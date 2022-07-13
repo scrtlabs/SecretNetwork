@@ -59,9 +59,12 @@ pub enum InstantiateMsg {
         code_hash: String,
         msg: String,
     },
-    BankMsg {
+    BankMsgSend {
         amount: Vec<Coin>,
         to: String,
+    },
+    BankMsgBurn {
+        amount: Vec<Coin>,
     },
 }
 
@@ -262,9 +265,12 @@ pub enum ExecuteMsg {
         privkey: Binary,
         iterations: u32,
     },
-    BankMsg {
+    BankMsgSend {
         amount: Vec<Coin>,
         to: String,
+    },
+    BankMsgBurn {
+        amount: Vec<Coin>,
     },
 }
 

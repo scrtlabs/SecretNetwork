@@ -3412,11 +3412,11 @@ func TestV010BankMsgSendFrom(t *testing.T) {
 			var contractAddress sdk.AccAddress
 
 			if callType == "init" {
-				contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, defaultGasForTests, -1, sdk.NewCoins())
+				contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, defaultGasForTests, -1, sdk.NewCoins())
 			} else {
 				contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests, -1, sdk.NewCoins())
 
-				_, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, math.MaxUint64, 0)
+				_, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, math.MaxUint64, 0)
 			}
 
 			require.NotEmpty(t, err)
@@ -3496,11 +3496,11 @@ func TestBankMsgSend(t *testing.T) {
 							var contractAddress sdk.AccAddress
 
 							if callType == "init" {
-								contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+								contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
 							} else {
 								contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
 
-								_, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, math.MaxUint64, 0)
+								_, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, math.MaxUint64, 0)
 							}
 
 							if test.isSuccuss {
@@ -3520,6 +3520,46 @@ func TestBankMsgSend(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBankMsgBurn(t *testing.T) {
+	t.Run("v1", func(t *testing.T) {
+		for _, callType := range []string{"init", "exec"} {
+			t.Run(callType, func(t *testing.T) {
+				for _, test := range []struct {
+					description string
+					sentFunds   sdk.Coins
+				}{
+					{
+						description: "try to burn coins it has",
+						sentFunds:   sdk.NewCoins(sdk.NewInt64Coin("denom", 1)),
+					},
+					{
+						description: "try to burn coins it doesnt have",
+						sentFunds:   sdk.NewCoins(),
+					},
+				} {
+					t.Run(test.description, func(t *testing.T) {
+						ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+						var err cosmwasm.StdError
+						var contractAddress sdk.AccAddress
+
+						if callType == "init" {
+							contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_burn":{"amount":[{"amount":"1","denom":"denom"}]}}`), false, false, defaultGasForTests, -1, test.sentFunds)
+						} else {
+							contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests, -1, test.sentFunds)
+
+							_, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_burn":{"amount":[{"amount":"1","denom":"denom"}]}}`), false, false, math.MaxUint64, 0)
+						}
+
+						require.NotEmpty(t, err)
+						require.Contains(t, err.Error(), "Unknown variant of Bank: invalid CosmosMsg from the contract")
+					})
+				}
+			})
+		}
+	})
 }
 
 func TestV1ReplyOnMultipleSubmessages(t *testing.T) {

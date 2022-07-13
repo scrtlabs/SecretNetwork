@@ -144,11 +144,14 @@ pub fn instantiate(
 
             Ok(Response::new().add_attribute("c", format!("{}", answer)))
         }
-        InstantiateMsg::BankMsg { to, amount } => {
+        InstantiateMsg::BankMsgSend { to, amount } => {
             Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
                 to_address: to,
                 amount,
             })))
+        }
+        InstantiateMsg::BankMsgBurn { amount } => {
+            Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Burn { amount })))
         }
     }
 }
@@ -540,11 +543,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
             return res;
         }
-        ExecuteMsg::BankMsg { to, amount } => {
+        ExecuteMsg::BankMsgSend { to, amount } => {
             Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
                 to_address: to,
                 amount,
             })))
+        }
+        ExecuteMsg::BankMsgBurn { amount } => {
+            Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Burn { amount })))
         }
     }
 }
