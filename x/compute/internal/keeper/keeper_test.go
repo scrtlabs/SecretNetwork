@@ -423,7 +423,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm")
+			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.NewCoins())
 
 			deposit := 100
 			var funds int64 = 0
@@ -443,7 +443,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			}
 
 			// when
-			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, int64(deposit))
+			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
 			// then
 			if spec.expError {
 				require.Error(t, err)
@@ -721,7 +721,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm")
+			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.NewCoins())
 
 			deposit := int64(100)
 			var funds int64 = 0
@@ -734,7 +734,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: bob, Beneficiary: fred})
 			require.NoError(t, err)
 
-			contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, 0)
+			contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
 			require.Empty(t, err)
 
 			wasmCalls := int64(-1)

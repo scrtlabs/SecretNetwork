@@ -73,6 +73,11 @@ pub enum InitMsg {
     InitFromV1 {
         counter: u64,
     },
+    BankMsg {
+        amount: Vec<Coin>,
+        to: HumanAddr,
+        from: Option<HumanAddr>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -163,6 +168,11 @@ pub enum HandleMsg {
         denom: String,
         to: HumanAddr,
         from: HumanAddr,
+    },
+    BankMsg {
+        amount: Vec<Coin>,
+        to: HumanAddr,
+        from: Option<HumanAddr>,
     },
     SendFundsToInitCallback {
         amount: u32,
@@ -409,6 +419,18 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 log: vec![],
             })
         }
+        InitMsg::BankMsg {
+            to,
+            amount: coins,
+            from,
+        } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Bank(BankMsg::Send {
+                from_address: from.unwrap_or(env.contract.address),
+                to_address: to,
+                amount: coins,
+            })],
+            log: vec![],
+        }),
     }
 }
 
@@ -618,6 +640,15 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     amount: Uint128(amount as u128),
                     denom: denom,
                 }],
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::BankMsg { to, amount, from } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Bank(BankMsg::Send {
+                from_address: from.unwrap_or(env.contract.address),
+                to_address: to,
+                amount,
             })],
             log: vec![],
             data: None,

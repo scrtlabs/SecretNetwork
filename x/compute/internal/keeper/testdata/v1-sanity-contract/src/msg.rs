@@ -1,8 +1,8 @@
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Coin};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum InstantiateMsg {
     Counter {
@@ -58,6 +58,10 @@ pub enum InstantiateMsg {
         addr: String,
         code_hash: String,
         msg: String,
+    },
+    BankMsg {
+        amount: Vec<Coin>,
+        to: String,
     },
 }
 
@@ -257,6 +261,10 @@ pub enum ExecuteMsg {
         msg: Binary,
         privkey: Binary,
         iterations: u32,
+    },
+    BankMsg {
+        amount: Vec<Coin>,
+        to: String,
     },
 }
 

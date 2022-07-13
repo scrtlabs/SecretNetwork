@@ -144,6 +144,12 @@ pub fn instantiate(
 
             Ok(Response::new().add_attribute("c", format!("{}", answer)))
         }
+        InstantiateMsg::BankMsg { to, amount } => {
+            Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
+                to_address: to,
+                amount,
+            })))
+        }
     }
 }
 
@@ -533,6 +539,12 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             }
 
             return res;
+        }
+        ExecuteMsg::BankMsg { to, amount } => {
+            Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
+                to_address: to,
+                amount,
+            })))
         }
     }
 }
