@@ -154,6 +154,10 @@ jobs:
         with:
           name: static-too-high-initial-memory.wasm
           path: ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+      - uses: actions/upload-artifact@v2
+        with:
+          name: v1-contract.wasm
+          path: ./x/compute/internal/keeper/testdata/v1-sanity-contract/contract.wasm
 
   Go-Tests:
     runs-on: ubuntu-20.04
@@ -189,11 +193,15 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: static-too-high-initial-memory.wasm
+      - uses: actions/download-artifact@v2
+        with:
+          name: v1-contract.wasm
       - name: Setup Files
         run: |
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
           cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
+          cp v1-contract.wasm ./x/compute/internal/keeper/testdata/v1-sanity-contract/contract.wasm
           cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
           cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
