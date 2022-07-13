@@ -1,7 +1,7 @@
 use cosmwasm_storage::{PrefixedStorage, ReadonlySingleton, Singleton};
 
 use cosmwasm_std::{
-    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
+    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Empty, Env, Extern, HandleResponse,
     HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
     ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
@@ -78,6 +78,7 @@ pub enum InitMsg {
         to: HumanAddr,
         from: Option<HumanAddr>,
     },
+    CosmosMsgCustom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -265,6 +266,7 @@ pub enum HandleMsg {
     IncrementFromV1 {
         addition: u64,
     },
+    CosmosMsgCustom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -429,6 +431,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 to_address: to,
                 amount: coins,
             })],
+            log: vec![],
+        }),
+        InitMsg::CosmosMsgCustom {} => Ok(InitResponse {
+            messages: vec![CosmosMsg::Custom(Empty {})],
             log: vec![],
         }),
     }
@@ -650,6 +656,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 to_address: to,
                 amount,
             })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::CosmosMsgCustom {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Custom(Empty {})],
             log: vec![],
             data: None,
         }),

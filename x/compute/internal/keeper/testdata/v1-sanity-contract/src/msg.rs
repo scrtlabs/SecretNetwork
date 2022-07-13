@@ -66,6 +66,7 @@ pub enum InstantiateMsg {
     BankMsgBurn {
         amount: Vec<Coin>,
     },
+    CosmosMsgCustom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -272,6 +273,7 @@ pub enum ExecuteMsg {
     BankMsgBurn {
         amount: Vec<Coin>,
     },
+    CosmosMsgCustom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

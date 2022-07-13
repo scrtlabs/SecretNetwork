@@ -3562,6 +3562,37 @@ func TestBankMsgBurn(t *testing.T) {
 	})
 }
 
+func TestCosmosMsgCustom(t *testing.T) {
+	for _, contract := range testContracts {
+		t.Run(contract.CosmWasmVersion, func(t *testing.T) {
+			for _, callType := range []string{"init", "exec"} {
+				t.Run(callType, func(t *testing.T) {
+					ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, contract.WasmFilePath, sdk.NewCoins())
+
+					var err cosmwasm.StdError
+					var contractAddress sdk.AccAddress
+
+					if callType == "init" {
+						contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"cosmos_msg_custom":{}}`), false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins())
+					} else {
+						contractAddress, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins())
+
+						_, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"cosmos_msg_custom":{}}`), false, contract.IsCosmWasmV1, math.MaxUint64, 0)
+					}
+
+					require.NotEmpty(t, err)
+					// if contract.IsCosmWasmV1 {
+					require.Contains(t, err.Error(), "Custom variant not supported: invalid CosmosMsg from the contract")
+					// } else {
+					// 	require.Equal(t, err.Error(), "Custom variant not supported: invalid CosmosMsg from the contract")
+
+					// }
+				})
+			}
+		})
+	}
+}
+
 func TestV1ReplyOnMultipleSubmessages(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 

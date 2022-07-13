@@ -3,7 +3,7 @@ use mem::MaybeUninit;
 use std::{mem, thread};
 
 use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
+    attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Empty, Env,
     MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg,
     SubMsgResult, WasmMsg, WasmQuery,
 };
@@ -152,6 +152,9 @@ pub fn instantiate(
         }
         InstantiateMsg::BankMsgBurn { amount } => {
             Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Burn { amount })))
+        }
+        InstantiateMsg::CosmosMsgCustom {} => {
+            Ok(Response::new().add_message(CosmosMsg::Custom(Empty {})))
         }
     }
 }
@@ -551,6 +554,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::BankMsgBurn { amount } => {
             Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Burn { amount })))
+        }
+        ExecuteMsg::CosmosMsgCustom {} => {
+            Ok(Response::new().add_message(CosmosMsg::Custom(Empty {})))
         }
     }
 }
