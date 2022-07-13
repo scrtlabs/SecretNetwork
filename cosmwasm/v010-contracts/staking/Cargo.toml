@@ -30,8 +30,13 @@ overflow-checks = true
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print", features = ["staking"] }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print", features = [
+  "staking"
+] }
 cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
+
+[workspace]
+members = []

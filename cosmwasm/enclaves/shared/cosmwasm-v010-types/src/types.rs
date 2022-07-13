@@ -161,6 +161,7 @@ where
 pub enum CustomMsg {
     Debug(String),
     Raw(Binary),
+    Empty {},
 }
 
 impl Into<CosmosMsg<CustomMsg>> for CustomMsg {

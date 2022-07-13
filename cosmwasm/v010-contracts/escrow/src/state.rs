@@ -1,4 +1,4 @@
-use cosmwasm_std::{CanonicalAddr, Env, Storage};
+use cosmwasm_std::{Env, HumanAddr, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -7,9 +7,9 @@ static CONFIG_KEY: &[u8] = b"config";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
-    pub arbiter: CanonicalAddr,
-    pub recipient: CanonicalAddr,
-    pub source: CanonicalAddr,
+    pub arbiter: HumanAddr,
+    pub recipient: HumanAddr,
+    pub source: HumanAddr,
     pub end_height: Option<u64>,
     pub end_time: Option<u64>,
 }

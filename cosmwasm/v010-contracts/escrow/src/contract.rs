@@ -1,7 +1,6 @@
 use cosmwasm_std::{
-    generic_err, log, unauthorized, Api, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Env,
-    Extern, HandleResponse, HandleResult, InitResponse, InitResult, MigrateResponse, Querier,
-    StdResult, Storage,
+    log, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse, HandleResult,
+    HumanAddr, InitResponse, InitResult, MigrateResponse, Querier, StdError, StdResult, Storage,
 };
 
 use crate::msg::{HandleMsg, InitMsg, MigrateMsg, QueryMsg};
@@ -13,14 +12,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> InitResult {
     let state = State {
-        arbiter: deps.api.canonical_address(&msg.arbiter)?,
-        recipient: deps.api.canonical_address(&msg.recipient)?,
+        arbiter: msg.arbiter.clone(),
+        recipient: msg.recipient.clone(),
         source: env.message.sender.clone(),
         end_height: msg.end_height,
         end_time: msg.end_time,
     };
     if state.is_expired(&env) {
-        Err(generic_err("creating expired escrow"))
+        Err(StdError::generic_err("creating expired escrow"))
     } else {
         config(&mut deps.storage).save(&state)?;
         Ok(InitResponse::default())
@@ -46,28 +45,22 @@ fn try_approve<S: Storage, A: Api, Q: Querier>(
     quantity: Option<Vec<Coin>>,
 ) -> HandleResult {
     if env.message.sender != state.arbiter {
-        Err(unauthorized())
+        Err(StdError::unauthorized())
     } else if state.is_expired(&env) {
-        Err(generic_err("escrow expired"))
+        Err(StdError::generic_err("escrow expired"))
     } else {
         let amount = if let Some(quantity) = quantity {
             quantity
         } else {
             // release everything
 
-            let contract_address_human = deps.api.human_address(&env.contract.address)?;
+            let contract_address_human = env.contract.address.clone();
             // Querier guarantees to returns up-to-date data, including funds sent in this handle message
             // https://github.com/CosmWasm/wasmd/blob/master/x/wasm/internal/keeper/keeper.go#L185-L192
             deps.querier.query_all_balances(contract_address_human)?
         };
 
-        send_tokens(
-            &deps.api,
-            &env.contract.address,
-            &state.recipient,
-            amount,
-            "approve",
-        )
+        send_tokens(&env.contract.address, &state.recipient, amount, "approve")
     }
 }
 
@@ -78,32 +71,25 @@ fn try_refund<S: Storage, A: Api, Q: Querier>(
 ) -> HandleResult {
     // anyone can try to refund, as long as the contract is expired
     if !state.is_expired(&env) {
-        Err(generic_err("escrow not yet expired"))
+        Err(StdError::generic_err("escrow not yet expired"))
     } else {
-        let contract_address_human = deps.api.human_address(&env.contract.address)?;
+        let contract_address_human = env.contract.address.clone();
         // Querier guarantees to returns up-to-date data, including funds sent in this handle message
         // https://github.com/CosmWasm/wasmd/blob/master/x/wasm/internal/keeper/keeper.go#L185-L192
         let balance = deps.querier.query_all_balances(contract_address_human)?;
-        send_tokens(
-            &deps.api,
-            &env.contract.address,
-            &state.source,
-            balance,
-            "refund",
-        )
+        send_tokens(&env.contract.address, &state.source, balance, "refund")
     }
 }
 
 // this is a helper to move the tokens, so the business logic is easy to read
-fn send_tokens<A: Api>(
-    api: &A,
-    from_address: &CanonicalAddr,
-    to_address: &CanonicalAddr,
+fn send_tokens(
+    from_address: &HumanAddr,
+    to_address: &HumanAddr,
     amount: Vec<Coin>,
     action: &str,
 ) -> HandleResult {
-    let from_human = api.human_address(from_address)?;
-    let to_human = api.human_address(to_address)?;
+    let from_human = from_address.clone();
+    let to_human = to_address.clone();
     let log = vec![log("action", action), log("to", to_human.as_str())];
 
     let r = HandleResponse {
@@ -148,7 +134,7 @@ mod tests {
         height: u64,
         time: u64,
     ) -> Env {
-        let mut env = mock_env(api, signer, sent);
+        let mut env = mock_env(signer, sent);
         env.block.height = height;
         env.block.time = time;
         env
@@ -168,18 +154,9 @@ mod tests {
         assert_eq!(
             state,
             State {
-                arbiter: deps
-                    .api
-                    .canonical_address(&HumanAddr::from("verifies"))
-                    .unwrap(),
-                recipient: deps
-                    .api
-                    .canonical_address(&HumanAddr::from("benefits"))
-                    .unwrap(),
-                source: deps
-                    .api
-                    .canonical_address(&HumanAddr::from("creator"))
-                    .unwrap(),
+                arbiter: HumanAddr::from("verifies"),
+                recipient: HumanAddr::from("benefits"),
+                source: HumanAddr::from("creator"),
                 end_height: Some(1000),
                 end_time: None,
             }
@@ -206,7 +183,7 @@ mod tests {
         // initialize the store
         let init_amount = coins(1000, "earth");
         let init_env = mock_env_height(&deps.api, "creator", &init_amount, 876, 0);
-        let contract_addr = deps.api.human_address(&init_env.contract.address).unwrap();
+        let contract_addr = init_env.contract.address.clone();
         let msg = init_msg_expire_by_height(1000);
         let init_res = init(&mut deps, init_env, msg).unwrap();
         assert_eq!(0, init_res.messages.len());
@@ -270,7 +247,7 @@ mod tests {
         // initialize the store
         let init_amount = coins(1000, "earth");
         let init_env = mock_env_height(&deps.api, "creator", &init_amount, 876, 0);
-        let contract_addr = deps.api.human_address(&init_env.contract.address).unwrap();
+        let contract_addr = init_env.contract.address.clone();
         let msg = init_msg_expire_by_height(1000);
         let init_res = init(&mut deps, init_env, msg).unwrap();
         assert_eq!(0, init_res.messages.len());

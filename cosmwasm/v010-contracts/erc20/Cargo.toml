@@ -45,3 +45,6 @@ hex = "0.4"
 [dev-dependencies]
 cosmwasm-vm = { path = "../../packages/sgx-vm", package = "cosmwasm-sgx-vm", default-features = false }
 cosmwasm-schema = { path = "../../packages/schema" }
+
+[workspace]
+members = []

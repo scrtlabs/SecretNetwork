@@ -37,3 +37,6 @@ sha2 = "0.9.1"
 cosmwasm-schema = { path = "../../packages/schema" }
 cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 cosmwasm-vm = { path = "../../packages/sgx-vm", package = "cosmwasm-sgx-vm", default-features = false }
+
+[workspace]
+members = []
