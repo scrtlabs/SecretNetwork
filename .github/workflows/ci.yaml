@@ -198,7 +198,7 @@ jobs:
           name: static-too-high-initial-memory.wasm
       - name: Setup Files
         run: |
-          find -name \*.wasm
+          find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
           cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
@@ -206,7 +206,7 @@ jobs:
           cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
           cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
-          find -name \*.wasm
+          find "$(pwd)" -name \*.wasm
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
