@@ -148,8 +148,6 @@ where
     T: Clone + fmt::Debug + PartialEq,
 {
     Bank(BankMsg),
-    // by default we use RawMsg, but a contract can override that
-    // to call into more app-specific code (whatever they define)
     Custom(T),
     Staking(StakingMsg),
     Wasm(WasmMsg),

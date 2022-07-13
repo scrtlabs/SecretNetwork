@@ -7,7 +7,7 @@ use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
     ContractCode, CosmWasmMsg, CosmosPubKey, SigInfo, SignDoc, StdSignDoc,
 };
-use enclave_cosmwasm_types::types::{CanonicalAddr, Coin, Env, HumanAddr};
+use enclave_cosmwasm_v010_types::types::{CanonicalAddr, Coin, Env, HumanAddr};
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 
