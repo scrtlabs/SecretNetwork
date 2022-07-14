@@ -440,6 +440,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	gas := gasForContract(ctx)
 	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, contractAddress)
 	consumeGas(ctx, gasUsed)
+
 	if err != nil {
 		switch res := response.(type) {
 		case v1wasmTypes.DataWithInternalReplyInfo:
@@ -659,7 +660,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 	params := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* empty because it's unused in queries */
-		[]sdk.Coin{},     /* empty because it's unused in queries */
+		sdk.NewCoins(),   /* empty because it's unused in queries */
 		contractAddr,
 		contractKey,
 	)
@@ -1082,15 +1083,16 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	}
 
 	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, ogSigInfo, wasmTypes.HandleTypeReply)
+	consumeGas(ctx, gasUsed)
+
 	if execErr != nil {
-		return nil, sdkerrors.Wrap(types.ErrReplyFailed, execErr.Error())
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
 	switch res := response.(type) {
 	case *v010wasmTypes.HandleResponse:
-		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
 	case *v1wasmTypes.Response:
-		consumeGas(ctx, gasUsed)
 
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeReply,
@@ -1099,11 +1101,11 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, ogTx, ogSigInfo, wasmTypes.CosmosMsgVersionV1)
 		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrReplyFailed, err.Error())
+			return nil, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 		}
 
 		return data, nil
 	default:
-		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }

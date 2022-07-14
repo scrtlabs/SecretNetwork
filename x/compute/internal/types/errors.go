@@ -64,9 +64,6 @@ var (
 	// ErrUnknownMsg error by a message handler to show that it is not responsible for this message type
 	ErrUnknownMsg = sdkErrors.Register(DefaultCodespace, 18, "unknown message from the contract")
 
-	// ErrReplyFailed error for rust execution contract failure
-	ErrReplyFailed = sdkErrors.Register(DefaultCodespace, 19, "reply to contract failed")
-
 	// ErrInvalidEvent error if an attribute/event from the contract is invalid
 	ErrInvalidEvent = sdkErrors.Register(DefaultCodespace, 21, "invalid event")
 )
