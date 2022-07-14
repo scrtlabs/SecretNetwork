@@ -1,5 +1,6 @@
 // rename this to fuzz.go if you want to run the fuzzer
 
+//go:build gofuzz
 // +build gofuzz
 
 package remote_attestation

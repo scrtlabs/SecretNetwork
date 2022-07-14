@@ -1,12 +1,13 @@
 package cli
 
 import (
+	"io/ioutil"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -31,7 +32,7 @@ func AuthenticateNodeCmd() *cobra.Command {
 		Short: "Upload a certificate to authenticate the node",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//clientCtx := client.GetClientContextFromCmd(cmd)
+			// clientCtx := client.GetClientContextFromCmd(cmd)
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err

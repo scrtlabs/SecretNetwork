@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -103,7 +104,6 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 
 	// reinitialize all validators
 	app.stakingKeeper.IterateValidators(ctx, func(_ int64, val stakingtypes.ValidatorI) (stop bool) {
-
 		// donate any unwithdrawn outstanding reward fraction tokens to the community pool
 		scraps := app.distrKeeper.GetValidatorOutstandingRewardsCoins(ctx, val.GetOperator())
 		feePool := app.distrKeeper.GetFeePool(ctx)

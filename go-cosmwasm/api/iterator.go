@@ -1,8 +1,9 @@
 package api
 
 import (
-	dbm "github.com/tendermint/tm-db"
 	"sync"
+
+	dbm "github.com/tendermint/tm-db"
 )
 
 // frame stores all Iterators for one contract

@@ -2,9 +2,10 @@ package keeper_test
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/enigmampc/SecretNetwork/x/compute"
-	"testing"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/tendermint/crypto"
