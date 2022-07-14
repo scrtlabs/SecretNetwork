@@ -1,4 +1,4 @@
-use enclave_cosmwasm_types::types::CanonicalAddr;
+use enclave_cosmwasm_v010_types::types::CanonicalAddr;
 
 // https://github.com/tendermint/tendermint/blob/v0.33.3/crypto/crypto.go#L22
 pub trait CosmosAminoPubkey: PartialEq {

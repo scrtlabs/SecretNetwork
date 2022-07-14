@@ -9,7 +9,7 @@ use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, Run
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
-use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
+use enclave_cosmwasm_v010_types::consts::BECH32_PREFIX_ACC_ADDR;
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 
 use crate::contract_validation::ContractKey;

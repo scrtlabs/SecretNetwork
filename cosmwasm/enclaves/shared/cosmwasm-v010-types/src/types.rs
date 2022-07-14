@@ -143,33 +143,25 @@ pub struct ContractResult {
 #[serde(rename_all = "snake_case")]
 // This should be in correlation with cosmwasm-std/init_handle's CosmosMsg
 // See https://github.com/serde-rs/serde/issues/1296 why we cannot add De-Serialize trait bounds to T
-pub enum CosmosMsg<T = CustomMsg>
+pub enum CosmosMsg<T = Empty>
 where
     T: Clone + fmt::Debug + PartialEq,
 {
     Bank(BankMsg),
-    // by default we use RawMsg, but a contract can override that
-    // to call into more app-specific code (whatever they define)
     Custom(T),
     Staking(StakingMsg),
     Wasm(WasmMsg),
     Gov(GovMsg),
 }
 
-/// Added this here for reflect tests....
+/// An empty struct that serves as a placeholder in different places,
+/// such as contracts that don't set a custom message.
+///
+/// It is designed to be expressable in correct JSON and JSON Schema but
+/// contains no meaningful data. Previously we used enums without cases,
+/// but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-/// CustomMsg is an override of CosmosMsg::Custom to show this works and can be extended in the contract
-pub enum CustomMsg {
-    Debug(String),
-    Raw(Binary),
-}
-
-impl Into<CosmosMsg<CustomMsg>> for CustomMsg {
-    fn into(self) -> CosmosMsg<CustomMsg> {
-        CosmosMsg::Custom(self)
-    }
-}
+pub struct Empty {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]

@@ -8,8 +8,8 @@ use crate::wasm::CosmWasmApiVersion;
 use cosmos_proto::tx::signing::SignMode;
 use cosmwasm_v010_types::types::CanonicalAddr;
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
-use enclave_cosmwasm_types as cosmwasm_v010_types;
-use enclave_cosmwasm_types::encoding::Binary;
+use enclave_cosmwasm_v010_types as cosmwasm_v010_types;
+use enclave_cosmwasm_v010_types::encoding::Binary;
 use enclave_cosmwasm_v1_types::addresses::Addr;
 use enclave_cosmwasm_v1_types::results::{
     DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult,

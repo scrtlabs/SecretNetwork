@@ -1,7 +1,7 @@
 use cosmwasm_storage::{PrefixedStorage, ReadonlySingleton, Singleton};
 
 use cosmwasm_std::{
-    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
+    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Empty, Env, Extern, HandleResponse,
     HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
     ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
@@ -73,11 +73,12 @@ pub enum InitMsg {
     InitFromV1 {
         counter: u64,
     },
-    BankMsg {
+    BankMsgSend {
         amount: Vec<Coin>,
         to: HumanAddr,
         from: Option<HumanAddr>,
     },
+    CosmosMsgCustom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -169,7 +170,7 @@ pub enum HandleMsg {
         to: HumanAddr,
         from: HumanAddr,
     },
-    BankMsg {
+    BankMsgSend {
         amount: Vec<Coin>,
         to: HumanAddr,
         from: Option<HumanAddr>,
@@ -265,6 +266,7 @@ pub enum HandleMsg {
     IncrementFromV1 {
         addition: u64,
     },
+    CosmosMsgCustom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -419,7 +421,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 log: vec![],
             })
         }
-        InitMsg::BankMsg {
+        InitMsg::BankMsgSend {
             to,
             amount: coins,
             from,
@@ -429,6 +431,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 to_address: to,
                 amount: coins,
             })],
+            log: vec![],
+        }),
+        InitMsg::CosmosMsgCustom {} => Ok(InitResponse {
+            messages: vec![CosmosMsg::Custom(Empty {})],
             log: vec![],
         }),
     }
@@ -644,12 +650,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
-        HandleMsg::BankMsg { to, amount, from } => Ok(HandleResponse {
+        HandleMsg::BankMsgSend { to, amount, from } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Bank(BankMsg::Send {
                 from_address: from.unwrap_or(env.contract.address),
                 to_address: to,
                 amount,
             })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::CosmosMsgCustom {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Custom(Empty {})],
             log: vec![],
             data: None,
         }),

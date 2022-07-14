@@ -10,7 +10,7 @@ use cosmos_proto::crypto::multisig::multisig::MultiSignature;
 
 use super::traits::CosmosAminoPubkey;
 
-use enclave_cosmwasm_types::types::CanonicalAddr;
+use enclave_cosmwasm_v010_types::types::CanonicalAddr;
 use enclave_crypto::CryptoError;
 use protobuf::Message;
 

@@ -59,10 +59,14 @@ pub enum InstantiateMsg {
         code_hash: String,
         msg: String,
     },
-    BankMsg {
+    BankMsgSend {
         amount: Vec<Coin>,
         to: String,
     },
+    BankMsgBurn {
+        amount: Vec<Coin>,
+    },
+    CosmosMsgCustom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -262,10 +266,14 @@ pub enum ExecuteMsg {
         privkey: Binary,
         iterations: u32,
     },
-    BankMsg {
+    BankMsgSend {
         amount: Vec<Coin>,
         to: String,
     },
+    BankMsgBurn {
+        amount: Vec<Coin>,
+    },
+    CosmosMsgCustom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

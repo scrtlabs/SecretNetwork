@@ -14,7 +14,7 @@ sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://gi
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
-enclave_cosmwasm_types = { path = "../cosmwasm-types" }
+enclave_cosmwasm_v010_types = { path = "../cosmwasm-v010-types" }
 log = "0.4.8"
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
