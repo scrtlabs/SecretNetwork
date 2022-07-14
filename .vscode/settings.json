@@ -13,13 +13,13 @@
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
 
-  "go.formatTool": "gofumpt",
-  "go.alternateTools": {
-    " goreturns": "gofumpt"
-  },
   "go.testEnvVars": {
     "SGX_MODE": "SW",
     "RUST_BACKTRACE": "1"
+  },
+  "go.useLanguageServer": true,
+  "gopls": {
+    "formatting.gofumpt": true
   },
   "[go]": {
     "editor.formatOnSave": true,
