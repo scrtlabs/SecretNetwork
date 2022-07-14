@@ -172,7 +172,6 @@ func MintQuerier(keeper mintkeeper.Keeper) func(ctx sdk.Context, request *wasmTy
 		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown MintQuery variant"}
 	}
-
 }
 
 func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
@@ -279,7 +278,7 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 		}
 		if request.Validators != nil {
 			validators := keeper.GetBondedValidatorsByPower(ctx)
-			//validators := keeper.GetAllValidators(ctx)
+			// validators := keeper.GetAllValidators(ctx)
 			wasmVals := make([]wasmTypes.Validator, len(validators))
 			for i, v := range validators {
 				wasmVals[i] = wasmTypes.Validator{
@@ -361,7 +360,6 @@ func sdkToUnbondingDelegations(bondDenom string, delegations stakingtypes.Unbond
 	result := make([]wasmTypes.Delegation, len(delegations))
 
 	for i, d := range delegations {
-
 		for _, e := range d.Entries {
 
 			wasmCoin := wasmTypes.Coin{
@@ -376,7 +374,6 @@ func sdkToUnbondingDelegations(bondDenom string, delegations stakingtypes.Unbond
 			}
 
 		}
-
 	}
 	return result, nil
 }

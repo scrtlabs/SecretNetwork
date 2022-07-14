@@ -75,7 +75,6 @@ func (g *mockGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	if g.consumed > g.limit {
 		panic(ErrorOutOfGas{descriptor})
 	}
-
 }
 
 /*** Mock KVStore ****/
@@ -286,7 +285,7 @@ func NewBankQuerier(balances map[string]types.Coins) BankQuerier {
 func (q BankQuerier) Query(request *types.BankQuery) ([]byte, error) {
 	if request.Balance != nil {
 		denom := request.Balance.Denom
-		var coin = types.NewCoin(0, denom)
+		coin := types.NewCoin(0, denom)
 		for _, c := range q.Balances[request.Balance.Address] {
 			if c.Denom == denom {
 				coin = c

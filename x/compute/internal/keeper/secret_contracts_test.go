@@ -28,7 +28,6 @@ type ContractEvent []cosmwasm.LogAttribute
 
 // if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
 func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
-
 	var hash []byte
 	if codeId != 0 {
 		hash = keeper.GetCodeInfo(ctx, codeId).CodeHash
@@ -214,27 +213,34 @@ func (wasmGasMeter *WasmCounterGasMeter) RefundGas(amount stypes.Gas, descriptor
 func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() sdk.Gas {
 	return wasmGasMeter.gasMeter.GasConsumed()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) GasConsumedToLimit() sdk.Gas {
 	return wasmGasMeter.gasMeter.GasConsumedToLimit()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) Limit() sdk.Gas {
 	return wasmGasMeter.gasMeter.Limit()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) ConsumeGas(amount sdk.Gas, descriptor string) {
 	if (descriptor == "wasm contract" || descriptor == "contract sub-query") && amount > 0 {
 		wasmGasMeter.wasmCounter++
 	}
 	wasmGasMeter.gasMeter.ConsumeGas(amount, descriptor)
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) IsPastLimit() bool {
 	return wasmGasMeter.gasMeter.IsPastLimit()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) IsOutOfGas() bool {
 	return wasmGasMeter.gasMeter.IsOutOfGas()
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) String() string {
 	return fmt.Sprintf("WasmCounterGasMeter: %v %v", wasmGasMeter.wasmCounter, wasmGasMeter.gasMeter)
 }
+
 func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 	return wasmGasMeter.wasmCounter
 }
@@ -471,7 +477,7 @@ func TestSanity(t *testing.T) {
 
 	contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, initMsg, true, defaultGasForTests)
 	require.Empty(t, err)
-	//require.Empty(t, initEvents)
+	// require.Empty(t, initEvents)
 
 	// check state after init
 	qRes, qErr := queryHelper(t, keeper, ctx, contractAddress, fmt.Sprintf(`{"balance":{"address":"%s"}}`, walletA.String()), true, defaultGasForTests)
@@ -635,7 +641,7 @@ func TestQueryInputParamError(t *testing.T) {
 
 	contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, initMsg, true, defaultGasForTests)
 	require.Empty(t, err)
-	//require.Empty(t, initEvents)
+	// require.Empty(t, initEvents)
 
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"address":"blabla"}}`, true, defaultGasForTests)
 
@@ -858,7 +864,7 @@ func TestQueryInputStructureError(t *testing.T) {
 
 	contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, initMsg, true, defaultGasForTests)
 	require.Empty(t, err)
-	//require.Empty(t, initEvents)
+	// require.Empty(t, initEvents)
 
 	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"balance":{"invalidkey":"invalidval"}}`, true, defaultGasForTests)
 
@@ -942,7 +948,7 @@ func TestExecNoLogs(t *testing.T) {
 	_, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"no_logs":{}}`, true, defaultGasForTests, 0)
 
 	require.Empty(t, err)
-	//require.Empty(t, execEvents)
+	// require.Empty(t, execEvents)
 }
 
 func TestExecCallbackToInit(t *testing.T) {
@@ -978,7 +984,7 @@ func TestExecCallbackToInit(t *testing.T) {
 	data, execEvents, _, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, defaultGasForTests, 0)
 
 	require.Empty(t, err)
-	//require.Empty(t, execEvents)
+	// require.Empty(t, execEvents)
 	require.Equal(t, "🍆🥑🍄", string(data))
 }
 
@@ -1009,7 +1015,7 @@ func TestInitCallbackToInit(t *testing.T) {
 	data, _, _, err := execHelper(t, keeper, ctx, secondContractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, defaultGasForTests, 0)
 
 	require.Empty(t, err)
-	//require.Empty(t, execEvents)
+	// require.Empty(t, execEvents)
 	require.Equal(t, "🍆🥑🍄", string(data))
 }
 
@@ -1025,7 +1031,7 @@ func TestInitCallbackContractError(t *testing.T) {
 	require.NotNil(t, initErr.GenericErr)
 	require.Equal(t, "la la 🤯", initErr.GenericErr.Msg)
 	require.Empty(t, secondContractAddress)
-	//require.Empty(t, initEvents)
+	// require.Empty(t, initEvents)
 }
 
 func TestExecCallbackContractError(t *testing.T) {
@@ -1040,7 +1046,7 @@ func TestExecCallbackContractError(t *testing.T) {
 
 	require.NotNil(t, execErr.GenericErr)
 	require.Equal(t, "la la 🤯", execErr.GenericErr.Msg)
-	//require.Empty(t, execEvents)
+	// require.Empty(t, execEvents)
 	require.Empty(t, data)
 }
 
@@ -1057,7 +1063,7 @@ func TestExecCallbackBadParam(t *testing.T) {
 	require.NotNil(t, execErr.ParseErr)
 	require.Equal(t, "test_contract::contract::HandleMsg", execErr.ParseErr.Target)
 	require.Contains(t, execErr.ParseErr.Msg, "unknown variant `callback_contract_bad_param`")
-	//require.Empty(t, execEvents)
+	// require.Empty(t, execEvents)
 	require.Empty(t, data)
 }
 
@@ -1071,7 +1077,7 @@ func TestInitCallbackBadParam(t *testing.T) {
 
 	secondContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, defaultGasForTests)
 	require.Empty(t, secondContractAddress)
-	//require.Empty(t, initEvents)
+	// require.Empty(t, initEvents)
 
 	require.NotNil(t, initErr.ParseErr)
 	require.Equal(t, "test_contract::contract::InitMsg", initErr.ParseErr.Target)
@@ -1532,7 +1538,7 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 
 	_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 18, codeHash), false, defaultGasForTests, 17)
 
-	//require.Empty(t, execEvents)
+	// require.Empty(t, execEvents)
 
 	require.NotNil(t, execErr.GenericErr)
 	require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
@@ -2156,7 +2162,6 @@ func TestQueryGasPrice(t *testing.T) {
 	require.Empty(t, err)
 
 	t.Run("Query to Self Gas Price", func(t *testing.T) {
-
 		_, _, gasUsed, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, defaultGasForTests, 0)
 		require.Empty(t, err)
 		// require that more gas was used than the base 20K (10K for execute, another 10K for query)
@@ -2414,7 +2419,6 @@ func TestSecp256k1Verify(t *testing.T) {
 			events,
 		)
 	})
-
 }
 
 func TestBenchmarkSecp256k1VerifyAPI(t *testing.T) {
@@ -2510,7 +2514,6 @@ func TestEd25519Verify(t *testing.T) {
 			events,
 		)
 	})
-
 }
 
 func TestEd25519BatchVerify(t *testing.T) {
@@ -2660,7 +2663,6 @@ func TestEd25519BatchVerify(t *testing.T) {
 			events,
 		)
 	})
-
 }
 
 func TestSecp256k1RecoverPubkey(t *testing.T) {
