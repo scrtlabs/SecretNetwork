@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,12 +16,12 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"strconv"
-	"strings"
 )
 
-const MessageBlockSize = 256
-const flagAmount = "amount"
+const (
+	MessageBlockSize = 256
+	flagAmount       = "amount"
+)
 
 // S20GetQueryCmd GetQueryCmd returns the cli query commands for this module
 func S20GetQueryCmd() *cobra.Command {
@@ -69,7 +72,6 @@ func S20TransferHistoryCmd() *cobra.Command {
 		Long:  `Print out transfer you have been a part of - either as a sender or recipient`,
 		Args:  cobra.RangeArgs(3, 5),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			cliCtx, err := client.GetClientQueryContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
@@ -129,7 +131,6 @@ func S20TransactionHistoryCmd() *cobra.Command {
 Unlike the transfers query, this query shows all kinds of transactions with the contract.`,
 		Args: cobra.RangeArgs(3, 5),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			cliCtx, err := client.GetClientQueryContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
@@ -189,7 +190,6 @@ func S20BalanceCmd() *cobra.Command {
 key yet, use the "create-viewing-key" command. Otherwise, you can still see your current balance using a raw transaction`,
 		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			cliCtx, err := client.GetClientQueryContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
@@ -246,7 +246,6 @@ func s20TransferCmd() *cobra.Command {
 		Long:  `Transfer tokens to another address`,
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			////inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
@@ -288,8 +287,7 @@ func s20CreatingViewingKey() *cobra.Command {
 This way you can perform balance and transaction history queries without waiting for a transaction on-chain.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			//inBuf := bufio.NewReader(cmd.InOrStdin())
+			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
@@ -327,8 +325,7 @@ func s20SetViewingKey() *cobra.Command {
 you're doing`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			//inBuf := bufio.NewReader(cmd.InOrStdin())
+			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
@@ -357,8 +354,7 @@ func s20DepositCmd() *cobra.Command {
 		Long:  `Convert your SCRT into a secret token. This command will only work if the token supports native currency conversion`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			//inBuf := bufio.NewReader(cmd.InOrStdin())
+			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
@@ -391,8 +387,7 @@ func s20Redeem() *cobra.Command {
 		Long:  `Convert your secret token back to SCRT. This command will only work if the token supports native currency conversion`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			//inBuf := bufio.NewReader(cmd.InOrStdin())
+			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
@@ -428,8 +423,7 @@ func s20SendCmd() *cobra.Command {
 If no callback provided, this is identical to 'transfer'.`,
 		Args: cobra.RangeArgs(3, 4),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			//inBuf := bufio.NewReader(cmd.InOrStdin())
+			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
@@ -474,8 +468,7 @@ func s20BurnCmd() *cobra.Command {
 WARNING! This action is irreversible and permanent! use at your own risk`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			//inBuf := bufio.NewReader(cmd.InOrStdin())
+			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)

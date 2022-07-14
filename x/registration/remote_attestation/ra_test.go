@@ -1,10 +1,11 @@
 package remote_attestation
 
 import (
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ValidateCertificateHwMode(t *testing.T) {
@@ -39,8 +40,7 @@ func Test_InvalidRandomDataAsCert(t *testing.T) {
 }
 
 func Test_FuzzCrashers(t *testing.T) {
-
-	var crashers = [][]byte{
+	crashers := [][]byte{
 		[]byte("\x06\b*\x86H\xce=\x03\x01\a0\xd80r0"),
 		[]byte("\x06\b*\x86H\xce=\x03\x01\a\f\x1cEnigmaCh" +
 			"ain Node Ce000000000"),

@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [rocksdb, goleveldb]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env: # Or as an environment variable
       SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
       API_KEY_TESTNET: ${{ secrets.API_KEY_TESTNET }}
@@ -55,7 +55,7 @@ jobs:
       - run: rustup component add rust-src clippy
       - name: Install xargo
         run: |
-          cargo +stable install xargo
+          cargo +stable install xargo --version 0.3.25
           xargo --version
       - name: Download sccache
         run: |
@@ -72,7 +72,7 @@ jobs:
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=query-node, FEATURES=production make build-testnet
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=query-node, make build-testnet
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
@@ -80,7 +80,7 @@ jobs:
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
 
   build-deb-mainnet:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
@@ -88,6 +88,8 @@ jobs:
     env: # Or as an environment variable
       SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
       API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: scrtlabs/secret-network-node
     steps:
       - uses: actions/checkout@v3
       - name: Get the version
@@ -102,18 +104,28 @@ jobs:
           echo $API_KEY_MAINNET > api_key.txt
       - name: Build
         run: |
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production make build-mainnet-upgrade
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=query-node, make build-mainnet-upgrade
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v2
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+      - name: Log in to the Container registry
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push docker image
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
   native-build-cli:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
       - name: Build CLI
@@ -127,7 +139,7 @@ jobs:
           path: secretcli-${{runner.os}}
 
   x-build-cli:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v2
@@ -148,7 +160,7 @@ jobs:
           path: secretcli-MacOS-arm64
 
   publish-localsecret:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/localsecret
@@ -177,18 +189,17 @@ jobs:
 
   Release:
     needs: [native-build-cli, build-deb-testnet, build-deb-mainnet, x-build-cli]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Declare Commit Variables
-        id: vars
+        id: is_pre_release
         shell: bash
         run: |
-          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+          echo "::set-output name=IS_PRE_RELEASE::$(echo "${{ steps.get_version.outputs.VERSION }}" | awk 'BEGIN{prerelease="false"} /beta|alpha/{prerelease="true"} END{print prerelease}')"
       - uses: actions/download-artifact@v2
         with:
           name: secretcli-Linux
@@ -216,6 +227,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
+          prerelease: ${{ steps.is_pre_release.outputs.IS_PRE_RELEASE }}
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb

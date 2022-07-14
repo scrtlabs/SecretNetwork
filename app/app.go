@@ -2,6 +2,10 @@ package app
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
 
 	store "github.com/cosmos/cosmos-sdk/store/types"
 
@@ -93,11 +97,6 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	"github.com/spf13/cast"
-
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
@@ -242,13 +241,12 @@ func NewSecretNetworkApp(
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	invCheckPeriod uint,
-	//enabledProposals []compute.ProposalType,
+	// enabledProposals []compute.ProposalType,
 	bootstrap bool,
 	appOpts servertypes.AppOptions,
 	computeConfig *compute.WasmConfig,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *SecretNetworkApp {
-
 	encodingConfig := MakeEncodingConfig()
 	appCodec, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
@@ -258,7 +256,7 @@ func NewSecretNetworkApp(
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
-	//bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
+	// bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
 
 	keys := sdk.NewKVStoreKeys(
 		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
@@ -442,7 +440,7 @@ func NewSecretNetworkApp(
 
 	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
 	// we prefer to be more strict in what arguments the modules expect.
-	var skipGenesisInvariants = cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
+	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
 
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
@@ -538,7 +536,7 @@ func NewSecretNetworkApp(
 		govtypes.ModuleName,
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
-		//custom modules
+		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
 
@@ -585,7 +583,7 @@ func NewSecretNetworkApp(
 	//	evidence.NewAppModule(app.evidenceKeeper),
 	//)
 
-	//app.sm.RegisterStoreDecoders()
+	// app.sm.RegisterStoreDecoders()
 
 	// initialize stores
 	app.MountKVStores(keys)
@@ -724,10 +722,10 @@ func RegisterSwaggerAPI(_ client.Context, rtr *mux.Router) {
 		panic(err)
 	}
 
-	staticServer := http.FileServer(statikFS)
-	rtr.PathPrefix("/static/").Handler(http.StripPrefix("/static/", staticServer))
-	rtr.PathPrefix("/swagger/").Handler(http.StripPrefix("/swagger/", staticServer))
-	// rtr.PathPrefix("/swagger/").Handler(staticServer)
+	statikServer := http.FileServer(statikFS)
+	rtr.PathPrefix("/static/").Handler(http.StripPrefix("/static/", statikServer))
+	rtr.PathPrefix("/swagger/").Handler(statikServer)
+	rtr.PathPrefix("/openapi/").Handler(statikServer)
 }
 
 // BlockedAddrs returns all the app's module account addresses that are not

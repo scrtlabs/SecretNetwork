@@ -1,3 +1,4 @@
+//go:build !secretcli
 // +build !secretcli
 
 package api
@@ -63,7 +64,7 @@ func receiveVector(b C.Buffer) []byte {
 // Copy the contents of a vector that was allocated on the Rust side.
 // Unlike receiveVector, we do not free it, because it will be manually
 // freed on the Rust side after control returns to it.
-//This should be used in places like callbacks from Rust to Go.
+// This should be used in places like callbacks from Rust to Go.
 func receiveSlice(b C.Buffer) []byte {
 	if bufIsNil(b) {
 		return nil

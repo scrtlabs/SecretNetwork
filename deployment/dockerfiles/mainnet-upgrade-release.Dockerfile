@@ -24,19 +24,19 @@ RUN curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
     apt-get install -y nodejs npm && \
     npm i -g local-cors-proxy
 
+RUN wget -O /root/genesis.json https://github.com/scrtlabs/SecretNetwork/releases/download/v1.2.0/genesis.json
+
 ARG BUILD_VERSION="v0.0.0"
 ENV VERSION=${BUILD_VERSION}
 
 ENV SGX_MODE=HW
-ENV SECRET_NODE_TYPE=NODE
-
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
+
 
 # workaround because paths seem kind of messed up
 RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so
 RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_sim.so
 
-# Install ca-certificates
 WORKDIR /root
 
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
@@ -50,15 +50,10 @@ COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosm
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli /usr/bin/secretcli
 
-COPY deployment/docker/bootstrap/bootstrap_init.sh .
-COPY deployment/docker/node/node_init.sh .
-COPY deployment/docker/startup.sh .
-COPY deployment/docker/node_key.json .
+COPY deployment/docker/node/mainnet_node.sh .
 
 RUN chmod +x /usr/bin/secretd
-RUN chmod +x bootstrap_init.sh
-RUN chmod +x startup.sh
-RUN chmod +x node_init.sh
+RUN chmod +x mainnet_node.sh
 
 RUN secretd completion > /root/secretd_completion
 
@@ -72,17 +67,8 @@ RUN mkdir -p /root/config/
 
 
 ####### Node parameters
-ARG MONIKER=default
-ARG CHAINID=secret-testnet-1
-ARG GENESISPATH=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-testnet-genesis.json
-ARG PERSISTENT_PEERS=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.southuk.azure.com:26656
-
-ENV GENESISPATH="${GENESISPATH}"
-ENV CHAINID="${CHAINID}"
-ENV MONIKER="${MONIKER}"
-ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
 
 #ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
 
 # Run secretd by default, omit entrypoint to ease using container with secretcli
-ENTRYPOINT ["/bin/bash", "startup.sh"]
+ENTRYPOINT ["/bin/bash", "mainnet_node.sh"]

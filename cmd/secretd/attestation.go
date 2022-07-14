@@ -9,6 +9,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,25 +25,25 @@ import (
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"github.com/spf13/cobra"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
-	"path/filepath"
 )
 
-const flagReset = "reset"
-const flagPulsar = "pulsar"
-const flagCustomRegistrationService = "registration-service"
+const (
+	flagReset                     = "reset"
+	flagPulsar                    = "pulsar"
+	flagCustomRegistrationService = "registration-service"
+)
 
-const flagLegacyRegistrationNode = "registration-node"
-const flagLegacyBootstrapNode = "node"
+const (
+	flagLegacyRegistrationNode = "registration-node"
+	flagLegacyBootstrapNode    = "node"
+)
 
-const mainnetRegistrationService = "https://mainnet-register.scrtlabs.com/api/registernode"
-const pulsarRegistrationService = "https://testnet-register.scrtlabs.com/api/registernode"
+const (
+	mainnetRegistrationService = "https://mainnet-register.scrtlabs.com/api/registernode"
+	pulsarRegistrationService  = "https://testnet-register.scrtlabs.com/api/registernode"
+)
 
 func InitAttestation() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "init-enclave [output-file]",
 		Short: "Perform remote attestation of the enclave",
@@ -47,7 +53,6 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsDir == "" {
 				sgxSecretsDir = os.ExpandEnv("/opt/secret/.sgx_secrets")
@@ -55,7 +60,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			// create sgx secrets dir if it doesn't exist
 			if _, err := os.Stat(sgxSecretsDir); !os.IsNotExist(err) {
-				err := os.MkdirAll(sgxSecretsDir, 0777)
+				err := os.MkdirAll(sgxSecretsDir, 0o777)
 				if err != nil {
 					return err
 				}
@@ -109,7 +114,6 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 }
 
 func InitBootstrapCmd() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "init-bootstrap [node-exchange-file] [io-exchange-file]",
 		Short: "Perform bootstrap initialization",
@@ -224,7 +228,6 @@ func ParseCert() *cobra.Command {
 			"register the node, during node initialization",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// parse coins trying to be sent
 			cert, err := ioutil.ReadFile(args[0])
 			if err != nil {
@@ -251,7 +254,6 @@ func ConfigureSecret() *cobra.Command {
 			"seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			cert, err := ioutil.ReadFile(args[0])
 			if err != nil {
 				return err
@@ -287,7 +289,7 @@ func ConfigureSecret() *cobra.Command {
 
 			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedConfig)
 
-			err = ioutil.WriteFile(seedFilePath, cfgBytes, 0664)
+			err = ioutil.WriteFile(seedFilePath, cfgBytes, 0o664)
 			if err != nil {
 				return err
 			}
@@ -306,7 +308,6 @@ func HealthCheck() *cobra.Command {
 		Long:  "Help diagnose issues by performing a basic sanity test that SGX is working properly",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			res, err := api.HealthCheck()
 			if err != nil {
 				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
@@ -328,7 +329,6 @@ func ResetEnclave() *cobra.Command {
 			"You will have to go through registration again to be able to start the node",
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
 			if err != nil {
 				return err
@@ -359,7 +359,7 @@ func ResetEnclave() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				err := os.MkdirAll(sgxSecretsDir, 0777)
+				err := os.MkdirAll(sgxSecretsDir, 0o777)
 				if err != nil {
 					return err
 				}
@@ -393,7 +393,6 @@ type ErrorResponse struct {
 
 // AutoRegisterNode *** EXPERIMENTAL ***
 func AutoRegisterNode() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "auto-register",
 		Short: "Perform remote attestation of the enclave",
@@ -402,7 +401,6 @@ Please report any issues with this command
 `,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsFolder == "" {
 				sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
@@ -552,7 +550,7 @@ Please report any issues with this command
 			// create seed directory if it doesn't exist
 			_, err = os.Stat(seedCfgDir)
 			if os.IsNotExist(err) {
-				err = os.MkdirAll(seedCfgDir, 0777)
+				err = os.MkdirAll(seedCfgDir, 0o777)
 				if err != nil {
 					return fmt.Errorf("failed to create directory '%s': %w", seedCfgDir, err)
 				}
@@ -561,7 +559,7 @@ Please report any issues with this command
 			// write seed to file - if file doesn't exist, write it. If it does, delete the existing one and create this
 			_, err = os.Stat(seedCfgFile)
 			if os.IsNotExist(err) {
-				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0644)
+				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0o644)
 				if err != nil {
 					return err
 				}
@@ -571,7 +569,7 @@ Please report any issues with this command
 					return fmt.Errorf("failed to modify file '%s': %w", seedCfgFile, err)
 				}
 
-				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0644)
+				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0o644)
 				if err != nil {
 					return fmt.Errorf("failed to create file '%s': %w", seedCfgFile, err)
 				}

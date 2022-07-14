@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   Enclave-Unit-Tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install Intel's SGX SDK
@@ -35,7 +35,7 @@ jobs:
         run: |
           cargo --version
           rustc --version  
-          cargo +stable install xargo
+          cargo +stable install xargo --version 0.3.25
           xargo --version
       - name: Download sccache
         run: |
@@ -51,7 +51,7 @@ jobs:
           make clean-enclave
 
   Build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -85,7 +85,7 @@ jobs:
         run: |
           cargo --version
           rustc --version  
-          cargo +stable install xargo
+          cargo +stable install xargo --version 0.3.25
           xargo --version
       - name: Download sccache
         run: |
@@ -150,7 +150,7 @@ jobs:
           path: ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
 
   Go-Tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: Build
     steps:
       - uses: actions/checkout@v2
@@ -208,7 +208,7 @@ jobs:
           LOG_LEVEL=ERROR go test -p 1 -timeout 20m -v ./x/compute/internal/...
 
   Clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install Intel's SGX SDK
@@ -239,7 +239,7 @@ jobs:
         run: |
           cargo --version
           rustc --version  
-          cargo +stable install xargo
+          cargo +stable install xargo --version 0.3.25
           xargo --version
       - name: Download sccache
         run: |
@@ -255,7 +255,7 @@ jobs:
           SGX_MODE=HW make clippy
 
   XBuild-CLI:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -271,7 +271,7 @@ jobs:
         run: make build_windows_cli
 
   Integration-Tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Build docker testnet

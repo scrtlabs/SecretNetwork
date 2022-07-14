@@ -48,9 +48,9 @@ func GetTxCmd() *cobra.Command {
 		InstantiateContractCmd(),
 		ExecuteContractCmd(),
 		// Currently not supporting these commands
-		//MigrateContractCmd(cdc),
-		//UpdateContractAdminCmd(cdc),
-		//ClearContractAdminCmd(cdc),
+		// MigrateContractCmd(cdc),
+		// UpdateContractAdminCmd(cdc),
+		// ClearContractAdminCmd(cdc),
 	)
 	return txCmd
 }
