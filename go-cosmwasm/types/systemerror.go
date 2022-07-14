@@ -7,12 +7,12 @@ import (
 // SystemError captures all errors returned from the Rust code as SystemError.
 // Exactly one of the fields should be set.
 type SystemError struct {
-	InvalidRequest     *InvalidRequest     `json:"invalid_request,omitempty"`
-	InvalidResponse    *InvalidResponse    `json:"invalid_response,omitempty"`
-	NoSuchContract     *NoSuchContract     `json:"no_such_contract,omitempty"`
-	Unknown            *Unknown            `json:"unknown,omitempty"`
-	UnsupportedRequest *UnsupportedRequest `json:"unsupported_request,omitempty"`
-	ExceededRecursionLimit	*ExceededRecursionLimit	`json:"exceeded_recursion_limit,omitempty"`
+	InvalidRequest         *InvalidRequest         `json:"invalid_request,omitempty"`
+	InvalidResponse        *InvalidResponse        `json:"invalid_response,omitempty"`
+	NoSuchContract         *NoSuchContract         `json:"no_such_contract,omitempty"`
+	Unknown                *Unknown                `json:"unknown,omitempty"`
+	UnsupportedRequest     *UnsupportedRequest     `json:"unsupported_request,omitempty"`
+	ExceededRecursionLimit *ExceededRecursionLimit `json:"exceeded_recursion_limit,omitempty"`
 }
 
 var (

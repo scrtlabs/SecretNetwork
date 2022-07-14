@@ -122,7 +122,6 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 		msg.SentFunds,
 		msg.CallbackSig,
 	)
-
 	if err != nil {
 		return res, err
 	}

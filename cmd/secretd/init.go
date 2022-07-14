@@ -92,7 +92,7 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 					"ab6394e953e0b570bb1deeb5a8b387aa0dc6188a@scrt-seed-02.scrtlabs.com:26656", // SCRT Labs 2
 					"9cdaa5856e0245ecd73bd464308fb990fbc53b57@scrt-seed-03.scrtlabs.com:26656", // SCRT Labs 3
 				}
-				//Override default settings in config.toml
+				// Override default settings in config.toml
 				config.P2P.Seeds = strings.Join(seeds[:], ",")
 			}
 

@@ -15,9 +15,11 @@ import (
 	"github.com/spf13/cast"
 )
 
-const defaultLRUCacheSize = uint64(0)
-const defaultEnclaveLRUCacheSize = uint8(0) // can safely go up to 15
-const defaultQueryGasLimit = uint64(10_000_000)
+const (
+	defaultLRUCacheSize        = uint64(0)
+	defaultEnclaveLRUCacheSize = uint8(0) // can safely go up to 15
+	defaultQueryGasLimit       = uint64(10_000_000)
+)
 
 // base64 of a 64 byte key
 type ContractKey string
@@ -66,6 +68,7 @@ func NewContractInfo(codeID uint64, creator sdk.AccAddress, label string, create
 		Created: createdAt,
 	}
 }
+
 func (c *ContractInfo) ValidateBasic() error {
 	if c.CodeID == 0 {
 		return sdkerrors.Wrap(ErrEmpty, "code id")

@@ -5,13 +5,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
-	"path/filepath"
 )
 
 // Keeper will have a reference to Wasmer with it's own data directory.
@@ -24,7 +25,6 @@ type Keeper struct {
 
 // NewKeeper creates a new contract Keeper instance
 func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
-
 	if !bootstrap {
 		InitializeNode(homeDir, enclave)
 	}
@@ -38,7 +38,6 @@ func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, 
 }
 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
-
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
 	if !fileExists(seedPath) {

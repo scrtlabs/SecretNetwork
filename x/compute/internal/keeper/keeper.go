@@ -74,7 +74,7 @@ type Keeper struct {
 	queryGasLimit uint64
 	serviceRouter MsgServiceRouter
 	// authZPolicy   AuthorizationPolicy
-	//paramSpace    subspace.Subspace
+	// paramSpace    subspace.Subspace
 }
 
 // MsgServiceRouter expected MsgServiceRouter interface
@@ -332,7 +332,6 @@ func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1w
 				Instantiate: msg.Wasm.Instantiate,
 			},
 		}
-
 	} else if msg.Gov != nil {
 		subMsg.Msg = v1wasmTypes.CosmosMsg{
 			Gov: &v1wasmTypes.GovMsg{
@@ -734,7 +733,6 @@ func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress
 }
 
 func (k Keeper) GetContractHash(ctx sdk.Context, contractAddress sdk.AccAddress) []byte {
-
 	codeId := k.GetContractInfo(ctx, contractAddress).CodeID
 
 	hash := k.GetCodeInfo(ctx, codeId).CodeHash
@@ -766,13 +764,12 @@ func (k Keeper) setContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress,
 func (k Keeper) setContractCustomInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractCustomInfo) {
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey)
-	//println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey))
+	// println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey))
 	store.Set(types.GetContractLabelPrefix(contract.Label), contractAddress)
-	//println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress))
+	// println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress))
 }
 
 func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo, types.ContractCustomInfo) bool) {
-
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.ContractKeyPrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	for ; iter.Valid(); iter.Next() {
@@ -780,8 +777,8 @@ func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, typ
 		k.cdc.MustUnmarshal(iter.Value(), &contract)
 
 		enclaveId := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
-		//println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId))
-		//println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
+		// println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId))
+		// println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
 
 		contractCustomInfo := types.ContractCustomInfo{
 			EnclaveKey: enclaveId,
@@ -942,7 +939,6 @@ func contractAddress(codeID, instanceID uint64) sdk.AccAddress {
 	// overflow 32 bits. This is highly improbable, but something that could be refactored.
 	contractID := codeID<<32 + instanceID
 	return addrFromUint64(contractID)
-
 }
 
 func (k Keeper) GetNextCodeID(ctx sdk.Context) uint64 {
@@ -1078,7 +1074,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 	marshaledReply, error := json.Marshal(reply)
-	//marshaledReply = append(replyToContractHash, marshaledReply...)
+	// marshaledReply = append(replyToContractHash, marshaledReply...)
 	marshaledReply = append(ogTx[0:64], marshaledReply...)
 
 	if error != nil {
@@ -1110,5 +1106,4 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	default:
 		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
-
 }

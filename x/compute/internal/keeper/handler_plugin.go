@@ -72,7 +72,8 @@ func NewMessageHandler(
 	channelKeeper channelkeeper.Keeper,
 	capabilityKeeper capabilitykeeper.ScopedKeeper,
 	portSource types.ICS20TransferPortSource,
-	unpacker codectypes.AnyUnpacker) Messenger {
+	unpacker codectypes.AnyUnpacker,
+) Messenger {
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
 		NewSDKMessageHandler(router, encoders),
@@ -140,14 +141,16 @@ func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, cont
 	return nil, nil, h.channelKeeper.SendPacket(ctx, channelCap, packet)
 }
 
-type BankEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.BankMsg) ([]sdk.Msg, error)
-type CustomEncoder func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
-type DistributionEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.DistributionMsg) ([]sdk.Msg, error)
-type GovEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.GovMsg) ([]sdk.Msg, error)
-type IBCEncoder func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *v1wasmTypes.IBCMsg) ([]sdk.Msg, error)
-type StakingEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk.Msg, error)
-type StargateEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.StargateMsg) ([]sdk.Msg, error)
-type WasmEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, error)
+type (
+	BankEncoder         func(sender sdk.AccAddress, msg *v1wasmTypes.BankMsg) ([]sdk.Msg, error)
+	CustomEncoder       func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
+	DistributionEncoder func(sender sdk.AccAddress, msg *v1wasmTypes.DistributionMsg) ([]sdk.Msg, error)
+	GovEncoder          func(sender sdk.AccAddress, msg *v1wasmTypes.GovMsg) ([]sdk.Msg, error)
+	IBCEncoder          func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *v1wasmTypes.IBCMsg) ([]sdk.Msg, error)
+	StakingEncoder      func(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk.Msg, error)
+	StargateEncoder     func(sender sdk.AccAddress, msg *v1wasmTypes.StargateMsg) ([]sdk.Msg, error)
+	WasmEncoder         func(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, error)
+)
 
 type MessageEncoders struct {
 	Bank         BankEncoder
@@ -524,7 +527,6 @@ func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress
 	)
 	for _, sdkMsg := range sdkMsgs {
 		sdkEvents, sdkData, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
-
 		if err != nil {
 			data = append(data, sdkData)
 			return nil, data, err
@@ -536,7 +538,7 @@ func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress
 
 	return events, data, nil
 
-	//return nil, nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of CosmosMsgVersion")
+	// return nil, nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of CosmosMsgVersion")
 }
 
 func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (sdk.Events, []byte, error) {

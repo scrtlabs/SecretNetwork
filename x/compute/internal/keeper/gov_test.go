@@ -15,9 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
 )
 
-var (
-	TestProposal = types.NewTextProposal("Test", "description")
-)
+var TestProposal = types.NewTextProposal("Test", "description")
 
 type GovInitMsg struct{}
 
