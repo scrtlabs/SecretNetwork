@@ -283,6 +283,9 @@ func CmdDecryptText() *cobra.Command {
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
+			if err != nil {
+				return fmt.Errorf("error while trying to get the sender's public key: %w", err)
+			}
 
 			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
 				return fmt.Errorf("cannot decrypt, not original tx sender")

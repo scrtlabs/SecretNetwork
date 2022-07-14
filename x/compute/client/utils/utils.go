@@ -119,7 +119,13 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 	}
 
 	privkey, err = hex.DecodeString(keyPair.Private)
+	if err != nil {
+		return nil, nil, err
+	}
 	pubkey, err = hex.DecodeString(keyPair.Public)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// TODO verify pubkey
 
@@ -165,6 +171,10 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 	}
 
 	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, consensusIoPubKeyBytes)
+	if err != nil {
+		fmt.Println("Failed to derive tx encryption key")
+		return nil, err
+	}
 
 	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
 
@@ -189,6 +199,9 @@ func (ctx WASMContext) OfflineEncrypt(plaintext []byte, pathToMasterIoKey string
 	}
 
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
+	if err != nil {
+		return nil, err
+	}
 
 	nonce := make([]byte, 32)
 	_, err = rand.Read(nonce)
@@ -209,6 +222,10 @@ func (ctx WASMContext) OfflineEncrypt(plaintext []byte, pathToMasterIoKey string
 // Encrypt encrypts
 func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
 
 	nonce := make([]byte, 32)
 	_, err = rand.Read(nonce)
@@ -233,6 +250,9 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 	}
 
 	txSenderPrivKey, _, err := ctx.GetTxSenderKeyPair()
+	if err != nil {
+		return nil, err
+	}
 
 	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
 	if err != nil {

@@ -148,6 +148,7 @@ func TestQueryContractState(t *testing.T) {
 	}
 
 	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
 
 	addr, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, "demo contract to query", deposit, nil)
 	require.NoError(t, err)
@@ -284,6 +285,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	}
 
 	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
+	require.NoError(t, err)
 
 	// manage some realistic block settings
 	var h int64 = 10

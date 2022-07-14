@@ -492,6 +492,9 @@ Please report any issues with this command
 			}`, base64.StdEncoding.EncodeToString(cert)))
 
 			resp, err := http.Post(fmt.Sprintf(`%s`, regUrl), "application/json", bytes.NewBuffer(data))
+			if err != nil {
+				log.Fatalln(err)
+			}
 			defer resp.Body.Close()
 
 			body, err := ioutil.ReadAll(resp.Body)

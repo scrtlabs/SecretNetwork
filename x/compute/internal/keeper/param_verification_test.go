@@ -728,8 +728,11 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	fmt.Printf("wallet A sig: %v\n", walletASignature)
 
 	err = multisig.AddSignatureFromPubKey(multimultiSig, &walletBSignatureData, privKeyB.PubKey(), multiSigPubKeys)
+	require.NoError(t, err)
 	err = multisig.AddSignatureFromPubKey(multimultiSig, multiSignature, multisigAccount.public, multiSigPubKeys)
+	require.NoError(t, err)
 	err = multisig.AddSignatureFromPubKey(multimultiSig, &walletASignatureData, privKeyA.PubKey(), multiSigPubKeys)
+	require.NoError(t, err)
 
 	fmt.Printf("multimultisig sig: %v\n", multimultiSig)
 

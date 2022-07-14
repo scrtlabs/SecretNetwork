@@ -184,7 +184,6 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 				if err != nil && len(platInfo) != 105 {
 					return nil, errors.New("illegal PlatformInfoBlob")
 				}
-				platInfo = platInfo[4:]
 
 				//piBlob := parsePlatform(platInfo)
 				//piBlobJson, err := json.Marshal(piBlob)

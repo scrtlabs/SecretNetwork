@@ -511,6 +511,9 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 			Sequence:      creatorAcc.GetSequence(),
 		}
 		bytesToSign, err := signModeHandler.GetSignBytes(sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
+		if err != nil {
+			panic(err)
+		}
 
 		signBytes, err := privKey.Sign(bytesToSign)
 		if err != nil {
