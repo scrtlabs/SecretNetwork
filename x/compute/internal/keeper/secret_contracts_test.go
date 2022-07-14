@@ -1575,6 +1575,7 @@ func TestExternalQueryCalleePanic(t *testing.T) {
 		})
 	}
 }
+
 func TestExternalQueryCalleeStdError(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -1626,7 +1627,6 @@ func TestExternalQueryBadSenderABI(t *testing.T) {
 				require.Equal(t, "test_contract::contract::QueryMsg", err.ParseErr.Target)
 				require.Equal(t, "Invalid type", err.ParseErr.Msg)
 			}
-
 		})
 	}
 }

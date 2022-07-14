@@ -157,7 +157,6 @@ func TestMaskReflectContractSend(t *testing.T) {
 	checkAccount(t, ctx, accKeeper, keeper.bankKeeper, maskAddr, sdk.NewCoins(sdk.NewInt64Coin("denom", 26000))) // 40k - 14k (from send)
 	checkAccount(t, ctx, accKeeper, keeper.bankKeeper, escrowAddr, sdk.Coins{})                                  // emptied reserved
 	checkAccount(t, ctx, accKeeper, keeper.bankKeeper, bob, sdk.NewCoins(sdk.NewInt64Coin("denom", 39000)))      // all escrow of 25k + 14k
-
 }
 
 func TestMaskReflectCustomMsg(t *testing.T) {
@@ -428,7 +427,6 @@ func reflectPlugins() *QueryPlugins {
 }
 
 func performCustomQuery(_ sdk.Context, request json.RawMessage) ([]byte, error) {
-
 	var custom reflectCustomQuery
 	err := json.Unmarshal(request, &custom)
 	if err != nil {

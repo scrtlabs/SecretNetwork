@@ -1,3 +1,4 @@
+//go:build secretcli
 // +build secretcli
 
 package main
@@ -9,7 +10,6 @@ import (
 const flagReset = "reset"
 
 func InitAttestation() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "init-enclave [output-file]",
 		Short: "Perform remote attestation of the enclave",
@@ -29,7 +29,6 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 }
 
 func InitBootstrapCmd() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "init-bootstrap [node-exchange-file] [io-exchange-file]",
 		Short: "Perform bootstrap initialization",

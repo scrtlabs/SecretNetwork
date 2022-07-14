@@ -92,7 +92,7 @@ func TestQueryContractLabel(t *testing.T) {
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			//binResult, err := q(ctx, spec.srcPath, spec.srcReq)
+			// binResult, err := q(ctx, spec.srcPath, spec.srcReq)
 			binResult, err := q(ctx, spec.srcPath, spec.srcReq)
 			// require.True(t, spec.expErr.Is(err), "unexpected error")
 			require.True(t, spec.expErr.Is(err), err)

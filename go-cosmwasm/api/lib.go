@@ -19,13 +19,16 @@ import (
 
 // nice aliases to the rust names
 type i32 = C.int32_t
-type i64 = C.int64_t
-type u64 = C.uint64_t
-type u32 = C.uint32_t
-type u8 = C.uint8_t
-type u8_ptr = *C.uint8_t
-type usize = C.uintptr_t
-type cint = C.int
+
+type (
+	i64    = C.int64_t
+	u64    = C.uint64_t
+	u32    = C.uint32_t
+	u8     = C.uint8_t
+	u8_ptr = *C.uint8_t
+	usize  = C.uintptr_t
+	cint   = C.int
+)
 
 type Cache struct {
 	ptr *C.cache_t
@@ -267,7 +270,6 @@ func AnalyzeCode(
 	defer runtime.KeepAlive(codeHash)
 	errMsg := C.Buffer{}
 	report, err := C.analyze_code(cache.ptr, cs, &errMsg)
-
 	if err != nil {
 		return nil, errorWithMessage(err, errMsg)
 	}
