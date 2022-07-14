@@ -1,15 +1,16 @@
 package keeper
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	eng "github.com/enigmampc/SecretNetwork/types"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func init() {
@@ -35,10 +36,10 @@ func TestNewKeeper_Node(t *testing.T) {
 
 	seedPath := filepath.Join(tempDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
-	err = os.MkdirAll(filepath.Join(tempDir, types.SecretNodeCfgFolder), 0700)
+	err = os.MkdirAll(filepath.Join(tempDir, types.SecretNodeCfgFolder), 0o700)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(seedPath, CreateTestSeedConfig(t), 0700)
+	err = ioutil.WriteFile(seedPath, CreateTestSeedConfig(t), 0o700)
 	require.NoError(t, err)
 
 	_, regKeeper := CreateTestInput(t, false, tempDir, false)
@@ -89,5 +90,4 @@ func TestKeeper_RegisterNode(t *testing.T) {
 
 	_, err = regKeeper.RegisterNode(ctx, cert)
 	require.NoError(t, err)
-
 }

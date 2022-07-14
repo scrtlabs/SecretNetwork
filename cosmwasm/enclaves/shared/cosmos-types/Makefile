@@ -1,7 +1,7 @@
 SGX_MODE ?= HW
 
 ifeq ($(SGX_MODE), SW)
-	Rust_Flags := "-Z force-unstable-if-unmarked -C target-feature=+aes,+ssse3"
+	Rust_Flags := "-Z force-unstable-if-unmarked"
 else
 	Rust_Flags := "-Z force-unstable-if-unmarked -C target-cpu=skylake"
 endif

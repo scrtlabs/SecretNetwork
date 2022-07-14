@@ -78,6 +78,7 @@ func multisigTxCreator(
 	signModeHandler := multisigTxCreatorForExisting(t, ctx, multisigAccount, signers, actualSigners, sdkMsg)
 	return signModeHandler, signers, multisigAccount
 }
+
 func multisigTxCreatorForExisting(
 	t *testing.T, ctx *sdk.Context, multisigAccount Account, signers []Account, actualSigners int, sdkMsg sdk.Msg,
 ) authsigning.SignModeHandler {
@@ -803,7 +804,7 @@ func TestInvalidKeyType(t *testing.T) {
 
 	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
-	//nonce := initMsgBz[0:32]
+	// nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
 		Sender: edAddr,
