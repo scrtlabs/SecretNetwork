@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -27,11 +28,13 @@ func NewMessageHandler(router sdk.Router, customEncoders *MessageEncoders) Messa
 	}
 }
 
-type BankEncoder func(sender sdk.AccAddress, msg *wasmTypes.BankMsg) ([]sdk.Msg, error)
-type CustomEncoder func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
-type StakingEncoder func(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.Msg, error)
-type WasmEncoder func(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, error)
-type GovEncoder func(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error)
+type (
+	BankEncoder    func(sender sdk.AccAddress, msg *wasmTypes.BankMsg) ([]sdk.Msg, error)
+	CustomEncoder  func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
+	StakingEncoder func(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.Msg, error)
+	WasmEncoder    func(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, error)
+	GovEncoder     func(sender sdk.AccAddress, msg *wasmTypes.GovMsg) ([]sdk.Msg, error)
+)
 
 type MessageEncoders struct {
 	Bank    BankEncoder
@@ -282,7 +285,6 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *wasmTypes.WasmMsg) ([]sdk.Msg, er
 }
 
 func (k Keeper) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg wasmTypes.CosmosMsg) (events sdk.Events, data []byte, err error) {
-
 	sdkMsgs, err := k.messenger.encoders.Encode(contractAddr, msg)
 	if err != nil {
 		return nil, nil, err
@@ -292,7 +294,7 @@ func (k Keeper) Dispatch(ctx sdk.Context, contractAddr sdk.AccAddress, msg wasmT
 		if err != nil {
 			return nil, nil, err
 		}
-		//return sdkEvents, msgData, err
+		// return sdkEvents, msgData, err
 	}
 	return nil, nil, nil
 }
@@ -356,7 +358,7 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	//}
 
 	// append message action attribute
-	//events = append(events, sdkEvents...)
+	// events = append(events, sdkEvents...)
 
 	return nil, nil, nil
 }

@@ -259,7 +259,7 @@ func TestIsSimulationMode(t *testing.T) {
 	}
 	for msg := range specs {
 		t.Run(msg, func(t *testing.T) {
-			//require.Equal(t, spec.exp, isSimulationMode(spec.ctx))
+			// require.Equal(t, spec.exp, isSimulationMode(spec.ctx))
 		})
 	}
 }
@@ -556,7 +556,7 @@ func TestExecute(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 
 	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
-	//keyStr := hex.EncodeToString(key)
+	// keyStr := hex.EncodeToString(key)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(key)),
@@ -607,12 +607,12 @@ func TestExecute(t *testing.T) {
 	gasBefore = ctx.GasMeter().GasConsumed()
 
 	require.NoError(t, err)
-	//res, _, _, err := execHelper(t, keeper, trialCtx, addr, creator, `{"release":{}}`, true, defaultGasForTests)
+	// res, _, _, err := execHelper(t, keeper, trialCtx, addr, creator, `{"release":{}}`, true, defaultGasForTests)
 
 	initMsgBz = []byte(`{"release":{}}`)
 
 	key = keeper.GetCodeInfo(ctx, contractID).CodeHash
-	//keyStr := hex.EncodeToString(key)
+	// keyStr := hex.EncodeToString(key)
 
 	msg = types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(key)),
