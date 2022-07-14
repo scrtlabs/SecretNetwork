@@ -84,9 +84,9 @@ type VoteMsg struct {
 }
 
 var (
-	Yes = "Yes"
-	Abstain = "Abstain"
-	No = "No"
+	Yes        = "Yes"
+	Abstain    = "Abstain"
+	No         = "No"
 	NoWithVeto = "NoWithVeto"
 )
 

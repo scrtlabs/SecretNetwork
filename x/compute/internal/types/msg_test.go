@@ -31,13 +31,12 @@ func TestBuilderRegexp(t *testing.T) {
 				assert.Error(t, err)
 			}
 		})
-
 	}
 }
 
 func TestStoreCodeValidation(t *testing.T) {
 	badAddress := sdk.AccAddress(make([]byte, 2000))
-	//require.NoError(t, err)
+	// require.NoError(t, err)
 	// proper address size
 	goodAddress := sdk.AccAddress(make([]byte, 20))
 
@@ -239,7 +238,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 
 func TestExecuteContractValidation(t *testing.T) {
 	badAddress := sdk.AccAddress(make([]byte, 2000))
-	//require.NoError(t, err)
+	// require.NoError(t, err)
 	// proper address size
 	goodAddress := sdk.AccAddress(make([]byte, 20))
 

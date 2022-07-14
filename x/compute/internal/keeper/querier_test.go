@@ -21,7 +21,7 @@ import (
 
 func TestQueryContractLabel(t *testing.T) {
 	encoders := DefaultEncoders()
-	ctx, keepers := CreateTestInput(t, false,SupportedFeatures, &encoders, nil)
+	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
@@ -87,7 +87,7 @@ func TestQueryContractLabel(t *testing.T) {
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			//binResult, err := q(ctx, spec.srcPath, spec.srcReq)
+			// binResult, err := q(ctx, spec.srcPath, spec.srcReq)
 			binResult, err := q(ctx, spec.srcPath, spec.srcReq)
 			// require.True(t, spec.expErr.Is(err), "unexpected error")
 			require.True(t, spec.expErr.Is(err), err)
