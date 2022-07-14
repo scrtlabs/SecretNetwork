@@ -21,7 +21,7 @@ const (
 	QueryContractAddress    = "label"
 	QueryContractKey        = "contract-key"
 	QueryContractHash       = "contract-hash"
-	//QueryContractHistory    = "contract-history"
+	// QueryContractHistory    = "contract-history"
 )
 
 const QueryMethodContractStateSmart = "smart"
@@ -106,7 +106,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			return nil, nil
 		}
 
-		//bz, err = keeper.legacyAmino.MarshalJSON(rsp)
+		// bz, err = keeper.legacyAmino.MarshalJSON(rsp)
 		bz, err = json.MarshalIndent(rsp, "", "  ")
 		if err != nil {
 			return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
@@ -159,5 +159,4 @@ func queryContractState(ctx sdk.Context, bech, queryMethod string, data []byte, 
 		}
 		return bz, nil
 	*/
-
 }

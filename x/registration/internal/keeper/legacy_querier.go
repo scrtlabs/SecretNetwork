@@ -3,10 +3,11 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
+	"reflect"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"reflect"
 )
 
 const (

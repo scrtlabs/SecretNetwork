@@ -98,7 +98,7 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 			return nil, nil, err
 		}
 
-		err = ioutil.WriteFile(keyPairFilePath, keyPairJSONBytes, 0644)
+		err = ioutil.WriteFile(keyPairFilePath, keyPairJSONBytes, 0o644)
 		if err != nil {
 			return nil, nil, err
 		}

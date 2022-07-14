@@ -1,12 +1,13 @@
 package keeper
 
 import (
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInitGenesisNoMaster(t *testing.T) {

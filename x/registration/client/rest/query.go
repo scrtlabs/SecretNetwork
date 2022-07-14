@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
-	"net/http"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
@@ -168,7 +169,6 @@ func newArgDecoder(def func(string) ([]byte, error)) *argumentDecoder {
 }
 
 func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
-
 	switch a.encoding {
 	case "hex":
 		return hex.DecodeString(s)
