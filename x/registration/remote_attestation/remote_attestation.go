@@ -7,8 +7,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 /*
@@ -134,7 +135,7 @@ func verifyCert(payload []byte) ([]byte, error) {
 		// note: there's no way to not validate the time, and we don't want to write this code
 		// ourselves. We also can't just ignore the error message, since that means that the rest of
 		// the validation didn't happen (time is validated early on)
-		CurrentTime: time.Date(2023, 11, 04, 00, 00, 00, 00, time.UTC),
+		CurrentTime: time.Date(2023, 11, 0o4, 0o0, 0o0, 0o0, 0o0, time.UTC),
 	}
 
 	if _, err := certServer.Verify(opts); err != nil {
@@ -159,11 +160,11 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 
 	// 1. Check timestamp is within 24H
 	if qr.Timestamp != "" {
-		//timeFixed := qr.Timestamp + "+0000"
-		//timeFixed := qr.Timestamp + "Z"
-		//ts, _ := time.Parse(time.RFC3339, timeFixed)
-		//now := time.Now().Unix()
-		//fmt.Println("Time diff = ", now-ts.Unix())
+		// timeFixed := qr.Timestamp + "+0000"
+		// timeFixed := qr.Timestamp + "Z"
+		// ts, _ := time.Parse(time.RFC3339, timeFixed)
+		// now := time.Now().Unix()
+		// fmt.Println("Time diff = ", now-ts.Unix())
 	} else {
 		return nil, errors.New("Failed to fetch timestamp from attestation report")
 	}
@@ -171,7 +172,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 	// 2. Verify quote status (mandatory field)
 
 	if qr.IsvEnclaveQuoteStatus != "" {
-		//fmt.Println("isvEnclaveQuoteStatus = ", qr.IsvEnclaveQuoteStatus)
+		// fmt.Println("isvEnclaveQuoteStatus = ", qr.IsvEnclaveQuoteStatus)
 		switch qr.IsvEnclaveQuoteStatus {
 		case "OK":
 			break
@@ -240,13 +241,13 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 		qrData := parseReport(qb, quoteHex)
 
 		// todo: possibly verify mr signer/enclave?
-		//fmt.Println("Quote = [" + quoteBytes[:len(quoteBytes)-2] + "]")
-		//fmt.Println("sgx quote version = ", qrData.version)
-		//fmt.Println("sgx quote signature type = ", qrData.signType)
-		//fmt.Println("sgx quote report_data = ", qrData.reportBody.reportData)
-		//fmt.Println("sgx quote mr_enclave = ", qrData.reportBody.mrEnclave)
-		//fmt.Println("sgx quote mr_signer = ", qrData.reportBody.mrSigner)
-		//fmt.Println("Anticipated public key = ", pubHex)
+		// fmt.Println("Quote = [" + quoteBytes[:len(quoteBytes)-2] + "]")
+		// fmt.Println("sgx quote version = ", qrData.version)
+		// fmt.Println("sgx quote signature type = ", qrData.signType)
+		// fmt.Println("sgx quote report_data = ", qrData.reportBody.reportData)
+		// fmt.Println("sgx quote mr_enclave = ", qrData.reportBody.mrEnclave)
+		// fmt.Println("sgx quote mr_signer = ", qrData.reportBody.mrSigner)
+		// fmt.Println("Anticipated public key = ", pubHex)
 
 		if qrData.ReportBody.ReportData != pubHex {
 			// err := errors.New("Failed to authenticate certificate public key")
