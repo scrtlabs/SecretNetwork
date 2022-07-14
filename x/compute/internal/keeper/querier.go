@@ -118,7 +118,6 @@ func (q GrpcQuerier) SmartContractState(c context.Context, req *types.QuerySmart
 		return nil, types.ErrNotFound
 	}
 	return &types.QuerySmartContractStateResponse{Data: rsp}, nil
-
 }
 
 func (q GrpcQuerier) Code(c context.Context, req *types.QueryCodeRequest) (*types.QueryCodeResponse, error) {
@@ -159,7 +158,6 @@ func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryContractA
 		return nil, types.ErrNotFound
 	}
 	return &types.QueryContractAddressByLabelResponse{Address: rsp}, nil
-
 }
 
 func (q GrpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyRequest) (*types.QueryContractKeyResponse, error) {
@@ -175,7 +173,6 @@ func (q GrpcQuerier) ContractKey(c context.Context, req *types.QueryContractKeyR
 		return nil, types.ErrNotFound
 	}
 	return &types.QueryContractKeyResponse{Key: rsp}, nil
-
 }
 
 func (q GrpcQuerier) ContractHash(c context.Context, req *types.QueryContractHashRequest) (*types.QueryContractHashResponse, error) {
@@ -191,7 +188,6 @@ func (q GrpcQuerier) ContractHash(c context.Context, req *types.QueryContractHas
 		return nil, types.ErrNotFound
 	}
 	return &types.QueryContractHashResponse{CodeHash: rsp}, nil
-
 }
 
 func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {

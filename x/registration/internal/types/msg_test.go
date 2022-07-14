@@ -16,7 +16,7 @@ func TestMsgRaAuthenticateRoute(t *testing.T) {
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 	// coins := sdk.NewCoins(sdk.NewInt64Coin("atom", 10))
-	var msg = RaAuthenticate{
+	msg := RaAuthenticate{
 		addr1,
 		cert,
 	}
@@ -26,7 +26,6 @@ func TestMsgRaAuthenticateRoute(t *testing.T) {
 }
 
 func TestMsgSendValidation(t *testing.T) {
-
 	_ = os.Setenv("SGX_MODE", "SW")
 
 	addr0 := sdk.AccAddress([]byte("qwlnmxj7prpx8rysxm2u"))
@@ -44,10 +43,11 @@ func TestMsgSendValidation(t *testing.T) {
 	cases := []struct {
 		valid bool
 		tx    RaAuthenticate
-	}{{true, RaAuthenticate{
-		addr0,
-		cert,
-	}},
+	}{
+		{true, RaAuthenticate{
+			addr0,
+			cert,
+		}},
 		// invalid address send
 		{false, RaAuthenticate{
 			addr0,
@@ -75,7 +75,7 @@ func TestMsgSendGetSignBytes(t *testing.T) {
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
-	var msg = RaAuthenticate{
+	msg := RaAuthenticate{
 		addr0,
 		cert,
 	}
@@ -90,7 +90,7 @@ func TestMsgSendGetSigners(t *testing.T) {
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
-	var msg = RaAuthenticate{
+	msg := RaAuthenticate{
 		addr0,
 		cert,
 	}

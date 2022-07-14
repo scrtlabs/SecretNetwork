@@ -3,9 +3,10 @@ package keeper
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"io"
 	"io/ioutil"
+
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
 // magic bytes to identify gzip.

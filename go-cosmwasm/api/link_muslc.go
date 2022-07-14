@@ -1,3 +1,4 @@
+//go:build linux && muslc
 // +build linux,muslc
 
 package api
