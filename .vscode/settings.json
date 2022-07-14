@@ -9,9 +9,11 @@
   "rust-analyzer.rustfmt.rangeFormatting.enable": true,
   "rust-analyzer.diagnostics.disabled": ["unresolved-macro-call"],
   "[rust]": {
+    "editor.formatOnSave": true,
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
 
+  "go.formatTool": "gofumpt",
   "go.alternateTools": {
     " goreturns": "gofumpt"
   },
@@ -20,6 +22,7 @@
     "RUST_BACKTRACE": "1"
   },
   "[go]": {
+    "editor.formatOnSave": true,
     "editor.defaultFormatter": "golang.go"
   }
 }
