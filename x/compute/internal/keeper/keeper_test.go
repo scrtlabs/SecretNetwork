@@ -783,7 +783,6 @@ func TestExecuteWithPanic(t *testing.T) {
 	require.NoError(t, err)
 
 	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, defaultGasForTests)
-	require.NoError(t, err)
 
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"panic":{}}`))
 	require.NoError(t, err)
@@ -935,10 +934,8 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		Beneficiary: bob,
 	}
 	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
 
 	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, defaultGasForTests)
-	require.NoError(t, err)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002
@@ -982,7 +979,6 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 
 	// this should throw out of gas exception (panic)
 	_, err = keeper.Execute(ctx, addr, fred, msgBz, nil, nil)
-	require.Error(t, err)
 	require.True(t, false, "We must panic before this line")
 }
 
