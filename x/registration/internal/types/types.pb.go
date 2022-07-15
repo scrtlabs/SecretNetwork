@@ -6,12 +6,13 @@ package types
 import (
 	bytes "bytes"
 	fmt "fmt"
-	github_com_enigmampc_SecretNetwork_x_registration_remote_attestation "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
 	io "io"
 	math "math"
 	math_bits "math/bits"
+
+	github_com_enigmampc_SecretNetwork_x_registration_remote_attestation "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
