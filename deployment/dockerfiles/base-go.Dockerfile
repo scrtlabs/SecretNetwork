@@ -6,8 +6,8 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
-ADD https://go.dev/dl/go1.17.7.linux-amd64.tar.gz go1.17.7.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.17.7.linux-amd64.tar.gz
+ADD https://go.dev/dl/go1.18.4.linux-amd64.tar.gz go1.18.4.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.18.4.linux-amd64.tar.gz
 RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 
 # Set working directory for the build
