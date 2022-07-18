@@ -25,17 +25,18 @@ ENV RUSTUP_HOME=${USER_HOME}/.cargo/bin
 
 COPY deployment/.devcontainer/library-scripts/*.sh deployment/.devcontainer/library-scripts/*.env /tmp/library-scripts/
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && /bin/bash /tmp/library-scripts/common-debian.sh "${INSTALL_ZSH}" "${USERNAME}" "${USER_UID}" "${USER_GID}" "${UPGRADE_PACKAGES}" "true" "true"\
+    && /bin/bash /tmp/library-scripts/common-debian.sh "${INSTALL_ZSH}" "${USERNAME}" "${USER_UID}" "${USER_GID}" "${UPGRADE_PACKAGES}" "true" "true"
     #
     # ****************************************************************************
     # * TODO: Add any additional OS packages you want included in the definition *
     # * here. We want to do this before cleanup to keep the "layer" small.       *
     # ****************************************************************************
     # && apt-get -y install --no-install-recommends <your-package-list-here> \
-    # \
-    && bash /tmp/library-scripts/rust-debian.sh "${CARGO_HOME}" "${RUSTUP_HOME}" "${USERNAME}" "true" "true" \
-    && bash /tmp/library-scripts/go-debian.sh "none" "${GOROOT}" "${GOPATH}" "${USERNAME}" "false" \
-    && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/library-scripts
+RUN bash /tmp/library-scripts/rust-debian.sh "${CARGO_HOME}" "${RUSTUP_HOME}" "${USERNAME}" "true" "true"
+
+RUN bash /tmp/library-scripts/go-debian.sh "none" "${GOROOT}" "${GOPATH}" "${USERNAME}" "false"
+
+RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/library-scripts
 
 # [Optional] Uncomment this section to install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
