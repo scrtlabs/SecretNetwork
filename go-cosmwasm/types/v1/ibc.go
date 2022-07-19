@@ -1,8 +1,6 @@
 package v1types
 
-import (
-	abci "github.com/tendermint/tendermint/abci/types"
-)
+import v010msgtypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 
 type IBCEndpoint struct {
 	PortID    string `json:"port_id"`
@@ -137,16 +135,19 @@ func (m *IBCCloseConfirm) ToMsg() IBCChannelCloseMsg {
 }
 
 type IBCPacketReceiveMsg struct {
-	Packet IBCPacket `json:"packet"`
+	Packet  IBCPacket `json:"packet"`
+	Relayer string    `json:"relayer"`
 }
 
 type IBCPacketAckMsg struct {
 	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
 	OriginalPacket  IBCPacket          `json:"original_packet"`
+	Relayer         string             `json:"relayer"`
 }
 
 type IBCPacketTimeoutMsg struct {
-	Packet IBCPacket `json:"packet"`
+	Packet  IBCPacket `json:"packet"`
+	Relayer string    `json:"relayer"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back
@@ -196,10 +197,17 @@ type IBCPacket struct {
 
 // IBCChannelOpenResult is the raw response from the ibc_channel_open call.
 // This is mirrors Rust's ContractResult<()>.
-// We just check if Err == "" to see if this is success (no other data on success)
+// Check if Err == "" to see if this is success
+// On Success, IBCV3ChannelOpenResponse *may* be set if the contract is ibcv3 compatible and wishes to
+// define a custom version in the handshake.
 type IBCChannelOpenResult struct {
-	Ok  *struct{} `json:"ok,omitempty"`
-	Err string    `json:"error,omitempty"`
+	Ok  *IBC3ChannelOpenResponse `json:"ok,omitempty"`
+	Err string                   `json:"error,omitempty"`
+}
+
+// IBC3ChannelOpenResponse is version negotiation data for the handshake
+type IBC3ChannelOpenResponse struct {
+	Version string `json:"version"`
 }
 
 // This is the return value for the majority of the ibc handlers.
@@ -223,7 +231,7 @@ type IBCBasicResponse struct {
 	// "fire and forget".
 	Messages []SubMsg `json:"messages"`
 	// attributes for a log event to return over abci interface
-	Attributes []abci.EventAttribute `json:"attributes"`
+	Attributes []v010msgtypes.LogAttribute `json:"attributes"`
 	// custom events (separate from the main one that contains the attributes
 	// above)
 	Events []Event `json:"events"`
@@ -254,8 +262,8 @@ type IBCReceiveResponse struct {
 	// If the ReplyOn value matches the result, the runtime will invoke this
 	// contract's `reply` entry point after execution. Otherwise, this is all
 	// "fire and forget".
-	Messages   []SubMsg              `json:"messages"`
-	Attributes []abci.EventAttribute `json:"attributes"`
+	Messages   []SubMsg                    `json:"messages"`
+	Attributes []v010msgtypes.LogAttribute `json:"attributes"`
 	// custom events (separate from the main one that contains the attributes
 	// above)
 	Events []Event `json:"events"`

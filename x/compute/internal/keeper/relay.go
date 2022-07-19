@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -27,7 +28,6 @@ func (k Keeper) OnOpenChannel(
 	msg v1types.IBCChannelOpenMsg,
 ) (string, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "ibc-open-channel")
-	version := ""
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: ibc-open-channel")
 
@@ -68,18 +68,16 @@ func (k Keeper) OnOpenChannel(
 		return "", sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
-	/////////
-	res, gasUsed, execErr := k.wasmVM.IBCChannelOpen(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, costJSONDeserialization)
-
-	if execErr != nil {
-		return "", sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	switch resp := res.(type) {
+	case *v1types.IBC3ChannelOpenResponse:
+		if resp != nil {
+			return resp.Version, nil
+		} else {
+			return "", nil
+		}
+	default:
+		return "", sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot cast res to IBC3ChannelOpenResponse: %+v", res))
 	}
-
-	if res != nil {
-		version = res.Version
-	}
-
-	return version, nil
 }
 
 // OnConnectChannel calls the contract to let it know the IBC channel was established.
