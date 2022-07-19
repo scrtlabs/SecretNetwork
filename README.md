@@ -1,4 +1,4 @@
-![Secret Network](logo.png)
+![Secret Network](sn-logo.png)
 
 <p align="center">
 Secret Network secures the decentralized web
@@ -11,6 +11,13 @@ Secret Network is a blockchain-based, open-source protocol that lets anyone perf
 Mainnet is out! Get the latest release at [https://github.com/scrtlabs/SecretNetwork/releases/latest](https://github.com/scrtlabs/SecretNetwork/releases/latest).
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+
+# Getting Started (gitpod)
+
+Click the button below to start a new development environment:
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/scrtlabs/SecretNetwork)
+
 
 # Community
 
