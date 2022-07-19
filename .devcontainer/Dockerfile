@@ -110,6 +110,7 @@ RUN apt-get update && \
     autoconf \
     libtool \
     automake \
+    clang \
     #### SGX installer dependencies ####
     g++ make libcurl4 libssl1.1 && \
     rm -rf /var/lib/apt/lists/*
