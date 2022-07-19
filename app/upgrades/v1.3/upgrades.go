@@ -15,7 +15,6 @@ const UpgradeName = "v1.3"
 func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
-
 		// Assaf: Set version map for all modules because for some
 		// reason it's not already set in upgradekeepr.
 		// We upgrade from cosmos-sdk v0.44.5 to v0.45.4 and ibc-go v1.1.5 to v3.0.0

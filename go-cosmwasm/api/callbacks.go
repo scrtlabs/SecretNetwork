@@ -1,3 +1,4 @@
+//go:build !secretcli
 // +build !secretcli
 
 package api
@@ -302,8 +303,10 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 
 /***** GoAPI *******/
 
-type HumanizeAddress func([]byte) (string, uint64, error)
-type CanonicalizeAddress func(string) ([]byte, uint64, error)
+type (
+	HumanizeAddress     func([]byte) (string, uint64, error)
+	CanonicalizeAddress func(string) ([]byte, uint64, error)
+)
 
 type GoAPI struct {
 	HumanAddress     HumanizeAddress
