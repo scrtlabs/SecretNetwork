@@ -65,7 +65,7 @@ perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' .secretd/c
 lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
 
 # Setup faucet
-gunicorn --bind 0.0.0.0:5000 svc &
+setsid node faucet_server.js &
 
 # Setup secretcli
 cp $(which secretd) $(dirname $(which secretd))/secretcli
