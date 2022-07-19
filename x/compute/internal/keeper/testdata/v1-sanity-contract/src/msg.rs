@@ -9,7 +9,6 @@ pub enum InstantiateMsg {
         counter: u64,
         expires: u64,
     },
-
     // These were ported from the v0.10 test-contract:
     Nop {},
     Callback {
@@ -90,6 +89,11 @@ pub enum ExecuteMsg {
     },
     MultipleSubMessages {},
     MultipleSubMessagesNoReply {},
+    InitV10 {
+        code_id: u64,
+        code_hash: String,
+        counter: u64,
+    },
 
     // These were ported from the v0.10 test-contract:
     A {

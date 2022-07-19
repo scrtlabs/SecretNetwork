@@ -190,20 +190,23 @@ pub fn reduct_custom_events(reply: &mut Reply) {
             let filtered_attributes = vec!["contract_address".to_string(), "code_id".to_string()];
             for ev in r.events.iter() {
                 if filtered_types.contains(&ev.ty) {
-                    let mut had_match = false;
+                    let mut new_ev = Event {
+                        ty: ev.ty.clone(),
+                        attributes: vec![],
+                    };
+
                     for attr in &ev.attributes {
-                        if filtered_attributes.contains(&attr.key) {
-                            had_match = true;
-                            break;
+                        if !filtered_attributes.contains(&attr.key) {
+                            new_ev.attributes.push(attr.clone());
                         }
                     }
 
-                    if had_match {
-                        continue;
+                    if new_ev.attributes.len() > 0 {
+                        events.push(new_ev);
                     }
+                } else {
+                    events.push(ev.clone());
                 }
-
-                events.push(ev.clone());
             }
 
             SubMsgResult::Ok(SubMsgResponse {

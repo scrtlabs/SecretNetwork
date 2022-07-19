@@ -111,7 +111,7 @@ pub fn instantiate(
                 code_hash,
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
-                label: label,
+                label,
             }))
             .add_attribute("a", "a")),
         InstantiateMsg::CallToExec {
@@ -172,7 +172,30 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::SubMsgLoopIner { iter } => sub_msg_loop_iner(env, deps, iter),
         ExecuteMsg::MultipleSubMessages {} => send_multiple_sub_messages(env, deps),
         ExecuteMsg::MultipleSubMessagesNoReply {} => send_multiple_sub_messages_no_reply(env, deps),
+        ExecuteMsg::InitV10 {
+            counter,
+            code_id,
+            code_hash,
+        } => {
+            let mut resp = Response::default();
 
+            let msg =
+                "{\"init_from_v1\":{\"counter\":".to_string() + counter.to_string().as_str() + "}}";
+            resp.messages.push(SubMsg {
+                id: 1700,
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                    funds: vec![],
+                    label: "new2231231".to_string(),
+                    code_id,
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Always,
+            });
+
+            Ok(resp)
+        }
         // These were ported from the v0.10 test-contract:
         ExecuteMsg::A {
             contract_addr,
@@ -1036,6 +1059,32 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             Ok(resp)
         }
         (1602, SubMsgResult::Ok(_)) => Err(StdError::generic_err("got wrong bank answer")),
+        (1700, SubMsgResult::Ok(s)) => {
+            if s.events.len() == 0 {
+                return Err(StdError::generic_err(format!(
+                    "Init didn't response with contract address",
+                )));
+            }
+
+            if s.events[0].attributes.len() == 0 {
+                return Err(StdError::generic_err(format!(
+                    "Init didn't response with contract address",
+                )));
+            }
+
+            if s.events[0].attributes[0].key != "contract_address" {
+                return Err(StdError::generic_err(format!(
+                    "Init didn't response with contract address, key was {:?}",
+                    s.events[0].attributes[0].key,
+                )));
+            }
+
+            let mut resp = Response::default();
+            resp.data = Some(s.events[0].attributes[0].value.as_bytes().into());
+
+            Ok(resp)
+        }
+        (1700, SubMsgResult::Err(_)) => Err(StdError::generic_err("Failed to init v010 contract")),
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
@@ -1120,7 +1169,7 @@ fn send_external_query(deps: Deps, contract_addr: String, code_hash: String) -> 
         .querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            code_hash: code_hash,
+            code_hash,
             msg: Binary::from(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
         }))
         .unwrap();

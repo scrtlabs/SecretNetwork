@@ -306,7 +306,7 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryRes {
-    GetCountFromV1 { count: u64 },
+    Get { count: u64 },
 }
 
 /////////////////////////////// Init ///////////////////////////////
@@ -1588,7 +1588,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetCountFromV1 {} => {
             let count = count_read(&deps.storage).load()?;
 
-            Ok(to_binary(&QueryRes::GetCountFromV1 { count })?)
+            Ok(to_binary(&QueryRes::Get { count })?)
         }
     }
 }

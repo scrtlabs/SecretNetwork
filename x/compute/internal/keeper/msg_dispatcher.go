@@ -23,7 +23,7 @@ type Messenger interface {
 
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
-	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, replyToContractHash []byte) ([]byte, error)
+	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -263,7 +263,6 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			SignMode:  "SIGN_MODE_UNSPECIFIED",
 		}
 
-		var replyToContractHash []byte
 		if isReplyEncrypted(msg.Msg, reply) {
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
 
@@ -286,13 +285,12 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			}
 
 			replySigInfo = ogSigInfo
-			replyToContractHash = dataWithInternalReplyInfo.Data[0:64] // First 64 bytes of the data is the contract hash
 			reply.ID = dataWithInternalReplyInfo.InternalMsgId
 			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
 
 		}
 
-		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo, replyToContractHash)
+		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo)
 		switch {
 		case err != nil:
 			return nil, err

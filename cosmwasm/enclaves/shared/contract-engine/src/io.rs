@@ -284,13 +284,18 @@ pub fn encrypt_output(
 
             *internal_reply_enclave_sig = match reply_params {
                 Some(_) => {
+                    let events = match ok.log.len() {
+                        0 => vec![],
+                        _ => vec![Event {
+                            ty: "wasm".to_string(),
+                            attributes: ok.log.clone(),
+                        }],
+                    };
+
                     let reply = Reply {
                         id: msg_id.unwrap(),
                         result: SubMsgResult::Ok(SubMsgResponse {
-                            events: vec![Event {
-                                ty: "".to_string(),
-                                attributes: ok.log.clone(),
-                            }],
+                            events,
                             data: ok.data.clone(),
                         }),
                     };
