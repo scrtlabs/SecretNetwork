@@ -1,6 +1,6 @@
 module github.com/enigmampc/SecretNetwork
 
-go 1.18
+go 1.17
 
 require (
 	github.com/cosmos/cosmos-sdk v0.45.4
@@ -21,7 +21,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/tendermint/tendermint v0.34.19
 	github.com/tendermint/tm-db v0.6.7
-	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	google.golang.org/genproto v0.0.0-20220505152158-f39f71e6c8f3
 	google.golang.org/grpc v1.46.0
 	google.golang.org/protobuf v1.28.0
@@ -33,8 +33,6 @@ require (
 	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
-	github.com/valyala/fasthttp v1.38.0 // indirect
-	github.com/valyala/tcplisten v1.0.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
@@ -88,7 +86,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/keybase/go-keychain v0.0.0-20190712205309-48d3d31d256d // indirect
-	github.com/klauspost/compress v1.15.0 // indirect
+	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/lib/pq v1.10.4 // indirect
 	github.com/libp2p/go-buffer-pool v0.0.2 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
@@ -119,9 +117,9 @@ require (
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/zondax/hid v0.9.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
-	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
+	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b // indirect
+	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
+	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -130,7 +128,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk v0.45.4 => github.com/scrtlabs/cosmos-sdk v0.45.7-0.20220717152310-6a41623d9319
+	github.com/cosmos/cosmos-sdk v0.45.4 => github.com/scrtlabs/cosmos-sdk v0.45.4-scrt.0.20220524151842-19338330a997
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
