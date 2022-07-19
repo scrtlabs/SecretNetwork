@@ -55,7 +55,7 @@ ENV USER_HOME=/home/${USERNAME}
 # ENV RUSTUP_HOME=${USER_HOME}/.cargo/bin
 
 
-COPY deployment/.devcontainer/library-scripts/*.sh deployment/.devcontainer/library-scripts/*.env /tmp/library-scripts/
+COPY .devcontainer/library-scripts/*.sh .devcontainer/library-scripts/*.env /tmp/library-scripts/
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && /bin/bash /tmp/library-scripts/common-debian.sh "${INSTALL_ZSH}" "${USERNAME}" "${USER_UID}" "${USER_GID}" "${UPGRADE_PACKAGES}" "true" "true"
     #
@@ -74,13 +74,14 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 RUN bash /tmp/library-scripts/rust-debian.sh "${CARGO_HOME}" "${RUSTUP_HOME}" "${USERNAME}" "true" "true"
 
 # Install Go
-ADD https://go.dev/dl/go1.18.4.linux-amd64.tar.gz go1.18.4.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.18.4.linux-amd64.tar.gz
+#ADD https://go.dev/dl/go1.18.4.linux-amd64.tar.gz go1.18.4.linux-amd64.tar.gz
+#RUN tar -C /usr/local -xzf go1.18.4.linux-amd64.tar.gz
+#
+#RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" "$GOPATH/pkg" && chmod -R 777 "$GOPATH"
+#RUN chown ${USERNAME}:${USERNAME} /go -R
 
-RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" "$GOPATH/pkg" && chmod -R 777 "$GOPATH"
-RUN chown ${USERNAME}:${USERNAME} /go -R
-
-RUN bash /tmp/library-scripts/go-debian.sh "none" "${GOROOT}" "${GOPATH}" "${USERNAME}" "false"
+RUN bash /tmp/library-scripts/go-debian.sh "1.18.4" "${GOROOT}" "${GOPATH}" "${USERNAME}" "true" "true" && \
+    go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/library-scripts
 
@@ -93,7 +94,7 @@ RUN wget -q https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.
     chmod +x /bin/wat2wasm /bin/wasm2wat && \
     rm -f wabt-1.0.20-ubuntu.tar.gz
 
-RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
+USER root
 
 # SGX version parameters
 ARG SGX_VERSION=2.12.100.3
@@ -106,6 +107,9 @@ RUN apt-get update && \
     #### Base utilities ####
     gdebi \
     libprotobuf17 \
+    autoconf \
+    libtool \
+    automake \
     #### SGX installer dependencies ####
     g++ make libcurl4 libssl1.1 && \
     rm -rf /var/lib/apt/lists/*
@@ -141,23 +145,30 @@ RUN dpkg -i ./sgx/libsgx-enclave-common_${SGX_VERSION}-${OS_REVESION}_amd64.deb 
     dpkg -i ./sgx/libsgx-uae-service_${SGX_VERSION}-${OS_REVESION}_amd64.deb
 
 ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/sgx_linux_x64_sdk_${SGX_VERSION}.bin ./sgx/
-ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/sgx_linux_x64_driver_2.11.0_4505f07.bin ./sgx/
+# ADD https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/sgx_linux_x64_driver_2.11.0_4505f07.bin ./sgx/
 
 RUN chmod +x ./sgx/sgx_linux_x64_sdk_${SGX_VERSION}.bin
 RUN echo -e 'no\n/opt' | ./sgx/sgx_linux_x64_sdk_${SGX_VERSION}.bin && \
-    echo 'source /opt/sgxsdk/environment' >> /root/.bashrc && \
+    echo 'source /opt/sgxsdk/environment' >> /etc/bash.bashrc && \
+    echo 'export SGX_MODE=SW' >> /etc/bash.bashrc \
     rm -rf ./sgx/*
 
-ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/
+# ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/
+
+RUN echo 'export SCRT_ENCLAVE_DIR=/home/vscode/SecretNetwork/go-cosmwasm/' >> /etc/bash.bashrc
 
 USER $USERNAME
 
 WORKDIR ${USER_HOME}
 
+RUN cargo install xargo --version 0.3.25
 RUN git clone https://github.com/scrtlabs/SecretNetwork.git
 
 WORKDIR ${USER_HOME}/SecretNetwork
 
 # USER root
 # get rust
-RUN rustup target add wasm32-unknown-unknown
+RUN rustup target add wasm32-unknown-unknown && rustup component add rust-src
+USER root
+# fuck you permissions
+RUN chown $USERNAME:$USERNAME /go -R

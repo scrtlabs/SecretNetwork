@@ -15,10 +15,9 @@
 	"settings": {},
 
 	// Add the IDs of extensions you want installed when the container is created.
-	"workspaceFolder": "/go/src/github.com/enigmampc/SecretNetwork",
+	"workspaceFolder": "/home/vscode/SecretNetwork",
 	"extensions": [
 		"bungcip.better-toml",
-		"rust-lang.rust",
 		"rust-lang.rust-analyzer",
 		"golang.Go"
 	],
