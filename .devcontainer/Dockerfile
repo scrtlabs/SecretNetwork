@@ -169,7 +169,7 @@ WORKDIR ${USER_HOME}/SecretNetwork
 
 # USER root
 # get rust
-RUN rustup target add wasm32-unknown-unknown && rustup component add rust-src
+RUN rustup target add wasm32-unknown-unknown && rustup component add rust-src rust-analysis
 USER root
 # fuck you permissions
 RUN chown $USERNAME:$USERNAME /go -R
