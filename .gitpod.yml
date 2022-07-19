@@ -1,1 +1,11 @@
-image: ghcr.io/notional-labs/cosmos
+image: ghcr.io/scrtlabs/secretnetwork-dev:latest
+
+vscode:
+  extensions:
+    - rust-lang.rust-analyzer
+    - vadimcn.vscode-lldb
+    - mutantdino.resourcemonitor
+    - serayuzgur.crates
+    - bungcip.better-toml
+    - golang.Go
+
