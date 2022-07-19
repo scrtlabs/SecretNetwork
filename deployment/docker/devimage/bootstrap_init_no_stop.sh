@@ -26,6 +26,7 @@ then
   cp ~/node_key.json ~/.secretd/config/node_key.json
   perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
   perl -i -pe 's/"172800s"/"90s"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
+  perl -i -pe 's/"1814400s"/"80s"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
 
   perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/g' ~/.secretd/config/app.toml # enable cors
 
@@ -70,5 +71,5 @@ setsid node faucet_server.js &
 # Setup secretcli
 cp $(which secretd) $(dirname $(which secretd))/secretcli
 
-source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG_LEVEL=INFO secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
 

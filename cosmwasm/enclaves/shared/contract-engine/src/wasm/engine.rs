@@ -33,7 +33,7 @@ impl Engine {
     }
 
     pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        info!("Invoking init() in wasm");
+        info!("Invoking contract init");
 
         match self
             .module
@@ -73,7 +73,7 @@ impl Engine {
     }
 
     pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        info!("Invoking handle() in wasm");
+        info!("Invoking contract handle");
 
         // Itzik: leaving this here as an example in case we will want to do something like this in the future
 
@@ -122,7 +122,7 @@ impl Engine {
     }
 
     pub fn query(&mut self, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        info!("Invoking query() in wasm");
+        info!("Invoking contract query");
 
         match self
             .module
