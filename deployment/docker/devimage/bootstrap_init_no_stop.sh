@@ -7,11 +7,7 @@ then
   rm -rf ~/.secretd/*
   rm -rf /opt/secret/.sgx_secrets/*
 
-  if [ -z "${CHAINID}" ]; then
-    chain_id="$CHAINID"
-  else
-    chain_id="secretdev-1"
-  fi
+  chain_id=${CHAINID:-secretdev-1}
 
   mkdir -p ./.sgx_secrets
   secretd config chain-id "$chain_id"
