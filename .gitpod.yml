@@ -5,6 +5,7 @@ tasks:
     command: |
       sudo chown gitpod:gitpod /go -R
       sudo chown gitpod:gitpod /usr/local/cargo -R
+      export SCRT_ENCLAVE_DIR=/workspace/SecretNetwork/go-cosmwasm/
 
 vscode:
   extensions:
