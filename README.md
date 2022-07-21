@@ -1,12 +1,14 @@
 ![Secret Network](sn-logo.png)
+[![version](https://img.shields.io/badge/version-1.3.1-blue)](https://github.com/scrtlabs/SecretNetwork/releases/tag/v1.3.1)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
-<p align="center">
-Secret Network secures the decentralized web
-</p>
+<a href="https://twitter.com/intent/follow?screen_name=scrt_labs">
+<img src="https://img.shields.io/twitter/follow/scrt_labs?style=social&logo=twitter"
+alt="follow on Twitter"></a>
+
 
 Secret Network offers scalable permissionless smart contracts with a private by default design— bringing novel use cases to blockchain not feasible on public systems. Secret Network enables users to take back ownership over their private (financial) information and for them to share this information with whom they trust. Secret Network was the first protocol to provide private smart contracts on mainnet, live since September 2020. Secret Network is Built with the Cosmos Software Development Kit (SDK) bringing Interoperable privacy to the entire Cosmos ecosystem. Secret Network uses a combination of the Intel SGX (Software Guard Extension) Trusted Execution Environment technology, several encryption schemes and key management to bring privacy by default to blockchain users. Secret Contracts are an implementation of the Rust based smart contract compiling toolkit CosmWasm, adding private metadata possibilities. Secret Network is powered by the Native public coin SCRT which is used for fees, Proof Of Stake security and Governance. With more than 20+ Dapps, 100+ full time builders and a strong grassroots community Secret Network aims to bring privacy to the masses.
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
 # Setting up Environment
 
@@ -51,6 +53,35 @@ Install go from [https://go.dev/doc/install](https://go.dev/doc/install)
 ### Install SGX
 
 To compile the code and run tests, you'll need to install the SGX SDK and PSW. To run in simulation (or software) modes of SGX you do _not_ need to install the SGX driver. 
+For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script in the following way:
+
+`sudo ./scripts/install-sgx.sh true true true false`
+
+# Build from Source
+
+Use `make build-linux` to build the entire codebase. This will build both the Rust (enclave & contract engine) and the Go (blockchain) code.
+
+To build just the rust code, you can use `make _build-linux`, while to build just the Go code, there is the aptly named `make build_local_no_rust`.
+
+
+Tip:
+```text
+For a production build the enclave must be copied from the most recent release. 
+
+This is due to non-reproducible builds, and the fact that enclaves must be signed with a specific key to be accepted on mainnet. 
+
+Still, the non-enclave code can be modified and ran on mainnet as long as there are no consensus-breaking changes
+```
+
+# Running Something
+
+## Run tests
+
+To build run all tests, use `make go-tests`
+
+## Start local network
+
+Run `./scripts/start-node.sh`
 
 # Documentation
 
@@ -66,9 +97,6 @@ For the latest documentation, check out [https://docs.scrt.network](https://docs
 - Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
 - Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
 - Community Secret Nodes Telegram: [https://t.me/secretnodes](https://t.me/secretnodes)
-
-
-
 
 # License
 
