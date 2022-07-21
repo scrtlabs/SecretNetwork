@@ -1,11 +1,14 @@
 ![Secret Network](sn-logo.png)
+
+<div align="center">
+  
 [![version](https://img.shields.io/badge/version-1.3.1-blue)](https://github.com/scrtlabs/SecretNetwork/releases/tag/v1.3.1)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+<a href="https://twitter.com/intent/follow?screen_name=SecretNetwork">
+<img src="https://img.shields.io/twitter/follow/SecretNetwork?style=social&logo=twitter"
+alt="Follow"></a>
 
-<a href="https://twitter.com/intent/follow?screen_name=scrt_labs">
-<img src="https://img.shields.io/twitter/follow/scrt_labs?style=social&logo=twitter"
-alt="follow on Twitter"></a>
-
+ </div>
 
 Secret Network offers scalable permissionless smart contracts with a private by default design— bringing novel use cases to blockchain not feasible on public systems. Secret Network enables users to take back ownership over their private (financial) information and for them to share this information with whom they trust. Secret Network was the first protocol to provide private smart contracts on mainnet, live since September 2020. Secret Network is Built with the Cosmos Software Development Kit (SDK) bringing Interoperable privacy to the entire Cosmos ecosystem. Secret Network uses a combination of the Intel SGX (Software Guard Extension) Trusted Execution Environment technology, several encryption schemes and key management to bring privacy by default to blockchain users. Secret Contracts are an implementation of the Rust based smart contract compiling toolkit CosmWasm, adding private metadata possibilities. Secret Network is powered by the Native public coin SCRT which is used for fees, Proof Of Stake security and Governance. With more than 20+ Dapps, 100+ full time builders and a strong grassroots community Secret Network aims to bring privacy to the masses.
 
