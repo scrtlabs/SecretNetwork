@@ -11,6 +11,7 @@
 
 set -e
 
+INSTALL_ZSH=${1:-"true"}
 USERNAME=${2:-"automatic"}
 USER_UID=${3:-"automatic"}
 USER_GID=${4:-"automatic"}
