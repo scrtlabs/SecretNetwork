@@ -731,12 +731,12 @@ func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, typ
 		var contract types.ContractInfo
 		k.cdc.MustUnmarshal(iter.Value(), &contract)
 
-		enclaveId := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
-		// println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId))
+		enclaveID := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
+		// println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveID))
 		// println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
 
 		contractCustomInfo := types.ContractCustomInfo{
-			EnclaveKey: enclaveId,
+			EnclaveKey: enclaveID,
 			Label:      contract.Label,
 		}
 

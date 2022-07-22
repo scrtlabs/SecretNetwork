@@ -80,7 +80,6 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
 
-
 var ModuleBasics = module.NewBasicManager(
 	auth.AppModuleBasic{},
 	bank.AppModuleBasic{},
