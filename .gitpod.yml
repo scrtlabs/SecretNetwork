@@ -6,6 +6,13 @@ tasks:
       sudo chown gitpod:gitpod /go -R
       sudo chown gitpod:gitpod /usr/local/cargo -R
       export SCRT_ENCLAVE_DIR=/workspace/SecretNetwork/go-cosmwasm/
+  - name: install tools
+    command: 
+      go install golang.org/x/tools/cmd/goimports@latest
+      go install mvdan.cc/gofumpt@latest
+      go install src.techknowlogick.com/xgo@latest
+
+
 
 vscode:
   extensions:

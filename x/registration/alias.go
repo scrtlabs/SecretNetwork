@@ -55,7 +55,7 @@ type (
 	GenesisState      = types.GenesisState
 	Keeper            = keeper.Keeper
 	SeedConfig        = types.SeedConfig
-	EnclaveApi        = enclave.Api
+	EnclaveApi        = enclave.API
 	MasterCertificate = types.MasterCertificate
 	Key               = types.Key
 )

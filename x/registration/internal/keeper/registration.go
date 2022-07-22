@@ -4,25 +4,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remoteAttestation"
 )
-
-//func (k Keeper) MasterCertPrefix(ctx sdk.Context) *types.PublicKey {
-//	store := ctx.KVStore(k.storeKey)
-//	var pkIO types.PublicKey
-//	certBz := store.Get(types.MasterCertPrefix(types.MasterPublicKeyId))
-//	if certBz == nil {
-//		return nil
-//	}
-//	k.cdc.MustUnmarshalBinaryBare(certBz, &pkIO)
-//	return &pkIO
-//}
-//
-//func (k Keeper) setMasterPublicKey(ctx sdk.Context, publicKey types.PublicKey) {
-//	store := ctx.KVStore(k.storeKey)
-//
-//	store.Set(types.MasterCertPrefix(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(publicKey))
-//}
 
 func (k Keeper) GetMasterCertificate(ctx sdk.Context, certType string) *types.MasterCertificate {
 	store := ctx.KVStore(k.storeKey)
@@ -39,14 +22,6 @@ func (k Keeper) setMasterCertificate(ctx sdk.Context, cert types.MasterCertifica
 	store := ctx.KVStore(k.storeKey)
 
 	store.Set(types.MasterCertPrefix(certType), k.cdc.MustMarshal(&cert))
-}
-
-func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, certType string) bool {
-	regInfo := k.GetMasterCertificate(ctx, certType)
-	if regInfo == nil {
-		return false
-	}
-	return true
 }
 
 func (k Keeper) getRegistrationInfo(ctx sdk.Context, publicKey types.NodeID) *types.RegistrationNodeInfo {
@@ -97,7 +72,6 @@ func (k Keeper) isNodeAuthenticated(ctx sdk.Context, publicKey types.NodeID) (bo
 
 	if regInfo.EncryptedSeed == nil {
 		return false, nil
-	} else {
-		return true, nil
 	}
+	return true, nil
 }

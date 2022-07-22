@@ -4,12 +4,12 @@ import (
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 )
 
-type Api struct{}
+type API struct{}
 
-func (Api) LoadSeed(masterCert []byte, seed []byte) (bool, error) {
+func (API) LoadSeed(masterCert []byte, seed []byte) (bool, error) {
 	return api.LoadSeedToEnclave(masterCert, seed)
 }
 
-func (Api) GetEncryptedSeed(masterCert []byte) ([]byte, error) {
+func (API) GetEncryptedSeed(masterCert []byte) ([]byte, error) {
 	return api.GetEncryptedSeed(masterCert)
 }

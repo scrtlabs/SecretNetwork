@@ -9,7 +9,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remoteAttestation"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
@@ -125,7 +125,7 @@ func seedCertificateHandlerFn(cliCtx client.Context) http.HandlerFunc {
 }
 
 //
-//func queryCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+// func queryCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.Request) {
 //		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
 //		if err != nil {
@@ -154,27 +154,6 @@ func seedCertificateHandlerFn(cliCtx client.Context) http.HandlerFunc {
 //	}
 //}
 
-//type smartResponse struct {
+// type smartResponse struct {
 //	Smart []byte `json:"smart"`
 //}
-
-type argumentDecoder struct {
-	// dec is the default decoder
-	dec      func(string) ([]byte, error)
-	encoding string
-}
-
-func newArgDecoder(def func(string) ([]byte, error)) *argumentDecoder {
-	return &argumentDecoder{dec: def}
-}
-
-func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
-	switch a.encoding {
-	case "hex":
-		return hex.DecodeString(s)
-	case "base64":
-		return base64.StdEncoding.DecodeString(s)
-	default:
-		return a.dec(s)
-	}
-}

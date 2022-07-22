@@ -93,7 +93,7 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 					"9cdaa5856e0245ecd73bd464308fb990fbc53b57@scrt-seed-03.scrtlabs.com:26656", // SCRT Labs 3
 				}
 				// Override default settings in config.toml
-				config.P2P.Seeds = strings.Join(seeds[:], ",")
+				config.P2P.Seeds = strings.Join(seeds, ",")
 			}
 
 			config.P2P.MaxNumInboundPeers = 320

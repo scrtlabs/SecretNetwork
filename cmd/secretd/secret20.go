@@ -92,7 +92,7 @@ func S20TransferHistoryCmd() *cobra.Command {
 				return errors.New("viewing key must not be empty")
 			}
 
-			var page uint64 = 0
+			var page uint64
 			var pageSize uint64 = 10
 
 			if len(args) >= 4 {
@@ -154,7 +154,7 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 				return errors.New("viewing key must not be empty")
 			}
 
-			var page uint64 = 0
+			var page uint64
 			var pageSize uint64 = 10
 
 			if len(args) >= 4 {

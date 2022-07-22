@@ -2,9 +2,16 @@ run:
   tests: false
 #   # timeout for analysis, e.g. 30s, 5m, default is 1m
   timeout: 5m
+  build-tags: ["secretcli"]
+  skip-files:
+    - go-cosmwasm/api/callbacks.go
+  go: '1.18'
+
+
 
 linters:
   disable-all: true
+  enable:
     - deadcode
     - depguard
     - dogsled
@@ -15,7 +22,6 @@ linters:
     - gofmt
     - gofumpt
     - goimports
-    - golint
     - gosec
     - gosimple
     - govet

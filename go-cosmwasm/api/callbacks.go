@@ -1,5 +1,4 @@
 //go:build !secretcli
-// +build !secretcli
 
 package api
 

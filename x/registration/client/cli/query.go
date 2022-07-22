@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
-	flag "github.com/spf13/pflag"
 
 	"github.com/spf13/cobra"
 
@@ -46,17 +45,17 @@ func GetCmdEncryptedSeed() *cobra.Command {
 				return err
 			}
 
-			nodeId := args[0]
-			if len(nodeId) != types.PublicKeyLength {
+			nodeID := args[0]
+			if len(nodeID) != types.PublicKeyLength {
 				return fmt.Errorf("invalid Node ID format (req: hex string of length %d)", types.PublicKeyLength)
 			}
 
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed, nodeId)
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryEncryptedSeed, nodeID)
 			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
-			fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(res)))
+			fmt.Printf(fmt.Sprintf("0x%s", hex.EncodeToString(res)))
 			return nil
 		},
 	}
@@ -107,20 +106,11 @@ func GetCmdMasterParams() *cobra.Command {
 	return cmd
 }
 
+//nolint:unused
 type argumentDecoder struct {
 	// dec is the default decoder
 	dec                func(string) ([]byte, error)
 	asciiF, hexF, b64F bool
-}
-
-func newArgDecoder(def func(string) ([]byte, error)) *argumentDecoder {
-	return &argumentDecoder{dec: def}
-}
-
-func (a *argumentDecoder) RegisterFlags(f *flag.FlagSet, argName string) {
-	f.BoolVar(&a.asciiF, "ascii", false, "ascii encoded "+argName)
-	f.BoolVar(&a.hexF, "hex", false, "hex encoded  "+argName)
-	f.BoolVar(&a.b64F, "b64", false, "base64 encoded "+argName)
 }
 
 func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
@@ -146,6 +136,7 @@ func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
 	}
 }
 
+//nolint:unused
 func asciiDecodeString(s string) ([]byte, error) {
 	return []byte(s), nil
 }

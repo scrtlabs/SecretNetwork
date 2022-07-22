@@ -17,7 +17,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/gov"
-	//"github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
+
+	// "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
@@ -120,7 +121,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, bootstrap boo
 	router := baseapp.NewRouter()
 
 	// Load default wasm config
-	keeper := NewKeeper(cdc, keyContract, router, mock.MockEnclaveApi{}, tempDir, bootstrap)
+	keeper := NewKeeper(cdc, keyContract, router, mock.EnclaveAPI{}, tempDir, bootstrap)
 
 	return ctx, keeper
 }

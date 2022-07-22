@@ -9,8 +9,8 @@ const (
 	EnclaveRegistrationKey = "new_node_seed_exchange_keypair.sealed"
 	PublicKeyLength        = 64 // encoded length
 	EncryptedKeyLength     = 96 // encoded length
-	MasterNodeKeyId        = "NodeExchMasterKey"
-	MasterIoKeyId          = "IoExchMasterKey"
+	MasterNodeKeyID        = "NodeExchMasterKey"
+	MasterIoKeyID          = "IoExchMasterKey"
 	SecretNodeSeedConfig   = "seed.json"
 	SecretNodeCfgFolder    = ".node"
 )

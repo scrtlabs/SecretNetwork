@@ -10,9 +10,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remoteAttestation"
 )
 
 // Keeper will have a reference to Wasmer with it's own data directory.
@@ -116,46 +115,13 @@ func isSimulationMode(ctx sdk.Context) bool {
 	return ctx.GasMeter().Limit() == 0 && ctx.BlockHeight() != 0
 }
 
-func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) error {
-	// make sure this account can send it
-	for _, acct := range msg.GetSigners() {
-		if !acct.Equals(contractAddr) {
-			return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
-		}
-	}
-
-	var res *sdk.Result
-	var err error
-	// find the handler and execute it
-	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
-		h := k.router.Route(ctx, legacyMsg.Route())
-		if h == nil {
-			return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, legacyMsg.Route())
-		}
-		res, err = h(ctx, msg)
-		if err != nil {
-			return err
-		}
-	}
-
-	events := make(sdk.Events, len(res.Events))
-	for i := range res.Events {
-		events[i] = sdk.Event(res.Events[i])
-	}
-
-	// redispatch all events, (type sdk.EventTypeMessage will be filtered out in the handler)
-	ctx.EventManager().EmitEvents(events)
-
-	return nil
-}
-
 func validateSeedParams(config types.SeedConfig) error {
 	res, err := base64.StdEncoding.DecodeString(config.MasterCert)
 	if err != nil {
 		return err
 	}
 
-	res, err = ra.VerifyRaCert(res)
+	_, err = ra.VerifyRaCert(res)
 	if err != nil {
 		return err
 	}

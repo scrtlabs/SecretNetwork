@@ -79,7 +79,7 @@ func ReleaseCache(cache Cache) {
 	// C.release_cache(cache.ptr)
 }
 
-func InitEnclaveRuntime(ModuleCacheSize uint8) error {
+func InitEnclaveRuntime(moduleCacheSize uint8) error {
 	return nil
 }
 
@@ -95,7 +95,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func GetCode(cache Cache, code_id []byte) ([]byte, error) {
+func GetCode(cache Cache, codeID []byte) ([]byte, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)
 	//errmsg := C.Buffer{}
@@ -109,7 +109,7 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 
 func Instantiate(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
@@ -141,7 +141,7 @@ func Instantiate(
 
 func Handle(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
@@ -173,7 +173,7 @@ func Handle(
 
 func Migrate(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
@@ -204,7 +204,7 @@ func Migrate(
 
 func Query(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
