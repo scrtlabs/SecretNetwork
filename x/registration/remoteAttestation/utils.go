@@ -5,8 +5,5 @@ import (
 )
 
 func isSgxHardwareMode() bool {
-	if os.Getenv("SGX_MODE") != "SW" {
-		return true
-	}
-	return false
+	return os.Getenv("SGX_MODE") != "SW"
 }
