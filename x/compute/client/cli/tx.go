@@ -25,10 +25,8 @@ const (
 	flagSource                 = "source"
 	flagBuilder                = "builder"
 	flagLabel                  = "label"
-	flagRunAs                  = "run-as"
 	flagInstantiateByEverybody = "instantiate-everybody"
 	flagInstantiateByAddress   = "instantiate-only-address"
-	flagProposalType           = "type"
 	flagIoMasterKey            = "enclave-key"
 	flagCodeHash               = "code-hash"
 	// flagAdmin                  = "admin"
@@ -234,7 +232,7 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 			return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 		}
 
-		initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[0])
+		initMsg.CodeHash, err = GetCodeHashByCodeID(cliCtx, args[0])
 		if err != nil {
 			return types.MsgInstantiateContract{}, err
 		}
@@ -389,7 +387,7 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 	return tx.GenerateOrBroadcastTxCLI(cliCtx, cmd.Flags(), &msgExec)
 }
 
-func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
+func GetCodeHashByCodeID(cliCtx client.Context, codeID string) ([]byte, error) {
 	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
 	res, _, err := cliCtx.Query(route)
 	if err != nil {

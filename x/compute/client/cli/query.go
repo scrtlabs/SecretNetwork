@@ -574,7 +574,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 			return fmt.Errorf("query result: %v", stdErr.Error())
 		}
 		// Itzik: Commenting this as it might have been a placeholder for encrypting
-		//else if strings.Contains(err.Error(), "EnclaveErr") {
+		// else if strings.Contains(err.Error(), "EnclaveErr") {
 		//	return err
 		//}
 		return err

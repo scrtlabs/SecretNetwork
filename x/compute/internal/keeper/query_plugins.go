@@ -189,7 +189,7 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 			req := abci.RequestQuery{
 				Data: jsonParams,
 			}
-			//keeper.DelegationTotalRewards(ctx, distrtypes.QueryDelegationTotalRewardsRequest{
+			// keeper.DelegationTotalRewards(ctx, distrtypes.QueryDelegationTotalRewardsRequest{
 			//	DelegatorAddress: request.Rewards.Delegator,
 			//})
 			route := []string{distrtypes.QueryDelegatorTotalRewards}

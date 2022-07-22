@@ -2,7 +2,7 @@ package types
 
 // Leaving this here in case we want to add a custom gas store in the future
 
-//package types
+// package types
 //
 //import (
 //	"io"

@@ -6,16 +6,16 @@ package api
 //
 //// #include <stdlib.h>
 //// #include "bindings.h"
-//import "C"
+// import "C"
 
 // import "C"
 import (
-	//"fmt"
+	// "fmt"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 )
 
 // nice aliases to the rust names
-//type i32 = C.int32_t
+// type i32 = C.int32_t
 //type i64 = C.int64_t
 //type u64 = C.uint64_t
 //type u32 = C.uint32_t
@@ -35,7 +35,7 @@ func HealthCheck() ([]byte, error) {
 }
 
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
-	//errmsg := C.Buffer{}
+	// errmsg := C.Buffer{}
 	//
 	//res, err := C.init_bootstrap(&errmsg)
 	//if err != nil {
@@ -46,7 +46,7 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 }
 
 func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
-	//pkSlice := sendSlice(masterCert)
+	// pkSlice := sendSlice(masterCert)
 	//defer freeAfterSend(pkSlice)
 	//seedSlice := sendSlice(seed)
 	//defer freeAfterSend(seedSlice)
@@ -62,7 +62,7 @@ func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cache, error) {
-	//dir := sendSlice([]byte(dataDir))
+	// dir := sendSlice([]byte(dataDir))
 	//defer freeAfterSend(dir)
 	//features := sendSlice([]byte(supportedFeatures))
 	//defer freeAfterSend(features)
@@ -84,7 +84,7 @@ func InitEnclaveRuntime(moduleCacheSize uint8) error {
 }
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
-	//code := sendSlice(wasm)
+	// code := sendSlice(wasm)
 	//defer freeAfterSend(code)
 	//errmsg := C.Buffer{}
 	//id, err := C.create(cache.ptr, code, &errmsg)
@@ -96,7 +96,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 }
 
 func GetCode(cache Cache, codeID []byte) ([]byte, error) {
-	//id := sendSlice(code_id)
+	// id := sendSlice(code_id)
 	//defer freeAfterSend(id)
 	//errmsg := C.Buffer{}
 	//code, err := C.get_code(cache.ptr, id, &errmsg)
@@ -119,7 +119,7 @@ func Instantiate(
 	gasLimit uint64,
 	sigInfo []byte,
 ) ([]byte, uint64, error) {
-	//id := sendSlice(code_id)
+	// id := sendSlice(code_id)
 	//defer freeAfterSend(id)
 	//p := sendSlice(params)
 	//defer freeAfterSend(p)
@@ -151,7 +151,7 @@ func Handle(
 	gasLimit uint64,
 	sigInfo []byte,
 ) ([]byte, uint64, error) {
-	//id := sendSlice(code_id)
+	// id := sendSlice(code_id)
 	//defer freeAfterSend(id)
 	//p := sendSlice(params)
 	//defer freeAfterSend(p)
@@ -182,7 +182,7 @@ func Migrate(
 	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
-	//id := sendSlice(code_id)
+	// id := sendSlice(code_id)
 	//defer freeAfterSend(id)
 	//p := sendSlice(params)
 	//defer freeAfterSend(p)
@@ -213,7 +213,7 @@ func Query(
 	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
-	//id := sendSlice(code_id)
+	// id := sendSlice(code_id)
 	//defer freeAfterSend(id)
 	//m := sendSlice(msg)
 	//defer freeAfterSend(m)
@@ -233,7 +233,7 @@ func Query(
 
 // KeyGen Send KeyGen request to enclave
 func KeyGen() ([]byte, error) {
-	//errmsg := C.Buffer{}
+	// errmsg := C.Buffer{}
 	//res, err := C.key_gen(&errmsg)
 	//if err != nil {
 	//	return nil, errorWithMessage(err, errmsg)
@@ -244,7 +244,7 @@ func KeyGen() ([]byte, error) {
 
 // KeyGen Seng KeyGen request to enclave
 func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
-	//errmsg := C.Buffer{}
+	// errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {
 	//	return false, errorWithMessage(err, errmsg)
@@ -253,7 +253,7 @@ func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
 }
 
 func GetEncryptedSeed(cert []byte) ([]byte, error) {
-	//errmsg := C.Buffer{}
+	// errmsg := C.Buffer{}
 	//certSlice := sendSlice(cert)
 	//defer freeAfterSend(certSlice)
 	//res, err := C.get_encrypted_seed(certSlice, &errmsg)
@@ -266,7 +266,7 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 
 /**** To error module ***/
 
-//func errorWithMessage(err error, b C.Buffer) error {
+// func errorWithMessage(err error, b C.Buffer) error {
 //	//msg := receiveVector(b)
 //	//if msg == nil {
 //	//	return err
