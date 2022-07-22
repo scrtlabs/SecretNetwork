@@ -211,6 +211,7 @@ func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper 
 }
 
 // TODO: this doesn't look right - Jacob
+//nolint:staticcheck // we are doing this to satisfy an ibc requirement.  Likely possible to fix it...
 func (app *SecretNetworkApp) GetTxConfig() client.TxConfig {
 	return app.GetTxConfig()
 }
