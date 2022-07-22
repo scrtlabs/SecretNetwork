@@ -1,4 +1,4 @@
-//nolint:deadcode,unused // functions here are used when the uncommenting magic happens and the code is built remotely.
+//nolint:unused // functions here are used when the uncommenting magic happens and the code is built remotely.
 
 package api
 
@@ -25,7 +25,7 @@ var dbCounterMutex sync.Mutex
 func startContract() uint64 {
 	dbCounterMutex.Lock()
 	defer dbCounterMutex.Unlock()
-	dbCounter += 1
+	dbCounter++
 	return dbCounter
 }
 
