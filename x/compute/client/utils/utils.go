@@ -176,7 +176,7 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 		return nil, err
 	}
 
-	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
+	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
 
 	txEncryptionKey := make([]byte, 32)
 	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {
@@ -314,7 +314,7 @@ func GetTxEncryptionKeyOffline(pubkey []byte, txSenderPrivKey []byte, nonce []by
 		return nil, err
 	}
 
-	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
+	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
 
 	txEncryptionKey := make([]byte, 32)
 	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {
