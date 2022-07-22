@@ -272,18 +272,18 @@ var re = regexp.MustCompile("encrypted: (.+?):")
 func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (json.RawMessage, error) {
 	regexMatch := re.FindStringSubmatch(errString)
 	if len(regexMatch) != 2 {
-		return nil, fmt.Errorf("Got an error finding base64 of the error: regexMatch '%v' should have a length of 2. error: %v", regexMatch, errString)
+		return nil, fmt.Errorf("got an error finding base64 of the error: regexMatch '%v' should have a length of 2. error: %v", regexMatch, errString)
 	}
 	errorCipherB64 := regexMatch[1]
 
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 	if err != nil {
-		return nil, fmt.Errorf("Got an error decoding base64 of the error: %w", err)
+		return nil, fmt.Errorf("got an error decoding base64 of the error: %w", err)
 	}
 
 	errorPlainBz, err := ctx.Decrypt(errorCipherBz, nonce)
 	if err != nil {
-		return nil, fmt.Errorf("Got an error decrypting the error: %w", err)
+		return nil, fmt.Errorf("got an error decrypting the error: %w", err)
 	}
 
 	return errorPlainBz, nil

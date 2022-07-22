@@ -48,7 +48,6 @@ type Keeper struct {
 	messenger    MessageHandler
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
-	serviceRouter MsgServiceRouter
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
 }
@@ -689,9 +688,9 @@ func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress
 }
 
 func (k Keeper) GetContractHash(ctx sdk.Context, contractAddress sdk.AccAddress) []byte {
-	codeId := k.GetContractInfo(ctx, contractAddress).CodeID
+	codeID := k.GetContractInfo(ctx, contractAddress).CodeID
 
-	hash := k.GetCodeInfo(ctx, codeId).CodeHash
+	hash := k.GetCodeInfo(ctx, codeID).CodeHash
 
 	return hash
 }
@@ -766,30 +765,6 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 			return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
 		}
 		prefixStore.Set(model.Key, model.Value)
-
-	}
-	return nil
-}
-
-func (k Keeper) fixContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.Model) error {
-	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
-	for _, model := range models {
-		if model.Value == nil {
-			model.Value = []byte{}
-		}
-
-		if !prefixStore.Has(model.Key) {
-			prefixStore.Set(model.Key, model.Value)
-			continue
-		}
-
-		existingValue := prefixStore.Get(model.Key)
-		if bytes.Equal(existingValue, model.Value) {
-			continue
-		} else {
-			prefixStore.Set(model.Key, model.Value)
-		}
 
 	}
 	return nil

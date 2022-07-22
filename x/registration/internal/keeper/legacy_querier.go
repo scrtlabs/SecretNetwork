@@ -35,7 +35,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			}
 			return bz, nil
 		case QueryMasterCertificate:
-			rsp, err = queryMasterKey(ctx, keeper)
+			rsp, err = queryMasterKey(ctx, keeper) //nolint:staticcheck // No idea what the linter was referring to here.
 			if err != nil {
 				return nil, err
 			}

@@ -101,7 +101,7 @@ func instantiateContractHandlerFn(cliCtx client.Context) http.HandlerFunc {
 			return
 		}
 		vars := mux.Vars(r)
-		codeId := vars["codeId"]
+		codeId := vars["codeId"] //nolint:revive
 
 		req.BaseReq = req.BaseReq.Sanitize()
 		if !req.BaseReq.ValidateBasic(w) {

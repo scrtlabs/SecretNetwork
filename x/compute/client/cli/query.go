@@ -218,7 +218,7 @@ func GetCmdQueryCode() *cobra.Command {
 			}
 
 			fmt.Printf("Downloading wasm code to %s\n", args[1])
-			return ioutil.WriteFile(args[1], code.Data, 0o644)
+			return ioutil.WriteFile(args[1], code.Data, 0o644) //nolint:gosec // common cosmos problem, but no known fix.
 		},
 	}
 
@@ -344,14 +344,14 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					if ok {
 						txInput3.WASMByteCode = nil
 						return clientCtx.PrintProto(txInput3)
-					} else {
-						return fmt.Errorf("TX is not a compute transaction")
 					}
-				} else {
-					encryptedInput = txInput2.InitMsg
-					dataOutputHexB64 = result.Data
-					answer.Type = "instantiate"
+					return fmt.Errorf("TX is not a compute transaction")
+
 				}
+				encryptedInput = txInput2.InitMsg
+				dataOutputHexB64 = result.Data
+				answer.Type = "instantiate"
+
 			} else {
 				encryptedInput = txInput.Msg
 				dataOutputHexB64 = result.Data

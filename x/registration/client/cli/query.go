@@ -1,10 +1,8 @@
 package cli
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 
@@ -89,12 +87,12 @@ func GetCmdMasterParams() *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate.Bytes, 0o644)
+			err = ioutil.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate.Bytes, 0o644) //nolint:gosec // common cosmos issue, never works to fix it though.
 			if err != nil {
 				return err
 			}
 
-			err = ioutil.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate.Bytes, 0o644)
+			err = ioutil.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate.Bytes, 0o644) //nolint:gosec // common cosmos issue, never works to fix it though.
 			if err != nil {
 				return err
 			}
@@ -104,39 +102,4 @@ func GetCmdMasterParams() *cobra.Command {
 	}
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
-}
-
-//nolint:unused
-type argumentDecoder struct {
-	// dec is the default decoder
-	dec                func(string) ([]byte, error)
-	asciiF, hexF, b64F bool
-}
-
-func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
-	found := -1
-	for i, v := range []*bool{&a.asciiF, &a.hexF, &a.b64F} {
-		if !*v {
-			continue
-		}
-		if found != -1 {
-			return nil, errors.New("multiple decoding flags used")
-		}
-		found = i
-	}
-	switch found {
-	case 0:
-		return asciiDecodeString(s)
-	case 1:
-		return hex.DecodeString(s)
-	case 2:
-		return base64.StdEncoding.DecodeString(s)
-	default:
-		return a.dec(s)
-	}
-}
-
-//nolint:unused
-func asciiDecodeString(s string) ([]byte, error) {
-	return []byte(s), nil
 }

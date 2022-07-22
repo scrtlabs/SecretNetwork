@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+//nolint:gocritic // this will be uncommented during the remote build.
 func registerTxRoutes(cliCtx client.Context, r *mux.Router) {
 	// r.HandleFunc("/wasm/code", storeCodeHandlerFn(cliCtx)).Methods("POST")
 	// r.HandleFunc("/wasm/code/{codeId}", instantiateContractHandlerFn(cliCtx)).Methods("POST")

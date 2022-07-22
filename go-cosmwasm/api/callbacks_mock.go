@@ -1,6 +1,7 @@
 //go:build secretcli
 // +build secretcli
 
+// nolint:gocritic // this file gets magically uncommented during the key injection build.
 package api
 
 //
