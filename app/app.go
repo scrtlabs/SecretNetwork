@@ -210,7 +210,7 @@ func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper 
 	return app.ScopedIBCKeeper
 }
 
-//TODO: this doesn't look right - Jacob
+// TODO: this doesn't look right - Jacob
 func (app *SecretNetworkApp) GetTxConfig() client.TxConfig {
 	return app.GetTxConfig()
 }
