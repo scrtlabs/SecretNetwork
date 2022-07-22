@@ -479,7 +479,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 	}
 
 	// This code is based on `cosmos-sdk/client/tx/tx.go::Sign()`
-	var sigs []sdksigning.SignatureV2
+	var sigs []sdksigning.SignatureV2 // nolint:prealloc
 	for _, creatorAcc := range creatorAccs {
 		sig := sdksigning.SignatureV2{
 			PubKey: creatorAcc.GetPubKey(),

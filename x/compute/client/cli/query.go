@@ -569,7 +569,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 			var stdErr cosmwasmTypes.StdError
 			err = json.Unmarshal(errorPlainBz, &stdErr)
 			if err != nil {
-				return fmt.Errorf("Error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
+				return fmt.Errorf("error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
 			}
 			return fmt.Errorf("query result: %v", stdErr.Error())
 		}

@@ -221,7 +221,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	}
 
 	pkIndex := -1
-	var _signers [][]byte // This is just used for the error message below
+	var _signers [][]byte //nolint:prealloc // This is just used for the error message below
 	for index, pubKey := range pubKeys {
 		thisSigner := pubKey.Address().Bytes()
 		_signers = append(_signers, thisSigner)
@@ -233,7 +233,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
 	}
 
-	signatures, err := protobufTx.GetSignaturesV2()
+	signatures, err := protobufTx.GetSignaturesV2() //nolint:staticcheck
 	var signMode sdktxsigning.SignMode
 	switch signData := signatures[pkIndex].Data.(type) {
 	case *sdktxsigning.SingleSignatureData:

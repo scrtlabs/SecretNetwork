@@ -189,7 +189,7 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 
 	label, err := initFlags.GetString(flagLabel)
 	if label == "" {
-		return types.MsgInstantiateContract{}, fmt.Errorf("Label is required on all contracts")
+		return types.MsgInstantiateContract{}, fmt.Errorf("label is required on all contracts")
 	}
 	if err != nil {
 		return types.MsgInstantiateContract{}, fmt.Errorf("label: %s", err)

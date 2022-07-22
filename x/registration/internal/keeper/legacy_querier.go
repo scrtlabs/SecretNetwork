@@ -40,7 +40,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 				return nil, err
 			}
 
-			if rsp == nil || reflect.ValueOf(rsp).IsNil() {
+			if rsp == nil || reflect.ValueOf(rsp).IsNil() { //nolint:staticcheck
 				return nil, nil
 			}
 

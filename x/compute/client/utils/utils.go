@@ -83,7 +83,10 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 
 	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {
 		var privkey [32]byte
-		rand.Read(privkey[:])
+		_, err := rand.Read(privkey[:])
+		if err != nil {
+			return nil, nil, err
+		}
 
 		var pubkey [32]byte
 		curve25519.ScalarBaseMult(&pubkey, &privkey)
@@ -98,7 +101,7 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 			return nil, nil, err
 		}
 
-		err = ioutil.WriteFile(keyPairFilePath, keyPairJSONBytes, 0o644)
+		err = ioutil.WriteFile(keyPairFilePath, keyPairJSONBytes, 0o644) //nolint:gosec
 		if err != nil {
 			return nil, nil, err
 		}
@@ -303,7 +306,7 @@ func encryptData(aesEncryptionKey []byte, txSenderPubKey []byte, plaintext []byt
 	}
 
 	// ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
-	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
+	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...) //nolint:gocritic
 
 	return ciphertext, nil
 }
