@@ -57,7 +57,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			if err != nil {
 				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
 			}
-			rsp, err = queryContractListByCode(ctx, codeID, keeper) //nolint:errcheck
+			rsp, err = queryContractListByCode(ctx, codeID, keeper) //nolint:staticcheck
 		case QueryGetContractState:
 			if len(path) < 2 {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("%s too few arguments (wanted at least 2): %v", QueryGetContractState, path))

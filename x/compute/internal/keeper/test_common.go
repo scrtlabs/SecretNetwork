@@ -80,10 +80,6 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
 
-const (
-	flagLRUCacheSize  = "lru_size"
-	flagQueryGasLimit = "query_gas_limit"
-)
 
 var ModuleBasics = module.NewBasicManager(
 	auth.AppModuleBasic{},
