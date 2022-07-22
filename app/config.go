@@ -90,14 +90,6 @@ var mbasics = module.NewBasicManager(
 	)...,
 )
 
-func customKVStoreKeys() []string {
-	return []string{
-		compute.StoreKey,
-		registration.StoreKey,
-		icaauth.StoreKey,
-	}
-}
-
 func customModuleBasics() []module.AppModuleBasic {
 	return []module.AppModuleBasic{
 		compute.AppModuleBasic{},
@@ -139,21 +131,6 @@ func MakeEncodingConfig() EncodingConfig {
 	}
 }
 
-func kvStoreKeys() map[string]*sdk.KVStoreKey {
-	return sdk.NewKVStoreKeys(
-		append([]string{
-			authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
-			minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
-			govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
-			evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey,
-			feegrant.StoreKey, authzkeeper.StoreKey,
-			icacontrollertypes.StoreKey,
-			icahosttypes.StoreKey,
-		},
-			customKVStoreKeys()...,
-		)...,
-	)
-}
 
 func transientStoreKeys() map[string]*sdk.TransientStoreKey {
 	return sdk.NewTransientStoreKeys(paramstypes.TStoreKey)

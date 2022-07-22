@@ -11,22 +11,24 @@ type frame []dbm.Iterator
 
 // iteratorStack contains one frame for each contract, indexed by a counter
 // 10 is a rather arbitrary guess on how many frames might be needed simultaneously
-var iteratorStack = make(map[uint64]frame, 10)
-var iteratorStackMutex sync.Mutex
+var iteratorStack = make(map[uint64]frame, 10) //nolint:unused
+var iteratorStackMutex sync.Mutex              //nolint:unused
 
 // this is a global counter when we create DBs
-var dbCounter uint64
-var dbCounterMutex sync.Mutex
+var dbCounter uint64          //nolint:unused
+var dbCounterMutex sync.Mutex //nolint:unused
 
 // startContract is called at the beginning of a contract runtime to create a new frame on the iteratorStack
 // updates dbCounter for an index
+//nolint:unused,deadcode
 func startContract() uint64 {
 	dbCounterMutex.Lock()
 	defer dbCounterMutex.Unlock()
-	dbCounter += 1
+	dbCounter++
 	return dbCounter
 }
 
+//nolint:unused
 func popFrame(counter uint64) frame {
 	iteratorStackMutex.Lock()
 	defer iteratorStackMutex.Unlock()
@@ -38,6 +40,7 @@ func popFrame(counter uint64) frame {
 }
 
 // endContract is called at the end of a contract runtime to remove one item from the IteratorStack
+//nolint:unused,deadcode
 func endContract(counter uint64) {
 	// we pull popFrame in another function so we don't hold the mutex while cleaning up the popped frame
 	remove := popFrame(counter)
@@ -50,11 +53,12 @@ func endContract(counter uint64) {
 // storeIterator will add this to the end of the latest stack and return a reference to it.
 // We start counting with 1, so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
+//nolint:unused,deadcode
 func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
 	iteratorStackMutex.Lock()
 	defer iteratorStackMutex.Unlock()
 
-	frame := append(iteratorStack[dbCounter], it)
+	frame := append(iteratorStack[dbCounter], it) //nolint:gocritic // I frequently see this in cosmos lints, and never feel comfortable solving it.
 	iteratorStack[dbCounter] = frame
 	return uint64(len(frame))
 }
@@ -62,6 +66,7 @@ func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
 // We start counting with 1, in storeIterator so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
+//nolint:unused,deadcode
 func retrieveIterator(dbCounter uint64, index uint64) dbm.Iterator {
 	iteratorStackMutex.Lock()
 	defer iteratorStackMutex.Unlock()

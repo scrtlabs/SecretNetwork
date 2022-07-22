@@ -41,12 +41,12 @@ type Wasmer struct {
 // cacheSize sets the size of an optional in-memory LRU cache for prepared VMs.
 // They allow popular contracts to be executed very rapidly (no loading overhead),
 // but require ~32-64MB each in memory usage.
-func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, ModuleCacheSize uint8) (*Wasmer, error) {
+func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, moduleCacheSize uint8) (*Wasmer, error) {
 	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize)
 	if err != nil {
 		return nil, err
 	}
-	err = api.InitEnclaveRuntime(ModuleCacheSize)
+	err = api.InitEnclaveRuntime(moduleCacheSize)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func AppendReplyInternalDataToData(data []byte, internaReplyEnclaveSig []byte, i
 // (That is a detail for the external, sdk-facing, side).
 //
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
-// and setting the env with relevent info on this instance (address, balance, etc)
+// and setting the env with relevant info on this instance (address, balance, etc)
 func (w *Wasmer) Execute(
 	code CodeID,
 	env types.Env,

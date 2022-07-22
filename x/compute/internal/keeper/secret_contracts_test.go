@@ -1170,10 +1170,8 @@ func TestExecNoLogs(t *testing.T) {
 
 			_, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"no_logs":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
-			require.Empty(t, err)
-			// require.Empty(t, execEvents)
-		})
-	}
+	require.Empty(t, err)
+	// require.Empty(t, execEvents)
 }
 
 func TestExecCallbackToInit(t *testing.T) {
@@ -1261,14 +1259,9 @@ func TestInitCallbackContractError(t *testing.T) {
 			require.Empty(t, initErr)
 			require.Equal(t, 1, len(initEvents))
 
-			secondContractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s", "code_hash":"%s"}}`, contractAddress, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests)
-
-			require.NotNil(t, initErr.GenericErr)
-			require.Contains(t, initErr.GenericErr.Msg, "la la 🤯")
-			require.Empty(t, secondContractAddress)
-			// require.Empty(t, initEvents)
-		})
-	}
+	require.Empty(t, err)
+	// require.Empty(t, execEvents)
+	require.Equal(t, "🍆🥑🍄", string(data))
 }
 
 func TestExecCallbackContractError(t *testing.T) {
@@ -1918,7 +1911,7 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 
 			_, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, codeID, "denom", 18, codeHash), false, testContract.IsCosmWasmV1, defaultGasForTests, 17)
 
-			// require.Empty(t, execEvents)
+	// require.Empty(t, execEvents)
 
 			require.NotNil(t, execErr.GenericErr)
 			require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")

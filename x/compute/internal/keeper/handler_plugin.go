@@ -380,7 +380,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk
 		if err != nil {
 			return nil, err
 		}
-		//sdkMsg := stakingtypes.MsgDelegate{
+		// sdkMsg := stakingtypes.MsgDelegate{
 		//	DelegatorAddress: sender.String(),
 		//	ValidatorAddress: msg.Delegate.Validator,
 		//	Amount:           coin,
@@ -577,7 +577,7 @@ func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Addre
 		return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))
 
 		// todo: grpc routing
-		//handler := k.serviceRouter.Handler(msg)
+		// handler := k.serviceRouter.Handler(msg)
 		//if handler == nil {
 		//	return nil, nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, sdk.MsgTypeURL(msg))
 		//}

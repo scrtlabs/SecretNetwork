@@ -15,9 +15,6 @@ const (
 	QueryMasterCertificate = "master-cert"
 )
 
-// controls error output on querier - set true when testing/debugging
-const debug = false
-
 // NewQuerier creates a new querier
 func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) ([]byte, error) {
@@ -38,16 +35,15 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			}
 			return bz, nil
 		case QueryMasterCertificate:
-			rsp, err = queryMasterKey(ctx, keeper)
-
+			rsp, err = queryMasterKey(ctx, keeper) //nolint:staticcheck // No idea what the linter was referring to here.
 			if err != nil {
 				return nil, err
 			}
 
-			if rsp == nil || reflect.ValueOf(rsp).IsNil() {
+			if rsp == nil || reflect.ValueOf(rsp).IsNil() { //nolint:staticcheck
 				return nil, nil
 			}
-			// why indent?
+
 			bz, err = json.Marshal(rsp)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())

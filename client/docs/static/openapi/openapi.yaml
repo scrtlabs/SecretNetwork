@@ -28473,7 +28473,7 @@ paths:
         required: true
       responses:
         "202":
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           content:
             application/json:
               schema:
@@ -29179,7 +29179,7 @@ paths:
         - Staking
       responses:
         "200":
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           content:
             application/json:
               schema:
@@ -29833,7 +29833,7 @@ paths:
         required: true
       responses:
         "200":
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           content:
             application/json:
               schema:
@@ -29997,7 +29997,7 @@ paths:
         required: true
       responses:
         "200":
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           content:
             application/json:
               schema:
@@ -30225,7 +30225,7 @@ paths:
         required: true
       responses:
         "200":
-          description: The transaction was succesfully generated
+          description: The transaction was successfully generated
           content:
             application/json:
               schema:

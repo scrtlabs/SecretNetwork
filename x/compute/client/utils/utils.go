@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/encoding/proto"
 
 	regtypes "github.com/enigmampc/SecretNetwork/x/registration"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remoteAttestation"
 
 	"github.com/miscreant/miscreant.go"
 	"golang.org/x/crypto/curve25519"
@@ -83,7 +83,10 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 
 	if _, err := os.Stat(keyPairFilePath); os.IsNotExist(err) {
 		var privkey [32]byte
-		rand.Read(privkey[:])
+		_, err := rand.Read(privkey[:])
+		if err != nil {
+			return nil, nil, err
+		}
 
 		var pubkey [32]byte
 		curve25519.ScalarBaseMult(&pubkey, &privkey)
@@ -98,7 +101,7 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 			return nil, nil, err
 		}
 
-		err = ioutil.WriteFile(keyPairFilePath, keyPairJSONBytes, 0o644)
+		err = ioutil.WriteFile(keyPairFilePath, keyPairJSONBytes, 0o644) //nolint:gosec // common cosmos issue that I don't know how to solve exactly.
 		if err != nil {
 			return nil, nil, err
 		}
@@ -119,7 +122,13 @@ func (ctx WASMContext) GetTxSenderKeyPair() (privkey []byte, pubkey []byte, er e
 	}
 
 	privkey, err = hex.DecodeString(keyPair.Private)
+	if err != nil {
+		return nil, nil, err
+	}
 	pubkey, err = hex.DecodeString(keyPair.Public)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// TODO verify pubkey
 
@@ -165,8 +174,12 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 	}
 
 	txEncryptionIkm, err := curve25519.X25519(txSenderPrivKey, consensusIoPubKeyBytes)
+	if err != nil {
+		fmt.Println("Failed to derive tx encryption key")
+		return nil, err
+	}
 
-	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
+	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
 
 	txEncryptionKey := make([]byte, 32)
 	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {
@@ -189,6 +202,9 @@ func (ctx WASMContext) OfflineEncrypt(plaintext []byte, pathToMasterIoKey string
 	}
 
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
+	if err != nil {
+		return nil, err
+	}
 
 	nonce := make([]byte, 32)
 	_, err = rand.Read(nonce)
@@ -209,6 +225,10 @@ func (ctx WASMContext) OfflineEncrypt(plaintext []byte, pathToMasterIoKey string
 // Encrypt encrypts
 func (ctx WASMContext) Encrypt(plaintext []byte) ([]byte, error) {
 	txSenderPrivKey, txSenderPubKey, err := ctx.GetTxSenderKeyPair()
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
 
 	nonce := make([]byte, 32)
 	_, err = rand.Read(nonce)
@@ -233,6 +253,9 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 	}
 
 	txSenderPrivKey, _, err := ctx.GetTxSenderKeyPair()
+	if err != nil {
+		return nil, err
+	}
 
 	txEncryptionKey, err := ctx.getTxEncryptionKey(txSenderPrivKey, nonce)
 	if err != nil {
@@ -252,18 +275,18 @@ var re = regexp.MustCompile("encrypted: (.+?):")
 func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (json.RawMessage, error) {
 	regexMatch := re.FindStringSubmatch(errString)
 	if len(regexMatch) != 2 {
-		return nil, fmt.Errorf("Got an error finding base64 of the error: regexMatch '%v' should have a length of 2. error: %s", regexMatch, errString)
+		return nil, fmt.Errorf("got an error finding base64 of the error: regexMatch '%v' should have a length of 2. error: %v", regexMatch, errString)
 	}
 	errorCipherB64 := regexMatch[1]
 
 	errorCipherBz, err := base64.StdEncoding.DecodeString(errorCipherB64)
 	if err != nil {
-		return nil, fmt.Errorf("Got an error decoding base64 of the error: %w", err)
+		return nil, fmt.Errorf("got an error decoding base64 of the error: %w", err)
 	}
 
 	errorPlainBz, err := ctx.Decrypt(errorCipherBz, nonce)
 	if err != nil {
-		return nil, fmt.Errorf("Got an error decrypting the error: %w", err)
+		return nil, fmt.Errorf("got an error decrypting the error: %w", err)
 	}
 
 	return errorPlainBz, nil
@@ -283,7 +306,7 @@ func encryptData(aesEncryptionKey []byte, txSenderPubKey []byte, plaintext []byt
 	}
 
 	// ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
-	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...)
+	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...) //nolint:gocritic
 
 	return ciphertext, nil
 }
@@ -294,7 +317,7 @@ func GetTxEncryptionKeyOffline(pubkey []byte, txSenderPrivKey []byte, nonce []by
 		return nil, err
 	}
 
-	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm[:], nonce...), hkdfSalt, []byte{})
+	kdfFunc := hkdf.New(sha256.New, append(txEncryptionIkm, nonce...), hkdfSalt, []byte{})
 
 	txEncryptionKey := make([]byte, 32)
 	if _, err := io.ReadFull(kdfFunc, txEncryptionKey); err != nil {

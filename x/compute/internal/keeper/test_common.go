@@ -39,7 +39,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -269,7 +268,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	// mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
 
-	//mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
+	// mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
 	//	keyBank,
 	//	mintSubsp,
 	//	stakingKeeper,
@@ -346,7 +345,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler, mintStore, mintSubsp, stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName)
 	mintKeeper.SetMinter(ctx, minttypes.DefaultInitialMinter())
 
-	//keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	// keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	//// add wasm handler so we can loop-back (contracts calling contracts)
 	//router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 
@@ -531,11 +530,11 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	return ctx.WithTxBytes(txBytes)
 }
 
-func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *sdktx.Tx {
+func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
 	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
 
-func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *sdktx.Tx {
+func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
 		panic("length of `msgs` `creatorAccs` and `privKeys` must be the same")
 	}
@@ -555,7 +554,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 	}
 
 	// This code is based on `cosmos-sdk/client/tx/tx.go::Sign()`
-	var sigs []sdksigning.SignatureV2
+	var sigs []sdksigning.SignatureV2 // nolint:prealloc
 	for _, creatorAcc := range creatorAccs {
 		sig := sdksigning.SignatureV2{
 			PubKey: creatorAcc.GetPubKey(),
@@ -581,6 +580,9 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 			Sequence:      creatorAcc.GetSequence(),
 		}
 		bytesToSign, err := signModeHandler.GetSignBytes(sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
+		if err != nil {
+			panic(err)
+		}
 
 		signBytes, err := privKey.Sign(bytesToSign)
 		if err != nil {
@@ -632,7 +634,7 @@ func fundAccounts(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Ke
 	am.SetAccount(ctx, baseAcct)
 }
 
-var keyCounter uint64 = 0
+var keyCounter uint64
 
 // we need to make this deterministic (same every test run), as encoded address size and thus gas cost,
 // depends on the actual bytes (due to ugly CanonicalAddress encoding)

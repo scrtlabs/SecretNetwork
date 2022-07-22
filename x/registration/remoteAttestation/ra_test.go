@@ -1,4 +1,4 @@
-package remote_attestation
+package remoteAttestation
 
 import (
 	"io/ioutil"

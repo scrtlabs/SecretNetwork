@@ -1,4 +1,4 @@
-package remote_attestation
+package remoteAttestation
 
 import (
 	"bytes"
@@ -24,9 +24,6 @@ import (
 
 */
 func VerifyRaCert(rawCert []byte) ([]byte, error) {
-	// printCert(rawCert)
-	// get the pubkey and payload from raw data
-
 	pubK, payload, err := unmarshalCert(rawCert)
 	if err != nil {
 		return nil, err
@@ -79,7 +76,7 @@ func extractAsn1Value(cert []byte, oid []byte) ([]byte, error) {
 	}
 
 	// Obtain Netscape Comment
-	offset += 1
+	offset++
 	payload := cert[offset : offset+length]
 
 	return payload, nil
@@ -184,14 +181,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 				if err != nil && len(platInfo) != 105 {
 					return nil, errors.New("illegal PlatformInfoBlob")
 				}
-				platInfo = platInfo[4:]
 
-				//piBlob := parsePlatform(platInfo)
-				//piBlobJson, err := json.Marshal(piBlob)
-				//if err != nil {
-				//	return nil, err
-				//}
-				//fmt.Println("Platform info is: " + string(piBlobJson))
 			} else {
 				return nil, errors.New("Failed to fetch platformInfoBlob from attestation report")
 			}

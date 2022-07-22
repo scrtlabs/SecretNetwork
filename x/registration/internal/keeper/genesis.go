@@ -13,8 +13,8 @@ import (
 func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	if data.IoMasterCertificate != nil && data.NodeExchMasterCertificate != nil {
 		// keeper.setMasterPublicKey(ctx, data.MasterPublic)
-		keeper.setMasterCertificate(ctx, *data.IoMasterCertificate, types.MasterIoKeyId)
-		keeper.setMasterCertificate(ctx, *data.NodeExchMasterCertificate, types.MasterNodeKeyId)
+		keeper.setMasterCertificate(ctx, *data.IoMasterCertificate, types.MasterIoKeyID)
+		keeper.setMasterCertificate(ctx, *data.NodeExchMasterCertificate, types.MasterNodeKeyID)
 		for _, storedRegInfo := range data.Registration {
 			keeper.SetRegistrationInfo(ctx, *storedRegInfo)
 		}
@@ -27,8 +27,8 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 func ExportGenesis(ctx sdk.Context, keeper Keeper) *types.GenesisState {
 	var genState types.GenesisState
 
-	genState.NodeExchMasterCertificate = keeper.GetMasterCertificate(ctx, types.MasterNodeKeyId)
-	genState.IoMasterCertificate = keeper.GetMasterCertificate(ctx, types.MasterIoKeyId)
+	genState.NodeExchMasterCertificate = keeper.GetMasterCertificate(ctx, types.MasterNodeKeyID)
+	genState.IoMasterCertificate = keeper.GetMasterCertificate(ctx, types.MasterIoKeyID)
 
 	keeper.ListRegistrationInfo(ctx, func(pubkey []byte, regInfo types.RegistrationNodeInfo) bool {
 		genState.Registration = append(genState.Registration, &regInfo)

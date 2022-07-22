@@ -72,7 +72,6 @@ type Keeper struct {
 	messenger        Messenger
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
-	serviceRouter MsgServiceRouter
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
 }
@@ -251,7 +250,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	}
 
 	pkIndex := -1
-	var _signers [][]byte // This is just used for the error message below
+	var _signers [][]byte //nolint:prealloc // This is just used for the error message below
 	for index, pubKey := range pubKeys {
 		thisSigner := pubKey.Address().Bytes()
 		_signers = append(_signers, thisSigner)
@@ -263,7 +262,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
 	}
 
-	signatures, err := protobufTx.GetSignaturesV2()
+	signatures, err := protobufTx.GetSignaturesV2() //nolint:staticcheck
 	var signMode sdktxsigning.SignMode
 	switch signData := signatures[pkIndex].Data.(type) {
 	case *sdktxsigning.SingleSignatureData:
@@ -781,7 +780,7 @@ func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, typ
 		// println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
 
 		contractCustomInfo := types.ContractCustomInfo{
-			EnclaveKey: enclaveId,
+			EnclaveKey: enclaveID,
 			Label:      contract.Label,
 		}
 
@@ -810,30 +809,6 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 			return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
 		}
 		prefixStore.Set(model.Key, model.Value)
-
-	}
-	return nil
-}
-
-func (k Keeper) fixContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.Model) error {
-	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
-	for _, model := range models {
-		if model.Value == nil {
-			model.Value = []byte{}
-		}
-
-		if !prefixStore.Has(model.Key) {
-			prefixStore.Set(model.Key, model.Value)
-			continue
-		}
-
-		existingValue := prefixStore.Get(model.Key)
-		if bytes.Equal(existingValue, model.Value) {
-			continue
-		} else {
-			prefixStore.Set(model.Key, model.Value)
-		}
 
 	}
 	return nil

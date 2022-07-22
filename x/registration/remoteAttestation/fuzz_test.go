@@ -3,7 +3,7 @@
 //go:build gofuzz
 // +build gofuzz
 
-package remote_attestation
+package remoteAttestation
 
 func Fuzz(data []byte) int {
 	if _, err := VerifyRaCert(data); err != nil {

@@ -101,7 +101,7 @@ type StakingQuery struct {
 	Validators           *ValidatorsQuery         `json:"validators,omitempty"`
 	AllDelegations       *AllDelegationsQuery     `json:"all_delegations,omitempty"`
 	Delegation           *DelegationQuery         `json:"delegation,omitempty"`
-	UnBondingDelegations *UnbondingDeletionsQuery `json:"unbonding_delegations, omitempty"`
+	UnBondingDelegations *UnbondingDeletionsQuery `json:"unbonding_delegations,omitempty"`
 	BondedDenom          *struct{}                `json:"bonded_denom,omitempty"`
 }
 
@@ -128,10 +128,12 @@ func (v Validators) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
+const null = "null"
+
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (v *Validators) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == null {
 		return nil
 	}
 	var raw []Validator
@@ -180,7 +182,7 @@ func (d Delegations) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (d *Delegations) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == null {
 		return nil
 	}
 	var raw []Delegation
@@ -223,7 +225,7 @@ type WasmQuery struct {
 	Raw   *RawQuery   `json:"raw,omitempty"`
 }
 
-// SmartQuery respone is raw bytes ([]byte)
+// SmartQuery response is raw bytes ([]byte)
 type SmartQuery struct {
 	ContractAddr string `json:"contract_addr"`
 	Msg          []byte `json:"msg"`
@@ -302,7 +304,7 @@ func (d RewardCoins) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (d *RewardCoins) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == null {
 		return nil
 	}
 	var raw []Coin
@@ -330,7 +332,7 @@ func (d ProposalsResponse) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (d *ProposalsResponse) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "{\"proposals\": []}" || string(data) == "null" || string(data) == "{\"proposals\":[]}" {
+	if string(data) == "{\"proposals\": []}" || string(data) == null || string(data) == "{\"proposals\":[]}" {
 		return nil
 	}
 	var raw []Proposal

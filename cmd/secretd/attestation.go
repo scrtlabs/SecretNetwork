@@ -1,5 +1,4 @@
 //go:build !secretcli
-// +build !secretcli
 
 package main
 
@@ -23,7 +22,7 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	ra "github.com/enigmampc/SecretNetwork/x/registration/remoteAttestation"
 	"github.com/spf13/cobra"
 )
 
@@ -91,11 +90,13 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
+			//nolint:typecheck
 			spidFile, err := Asset("spid.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
+			//nolint:typecheck
 			apiKeyFile, err := Asset("api_key.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
@@ -433,6 +434,7 @@ Please report any issues with this command
 				}
 			}
 
+			//nolint:typecheck
 			spidFile, err := Asset("spid.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
@@ -492,6 +494,9 @@ Please report any issues with this command
 			}`, base64.StdEncoding.EncodeToString(cert)))
 
 			resp, err := http.Post(fmt.Sprintf(`%s`, regUrl), "application/json", bytes.NewBuffer(data))
+			if err != nil {
+				log.Fatalln(err)
+			}
 			defer resp.Body.Close()
 
 			body, err := ioutil.ReadAll(resp.Body)

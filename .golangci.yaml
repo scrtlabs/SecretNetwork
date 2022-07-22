@@ -1,0 +1,50 @@
+run:
+  tests: false
+#   # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+  build-tags: ["secretcli"]
+  skip-files:
+    - go-cosmwasm/api/callbacks.go
+    - go-cosmwasm/api/callbacks_mock.go
+    - go-cosmwasm/api/lib_mock.go
+  go: '1.18'
+
+
+
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - depguard
+    - dogsled
+    - exportloopref
+    - errcheck
+    - goconst
+    - gofmt
+    - gofumpt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - prealloc
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - revive
+    - typecheck
+    - unconvert
+    - unused
+    - misspell
+    - nolintlint
+
+issues:
+  exclude-rules:
+    - text: "Use of weak random number generator"
+      linters:
+        - gosec
+    - text: "ST1003:"
+      linters:
+        - stylecheck

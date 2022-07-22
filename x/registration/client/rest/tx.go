@@ -14,7 +14,7 @@ func registerTxRoutes(cliCtx client.Context, r *mux.Router) {
 // limit max bytes read to prevent gzip bombs
 // const maxSize = 400 * 1024
 
-//type storeCodeReq struct {
+// type storeCodeReq struct {
 //	BaseReq   rest.BaseReq `json:"base_req" yaml:"base_req"`
 //	WasmBytes []byte       `json:"wasm_bytes"`
 //}

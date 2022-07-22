@@ -1,6 +1,7 @@
 //go:build secretcli
 // +build secretcli
 
+// nolint:gocritic // this file gets magically uncommented during the key injection build.
 package api
 
 //
@@ -8,7 +9,7 @@ package api
 //#include "bindings.h"
 //
 //// typedefs for _cgo functions (db)
-//typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val);
+// typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val);
 //typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val);
 //typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key);
 //typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out);
@@ -120,7 +121,7 @@ type KVStore interface {
 //	ReverseIterator(start, end []byte) dbm.Iterator
 //}
 //
-//var db_vtable = C.DB_vtable{
+// var db_vtable = C.DB_vtable{
 //	read_db:   (C.read_db_fn)(C.cGet_cgo),
 //	write_db:  (C.write_db_fn)(C.cSet_cgo),
 //	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
@@ -307,7 +308,7 @@ type GoAPI struct {
 }
 
 //
-//var api_vtable = C.GoApi_vtable{
+// var api_vtable = C.GoApi_vtable{
 //	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo),
 //	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo),
 //}

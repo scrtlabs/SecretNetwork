@@ -449,7 +449,7 @@ paths:
                   $ref: "#/definitions/Coin"
       responses:
         202:
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
@@ -785,7 +785,7 @@ paths:
         - application/json
       responses:
         200:
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
@@ -1103,7 +1103,7 @@ paths:
                 $ref: "#/definitions/StdTx"
       responses:
         200:
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
@@ -1176,7 +1176,7 @@ paths:
                   $ref: "#/definitions/Coin"
       responses:
         200:
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
@@ -1257,7 +1257,7 @@ paths:
                   $ref: "#/definitions/ParamChange"
       responses:
         200:
-          description: The transaction was succesfully generated
+          description: The transaction was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:

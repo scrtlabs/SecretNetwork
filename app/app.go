@@ -37,7 +37,7 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
+	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/1point3"
 	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
 	icaauthtypes "github.com/enigmampc/SecretNetwork/x/mauth/types"
 
@@ -210,6 +210,8 @@ func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper 
 	return app.ScopedIBCKeeper
 }
 
+// TODO: this doesn't look right - Jacob
+//nolint:staticcheck // we are doing this to satisfy an ibc requirement.  Likely possible to fix it...
 func (app *SecretNetworkApp) GetTxConfig() client.TxConfig {
 	return app.GetTxConfig()
 }
@@ -574,7 +576,7 @@ func NewSecretNetworkApp(
 	//
 	// NOTE: This is not required for apps that don't use the simulator for fuzz testing
 	// transactions.
-	//app.sm = module.NewSimulationManager(
+	// app.sm = module.NewSimulationManager(
 	//	auth.NewAppModule(appCodec, app.accountKeeper, authsims.RandomGenesisAccounts),
 	//	bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
 	//	capability.NewAppModule(appCodec, *app.capabilityKeeper),

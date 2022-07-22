@@ -30841,7 +30841,7 @@ paths:
                       example: '50'
       responses:
         '202':
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             type: object
             properties:
@@ -31547,7 +31547,7 @@ paths:
         - application/json
       responses:
         '200':
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             type: object
             properties:
@@ -32199,7 +32199,7 @@ paths:
                         example: '0'
       responses:
         '200':
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             type: object
             properties:
@@ -32368,7 +32368,7 @@ paths:
                       example: '50'
       responses:
         '200':
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             type: object
             properties:
@@ -32600,7 +32600,7 @@ paths:
                       type: object
       responses:
         '200':
-          description: The transaction was succesfully generated
+          description: The transaction was successfully generated
           schema:
             type: object
             properties:

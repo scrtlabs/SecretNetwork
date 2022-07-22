@@ -37,7 +37,13 @@ func init() {
 	config.Seal()
 
 	spid, err := ioutil.ReadFile("../../../../ias_keys/develop/spid.txt")
+	if err != nil {
+		panic(fmt.Sprintf("Error reading spid.txt: %v", err))
+	}
 	apiKey, err := ioutil.ReadFile("../../../../ias_keys/develop/api_key.txt")
+	if err != nil {
+		panic(fmt.Sprintf("Error reading api_key.txt: %v", err))
+	}
 
 	fmt.Printf("This IS spid: %v\n", spid)
 	fmt.Printf("This IS api key: %v\n", apiKey)
@@ -594,6 +600,7 @@ func TestExecute(t *testing.T) {
 		Beneficiary: bob,
 	}
 	initMsgBz, err := json.Marshal(initMsg)
+	require.NoError(t, err)
 
 	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
 	// keyStr := hex.EncodeToString(key)
@@ -953,6 +960,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	// this must fail
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil, nil)
+	require.Error(t, err)
 	assert.True(t, false)
 	// make sure gas ran out
 	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
