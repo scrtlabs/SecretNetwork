@@ -68,7 +68,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			if err != nil {
 				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
 			}
-			rsp, err = queryCode(ctx, codeID, keeper)
+			rsp, err = queryCode(ctx, codeID, keeper) //nolint:staticcheck
 		case QueryListCode:
 			rsp, err = queryCodeList(ctx, keeper)
 		/*
@@ -87,13 +87,13 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
-			bz, err = queryContractKey(ctx, addr, keeper)
+			bz, err = queryContractKey(ctx, addr, keeper) //nolint:staticcheck
 		case QueryContractHash:
 			addr, err := sdk.AccAddressFromBech32(path[1])
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
-			bz, err = queryContractHash(ctx, addr, keeper)
+			bz, err = queryContractHash(ctx, addr, keeper) //nolint:staticcheck
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("unknown data query endpoint %v", path[0]))
 		}
