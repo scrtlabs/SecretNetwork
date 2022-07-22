@@ -1,0 +1,6 @@
+{
+    "makefile.extensionOutputFolder": "./.vscode",
+    "go.buildTags": "secretcli",
+    "go.lintTool": "golangci-lint",
+    "go.lintOnSave": "workspace"
+}
