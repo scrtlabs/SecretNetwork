@@ -1,3 +1,5 @@
+//nolint:deadcode,unused // functions here are used when the uncommenting magic happens and the code is built remotely.
+
 package api
 
 import (
