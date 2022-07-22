@@ -55,7 +55,7 @@ ENV USER_HOME=/home/${USERNAME}
 # ENV RUSTUP_HOME=${USER_HOME}/.cargo/bin
 
 
-COPY .devcontainer/library-scripts/*.sh .devcontainer/library-scripts/*.env /tmp/library-scripts/
+COPY library-scripts/*.sh library-scripts/*.env /tmp/library-scripts/
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && /bin/bash /tmp/library-scripts/common-debian.sh "${INSTALL_ZSH}" "${USERNAME}" "${USER_UID}" "${USER_GID}" "${UPGRADE_PACKAGES}" "true" "true"
     #

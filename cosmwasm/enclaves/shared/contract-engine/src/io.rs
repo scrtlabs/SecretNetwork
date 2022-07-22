@@ -76,7 +76,7 @@ pub fn encrypt_output(
 ) -> Result<Vec<u8>, EnclaveError> {
     let key = calc_encryption_key(&nonce, &user_public_key);
 
-    trace!(
+    info!(
         "Output before encryption: {:?}",
         String::from_utf8_lossy(&output)
     );

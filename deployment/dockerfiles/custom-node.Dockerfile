@@ -68,7 +68,7 @@ RUN mkdir -p /root/.secretd/.node/
 
 ####### Node parameters
 ARG MONIKER=default
-ARG CHAINID=secret-testnet-1
+ARG CHAINID=secretdev-1
 ARG GENESISPATH=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-testnet-genesis.json
 ARG PERSISTENT_PEERS=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.southuk.azure.com:26656
 
