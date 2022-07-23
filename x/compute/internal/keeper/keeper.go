@@ -334,7 +334,7 @@ func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1w
 	} else if msg.Gov != nil {
 		subMsg.Msg = v1wasmTypes.CosmosMsg{
 			Gov: &v1wasmTypes.GovMsg{
-				Vote: &v1wasmTypes.VoteMsg{ProposalId: msg.Gov.Vote.Proposal, Vote: v1wasmTypes.ToVoteOption[msg.Gov.Vote.VoteOption]},
+				Vote: &v1wasmTypes.VoteMsg{ProposalID: msg.Gov.Vote.Proposal, Vote: v1wasmTypes.ToVoteOption[msg.Gov.Vote.VoteOption]},
 			},
 		}
 	}
@@ -732,9 +732,9 @@ func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress
 }
 
 func (k Keeper) GetContractHash(ctx sdk.Context, contractAddress sdk.AccAddress) []byte {
-	codeId := k.GetContractInfo(ctx, contractAddress).CodeID
+	codeID := k.GetContractInfo(ctx, contractAddress).CodeID
 
-	hash := k.GetCodeInfo(ctx, codeId).CodeHash
+	hash := k.GetCodeInfo(ctx, codeID).CodeHash
 
 	return hash
 }
@@ -775,7 +775,7 @@ func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, typ
 		var contract types.ContractInfo
 		k.cdc.MustUnmarshal(iter.Value(), &contract)
 
-		enclaveId := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
+		enclaveID := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
 		// println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId))
 		// println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
 

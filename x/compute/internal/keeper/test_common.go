@@ -92,11 +92,6 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
 
-const (
-	flagLRUCacheSize  = "lru_size"
-	flagQueryGasLimit = "query_gas_limit"
-)
-
 var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
 
 type MockIBCTransferKeeper struct {

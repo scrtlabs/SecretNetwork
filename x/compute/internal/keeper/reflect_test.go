@@ -84,9 +84,10 @@ func TestMaskReflectContractSend(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, maskID, maskStart)
 
-	maskAddr, err := keeper.Instantiate(ctx, maskID, creator /* nil,*/, initMsgBz, "mask contract 2", maskStart, nil)
+	maskAddr, other, err := keeper.Instantiate(ctx, maskID, creator /* nil,*/, initMsgBz, "mask contract 2", maskStart, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, maskAddr)
+	require.NotEmpty(t, other)
 
 	// now we set contract as verifier of an escrow
 	initMsg := InitMsg{
@@ -104,10 +105,11 @@ func TestMaskReflectContractSend(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, escrowID, escrowStart)
 
-	escrowAddr, err := keeper.Instantiate(ctx, escrowID, creator /* nil,*/, initMsgBz, "escrow contract 2", escrowStart, nil)
+	escrowAddr, other, err := keeper.Instantiate(ctx, escrowID, creator /* nil,*/, initMsgBz, "escrow contract 2", escrowStart, nil)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, escrowAddr)
+	require.NotEmpty(t, other)
 
 	// let's make sure all balances make sense
 	checkAccount(t, ctx, accKeeper, keeper.bankKeeper, creator, sdk.NewCoins(sdk.NewInt64Coin("denom", 35000))) // 100k - 40k - 25k
@@ -282,9 +284,10 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	require.NoError(t, err)
 	contractStart := sdk.NewCoins(sdk.NewInt64Coin("denom", 40000))
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, codeID, contractStart)
-	contractAddr, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, "mask contract 1", contractStart, nil)
+	contractAddr, other, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, "mask contract 1", contractStart, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, contractAddr)
+	require.NotEmpty(t, other)
 
 	// let's perform a normal query of state
 	ownerQuery := MaskQueryMsg{

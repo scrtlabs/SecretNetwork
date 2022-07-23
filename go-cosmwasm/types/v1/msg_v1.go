@@ -37,7 +37,7 @@ type Response struct {
 // Used to serialize both the data and the internal reply information in order to keep the api without changes
 type DataWithInternalReplyInfo struct {
 	InternaReplyEnclaveSig []byte `json:"internal_reply_enclave_sig"`
-	InternalMsgId          []byte `json:"internal_msg_id"`
+	InternalMsgID          []byte `json:"internal_msg_id"`
 	Data                   []byte `json:"data,omitempty"`
 }
 
@@ -113,7 +113,7 @@ type GovMsg struct {
 type VoteOption int
 
 type VoteMsg struct {
-	ProposalId uint64     `json:"proposal_id"`
+	ProposalID uint64     `json:"proposal_id"`
 	Vote       VoteOption `json:"vote"`
 }
 
@@ -146,7 +146,7 @@ func (v VoteOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
-func (s *VoteOption) UnmarshalJSON(b []byte) error {
+func (v *VoteOption) UnmarshalJSON(b []byte) error {
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *VoteOption) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid vote option '%s'", j)
 	}
-	*s = voteOption
+	*v = voteOption
 	return nil
 }
 

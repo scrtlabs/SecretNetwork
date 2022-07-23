@@ -5,48 +5,30 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/std"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/capability"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
-	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
-	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/mint"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
-	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
-	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
-	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v3/modules/core"
-	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
 	"github.com/enigmampc/SecretNetwork/x/registration"
@@ -129,13 +111,4 @@ func MakeEncodingConfig() EncodingConfig {
 		TxConfig:          txCfg,
 		Amino:             amino,
 	}
-}
-
-
-func transientStoreKeys() map[string]*sdk.TransientStoreKey {
-	return sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
-}
-
-func memStoreKeys() map[string]*sdk.MemoryStoreKey {
-	return sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
 }

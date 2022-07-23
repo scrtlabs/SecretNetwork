@@ -285,7 +285,7 @@ func EncodeGovMsg(sender sdk.AccAddress, msg *v1wasmTypes.GovMsg) ([]sdk.Msg, er
 		return nil, err
 	}
 
-	sdkMsg := govtypes.NewMsgVote(sender, msg.Vote.ProposalId, option)
+	sdkMsg := govtypes.NewMsgVote(sender, msg.Vote.ProposalID, option)
 	return []sdk.Msg{sdkMsg}, nil
 }
 

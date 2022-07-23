@@ -89,7 +89,7 @@ type V010orV1ContractExecResponse struct {
 	V1                     *V1ContractExecResponse   `json:"v1,omitempty"`
 	V010                   *V010ContractExecResponse `json:"v010,omitempty"`
 	InternaReplyEnclaveSig []byte                    `json:"internal_reply_enclave_sig"`
-	InternalMsgId          []byte                    `json:"internal_msg_id"`
+	InternalMsgID          []byte                    `json:"internal_msg_id"`
 }
 
 type V010ContractExecResponse struct {
@@ -106,7 +106,7 @@ type V010orV1ContractInitResponse struct {
 	V1                     *V1ContractInitResponse   `json:"v1,omitempty"`
 	V010                   *V010ContractInitResponse `json:"v010,omitempty"`
 	InternaReplyEnclaveSig []byte                    `json:"internal_reply_enclave_sig"`
-	InternalMsgId          []byte                    `json:"internal_msg_id"`
+	InternalMsgID          []byte                    `json:"internal_msg_id"`
 }
 
 type V010ContractInitResponse struct {
@@ -128,7 +128,7 @@ type V1ContractInitResponse struct {
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
 func (w *Wasmer) Instantiate(
-	codeId CodeID,
+	codeID CodeID,
 	env types.Env,
 	initMsg []byte,
 	store KVStore,
@@ -149,7 +149,7 @@ func (w *Wasmer) Instantiate(
 		return nil, nil, 0, err
 	}
 
-	data, gasUsed, err := api.Instantiate(w.cache, codeId, paramBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
+	data, gasUsed, err := api.Instantiate(w.cache, codeID, paramBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
 	if err != nil {
 		return nil, nil, gasUsed, err
 	}
@@ -165,13 +165,13 @@ func (w *Wasmer) Instantiate(
 		return nil, nil, gasUsed, fmt.Errorf("instantiate: cannot parse response from json: %w", err)
 	}
 
-	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
+	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgID) > 0)
 
 	// init v0.10 response
 	if respV010orV1.V010 != nil {
 		if respV010orV1.V010.Err != nil {
 			return v1types.DataWithInternalReplyInfo{
-				InternalMsgId:          respV010orV1.InternalMsgId,
+				InternalMsgID:          respV010orV1.InternalMsgID,
 				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
 				Data:                   []byte(respV010orV1.V010.Err.GenericErr.Msg),
 			}, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010.Err)
@@ -179,7 +179,7 @@ func (w *Wasmer) Instantiate(
 
 		if respV010orV1.V010.Ok != nil {
 			if isOutputAddressedToReply {
-				respV010orV1.V010.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+				respV010orV1.V010.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgID)
 				if err != nil {
 					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
 				}
@@ -195,7 +195,7 @@ func (w *Wasmer) Instantiate(
 	if respV010orV1.V1 != nil {
 		if respV010orV1.V1.Err != nil {
 			return v1types.DataWithInternalReplyInfo{
-				InternalMsgId:          respV010orV1.InternalMsgId,
+				InternalMsgID:          respV010orV1.InternalMsgID,
 				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
 				Data:                   []byte(respV010orV1.V1.Err.GenericErr.Msg),
 			}, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V1.Err)
@@ -203,7 +203,7 @@ func (w *Wasmer) Instantiate(
 
 		if respV010orV1.V1.Ok != nil {
 			if isOutputAddressedToReply {
-				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgID)
 				if err != nil {
 					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
 				}
@@ -218,10 +218,10 @@ func (w *Wasmer) Instantiate(
 	return nil, nil, gasUsed, fmt.Errorf("instantiate: cannot detect response type (v0.10 or v1)")
 }
 
-func AppendReplyInternalDataToData(data []byte, internaReplyEnclaveSig []byte, internalMsgId []byte) ([]byte, error) {
+func AppendReplyInternalDataToData(data []byte, internaReplyEnclaveSig []byte, internalMsgID []byte) ([]byte, error) {
 	dataWithInternalReply := v1types.DataWithInternalReplyInfo{
 		InternaReplyEnclaveSig: internaReplyEnclaveSig,
-		InternalMsgId:          internalMsgId,
+		InternalMsgID:          internalMsgID,
 		Data:                   data,
 	}
 
@@ -268,13 +268,13 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
-	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
+	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgID) > 0)
 
 	// handle v0.10 response
 	if respV010orV1.V010 != nil {
 		if respV010orV1.V010.Err != nil {
 			return v1types.DataWithInternalReplyInfo{
-				InternalMsgId:          respV010orV1.InternalMsgId,
+				InternalMsgID:          respV010orV1.InternalMsgID,
 				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
 				Data:                   []byte(respV010orV1.V010.Err.GenericErr.Msg),
 			}, gasUsed, fmt.Errorf("%+v", respV010orV1.V010.Err)
@@ -282,7 +282,7 @@ func (w *Wasmer) Execute(
 
 		if respV010orV1.V010.Ok != nil {
 			if isOutputAddressedToReply {
-				respV010orV1.V010.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+				respV010orV1.V010.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgID)
 				if err != nil {
 					return nil, gasUsed, fmt.Errorf("cannot serialize v010 DataWithInternalReplyInfo into binary : %w", err)
 				}
@@ -295,7 +295,7 @@ func (w *Wasmer) Execute(
 	if respV010orV1.V1 != nil {
 		if respV010orV1.V1.Err != nil {
 			return v1types.DataWithInternalReplyInfo{
-				InternalMsgId:          respV010orV1.InternalMsgId,
+				InternalMsgID:          respV010orV1.InternalMsgID,
 				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
 				Data:                   []byte(respV010orV1.V1.Err.GenericErr.Msg),
 			}, gasUsed, fmt.Errorf("%+v", respV010orV1.V1.Err)
@@ -303,7 +303,7 @@ func (w *Wasmer) Execute(
 
 		if respV010orV1.V1.Ok != nil {
 			if isOutputAddressedToReply {
-				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgID)
 				if err != nil {
 					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
 				}

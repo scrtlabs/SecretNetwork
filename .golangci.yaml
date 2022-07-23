@@ -29,7 +29,6 @@ linters:
     - ineffassign
     - misspell
     - nakedret
-    - prealloc
     - staticcheck
     - structcheck
     - stylecheck

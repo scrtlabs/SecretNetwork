@@ -243,10 +243,10 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			}
 		}
 
-		msg_id := []byte(fmt.Sprint(msg.ID))
+		msgID := []byte(fmt.Sprint(msg.ID))
 		// now handle the reply, we use the parent context, and abort on error
 		reply := v1wasmTypes.Reply{
-			ID:     msg_id,
+			ID:     msgID,
 			Result: result,
 		}
 
@@ -280,12 +280,12 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 				}
 			}
 
-			if len(dataWithInternalReplyInfo.InternalMsgId) == 0 || len(dataWithInternalReplyInfo.InternaReplyEnclaveSig) == 0 {
+			if len(dataWithInternalReplyInfo.InternalMsgID) == 0 || len(dataWithInternalReplyInfo.InternaReplyEnclaveSig) == 0 {
 				return nil, fmt.Errorf("when sending a reply both InternaReplyEnclaveSig and InternalMsgId are expected to be initialized")
 			}
 
 			replySigInfo = ogSigInfo
-			reply.ID = dataWithInternalReplyInfo.InternalMsgId
+			reply.ID = dataWithInternalReplyInfo.InternalMsgID
 			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
 
 		}

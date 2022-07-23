@@ -48,10 +48,6 @@ type transferPayload struct {
 	Amount string `json:"amount"`
 }
 
-type ownerPayload struct {
-	Owner sdk.Address `json:"owner"`
-}
-
 type unbondPayload struct {
 	// uint128 encoded as string
 	Amount string `json:"amount"`
@@ -244,22 +240,6 @@ func initializeStaking(t *testing.T) initInfo {
 		distKeeper:    keepers.DistKeeper,
 		bankKeeper:    keeper.bankKeeper,
 		cleanup:       func() {},
-	}
-}
-
-func checkAccount(t *testing.T, ctx sdk.Context, accKeeper authkeeper.AccountKeeper, bankKeeper bankkeeper.Keeper, addr sdk.AccAddress, expected sdk.Coins) {
-	acct := accKeeper.GetAccount(ctx, addr)
-	if expected == nil {
-		assert.Nil(t, acct)
-	} else {
-		assert.NotNil(t, acct)
-		coins := bankKeeper.GetAllBalances(ctx, acct.GetAddress())
-		if expected.Empty() {
-			// there is confusion between nil and empty slice... let's just treat them the same
-			assert.True(t, coins.Empty())
-		} else {
-			assert.Equal(t, coins, expected)
-		}
 	}
 }
 
