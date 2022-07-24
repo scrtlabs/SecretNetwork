@@ -232,6 +232,7 @@ jobs:
           rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cat ~/.cargo/config.toml >> ~/.cargo/config.toml
           cd cosmwasm/enclaves/execute/
           cargo --version
           rustc --version  
