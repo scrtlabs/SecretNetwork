@@ -21,7 +21,8 @@ jobs:
           rustup component add rust-src clippy
       - name: Install xargo
         run: |
-          rustup install nightly --default
+          rustup install nightly
+          rustup default nightly
           cat cargo.toml >> ~/.cargo/config.toml
           cargo --version
           rustc --version  
@@ -56,7 +57,8 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - run: |
-          rustup install nightly --default
+          rustup install nightly
+          rustup default nightly
           cat cargo.toml >> ~/.cargo/config.toml
           rustup component add rust-src clippy
           cd cosmwasm/enclaves/execute/
