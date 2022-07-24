@@ -15,27 +15,13 @@ jobs:
           wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
-      - name: Cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache xargo sysroot
-        uses: actions/cache@v1
-        with:
-          path: ~/.xargo
-          key: ${{ runner.os }}-xargo-sysroot
-      - name: Cache build artifacts
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/sccache
-          key: ${{ runner.os }}-sccache
       - run: |
           rustup component add rust-src clippy
           cd cosmwasm/enclaves/execute/
           rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cat cargo.toml >> ~/.cargo/config.toml
           cargo --version
           rustc --version  
           cargo +stable install xargo --version 0.3.25

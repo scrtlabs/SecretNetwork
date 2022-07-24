@@ -1,0 +1,9 @@
+# This is appended to the build system's .cargo/cargo.toml file
+
+[source."https://github.com/apache/teaclave-sgx-sdk.git"]
+git = "https://github.com/apache/teaclave-sgx-sdk.git"
+rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "third_party/vendor"
