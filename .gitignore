@@ -35,3 +35,4 @@ node_modules
 /secretjs
 /secret.js
 tmp-swagger-gen
+.vscode
