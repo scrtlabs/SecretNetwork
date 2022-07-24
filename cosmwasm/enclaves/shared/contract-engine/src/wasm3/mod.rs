@@ -1,16 +1,18 @@
 use std::cell::RefCell;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::marker::PhantomData;
 use std::ops::DerefMut;
 
 use log::*;
 
 use bech32::{FromBase32, ToBase32};
+use rand_chacha::ChaChaRng;
+use rand_core::SeedableRng;
 use wasm3::error::Trap;
 
 use enclave_cosmos_types::types::ContractCode;
 use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
-use enclave_crypto::{Ed25519PublicKey, WasmApiCryptoError};
+use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
@@ -19,6 +21,7 @@ use crate::db::read_encrypted_key;
 use crate::db::{remove_encrypted_key, write_encrypted_key};
 use crate::errors::{wasm3_error_to_enclave_error, WasmEngineError, WasmEngineResult};
 use crate::gas::WasmCosts;
+use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::ContractOperation;
 
@@ -108,9 +111,39 @@ impl Context {
         self.last_error = Some(error);
     }
 
+    /// Track gas used inside wasmi
+    fn use_gas(&mut self, gas_amount: u64) -> Result<(), WasmEngineError> {
+        self.gas_used = self.gas_used.saturating_add(gas_amount);
+        self.check_gas_usage()
+    }
+
+    fn check_gas_usage(&self) -> Result<(), WasmEngineError> {
+        // Check if new amount is bigger than gas limit
+        // If is above the limit, halt execution
+        if self.is_gas_depleted() {
+            debug!(
+                "Out of gas! Gas limit: {}, gas used: {}, gas used externally: {}",
+                self.gas_limit, self.gas_used, self.gas_used_externally
+            );
+            Err(WasmEngineError::OutOfGas)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn is_gas_depleted(&self) -> bool {
+        self.gas_limit < self.gas_used.saturating_add(self.gas_used_externally)
+    }
+
     fn use_gas_externally(&mut self, gas: u64) -> WasmEngineResult<()> {
         // todo implement gas consumption
         Ok(())
+    }
+
+    fn gas_left(&self) -> u64 {
+        self.gas_limit
+            .saturating_sub(self.gas_used)
+            .saturating_sub(self.gas_used_externally)
     }
 }
 
@@ -327,12 +360,12 @@ impl<'m> CWMemory<'m> {
 
     fn extract_vector(&self, region_ptr: u32) -> WasmEngineResult<Vec<u8>> {
         if region_ptr == 0 {
-            eprintln!("vec_ptr_ptr is null");
+            debug!("vec_ptr_ptr is null");
             return Err(WasmEngineError::MemoryReadError);
         }
 
         let vec_ptr = self.get_u32_at(region_ptr)? as usize;
-        let vec_len = self.get_u32_at(region_ptr + SIZE_OF_U32 as u32)? as usize;
+        let vec_len = self.get_u32_at(region_ptr + (SIZE_OF_U32 as u32) * 2)? as usize;
         if vec_ptr == 0 {
             return Err(WasmEngineError::MemoryReadError);
         }
@@ -341,6 +374,44 @@ impl<'m> CWMemory<'m> {
             Some(slice) => Ok(slice.to_owned()),
             None => Err(WasmEngineError::MemoryReadError),
         }
+    }
+
+    fn decode_sections(&self, region_ptr: u32) -> WasmEngineResult<Vec<Vec<u8>>> {
+        if region_ptr == 0 {
+            debug!("region_ptr is null");
+            return Err(WasmEngineError::MemoryReadError);
+        }
+
+        let data_ptr = self.get_u32_at(region_ptr)? as usize;
+        if data_ptr == 0 {
+            debug!("data_ptr is null");
+            return Err(WasmEngineError::MemoryReadError);
+        }
+
+        let data_len = self.get_u32_at(region_ptr + (SIZE_OF_U32 as u32) * 2)? as usize;
+        let mut remaining_len = data_len as usize;
+
+        let data = self.memory.get(data_ptr..data_ptr + data_len);
+        let data = data.ok_or(WasmEngineError::MemoryReadError)?;
+
+        let mut result: Vec<Vec<u8>> = vec![];
+        while remaining_len >= 4 {
+            let tail_len = u32::from_be_bytes([
+                data[remaining_len - 4],
+                data[remaining_len - 3],
+                data[remaining_len - 2],
+                data[remaining_len - 1],
+            ]) as usize;
+            let mut new_element = vec![0; tail_len];
+            let elem_start = remaining_len - SIZE_OF_U32 - tail_len;
+            let elem_end = remaining_len - SIZE_OF_U32;
+            new_element.copy_from_slice(&data[elem_start..elem_end]);
+            result.push(new_element);
+            remaining_len -= 4 + tail_len;
+        }
+        result.reverse();
+
+        Ok(result)
     }
 
     fn write_to_allocated_memory(
@@ -387,6 +458,26 @@ fn show_bytes(bytes: &[u8]) -> String {
         String::from_utf8_lossy(bytes),
         hex::encode(bytes)
     )
+}
+
+/// Returns the data shifted by 32 bits towards the most significant bit.
+///
+/// This is independent of endianness. But to get the idea, it would be
+/// `data || 0x00000000` in big endian representation.
+#[inline]
+fn to_high_half(data: u32) -> u64 {
+    // See https://stackoverflow.com/a/58956419/2013738 to understand
+    // why this is endianness agnostic.
+    (data as u64) << 32
+}
+
+/// Returns the data copied to the 4 least significant bytes.
+///
+/// This is independent of endianness. But to get the idea, it would be
+/// `0x00000000 || data` in big endian representation.
+#[inline]
+fn to_low_half(data: u32) -> u64 {
+    data.into()
 }
 
 fn host_read_db(
@@ -621,25 +712,50 @@ fn host_query_chain(
     query_region_ptr: i32,
 ) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    let query_buffer = memory.extract_vector(query_region_ptr as u32).map_err(
+        debug_err!(err => "query_chain failed to extract vector from query_region_ptr: {err}"),
+    )?;
+
+    let mut gas_used: u64 = 0;
+    let answer = encrypt_and_query_chain(
+        &query_buffer,
+        &context.context,
+        context.user_nonce,
+        context.user_public_key,
+        &mut gas_used,
+        context.gas_left(),
+    )?;
+
+    context.use_gas_externally(gas_used)?;
+
+    write_to_memory(&mut call_context.runtime, &answer).map(|region_ptr| region_ptr as i32)
 }
 
 fn host_debug_print(
-    context: &mut Context,
+    _context: &mut Context,
     mut call_context: wasm3::CallContext,
     message_region_ptr: i32,
-) -> WasmEngineResult<i32> {
+) -> WasmEngineResult<()> {
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    let message_buffer = memory.extract_vector(message_region_ptr as u32)?;
+
+    let message =
+        String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
+
+    info!("debug_print: {:?}", message);
+
+    Ok(())
 }
 
 fn host_gas(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    mut _call_context: wasm3::CallContext,
     gas_amount: i32,
-) -> WasmEngineResult<i32> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+) -> WasmEngineResult<()> {
+    context.use_gas(gas_amount as u64)?;
+    Ok(())
 }
 
 fn host_secp256k1_verify(
@@ -760,7 +876,102 @@ fn host_secp256k1_recover_pubkey(
     (message_hash_ptr, signature_ptr, recovery_param): (i32, i32, i32),
 ) -> WasmEngineResult<i64> {
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    let cost = context.gas_costs.external_secp256k1_recover_pubkey as u64;
+    context.use_gas_externally(cost)?;
+
+    let message_hash_data = memory.extract_vector(message_hash_ptr as u32).map_err(
+        debug_err!(err => "secp256k1_recover_pubkey error while trying to read message_hash from wasm memory: {err}")
+    )?;
+    let signature_data = memory.extract_vector(signature_ptr as u32).map_err(
+        debug_err!(err => "secp256k1_recover_pubkey error while trying to read signature from wasm memory: {err}")
+    )?;
+
+    trace!(
+        "secp256k1_recover_pubkey was called from WASM code with message_hash {:x?} (len {:?} should be 32)",
+        &message_hash_data,
+        message_hash_data.len()
+    );
+    trace!(
+        "secp256k1_recover_pubkey was called from WASM code with signature {:x?} (len {:?} should be 64)",
+        &signature_data,
+        signature_data.len()
+    );
+    trace!(
+        "secp256k1_recover_pubkey was called from WASM code with recovery_param {:?}",
+        recovery_param,
+    );
+
+    // check message_hash input
+    if message_hash_data.len() != 32 {
+        // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L93
+        return Ok(to_high_half(WasmApiCryptoError::InvalidHashFormat as u32) as i64);
+    }
+
+    // check signature input
+    if signature_data.len() != 64 {
+        // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+        return Ok(to_high_half(WasmApiCryptoError::InvalidSignatureFormat as u32) as i64);
+    }
+
+    let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash_data) {
+        Err(err) => {
+            debug!("secp256k1_recover_pubkey() failed to create a secp256k1 message from message_hash: {:?}", err);
+
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+            return Ok(to_high_half(WasmApiCryptoError::GenericErr as u32) as i64);
+        }
+        Ok(x) => x,
+    };
+
+    let recovery_id = match secp256k1::ecdsa::RecoveryId::from_i32(recovery_param) {
+        Err(err) => {
+            debug!("secp256k1_recover_pubkey() failed to create a secp256k1 recovery_id from recovery_param: {:?}", err);
+
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+            return Ok(to_high_half(WasmApiCryptoError::GenericErr as u32) as i64);
+        }
+        Ok(x) => x,
+    };
+
+    let secp256k1_sig =
+        match secp256k1::ecdsa::RecoverableSignature::from_compact(&signature_data, recovery_id) {
+            Err(err) => {
+                debug!(
+                    "secp256k1_recover_pubkey() malformed recoverable signature: {:?}",
+                    err
+                );
+
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+                return Ok(to_high_half(WasmApiCryptoError::GenericErr as u32) as i64);
+            }
+            Ok(x) => x,
+        };
+
+    match secp256k1::Secp256k1::verification_only().recover_ecdsa(&secp256k1_msg, &secp256k1_sig) {
+        Err(err) => {
+            debug!(
+                "secp256k1_recover_pubkey() failed to recover pubkey: {:?}",
+                err
+            );
+
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+            Ok(to_high_half(WasmApiCryptoError::GenericErr as u32) as i64)
+        }
+        Ok(pubkey) => {
+            let answer = pubkey.serialize();
+            let ptr_to_region_in_wasm_vm = write_to_memory(&mut call_context.runtime, &answer).map_err(|err| {
+                debug!(
+                        "secp256k1_recover_pubkey() error while trying to allocate and write the answer {:?} to the WASM VM",
+                        &answer,
+                    );
+                err
+            })?;
+
+            // Return pointer to the allocated buffer with the value written to it
+            Ok(to_low_half(ptr_to_region_in_wasm_vm) as i64)
+        }
+    }
 }
 
 fn host_ed25519_verify(
@@ -769,7 +980,79 @@ fn host_ed25519_verify(
     (message_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
 ) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    let cost = context.gas_costs.external_ed25519_verify as u64;
+    context.use_gas_externally(cost)?;
+
+    let message_data = memory.extract_vector(message_ptr as u32).map_err(
+        debug_err!(err => "ed25519_verify error while trying to read message_hash from wasm memory: {err}")
+    )?;
+    let signature_data = memory.extract_vector(signature_ptr as u32).map_err(
+        debug_err!(err => "ed25519_verify error while trying to read signature from wasm memory: {err}")
+    )?;
+    let public_key_data = memory.extract_vector(public_key_ptr as u32).map_err(
+        debug_err!(err => "ed25519_verify error while trying to read public_key from wasm memory: {err}")
+    )?;
+
+    trace!(
+        "ed25519_verify was called from WASM code with message {:x?} (len {:?})",
+        &message_data,
+        message_data.len()
+    );
+    trace!(
+        "ed25519_verify was called from WASM code with signature {:x?} (len {:?} should be 64)",
+        &signature_data,
+        signature_data.len()
+    );
+    trace!(
+        "ed25519_verify was called from WASM code with public_key {:x?} (len {:?} should be 32)",
+        &public_key_data,
+        public_key_data.len()
+    );
+
+    let signature: ed25519_zebra::Signature =
+        match ed25519_zebra::Signature::try_from(signature_data.as_slice()) {
+            Ok(x) => x,
+            Err(err) => {
+                debug!(
+                    "ed25519_verify() failed to create an ed25519 signature from signature: {:?}",
+                    err
+                );
+
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+                return Ok(WasmApiCryptoError::InvalidSignatureFormat as i32);
+            }
+        };
+
+    let public_key: ed25519_zebra::VerificationKey = match ed25519_zebra::VerificationKey::try_from(
+        public_key_data.as_slice(),
+    ) {
+        Ok(x) => x,
+        Err(err) => {
+            debug!(
+                        "ed25519_verify() failed to create an ed25519 VerificationKey from public_key: {:?}",
+                        err
+                    );
+
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
+            return Ok(WasmApiCryptoError::InvalidPubkeyFormat as i32);
+        }
+    };
+
+    match public_key.verify(&signature, &message_data) {
+        Err(err) => {
+            debug!("ed25519_verify() failed to verify signature: {:?}", err);
+
+            // return 1 == failed, invalid signature
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
+            Ok(1)
+        }
+        Ok(()) => {
+            // return 0 == success, valid signature
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
+            Ok(0)
+        }
+    }
 }
 
 fn host_ed25519_batch_verify(
@@ -778,7 +1061,150 @@ fn host_ed25519_batch_verify(
     (messages_ptr, signatures_ptr, public_keys_ptr): (i32, i32, i32),
 ) -> WasmEngineResult<i32> {
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    let messages_data = memory
+        .decode_sections(messages_ptr as u32)
+        .map_err(debug_err!(
+            err => "ed25519_batch_verify error while trying to read messages from wasm memory: {err}"
+        ))?;
+
+    let signatures_data = memory
+        .decode_sections(signatures_ptr as u32)
+        .map_err(debug_err!(
+            err => "ed25519_batch_verify error while trying to read signatures from wasm memory: {err}"
+        ))?;
+
+    let pubkeys_data = memory
+        .decode_sections(public_keys_ptr as u32)
+        .map_err(debug_err!(
+            err => "ed25519_batch_verify error while trying to read public_keys from wasm memory: {err}"
+        ))?;
+
+    let messages_len = messages_data.len();
+    let signatures_len = signatures_data.len();
+    let pubkeys_len = pubkeys_data.len();
+
+    if messages_len == 0 || signatures_len == 0 || pubkeys_len == 0 {
+        debug!("ed25519_batch_verify trying to bach verify with empty inputs!");
+        return Err(WasmEngineError::MemoryReadError);
+    }
+
+    let lengths = (messages_len, signatures_len, pubkeys_len);
+    let (messages, signatures, pubkeys): (Vec<&[u8]>, Vec<&[u8]>, Vec<&[u8]>) = match lengths {
+        (ml, sl, pl) if ml == sl && sl == pl => {
+            let messages = messages_data.iter().map(Vec::as_slice).collect();
+            let signatures = signatures_data.iter().map(Vec::as_slice).collect();
+            let pubkeys = pubkeys_data.iter().map(Vec::as_slice).collect();
+            (messages, signatures, pubkeys)
+        }
+        (ml, sl, pl) if ml == 1 && sl == pl => {
+            let messages = vec![messages_data[0].as_slice()].repeat(signatures_len);
+            let signatures = signatures_data.iter().map(Vec::as_slice).collect();
+            let pubkeys = pubkeys_data.iter().map(Vec::as_slice).collect();
+            (messages, signatures, pubkeys)
+        }
+        (ml, sl, pl) if ml == sl && pl == 1 => {
+            let messages = messages_data.iter().map(Vec::as_slice).collect();
+            let signatures = signatures_data.iter().map(Vec::as_slice).collect();
+            let pubkeys = vec![pubkeys_data[0].as_slice()].repeat(signatures_len);
+            (messages, signatures, pubkeys)
+        }
+        _ => {
+            debug!(
+                "ed25519_batch_verify() mismatched number of messages ({}) / signatures ({}) / public keys ({})",
+                messages_len,
+                signatures_len,
+                pubkeys_len,
+            );
+
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L97
+            return Ok(WasmApiCryptoError::BatchErr as i32);
+        }
+    };
+
+    let base_cost = context.gas_costs.external_ed25519_batch_verify_base as u64;
+    let each_cost = context.gas_costs.external_ed25519_batch_verify_each as u64;
+    context.use_gas_externally(base_cost + (signatures.len() as u64) * each_cost)?;
+
+    let mut batch = ed25519_zebra::batch::Verifier::new();
+    for i in 0..signatures.len() {
+        let signature = match ed25519_zebra::Signature::try_from(signatures[i]) {
+            Ok(x) => x,
+            Err(err) => {
+                debug!(
+                    "ed25519_batch_verify() failed to create an ed25519 signature from signatures[{}]: {:?}",
+                    i, err
+                );
+
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L94
+                return Ok(WasmApiCryptoError::InvalidSignatureFormat as i32);
+            }
+        };
+
+        let pubkey = match ed25519_zebra::VerificationKeyBytes::try_from(pubkeys[i]) {
+            Ok(x) => x,
+            Err(err) => {
+                debug!(
+                        "ed25519_batch_verify() failed to create an ed25519 VerificationKey from public_keys[{}]: {:?}",
+                        i, err
+                    );
+
+                // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L95
+                return Ok(WasmApiCryptoError::InvalidPubkeyFormat as i32);
+            }
+        };
+
+        batch.queue((pubkey, signature, messages[i]));
+    }
+
+    // Assaf:
+    // To verify a batch of ed25519 signatures we need to provide an RNG source.
+    // In theory this doesn't have to be deterministic because the same signatures
+    // should produce the same output (true/false) regardless of the RNG being used.
+    // In practice I'm too afraid to do something non-deterministic in concensus code
+    // So I've decided to use a PRNG instead.
+    // For entropy I'm using the entire ed25519 batch verify input data + the gas consumed
+    // up until now in this WASM call. This will be deterministic, but also kinda-random in
+    // different situations. Note that the gas includes every WASM opcode and
+    // every WASM memory allocation up until now.
+    // Secret data from the enclave can also be used here but I'm not sure if that's necessary.
+    // A few more notes:
+    // 1. The vanilla CosmWasm v1 implementation is using RNG from the OS,
+    // meaning that different values are used in differents nodes for the same operation inside
+    // consensus code, but the output should be the same (https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/ed25519.rs#L108)
+    // 2. In Zcash (zebra) this is also used with RNG from the OS, however Zcash is a PoW chain
+    // and therefore there's no risk of consensus breaking (https://github.com/ZcashFoundation/zebra/blob/00aa5d96a30539a609bfdd17146b223c4e6cf424/tower-batch/tests/ed25519.rs#L72-L83).
+    // 3. In dalek-ed25519 they warn agains using deterministic RNG, as an attacker can derive a falsy signature from the right signature. For me this is an acceptable risk compared to breaking consensus (https://docs.rs/ed25519-dalek/1.0.1/ed25519_dalek/fn.verify_batch.html#on-deterministic-nonces and https://github.com/dalek-cryptography/ed25519-dalek/pull/147).
+    let mut rng_entropy: Vec<u8> = vec![];
+    rng_entropy.append(&mut messages_data.into_iter().flatten().collect());
+    rng_entropy.append(&mut signatures_data.into_iter().flatten().collect());
+    rng_entropy.append(&mut pubkeys_data.into_iter().flatten().collect());
+    rng_entropy.append(
+        &mut (context.gas_used.saturating_add(context.gas_used_externally))
+            .to_be_bytes()
+            .to_vec(),
+    );
+
+    let rng_seed: [u8; 32] = sha_256(&rng_entropy);
+    let mut rng = ChaChaRng::from_seed(rng_seed);
+
+    match batch.verify(&mut rng) {
+        Err(err) => {
+            debug!(
+                "ed25519_batch_verify() failed to verify signatures: {:?}",
+                err
+            );
+
+            // return 1 == failed, invalid signature
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L329
+            Ok(1)
+        }
+        Ok(()) => {
+            // return 0 == success, valid signature
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L329
+            Ok(0)
+        }
+    }
 }
 
 fn host_secp256k1_sign(
@@ -787,7 +1213,75 @@ fn host_secp256k1_sign(
     (message_ptr, private_key_ptr): (i32, i32),
 ) -> WasmEngineResult<i64> {
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    let cost = context.gas_costs.external_secp256k1_sign as u64;
+    context.use_gas_externally(cost)?;
+
+    let message_data = memory.extract_vector(message_ptr as u32).map_err(
+        debug_err!(err => "secp256k1_sign error while trying to read message_hash from wasm memory: {err}")
+    )?;
+    let private_key_data = memory.extract_vector(private_key_ptr as u32).map_err(
+        debug_err!(err => "secp256k1_sign error while trying to read private key from wasm memory: {err}")
+    )?;
+
+    trace!(
+        "secp256k1_sign() was called from WASM code with message {:x?} (len {:?} should be 32)",
+        &message_data,
+        message_data.len()
+    );
+    trace!(
+        "secp256k1_sign() was called from WASM code with private_key {:x?} (len {:?} should be 64)",
+        &private_key_data,
+        private_key_data.len()
+    );
+
+    if private_key_data.len() != 32 {
+        return Ok(to_high_half(WasmApiCryptoError::InvalidPrivateKeyFormat as u32) as i64);
+    }
+
+    let secp = secp256k1::Secp256k1::new();
+
+    let message_hash: [u8; 32] = sha_256(message_data.as_slice());
+    let secp256k1_msg = match secp256k1::Message::from_slice(&message_hash) {
+        Err(err) => {
+            debug!(
+                "secp256k1_sign() failed to create a secp256k1 message from message: {:?}",
+                err
+            );
+
+            return Ok(to_high_half(WasmApiCryptoError::GenericErr as u32) as i64);
+        }
+        Ok(x) => x,
+    };
+
+    let secp256k1_signing_key = match secp256k1::SecretKey::from_slice(private_key_data.as_slice())
+    {
+        Err(err) => {
+            debug!(
+                "secp256k1_sign() failed to create a secp256k1 secret key from private key: {:?}",
+                err
+            );
+
+            return Ok(to_high_half(WasmApiCryptoError::InvalidPrivateKeyFormat as u32) as i64);
+        }
+        Ok(x) => x,
+    };
+
+    let sig = secp
+        .sign_ecdsa(&secp256k1_msg, &secp256k1_signing_key)
+        .serialize_compact();
+
+    let ptr_to_region_in_wasm_vm =
+        write_to_memory(&mut call_context.runtime, &sig).map_err(|err| {
+            debug!(
+            "secp256k1_sign() error while trying to allocate and write the sig {:?} to the WASM VM",
+            &sig,
+        );
+            err
+        })?;
+
+    // Return pointer to the allocated buffer with the value written to it
+    Ok(to_low_half(ptr_to_region_in_wasm_vm) as i64)
 }
 
 fn host_ed25519_sign(
@@ -796,5 +1290,56 @@ fn host_ed25519_sign(
     (message_ptr, private_key_ptr): (i32, i32),
 ) -> WasmEngineResult<i64> {
     let memory = CWMemory::new(&mut call_context.runtime);
-    todo!()
+
+    let cost = context.gas_costs.external_ed25519_sign as u64;
+    context.use_gas_externally(cost)?;
+
+    let message_data = memory.extract_vector(message_ptr as u32).map_err(
+        debug_err!(err => "ed25519_sign error while trying to read message_hash from wasm memory: {err}")
+    )?;
+    let private_key_data = memory.extract_vector(private_key_ptr as u32).map_err(
+        debug_err!(err => "ed25519_sign error while trying to read private key from wasm memory: {err}")
+    )?;
+
+    trace!(
+        "ed25519_sign() was called from WASM code with message {:x?} (len {:?} should be 32)",
+        &message_data,
+        message_data.len()
+    );
+    trace!(
+        "ed25519_sign() was called from WASM code with private_key {:x?} (len {:?} should be 64)",
+        &private_key_data,
+        private_key_data.len()
+    );
+
+    // check private_key input
+    if private_key_data.len() != 32 {
+        return Ok(to_high_half(WasmApiCryptoError::InvalidPrivateKeyFormat as u32) as i64);
+    }
+
+    let ed25519_signing_key = match ed25519_zebra::SigningKey::try_from(private_key_data.as_slice())
+    {
+        Ok(x) => x,
+        Err(err) => {
+            debug!(
+                "ed25519_sign() failed to create an ed25519 signing key from private_key: {:?}",
+                err
+            );
+
+            return Ok(to_high_half(WasmApiCryptoError::InvalidPrivateKeyFormat as u32) as i64);
+        }
+    };
+
+    let sig: [u8; 64] = ed25519_signing_key.sign(message_data.as_slice()).into();
+
+    let ptr_to_region_in_wasm_vm = write_to_memory(&mut call_context.runtime, &sig).map_err(|err| {
+        debug!(
+                "ed25519_sign() error while trying to allocate and write the sig {:?} to the WASM VM",
+                &sig,
+            );
+        err
+    })?;
+
+    // Return pointer to the allocated buffer with the value written to it
+    Ok(to_low_half(ptr_to_region_in_wasm_vm) as i64)
 }
