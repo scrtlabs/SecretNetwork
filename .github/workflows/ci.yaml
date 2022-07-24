@@ -16,6 +16,8 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - run: |
+          rustup install nightly-2022-07-23
+          rustup default nightly-2022-07-23
           rustup component add rust-src clippy
           cd cosmwasm/enclaves/execute/
           rustup component add rust-src clippy
