@@ -10,7 +10,7 @@ use cosmwasm_std::{
 use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QueryRes};
+use crate::msg::{ExecuteMsg, ExternalMessages, InstantiateMsg, QueryMsg, QueryRes};
 use crate::state::{count, count_read, expiration, expiration_read};
 
 #[entry_point]
@@ -195,6 +195,162 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             });
 
             Ok(resp)
+        }
+        ExecuteMsg::ExecV10 { address, code_hash } => {
+            let mut resp = Response::default();
+
+            resp.messages.push(SubMsg {
+                id: 1800,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary::from("{\"execute_from_v1\":{\"counter\":20}}".as_bytes().to_vec()),
+                    contract_addr: address,
+                    code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Always,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::InitV10NoReply {
+            counter,
+            code_id,
+            code_hash,
+        } => {
+            let mut resp = Response::default();
+
+            let msg =
+                "{\"init_from_v1\":{\"counter\":".to_string() + counter.to_string().as_str() + "}}";
+            resp.messages.push(SubMsg {
+                id: 8888,
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                    funds: vec![],
+                    label: "new2231231".to_string(),
+                    code_id,
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Never,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::ExecV10NoReply { address, code_hash } => {
+            let mut resp = Response::default();
+
+            resp.messages.push(SubMsg {
+                id: 8889,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary::from("{\"execute_from_v1\":{\"counter\":20}}".as_bytes().to_vec()),
+                    contract_addr: address,
+                    code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Never,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::QueryV10 { address, code_hash } => {
+            let response = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                code_hash,
+                contract_addr: address,
+                msg: to_binary(&ExternalMessages::GetCountFromV1 {})?,
+            }))?;
+
+            match response {
+                QueryRes::Get { count } => {
+                    let mut resp = Response::default();
+                    resp.data = Some((count as u32).to_be_bytes().into());
+                    return Ok(resp);
+                }
+            }
+        }
+
+        ExecuteMsg::InitV10WithError { code_id, code_hash } => {
+            let mut resp = Response::default();
+
+            let msg = "{\"init_from_v1_with_error\":{}";
+            resp.messages.push(SubMsg {
+                id: 2000,
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                    funds: vec![],
+                    label: "new2231231".to_string(),
+                    code_id,
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Always,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::ExecV10WithError { address, code_hash } => {
+            let mut resp = Response::default();
+
+            resp.messages.push(SubMsg {
+                id: 2100,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary::from("{\"execute_from_v1_with_error\":{}}".as_bytes().to_vec()),
+                    contract_addr: address,
+                    code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Always,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::InitV10NoReplyWithError { code_id, code_hash } => {
+            let mut resp = Response::default();
+
+            let msg = "{\"init_from_v1_with_error\":{}}";
+            resp.messages.push(SubMsg {
+                id: 8890,
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                    funds: vec![],
+                    label: "new2231231".to_string(),
+                    code_id,
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Never,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::ExecV10NoReplyWithError { address, code_hash } => {
+            let mut resp = Response::default();
+
+            resp.messages.push(SubMsg {
+                id: 8891,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary::from("{\"execute_from_v1_with_error\":{}}".as_bytes().to_vec()),
+                    contract_addr: address,
+                    code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Never,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::QueryV10WithError { address, code_hash } => {
+            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                code_hash,
+                contract_addr: address,
+                msg: to_binary(&ExternalMessages::QueryFromV1WithError {})?,
+            }))?;
+
+            // shouldn't be reachable
+            Ok(Response::default())
         }
         // These were ported from the v0.10 test-contract:
         ExecuteMsg::A {
@@ -586,7 +742,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 pub fn increment(deps: DepsMut, c: u64) -> StdResult<Response> {
     if c == 0 {
-        return Err(StdError::generic_err("got wrong counter"));
+        return Err(StdError::generic_err("got wrong counter on increment"));
     }
 
     let new_count = count_read(deps.storage).load()? + c;
@@ -854,7 +1010,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         // These were ported from the v0.10 test-contract:
         QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         QueryMsg::Panic {} => panic!("panic in query"),
-        QueryMsg::ReceiveExternalQuery { num } => {
+        QueryMsg::ReceiveExternalQuery { num } | QueryMsg::ReceiveExternalQueryV1 { num } => {
             Ok(Binary(serde_json_wasm::to_vec(&(num + 1)).unwrap()))
         }
         QueryMsg::SendExternalQueryInfiniteLoop { to, code_hash } => {
@@ -892,6 +1048,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .map_err(|err| {
                     StdError::generic_err(format!("Got an error from query: {:?}", err))
                 })?;
+            return Ok(to_binary(&answer)?);
+        }
+        QueryMsg::GetContractVersion {} => {
+            let answer: u8 = 1;
             return Ok(to_binary(&answer)?);
         }
     }
@@ -1085,6 +1245,32 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             Ok(resp)
         }
         (1700, SubMsgResult::Err(_)) => Err(StdError::generic_err("Failed to init v010 contract")),
+        (1800, SubMsgResult::Ok(s)) => match s.data {
+            Some(x) => {
+                let counter = String::from_utf8(
+                    Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
+                )?;
+                let mut resp = Response::default();
+                resp.data = Some(counter.as_bytes().into());
+
+                Ok(resp)
+            }
+            None => Err(StdError::generic_err(format!(
+                "Init didn't response with contract address",
+            ))),
+        },
+        (1800, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err("Failed to execute v010 contract"))
+        }
+
+        (2000, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!(
+            "Init with error didn't response with error",
+        ))),
+        (2000, SubMsgResult::Err(_)) => Ok(Response::default()),
+        (2100, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!(
+            "Execute with error didn't response with error",
+        ))),
+        (2100, SubMsgResult::Err(_)) => Ok(Response::default()),
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

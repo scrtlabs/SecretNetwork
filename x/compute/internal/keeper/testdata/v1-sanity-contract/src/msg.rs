@@ -94,6 +94,43 @@ pub enum ExecuteMsg {
         code_hash: String,
         counter: u64,
     },
+    ExecV10 {
+        address: String,
+        code_hash: String,
+    },
+    InitV10NoReply {
+        code_id: u64,
+        code_hash: String,
+        counter: u64,
+    },
+    ExecV10NoReply {
+        address: String,
+        code_hash: String,
+    },
+    QueryV10 {
+        address: String,
+        code_hash: String,
+    },
+    InitV10WithError {
+        code_id: u64,
+        code_hash: String,
+    },
+    ExecV10WithError {
+        address: String,
+        code_hash: String,
+    },
+    InitV10NoReplyWithError {
+        code_id: u64,
+        code_hash: String,
+    },
+    ExecV10NoReplyWithError {
+        address: String,
+        code_hash: String,
+    },
+    QueryV10WithError {
+        address: String,
+        code_hash: String,
+    },
 
     // These were ported from the v0.10 test-contract:
     A {
@@ -284,13 +321,15 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Get {},
-
     // These were ported from the v0.10 test-contract:
     ContractError {
         error_type: String,
     },
     Panic {},
     ReceiveExternalQuery {
+        num: u8,
+    },
+    ReceiveExternalQueryV1 {
         num: u8,
     },
     SendExternalQueryInfiniteLoop {
@@ -314,10 +353,18 @@ pub enum QueryMsg {
         code_hash: String,
         msg: String,
     },
+    GetContractVersion {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryRes {
     Get { count: u64 },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ExternalMessages {
+    GetCountFromV1 {},
+    QueryFromV1WithError {},
 }

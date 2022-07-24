@@ -301,6 +301,7 @@ pub enum QueryMsg {
         msg: String,
     },
     GetCountFromV1 {},
+    GetContractVersion {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -1589,6 +1590,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             let count = count_read(&deps.storage).load()?;
 
             Ok(to_binary(&QueryRes::Get { count })?)
+        }
+        QueryMsg::GetContractVersion {} => {
+            let answer: u8 = 10;
+            return Ok(to_binary(&answer)?);
         }
     }
 }
