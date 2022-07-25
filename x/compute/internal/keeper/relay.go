@@ -17,6 +17,41 @@ import (
 
 var _ types.IBCContractKeeper = (*Keeper)(nil)
 
+func (k Keeper) ibcContractCall(ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	msgBz []byte,
+) (interface{}, error) {
+	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
+
+	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return "", err
+	}
+
+	store := ctx.KVStore(k.storeKey)
+
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	env := types.NewEnv(
+		ctx,
+		sdk.AccAddress{}, /* there's no MessageInfo for IBC contract calls */
+		sdk.NewCoins(),   /* there's no MessageInfo for IBC contract calls */
+		contractAddress,
+		contractKey,
+	)
+
+	// prepare querier
+	querier := QueryHandler{
+		Ctx:     ctx,
+		Plugins: k.queryPlugins,
+	}
+
+	gas := gasForContract(ctx)
+	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, wasmTypes.HandleTypeReply)
+	consumeGas(ctx, gasUsed)
+
+	return res, err
+}
+
 // OnOpenChannel calls the contract to participate in the IBC channel handshake step.
 // In the IBC protocol this is either the `Channel Open Init` event on the initiating chain or
 // `Channel Open Try` on the counterparty chain.
@@ -31,39 +66,12 @@ func (k Keeper) OnOpenChannel(
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: ibc-open-channel")
 
-	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
-
-	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
-	if err != nil {
-		return "", err
-	}
-
-	store := ctx.KVStore(k.storeKey)
-
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-	env := types.NewEnv(
-		ctx,
-		sdk.AccAddress{}, /* empty because it's unused in queries */
-		sdk.NewCoins(),   /* empty because it's unused in queries */
-		contractAddress,
-		contractKey,
-	)
-
-	// prepare querier
-	querier := QueryHandler{
-		Ctx:     ctx,
-		Plugins: k.queryPlugins,
-	}
-
 	msgBz, err := json.Marshal(msg)
 	if err != nil {
 		return "", sdkerrors.Wrap(err, "ibc-open-channel")
 	}
 
-	gas := gasForContract(ctx)
-	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, wasmTypes.HandleTypeReply)
-	consumeGas(ctx, gasUsed)
-
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz)
 	if err != nil {
 		return "", sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
