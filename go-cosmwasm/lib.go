@@ -91,11 +91,11 @@ type ContractExecResponse struct {
 	InternaReplyEnclaveSig []byte                        `json:"internal_reply_enclave_sig"`
 	InternalMsgId          []byte                        `json:"internal_msg_id"`
 	IBCChannelOpen         *v1types.IBCChannelOpenResult `json:"ibc_channel_open,omitempty"`
-	IBCChannelConnect      *v1types.IBCBasicResponse     `json:"ibc_channel_connect,omitempty"`
-	IBCChannelClose        *v1types.IBCBasicResponse     `json:"ibc_channel_close,omitempty"`
+	IBCChannelConnect      *v1types.IBCBasicResult       `json:"ibc_channel_connect,omitempty"`
+	IBCChannelClose        *v1types.IBCBasicResult       `json:"ibc_channel_close,omitempty"`
 	IBCPacketReceive       *v1types.IBCReceiveResult     `json:"ibc_packet_receive,omitempty"`
-	IBCPacketAck           *v1types.IBCBasicResponse     `json:"ibc_packet_ack,omitempty"`
-	IBCPacketTimeout       *v1types.IBCBasicResponse     `json:"ibc_packet_timeout,omitempty"`
+	IBCPacketAck           *v1types.IBCBasicResult       `json:"ibc_packet_ack,omitempty"`
+	IBCPacketTimeout       *v1types.IBCBasicResult       `json:"ibc_packet_timeout,omitempty"`
 }
 
 type V010ContractExecResponse struct {
@@ -284,16 +284,16 @@ func (w *Wasmer) Execute(
 				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
 				Data:                   []byte(resp.V010.Err.GenericErr.Msg),
 			}, gasUsed, fmt.Errorf("%+v", resp.V010.Err)
-		}
-
-		if resp.V010.Ok != nil {
+		} else if resp.V010.Ok != nil {
 			if isOutputAddressedToReply {
 				resp.V010.Ok.Data, err = AppendReplyInternalDataToData(resp.V010.Ok.Data, resp.InternaReplyEnclaveSig, resp.InternalMsgId)
 				if err != nil {
-					return nil, gasUsed, fmt.Errorf("cannot serialize v010 DataWithInternalReplyInfo into binary : %w", err)
+					return nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
 				}
 			}
 			return resp.V010.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse v0.10 handle response: %+v", resp)
 		}
 	}
 
@@ -305,9 +305,7 @@ func (w *Wasmer) Execute(
 				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
 				Data:                   []byte(resp.V1.Err.GenericErr.Msg),
 			}, gasUsed, fmt.Errorf("%+v", resp.V1.Err)
-		}
-
-		if resp.V1.Ok != nil {
+		} else if resp.V1.Ok != nil {
 			if isOutputAddressedToReply {
 				resp.V1.Ok.Data, err = AppendReplyInternalDataToData(resp.V1.Ok.Data, resp.InternaReplyEnclaveSig, resp.InternalMsgId)
 				if err != nil {
@@ -315,6 +313,74 @@ func (w *Wasmer) Execute(
 				}
 			}
 			return resp.V1.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse v1 handle response: %+v", resp)
+		}
+	}
+
+	// handle IBCChannelOpen response
+	if resp.IBCChannelOpen != nil {
+		if resp.IBCChannelOpen.Err != "" {
+			return nil, gasUsed, fmt.Errorf("%s", resp.IBCChannelOpen.Err)
+		} else if resp.IBCChannelOpen.Ok != nil {
+			return resp.IBCChannelOpen.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelOpen response: %+v", resp)
+		}
+	}
+
+	// handle IBCChannelConnect response
+	if resp.IBCChannelConnect != nil {
+		if resp.IBCChannelConnect.Err != "" {
+			return nil, gasUsed, fmt.Errorf("%s", resp.IBCChannelConnect.Err)
+		} else if resp.IBCChannelConnect.Ok != nil {
+			return resp.IBCChannelConnect.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelConnect response: %+v", resp)
+		}
+	}
+
+	// handle IBCChannelClose response
+	if resp.IBCChannelClose != nil {
+		if resp.IBCChannelClose.Err != "" {
+			return nil, gasUsed, fmt.Errorf("%s", resp.IBCChannelClose.Err)
+		} else if resp.IBCChannelClose.Ok != nil {
+			return resp.IBCChannelClose.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelClose response: %+v", resp)
+		}
+	}
+
+	// handle IBCPacketReceive response
+	if resp.IBCPacketReceive != nil {
+		if resp.IBCPacketReceive.Err != "" {
+			return nil, gasUsed, fmt.Errorf("%s", resp.IBCPacketReceive.Err)
+		} else if resp.IBCPacketReceive.Ok != nil {
+			return resp.IBCPacketReceive.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketReceive response: %+v", resp)
+		}
+	}
+
+	// handle IBCPacketAck response
+	if resp.IBCPacketAck != nil {
+		if resp.IBCPacketAck.Err != "" {
+			return nil, gasUsed, fmt.Errorf("%s", resp.IBCPacketAck.Err)
+		} else if resp.IBCPacketAck.Ok != nil {
+			return resp.IBCPacketAck.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketAck response: %+v", resp)
+		}
+	}
+
+	// handle IBCPacketTimeout response
+	if resp.IBCPacketTimeout != nil {
+		if resp.IBCPacketTimeout.Err != "" {
+			return nil, gasUsed, fmt.Errorf("%s", resp.IBCPacketTimeout.Err)
+		} else if resp.IBCPacketTimeout.Ok != nil {
+			return resp.IBCPacketTimeout.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketTimeout response: %+v", resp)
 		}
 	}
 
