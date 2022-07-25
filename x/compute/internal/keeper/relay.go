@@ -20,6 +20,7 @@ var _ types.IBCContractKeeper = (*Keeper)(nil)
 func (k Keeper) ibcContractCall(ctx sdk.Context,
 	contractAddress sdk.AccAddress,
 	msgBz []byte,
+	callType wasmTypes.HandleType,
 ) (interface{}, error) {
 	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
 
@@ -46,10 +47,31 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	}
 
 	gas := gasForContract(ctx)
-	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, wasmTypes.HandleTypeReply)
+	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, callType)
 	consumeGas(ctx, gasUsed)
 
 	return res, err
+}
+
+func (k Keeper) parseThenHandleIBCBasicContractResponse(ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	res interface{},
+) error {
+	switch resp := res.(type) {
+	case *v1types.IBCBasicResponse:
+		if resp != nil {
+			contractInfo, _, _, err := k.contractInstance(ctx, contractAddress)
+			if err != nil {
+				return err
+			}
+
+			return k.handleIBCBasicContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp)
+		} else {
+			return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot parse IBCBasicResponse: %+v", res))
+		}
+	default:
+		return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot cast res to IBCBasicResponse: %+v", res))
+	}
 }
 
 // OnOpenChannel calls the contract to participate in the IBC channel handshake step.
@@ -71,7 +93,7 @@ func (k Keeper) OnOpenChannel(
 		return "", sdkerrors.Wrap(err, "ibc-open-channel")
 	}
 
-	res, err := k.ibcContractCall(ctx, contractAddress, msgBz)
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelConnect)
 	if err != nil {
 		return "", sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
@@ -84,7 +106,7 @@ func (k Keeper) OnOpenChannel(
 			return "", nil
 		}
 	default:
-		return "", sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot cast res to IBC3ChannelOpenResponse: %+v", res))
+		return "", sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-open-channel: cannot cast res to IBC3ChannelOpenResponse: %+v", res))
 	}
 }
 
@@ -97,26 +119,28 @@ func (k Keeper) OnOpenChannel(
 // See https://github.com/cosmos/ics/tree/master/spec/ics-004-channel-and-packet-semantics#channel-lifecycle-management
 func (k Keeper) OnConnectChannel(
 	ctx sdk.Context,
-	contractAddr sdk.AccAddress,
+	contractAddress sdk.AccAddress,
 	msg v1types.IBCChannelConnectMsg,
 ) error {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "ibc-connect-channel")
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
+
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: ibc-connect-channel")
+
+	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		return sdkerrors.Wrap(err, "ibc-connect-channel")
 	}
 
-	env := types.NewEnv(ctx, contractAddr)
-	querier := k.newQueryHandler(ctx, contractAddr)
-
-	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCChannelConnect(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, costJSONDeserialization)
-	k.consumeRuntimeGas(ctx, gasUsed)
-	if execErr != nil {
-		return sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelConnect)
+	if err != nil {
+		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
-	return k.handleIBCBasicContractResponse(ctx, contractAddr, contractInfo.IBCPortID, res)
+	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, res)
+	if err != nil {
+		sdkerrors.Wrap(err, "ibc-connect-channel")
+	}
+	return nil
 }
 
 // OnCloseChannel calls the contract to let it know the IBC channel is closed.
@@ -127,27 +151,28 @@ func (k Keeper) OnConnectChannel(
 // See https://github.com/cosmos/ics/tree/master/spec/ics-004-channel-and-packet-semantics#channel-lifecycle-management
 func (k Keeper) OnCloseChannel(
 	ctx sdk.Context,
-	contractAddr sdk.AccAddress,
+	contractAddress sdk.AccAddress,
 	msg v1types.IBCChannelCloseMsg,
 ) error {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "ibc-close-channel")
 
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: ibc-close-channel")
+
+	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		return sdkerrors.Wrap(err, "ibc-close-channel")
 	}
 
-	params := types.NewEnv(ctx, contractAddr)
-	querier := k.newQueryHandler(ctx, contractAddr)
-
-	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCChannelClose(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, costJSONDeserialization)
-	k.consumeRuntimeGas(ctx, gasUsed)
-	if execErr != nil {
-		return sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelClose)
+	if err != nil {
+		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
-	return k.handleIBCBasicContractResponse(ctx, contractAddr, contractInfo.IBCPortID, res)
+	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, res)
+	if err != nil {
+		sdkerrors.Wrap(err, "ibc-close-channel")
+	}
+	return nil
 }
 
 // OnRecvPacket calls the contract to process the incoming IBC packet. The contract fully owns the data processing and
@@ -192,25 +217,28 @@ func (k Keeper) OnRecvPacket(
 // For more information see: https://github.com/cosmos/ics/tree/master/spec/ics-004-channel-and-packet-semantics#packet-flow--handling
 func (k Keeper) OnAckPacket(
 	ctx sdk.Context,
-	contractAddr sdk.AccAddress,
+	contractAddress sdk.AccAddress,
 	msg v1types.IBCPacketAckMsg,
 ) error {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "ibc-ack-packet")
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
+
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: ibc-ack-packet")
+
+	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		return sdkerrors.Wrap(err, "ibc-ack-packet")
 	}
 
-	env := types.NewEnv(ctx, contractAddr)
-	querier := k.newQueryHandler(ctx, contractAddr)
-
-	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCPacketAck(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, costJSONDeserialization)
-	k.consumeRuntimeGas(ctx, gasUsed)
-	if execErr != nil {
-		return sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketAck)
+	if err != nil {
+		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
-	return k.handleIBCBasicContractResponse(ctx, contractAddr, contractInfo.IBCPortID, res)
+
+	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, res)
+	if err != nil {
+		sdkerrors.Wrap(err, "ibc-ack-packet")
+	}
+	return nil
 }
 
 // OnTimeoutPacket calls the contract to let it know the packet was never received on the destination chain within
@@ -218,27 +246,28 @@ func (k Keeper) OnAckPacket(
 // The contract should handle this on the application level and undo the original operation
 func (k Keeper) OnTimeoutPacket(
 	ctx sdk.Context,
-	contractAddr sdk.AccAddress,
+	contractAddress sdk.AccAddress,
 	msg v1types.IBCPacketTimeoutMsg,
 ) error {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "ibc-timeout-packet")
 
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: ibc-timeout-packet")
+
+	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		return sdkerrors.Wrap(err, "ibc-timeout-packet")
 	}
 
-	env := types.NewEnv(ctx, contractAddr)
-	querier := k.newQueryHandler(ctx, contractAddr)
-
-	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCPacketTimeout(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, costJSONDeserialization)
-	k.consumeRuntimeGas(ctx, gasUsed)
-	if execErr != nil {
-		return sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketTimeout)
+	if err != nil {
+		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
-	return k.handleIBCBasicContractResponse(ctx, contractAddr, contractInfo.IBCPortID, res)
+	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, res)
+	if err != nil {
+		sdkerrors.Wrap(err, "ibc-timeout-packet")
+	}
+	return nil
 }
 
 func (k Keeper) handleIBCBasicContractResponse(ctx sdk.Context, addr sdk.AccAddress, id string, res *v1types.IBCBasicResponse) error {
