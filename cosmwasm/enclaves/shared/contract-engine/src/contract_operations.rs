@@ -225,12 +225,12 @@ pub fn parse_message(
     sig_info: &SigInfo,
     handle_type: &HandleType,
 ) -> Result<ParsedMessage, EnclaveError> {
-    let orig_secret_msg = SecretMessage::from_slice(message)?;
-
     return match handle_type {
         HandleType::HANDLE_TYPE_EXECUTE => {
+            let orig_secret_msg = SecretMessage::from_slice(message)?;
+
             trace!(
-                "handle input before decryption: {:?}",
+                "execute input before decryption: {:?}",
                 base64::encode(&message)
             );
             let decrypted_msg = orig_secret_msg.decrypt()?;
@@ -242,10 +242,14 @@ pub fn parse_message(
                 contract_hash_for_validation: None,
             })
         }
-
         HandleType::HANDLE_TYPE_REPLY => {
+            let orig_secret_msg = SecretMessage::from_slice(message)?;
+
             if sig_info.sign_mode == SignMode::SIGN_MODE_UNSPECIFIED {
-                trace!("reply input is not encrypted");
+                trace!(
+                    "reply input is not encrypted: {:?}",
+                    base64::encode(&message)
+                );
                 let decrypted_msg = orig_secret_msg.msg.clone();
                 let mut reply: Reply = serde_json::from_slice(&decrypted_msg)
                     .map_err(|err| {
@@ -512,6 +516,63 @@ pub fn parse_message(
                 }
             }
         }
+        HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => todo!(),
+        HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => todo!(),
+        HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => todo!(),
+        HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
+            let orig_secret_msg = match SecretMessage::from_slice(message) {
+                Ok(orig_secret_msg) => orig_secret_msg,
+                Err(_) => {
+                    trace!(
+                        "ibc_packet_receive msg is not SecretMessage (probably plaintext): {:?}",
+                        base64::encode(&message)
+                    );
+
+                    SecretMessage {
+                        nonce: [0; 32],
+                        user_public_key: [0; 32],
+                        msg: message.into(),
+                    }
+                }
+            };
+
+            match orig_secret_msg.decrypt() {
+                Ok(decrypted_msg) => {
+                    // IBC packet is encrypted
+
+                    trace!(
+                        "ibc_packet_receive input before decryption: {:?}",
+                        base64::encode(&message)
+                    );
+
+                    Ok(ParsedMessage {
+                        should_validate_sig_info: true,
+                        was_msg_encrypted: true,
+                        secret_msg: orig_secret_msg,
+                        decrypted_msg,
+                        contract_hash_for_validation: None,
+                    })
+                }
+                Err(_) => {
+                    // assume packet is not encrypted, continue in plaintext mode
+
+                    trace!(
+                        "ibc_packet_receive input is not encrypted: {:?}",
+                        base64::encode(&message)
+                    );
+
+                    Ok(ParsedMessage {
+                        should_validate_sig_info: false,
+                        was_msg_encrypted: false,
+                        secret_msg: orig_secret_msg,
+                        decrypted_msg: orig_secret_msg.msg,
+                        contract_hash_for_validation: None,
+                    })
+                }
+            }
+        }
+        HandleType::HANDLE_TYPE_IBC_PACKET_ACK => todo!(),
+        HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => todo!(),
     };
 }
 
