@@ -55,6 +55,7 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 
 func (k Keeper) parseThenHandleIBCBasicContractResponse(ctx sdk.Context,
 	contractAddress sdk.AccAddress,
+	inputMsg []byte,
 	res interface{},
 ) error {
 	switch resp := res.(type) {
@@ -65,9 +66,9 @@ func (k Keeper) parseThenHandleIBCBasicContractResponse(ctx sdk.Context,
 				return err
 			}
 
-			return k.handleIBCBasicContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp)
+			return k.handleIBCBasicContractResponse(ctx, contractAddress, contractInfo.IBCPortID, inputMsg, resp)
 		} else {
-			return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot parse IBCBasicResponse: %+v", res))
+			return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("null pointer IBCBasicResponse: %+v", res))
 		}
 	default:
 		return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot cast res to IBCBasicResponse: %+v", res))
@@ -136,7 +137,7 @@ func (k Keeper) OnConnectChannel(
 		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
-	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, res)
+	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
 		sdkerrors.Wrap(err, "ibc-connect-channel")
 	}
@@ -168,7 +169,7 @@ func (k Keeper) OnCloseChannel(
 		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
-	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, res)
+	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
 		sdkerrors.Wrap(err, "ibc-close-channel")
 	}
@@ -183,29 +184,42 @@ func (k Keeper) OnCloseChannel(
 // For more information see: https://github.com/cosmos/ics/tree/master/spec/ics-004-channel-and-packet-semantics#packet-flow--handling
 func (k Keeper) OnRecvPacket(
 	ctx sdk.Context,
-	contractAddr sdk.AccAddress,
+	contractAddress sdk.AccAddress,
 	msg v1types.IBCPacketReceiveMsg,
 ) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "ibc-recv-packet")
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
+
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: ibc-recv-packet")
+
+	msgBz, err := json.Marshal(msg)
 	if err != nil {
-		return nil, err
+		return nil, sdkerrors.Wrap(err, "ibc-recv-packet")
 	}
 
-	env := types.NewEnv(ctx, contractAddr)
-	querier := k.newQueryHandler(ctx, contractAddr)
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelConnect)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
+	}
 
-	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCPacketReceive(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, costJSONDeserialization)
-	k.consumeRuntimeGas(ctx, gasUsed)
-	if execErr != nil {
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	switch resp := res.(type) {
+	case *v1types.IBCReceiveResponse:
+		if resp != nil {
+			contractInfo, _, _, err := k.contractInstance(ctx, contractAddress)
+			if err != nil {
+				return nil, err
+			}
+			verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
+
+			// note submessage reply results can overwrite the `Acknowledgement` data
+			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, msgBz, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+		} else {
+			// should never get here as it's already checked in
+			// https://github.com/scrtlabs/SecretNetwork/blob/bd46776c/go-cosmwasm/lib.go#L358
+			return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: null pointer IBCReceiveResponse: %+v", res))
+		}
+	default:
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: cannot cast res to IBCReceiveResponse: %+v", res))
 	}
-	if res.Err != "" { // handle error case as before https://github.com/CosmWasm/wasmvm/commit/c300106fe5c9426a495f8e10821e00a9330c56c6
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, res.Err)
-	}
-	// note submessage reply results can overwrite the `Acknowledgement` data
-	return k.handleContractResponse(ctx, contractAddr, contractInfo.IBCPortID, res.Ok.Messages, res.Ok.Attributes, res.Ok.Acknowledgement, res.Ok.Events)
 }
 
 // OnAckPacket calls the contract to handle the "acknowledgement" data which can contain success or failure of a packet
@@ -234,7 +248,7 @@ func (k Keeper) OnAckPacket(
 		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
-	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, res)
+	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
 		sdkerrors.Wrap(err, "ibc-ack-packet")
 	}
@@ -263,14 +277,16 @@ func (k Keeper) OnTimeoutPacket(
 		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
 
-	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, res)
+	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
 		sdkerrors.Wrap(err, "ibc-timeout-packet")
 	}
 	return nil
 }
 
-func (k Keeper) handleIBCBasicContractResponse(ctx sdk.Context, addr sdk.AccAddress, id string, res *v1types.IBCBasicResponse) error {
-	_, err := k.handleContractResponse(ctx, addr, id, res.Messages, res.Attributes, nil, res.Events)
+func (k Keeper) handleIBCBasicContractResponse(ctx sdk.Context, addr sdk.AccAddress, ibcPortID string, inputMsg []byte, res *v1types.IBCBasicResponse) error {
+	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
+
+	_, err := k.handleContractResponse(ctx, addr, ibcPortID, res.Messages, res.Attributes, res.Events, nil, inputMsg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
 	return err
 }
