@@ -1,5 +1,11 @@
 # CHANGELOG
 
+# 1.3.2
+
+- LocalSecret: Support older CPUs
+- LocalSecret: Port faucet from python to node (@levackt)
+- Swagger: Add `/cosmos/tx/v1beta1` endpoints
+
 # 1.3.1
 
 - Use all available cores to serve queries.
