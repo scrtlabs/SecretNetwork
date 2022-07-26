@@ -117,6 +117,39 @@ pub fn instantiate(
                     .add_attribute("attr3", "🐙")
                     .add_attribute("attr4", "🦄"),
             )),
+        InstantiateMsg::AddMixedAttributesAndEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute_plaintext("attr1", "🦄")
+                    .add_attribute_plaintext("attr2", "🌈"),
+            )
+            .add_attribute_plaintext("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+        InstantiateMsg::AddMixedAttributesAndEventsWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(
+                        r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_attribute("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
 
         // These were ported from the v0.10 test-contract:
         InstantiateMsg::Nop {} => Ok(Response::new().add_attribute("init", "🌈")),
@@ -346,6 +379,76 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     .add_attribute("attr3", "😅")
                     .add_attribute("attr4", "🦄"),
             )),
+
+        ExecuteMsg::AddMixedAttributesAndEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute_plaintext("attr1", "🦄")
+                    .add_attribute_plaintext("attr2", "🌈"),
+            )
+            .add_attribute_plaintext("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+        ExecuteMsg::AddMixedAttributesAndEventsWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(
+                        r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_attribute("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+        ExecuteMsg::AddMoreMixedAttributesAndEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr5", "🐙")
+                    .add_attribute("attr6", "🦄"),
+            )
+            .add_attribute("attr7", "😅")
+            .add_attribute_plaintext("attr8", "🦄")),
+        ExecuteMsg::AddAttributesFromV010 {
+            addr,
+            code_hash,
+            id,
+        } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash,
+                    contract_addr: addr,
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_attribute("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+
         ExecuteMsg::TransferMoney { amount } => transfer_money(deps, amount),
         ExecuteMsg::RecursiveReply {} => recursive_reply(env, deps),
         ExecuteMsg::RecursiveReplyFail {} => recursive_reply_fail(env, deps),
@@ -1478,6 +1581,15 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
                     .add_attribute("attr4", "😊"),
             )),
         (2400, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Add events failed",))),
+        (2500, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_event(
+                Event::new("cyber3".to_string())
+                    .add_attribute("attr9", "🤯")
+                    .add_attribute("attr10", "🤟"),
+            )
+            .add_attribute("attr11", "😉")
+            .add_attribute_plaintext("attr12", "😊")),
+        (2500, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Add events failed",))),
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

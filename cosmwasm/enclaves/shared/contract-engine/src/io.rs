@@ -254,9 +254,8 @@ pub fn encrypt_output(
 
             // v0.10: The logs that will be emitted as part of a "wasm" event.
             for log in ok.log.iter_mut().filter(|log| log.encrypted) {
-                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &reply_params)?;
-                log.value =
-                    encrypt_preserialized_string(&encryption_key, &log.value, &reply_params)?;
+                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &None)?;
+                log.value = encrypt_preserialized_string(&encryption_key, &log.value, &None)?;
             }
 
             if let Some(data) = &mut ok.data {
@@ -384,17 +383,21 @@ pub fn encrypt_output(
 
             *internal_reply_enclave_sig = match reply_params {
                 Some(_) => {
-                    let mut events: Vec<Event> = ok.events.clone();
-                    let custom_contract_event_prefix: String = "wasm-".to_string();
-                    for event in events.iter_mut() {
-                        event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
-                    }
+                    let mut events: Vec<Event> = vec![];
 
                     if ok.attributes.len() > 0 {
                         events.push(Event {
                             ty: "wasm".to_string(),
                             attributes: ok.attributes.clone(),
                         })
+                    }
+
+                    events.extend_from_slice(&ok.events.clone().as_slice());
+                    let custom_contract_event_prefix: String = "wasm-".to_string();
+                    for event in events.iter_mut() {
+                        if event.ty != "wasm" {
+                            event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
+                        }
                     }
 
                     let reply = Reply {

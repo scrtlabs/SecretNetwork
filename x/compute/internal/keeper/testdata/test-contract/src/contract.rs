@@ -1,9 +1,9 @@
 use cosmwasm_storage::{PrefixedStorage, ReadonlySingleton, Singleton};
 
 use cosmwasm_std::{
-    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Empty, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
-    ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
+    log, plaintext_log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Empty, Env, Extern,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest,
+    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
 use secp256k1::Secp256k1;
 
@@ -72,6 +72,14 @@ pub enum InitMsg {
     },
     InitFromV1 {
         counter: u64,
+    },
+    AddAttributes {},
+    AddAttributesWithSubmessage {},
+    AddPlaintextAttributes {},
+    AddPlaintextAttributesWithSubmessage {},
+    AddMixedEventsAndAttributesFromV1 {
+        addr: HumanAddr,
+        code_hash: String,
     },
     BankMsgSend {
         amount: Vec<Coin>,
@@ -263,8 +271,21 @@ pub enum HandleMsg {
         privkey: Binary,
         iterations: u32,
     },
+    ExecuteFromV1 {
+        counter: u64,
+    },
     IncrementFromV1 {
         addition: u64,
+    },
+    AddAttributes {},
+    AddAttributesWithSubmessage {},
+    AddMoreAttributes {},
+    AddPlaintextAttributes {},
+    AddPlaintextAttributesWithSubmessage {},
+    AddMorePlaintextAttributes {},
+    AddMixedEventsAndAttributesFromV1 {
+        addr: HumanAddr,
+        code_hash: String,
     },
     CosmosMsgCustom {},
 }
@@ -422,6 +443,43 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 log: vec![],
             })
         }
+        InitMsg::AddAttributes {} => Ok(InitResponse {
+            messages: vec![],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+        }),
+        InitMsg::AddAttributesWithSubmessage {} => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+        }),
+        InitMsg::AddPlaintextAttributes {} => Ok(InitResponse {
+            messages: vec![],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+        }),
+        InitMsg::AddPlaintextAttributesWithSubmessage {} => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+        }),
+        InitMsg::AddMixedEventsAndAttributesFromV1 { addr, code_hash } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary::from(
+                    r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                ),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+        }),
         InitMsg::BankMsgSend {
             to,
             amount: coins,
@@ -1013,6 +1071,18 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             return res;
         }
+        HandleMsg::ExecuteFromV1 { counter } => {
+            count(&mut deps.storage).save(&counter)?;
+
+            let mut resp = HandleResponse::default();
+            resp.data = Some(
+                (count_read(&deps.storage).load()? as u32)
+                    .to_be_bytes()
+                    .into(),
+            );
+
+            Ok(resp)
+        }
         HandleMsg::IncrementFromV1 { addition } => {
             if addition == 0 {
                 return Err(StdError::generic_err("got wrong counter"));
@@ -1026,6 +1096,58 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             Ok(resp)
         }
+        HandleMsg::AddAttributes {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMoreAttributes {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![log("attr3", "🍉"), log("attr4", "🥝")],
+            data: None,
+        }),
+        HandleMsg::AddAttributesWithSubmessage {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddPlaintextAttributes {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMorePlaintextAttributes {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![plaintext_log("attr3", "🍉"), plaintext_log("attr4", "🥝")],
+            data: None,
+        }),
+        HandleMsg::AddPlaintextAttributesWithSubmessage {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMixedEventsAndAttributesFromV1 { addr, code_hash } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary::from(
+                    r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                ),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
     }
 }
 

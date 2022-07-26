@@ -21,6 +21,10 @@ pub enum InstantiateMsg {
     AddEventsWithSubmessage {
         id: u64,
     },
+    AddMixedAttributesAndEvents {},
+    AddMixedAttributesAndEventsWithSubmessage {
+        id: u64,
+    },
     // These were ported from the v0.10 test-contract:
     Nop {},
     Callback {
@@ -97,10 +101,20 @@ pub enum ExecuteMsg {
     },
     AddMorePlaintextAttributes {},
     AddEvents {},
+    AddMoreEvents {},
     AddEventsWithSubmessage {
         id: u64,
     },
-    AddMoreEvents {},
+    AddMixedAttributesAndEvents {},
+    AddMixedAttributesAndEventsWithSubmessage {
+        id: u64,
+    },
+    AddMoreMixedAttributesAndEvents {},
+    AddAttributesFromV010 {
+        addr: String,
+        code_hash: String,
+        id: u64,
+    },
     TransferMoney {
         amount: u64,
     },
