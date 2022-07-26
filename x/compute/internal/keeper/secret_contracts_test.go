@@ -186,8 +186,9 @@ func decryptAttributes(attrs []abci.EventAttribute, nonce []byte) ([]v010cosmwas
 // tryDecryptWasmEvents gets all "wasm" events and try to decrypt what it can.
 // Returns all "wasm" events, including from contract callbacks.
 // The difference between this and getDecryptedWasmEvents is that it is aware of plaintext logs.
-func tryDecryptWasmEvents(ctx sdk.Context, nonce []byte) []ContractEvent {
+func tryDecryptWasmEvents(ctx sdk.Context, nonce []byte, shouldSkipAttributes ...bool) []ContractEvent {
 	events := ctx.EventManager().Events()
+	shouldSkip := (len(shouldSkipAttributes) > 0 && shouldSkipAttributes[0])
 	var res []ContractEvent
 	for _, e := range events {
 		if e.Type == "wasm" {
@@ -199,7 +200,7 @@ func tryDecryptWasmEvents(ctx sdk.Context, nonce []byte) []ContractEvent {
 				}
 				newEvent = append(newEvent, newLog)
 
-				if newLog.Key != "contract_address" {
+				if !shouldSkip && newLog.Key != "contract_address" {
 					// key
 					newAttr, err := decryptAttribute(newLog, nonce)
 					if err != nil {
@@ -370,15 +371,15 @@ func queryHelperImpl(
 func execHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coin, -1)
+	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coin, -1, shouldSkipAttributes...)
 }
 
 func execHelperImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
 
@@ -421,7 +422,7 @@ func execHelperImpl(
 	}
 
 	// wasmEvents comes from all the callbacks as well
-	wasmEvents := tryDecryptWasmEvents(ctx, nonce)
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
 
 	// TODO check if we can extract the messages from ctx
 
@@ -434,15 +435,15 @@ func execHelperImpl(
 func initHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, sdk.NewCoins())
+	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, sdk.NewCoins(), shouldSkipAttributes...)
 }
 
 func initHelperImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, sentFunds sdk.Coins,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, sentFunds sdk.Coins, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
 
@@ -482,7 +483,7 @@ func initHelperImpl(
 	}
 
 	// wasmEvents comes from all the callbacks as well
-	wasmEvents := tryDecryptWasmEvents(ctx, nonce)
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
 
 	// TODO check if we can extract the messages from ctx
 
@@ -4287,6 +4288,150 @@ func TestV1SendsEncryptedAttributesFromExecuteWithSubmessageWithReply(t *testing
 	)
 }
 
+func TestV1SendsPlaintextFromInitWithoutSubmessageWithoutReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes":{}}`, true, true, defaultGasForTests, true)
+	require.Empty(t, err)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+		},
+		events,
+	)
+}
+
+func TestV1SendsPlaintextAttributesFromInitWithSubmessageWithoutReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":0}}`, true, true, defaultGasForTests, true)
+	require.Empty(t, err)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+		},
+		events,
+	)
+}
+
+func TestV1SendsPlaintextAttributesFromInitWithSubmessageWithReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, true)
+	require.Empty(t, err)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr5", Value: "🤯"},
+				{Key: "attr6", Value: "🦄"},
+			},
+		},
+		events,
+	)
+}
+
+func TestV1SendsPlaintextAttributesFromExecuteWithoutSubmessageWithoutReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes":{}}`, true, true, defaultGasForTests, 0, true)
+	require.Empty(t, err)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+		},
+		events,
+	)
+}
+
+func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithoutReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":0}}`, true, true, defaultGasForTests, 0, true)
+	require.Empty(t, err)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+		},
+		events,
+	)
+}
+
+func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, 0, true)
+	require.Empty(t, err)
+
+	require.Equal(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr5", Value: "🤯"},
+				{Key: "attr6", Value: "🦄"},
+			},
+		},
+		events,
+	)
+}
+
 func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
@@ -4430,7 +4575,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	nonce, ctx, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_events_with_submessage":{"id":2300}}`, true, true, defaultGasForTests)
+	nonce, ctx, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_events_with_submessage":{"id":2400}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 
 	events := ctx.EventManager().Events()
@@ -4703,7 +4848,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
-	nonce, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_events_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, 0)
+	nonce, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_events_with_submessage":{"id":2400}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
 
 	events := ctx.EventManager().Events()

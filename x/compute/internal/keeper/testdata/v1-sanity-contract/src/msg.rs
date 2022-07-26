@@ -13,6 +13,10 @@ pub enum InstantiateMsg {
     AddAttributesWithSubmessage {
         id: u64,
     },
+    AddPlaintextAttributes {},
+    AddPlaintextAttributesWithSubmessage {
+        id: u64,
+    },
     AddEvents {},
     AddEventsWithSubmessage {
         id: u64,
@@ -87,6 +91,11 @@ pub enum ExecuteMsg {
         id: u64,
     },
     AddMoreAttributes {},
+    AddPlaintextAttributes {},
+    AddPlaintextAttributesWithSubmessage {
+        id: u64,
+    },
+    AddMorePlaintextAttributes {},
     AddEvents {},
     AddEventsWithSubmessage {
         id: u64,

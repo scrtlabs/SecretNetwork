@@ -56,6 +56,30 @@ pub fn instantiate(
             .add_attribute("attr1", "🦄")
             .add_attribute("attr2", "🌈")),
 
+        InstantiateMsg::AddPlaintextAttributes {} => Ok(Response::new()
+            .add_attribute_plaintext("attr1", "🦄")
+            .add_attribute_plaintext("attr2", "🌈")),
+        InstantiateMsg::AddPlaintextAttributesWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(
+                        r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_attribute_plaintext("attr1", "🦄")
+            .add_attribute_plaintext("attr2", "🌈")),
+
         InstantiateMsg::AddEvents {} => Ok(Response::new()
             .add_event(
                 Event::new("cyber1".to_string())
@@ -247,6 +271,32 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::AddMoreAttributes {} => Ok(Response::new()
             .add_attribute("attr3", "🍉")
             .add_attribute("attr4", "🥝")),
+        ExecuteMsg::AddPlaintextAttributes {} => Ok(Response::new()
+            .add_attribute_plaintext("attr1", "🦄")
+            .add_attribute_plaintext("attr2", "🌈")),
+        ExecuteMsg::AddPlaintextAttributesWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(
+                        r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_attribute_plaintext("attr1", "🦄")
+            .add_attribute_plaintext("attr2", "🌈")),
+        ExecuteMsg::AddMorePlaintextAttributes {} => Ok(Response::new()
+            .add_attribute_plaintext("attr3", "🍉")
+            .add_attribute_plaintext("attr4", "🥝")),
 
         ExecuteMsg::AddEvents {} => Ok(Response::new()
             .add_event(
@@ -1411,6 +1461,12 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             Err(StdError::generic_err(format!("Add attributes failed",)))
         }
         (2300, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_attribute_plaintext("attr5", "🤯")
+            .add_attribute_plaintext("attr6", "🦄")),
+        (2300, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Add attributes failed",)))
+        }
+        (2400, SubMsgResult::Ok(_)) => Ok(Response::new()
             .add_event(
                 Event::new("cyber5".to_string())
                     .add_attribute("attr1", "😗")
@@ -1421,7 +1477,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
                     .add_attribute("attr3", "😉")
                     .add_attribute("attr4", "😊"),
             )),
-        (2300, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Add events failed",))),
+        (2400, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Add events failed",))),
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
