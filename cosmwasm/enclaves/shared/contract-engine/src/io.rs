@@ -347,18 +347,15 @@ pub fn encrypt_output(
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &reply_params)?;
-                attr.value =
-                    encrypt_preserialized_string(&encryption_key, &attr.value, &reply_params)?;
+                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
+                attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
             }
 
             // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
             for event in ok.events.iter_mut() {
                 for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                    attr.key =
-                        encrypt_preserialized_string(&encryption_key, &attr.key, &reply_params)?;
-                    attr.value =
-                        encrypt_preserialized_string(&encryption_key, &attr.value, &reply_params)?;
+                    attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
+                    attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
                 }
             }
 
@@ -387,13 +384,27 @@ pub fn encrypt_output(
 
             *internal_reply_enclave_sig = match reply_params {
                 Some(_) => {
+                    let mut events: Vec<Event> = ok.events.clone();
+                    let custom_contract_event_prefix: String = "wasm-".to_string();
+                    for event in events.iter_mut() {
+                        event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
+                    }
+
+                    if ok.attributes.len() > 0 {
+                        events.push(Event {
+                            ty: "wasm".to_string(),
+                            attributes: ok.attributes.clone(),
+                        })
+                    }
+
                     let reply = Reply {
                         id: msg_id.unwrap(),
                         result: SubMsgResult::Ok(SubMsgResponse {
-                            events: ok.events.clone(),
+                            events,
                             data: ok.data.clone(),
                         }),
                     };
+
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
                         warn!(
                             "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
@@ -401,6 +412,7 @@ pub fn encrypt_output(
                         );
                         EnclaveError::FailedToSerialize
                     })?;
+
                     let tmp_secret_msg = SecretMessage {
                         nonce: secret_msg.nonce,
                         user_public_key: secret_msg.user_public_key,

@@ -899,10 +899,12 @@ func (k *Keeper) handleContractResponse(
 	ctx.EventManager().EmitEvents(events)
 
 	if len(evts) > 0 {
+
 		customEvents, err := types.NewCustomEvents(evts, contractAddr)
 		if err != nil {
 			return nil, err
 		}
+
 		ctx.EventManager().EmitEvents(customEvents)
 	}
 

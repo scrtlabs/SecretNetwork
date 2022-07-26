@@ -1,11 +1,11 @@
 use core::time;
 use mem::MaybeUninit;
-use std::{mem, thread};
+use std::{mem, thread, vec};
 
 use cosmwasm_std::{
     attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Empty, Env,
-    MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg,
-    SubMsgResult, WasmMsg, WasmQuery,
+    Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage,
+    SubMsg, SubMsgResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
@@ -33,6 +33,66 @@ pub fn instantiate(
             resp.data = Some(env.contract.address.as_bytes().into());
             Ok(resp)
         }
+
+        InstantiateMsg::AddAttributes {} => Ok(Response::new()
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        InstantiateMsg::AddAttributesWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+
+        InstantiateMsg::AddEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr3", "🐙")
+                    .add_attribute("attr4", "🦄"),
+            )),
+        InstantiateMsg::AddEventsWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_events":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr3", "🐙")
+                    .add_attribute("attr4", "🦄"),
+            )),
 
         // These were ported from the v0.10 test-contract:
         InstantiateMsg::Nop {} => Ok(Response::new().add_attribute("init", "🌈")),
@@ -163,6 +223,79 @@ pub fn instantiate(
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Increment { addition } => increment(deps, addition),
+        ExecuteMsg::AddAttributes {} => Ok(Response::new()
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        ExecuteMsg::AddAttributesWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        ExecuteMsg::AddMoreAttributes {} => Ok(Response::new()
+            .add_attribute("attr3", "🍉")
+            .add_attribute("attr4", "🥝")),
+
+        ExecuteMsg::AddEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr3", "🐙")
+                    .add_attribute("attr4", "🦄"),
+            )),
+        ExecuteMsg::AddEventsWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_events":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr3", "🐙")
+                    .add_attribute("attr4", "🦄"),
+            )),
+        ExecuteMsg::AddMoreEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber3".to_string())
+                    .add_attribute("attr1", "🤯")
+                    .add_attribute("attr2", "🤟"),
+            )
+            .add_event(
+                Event::new("cyber4".to_string())
+                    .add_attribute("attr3", "😅")
+                    .add_attribute("attr4", "🦄"),
+            )),
         ExecuteMsg::TransferMoney { amount } => transfer_money(deps, amount),
         ExecuteMsg::RecursiveReply {} => recursive_reply(env, deps),
         ExecuteMsg::RecursiveReplyFail {} => recursive_reply_fail(env, deps),
@@ -1271,6 +1404,24 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             "Execute with error didn't response with error",
         ))),
         (2100, SubMsgResult::Err(_)) => Ok(Response::default()),
+        (2200, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_attribute("attr5", "🤯")
+            .add_attribute("attr6", "🦄")),
+        (2200, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Add attributes failed",)))
+        }
+        (2300, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_event(
+                Event::new("cyber5".to_string())
+                    .add_attribute("attr1", "😗")
+                    .add_attribute("attr2", "😋"),
+            )
+            .add_event(
+                Event::new("cyber6".to_string())
+                    .add_attribute("attr3", "😉")
+                    .add_attribute("attr4", "😊"),
+            )),
+        (2300, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Add events failed",))),
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

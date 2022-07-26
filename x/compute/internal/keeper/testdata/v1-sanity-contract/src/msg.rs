@@ -9,6 +9,14 @@ pub enum InstantiateMsg {
         counter: u64,
         expires: u64,
     },
+    AddAttributes {},
+    AddAttributesWithSubmessage {
+        id: u64,
+    },
+    AddEvents {},
+    AddEventsWithSubmessage {
+        id: u64,
+    },
     // These were ported from the v0.10 test-contract:
     Nop {},
     Callback {
@@ -74,6 +82,16 @@ pub enum ExecuteMsg {
     Increment {
         addition: u64,
     },
+    AddAttributes {},
+    AddAttributesWithSubmessage {
+        id: u64,
+    },
+    AddMoreAttributes {},
+    AddEvents {},
+    AddEventsWithSubmessage {
+        id: u64,
+    },
+    AddMoreEvents {},
     TransferMoney {
         amount: u64,
     },

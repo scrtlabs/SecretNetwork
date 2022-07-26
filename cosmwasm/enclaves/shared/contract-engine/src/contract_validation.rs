@@ -362,6 +362,7 @@ fn verify_callback_sig_impl(
             "Contract signature does not match with the one sent: {:?}",
             callback_signature
         );
+
         return false;
     }
 
