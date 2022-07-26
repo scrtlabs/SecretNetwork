@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Secret Network
   description: A REST interface for queries and transactions
-  version: v1.3.1
+  version: v1.3.2
 paths:
   /cosmos/auth/v1beta1/accounts:
     get:
@@ -32407,6 +32407,7 @@ paths:
                         address:
                           type: string
                           format: byte
+                          title: address is the canonical address of the contract
                         ContractInfo:
                           type: object
                           properties:
@@ -32435,8 +32436,6 @@ paths:
                                   format: uint64
                                   title: TxIndex is a monotonic counter within the block (actual transaction
                                     index, or gas consumed)
-                            ibc_port_id:
-                              type: string
                           title: ContractInfo stores a WASM contract instance
                       title: ContractInfoWithAddress adds the address (key) to the ContractInfo
                         representation
@@ -32631,7 +32630,7 @@ paths:
                   address:
                     type: string
                     format: byte
-                    title: address is the address of the contract
+                    title: address is the canonical address of the contract
                   ContractInfo:
                     type: object
                     properties:
@@ -32659,8 +32658,6 @@ paths:
                             format: uint64
                             title: TxIndex is a monotonic counter within the block (actual transaction
                               index, or gas consumed)
-                      ibc_port_id:
-                        type: string
                     title: ContractInfo stores a WASM contract instance
                 title: QueryContractInfoResponse is the response type for the Query/ContractInfo
                   RPC method
@@ -32833,7 +32830,7 @@ paths:
                             }
       parameters:
         - name: address
-          description: address is the address of the contract to query
+          description: address is the canonical address of the contract to query
           in: path
           required: true
           schema:
@@ -33025,7 +33022,7 @@ paths:
                             }
       parameters:
         - name: address
-          description: address is the address of the contract
+          description: address is the canonical address of the contract
           in: path
           required: true
           schema:
@@ -62207,8 +62204,6 @@ components:
               format: uint64
               title: TxIndex is a monotonic counter within the block (actual transaction
                 index, or gas consumed)
-        ibc_port_id:
-          type: string
       title: ContractInfo stores a WASM contract instance
     secret.compute.v1beta1.ContractInfoWithAddress:
       type: object
@@ -62216,6 +62211,7 @@ components:
         address:
           type: string
           format: byte
+          title: address is the canonical address of the contract
         ContractInfo:
           type: object
           properties:
@@ -62242,8 +62238,6 @@ components:
                   format: uint64
                   title: TxIndex is a monotonic counter within the block (actual transaction
                     index, or gas consumed)
-            ibc_port_id:
-              type: string
           title: ContractInfo stores a WASM contract instance
       title: ContractInfoWithAddress adds the address (key) to the ContractInfo
         representation
@@ -62296,7 +62290,7 @@ components:
         address:
           type: string
           format: byte
-          title: address is the address of the contract
+          title: address is the canonical address of the contract
         ContractInfo:
           type: object
           properties:
@@ -62323,8 +62317,6 @@ components:
                   format: uint64
                   title: TxIndex is a monotonic counter within the block (actual transaction
                     index, or gas consumed)
-            ibc_port_id:
-              type: string
           title: ContractInfo stores a WASM contract instance
       title: QueryContractInfoResponse is the response type for the Query/ContractInfo
         RPC method
@@ -62339,6 +62331,7 @@ components:
               address:
                 type: string
                 format: byte
+                title: address is the canonical address of the contract
               ContractInfo:
                 type: object
                 properties:
@@ -62366,8 +62359,6 @@ components:
                         format: uint64
                         title: TxIndex is a monotonic counter within the block (actual transaction
                           index, or gas consumed)
-                  ibc_port_id:
-                    type: string
                 title: ContractInfo stores a WASM contract instance
             title: ContractInfoWithAddress adds the address (key) to the ContractInfo
               representation
