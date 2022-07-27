@@ -151,6 +151,28 @@ pub fn instantiate(
             .add_attribute("attr3", "🐙")
             .add_attribute_plaintext("attr4", "🦄")),
 
+        InstantiateMsg::MeasureGasForSubmessage { id } => {
+            let msg = match id {
+                0 => Binary::from(r#"{"gas_meter":{}}"#.as_bytes().to_vec()),
+                _ => Binary::from(r#"{"gas_meter_proxy":{}}"#.as_bytes().to_vec()),
+            };
+
+            Ok(Response::new().add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg,
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            }))
+        }
         // These were ported from the v0.10 test-contract:
         InstantiateMsg::Nop {} => Ok(Response::new().add_attribute("init", "🌈")),
         InstantiateMsg::Callback {
@@ -448,7 +470,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             )
             .add_attribute("attr3", "🐙")
             .add_attribute_plaintext("attr4", "🦄")),
-
+        ExecuteMsg::GasMeter {} => loop {},
+        ExecuteMsg::GasMeterProxy {} => Ok(Response::default()),
         ExecuteMsg::TransferMoney { amount } => transfer_money(deps, amount),
         ExecuteMsg::RecursiveReply {} => recursive_reply(env, deps),
         ExecuteMsg::RecursiveReplyFail {} => recursive_reply_fail(env, deps),
@@ -1589,7 +1612,13 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             )
             .add_attribute("attr11", "😉")
             .add_attribute_plaintext("attr12", "😊")),
-        (2500, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Add events failed",))),
+        (2500, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Add mixed events failed",)))
+        }
+        (2600, SubMsgResult::Ok(_)) => loop {},
+        (2600, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Gas submessage failed",)))
+        }
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

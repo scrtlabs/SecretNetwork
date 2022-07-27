@@ -1085,6 +1085,8 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	}
 
 	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, ogSigInfo, wasmTypes.HandleTypeReply)
+	consumeGas(ctx, gasUsed)
+
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrReplyFailed, execErr.Error())
 	}
@@ -1093,8 +1095,6 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	case *v010wasmTypes.HandleResponse:
 		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
 	case *v1wasmTypes.Response:
-		consumeGas(ctx, gasUsed)
-
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeReply,
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),

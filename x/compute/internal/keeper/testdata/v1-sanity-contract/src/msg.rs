@@ -25,6 +25,9 @@ pub enum InstantiateMsg {
     AddMixedAttributesAndEventsWithSubmessage {
         id: u64,
     },
+    MeasureGasForSubmessage {
+        id: u64,
+    },
     // These were ported from the v0.10 test-contract:
     Nop {},
     Callback {
@@ -115,6 +118,8 @@ pub enum ExecuteMsg {
         code_hash: String,
         id: u64,
     },
+    GasMeter {},
+    GasMeterProxy {},
     TransferMoney {
         amount: u64,
     },
