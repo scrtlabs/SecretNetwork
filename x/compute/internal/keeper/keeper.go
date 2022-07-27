@@ -163,15 +163,6 @@ func (k Keeper) setParams(ctx sdk.Context, ps types.Params) {
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string) (codeID uint64, err error) {
-	/*
-		return k.create(ctx, creator, wasmCode, source, builder, &types.AccessConfig{Type: types.Everybody}  , k.authZPolicy )
-		}
-
-		func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig ) (codeID uint64, err error) {
-		if !authZ.CanCreateCode(k.getUploadAccessConfig(ctx), creator) {
-			return 0, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not create code")
-		}
-	*/
 	wasmCode, err = uncompress(wasmCode)
 	if err != nil {
 		return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
@@ -180,18 +171,12 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 
 	codeHash, err := k.wasmer.Create(wasmCode)
 	if err != nil {
-		// return 0, sdkerrors.Wrap(err, "cosmwasm create")
 		return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
 	store := ctx.KVStore(k.storeKey)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
-	/*
-		if instantiateAccess == nil {
-			defaultAccessConfig := k.getInstantiateAccessConfig(ctx).With(creator)
-			instantiateAccess = &defaultAccessConfig
-		}
-	*/
-	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder /* , *instantiateAccess */)
+
+	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshal(&codeInfo))
 
@@ -418,10 +403,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(bz, &codeInfo)
 
-	// if !authZ.CanInstantiateContract(codeInfo.InstantiateConfig, creator) {
-	// 	return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not instantiate")
-	// }
-
 	// prepare env for contract instantiate call
 	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil)
 
@@ -463,8 +444,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		createdAt := types.NewAbsoluteTxPosition(ctx)
 		contractInfo := types.NewContractInfo(codeID, creator, label, createdAt)
 		store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(&contractInfo))
-
-		// fmt.Printf("Storing key: %v for account %s\n", key, contractAddress)
 
 		store.Set(types.GetContractEnclaveKey(contractAddress), key)
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
@@ -997,8 +976,6 @@ func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, cus
 		return sdkerrors.Wrapf(types.ErrDuplicate, "contract: %s", contractAddr)
 	}
 
-	// historyEntry := c.ResetFromGenesis(ctx)
-	// k.appendToContractHistory(ctx, contractAddr, historyEntry)
 	k.setContractCustomInfo(ctx, contractAddr, customInfo)
 	k.setContractInfo(ctx, contractAddr, c)
 	return k.importContractState(ctx, contractAddr, state)
