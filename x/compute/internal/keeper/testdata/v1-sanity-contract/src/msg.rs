@@ -88,6 +88,12 @@ pub enum ExecuteMsg {
     SubMsgLoopIner {
         iter: u64,
     },
+    SentFunds {
+to_type: "init"/"exec"
+to_contract: "secret1.."
+to_contract_hash: "ABC"
+funds
+    },
     MultipleSubMessages {},
     MultipleSubMessagesNoReply {},
 
