@@ -538,7 +538,7 @@ pub fn parse_message(
 
             match orig_secret_msg.decrypt() {
                 Ok(decrypted_msg) => {
-                    // IBC packet is encrypted
+                    // IBC packet was encrypted
 
                     trace!(
                         "ibc_packet_receive input before decryption: {:?}",
