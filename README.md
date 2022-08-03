@@ -60,6 +60,14 @@ For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script 
 
 `sudo ./scripts/install-sgx.sh true true true false`
 
+### Install Xargo
+
+We need a very specific version of xargo for everything to compile happily together
+
+```
+cargo install xargo --version 0.3.25
+```
+
 # Build from Source
 
 Use `make build-linux` to build the entire codebase. This will build both the Rust (enclave & contract engine) and the Go (blockchain) code.
