@@ -58,7 +58,9 @@ Install go from [https://go.dev/doc/install](https://go.dev/doc/install)
 To compile the code and run tests, you'll need to install the SGX SDK and PSW. To run in simulation (or software) modes of SGX you do _not_ need to install the SGX driver. 
 For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script in the following way:
 
-`sudo ./scripts/install-sgx.sh true true true false`
+```bash
+sudo ./scripts/install-sgx.sh true true true false
+```
 
 ### Install Xargo
 
