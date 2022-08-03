@@ -37,7 +37,7 @@ Click the button below to start a new development environment:
 
 ## Manual Set up
 
-### Install prerequisit packages
+### Install prerequisite packages
 
 ```
 apt-get install -y --no-install-recommends g++ libtool autoconf clang
