@@ -37,6 +37,12 @@ Click the button below to start a new development environment:
 
 ## Manual Set up
 
+### Install prerequisit packages
+
+```
+apt-get install -y --no-install-recommends g++ libtool autoconf clang
+```
+
 ### Clone Repo
 
 Clone this repo to your favorite working directory
@@ -59,9 +65,15 @@ To run tests you'll need to add the wasm32 target -
 rustup target add wasm32-unknown-unknown
 ```
 
-### Install Go
+### Install Go (v1.18+)
 
 Install go from [https://go.dev/doc/install](https://go.dev/doc/install)
+
+#### Install gobindata
+
+```
+sudo apt install go-bindata
+```
 
 ### Install SGX
 
