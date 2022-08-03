@@ -301,7 +301,7 @@ pub fn instantiate(
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::Increment { addition } => increment(deps, addition),
+        ExecuteMsg::Increment { addition } => increment(env, deps, addition),
         ExecuteMsg::AddAttributes {} => Ok(Response::new()
             .add_attribute("attr1", "🦄")
             .add_attribute("attr2", "🌈")),
@@ -481,6 +481,22 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::SubMsgLoopIner { iter } => sub_msg_loop_iner(env, deps, iter),
         ExecuteMsg::MultipleSubMessages {} => send_multiple_sub_messages(env, deps),
         ExecuteMsg::MultipleSubMessagesNoReply {} => send_multiple_sub_messages_no_reply(env, deps),
+        ExecuteMsg::QuickError {} => {
+            count(deps.storage).save(&123456)?;
+            Err(StdError::generic_err("error in execute"))
+        }
+        ExecuteMsg::MultipleSubMessagesNoReplyWithError {} => {
+            send_multiple_sub_messages_no_reply_with_error(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesNoReplyWithPanic {} => {
+            send_multiple_sub_messages_no_reply_with_panic(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesWithReplyWithError {} => {
+            send_multiple_sub_messages_with_reply_with_error(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesWithReplyWithPanic {} => {
+            send_multiple_sub_messages_with_reply_with_panic(env, deps)
+        }
         ExecuteMsg::InitV10 {
             counter,
             code_id,
@@ -1049,9 +1065,38 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
-pub fn increment(deps: DepsMut, c: u64) -> StdResult<Response> {
+pub fn increment(env: Env, deps: DepsMut, c: u64) -> StdResult<Response> {
     if c == 0 {
         return Err(StdError::generic_err("got wrong counter on increment"));
+    }
+
+    if c == 9875 {
+        let new_count = count_read(deps.storage).load()? + 100;
+        count(deps.storage).save(&new_count)?;
+        return Err(StdError::generic_err("got wrong counter on increment"));
+    }
+
+    if c == 9876 {
+        let new_count = count_read(deps.storage).load()? + 100;
+        count(deps.storage).save(&new_count)?;
+        panic!()
+    }
+
+    if c == 9911 {
+        let mut resp = Response::default();
+        resp.messages.push(SubMsg {
+            id: 1304,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address.into_string(),
+                code_hash: env.contract.code_hash,
+                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                funds: vec![],
+            }),
+            gas_limit: Some(10000000_u64),
+            reply_on: ReplyOn::Always,
+        });
+
+        return Ok(resp);
     }
 
     let new_count = count_read(deps.storage).load()? + c;
@@ -1122,7 +1167,7 @@ pub fn sub_msg_loop_iner(_env: Env, deps: DepsMut, iter: u64) -> StdResult<Respo
         return Err(StdError::generic_err("stopped loop"));
     }
 
-    increment(deps, 1)?;
+    increment(_env, deps, 1)?;
 
     let mut resp = Response::default();
     resp.data = Some(((iter - 1) as u64).to_string().as_bytes().into());
@@ -1241,6 +1286,229 @@ pub fn send_multiple_sub_messages_no_reply(env: Env, deps: DepsMut) -> StdResult
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Never,
     });
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_no_reply_with_error(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 1610,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1611,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Success,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1613,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_with_reply_with_error(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 3000,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3003,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_with_reply_with_panic(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 3000,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_no_reply_with_panic(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 1610,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1611,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1613,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
 
     resp.data = Some(
         (count_read(deps.storage).load()? as u32)
@@ -1619,6 +1887,19 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (2600, SubMsgResult::Err(_)) => {
             Err(StdError::generic_err(format!("Gas submessage failed",)))
         }
+        (3000, SubMsgResult::Ok(_)) => {
+            let new_count = count_read(deps.storage).load()? + 3;
+            count(deps.storage).save(&new_count)?;
+            Ok(Response::default())
+        }
+        (3000, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Revert submessage failed",)))
+        }
+        (3001, SubMsgResult::Ok(_)) => {
+            Ok(Response::default())
+            //Err(StdError::generic_err(format!("Revert submessage failed",)))
+        }
+        (3001, SubMsgResult::Err(_)) => Ok(Response::default()),
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

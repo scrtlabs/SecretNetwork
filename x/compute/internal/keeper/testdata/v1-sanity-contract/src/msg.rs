@@ -135,6 +135,11 @@ pub enum ExecuteMsg {
     },
     MultipleSubMessages {},
     MultipleSubMessagesNoReply {},
+    QuickError {},
+    MultipleSubMessagesNoReplyWithError {},
+    MultipleSubMessagesNoReplyWithPanic {},
+    MultipleSubMessagesWithReplyWithError {},
+    MultipleSubMessagesWithReplyWithPanic {},
     InitV10 {
         code_id: u64,
         code_hash: String,

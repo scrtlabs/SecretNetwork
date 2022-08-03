@@ -73,6 +73,9 @@ pub enum InitMsg {
     InitFromV1 {
         counter: u64,
     },
+    Counter {
+        counter: u64,
+    },
     AddAttributes {},
     AddAttributesWithSubmessage {},
     AddPlaintextAttributes {},
@@ -288,6 +291,7 @@ pub enum HandleMsg {
         code_hash: String,
     },
     CosmosMsgCustom {},
+    InitNewContract {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -322,6 +326,7 @@ pub enum QueryMsg {
         msg: String,
     },
     GetCountFromV1 {},
+    Get {},
     GetContractVersion {},
 }
 
@@ -436,6 +441,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             })
         }
         InitMsg::InitFromV1 { counter } => {
+            count(&mut deps.storage).save(&counter)?;
+
+            Ok(InitResponse {
+                messages: vec![],
+                log: vec![],
+            })
+        }
+        InitMsg::Counter { counter } => {
             count(&mut deps.storage).save(&counter)?;
 
             Ok(InitResponse {
@@ -1148,6 +1161,21 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
             data: None,
         }),
+        HandleMsg::InitNewContract {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id: 1,
+                msg: Binary::from(
+                    "{\"counter\":{\"counter\":150, \"expires\":100}}"
+                        .as_bytes()
+                        .to_vec(),
+                ),
+                callback_code_hash: env.contract_code_hash,
+                send: vec![],
+                label: String::from("fi"),
+            })],
+            log: vec![],
+            data: None,
+        }),
     }
 }
 
@@ -1709,6 +1737,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             return Ok(to_binary(&answer)?);
         }
         QueryMsg::GetCountFromV1 {} => {
+            let count = count_read(&deps.storage).load()?;
+
+            Ok(to_binary(&QueryRes::Get { count })?)
+        }
+        QueryMsg::Get {} => {
             let count = count_read(&deps.storage).load()?;
 
             Ok(to_binary(&QueryRes::Get { count })?)

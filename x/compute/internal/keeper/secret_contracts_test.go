@@ -3435,6 +3435,36 @@ func TestV1ReplySanity(t *testing.T) {
 	require.Equal(t, uint32(1337), resp.Get.Count)
 }
 
+func TestInitCreateNewContract(t *testing.T) {
+	for _, testContract := range testContracts {
+		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
+
+			_, _, contractAddress, ev, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+			fmt.Printf("LIORRR pre %+v", ev)
+			_, _, _, ev, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, testContract.IsCosmWasmV1, math.MaxUint64, 0)
+
+			require.Empty(t, err)
+			newContractAddress, Aerr := sdk.AccAddressFromBech32(ev[1][0].Value)
+			require.Empty(t, Aerr)
+			queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+			require.Empty(t, qErr)
+
+			var resp v1QueryResponse
+			e := json.Unmarshal([]byte(queryRes), &resp)
+			require.NoError(t, e)
+			require.Equal(t, uint32(10), resp.Get.Count)
+
+			queryRes, qErr = queryHelper(t, keeper, ctx, newContractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+			require.Empty(t, qErr)
+
+			e = json.Unmarshal([]byte(queryRes), &resp)
+			require.NoError(t, e)
+			require.Equal(t, uint32(150), resp.Get.Count)
+		})
+	}
+}
+
 func TestV1ReplyLoop(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
@@ -3656,6 +3686,14 @@ func TestV1MultipleSubmessagesNoReply(t *testing.T) {
 
 	require.Empty(t, err)
 	require.Equal(t, uint32(10), binary.BigEndian.Uint32(data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(16), resp.Get.Count)
 }
 
 func TestV1InitV010ContractWithReply(t *testing.T) {
