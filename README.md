@@ -45,9 +45,19 @@ Clone this repo to your favorite working directory
 
 Install rust from [https://rustup.rs/](https://rustup.rs/). 
 
-Then, add the rust-src component. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - `rustup component add rust-src`
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
-To run tests you'll need to add the wasm32 target - `rustup target add wasm32-unknown-unknown`
+Then, add the rust-src component. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - 
+```
+rustup component add rust-src
+```
+
+To run tests you'll need to add the wasm32 target - 
+```
+rustup target add wasm32-unknown-unknown
+```
 
 ### Install Go
 
