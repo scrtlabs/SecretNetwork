@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"github.com/enigmampc/SecretNetwork/app/upgrades"
+	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
 	"io"
 	"net/http"
 	"os"
@@ -136,6 +138,8 @@ var (
 	allowedReceivingModAcc = map[string]bool{
 		distrtypes.ModuleName: true,
 	}
+
+	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade}
 )
 
 // Verify app interface at compile time
@@ -171,7 +175,7 @@ type SecretNetworkApp struct {
 	paramsKeeper     paramskeeper.Keeper
 	evidenceKeeper   evidencekeeper.Keeper
 	feeGrantKeeper   feegrantkeeper.Keeper
-	computeKeeper    compute.Keeper
+	ComputeKeeper    compute.Keeper
 	regKeeper        reg.Keeper
 	ibcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	transferKeeper   ibctransferkeeper.Keeper
@@ -421,7 +425,7 @@ func NewSecretNetworkApp(
 	// if we want to allow any custom callbacks
 	supportedFeatures := "staking"
 
-	app.computeKeeper = compute.NewKeeper(
+	app.ComputeKeeper = compute.NewKeeper(
 		appCodec,
 		*legacyAmino,
 		keys[compute.StoreKey],
@@ -463,7 +467,7 @@ func NewSecretNetworkApp(
 		staking.NewAppModule(appCodec, app.stakingKeeper, app.accountKeeper, app.bankKeeper),
 		upgrade.NewAppModule(app.upgradeKeeper),
 		evidence.NewAppModule(app.evidenceKeeper),
-		compute.NewAppModule(app.computeKeeper),
+		compute.NewAppModule(app.ComputeKeeper),
 		params.NewAppModule(app.paramsKeeper),
 		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 		reg.NewAppModule(app.regKeeper),
@@ -584,7 +588,7 @@ func NewSecretNetworkApp(
 	//	distr.NewAppModule(appCodec, app.distrKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
 	//	slashing.NewAppModule(appCodec, app.slashingKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
 	//	params.NewAppModule(app.paramsKeeper),
-	//	//compute.NewAppModule(app.computeKeeper),
+	//	//compute.NewAppModule(app.ComputeKeeper),
 	//	evidence.NewAppModule(app.evidenceKeeper),
 	//)
 
@@ -617,7 +621,7 @@ func NewSecretNetworkApp(
 
 	if manager := app.SnapshotManager(); manager != nil {
 		err := manager.RegisterExtensions(
-			compute.NewWasmSnapshotter(app.CommitMultiStore(), &app.computeKeeper),
+			compute.NewWasmSnapshotter(app.CommitMultiStore(), &app.ComputeKeeper),
 		)
 		if err != nil {
 			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
@@ -747,15 +751,36 @@ func (app *SecretNetworkApp) BlockedAddrs() map[string]bool {
 func (app *SecretNetworkApp) setupUpgradeHandlers(icamodule *ica.AppModule) {
 	// this configures a no-op upgrade handler for the v4 upgrade,
 	// which improves the lockup module's store management.
-	app.upgradeKeeper.SetUpgradeHandler(
-		v1_3.UpgradeName, v1_3.CreateUpgradeHandler(
-			app.mm, icamodule, app.configurator))
+	for _, upgradeDetails := range Upgrades {
+		app.upgradeKeeper.SetUpgradeHandler(
+			upgradeDetails.UpgradeName,
+			upgradeDetails.CreateUpgradeHandler(
+				app.mm,
+				app,
+				app.configurator,
+			),
+		)
+	}
+	//
+	//app.upgradeKeeper.SetUpgradeHandler(
+	//	v1_3.UpgradeName, v1_3.CreateUpgradeHandler(
+	//		app.mm, icamodule, app.configurator))
 }
 
 func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 	upgradeInfo, err := app.upgradeKeeper.ReadUpgradeInfoFromDisk()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to read upgrade info from disk %s", err))
+	}
+
+	if app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+		return
+	}
+
+	for _, upgradeDetails := range Upgrades {
+		if upgradeInfo.Name == upgradeDetails.UpgradeName {
+			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
+		}
 	}
 
 	if upgradeInfo.Name == v1_3.UpgradeName && !app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
