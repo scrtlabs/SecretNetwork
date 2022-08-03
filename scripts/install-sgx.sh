@@ -48,11 +48,11 @@ install_sdk(){
    # Make the driver and SDK installers executable
    chmod +x ./sgx_linux_*.bin
 
-   # Install the SDK inside ./sgxsdk/ which is inside $HOME/.sgxsdk
-   echo yes | ./sgx_linux_x64_sdk_*.bin
+   # Install the SDK in /opt/intel/sgxsdk
+   (echo no; echo /opt/intel/) | ./sgx_linux_x64_sdk_2.13.100.4.bin
 
    # Setup the environment variables for every new shell
-   echo "source '$HOME/.sgxsdk/sgxsdk/environment'" |
+   echo "source '/opt/intel/.sgxsdk/sgxsdk/environment'" |
       tee -a "$HOME/.bashrc" "$HOME/.zshrc" > /dev/null
 }
 
