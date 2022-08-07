@@ -25,6 +25,9 @@ use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::ContractOperation;
 
+mod gas;
+mod validation;
+
 type Wasm3RsError = wasm3::error::Error;
 type Wasm3RsResult<T> = wasm3::error::Result<T>;
 
@@ -135,9 +138,9 @@ impl Context {
         self.gas_limit < self.gas_used.saturating_add(self.gas_used_externally)
     }
 
-    fn use_gas_externally(&mut self, gas: u64) -> WasmEngineResult<()> {
-        // todo implement gas consumption
-        Ok(())
+    fn use_gas_externally(&mut self, gas_amount: u64) -> WasmEngineResult<()> {
+        self.gas_used_externally = self.gas_used_externally.saturating_add(gas_amount);
+        self.check_gas_usage()
     }
 
     fn gas_left(&self) -> u64 {
@@ -169,6 +172,21 @@ impl Engine {
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Engine, EnclaveError> {
+        let mut module = walrus::ModuleConfig::new()
+            .generate_producers_section(false)
+            .parse(contract_code.code())
+            .map_err(|_| EnclaveError::InvalidWasm)?;
+
+        validation::validate_memory(&mut module)?;
+
+        if let ContractOperation::Init = operation {
+            validation::deny_floating_point(&module)?;
+        }
+
+        gas::add_metering(&mut module);
+
+        let transformed_code = module.emit_wasm();
+
         let context = Context {
             context,
             gas_limit,
@@ -184,7 +202,7 @@ impl Engine {
         let context = Box::new(RefCell::new(context));
         let context_ptr = Box::into_raw(context);
 
-        Engine::setup_runtime(context_ptr, contract_code).map_err(|err| unsafe {
+        Engine::setup_runtime(context_ptr, &transformed_code).map_err(|err| unsafe {
             let context = &*context_ptr;
             let mut context = context.borrow_mut();
             wasm3_error_to_enclave_error(context.deref_mut(), err)
@@ -193,7 +211,7 @@ impl Engine {
 
     fn setup_runtime(
         context_ptr: *mut RefCell<Context>,
-        contract_code: ContractCode,
+        contract_bytes: &[u8],
     ) -> Wasm3RsResult<Engine> {
         debug!("setting up runtime");
         let environment = wasm3::Environment::new()?;
@@ -201,7 +219,7 @@ impl Engine {
         let runtime = environment.create_runtime(1024 * 60)?;
         debug!("initialized runtime");
 
-        let mut module = runtime.parse_and_load_module(contract_code.code())?;
+        let mut module = runtime.parse_and_load_module(contract_bytes)?;
         debug!("parsed module");
 
         #[rustfmt::skip] {

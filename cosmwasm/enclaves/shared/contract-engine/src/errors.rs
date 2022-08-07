@@ -100,6 +100,8 @@ pub fn wasm3_error_to_enclave_error(
             Wasm3RsError::ModuleNotFound => EnclaveError::InvalidWasm,
             Wasm3RsError::ModuleLoadEnvMismatch => EnclaveError::FailedFunctionCall,
             Wasm3RsError::RuntimeIsActive => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::GlobalNotFound => EnclaveError::InvalidWasm,
+            Wasm3RsError::ArgumentTypeMismatch => EnclaveError::InvalidWasm,
         },
     }
 }

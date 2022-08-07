@@ -61,6 +61,12 @@ version = "1.0.28"
 source = "git+https://github.com/mesalock-linux/anyhow-sgx#9b7763f58b5dedc11f388ea9a0072049c309e27d"
 
 [[package]]
+name = "anyhow"
+version = "1.0.60"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c794e162a5eff65c72ef524dfe393eb923c354e350bb78b9c7383df13f3bc142"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -488,6 +494,7 @@ dependencies = [
  "sgx_tstd 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269)",
  "sgx_types 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=a37ffb9449ba6d5b6e4a9d586bbab864ae732269)",
  "sha2 0.8.2",
+ "walrus",
  "wasm3",
  "wasmi",
 ]
@@ -641,6 +648,15 @@ version = "0.9.0"
 source = "git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3#a6a172e652b4db4eaa17e4faa078fda8922abdd0"
 
 [[package]]
+name = "heck"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
+dependencies = [
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -666,6 +682,12 @@ name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
+
+[[package]]
+name = "id-arena"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25a2bc672d1148e28034f176e01fffebb08b35768468cc954630da77a1449005"
 
 [[package]]
 name = "instant"
@@ -710,6 +732,12 @@ name = "lazycell"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
+
+[[package]]
+name = "leb128"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "884e2677b40cc8c339eaefcb701c32ef1fd2493d71118dc0ca4b6a736c93bd67"
 
 [[package]]
 name = "libc"
@@ -889,7 +917,7 @@ name = "prost-derive"
 version = "0.6.1"
 source = "git+https://github.com/mesalock-linux/prost-sgx?rev=cd3103a6d45cf7a43b6c1c5e4223428097d1c547#cd3103a6d45cf7a43b6c1c5e4223428097d1c547"
 dependencies = [
- "anyhow",
+ "anyhow 1.0.28",
  "itertools",
  "proc-macro2",
  "quote",
@@ -1555,6 +1583,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
 
 [[package]]
+name = "unicode-segmentation"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e8820f5d777f6224dc4be3632222971ac30164d4a258d595640799554ebfd99"
+
+[[package]]
 name = "unicode-width"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1591,6 +1625,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
+name = "walrus"
+version = "0.19.0"
+source = "git+https://github.com/scrtlabs/walrus?rev=ff51789#ff51789e33b75efd155a63c980e02f8115007644"
+dependencies = [
+ "anyhow 1.0.60",
+ "id-arena",
+ "leb128",
+ "log",
+ "walrus-macro",
+ "wasmparser",
+]
+
+[[package]]
+name = "walrus-macro"
+version = "0.19.0"
+source = "git+https://github.com/scrtlabs/walrus?rev=ff51789#ff51789e33b75efd155a63c980e02f8115007644"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "wasi"
 version = "0.10.2+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1599,7 +1657,7 @@ checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
 [[package]]
 name = "wasm3"
 version = "0.5.0"
-source = "git+https://github.com/scrtlabs/wasm3-rs?rev=3ecaba2#3ecaba22e5a37631c71720a75cc7d4fcb3b8f858"
+source = "git+https://github.com/scrtlabs/wasm3-rs?rev=004a3e7#004a3e7c38bea53b21f7991ab250476139c302c5"
 dependencies = [
  "cty",
  "wasm3-sys",
@@ -1608,7 +1666,7 @@ dependencies = [
 [[package]]
 name = "wasm3-sys"
 version = "0.5.0"
-source = "git+https://github.com/scrtlabs/wasm3-rs?rev=3ecaba2#3ecaba22e5a37631c71720a75cc7d4fcb3b8f858"
+source = "git+https://github.com/scrtlabs/wasm3-rs?rev=004a3e7#004a3e7c38bea53b21f7991ab250476139c302c5"
 dependencies = [
  "bindgen",
  "cc",
@@ -1637,6 +1695,12 @@ source = "git+https://github.com/paritytech/wasmi?rev=84d2764594d80425373bf4949a
 dependencies = [
  "parity-wasm",
 ]
+
+[[package]]
+name = "wasmparser"
+version = "0.78.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52144d4c78e5cf8b055ceab8e5fa22814ce4315d6002ad32cfd914f37c12fd65"
 
 [[package]]
 name = "webpki"

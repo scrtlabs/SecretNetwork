@@ -25,6 +25,7 @@ enclave_crypto = { path = "../crypto" }
 enclave_cosmos_types = { path = "../cosmos-types" }
 enclave_cosmwasm_types = { path = "../cosmwasm-types" }
 enclave_utils = { path = "../utils" }
+
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
 ] }
@@ -36,9 +37,12 @@ log = "0.4.14"
 derive_more = "0.99"
 sha2 = "0.8.1"
 bech32 = "0.7.2"
+
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
-wasm3 = { rev = "3ecaba2", git = "https://github.com/scrtlabs/wasm3-rs", features = ["build-bindgen"] }
+wasm3 = { rev = "004a3e7", git = "https://github.com/scrtlabs/wasm3-rs", features = ["build-bindgen"] }
+walrus = { version = "0.19.0", git = "https://github.com/scrtlabs/walrus", rev = "ff51789" }
+
 lru = { version = "0.6", default-features = false }
 hex = "0.4.2"
 secp256k1 = { version = "0.21.3", features = ["recovery"] }
