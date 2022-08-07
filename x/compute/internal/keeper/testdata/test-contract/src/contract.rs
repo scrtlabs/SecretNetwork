@@ -1286,8 +1286,8 @@ fn send_external_query_recursion_limit<S: Storage, A: Api, Q: Querier>(
             ),
         }));
 
-    // 5 is the current recursion limit.
-    if depth != 5 {
+    // 10 is the current recursion limit.
+    if depth != 10 {
         result
     } else {
         match result {
