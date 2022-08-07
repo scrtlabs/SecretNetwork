@@ -2,7 +2,7 @@ use std::cell::Cell;
 
 use enclave_ffi_types::EnclaveError;
 
-const RECURSION_LIMIT: u8 = 5;
+const RECURSION_LIMIT: u8 = 10;
 
 thread_local! {
     /// This counter tracks the recursion depth of queries,
