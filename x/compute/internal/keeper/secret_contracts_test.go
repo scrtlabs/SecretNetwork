@@ -3441,7 +3441,6 @@ func TestInitCreateNewContract(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
 			_, _, contractAddress, ev, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
-			fmt.Printf("LIORRR pre %+v", ev)
 			_, _, _, ev, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, testContract.IsCosmWasmV1, math.MaxUint64, 0)
 
 			require.Empty(t, err)
@@ -3664,6 +3663,29 @@ func TestCosmosMsgCustom(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestV1SendsFundsWithReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, true, defaultGasForTests, 200)
+	require.Empty(t, err)
+
+	_, _, _, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"send_funds_with_reply":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+}
+
+func TestV1SendsFundsWithErrorWithReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+
+	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"send_funds_with_error_with_reply":{}}`, false, true, math.MaxUint64, 0)
+
+	require.NotEmpty(t, err)
+	require.Contains(t, fmt.Sprintf("%+v", err), "an sdk error occoured while sending a sub-message")
 }
 
 func TestV1ReplyOnMultipleSubmessages(t *testing.T) {

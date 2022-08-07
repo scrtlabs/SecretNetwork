@@ -302,6 +302,36 @@ pub fn instantiate(
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Increment { addition } => increment(env, deps, addition),
+        ExecuteMsg::SendFundsWithErrorWithReply {} => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: 8000,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: coins(100, "lior"),
+                })
+                .into(),
+                reply_on: ReplyOn::Always,
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        ExecuteMsg::SendFundsWithReply {} => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: 8001,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: coins(100, "denom"),
+                })
+                .into(),
+                reply_on: ReplyOn::Always,
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
         ExecuteMsg::AddAttributes {} => Ok(Response::new()
             .add_attribute("attr1", "🦄")
             .add_attribute("attr2", "🌈")),
@@ -1895,11 +1925,16 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (3000, SubMsgResult::Err(_)) => {
             Err(StdError::generic_err(format!("Revert submessage failed",)))
         }
-        (3001, SubMsgResult::Ok(_)) => {
-            Ok(Response::default())
-            //Err(StdError::generic_err(format!("Revert submessage failed",)))
-        }
+        (3001, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!(
+            "Revert submessage should fail",
+        ))),
         (3001, SubMsgResult::Err(_)) => Ok(Response::default()),
+        (8000, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!("Unreachable",))),
+        (8000, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Unreachable",))),
+        (8001, SubMsgResult::Ok(_)) => Ok(Response::default()),
+        (8001, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Funds message failed",)))
+        }
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

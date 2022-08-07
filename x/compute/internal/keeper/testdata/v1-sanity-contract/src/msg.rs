@@ -93,6 +93,8 @@ pub enum ExecuteMsg {
     Increment {
         addition: u64,
     },
+    SendFundsWithErrorWithReply {},
+    SendFundsWithReply {},
     AddAttributes {},
     AddAttributesWithSubmessage {
         id: u64,
