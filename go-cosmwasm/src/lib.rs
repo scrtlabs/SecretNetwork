@@ -12,7 +12,9 @@ pub use memory::{free_rust, Buffer};
 pub use querier::GoQuerier;
 
 use std::convert::TryInto;
+use std::ffi::CStr;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+
 use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error, Error};
@@ -59,6 +61,34 @@ pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
             Buffer::from_vec(format!("{}", res).into_bytes())
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn health_check_set_error(
+    error_string_buffer: &Buffer,
+    error_buffer: Option<&mut Buffer>,
+) -> Buffer {
+    let error_string = buffer_to_string(error_string_buffer);
+
+    // error_buffer will be set according to error_string, and be used by the caller of
+    // health_check_set_error()
+    set_error(Error::enclave_err(error_string), error_buffer);
+    Buffer::default()
+}
+
+#[no_mangle]
+pub extern "C" fn health_check_clear_error(gramine_response: &Buffer) -> Buffer {
+    clear_error();
+
+    let response_string = buffer_to_string(gramine_response);
+    Buffer::from_vec(format!("{}", response_string).into_bytes())
+}
+
+fn buffer_to_string(string_buffer: &Buffer) -> String {
+    let c_str: &CStr = unsafe { CStr::from_ptr(string_buffer.ptr as *const i8) };
+    let str_slice: &str = c_str.to_str().unwrap();
+    let str_buf: String = str_slice.to_owned();
+    str_buf
 }
 
 #[no_mangle]

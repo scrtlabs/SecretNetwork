@@ -9,6 +9,10 @@ import "C"
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"sync"
+
 	"runtime"
 	"syscall"
 
@@ -35,11 +39,62 @@ type Cache struct {
 func HealthCheck() ([]byte, error) {
 	errmsg := C.Buffer{}
 
-	res, err := C.get_health_check(&errmsg)
-	if err != nil {
+	gramineResponse, gramineError := getFromGramine()
+
+	if gramineError != nil {
+		gramineErrorBuffer := sendSlice([]byte(gramineError.Error()))
+		_, err := C.health_check_set_error(&gramineErrorBuffer, &errmsg)
 		return nil, errorWithMessage(err, errmsg)
 	}
+
+	gramineResponseBuffer := sendSlice([]byte(gramineResponse))
+	res, err := C.health_check_clear_error(&gramineResponseBuffer)
+	if err != nil {
+		return nil, errorWithMessage(err, gramineResponseBuffer)
+	}
 	return receiveVector(res), nil
+}
+
+func getFromGramine() (string, error) {
+	var gramineResponse string
+	var gramineError error
+	url := "http://127.0.0.1:9005/check-enclave"
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(url string) {
+
+		defer wg.Done()
+
+		gramineReponseBody, er := doReq(url)
+		gramineResponse = gramineReponseBody
+		gramineError = er
+
+	}(url)
+	wg.Wait()
+	return gramineResponse, gramineError
+}
+
+func doReq(url string) (content string, err error) {
+
+	response, err := http.Get(url)
+
+	if err != nil {
+
+		fmt.Errorf("%s", err)
+		return "", err
+	}
+
+	defer response.Body.Close()
+
+	body, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+
+		fmt.Errorf("%s", err)
+		return "", err
+	}
+
+	return string(body), nil
 }
 
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
