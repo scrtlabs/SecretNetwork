@@ -21,6 +21,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     match msg {
+        InstantiateMsg::WasmMsg { ty } => wasm_msg(ty),
         InstantiateMsg::Counter { counter, expires } => {
             if counter == 0 {
                 return Err(StdError::generic_err("got wrong counter on init"));
@@ -298,9 +299,22 @@ pub fn instantiate(
     }
 }
 
+pub fn wasm_msg(ty: String) -> StdResult<Response> {
+    if ty == "success" {
+        return Ok(Response::default());
+    } else if ty == "err" {
+        return Err(StdError::generic_err("custom error"));
+    } else if ty == "panic" {
+        panic!()
+    }
+
+    return Err(StdError::generic_err("custom error"));
+}
+
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
+        ExecuteMsg::WasmMsg { ty } => wasm_msg(ty),
         ExecuteMsg::Increment { addition } => increment(env, deps, addition),
         ExecuteMsg::SendFundsWithErrorWithReply {} => Ok(Response::new()
             .add_submessage(SubMsg {

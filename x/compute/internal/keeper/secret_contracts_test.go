@@ -3594,6 +3594,95 @@ func TestBankMsgSend(t *testing.T) {
 	}
 }
 
+func TestWasmMsgStructure(t *testing.T) {
+	for _, from := range testContracts {
+		t.Run(fmt.Sprintf("from %s", from.CosmWasmVersion), func(t *testing.T) {
+			for _, to := range testContracts {
+				t.Run(fmt.Sprintf("to %s", to.CosmWasmVersion), func(t *testing.T) {
+					for _, firstCallType := range []string{"init", "exec"} {
+						t.Run(fmt.Sprintf("first call %s", firstCallType), func(t *testing.T) {
+							for _, secondCallType := range []string{"init", "exec"} {
+								t.Run(fmt.Sprintf("second call %s", secondCallType), func(t *testing.T) {
+									for _, test := range []struct {
+										description      string
+										msg              string
+										isSuccess        bool
+										isErrorEncrypted bool
+										expectedError    string
+									}{
+										{
+											description:      "Send invalid input",
+											msg:              `{\"blabla\":{}}`,
+											isSuccess:        false,
+											isErrorEncrypted: true,
+											expectedError:    "unknown variant",
+										},
+										{
+											description:      "Success",
+											msg:              `{\"wasm_msg\":{\"ty\": \"success\"}}`,
+											isSuccess:        true,
+											isErrorEncrypted: true,
+											expectedError:    "",
+										},
+										{
+											description:      "StdError",
+											msg:              `{\"wasm_msg\":{\"ty\": \"err\"}}`,
+											isSuccess:        false,
+											isErrorEncrypted: true,
+											expectedError:    "custom error",
+										},
+										{
+											description:      "Panic",
+											msg:              `{\"wasm_msg\":{\"ty\": \"panic\"}}`,
+											isSuccess:        false,
+											isErrorEncrypted: false,
+											expectedError:    "panicked",
+										},
+									} {
+										t.Run(test.description, func(t *testing.T) {
+											ctx, keeper, fromCodeID, _, walletA, privKeyA, _, _ := setupTest(t, from.WasmFilePath, sdk.NewCoins())
+
+											wasmCode, err := ioutil.ReadFile(to.WasmFilePath)
+											require.NoError(t, err)
+
+											toCodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+											toCodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, toCodeID).CodeHash)
+											require.NoError(t, err)
+
+											toAddress := sdk.AccAddress{}
+											if secondCallType != "init" {
+												_, _, toAddress, _, err = initHelper(t, keeper, ctx, toCodeID, walletA, privKeyA, `{"nop":{}}`, true, to.IsCosmWasmV1, defaultGasForTests)
+												require.Empty(t, err)
+											}
+
+											fromAddress := sdk.AccAddress{}
+											if firstCallType == "init" {
+												_, _, _, _, err = initHelper(t, keeper, ctx, fromCodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_%s":{"code_id": %d, "addr": "%s", "code_hash": "%s", "label": "%s", "msg": "%s"}}`, secondCallType, toCodeID, toAddress, toCodeHash, "blabla", test.msg), test.isErrorEncrypted, true, defaultGasForTests)
+											} else if firstCallType == "exec" {
+												_, _, fromAddress, _, err = initHelper(t, keeper, ctx, fromCodeID, walletA, privKeyA, `{"nop":{}}`, true, from.IsCosmWasmV1, defaultGasForTests)
+												require.Empty(t, err)
+												_, _, _, _, _, err = execHelper(t, keeper, ctx, fromAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_%s":{"code_id": %d, "addr": "%s", "code_hash": "%s", "label": "%s", "msg": "%s"}}`, secondCallType, toCodeID, toAddress, toCodeHash, "blabla", test.msg), test.isErrorEncrypted, true, math.MaxUint64, 0)
+											}
+
+											if test.isSuccess {
+												require.Empty(t, err)
+											} else {
+												require.NotEmpty(t, err)
+												fmt.Printf("LIORRRR %+v", err)
+												require.Contains(t, fmt.Sprintf("%+v", err), test.expectedError)
+											}
+										})
+									}
+								})
+							}
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestBankMsgBurn(t *testing.T) {
 	t.Run("v1", func(t *testing.T) {
 		for _, callType := range []string{"init", "exec"} {

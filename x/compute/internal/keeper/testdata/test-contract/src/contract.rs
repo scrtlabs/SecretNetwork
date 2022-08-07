@@ -22,6 +22,9 @@ const REALLY_LONG: &[u8] = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum InitMsg {
+    WasmMsg {
+        ty: String,
+    },
     Nop {},
     Callback {
         contract_addr: HumanAddr,
@@ -95,6 +98,9 @@ pub enum InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    WasmMsg {
+        ty: String,
+    },
     A {
         contract_addr: HumanAddr,
         code_hash: String,
@@ -344,6 +350,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> InitResult {
     match msg {
+        InitMsg::WasmMsg { ty } => {
+            if ty == "success" {
+                return Ok(InitResponse::default());
+            } else if ty == "err" {
+                return Err(StdError::generic_err("custom error"));
+            } else if ty == "panic" {
+                panic!()
+            }
+
+            return Err(StdError::generic_err("custom error"));
+        }
         InitMsg::Nop {} => Ok(InitResponse {
             messages: vec![],
             log: vec![log("init", "🌈")],
@@ -604,6 +621,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> HandleResult {
     match msg {
+        HandleMsg::WasmMsg { ty } => {
+            if ty == "success" {
+                return Ok(HandleResponse::default());
+            } else if ty == "err" {
+                return Err(StdError::generic_err("custom error"));
+            } else if ty == "panic" {
+                panic!()
+            }
+
+            return Err(StdError::generic_err("custom error"));
+        }
         HandleMsg::A {
             contract_addr,
             code_hash,

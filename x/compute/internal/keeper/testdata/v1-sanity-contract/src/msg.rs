@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum InstantiateMsg {
+    WasmMsg {
+        ty: String,
+    },
     Counter {
         counter: u64,
         expires: u64,
@@ -90,6 +93,9 @@ pub enum InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    WasmMsg {
+        ty: String,
+    },
     Increment {
         addition: u64,
     },
