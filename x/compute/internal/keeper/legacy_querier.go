@@ -49,6 +49,9 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
 			rsp, err = queryContractInfo(ctx, addr, keeper)
+			if err != nil {
+				return nil, sdkerrors.Wrapf(types.ErrInvalid, "contract id: %s", err.Error())
+			}
 		case QueryListContractByCode:
 			codeID, err := strconv.ParseUint(path[1], 10, 64)
 			if err != nil {

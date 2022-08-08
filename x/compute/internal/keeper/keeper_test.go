@@ -457,71 +457,6 @@ func TestInstantiateWithDeposit(t *testing.T) {
 	}
 }
 
-/*
-func TestInstantiateWithPermissions(t *testing.T) {
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
-	require.NoError(t, err)
-
-	var (
-		deposit   = sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-		myAddr    = bytes.Repeat([]byte{1}, sdk.AddrLen)
-		otherAddr = bytes.Repeat([]byte{2}, sdk.AddrLen)
-		anyAddr   = bytes.Repeat([]byte{3}, sdk.AddrLen)
-	)
-
-	initMsg := InitMsg{
-		Verifier:    anyAddr,
-		Beneficiary: anyAddr,
-	}
-	initMsgBz, err := json.Marshal(initMsg)
-	require.NoError(t, err)
-
-	specs := map[string]struct {
-		srcPermission types.AccessConfig
-		srcActor      sdk.AccAddress
-		expError      *sdkerrors.Error
-	}{
-		"default": {
-			srcPermission: types.DefaultUploadAccess,
-			srcActor:      anyAddr,
-		},
-		"everybody": {
-			srcPermission: types.AllowEverybody,
-			srcActor:      anyAddr,
-		},
-		"nobody": {
-			srcPermission: types.AllowNobody,
-			srcActor:      myAddr,
-			expError:      sdkerrors.ErrUnauthorized,
-		},
-		"onlyAddress with matching address": {
-			srcPermission: types.OnlyAddress.With(myAddr),
-			srcActor:      myAddr,
-		},
-		"onlyAddress with non matching address": {
-			srcPermission: types.OnlyAddress.With(otherAddr),
-			expError:      sdkerrors.ErrUnauthorized,
-		},
-	}
-	for msg, spec := range specs {
-		t.Run(msg, func(t *testing.T) {
-			tempDir, err := ioutil.TempDir("", "wasm")
-			require.NoError(t, err)
-			defer os.RemoveAll(tempDir)
-
-			ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-			fundAccounts(ctx, accKeeper, spec.srcActor, deposit)
-
-			contractID, err := keeper.Create(ctx, myAddr, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "")
-			require.NoError(t, err)
-
-			_,_, err = keeper.Instantiate(ctx, contractID, spec.srcActor, nil, initMsgBz, "demo contract 1", nil)
-			assert.True(t, spec.expError.Is(err), "got %+v", err)
-		})
-	}
-}
-*/
 func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	encodingConfig := MakeEncodingConfig()
 	var transferPortSource types.ICS20TransferPortSource
@@ -665,7 +600,7 @@ func TestExecute(t *testing.T) {
 	ctx = PrepareExecSignedTx(t, keeper, ctx, fred, privFred, msgBz, addr, topUp)
 
 	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp, nil)
-	diff := time.Now().Sub(start)
+	diff := time.Since(start)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
