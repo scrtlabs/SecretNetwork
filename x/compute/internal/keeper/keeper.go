@@ -580,14 +580,93 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
-		var result sdk.Result
-		switch res := response.(type) {
-		case v1wasmTypes.DataWithInternalReplyInfo:
-			result.Data, err = json.Marshal(res)
-			if err != nil {
-				return nil, sdkerrors.Wrap(err, "couldn't marshal internal reply info")
-			}
-		}
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+
+	// var res wasmTypes.CosmosResponse
+	// err = json.Unmarshal(res, &res)
+	// if err != nil {
+	//	return sdk.Result{}, err
+	//}
+
+	// emit all events from this contract itself
+	events := types.ParseEvents(res.Log, contractAddress)
+	ctx.EventManager().EmitEvents(events)
+
+	// TODO: capture events here as well
+	err = k.dispatchMessages(ctx, contractAddress, res.Messages)
+	if err != nil {
+		return nil, err
+	}
+
+	return &sdk.Result{
+		Data: res.Data,
+	}, nil
+}
+
+/*
+// We don't use this function currently. It's here for upstream compatibility
+// Migrate allows to upgrade a contract to a new code with data migration.
+func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) (*sdk.Result, error) {
+	return k.migrate(ctx, contractAddress, caller, newCodeID, msg, k.authZPolicy)
+}
+
+func (k Keeper) migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte, authZ AuthorizationPolicy) (*sdk.Result, error) {
+	ctx.GasMeter().ConsumeGas(InstanceCost, "Loading CosmWasm module: migrate")
+	_ = authtypes.StdSignature{
+		PubKey:    secp256k1.PubKeySecp256k1{},
+		Signature: []byte{},
+	}
+	_ = []byte{}
+
+	tx := authtypes.StdTx{}
+	txBytes := ctx.TxBytes()
+	err := k.cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	if err != nil {
+		return &sdk.Result{}, sdkerrors.Wrap(types.ErrInstantiateFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+	}
+
+	contractInfo := k.GetContractInfo(ctx, contractAddress)
+	if contractInfo == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown contract")
+	}
+	if !authZ.CanModifyContract(contractInfo.Admin, caller) {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not migrate")
+	}
+
+	newCodeInfo := k.GetCodeInfo(ctx, newCodeID)
+	if newCodeInfo == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown code")
+	}
+
+	store := ctx.KVStore(k.storeKey)
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+
+	var noDeposit sdk.Coins
+	params := types.NewEnv(ctx, caller, noDeposit, contractAddress, contractKey)
+
+	// prepare querier
+	querier := QueryHandler{
+		Ctx:     ctx,
+		Plugins: k.queryPlugins,
+	}
+
+	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	gas := gasForContract(ctx)
+	res, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, params, msg, &prefixStore, cosmwasmAPI, &querier, gasMeter(ctx), gas)
+	consumeGas(ctx, gasUsed)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
+	}
+
+	// emit all events from this contract itself
+	events := types.ParseEvents(res.Log, contractAddress)
+	ctx.EventManager().EmitEvents(events)
+
+	historyEntry := contractInfo.AddMigration(ctx, newCodeID, msg)
+	k.appendToContractHistory(ctx, contractAddress, historyEntry)
+	k.setContractInfo(ctx, contractAddress, contractInfo)
 
 		return &result, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}

@@ -267,7 +267,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	// mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
 
-	//mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
+	// mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
 	//	keyBank,
 	//	mintSubsp,
 	//	stakingKeeper,
@@ -276,7 +276,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	//	authtypes.FeeCollectorName,
 	//	)
 	//
-	//bankkeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
+	// bankkeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
 
 	distSubsp, _ := paramsKeeper.GetSubspace(distrtypes.ModuleName)
 	distKeeper := distrkeeper.NewKeeper(
@@ -301,7 +301,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	distrAcc := authtypes.NewEmptyModuleAccount(distrtypes.ModuleName)
 
 	totalSupply := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, sdk.NewInt(2000000)))
-	err = bankKeeper.MintCoins(ctx, faucetAccountName, totalSupply)
+	err := bankKeeper.MintCoins(ctx, faucetAccountName, totalSupply)
 	require.NoError(t, err)
 
 	// err = bankKeeper.SendCoinsFromModuleToAccount(ctx, faucetAccountName, distrAcc.GetAddress(), totalSupply)
@@ -344,9 +344,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler, mintStore, mintSubsp, stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName)
 	mintKeeper.SetMinter(ctx, minttypes.DefaultInitialMinter())
 
-	//keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	// keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	//// add wasm handler so we can loop-back (contracts calling contracts)
-	//router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
+	// router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 
 	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
 	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
@@ -579,6 +579,9 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 			Sequence:      creatorAcc.GetSequence(),
 		}
 		bytesToSign, err := signModeHandler.GetSignBytes(sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
+		if err != nil {
+			panic(err)
+		}
 
 		signBytes, err := privKey.Sign(bytesToSign)
 		if err != nil {
@@ -649,7 +652,7 @@ type protoTxProvider interface {
 	GetProtoTx() *tx.Tx
 }
 
-func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) { // nolint
+func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) {
 	protoProvider, ok := txBuilder.(protoTxProvider)
 	if !ok {
 		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expected proto tx builder, got %T", txBuilder)

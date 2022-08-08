@@ -125,7 +125,7 @@ func seedCertificateHandlerFn(cliCtx client.Context) http.HandlerFunc {
 }
 
 //
-//func queryCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+// func queryCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.Request) {
 //		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
 //		if err != nil {
@@ -154,7 +154,7 @@ func seedCertificateHandlerFn(cliCtx client.Context) http.HandlerFunc {
 //	}
 //}
 
-//type smartResponse struct {
+// type smartResponse struct {
 //	Smart []byte `json:"smart"`
 //}
 

@@ -101,7 +101,7 @@ type StakingQuery struct {
 	Validators           *ValidatorsQuery         `json:"validators,omitempty"`
 	AllDelegations       *AllDelegationsQuery     `json:"all_delegations,omitempty"`
 	Delegation           *DelegationQuery         `json:"delegation,omitempty"`
-	UnBondingDelegations *UnbondingDeletionsQuery `json:"unbonding_delegations, omitempty"`
+	UnBondingDelegations *UnbondingDeletionsQuery `json:"unbonding_delegations,omitempty"`
 	BondedDenom          *struct{}                `json:"bonded_denom,omitempty"`
 }
 
@@ -131,7 +131,7 @@ func (v Validators) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (v *Validators) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == "null" { //nolint:goconst
 		return nil
 	}
 	var raw []Validator

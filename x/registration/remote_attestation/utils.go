@@ -8,16 +8,13 @@ import (
 )
 
 func isSgxHardwareMode() bool {
-	if os.Getenv("SGX_MODE") == "SW" {
-		return false
-	}
-	return true
+	return os.Getenv("SGX_MODE") != "SW"
 }
 
 func printCert(rawByte []byte) {
 	print("--received-server cert: [Certificate(b\"")
 	for _, b := range rawByte {
-		if b == '\n' {
+		if b == '\n' { //nolint:gocritic
 			print("\\n")
 		} else if b == '\r' {
 			print("\\r")

@@ -91,12 +91,12 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			spidFile, err := Asset("spid.txt")
+			spidFile, err := Asset("spid.txt") //nolint
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			apiKeyFile, err := Asset("api_key.txt")
+			apiKeyFile, err := Asset("api_key.txt") //nolint
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
@@ -138,12 +138,12 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
 
-			spidFile, err := Asset("spid.txt")
+			spidFile, err := Asset("spid.txt") //nolint
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			apiKeyFile, err := Asset("api_key.txt")
+			apiKeyFile, err := Asset("api_key.txt") //nolint
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
@@ -433,12 +433,12 @@ Please report any issues with this command
 				}
 			}
 
-			spidFile, err := Asset("spid.txt")
+			spidFile, err := Asset("spid.txt") //nolint
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			apiKeyFile, err := Asset("api_key.txt")
+			apiKeyFile, err := Asset("api_key.txt") //nolint
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}

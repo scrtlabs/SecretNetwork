@@ -92,11 +92,11 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
-func InitEnclaveRuntime(ModuleCacheSize uint8) error {
+func InitEnclaveRuntime(moduleCacheSize uint8) error {
 	errmsg := C.Buffer{}
 
 	config := C.EnclaveRuntimeConfig{
-		module_cache_size: u8(ModuleCacheSize),
+		module_cache_size: u8(moduleCacheSize),
 	}
 	_, err := C.configure_enclave_runtime(config, &errmsg)
 	if err != nil {
