@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -64,14 +64,14 @@ func TestMaskReflectContractSend(t *testing.T) {
 	_, _, bob := keyPubAddr()
 
 	// upload mask code
-	maskCode, err := ioutil.ReadFile("./testdata/reflect.wasm")
+	maskCode, err := os.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
 	maskID, err := keeper.Create(ctx, creator, maskCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), maskID)
 
 	// upload hackatom escrow code
-	escrowCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	escrowCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 	escrowID, err := keeper.Create(ctx, creator, escrowCode, "", "")
 	require.NoError(t, err)
@@ -168,7 +168,7 @@ func TestMaskReflectCustomMsg(t *testing.T) {
 	_, _, fred := keyPubAddr()
 
 	// upload code
-	maskCode, err := ioutil.ReadFile("./testdata/reflect.wasm")
+	maskCode, err := os.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
 	codeID, err := keeper.Create(ctx, creator, maskCode, "", "")
 	require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestMaskReflectCustomQuery(t *testing.T) {
 	creator, privCreator := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	// upload code
-	maskCode, err := ioutil.ReadFile("./testdata/reflect.wasm")
+	maskCode, err := os.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
 	codeID, err := keeper.Create(ctx, creator, maskCode, "", "")
 	require.NoError(t, err)

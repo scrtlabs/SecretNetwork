@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
@@ -29,7 +29,7 @@ func TestInitGenesis(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	data := types.GenesisState{
@@ -45,7 +45,7 @@ func TestExportGenesis(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	data := types.GenesisState{

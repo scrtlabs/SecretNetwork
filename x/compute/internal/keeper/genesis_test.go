@@ -2,7 +2,6 @@ package keeper
 
 /*
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -23,7 +22,7 @@ import (
 func TestGenesisExportImport(t *testing.T) {
 	srcKeeper, srcCtx, srcStoreKeys, srcCleanup := setupKeeper(t)
 	defer srcCleanup()
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
 	// store some test data
@@ -105,7 +104,7 @@ func TestGenesisExportImport(t *testing.T) {
 }
 
 func TestFailFastImport(t *testing.T) {
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
 	myCodeInfo := wasmTypes.CodeInfoFixture(wasmTypes.WithSHA256CodeHash(wasmCode))
@@ -395,7 +394,7 @@ func TestImportContractWithCodeHistoryReset(t *testing.T) {
 	keeper, ctx, _, dstCleanup := setupKeeper(t)
 	defer dstCleanup()
 
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
 	wasmCodeHash := sha256.Sum256(wasmCode)
@@ -464,7 +463,7 @@ func TestImportContractWithCodeHistoryReset(t *testing.T) {
 
 func setupKeeper(t *testing.T) (Keeper, sdk.Context, []sdk.StoreKey, func()) {
 	t.Helper()
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir := os.TempDir()
 	require.NoError(t, err)
 	cleanup := func() { os.RemoveAll(tempDir) }
 	//t.Cleanup(cleanup) todo: add with Go 1.14

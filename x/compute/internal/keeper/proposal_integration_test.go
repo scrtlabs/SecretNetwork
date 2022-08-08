@@ -4,7 +4,6 @@ package keeper
 // 	"bytes"
 // 	"encoding/hex"
 // 	"encoding/json"
-// 	"io/ioutil"
 // 	"os"
 // 	"testing"
 
@@ -17,14 +16,13 @@ package keeper
 // )
 
 // func TestStoreCodeProposal(t *testing.T) {
-// 	tempDir, err := ioutil.TempDir("", "wasm")
-// 	require.NoError(t, err)
+// 	tempDir := os.TempDir()
 // 	defer os.RemoveAll(tempDir)
 
 // 	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
 // 	govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
 // 	// wasmKeeper.setParams(ctx, types.Params{UploadAccess: types.AllowNobody, DefaultInstantiatePermission: types.Nobody})
-// 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+// 	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 // 	require.NoError(t, err)
 
 // 	var anyAddress sdk.AccAddress = make([]byte, sdk.AddrLen)
@@ -58,15 +56,14 @@ package keeper
 // }
 
 // func TestInstantiateProposal(t *testing.T) {
-// 	tempDir, err := ioutil.TempDir("", "wasm")
-// 	require.NoError(t, err)
+// 	tempDir := os.TempDir()
 // 	defer os.RemoveAll(tempDir)
 
 // 	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
 // 	govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
 // 	// wasmKeeper.setParams(ctx, types.Params{UploadAccess: types.AllowNobody, DefaultInstantiatePermission: types.Nobody})
 
-// 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+// 	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 // 	require.NoError(t, err)
 
 // 	require.NoError(t, wasmKeeper.importCode(ctx, 1,
@@ -114,15 +111,14 @@ package keeper
 // }
 
 // func TestMigrateProposal(t *testing.T) {
-// 	tempDir, err := ioutil.TempDir("", "wasm")
-// 	require.NoError(t, err)
+// 	tempDir := os.TempDir()
 // 	defer os.RemoveAll(tempDir)
 
 // 	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
 // 	govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
 // 	// wasmKeeper.setParams(ctx, types.Params{UploadAccess: types.AllowNobody, DefaultInstantiatePermission: types.Nobody})
 
-// 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+// 	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 // 	require.NoError(t, err)
 
 // 	codeInfoFixture := types.CodeInfoFixture(types.WithSHA256CodeHash(wasmCode))
@@ -196,7 +192,7 @@ package keeper
 // 		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, sdk.AddrLen)
 // 		contractAddr                = contractAddress(1, 1)
 // 	)
-// 	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+// 	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 // 	require.NoError(t, err)
 
 // 	specs := map[string]struct {
@@ -257,8 +253,7 @@ package keeper
 // 	}
 // 	for msg, spec := range specs {
 // 		t.Run(msg, func(t *testing.T) {
-// 			tempDir, err := ioutil.TempDir("", "wasm")
-// 			require.NoError(t, err)
+// 			tempDir := os.TempDir()
 // 			defer os.RemoveAll(tempDir)
 // 			ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
 // 			govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
@@ -286,8 +281,7 @@ package keeper
 // }
 
 // func TestUpdateParamsProposal(t *testing.T) {
-// 	tempDir, err := ioutil.TempDir("", "wasm")
-// 	require.NoError(t, err)
+// 	tempDir := os.TempDir()
 // 	defer os.RemoveAll(tempDir)
 
 // 	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)

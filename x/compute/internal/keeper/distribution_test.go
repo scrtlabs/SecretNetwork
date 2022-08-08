@@ -3,7 +3,7 @@ package keeper
 import (
 	"encoding/binary"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,7 +59,7 @@ func TestDistributionRewards(t *testing.T) {
 	distKeeper.AllocateTokensToValidator(ctx, v, sdk.NewDecCoins(sdk.NewDecCoin("stake", sdk.NewInt(100))))
 
 	// upload staking derivates code
-	govCode, err := ioutil.ReadFile("./testdata/dist.wasm")
+	govCode, err := os.ReadFile("./testdata/dist.wasm")
 	require.NoError(t, err)
 	govId, err := keeper.Create(ctx, creator, govCode, "", "")
 	require.NoError(t, err)
