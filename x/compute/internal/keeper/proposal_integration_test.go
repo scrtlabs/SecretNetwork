@@ -16,7 +16,8 @@ package keeper
 // )
 
 // func TestStoreCodeProposal(t *testing.T) {
-// 	tempDir := os.TempDir()
+// 	tempDir, err := os.MkdirTemp("", "wasm")
+// 	require.NoError(t, err)
 // 	defer os.RemoveAll(tempDir)
 
 // 	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
@@ -56,7 +57,8 @@ package keeper
 // }
 
 // func TestInstantiateProposal(t *testing.T) {
-// 	tempDir := os.TempDir()
+// 	tempDir, err := os.MkdirTemp("", "wasm")
+// 	require.NoError(t, err)
 // 	defer os.RemoveAll(tempDir)
 
 // 	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
@@ -111,7 +113,8 @@ package keeper
 // }
 
 // func TestMigrateProposal(t *testing.T) {
-// 	tempDir := os.TempDir()
+// 	tempDir, err := os.MkdirTemp("", "wasm")
+// 	require.NoError(t, err)
 // 	defer os.RemoveAll(tempDir)
 
 // 	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
@@ -253,7 +256,8 @@ package keeper
 // 	}
 // 	for msg, spec := range specs {
 // 		t.Run(msg, func(t *testing.T) {
-// 			tempDir := os.TempDir()
+// 			tempDir, err := os.MkdirTemp("", "wasm")
+// 			require.NoError(t, err)
 // 			defer os.RemoveAll(tempDir)
 // 			ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)
 // 			govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
@@ -281,7 +285,8 @@ package keeper
 // }
 
 // func TestUpdateParamsProposal(t *testing.T) {
-// 	tempDir := os.TempDir()
+// 	tempDir, err := os.MkdirTemp("", "wasm")
+// 	require.NoError(t, err)
 // 	defer os.RemoveAll(tempDir)
 
 // 	ctx, keepers := CreateTestInput(t, false, tempDir, "staking", nil, nil)

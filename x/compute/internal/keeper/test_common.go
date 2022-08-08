@@ -157,7 +157,8 @@ type TestConfigType struct {
 
 // encoders can be nil to accept the defaults, or set it to override some of the message handlers (like default)
 func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, encoders *MessageEncoders, queriers *QueryPlugins) (sdk.Context, TestKeepers) {
-	tempDir := os.TempDir()
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(tempDir) })
 
 	keyContract := sdk.NewKVStoreKey(wasmtypes.StoreKey)
@@ -274,7 +275,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	distrAcc := authtypes.NewEmptyModuleAccount(distrtypes.ModuleName)
 
 	totalSupply := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, sdk.NewInt(2000000)))
-	err := bankKeeper.MintCoins(ctx, faucetAccountName, totalSupply)
+	err = bankKeeper.MintCoins(ctx, faucetAccountName, totalSupply)
 	require.NoError(t, err)
 
 	// err = bankKeeper.SendCoinsFromModuleToAccount(ctx, faucetAccountName, distrAcc.GetAddress(), totalSupply)

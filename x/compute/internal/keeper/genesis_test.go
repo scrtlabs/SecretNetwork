@@ -463,7 +463,7 @@ func TestImportContractWithCodeHistoryReset(t *testing.T) {
 
 func setupKeeper(t *testing.T) (Keeper, sdk.Context, []sdk.StoreKey, func()) {
 	t.Helper()
-	tempDir := os.TempDir()
+	tempDir, err := os.MkdirTemp("", "wasm")
 	require.NoError(t, err)
 	cleanup := func() { os.RemoveAll(tempDir) }
 	//t.Cleanup(cleanup) todo: add with Go 1.14
