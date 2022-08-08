@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -289,7 +289,7 @@ func ConfigureSecret() *cobra.Command {
 
 			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedConfig)
 
-			err = os.WriteFile(seedFilePath, cfgBytes, 0o664)
+			err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
 			if err != nil {
 				return err
 			}
@@ -559,7 +559,7 @@ Please report any issues with this command
 			// write seed to file - if file doesn't exist, write it. If it does, delete the existing one and create this
 			_, err = os.Stat(seedCfgFile)
 			if os.IsNotExist(err) {
-				err = os.WriteFile(seedCfgFile, cfgBytes, 0o644)
+				err = os.WriteFile(seedCfgFile, cfgBytes, 0o600)
 				if err != nil {
 					return err
 				}
@@ -569,7 +569,7 @@ Please report any issues with this command
 					return fmt.Errorf("failed to modify file '%s': %w", seedCfgFile, err)
 				}
 
-				err = os.WriteFile(seedCfgFile, cfgBytes, 0o644)
+				err = os.WriteFile(seedCfgFile, cfgBytes, 0o600)
 				if err != nil {
 					return fmt.Errorf("failed to create file '%s': %w", seedCfgFile, err)
 				}
