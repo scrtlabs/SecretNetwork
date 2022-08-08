@@ -27,7 +27,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -461,11 +460,11 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	return ctx.WithTxBytes(txBytes)
 }
 
-func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *sdktx.Tx {
+func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
 	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
 
-func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *sdktx.Tx {
+func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
 		panic("length of `msgs` `creatorAccs` and `privKeys` must be the same")
 	}

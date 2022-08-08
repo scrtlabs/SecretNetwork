@@ -58,12 +58,12 @@ ENV USER_HOME=/home/${USERNAME}
 COPY library-scripts/*.sh library-scripts/*.env /tmp/library-scripts/
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && /bin/bash /tmp/library-scripts/common-debian.sh "${INSTALL_ZSH}" "${USERNAME}" "${USER_UID}" "${USER_GID}" "${UPGRADE_PACKAGES}" "true" "true"
-    #
-    # ****************************************************************************
-    # * TODO: Add any additional OS packages you want included in the definition *
-    # * here. We want to do this before cleanup to keep the "layer" small.       *
-    # ****************************************************************************
-    # && apt-get -y install --no-install-recommends <your-package-list-here> \
+#
+# ****************************************************************************
+# * TODO: Add any additional OS packages you want included in the definition *
+# * here. We want to do this before cleanup to keep the "layer" small.       *
+# ****************************************************************************
+# && apt-get -y install --no-install-recommends <your-package-list-here> \
 # USER $USERNAME
 
 # Install rust as non-root user
@@ -80,7 +80,7 @@ RUN bash /tmp/library-scripts/rust-debian.sh "${CARGO_HOME}" "${RUSTUP_HOME}" "$
 #RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" "$GOPATH/pkg" && chmod -R 777 "$GOPATH"
 #RUN chown ${USERNAME}:${USERNAME} /go -R
 
-RUN bash /tmp/library-scripts/go-debian.sh "1.18.4" "${GOROOT}" "${GOPATH}" "${USERNAME}" "true" "true" && \
+RUN bash /tmp/library-scripts/go-debian.sh "1.19" "${GOROOT}" "${GOPATH}" "${USERNAME}" "true" "true" && \
     go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/library-scripts

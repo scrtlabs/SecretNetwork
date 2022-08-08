@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -89,7 +89,7 @@ func StoreCodeCmd() *cobra.Command {
 }
 
 func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSet) (types.MsgStoreCode, error) {
-	wasm, err := ioutil.ReadFile(args[0])
+	wasm, err := os.ReadFile(args[0])
 	if err != nil {
 		return types.MsgStoreCode{}, err
 	}

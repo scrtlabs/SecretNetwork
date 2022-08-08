@@ -211,7 +211,7 @@ func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper 
 }
 
 func (app *SecretNetworkApp) GetTxConfig() client.TxConfig {
-	return app.GetTxConfig()
+	return MakeEncodingConfig().TxConfig
 }
 
 func (app *SecretNetworkApp) AppCodec() codec.Codec {

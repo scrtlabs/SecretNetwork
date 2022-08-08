@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 
 	"github.com/gogo/protobuf/proto"
@@ -218,7 +218,7 @@ func GetCmdQueryCode() *cobra.Command {
 			}
 
 			fmt.Printf("Downloading wasm code to %s\n", args[1])
-			return ioutil.WriteFile(args[1], code.Data, 0o644)
+			return os.WriteFile(args[1], code.Data, 0o644)
 		},
 	}
 

@@ -355,6 +355,9 @@ func toReflectRawMsg(cdc codec.BinaryCodec, msg sdk.Msg) (wasmTypes.CosmosMsg, e
 	customMsg, err := json.Marshal(reflectCustomMsg{
 		Raw: rawBz,
 	})
+	if err != nil {
+		return wasmTypes.CosmosMsg{}, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+	}
 	res := wasmTypes.CosmosMsg{
 		Custom: customMsg,
 	}

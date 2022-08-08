@@ -2,7 +2,7 @@ package remote_attestation
 
 import (
 	"fmt"
-	"io/ioutil"
+	io "io"
 	"log"
 	"os"
 )
@@ -10,9 +10,8 @@ import (
 func isSgxHardwareMode() bool {
 	if os.Getenv("SGX_MODE") == "SW" {
 		return false
-	} else {
-		return true
 	}
+	return true
 }
 
 func printCert(rawByte []byte) {
@@ -53,7 +52,7 @@ func readFile(filePth string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := ioutil.ReadAll(f)
+	content, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
 	}

@@ -23,7 +23,7 @@ var dbCounterMutex sync.Mutex
 func startContract() uint64 {
 	dbCounterMutex.Lock()
 	defer dbCounterMutex.Unlock()
-	dbCounter += 1
+	dbCounter++
 	return dbCounter
 }
 
