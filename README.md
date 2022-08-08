@@ -37,6 +37,12 @@ Click the button below to start a new development environment:
 
 ## Manual Set up
 
+### Install prerequisite packages
+
+```
+apt-get install -y --no-install-recommends g++ libtool autoconf clang
+```
+
 ### Clone Repo
 
 Clone this repo to your favorite working directory
@@ -45,20 +51,46 @@ Clone this repo to your favorite working directory
 
 Install rust from [https://rustup.rs/](https://rustup.rs/). 
 
-Then, add the rust-src component. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - `rustup component add rust-src`
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
-To run tests you'll need to add the wasm32 target - `rustup target add wasm32-unknown-unknown`
+Then, add the rust-src component. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - 
+```
+rustup component add rust-src
+```
 
-### Install Go
+To run tests you'll need to add the wasm32 target - 
+```
+rustup target add wasm32-unknown-unknown
+```
+
+### Install Go (v1.18+)
 
 Install go from [https://go.dev/doc/install](https://go.dev/doc/install)
+
+#### Install gobindata
+
+```
+sudo apt install go-bindata
+```
 
 ### Install SGX
 
 To compile the code and run tests, you'll need to install the SGX SDK and PSW. To run in simulation (or software) modes of SGX you do _not_ need to install the SGX driver. 
 For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script in the following way:
 
-`sudo ./scripts/install-sgx.sh true true true false`
+```bash
+sudo ./scripts/install-sgx.sh true true true false
+```
+
+### Install Xargo
+
+We need a very specific version of xargo for everything to compile happily together
+
+```
+cargo install xargo --version 0.3.25
+```
 
 # Build from Source
 
