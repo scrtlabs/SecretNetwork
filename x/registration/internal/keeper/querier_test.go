@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -18,9 +17,7 @@ import (
 )
 
 func TestNewQuerier(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	nodeIdInvalid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
