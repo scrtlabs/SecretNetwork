@@ -218,7 +218,7 @@ func GetCmdQueryCode() *cobra.Command {
 			}
 
 			fmt.Printf("Downloading wasm code to %s\n", args[1])
-			return os.WriteFile(args[1], code.Data, 0o644)
+			return os.WriteFile(args[1], code.Data, 0o600)
 		},
 	}
 
@@ -283,6 +283,9 @@ func CmdDecryptText() *cobra.Command {
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
+			if err != nil {
+				return fmt.Errorf("error while getting tx sender key pair: %w", err)
+			}
 
 			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
 				return fmt.Errorf("cannot decrypt, not original tx sender")
@@ -341,14 +344,14 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					if ok {
 						txInput3.WASMByteCode = nil
 						return clientCtx.PrintProto(txInput3)
-					} else {
-						return fmt.Errorf("TX is not a compute transaction")
 					}
-				} else {
-					encryptedInput = txInput2.InitMsg
-					dataOutputHexB64 = result.Data
-					answer.Type = "instantiate"
+					return fmt.Errorf("TX is not a compute transaction")
+
 				}
+				encryptedInput = txInput2.InitMsg
+				dataOutputHexB64 = result.Data
+				answer.Type = "instantiate"
+
 			} else {
 				encryptedInput = txInput.Msg
 				dataOutputHexB64 = result.Data
@@ -566,12 +569,12 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 			var stdErr cosmwasmTypes.StdError
 			err = json.Unmarshal(errorPlainBz, &stdErr)
 			if err != nil {
-				return fmt.Errorf("Error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
+				return fmt.Errorf("error while trying to parse the error as json: '%s': %w", string(errorPlainBz), err)
 			}
 			return fmt.Errorf("query result: %v", stdErr.Error())
 		}
 		// Itzik: Commenting this as it might have been a placeholder for encrypting
-		//else if strings.Contains(err.Error(), "EnclaveErr") {
+		// else if strings.Contains(err.Error(), "EnclaveErr") {
 		//	return err
 		//}
 		return err

@@ -47,7 +47,6 @@ func getFile(src string) ([]byte, error) {
 func fileExists(src string) bool {
 	if _, err := os.Stat(src); err == nil {
 		return true
-	} else {
-		return false
 	}
+	return false
 }

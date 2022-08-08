@@ -29,7 +29,7 @@ const ( // event attributes
 	AttributeKeySigner   = "signer"
 )
 
-// nolint
+//nolint
 var (
 	CodeKeyPrefix       = []byte{0x01}
 	ContractKeyPrefix   = []byte{0x02}

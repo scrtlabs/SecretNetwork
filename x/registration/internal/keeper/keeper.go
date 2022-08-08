@@ -47,6 +47,9 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	// get PK from CLI
 	// get encrypted master key
 	byteValue, err := getFile(seedPath)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
 
 	var seedCfg types.SeedConfig
 

@@ -166,7 +166,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *wasmTypes.StakingMsg) ([]sdk.M
 		if err != nil {
 			return nil, err
 		}
-		//sdkMsg := stakingtypes.MsgDelegate{
+		// sdkMsg := stakingtypes.MsgDelegate{
 		//	DelegatorAddress: sender.String(),
 		//	ValidatorAddress: msg.Delegate.Validator,
 		//	Amount:           coin,
@@ -328,12 +328,12 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 		return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))
 
 		// todo: grpc routing
-		//handler := k.serviceRouter.Handler(msg)
-		//if handler == nil {
+		// handler := k.serviceRouter.Handler(msg)
+		// if handler == nil {
 		//	return nil, nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, sdk.MsgTypeURL(msg))
 		//}
-		//res, err := handler(ctx, msg)
-		//if err != nil {
+		// res, err := handler(ctx, msg)
+		// if err != nil {
 		//	return nil, nil, err
 		//}
 	}
@@ -348,12 +348,12 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	ctx.EventManager().EmitEvents(events)
 
 	// todo: add this when adding submessages
-	//data = make([]byte, len(res.Data))
-	//copy(data, res.Data)
+	// data = make([]byte, len(res.Data))
+	// copy(data, res.Data)
 	//
 	//// convert Tendermint.Events to sdk.Event
-	//sdkEvents := make(sdk.Events, len(res.Events))
-	//for i := range res.Events {
+	// sdkEvents := make(sdk.Events, len(res.Events))
+	// for i := range res.Events {
 	//	sdkEvents[i] = sdk.Event(res.Events[i])
 	//}
 

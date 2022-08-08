@@ -447,9 +447,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
-	//var res wasmTypes.CosmosResponse
-	//err = json.Unmarshal(res, &res)
-	//if err != nil {
+	// var res wasmTypes.CosmosResponse
+	// err = json.Unmarshal(res, &res)
+	// if err != nil {
 	//	return sdk.Result{}, err
 	//}
 

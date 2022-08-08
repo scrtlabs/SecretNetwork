@@ -569,7 +569,7 @@ func NewSecretNetworkApp(
 	//
 	// NOTE: This is not required for apps that don't use the simulator for fuzz testing
 	// transactions.
-	//app.sm = module.NewSimulationManager(
+	// app.sm = module.NewSimulationManager(
 	//	auth.NewAppModule(appCodec, app.accountKeeper, authsims.RandomGenesisAccounts),
 	//	bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
 	//	capability.NewAppModule(appCodec, *app.capabilityKeeper),

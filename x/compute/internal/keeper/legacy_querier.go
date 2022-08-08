@@ -58,6 +58,9 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
 			}
 			rsp, err = queryContractListByCode(ctx, codeID, keeper)
+			if err != nil {
+				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
+			}
 		case QueryGetContractState:
 			if len(path) < 2 {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("%s too few arguments (wanted at least 2): %v", QueryGetContractState, path))
@@ -69,6 +72,9 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
 			}
 			rsp, err = queryCode(ctx, codeID, keeper)
+			if err != nil {
+				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
+			}
 		case QueryListCode:
 			rsp, err = queryCodeList(ctx, keeper)
 		/*
@@ -88,12 +94,18 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
 			bz, err = queryContractKey(ctx, addr, keeper)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
+			}
 		case QueryContractHash:
 			addr, err := sdk.AccAddressFromBech32(path[1])
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
 			bz, err = queryContractHash(ctx, addr, keeper)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
+			}
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("unknown data query endpoint %v", path[0]))
 		}
