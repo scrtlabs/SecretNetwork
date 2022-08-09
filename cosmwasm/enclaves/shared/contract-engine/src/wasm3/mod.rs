@@ -202,7 +202,7 @@ impl Engine {
         let context = Box::new(RefCell::new(context));
         let context_ptr = Box::into_raw(context);
 
-        Engine::setup_runtime(context_ptr, &transformed_code).map_err(|err| unsafe {
+        Engine::setup_runtime(context_ptr, &transformed_code, gas_limit).map_err(|err| unsafe {
             let context = &*context_ptr;
             let mut context = context.borrow_mut();
             wasm3_error_to_enclave_error(context.deref_mut(), err)
@@ -212,6 +212,7 @@ impl Engine {
     fn setup_runtime(
         context_ptr: *mut RefCell<Context>,
         contract_bytes: &[u8],
+        gas_limit: u64,
     ) -> Wasm3RsResult<Engine> {
         debug!("setting up runtime");
         let environment = wasm3::Environment::new()?;
@@ -221,6 +222,9 @@ impl Engine {
 
         let mut module = runtime.parse_and_load_module(contract_bytes)?;
         debug!("parsed module");
+
+        gas::set_gas_limit(&module, gas_limit);
+        debug!("set gas limit");
 
         #[rustfmt::skip] {
         link_fn!(module, context_ptr, "db_read", host_read_db)?;
@@ -262,9 +266,10 @@ impl Engine {
     }
 
     pub fn gas_used(&self) -> u64 {
-        let context = unsafe { &*self.context };
-        let context = context.borrow();
-        context.gas_used
+        // let context = unsafe { &*self.context };
+        // let context = context.borrow();
+        // context.gas_used
+        0
     }
 
     pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, WasmEngineError> {
@@ -281,7 +286,7 @@ impl Engine {
             debug!("init failed with {:?}", err);
             let context = &*self.context;
             let mut context = context.borrow_mut();
-            debug!("booped context");
+            debug!("borrowed context");
             wasm3_error_to_enclave_error(context.deref_mut(), err)
         };
 
@@ -300,7 +305,7 @@ impl Engine {
             debug!("handle failed with {:?}", err);
             let context = &*self.context;
             let mut context = context.borrow_mut();
-            debug!("booped context");
+            debug!("borrowed context");
             wasm3_error_to_enclave_error(context.deref_mut(), err)
         };
 
@@ -319,7 +324,7 @@ impl Engine {
             debug!("query failed with {:?}", err);
             let context = &*self.context;
             let mut context = context.borrow_mut();
-            debug!("booped context");
+            debug!("borrowed context");
             wasm3_error_to_enclave_error(context.deref_mut(), err)
         };
 
