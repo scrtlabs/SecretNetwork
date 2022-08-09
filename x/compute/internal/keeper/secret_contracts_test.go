@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -84,7 +84,7 @@ func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins
 	walletA, privKeyA := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...))
 	walletB, privKeyB := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...))
 
-	wasmCode, err := ioutil.ReadFile(wasmPath)
+	wasmCode, err := os.ReadFile(wasmPath)
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -2184,7 +2184,7 @@ func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
 
 	walletA, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/static-too-high-initial-memory.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/static-too-high-initial-memory.wasm")
 	require.NoError(t, err)
 
 	_, err = keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3642,7 +3642,7 @@ func TestWasmMsgStructure(t *testing.T) {
 										t.Run(test.description, func(t *testing.T) {
 											ctx, keeper, fromCodeID, _, walletA, privKeyA, _, _ := setupTest(t, from.WasmFilePath, sdk.NewCoins())
 
-											wasmCode, err := ioutil.ReadFile(to.WasmFilePath)
+											wasmCode, err := os.ReadFile(to.WasmFilePath)
 											require.NoError(t, err)
 
 											toCodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3810,7 +3810,7 @@ func TestV1MultipleSubmessagesNoReply(t *testing.T) {
 func TestV1InitV010ContractWithReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3839,7 +3839,7 @@ func TestV1InitV010ContractWithReply(t *testing.T) {
 func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3863,7 +3863,7 @@ func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 func TestV1InitV010ContractNoReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3892,7 +3892,7 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3921,7 +3921,7 @@ func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 func TestV1QueryV010Contract(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3945,7 +3945,7 @@ func TestV1QueryV010Contract(t *testing.T) {
 func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3964,7 +3964,7 @@ func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3987,7 +3987,7 @@ func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4007,7 +4007,7 @@ func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4031,7 +4031,7 @@ func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 func TestV1QueryV010ContractWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4055,7 +4055,7 @@ func TestV1QueryV010ContractWithError(t *testing.T) {
 func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4080,7 +4080,7 @@ func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4110,7 +4110,7 @@ func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4134,7 +4134,7 @@ func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
 func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4159,7 +4159,7 @@ func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
 func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4182,7 +4182,7 @@ func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4207,7 +4207,7 @@ func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4220,7 +4220,7 @@ func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
 func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4240,7 +4240,7 @@ func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
 func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4255,7 +4255,7 @@ func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
 func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4271,7 +4271,7 @@ func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
 func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4285,7 +4285,7 @@ func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
 func TestV010QueryV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -5569,7 +5569,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -5629,7 +5629,7 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -5713,7 +5713,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 func TestV010SendsLogsMixedWithV1(t *testing.T) {
 	ctx, keeper, codeID, v1CodeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")

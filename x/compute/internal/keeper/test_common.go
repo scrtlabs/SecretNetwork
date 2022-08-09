@@ -3,7 +3,6 @@ package keeper
 import (
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -184,7 +183,7 @@ type TestConfigType struct {
 
 // encoders can be nil to accept the defaults, or set it to override some of the message handlers (like default)
 func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, encoders *MessageEncoders, queriers *QueryPlugins) (sdk.Context, TestKeepers) {
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir, err := os.MkdirTemp("", "wasm")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(tempDir) })
 

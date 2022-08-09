@@ -5,7 +5,6 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -18,7 +17,7 @@ import (
 )
 
 func TestNewQuerier(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir, err := os.MkdirTemp("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
@@ -29,7 +28,7 @@ func TestNewQuerier(t *testing.T) {
 
 	querier := NewLegacyQuerier(keeper) // TODO: Should test NewQuerier() as well
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{

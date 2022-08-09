@@ -2,7 +2,7 @@ package remote_attestation
 
 import (
 	"fmt"
-	"io/ioutil"
+	io "io"
 	"log"
 	"os"
 )
@@ -53,7 +53,7 @@ func readFile(filePth string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := ioutil.ReadAll(f)
+	content, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
 	}

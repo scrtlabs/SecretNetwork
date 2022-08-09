@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
 	flag "github.com/spf13/pflag"
@@ -90,12 +90,12 @@ func GetCmdMasterParams() *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate.Bytes, 0o644)
+			err = os.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate.Bytes, 0o644)
 			if err != nil {
 				return err
 			}
 
-			err = ioutil.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate.Bytes, 0o644)
+			err = os.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate.Bytes, 0o644)
 			if err != nil {
 				return err
 			}
