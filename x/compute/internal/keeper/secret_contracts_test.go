@@ -25,6 +25,8 @@ import (
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	v010cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+
+	"gonum.org/v1/gonum/stat/combin"
 )
 
 type ContractEvent []v010cosmwasm.LogAttribute
@@ -315,6 +317,28 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 }
 
 var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
+
+func multisetsFrom[t any](elements []t, size int) [][]t {
+	// init slice with 'size' elements, each one being the number of elements in the input slice
+	lengths := make([]int, size)
+	length := len(elements)
+	for i := 0; i < len(lengths); i++ {
+		lengths[i] = length
+	}
+
+	product := combin.Cartesian(lengths)
+	// map indexes to element
+	result := make([][]t, 0)
+	for _, indexes := range product {
+		inner := make([]t, 0)
+		for _, j := range indexes {
+			inner = append(inner, elements[j])
+		}
+		result = append(result, inner)
+	}
+
+	return result
+}
 
 func queryHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
@@ -1969,6 +1993,8 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
+			// The state here should have been reverted by the APP but in go-tests we create our own keeper
+			// so it is not reverted in this case.
 			require.Equal(t, "17denom", contractCoinsAfter.String())
 			require.Equal(t, "199983denom", walletCoinsAfter.String())
 		})
@@ -2037,6 +2063,8 @@ func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
 			contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
 			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
+			// The state here should have been reverted by the APP but in go-tests we create our own keeper
+			// so it is not reverted in this case.
 			require.Equal(t, "17denom", contractCoinsAfter.String())
 			require.Equal(t, "", contract2CoinsAfter.String())
 			require.Equal(t, "199983denom", walletCoinsAfter.String())
@@ -3588,6 +3616,129 @@ func TestBankMsgSend(t *testing.T) {
 							require.Equal(t, test.balancesAfter, walletACoinsAfter.String()+" "+walletBCoinsAfter.String())
 						})
 					}
+				})
+			}
+		})
+	}
+}
+
+func TestSendFunds(t *testing.T) {
+	for _, callTypes := range multisetsFrom([]string{"init", "exec", "user"}, 2) {
+		originType, destinationType := callTypes[0], callTypes[1]
+		fmt.Println("origin calltype:", originType, "destination calltype:", destinationType)
+
+		t.Run(originType+"->"+destinationType, func(t *testing.T) {
+			userTestsToSkipDest := 0
+			userTestsToSkipOrig := 0
+			for _, currentSubjects := range multisetsFrom(testContracts, 2) {
+				originVersion, destinationVersion := currentSubjects[0], currentSubjects[1]
+
+				// no need to test versions when one of the parties is a user account
+				if originType == "user" {
+					if userTestsToSkipOrig > 0 {
+						userTestsToSkipOrig--
+						continue
+					}
+					userTestsToSkipOrig++
+					originVersion.CosmWasmVersion = "user"
+				}
+				if destinationType == "user" {
+					if userTestsToSkipDest > 0 {
+						userTestsToSkipDest--
+						continue
+					}
+					userTestsToSkipDest++
+					destinationVersion.CosmWasmVersion = "user"
+				}
+
+				t.Run(originVersion.CosmWasmVersion+"->"+destinationVersion.CosmWasmVersion, func(t *testing.T) {
+					//for _, test := range []struct {
+					//	description    string
+					//	input          string
+					//	isSuccuss      bool
+					//	errorMsg       string
+					//	balancesBefore string
+					//	balancesAfter  string
+					//}{
+					//	{
+					//		description:    "regular",
+					//		input:          `[{"amount":"2","denom":"denom"}]`,
+					//		isSuccuss:      true,
+					//		balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+					//		balancesAfter:  "4998assaf,199998denom 5000assaf,5002denom",
+					//	},
+					//	{
+					//		description:    "multi-coin",
+					//		input:          `[{"amount":"1","denom":"assaf"},{"amount":"1","denom":"denom"}]`,
+					//		isSuccuss:      true,
+					//		balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+					//		balancesAfter:  "4998assaf,199998denom 5001assaf,5001denom",
+					//	},
+					//	{
+					//		description:    "zero",
+					//		input:          `[{"amount":"0","denom":"denom"}]`,
+					//		isSuccuss:      false,
+					//		errorMsg:       "encrypted: dispatch: submessages: 0denom: invalid coins",
+					//		balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+					//		balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
+					//	},
+					//	{
+					//		description:    "insufficient funds",
+					//		input:          `[{"amount":"3","denom":"denom"}]`,
+					//		isSuccuss:      false,
+					//		balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+					//		balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
+					//		errorMsg:       "encrypted: dispatch: submessages: 2denom is smaller than 3denom: insufficient funds",
+					//	},
+					//	{
+					//		description:    "non-existing denom",
+					//		input:          `[{"amount":"1","denom":"blabla"}]`,
+					//		isSuccuss:      false,
+					//		balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+					//		balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
+					//		errorMsg:       "encrypted: dispatch: submessages: 0blabla is smaller than 1blabla: insufficient funds",
+					//	},
+					//	{
+					//		description:    "none",
+					//		input:          `[]`,
+					//		isSuccuss:      true,
+					//		balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+					//		balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
+					//	},
+					//} {
+					//	t.Run(test.description, func(t *testing.T) {
+					//		ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, contract.WasmFilePath, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
+					//
+					//		walletACoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+					//		walletBCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletB)
+					//
+					//		require.Equal(t, test.balancesBefore, walletACoinsBefore.String()+" "+walletBCoinsBefore.String())
+					//
+					//		var err cosmwasm.StdError
+					//		var contractAddress sdk.AccAddress
+					//
+					//		if callType == "init" {
+					//			_, _, _, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+					//		} else {
+					//			_, _, contractAddress, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+					//
+					//			_, _, _, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, math.MaxUint64, 0)
+					//		}
+					//
+					//		if test.isSuccuss {
+					//			require.Empty(t, err)
+					//		} else {
+					//			require.NotEmpty(t, err)
+					//			require.Equal(t, err.Error(), test.errorMsg)
+					//		}
+					//
+					//		walletACoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+					//		walletBCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletB)
+					//
+					//		require.Equal(t, test.balancesAfter, walletACoinsAfter.String()+" "+walletBCoinsAfter.String())
+					//	})
+					//}
+					fmt.Println("pass the bus")
 				})
 			}
 		})
