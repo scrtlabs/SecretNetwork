@@ -11,12 +11,14 @@ impl log::Log for SimpleLogger {
     }
 
     fn log(&self, record: &Record) {
-        println!(
-            "{}  [{}] {}",
-            record.level(),
-            record.target(),
-            record.args()
-        );
+        if !record.target().starts_with("walrus::") {
+            println!(
+                "{}  [{}] {}",
+                record.level(),
+                record.target(),
+                record.args()
+            );
+        }
     }
 
     fn flush(&self) {}
