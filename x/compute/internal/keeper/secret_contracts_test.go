@@ -3826,10 +3826,11 @@ func TestSendFunds(t *testing.T) {
 								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), inputCoins)
 								destinationAddr = receivingWallet
 							} else if destinationType == "init" {
-								msg = fmt.Sprintf(`{"send_multiple_funds_to_init_callback":{"code_id":%d,"coins":"%s","code_hash":"%s"}}`, destinationCodeId, inputCoins, destinationHash)
+								fmt.Println("THE INPUT COINS ARE", inputCoins)
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_init_callback":{"code_id":%d,"coins":%s,"code_hash":"%s"}}`, destinationCodeId, inputCoins, destinationHash)
 								// destination address will only be known after the contract is init
 							} else {
-								msg = fmt.Sprintf(`{"send_multiple_funds_to_exec_callback":{"to":"%s","coins":"%s",code_hash":"%s"}}`, destinationAddr, inputCoins, destinationHash)
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_exec_callback":{"to":"%s","coins":%s,code_hash":"%s"}}`, destinationAddr, inputCoins, destinationHash)
 							}
 
 							// todo remove one or both of these, if unnecessary (probably needed for extraction of destination address on init)
@@ -3843,7 +3844,7 @@ func TestSendFunds(t *testing.T) {
 								// verify that no coins where left in the intermediate contract
 								// todo this is incorrect since keeper does not revert first tx
 								//sendingContractCoins := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
-								//require.Equal(t, sendingContractCoins.String(), "")
+								//require.Equal(t, "", sendingContractCoins.String())
 							} else if originType == "exec" {
 								_, _, _, _, _ = initHelper(t, keeper, ctx, originCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests)
 
@@ -3870,18 +3871,18 @@ func TestSendFunds(t *testing.T) {
 								require.Empty(t, err)
 							} else {
 								require.NotEmpty(t, err)
-								require.Equal(t, err.Error(), test.errorMsg)
+								require.Equal(t, test.errorMsg, err.Error())
 							}
 
 							originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
 							destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
 
-							require.Equal(t, originCoinsAfter.String(), test.balancesAfter)
+							require.Equal(t, test.balancesAfter, originCoinsAfter.String())
 
 							if !(destinationType == "init" && originType == "exec") {
 								// todo somehow retrieve destination address, which was not known in advance
 								destinationAddr = helperWallet
-								require.Equal(t, destinationCoinsAfter.String(), test.destinationBalancesAfter)
+								require.Equal(t, test.destinationBalancesAfter, destinationCoinsAfter.String())
 							}
 						})
 					}
