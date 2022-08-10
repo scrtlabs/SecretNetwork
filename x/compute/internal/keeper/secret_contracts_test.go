@@ -446,7 +446,7 @@ func execHelperMultipleCoins(
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coins, -1, shouldSkipAttributes...)
+	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coins, -1, shouldSkipAttributes...)
 }
 
 func execHelper(
@@ -454,10 +454,18 @@ func execHelper(
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
+	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coin, -1, shouldSkipAttributes...)
 }
 
 func execHelperImpl(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
+) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), wasmCallCount, shouldSkipAttributes...)
+}
+
+func execHelperMultipleCoinsImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
