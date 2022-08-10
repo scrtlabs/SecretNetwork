@@ -35,9 +35,18 @@ pub fn validate_memory(module: &mut Module) -> Result<(), EnclaveError> {
 
 pub fn deny_floating_point(module: &Module) -> Result<(), EnclaveError> {
     for func in module.funcs.iter() {
-        if let walrus::FunctionKind::Local(func) = &func.kind {
-            for (_block_id, block) in func.blocks() {
-                deny_fp_block(module, block)?
+        use walrus::FunctionKind::*;
+        match &func.kind {
+            Local(func) => {
+                for (_block_id, block) in func.blocks() {
+                    deny_fp_block(module, block)?
+                }
+            }
+            Import(walrus::ImportedFunction { ty, .. }) | Uninitialized(ty) => {
+                let ty = module.types.get(*ty);
+                for val_type in ty.params().iter().chain(ty.results().iter()) {
+                    deny_fp_valtype(*val_type)?;
+                }
             }
         }
     }
