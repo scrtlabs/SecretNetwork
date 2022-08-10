@@ -3857,7 +3857,7 @@ func TestSendFunds(t *testing.T) {
 							} else {
 								// user sends directly to contract
 								if destinationType == "exec" {
-									_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, "{no_logs:{}}", false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
+									_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, "{no_data:{}}", false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
 								} else {
 									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.coinsToSend))
 								}
