@@ -3722,8 +3722,8 @@ func TestSendFunds(t *testing.T) {
 							description:              "one, has all",
 							coinsToSend:              `20one`,
 							isSuccess:                true,
-							balancesBefore:           "5000one,200000denom",
-							balancesAfter:            "4980one,200000denom",
+							balancesBefore:           "200000denom,5000one",
+							balancesAfter:            "200000denom,4980one",
 							destinationBalancesAfter: "20one",
 						},
 						{
@@ -3789,10 +3789,9 @@ func TestSendFunds(t *testing.T) {
 						},
 					} {
 						t.Run(test.description, func(t *testing.T) {
-							ctx, keeper, helperWallet, privKeyA, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
+							ctx, keeper, helperWallet, helperPrivKey, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
 
 							fundingWallet, fundingWalletPrivKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
-
 							receivingWallet, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins())
 
 							// todo remove: this is only to verify that the account was funded correctly
@@ -3810,10 +3809,10 @@ func TestSendFunds(t *testing.T) {
 
 							// prepare receiving contract
 							if destinationType != "user" {
-								destinationCodeId, destinationHash = uploadCode(ctx, t, keeper, originVersion.WasmFilePath, helperWallet)
+								destinationCodeId, destinationHash = uploadCode(ctx, t, keeper, destinationVersion.WasmFilePath, helperWallet)
 
 								if destinationType == "exec" {
-									_, _, destinationAddr, _, _ = initHelperImpl(t, keeper, ctx, destinationCodeId, helperWallet, privKeyA, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins())
+									_, _, destinationAddr, _, _ = initHelperImpl(t, keeper, ctx, destinationCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins())
 								}
 							}
 
@@ -3841,17 +3840,17 @@ func TestSendFunds(t *testing.T) {
 
 							if originType == "init" {
 								// todo maybe extract data or wasmEvents, to know the receiving contract's address
-								_, _, _, _, _ = initHelperImpl(t, keeper, ctx, originCodeId, helperWallet, privKeyA, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
+								_, _, _, _, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
 
 								// verify that no coins where left in the intermediate contract
 								// todo this is incorrect since keeper does not revert first tx
 								//sendingContractCoins := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
 								//require.Equal(t, sendingContractCoins.String(), "")
 							} else if originType == "exec" {
-								_, _, _, _, _ = initHelperImpl(t, keeper, ctx, originCodeId, helperWallet, privKeyA, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
+								_, _, _, _, _ = initHelper(t, keeper, ctx, originCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests)
 
 								// todo maybe extract data or wasmEvents, to know the receiving contract's address
-								_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, helperWallet, privKeyA, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
+								_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, helperWallet, helperPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
 
 								// verify that no coins where left in the intermediate contract
 								// todo this is incorrect since keeper does not revert first tx
@@ -3860,11 +3859,11 @@ func TestSendFunds(t *testing.T) {
 								if destinationType == "exec" {
 									_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, "{no_logs:{}}", false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
 								} else {
-									_, _, destinationAddr, _, _ = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.coinsToSend))
+									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.coinsToSend))
 								}
 							}
 
-							if destinationType == "init" || originType == "exec" {
+							if destinationType == "init" && originType == "exec" {
 								// todo somehow retrieve destination address, which was not known in advance
 								destinationAddr = helperWallet
 							}
@@ -3880,7 +3879,12 @@ func TestSendFunds(t *testing.T) {
 							destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
 
 							require.Equal(t, originCoinsAfter.String(), test.balancesAfter)
-							require.Equal(t, destinationCoinsAfter.String(), test.destinationBalancesAfter)
+
+							if !(destinationType == "init" && originType == "exec") {
+								// todo somehow retrieve destination address, which was not known in advance
+								destinationAddr = helperWallet
+								require.Equal(t, destinationCoinsAfter.String(), test.destinationBalancesAfter)
+							}
 						})
 					}
 				})
