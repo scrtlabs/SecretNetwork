@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -330,6 +331,37 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 
 var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
+func stringToCoins(balance string) sdk.Coins {
+	result := sdk.NewCoins()
+
+	individualCoins := strings.Split(balance, ",")
+	for _, coin := range individualCoins {
+		var amount int64
+		var denom string
+		fmt.Sscanf(coin, "%d%s", &amount, &denom)
+		result = result.Add(sdk.NewInt64Coin(denom, amount))
+	}
+
+	return result
+}
+
+func CoinsToInput(coins sdk.Coins) string {
+	result := "["
+	for i, coin := range coins {
+		result += `{"amount":"`
+		result += coin.Amount.String()
+		result += `","denom":"`
+		result += coin.Denom
+		result += `"}`
+		if i != len(coins)-1 {
+			result += `,`
+		}
+	}
+	result += "]"
+
+	return result
+}
+
 func multisetsFrom[t any](elements []t, size int) [][]t {
 	// init slice with 'size' elements, each one being the number of elements in the input slice
 	lengths := make([]int, size)
@@ -409,18 +441,26 @@ func queryHelperImpl(
 	return string(resultBz), cosmwasm.StdError{}
 }
 
+func execHelperMultipleCoins(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, shouldSkipAttributes ...bool,
+) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coins, -1, shouldSkipAttributes...)
+}
+
 func execHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coin, -1, shouldSkipAttributes...)
+	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
 }
 
 func execHelperImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
 
@@ -444,10 +484,10 @@ func execHelperImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)))
+	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, coins)
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), nil)
+	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, coins, nil)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 
