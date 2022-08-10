@@ -73,7 +73,19 @@ func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress s
 	return queryBz, nil
 }
 
-func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, uint64, string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
+func uploadCode(ctx sdk.Context, t *testing.T, keeper Keeper, wasmPath string, walletA sdk.AccAddress) (uint64, string) {
+	wasmCode, err := ioutil.ReadFile(wasmPath)
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+
+	return codeID, codeHash
+}
+
+func setupBasicTest(t *testing.T, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
 	encodingConfig := MakeEncodingConfig()
 	var transferPortSource types.ICS20TransferPortSource
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
@@ -86,13 +98,13 @@ func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins
 	walletA, privKeyA := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...))
 	walletB, privKeyB := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...))
 
-	wasmCode, err := ioutil.ReadFile(wasmPath)
-	require.NoError(t, err)
+	return ctx, keeper, walletA, privKeyA, walletB, privKeyB
+}
 
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
+func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, uint64, string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
+	ctx, keeper, walletA, privKeyA, walletB, privKeyB := setupBasicTest(t, additionalCoinsInWallets)
 
-	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+	codeID, codeHash := uploadCode(ctx, t, keeper, wasmPath, walletA)
 
 	return ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB
 }
