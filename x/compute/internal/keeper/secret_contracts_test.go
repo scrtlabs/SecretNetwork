@@ -3668,7 +3668,6 @@ func TestWasmMsgStructure(t *testing.T) {
 												require.Empty(t, err)
 											} else {
 												require.NotEmpty(t, err)
-												fmt.Printf("LIORRRR %+v", err)
 												require.Contains(t, fmt.Sprintf("%+v", err), test.expectedError)
 											}
 										})

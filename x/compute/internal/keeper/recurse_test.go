@@ -306,14 +306,14 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			expectOOM:                 false,
 			expectRecursionLimit:      false,
 		},
-		"recursion 9, lots of work": {
+		"recursion 11, lots of work": {
 			gasLimit: 4_000_000,
 			msg: Recurse{
-				Depth: 9,
+				Depth: 11,
 				Work:  2000,
 			},
-			expectQueriesFromContract: 9,
-			expectedGas:               GasWork2k + 9*(GasWork2k+GasReturnHashed),
+			expectQueriesFromContract: 11,
+			expectedGas:               GasWork2k + 11*(GasWork2k+GasReturnHashed),
 			expectOutOfGas:            false,
 			expectOOM:                 false,
 			expectRecursionLimit:      true,
