@@ -3682,7 +3682,9 @@ func TestSendFunds(t *testing.T) {
 		t.Run(originType+"->"+destinationType, func(t *testing.T) {
 
 			alreadyTested := make(map[string]bool)
+			alreadyTested["useruser->useruser"] = true // we are only testing contracts here
 			for _, currentSubjects := range multisetsFrom(testContracts, 2) {
+				// [0] is source of transaction, [1] is destination todo remove comment if unnecessary
 				originVersion, destinationVersion := currentSubjects[0], currentSubjects[1]
 
 				// users don't have versions, so skip the repeating tests (user v1 = user v10)
@@ -3700,81 +3702,163 @@ func TestSendFunds(t *testing.T) {
 
 				t.Run(testTitle, func(t *testing.T) {
 					for _, test := range []struct {
-						description    string
-						input          string
-						isSuccess      bool
-						errorMsg       string
-						balancesBefore string
-						balancesAfter  string
+						description              string
+						coinsToSend              string
+						isSuccess                bool
+						errorMsg                 string
+						balancesBefore           string
+						balancesAfter            string
+						destinationBalancesAfter string
 					}{
 						{
-							description:    "one, has all",
-							input:          `[{"amount":"20","denom":"one"}]`,
-							isSuccess:      true,
-							balancesBefore: "5000one,200000denom",
-							balancesAfter:  "4980one,200000denom",
+							description:              "one, has all",
+							coinsToSend:              `20one`,
+							isSuccess:                true,
+							balancesBefore:           "5000one,200000denom",
+							balancesAfter:            "4980one,200000denom",
+							destinationBalancesAfter: "20one",
 						},
 						{
-							description:    "one, missing",
-							input:          `[{"amount":"20","denom":"one"}]`,
-							isSuccess:      true,
-							balancesBefore: "5000another",
-							balancesAfter:  "5000another",
+							description:              "one, missing",
+							coinsToSend:              `20one`,
+							isSuccess:                false,
+							errorMsg:                 "todo define error",
+							balancesBefore:           "5000another",
+							balancesAfter:            "5000another",
+							destinationBalancesAfter: "",
 						},
 						{
-							description:    "one, not enough",
-							input:          `[{"amount":"20","denom":"one"}]`,
-							isSuccess:      true,
-							balancesBefore: "5000another,19one",
-							balancesAfter:  "5000another,19one",
+							description:              "one, not enough",
+							coinsToSend:              `20one`,
+							isSuccess:                false,
+							errorMsg:                 "todo define error",
+							balancesBefore:           "5000another,19one",
+							balancesAfter:            "5000another,19one",
+							destinationBalancesAfter: "",
 						},
 						{
-							description:    "zero",
-							input:          `[]`,
-							isSuccess:      false,
-							errorMsg:       "encrypted: dispatch: submessages: 0denom: invalid coins",
-							balancesBefore: "5000assaf,200000denom",
-							balancesAfter:  "5000assaf,200000denom",
+							description:              "zero",
+							coinsToSend:              ``,
+							isSuccess:                true,
+							balancesBefore:           "5000assaf,200000denom",
+							balancesAfter:            "5000assaf,200000denom",
+							destinationBalancesAfter: "",
 						},
 						{
-							description:    "multi-coin, has all",
-							input:          `[{"amount":"130","denom":"assaf"},{"amount":"15","denom":"denom"}]`,
-							isSuccess:      true,
-							balancesBefore: "5000assaf,200000denom",
-							balancesAfter:  "4870assaf,199985denom",
+							description:              "multi-coin, has all",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                true,
+							balancesBefore:           "5000assaf,200000denom",
+							balancesAfter:            "4870assaf,199985denom",
+							destinationBalancesAfter: "130assaf,15denom",
 						},
 						{
-							description:    "multi-coin, missing one",
-							input:          `[{"amount":"130","denom":"assaf"},{"amount":"15","denom":"denom"}]`,
-							isSuccess:      false,
-							balancesBefore: "200000denom",
-							balancesAfter:  "200000denom",
+							description:              "multi-coin, missing one",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "todo define error",
+							balancesBefore:           "200000denom",
+							balancesAfter:            "200000denom",
+							destinationBalancesAfter: "",
 						},
 						{
-							description:    "multi-coin, not enough of one of them",
-							input:          `[{"amount":"130","denom":"assaf"},{"amount":"15","denom":"denom"}]`,
-							isSuccess:      false,
-							balancesBefore: "5000assaf,10denom",
-							balancesAfter:  "5000assaf,10denom",
+							description:              "multi-coin, not enough of one of them",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "todo define error",
+							balancesBefore:           "5000assaf,10denom",
+							balancesAfter:            "5000assaf,10denom",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "multi-coin, not enough of all of them",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "todo define error",
+							balancesBefore:           "12assaf,10denom",
+							balancesAfter:            "12assaf,10denom",
+							destinationBalancesAfter: "",
 						},
 					} {
 						t.Run(test.description, func(t *testing.T) {
-							ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, contract.WasmFilePath, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
+							ctx, keeper, helperWallet, privKeyA, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
 
-							walletACoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
-							walletBCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletB)
+							fundingWallet, fundingWalletPrivKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
 
-							require.Equal(t, test.balancesBefore, walletACoinsBefore.String()+" "+walletBCoinsBefore.String())
+							receivingWallet, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins())
+
+							// todo remove: this is only to verify that the account was funded correctly
+							fundingWalletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, fundingWallet)
+							require.Equal(t, test.balancesBefore, fundingWalletCoinsBefore.String())
+
+							var originCodeId uint64
+							if originType != "user" {
+								originCodeId, _ = uploadCode(ctx, t, keeper, originVersion.WasmFilePath, helperWallet)
+							}
+
+							var destinationCodeId uint64
+							var destinationHash string
+							var destinationAddr sdk.AccAddress
+
+							// prepare receiving contract
+							if destinationType != "user" {
+								destinationCodeId, destinationHash = uploadCode(ctx, t, keeper, originVersion.WasmFilePath, helperWallet)
+
+								if destinationType == "exec" {
+									_, _, destinationAddr, _, _ = initHelperImpl(t, keeper, ctx, destinationCodeId, helperWallet, privKeyA, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins())
+								}
+							}
 
 							var err cosmwasm.StdError
-							var contractAddress sdk.AccAddress
+							var originAddress sdk.AccAddress
 
-							if callType == "init" {
-								_, _, _, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+							var msg string
+							if destinationType == "user" {
+								// todo replace sending from bank to simply sending if there's such a thing
+								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), test.coinsToSend)
+								destinationAddr = receivingWallet
+							} else if destinationType == "init" {
+								// todo add 'send_multiple_funds_to_init_callback' to contract
+								msg = fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, destinationCodeId, "denom", 18, destinationHash)
+								// destination address will only be known after the contract is init
 							} else {
-								_, _, contractAddress, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+								// todo add 'send_multiple_funds_to_exec_callback' to contract
 
-								_, _, _, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, math.MaxUint64, 0)
+								msg = fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, destinationAddr, "denom", 18, destinationHash)
+							}
+
+							// todo remove one or both of these, if unnecessary (probably needed for extraction of destination address on init)
+							//var data []byte
+							//var wasmEvents []ContractEvent
+
+							if originType == "init" {
+								// todo maybe extract data or wasmEvents, to know the receiving contract's address
+								_, _, _, _, _ = initHelperImpl(t, keeper, ctx, originCodeId, helperWallet, privKeyA, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
+
+								// verify that no coins where left in the intermediate contract
+								// todo this is incorrect since keeper does not revert first tx
+								//sendingContractCoins := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
+								//require.Equal(t, sendingContractCoins.String(), "")
+							} else if originType == "exec" {
+								_, _, _, _, _ = initHelperImpl(t, keeper, ctx, originCodeId, helperWallet, privKeyA, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
+
+								// todo maybe extract data or wasmEvents, to know the receiving contract's address
+								_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, helperWallet, privKeyA, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
+
+								// verify that no coins where left in the intermediate contract
+								// todo this is incorrect since keeper does not revert first tx
+							} else {
+								// user sends directly to contract
+								if destinationType == "exec" {
+									_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, "{no_logs:{}}", false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
+								} else {
+									_, _, destinationAddr, _, _ = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.coinsToSend))
+								}
+							}
+
+							if destinationType == "init" || originType == "exec" {
+								// todo somehow retrieve destination address, which was not known in advance
+								destinationAddr = helperWallet
 							}
 
 							if test.isSuccess {
@@ -3784,10 +3868,11 @@ func TestSendFunds(t *testing.T) {
 								require.Equal(t, err.Error(), test.errorMsg)
 							}
 
-							walletACoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
-							walletBCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletB)
+							originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
+							destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
 
-							require.Equal(t, test.balancesAfter, walletACoinsAfter.String()+" "+walletBCoinsAfter.String())
+							require.Equal(t, originCoinsAfter.String(), test.balancesAfter)
+							require.Equal(t, destinationCoinsAfter.String(), test.destinationBalancesAfter)
 						})
 					}
 				})
