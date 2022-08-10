@@ -3792,11 +3792,16 @@ func TestSendFunds(t *testing.T) {
 							ctx, keeper, helperWallet, helperPrivKey, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
 
 							fundingWallet, fundingWalletPrivKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
+
+							fmt.Println("THE FUNDING WALLET IS", fundingWallet.String())
 							receivingWallet, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins())
+
+							fmt.Println("THE RECEIVING WALLET IS", receivingWallet.String())
 
 							// todo remove: this is only to verify that the account was funded correctly
 							fundingWalletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, fundingWallet)
 							require.Equal(t, test.balancesBefore, fundingWalletCoinsBefore.String())
+							fmt.Println("PASSING INITIAL TEST", receivingWallet.String())
 
 							var originCodeId uint64
 							if originType != "user" {
@@ -3826,7 +3831,6 @@ func TestSendFunds(t *testing.T) {
 								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), inputCoins)
 								destinationAddr = receivingWallet
 							} else if destinationType == "init" {
-								fmt.Println("THE INPUT COINS ARE", inputCoins)
 								msg = fmt.Sprintf(`{"send_multiple_funds_to_init_callback":{"code_id":%d,"coins":%s,"code_hash":"%s"}}`, destinationCodeId, inputCoins, destinationHash)
 								// destination address will only be known after the contract is init
 							} else {
@@ -3835,21 +3839,23 @@ func TestSendFunds(t *testing.T) {
 
 							// todo remove one or both of these, if unnecessary (probably needed for extraction of destination address on init)
 							//var data []byte
-							//var wasmEvents []ContractEvent
+							var wasmEvents []ContractEvent
 
+							fmt.Println("THE BALANCES BEFORE ARE", test.balancesBefore)
 							if originType == "init" {
 								// todo maybe extract data or wasmEvents, to know the receiving contract's address
-								_, _, _, _, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
+								fmt.Println("THE SENDING", test.balancesBefore, "COINS ON INIT")
+								_, _, originAddress, wasmEvents, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
 
 								// verify that no coins where left in the intermediate contract
 								// todo this is incorrect since keeper does not revert first tx
 								//sendingContractCoins := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
 								//require.Equal(t, "", sendingContractCoins.String())
 							} else if originType == "exec" {
-								_, _, _, _, _ = initHelper(t, keeper, ctx, originCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests)
+								_, _, originAddress, _, _ = initHelper(t, keeper, ctx, originCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests)
 
 								// todo maybe extract data or wasmEvents, to know the receiving contract's address
-								_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, helperWallet, helperPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
+								_, _, _, wasmEvents, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, helperWallet, helperPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
 
 								// verify that no coins where left in the intermediate contract
 								// todo this is incorrect since keeper does not revert first tx
@@ -3862,9 +3868,13 @@ func TestSendFunds(t *testing.T) {
 								}
 							}
 
-							if destinationType == "init" && originType == "exec" {
+							if destinationType == "init" {
 								// todo somehow retrieve destination address, which was not known in advance
-								destinationAddr = helperWallet
+								fmt.Println("THE WASM EVENTS WERE:", wasmEvents)
+								fmt.Println("THE RELEVANT WASM EVENT IS:", wasmEvents[1])
+								fmt.Println("THE RELEVANT PAIR ON THE WASM EVENT IS:", wasmEvents[1][0])
+								fmt.Println("THE RELEVANT VALUE ON THE WASM EVENT IS:", wasmEvents[1][0].Value)
+								destinationAddr, _ = sdk.AccAddressFromBech32(wasmEvents[1][0].Value)
 							}
 
 							if test.isSuccess {
@@ -3877,11 +3887,12 @@ func TestSendFunds(t *testing.T) {
 							originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
 							destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
 
+							fmt.Println("THE ORIGIN WALLET BALANCE AFTER IS", originCoinsAfter.String())
 							require.Equal(t, test.balancesAfter, originCoinsAfter.String())
 
 							if !(destinationType == "init" && originType == "exec") {
 								// todo somehow retrieve destination address, which was not known in advance
-								destinationAddr = helperWallet
+								destinationAddr = receivingWallet
 								require.Equal(t, test.destinationBalancesAfter, destinationCoinsAfter.String())
 							}
 						})
