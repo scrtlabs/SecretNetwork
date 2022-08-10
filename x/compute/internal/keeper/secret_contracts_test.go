@@ -3818,20 +3818,18 @@ func TestSendFunds(t *testing.T) {
 
 							var err cosmwasm.StdError
 							var originAddress sdk.AccAddress
-
 							var msg string
+
+							inputCoins := CoinsToInput(stringToCoins(test.coinsToSend))
 							if destinationType == "user" {
-								// todo replace sending from bank to simply sending if there's such a thing
-								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), test.coinsToSend)
+								// todo replace sending from bank to simply sending if there's such a thing. update: probably isn't
+								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), inputCoins)
 								destinationAddr = receivingWallet
 							} else if destinationType == "init" {
-								// todo add 'send_multiple_funds_to_init_callback' to contract
-								msg = fmt.Sprintf(`{"send_funds_to_init_callback":{"code_id":%d,"denom":"%s","amount":%d,"code_hash":"%s"}}`, destinationCodeId, "denom", 18, destinationHash)
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_init_callback":{"code_id":%d,"coins":"%s","code_hash":"%s"}}`, destinationCodeId, inputCoins, destinationHash)
 								// destination address will only be known after the contract is init
 							} else {
-								// todo add 'send_multiple_funds_to_exec_callback' to contract
-
-								msg = fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, destinationAddr, "denom", 18, destinationHash)
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_exec_callback":{"to":"%s","coins":"%s",code_hash":"%s"}}`, destinationAddr, inputCoins, destinationHash)
 							}
 
 							// todo remove one or both of these, if unnecessary (probably needed for extraction of destination address on init)
