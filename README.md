@@ -81,6 +81,7 @@ To compile the code and run tests, you'll need to install the SGX SDK and PSW. T
 For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script in the following way:
 
 ```bash
+chmod +x ./scripts/install-sgx.sh
 sudo ./scripts/install-sgx.sh true true true false
 ```
 
