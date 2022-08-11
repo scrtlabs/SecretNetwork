@@ -11,7 +11,7 @@ use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_cosmwasm_v010_types as cosmwasm_v010_types;
 use enclave_cosmwasm_v010_types::encoding::Binary;
 use enclave_cosmwasm_v1_types::addresses::Addr;
-use enclave_cosmwasm_v1_types::ibc::{IbcPacket, IbcPacketReceiveMsg};
+use enclave_cosmwasm_v1_types::ibc::IbcPacketReceiveMsg;
 use enclave_cosmwasm_v1_types::results::{
     DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult,
 };
@@ -568,7 +568,8 @@ pub fn parse_message(
                         base64::encode(&message)
                     );
 
-                    parsed_encrypted_ibc_packet_receive_msg.packet.data = tmp_secret_data;
+                    parsed_encrypted_ibc_packet_receive_msg.packet.data =
+                        decrypted_msg.as_slice().into();
 
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
@@ -592,11 +593,13 @@ pub fn parse_message(
                         base64::encode(&message)
                     );
 
+                    let decrypted_msg = orig_secret_msg.msg.clone();
+
                     Ok(ParsedMessage {
                         should_validate_sig_info: false,
                         was_msg_encrypted: false,
                         secret_msg: orig_secret_msg,
-                        decrypted_msg: orig_secret_msg.msg,
+                        decrypted_msg,
                         contract_hash_for_validation: None,
                     })
                 }

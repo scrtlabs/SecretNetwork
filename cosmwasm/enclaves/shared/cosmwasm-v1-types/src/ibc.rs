@@ -1,5 +1,6 @@
 use crate::addresses::Addr;
 use crate::timestamp::Timestamp;
+use enclave_cosmwasm_v010_types::encoding::Binary;
 use serde::{Deserialize, Serialize};
 
 /// The message that is passed into `ibc_channel_open`
@@ -87,6 +88,12 @@ pub struct IbcPacket {
     /// The sequence number of the packet on the given channel
     pub sequence: u64,
     pub timeout: IbcTimeout,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub struct IbcAcknowledgement {
+    pub data: Binary,
 }
 
 /// In IBC each package must set at least one type of timeout:
