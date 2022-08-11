@@ -180,7 +180,10 @@ impl Engine {
         validation::validate_memory(&mut module)?;
 
         if let ContractOperation::Init = operation {
-            validation::deny_floating_point(&module)?;
+            if module.has_floats() {
+                debug!("contract was found to contain floating point operations");
+                return Err(EnclaveError::WasmModuleWithFP);
+            }
         }
 
         gas::add_metering(&mut module);

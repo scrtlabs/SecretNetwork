@@ -1627,7 +1627,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 [[package]]
 name = "walrus"
 version = "0.19.0"
-source = "git+https://github.com/scrtlabs/walrus?rev=ff51789#ff51789e33b75efd155a63c980e02f8115007644"
+source = "git+https://github.com/scrtlabs/walrus?rev=81c459c#81c459ca288eff97af05a8c4001e9bc760b8cb3a"
 dependencies = [
  "anyhow 1.0.60",
  "id-arena",
@@ -1640,7 +1640,7 @@ dependencies = [
 [[package]]
 name = "walrus-macro"
 version = "0.19.0"
-source = "git+https://github.com/scrtlabs/walrus?rev=ff51789#ff51789e33b75efd155a63c980e02f8115007644"
+source = "git+https://github.com/scrtlabs/walrus?rev=81c459c#81c459ca288eff97af05a8c4001e9bc760b8cb3a"
 dependencies = [
  "heck",
  "proc-macro2",
