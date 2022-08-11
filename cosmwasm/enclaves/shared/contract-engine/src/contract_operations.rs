@@ -11,6 +11,7 @@ use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_cosmwasm_v010_types as cosmwasm_v010_types;
 use enclave_cosmwasm_v010_types::encoding::Binary;
 use enclave_cosmwasm_v1_types::addresses::Addr;
+use enclave_cosmwasm_v1_types::ibc::{IbcPacket, IbcPacketReceiveMsg};
 use enclave_cosmwasm_v1_types::results::{
     DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult,
 };
@@ -315,7 +316,6 @@ pub fn parse_message(
                 });
             }
 
-            // Here we are sure the reply is OK because only OK is encrypted
             trace!(
                 "reply input before decryption: {:?}",
                 base64::encode(&message)
@@ -520,6 +520,7 @@ pub fn parse_message(
         HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => todo!(),
         HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => todo!(),
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
+            // LIORRR TODO: Maybe mark whether the message was encrypted or not.
             let orig_secret_msg = match SecretMessage::from_slice(message) {
                 Ok(orig_secret_msg) => orig_secret_msg,
                 Err(_) => {
@@ -536,7 +537,29 @@ pub fn parse_message(
                 }
             };
 
-            match orig_secret_msg.decrypt() {
+            let mut parsed_encrypted_ibc_packet_receive_msg: IbcPacketReceiveMsg = serde_json::from_slice(
+                &orig_secret_msg.msg.as_slice().to_vec(),
+            )
+            .map_err(|err| {
+                warn!(
+            "IbcPacketReceiveMsg got an error while trying to deserialize msg input bytes into json {:?}: {}",
+            String::from_utf8_lossy(&orig_secret_msg.msg),
+            err
+            );
+                EnclaveError::FailedToDeserialize
+            })?;
+
+            let tmp_secret_data = SecretMessage {
+                nonce: orig_secret_msg.nonce,
+                user_public_key: orig_secret_msg.user_public_key,
+                msg: parsed_encrypted_ibc_packet_receive_msg
+                    .packet
+                    .data
+                    .as_slice()
+                    .to_vec(),
+            };
+
+            match tmp_secret_data.decrypt() {
                 Ok(decrypted_msg) => {
                     // IBC packet was encrypted
 
@@ -545,11 +568,19 @@ pub fn parse_message(
                         base64::encode(&message)
                     );
 
+                    parsed_encrypted_ibc_packet_receive_msg.packet.data = tmp_secret_data;
+
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
                         was_msg_encrypted: true,
                         secret_msg: orig_secret_msg,
-                        decrypted_msg,
+                        decrypted_msg: serde_json::to_vec(&parsed_encrypted_ibc_packet_receive_msg).map_err(|err| {
+                            warn!(
+                                "got an error while trying to serialize IbcPacketReceive into bytes {:?}: {}",
+                                parsed_encrypted_ibc_packet_receive_msg, err
+                            );
+                            EnclaveError::FailedToSerialize
+                        })?,
                         contract_hash_for_validation: None,
                     })
                 }
