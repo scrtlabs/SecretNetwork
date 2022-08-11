@@ -3868,31 +3868,26 @@ func TestSendFunds(t *testing.T) {
 								}
 							}
 
-							if destinationType == "init" {
-								// todo somehow retrieve destination address, which was not known in advance
-								fmt.Println("THE WASM EVENTS WERE:", wasmEvents)
-								fmt.Println("THE RELEVANT WASM EVENT IS:", wasmEvents[1])
-								fmt.Println("THE RELEVANT PAIR ON THE WASM EVENT IS:", wasmEvents[1][0])
-								fmt.Println("THE RELEVANT VALUE ON THE WASM EVENT IS:", wasmEvents[1][0].Value)
-								destinationAddr, _ = sdk.AccAddressFromBech32(wasmEvents[1][0].Value)
-							}
-
-							if test.isSuccess {
-								require.Empty(t, err)
-							} else {
+							if !test.isSuccess {
 								require.NotEmpty(t, err)
 								require.Equal(t, test.errorMsg, err.Error())
-							}
+							} else {
+								require.Empty(t, err)
 
-							originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
-							destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
+								originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
+								fmt.Println("THE ORIGIN WALLET BALANCE AFTER IS", originCoinsAfter.String()) //todo remove
+								require.Equal(t, test.balancesAfter, originCoinsAfter.String())
 
-							fmt.Println("THE ORIGIN WALLET BALANCE AFTER IS", originCoinsAfter.String())
-							require.Equal(t, test.balancesAfter, originCoinsAfter.String())
+								if destinationType == "init" && originType != "user" {
+									// todo remove debugs
+									fmt.Println("THE WASM EVENTS WERE:", wasmEvents)
+									fmt.Println("THE RELEVANT WASM EVENT IS:", wasmEvents[1])
+									fmt.Println("THE RELEVANT PAIR ON THE WASM EVENT IS:", wasmEvents[1][0])
+									fmt.Println("THE RELEVANT VALUE ON THE WASM EVENT IS:", wasmEvents[1][0].Value)
+									destinationAddr, _ = sdk.AccAddressFromBech32(wasmEvents[1][0].Value)
+								}
 
-							if !(destinationType == "init" && originType == "exec") {
-								// todo somehow retrieve destination address, which was not known in advance
-								destinationAddr = receivingWallet
+								destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
 								require.Equal(t, test.destinationBalancesAfter, destinationCoinsAfter.String())
 							}
 						})
