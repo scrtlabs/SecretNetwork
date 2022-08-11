@@ -3688,14 +3688,12 @@ func TestBankMsgSend(t *testing.T) {
 func TestSendFunds(t *testing.T) {
 	for _, callTypes := range multisetsFrom([]string{"init", "exec", "user"}, 2) {
 		originType, destinationType := callTypes[0], callTypes[1]
-		fmt.Println("origin calltype:", originType, "destination calltype:", destinationType)
 
 		t.Run(originType+"->"+destinationType, func(t *testing.T) {
 
 			alreadyTested := make(map[string]bool)
 			alreadyTested["useruser->useruser"] = true // we are only testing contracts here
 			for _, currentSubjects := range multisetsFrom(testContracts, 2) {
-				// [0] is source of transaction, [1] is destination todo remove comment if unnecessary
 				originVersion, destinationVersion := currentSubjects[0], currentSubjects[1]
 
 				// users don't have versions, so skip the repeating tests (user v1 = user v10)
@@ -3794,18 +3792,12 @@ func TestSendFunds(t *testing.T) {
 						t.Run(test.description, func(t *testing.T) {
 							ctx, keeper, helperWallet, helperPrivKey, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
 
-							fmt.Println("THE FUNDING COINS ARE", stringToCoins(test.balancesBefore))
 							fundingWallet, fundingWalletPrivKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
-
-							fmt.Println("THE FUNDING WALLET IS", fundingWallet.String())
 							receivingWallet, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins())
 
-							fmt.Println("THE RECEIVING WALLET IS", receivingWallet.String())
-
-							// todo remove: this is only to verify that the account was funded correctly
+							// verify that the account was funded correctly
 							fundingWalletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, fundingWallet)
 							require.Equal(t, test.balancesBefore, fundingWalletCoinsBefore.String())
-							fmt.Println("PASSING INITIAL TEST", receivingWallet.String())
 
 							var originCodeId uint64
 							if originType != "user" {
@@ -3829,13 +3821,8 @@ func TestSendFunds(t *testing.T) {
 							var originAddress sdk.AccAddress
 							var msg string
 
-							fmt.Println("THE PREPARING COINS TO SEND", test.coinsToSend)
-							s := stringToCoins(test.coinsToSend)
-							fmt.Println("THE COINS TO SEND STR ARE", s)
-							inputCoins := CoinsToInput(s)
-							fmt.Println("THE COINS TO SEND ARE", inputCoins)
+							inputCoins := CoinsToInput(stringToCoins(test.coinsToSend))
 							if destinationType == "user" {
-								// todo replace sending from bank to simply sending if there's such a thing. update: probably isn't
 								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), inputCoins)
 								destinationAddr = receivingWallet
 							} else if destinationType == "init" {
@@ -3845,7 +3832,6 @@ func TestSendFunds(t *testing.T) {
 								msg = fmt.Sprintf(`{"send_multiple_funds_to_exec_callback":{"to":"%s","coins":%s,"code_hash":"%s"}}`, destinationAddr, inputCoins, destinationHash)
 							}
 
-							fmt.Println("THE BALANCES BEFORE ARE", test.balancesBefore)
 							var wasmEvents []ContractEvent
 							if originType == "init" {
 								_, _, originAddress, wasmEvents, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
@@ -3861,18 +3847,13 @@ func TestSendFunds(t *testing.T) {
 									wasmCount = 0
 								}
 								if destinationType == "exec" {
-									fmt.Println("SENDING user->exec")
 									_, _, _, _, _, err = execHelperMultipleCoinsImpl(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, `{"no_data":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend), wasmCount)
-									fmt.Println("SENT user->exec")
 								} else {
-									fmt.Println("SENDING user->init")
 									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, destinationCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, wasmCount, stringToCoins(test.coinsToSend))
-									fmt.Println("SENT user->init")
 								}
 							}
 
 							if !test.isSuccess {
-								fmt.Println("SHOULD NOT BE SUCCESS NOW")
 								require.NotEmpty(t, err)
 
 								expectedErrorMsg := test.errorMsg
@@ -3881,21 +3862,13 @@ func TestSendFunds(t *testing.T) {
 								}
 								expectedErrorMsg = "encrypted: " + expectedErrorMsg
 								require.Equal(t, expectedErrorMsg, err.Error())
-								// todo maybe check balances here too
 							} else {
-								fmt.Println("SHOULD be SUCCESS NOW")
 								require.Empty(t, err)
 
 								originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
-								fmt.Println("THE ORIGIN WALLET BALANCE AFTER IS", originCoinsAfter.String()) //todo remove
 								require.Equal(t, test.balancesAfter, originCoinsAfter.String())
 
 								if destinationType == "init" && originType != "user" {
-									// todo remove debugs
-									fmt.Println("THE WASM EVENTS WERE:", wasmEvents)
-									fmt.Println("THE RELEVANT WASM EVENT IS:", wasmEvents[1])
-									fmt.Println("THE RELEVANT PAIR ON THE WASM EVENT IS:", wasmEvents[1][0])
-									fmt.Println("THE RELEVANT VALUE ON THE WASM EVENT IS:", wasmEvents[1][0].Value)
 									destinationAddr, _ = sdk.AccAddressFromBech32(wasmEvents[1][0].Value)
 								}
 
