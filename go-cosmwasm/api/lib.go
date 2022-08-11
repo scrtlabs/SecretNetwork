@@ -9,6 +9,7 @@ import "C"
 
 import (
 	"fmt"
+
 	"runtime"
 	"syscall"
 
@@ -35,9 +36,18 @@ type Cache struct {
 func HealthCheck() ([]byte, error) {
 	errmsg := C.Buffer{}
 
-	res, err := C.get_health_check(&errmsg)
-	if err != nil {
+	gramineResponse, gramineError := getFromGramine(CheckEnclave)
+
+	if gramineError != nil {
+		gramineErrorBuffer := sendSlice([]byte(gramineError.Error()))
+		_, err := C.health_check_set_error(&gramineErrorBuffer, &errmsg)
 		return nil, errorWithMessage(err, errmsg)
+	}
+
+	gramineResponseBuffer := sendSlice([]byte(gramineResponse))
+	res, err := C.health_check_clear_error(&gramineResponseBuffer)
+	if err != nil {
+		return nil, errorWithMessage(err, gramineResponseBuffer)
 	}
 	return receiveVector(res), nil
 }
