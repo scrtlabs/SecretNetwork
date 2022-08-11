@@ -184,13 +184,8 @@ pub fn redact_custom_events(reply: &mut Reply) {
             let mut events: Vec<Event> = Default::default();
 
             let filtered_attributes = vec!["contract_address".to_string(), "code_id".to_string()];
-            let filtered_types = vec![
-                "coin_spent".to_string(),
-                "coin_received".to_string(),
-                "transfer".to_string(),
-            ];
             for ev in r.events.iter() {
-                if filtered_types.contains(&ev.ty) {
+                if !ev.ty.starts_with("wasm") {
                     continue;
                 }
 
