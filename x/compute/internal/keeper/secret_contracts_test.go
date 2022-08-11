@@ -345,7 +345,6 @@ func stringToCoins(balance string) sdk.Coins {
 		result = result.Add(sdk.NewInt64Coin(denom, amount))
 	}
 
-	fmt.Println("THE RESULT OF COINS IS:", result)
 	return result
 }
 
@@ -363,7 +362,6 @@ func CoinsToInput(coins sdk.Coins) string {
 	}
 	result += "]"
 
-	fmt.Println("THE RESULT OF INPUT IS:", result)
 	return result
 }
 
@@ -3735,7 +3733,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "one, missing",
 							coinsToSend:              `20one`,
 							isSuccess:                false,
-							errorMsg:                 "encrypted: dispatch: submessages: 0one is smaller than 20one: insufficient funds",
+							errorMsg:                 "0one is smaller than 20one: insufficient funds",
 							balancesBefore:           "5000another",
 							balancesAfter:            "5000another",
 							destinationBalancesAfter: "",
@@ -3744,7 +3742,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "one, not enough",
 							coinsToSend:              `20one`,
 							isSuccess:                false,
-							errorMsg:                 "encrypted: dispatch: submessages: 19one is smaller than 20one: insufficient funds",
+							errorMsg:                 "19one is smaller than 20one: insufficient funds",
 							balancesBefore:           "5000another,19one",
 							balancesAfter:            "5000another,19one",
 							destinationBalancesAfter: "",
@@ -3769,7 +3767,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, missing one",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "encrypted: dispatch: submessages: 0assaf is smaller than 130assaf: insufficient funds",
+							errorMsg:                 "0assaf is smaller than 130assaf: insufficient funds",
 							balancesBefore:           "200000denom",
 							balancesAfter:            "200000denom",
 							destinationBalancesAfter: "",
@@ -3778,7 +3776,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, not enough of one of them",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "encrypted: dispatch: submessages: 10denom is smaller than 15denom: insufficient funds",
+							errorMsg:                 "10denom is smaller than 15denom: insufficient funds",
 							balancesBefore:           "5000assaf,10denom",
 							balancesAfter:            "5000assaf,10denom",
 							destinationBalancesAfter: "",
@@ -3787,7 +3785,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, not enough of all of them",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "encrypted: dispatch: submessages: 12assaf is smaller than 130assaf: insufficient funds",
+							errorMsg:                 "12assaf is smaller than 130assaf: insufficient funds",
 							balancesBefore:           "12assaf,10denom",
 							balancesAfter:            "12assaf,10denom",
 							destinationBalancesAfter: "",
@@ -3857,18 +3855,32 @@ func TestSendFunds(t *testing.T) {
 								_, _, _, wasmEvents, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.balancesBefore))
 							} else {
 								// user sends directly to contract
+								originAddress = fundingWallet
+								wasmCount := int64(-1)
+								if !test.isSuccess {
+									wasmCount = 0
+								}
 								if destinationType == "exec" {
-									_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, "{no_data:{}}", false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
+									fmt.Println("SENDING user->exec")
+									_, _, _, _, _, err = execHelperMultipleCoinsImpl(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, `{"no_data":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend), wasmCount)
+									fmt.Println("SENT user->exec")
 								} else {
 									fmt.Println("SENDING user->init")
-									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.coinsToSend))
+									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, destinationCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, wasmCount, stringToCoins(test.coinsToSend))
+									fmt.Println("SENT user->init")
 								}
 							}
 
 							if !test.isSuccess {
 								fmt.Println("SHOULD NOT BE SUCCESS NOW")
 								require.NotEmpty(t, err)
-								require.Equal(t, test.errorMsg, err.Error())
+
+								expectedErrorMsg := test.errorMsg
+								if originType != "user" {
+									expectedErrorMsg = "dispatch: submessages: " + expectedErrorMsg
+								}
+								expectedErrorMsg = "encrypted: " + expectedErrorMsg
+								require.Equal(t, expectedErrorMsg, err.Error())
 								// todo maybe check balances here too
 							} else {
 								fmt.Println("SHOULD be SUCCESS NOW")
