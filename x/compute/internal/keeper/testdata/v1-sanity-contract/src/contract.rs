@@ -1,16 +1,16 @@
 use core::time;
 use mem::MaybeUninit;
-use std::{mem, thread};
+use std::{mem, thread, vec};
 
 use cosmwasm_std::{
     attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Empty, Env,
-    MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg,
-    SubMsgResult, WasmMsg, WasmQuery,
+    Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage,
+    SubMsg, SubMsgResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QueryRes};
+use crate::msg::{ExecuteMsg, ExternalMessages, InstantiateMsg, QueryMsg, QueryRes};
 use crate::state::{count, count_read, expiration, expiration_read};
 
 #[entry_point]
@@ -21,6 +21,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     match msg {
+        InstantiateMsg::WasmMsg { ty } => wasm_msg(ty),
         InstantiateMsg::Counter { counter, expires } => {
             if counter == 0 {
                 return Err(StdError::generic_err("got wrong counter on init"));
@@ -34,6 +35,145 @@ pub fn instantiate(
             Ok(resp)
         }
 
+        InstantiateMsg::AddAttributes {} => Ok(Response::new()
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        InstantiateMsg::AddAttributesWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+
+        InstantiateMsg::AddPlaintextAttributes {} => Ok(Response::new()
+            .add_attribute_plaintext("attr1", "🦄")
+            .add_attribute_plaintext("attr2", "🌈")),
+        InstantiateMsg::AddPlaintextAttributesWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(
+                        r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_attribute_plaintext("attr1", "🦄")
+            .add_attribute_plaintext("attr2", "🌈")),
+
+        InstantiateMsg::AddEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr3", "🐙")
+                    .add_attribute("attr4", "🦄"),
+            )),
+        InstantiateMsg::AddEventsWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_events":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr3", "🐙")
+                    .add_attribute("attr4", "🦄"),
+            )),
+        InstantiateMsg::AddMixedAttributesAndEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute_plaintext("attr1", "🦄")
+                    .add_attribute_plaintext("attr2", "🌈"),
+            )
+            .add_attribute_plaintext("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+        InstantiateMsg::AddMixedAttributesAndEventsWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(
+                        r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_attribute("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+
+        InstantiateMsg::MeasureGasForSubmessage { id } => {
+            let msg = match id {
+                0 => Binary::from(r#"{"gas_meter":{}}"#.as_bytes().to_vec()),
+                _ => Binary::from(r#"{"gas_meter_proxy":{}}"#.as_bytes().to_vec()),
+            };
+
+            Ok(Response::new().add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg,
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            }))
+        }
         // These were ported from the v0.10 test-contract:
         InstantiateMsg::Nop {} => Ok(Response::new().add_attribute("init", "🌈")),
         InstantiateMsg::Callback {
@@ -111,7 +251,7 @@ pub fn instantiate(
                 code_hash,
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
-                label: label,
+                label,
             }))
             .add_attribute("a", "a")),
         InstantiateMsg::CallToExec {
@@ -159,10 +299,223 @@ pub fn instantiate(
     }
 }
 
+pub fn wasm_msg(ty: String) -> StdResult<Response> {
+    if ty == "success" {
+        return Ok(Response::default());
+    } else if ty == "err" {
+        return Err(StdError::generic_err("custom error"));
+    } else if ty == "panic" {
+        panic!()
+    }
+
+    return Err(StdError::generic_err("custom error"));
+}
+
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::Increment { addition } => increment(deps, addition),
+        ExecuteMsg::WasmMsg { ty } => wasm_msg(ty),
+        ExecuteMsg::Increment { addition } => increment(env, deps, addition),
+        ExecuteMsg::SendFundsWithErrorWithReply {} => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: 8000,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: coins(100, "lior"),
+                })
+                .into(),
+                reply_on: ReplyOn::Always,
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        ExecuteMsg::SendFundsWithReply {} => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: 8001,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: coins(100, "denom"),
+                })
+                .into(),
+                reply_on: ReplyOn::Always,
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        ExecuteMsg::AddAttributes {} => Ok(Response::new()
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        ExecuteMsg::AddAttributesWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        ExecuteMsg::AddMoreAttributes {} => Ok(Response::new()
+            .add_attribute("attr3", "🍉")
+            .add_attribute("attr4", "🥝")),
+        ExecuteMsg::AddPlaintextAttributes {} => Ok(Response::new()
+            .add_attribute_plaintext("attr1", "🦄")
+            .add_attribute_plaintext("attr2", "🌈")),
+        ExecuteMsg::AddPlaintextAttributesWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(
+                        r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_attribute_plaintext("attr1", "🦄")
+            .add_attribute_plaintext("attr2", "🌈")),
+        ExecuteMsg::AddMorePlaintextAttributes {} => Ok(Response::new()
+            .add_attribute_plaintext("attr3", "🍉")
+            .add_attribute_plaintext("attr4", "🥝")),
+
+        ExecuteMsg::AddEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr3", "🐙")
+                    .add_attribute("attr4", "🦄"),
+            )),
+        ExecuteMsg::AddEventsWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_events":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr3", "🐙")
+                    .add_attribute("attr4", "🦄"),
+            )),
+        ExecuteMsg::AddMoreEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber3".to_string())
+                    .add_attribute("attr1", "🤯")
+                    .add_attribute("attr2", "🤟"),
+            )
+            .add_event(
+                Event::new("cyber4".to_string())
+                    .add_attribute("attr3", "😅")
+                    .add_attribute("attr4", "🦄"),
+            )),
+
+        ExecuteMsg::AddMixedAttributesAndEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute_plaintext("attr1", "🦄")
+                    .add_attribute_plaintext("attr2", "🌈"),
+            )
+            .add_attribute_plaintext("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+        ExecuteMsg::AddMixedAttributesAndEventsWithSubmessage { id } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(
+                        r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_attribute("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+        ExecuteMsg::AddMoreMixedAttributesAndEvents {} => Ok(Response::new()
+            .add_event(
+                Event::new("cyber2".to_string())
+                    .add_attribute("attr5", "🐙")
+                    .add_attribute("attr6", "🦄"),
+            )
+            .add_attribute("attr7", "😅")
+            .add_attribute_plaintext("attr8", "🦄")),
+        ExecuteMsg::AddAttributesFromV010 {
+            addr,
+            code_hash,
+            id,
+        } => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash,
+                    contract_addr: addr,
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: match id {
+                    0 => ReplyOn::Never,
+                    _ => ReplyOn::Always,
+                },
+                gas_limit: None,
+            })
+            .add_event(
+                Event::new("cyber1".to_string())
+                    .add_attribute("attr1", "🦄")
+                    .add_attribute("attr2", "🌈"),
+            )
+            .add_attribute("attr3", "🐙")
+            .add_attribute_plaintext("attr4", "🦄")),
+        ExecuteMsg::GasMeter {} => loop {},
+        ExecuteMsg::GasMeterProxy {} => Ok(Response::default()),
         ExecuteMsg::TransferMoney { amount } => transfer_money(deps, amount),
         ExecuteMsg::RecursiveReply {} => recursive_reply(env, deps),
         ExecuteMsg::RecursiveReplyFail {} => recursive_reply_fail(env, deps),
@@ -172,7 +525,202 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::SubMsgLoopIner { iter } => sub_msg_loop_iner(env, deps, iter),
         ExecuteMsg::MultipleSubMessages {} => send_multiple_sub_messages(env, deps),
         ExecuteMsg::MultipleSubMessagesNoReply {} => send_multiple_sub_messages_no_reply(env, deps),
+        ExecuteMsg::QuickError {} => {
+            count(deps.storage).save(&123456)?;
+            Err(StdError::generic_err("error in execute"))
+        }
+        ExecuteMsg::MultipleSubMessagesNoReplyWithError {} => {
+            send_multiple_sub_messages_no_reply_with_error(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesNoReplyWithPanic {} => {
+            send_multiple_sub_messages_no_reply_with_panic(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesWithReplyWithError {} => {
+            send_multiple_sub_messages_with_reply_with_error(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesWithReplyWithPanic {} => {
+            send_multiple_sub_messages_with_reply_with_panic(env, deps)
+        }
+        ExecuteMsg::InitV10 {
+            counter,
+            code_id,
+            code_hash,
+        } => {
+            let mut resp = Response::default();
 
+            let msg =
+                "{\"init_from_v1\":{\"counter\":".to_string() + counter.to_string().as_str() + "}}";
+            resp.messages.push(SubMsg {
+                id: 1700,
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                    funds: vec![],
+                    label: "new2231231".to_string(),
+                    code_id,
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Always,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::ExecV10 { address, code_hash } => {
+            let mut resp = Response::default();
+
+            resp.messages.push(SubMsg {
+                id: 1800,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary::from("{\"execute_from_v1\":{\"counter\":20}}".as_bytes().to_vec()),
+                    contract_addr: address,
+                    code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Always,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::InitV10NoReply {
+            counter,
+            code_id,
+            code_hash,
+        } => {
+            let mut resp = Response::default();
+
+            let msg =
+                "{\"init_from_v1\":{\"counter\":".to_string() + counter.to_string().as_str() + "}}";
+            resp.messages.push(SubMsg {
+                id: 8888,
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                    funds: vec![],
+                    label: "new2231231".to_string(),
+                    code_id,
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Never,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::ExecV10NoReply { address, code_hash } => {
+            let mut resp = Response::default();
+
+            resp.messages.push(SubMsg {
+                id: 8889,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary::from("{\"execute_from_v1\":{\"counter\":20}}".as_bytes().to_vec()),
+                    contract_addr: address,
+                    code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Never,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::QueryV10 { address, code_hash } => {
+            let response = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                code_hash,
+                contract_addr: address,
+                msg: to_binary(&ExternalMessages::GetCountFromV1 {})?,
+            }))?;
+
+            match response {
+                QueryRes::Get { count } => {
+                    let mut resp = Response::default();
+                    resp.data = Some((count as u32).to_be_bytes().into());
+                    return Ok(resp);
+                }
+            }
+        }
+
+        ExecuteMsg::InitV10WithError { code_id, code_hash } => {
+            let mut resp = Response::default();
+
+            let msg = "{\"init_from_v1_with_error\":{}";
+            resp.messages.push(SubMsg {
+                id: 2000,
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                    funds: vec![],
+                    label: "new2231231".to_string(),
+                    code_id,
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Always,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::ExecV10WithError { address, code_hash } => {
+            let mut resp = Response::default();
+
+            resp.messages.push(SubMsg {
+                id: 2100,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary::from("{\"execute_from_v1_with_error\":{}}".as_bytes().to_vec()),
+                    contract_addr: address,
+                    code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Always,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::InitV10NoReplyWithError { code_id, code_hash } => {
+            let mut resp = Response::default();
+
+            let msg = "{\"init_from_v1_with_error\":{}}";
+            resp.messages.push(SubMsg {
+                id: 8890,
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                    funds: vec![],
+                    label: "new2231231".to_string(),
+                    code_id,
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Never,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::ExecV10NoReplyWithError { address, code_hash } => {
+            let mut resp = Response::default();
+
+            resp.messages.push(SubMsg {
+                id: 8891,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary::from("{\"execute_from_v1_with_error\":{}}".as_bytes().to_vec()),
+                    contract_addr: address,
+                    code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Never,
+            });
+
+            Ok(resp)
+        }
+        ExecuteMsg::QueryV10WithError { address, code_hash } => {
+            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                code_hash,
+                contract_addr: address,
+                msg: to_binary(&ExternalMessages::QueryFromV1WithError {})?,
+            }))?;
+
+            // shouldn't be reachable
+            Ok(Response::default())
+        }
         // These were ported from the v0.10 test-contract:
         ExecuteMsg::A {
             contract_addr,
@@ -561,9 +1109,38 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
-pub fn increment(deps: DepsMut, c: u64) -> StdResult<Response> {
+pub fn increment(env: Env, deps: DepsMut, c: u64) -> StdResult<Response> {
     if c == 0 {
-        return Err(StdError::generic_err("got wrong counter"));
+        return Err(StdError::generic_err("got wrong counter on increment"));
+    }
+
+    if c == 9875 {
+        let new_count = count_read(deps.storage).load()? + 100;
+        count(deps.storage).save(&new_count)?;
+        return Err(StdError::generic_err("got wrong counter on increment"));
+    }
+
+    if c == 9876 {
+        let new_count = count_read(deps.storage).load()? + 100;
+        count(deps.storage).save(&new_count)?;
+        panic!()
+    }
+
+    if c == 9911 {
+        let mut resp = Response::default();
+        resp.messages.push(SubMsg {
+            id: 1304,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address.into_string(),
+                code_hash: env.contract.code_hash,
+                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                funds: vec![],
+            }),
+            gas_limit: Some(10000000_u64),
+            reply_on: ReplyOn::Always,
+        });
+
+        return Ok(resp);
     }
 
     let new_count = count_read(deps.storage).load()? + c;
@@ -634,7 +1211,7 @@ pub fn sub_msg_loop_iner(_env: Env, deps: DepsMut, iter: u64) -> StdResult<Respo
         return Err(StdError::generic_err("stopped loop"));
     }
 
-    increment(deps, 1)?;
+    increment(_env, deps, 1)?;
 
     let mut resp = Response::default();
     resp.data = Some(((iter - 1) as u64).to_string().as_bytes().into());
@@ -762,6 +1339,229 @@ pub fn send_multiple_sub_messages_no_reply(env: Env, deps: DepsMut) -> StdResult
     Ok(resp)
 }
 
+pub fn send_multiple_sub_messages_no_reply_with_error(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 1610,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1611,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Success,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1613,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_with_reply_with_error(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 3000,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3003,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_with_reply_with_panic(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 3000,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_no_reply_with_panic(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 1610,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1611,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1613,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
 pub fn recursive_reply_fail(env: Env, _deps: DepsMut) -> StdResult<Response> {
     let mut resp = Response::default();
     resp.messages.push(SubMsg {
@@ -831,7 +1631,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         // These were ported from the v0.10 test-contract:
         QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         QueryMsg::Panic {} => panic!("panic in query"),
-        QueryMsg::ReceiveExternalQuery { num } => {
+        QueryMsg::ReceiveExternalQuery { num } | QueryMsg::ReceiveExternalQueryV1 { num } => {
             Ok(Binary(serde_json_wasm::to_vec(&(num + 1)).unwrap()))
         }
         QueryMsg::SendExternalQueryInfiniteLoop { to, code_hash } => {
@@ -869,6 +1669,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .map_err(|err| {
                     StdError::generic_err(format!("Got an error from query: {:?}", err))
                 })?;
+            return Ok(to_binary(&answer)?);
+        }
+        QueryMsg::GetContractVersion {} => {
+            let answer: u8 = 1;
             return Ok(to_binary(&answer)?);
         }
     }
@@ -1036,6 +1840,115 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             Ok(resp)
         }
         (1602, SubMsgResult::Ok(_)) => Err(StdError::generic_err("got wrong bank answer")),
+        (1700, SubMsgResult::Ok(s)) => {
+            if s.events.len() == 0 {
+                return Err(StdError::generic_err(format!(
+                    "Init didn't response with contract address",
+                )));
+            }
+
+            if s.events[0].attributes.len() == 0 {
+                return Err(StdError::generic_err(format!(
+                    "Init didn't response with contract address",
+                )));
+            }
+
+            if s.events[0].attributes[0].key != "contract_address" {
+                return Err(StdError::generic_err(format!(
+                    "Init didn't response with contract address, key was {:?}",
+                    s.events[0].attributes[0].key,
+                )));
+            }
+
+            let mut resp = Response::default();
+            resp.data = Some(s.events[0].attributes[0].value.as_bytes().into());
+
+            Ok(resp)
+        }
+        (1700, SubMsgResult::Err(_)) => Err(StdError::generic_err("Failed to init v010 contract")),
+        (1800, SubMsgResult::Ok(s)) => match s.data {
+            Some(x) => {
+                let counter = String::from_utf8(
+                    Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
+                )?;
+                let mut resp = Response::default();
+                resp.data = Some(counter.as_bytes().into());
+
+                Ok(resp)
+            }
+            None => Err(StdError::generic_err(format!(
+                "Init didn't response with contract address",
+            ))),
+        },
+        (1800, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err("Failed to execute v010 contract"))
+        }
+
+        (2000, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!(
+            "Init with error didn't response with error",
+        ))),
+        (2000, SubMsgResult::Err(_)) => Ok(Response::default()),
+        (2100, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!(
+            "Execute with error didn't response with error",
+        ))),
+        (2100, SubMsgResult::Err(_)) => Ok(Response::default()),
+        (2200, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_attribute("attr5", "🤯")
+            .add_attribute("attr6", "🦄")),
+        (2200, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Add attributes failed",)))
+        }
+        (2300, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_attribute_plaintext("attr5", "🤯")
+            .add_attribute_plaintext("attr6", "🦄")),
+        (2300, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Add attributes failed",)))
+        }
+        (2400, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_event(
+                Event::new("cyber5".to_string())
+                    .add_attribute("attr1", "😗")
+                    .add_attribute("attr2", "😋"),
+            )
+            .add_event(
+                Event::new("cyber6".to_string())
+                    .add_attribute("attr3", "😉")
+                    .add_attribute("attr4", "😊"),
+            )),
+        (2400, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Add events failed",))),
+        (2500, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_event(
+                Event::new("cyber3".to_string())
+                    .add_attribute("attr9", "🤯")
+                    .add_attribute("attr10", "🤟"),
+            )
+            .add_attribute("attr11", "😉")
+            .add_attribute_plaintext("attr12", "😊")),
+        (2500, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Add mixed events failed",)))
+        }
+        (2600, SubMsgResult::Ok(_)) => loop {},
+        (2600, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Gas submessage failed",)))
+        }
+        (3000, SubMsgResult::Ok(_)) => {
+            let new_count = count_read(deps.storage).load()? + 3;
+            count(deps.storage).save(&new_count)?;
+            Ok(Response::default())
+        }
+        (3000, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Revert submessage failed",)))
+        }
+        (3001, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!(
+            "Revert submessage should fail",
+        ))),
+        (3001, SubMsgResult::Err(_)) => Ok(Response::default()),
+        (8000, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!("Unreachable",))),
+        (8000, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Unreachable",))),
+        (8001, SubMsgResult::Ok(_)) => Ok(Response::default()),
+        (8001, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Funds message failed",)))
+        }
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
@@ -1089,8 +2002,8 @@ fn send_external_query_recursion_limit(
             ),
         }));
 
-    // 5 is the current recursion limit.
-    if depth != 5 {
+    // 10 is the current recursion limit.
+    if depth != 10 {
         result
     } else {
         match result {
@@ -1120,7 +2033,7 @@ fn send_external_query(deps: Deps, contract_addr: String, code_hash: String) -> 
         .querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr,
-            code_hash: code_hash,
+            code_hash,
             msg: Binary::from(r#"{"receive_external_query":{"num":2}}"#.as_bytes().to_vec()),
         }))
         .unwrap();

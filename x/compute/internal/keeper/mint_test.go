@@ -85,7 +85,7 @@ func TestMintQuerier(t *testing.T) {
 	require.NoError(t, err)
 
 	// test what happens if there are no rewards yet
-	res, _, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, false, defaultGasForTests, 0)
+	_, _, res, _, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, "0.130000000000000000", string(res))
@@ -97,7 +97,7 @@ func TestMintQuerier(t *testing.T) {
 	ctx = nextBlock(ctx, stakingKeeper)
 
 	// test what happens if there are some rewards
-	res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz2), false, false, defaultGasForTests, 0)
+	_, _, res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz2), false, false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, "0.199920047982406077", string(res))

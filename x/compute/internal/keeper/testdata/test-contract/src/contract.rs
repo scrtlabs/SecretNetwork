@@ -1,9 +1,9 @@
 use cosmwasm_storage::{PrefixedStorage, ReadonlySingleton, Singleton};
 
 use cosmwasm_std::{
-    log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Empty, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult,
-    ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
+    log, plaintext_log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Empty, Env, Extern,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest,
+    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
 use secp256k1::Secp256k1;
 
@@ -22,6 +22,9 @@ const REALLY_LONG: &[u8] = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum InitMsg {
+    WasmMsg {
+        ty: String,
+    },
     Nop {},
     Callback {
         contract_addr: HumanAddr,
@@ -73,6 +76,17 @@ pub enum InitMsg {
     InitFromV1 {
         counter: u64,
     },
+    Counter {
+        counter: u64,
+    },
+    AddAttributes {},
+    AddAttributesWithSubmessage {},
+    AddPlaintextAttributes {},
+    AddPlaintextAttributesWithSubmessage {},
+    AddMixedEventsAndAttributesFromV1 {
+        addr: HumanAddr,
+        code_hash: String,
+    },
     BankMsgSend {
         amount: Vec<Coin>,
         to: HumanAddr,
@@ -84,6 +98,9 @@ pub enum InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    WasmMsg {
+        ty: String,
+    },
     A {
         contract_addr: HumanAddr,
         code_hash: String,
@@ -263,10 +280,24 @@ pub enum HandleMsg {
         privkey: Binary,
         iterations: u32,
     },
+    ExecuteFromV1 {
+        counter: u64,
+    },
     IncrementFromV1 {
         addition: u64,
     },
+    AddAttributes {},
+    AddAttributesWithSubmessage {},
+    AddMoreAttributes {},
+    AddPlaintextAttributes {},
+    AddPlaintextAttributesWithSubmessage {},
+    AddMorePlaintextAttributes {},
+    AddMixedEventsAndAttributesFromV1 {
+        addr: HumanAddr,
+        code_hash: String,
+    },
     CosmosMsgCustom {},
+    InitNewContract {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -301,12 +332,14 @@ pub enum QueryMsg {
         msg: String,
     },
     GetCountFromV1 {},
+    Get {},
+    GetContractVersion {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryRes {
-    GetCountFromV1 { count: u64 },
+    Get { count: u64 },
 }
 
 /////////////////////////////// Init ///////////////////////////////
@@ -317,6 +350,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> InitResult {
     match msg {
+        InitMsg::WasmMsg { ty } => {
+            if ty == "success" {
+                return Ok(InitResponse::default());
+            } else if ty == "err" {
+                return Err(StdError::generic_err("custom error"));
+            } else if ty == "panic" {
+                panic!()
+            }
+
+            return Err(StdError::generic_err("custom error"));
+        }
         InitMsg::Nop {} => Ok(InitResponse {
             messages: vec![],
             log: vec![log("init", "🌈")],
@@ -421,6 +465,51 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 log: vec![],
             })
         }
+        InitMsg::Counter { counter } => {
+            count(&mut deps.storage).save(&counter)?;
+
+            Ok(InitResponse {
+                messages: vec![],
+                log: vec![],
+            })
+        }
+        InitMsg::AddAttributes {} => Ok(InitResponse {
+            messages: vec![],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+        }),
+        InitMsg::AddAttributesWithSubmessage {} => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+        }),
+        InitMsg::AddPlaintextAttributes {} => Ok(InitResponse {
+            messages: vec![],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+        }),
+        InitMsg::AddPlaintextAttributesWithSubmessage {} => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+        }),
+        InitMsg::AddMixedEventsAndAttributesFromV1 { addr, code_hash } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary::from(
+                    r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                ),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+        }),
         InitMsg::BankMsgSend {
             to,
             amount: coins,
@@ -532,6 +621,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> HandleResult {
     match msg {
+        HandleMsg::WasmMsg { ty } => {
+            if ty == "success" {
+                return Ok(HandleResponse::default());
+            } else if ty == "err" {
+                return Err(StdError::generic_err("custom error"));
+            } else if ty == "panic" {
+                panic!()
+            }
+
+            return Err(StdError::generic_err("custom error"));
+        }
         HandleMsg::A {
             contract_addr,
             code_hash,
@@ -1012,6 +1112,18 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             return res;
         }
+        HandleMsg::ExecuteFromV1 { counter } => {
+            count(&mut deps.storage).save(&counter)?;
+
+            let mut resp = HandleResponse::default();
+            resp.data = Some(
+                (count_read(&deps.storage).load()? as u32)
+                    .to_be_bytes()
+                    .into(),
+            );
+
+            Ok(resp)
+        }
         HandleMsg::IncrementFromV1 { addition } => {
             if addition == 0 {
                 return Err(StdError::generic_err("got wrong counter"));
@@ -1025,6 +1137,73 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             Ok(resp)
         }
+        HandleMsg::AddAttributes {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMoreAttributes {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![log("attr3", "🍉"), log("attr4", "🥝")],
+            data: None,
+        }),
+        HandleMsg::AddAttributesWithSubmessage {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddPlaintextAttributes {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMorePlaintextAttributes {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![plaintext_log("attr3", "🍉"), plaintext_log("attr4", "🥝")],
+            data: None,
+        }),
+        HandleMsg::AddPlaintextAttributesWithSubmessage {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMixedEventsAndAttributesFromV1 { addr, code_hash } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary::from(
+                    r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                ),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::InitNewContract {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id: 1,
+                msg: Binary::from(
+                    "{\"counter\":{\"counter\":150, \"expires\":100}}"
+                        .as_bytes()
+                        .to_vec(),
+                ),
+                callback_code_hash: env.contract_code_hash,
+                send: vec![],
+                label: String::from("fi"),
+            })],
+            log: vec![],
+            data: None,
+        }),
     }
 }
 
@@ -1107,8 +1286,8 @@ fn send_external_query_recursion_limit<S: Storage, A: Api, Q: Querier>(
             ),
         }));
 
-    // 5 is the current recursion limit.
-    if depth != 5 {
+    // 10 is the current recursion limit.
+    if depth != 10 {
         result
     } else {
         match result {
@@ -1588,7 +1767,16 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetCountFromV1 {} => {
             let count = count_read(&deps.storage).load()?;
 
-            Ok(to_binary(&QueryRes::GetCountFromV1 { count })?)
+            Ok(to_binary(&QueryRes::Get { count })?)
+        }
+        QueryMsg::Get {} => {
+            let count = count_read(&deps.storage).load()?;
+
+            Ok(to_binary(&QueryRes::Get { count })?)
+        }
+        QueryMsg::GetContractVersion {} => {
+            let answer: u8 = 10;
+            return Ok(to_binary(&answer)?);
         }
     }
 }

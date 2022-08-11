@@ -178,32 +178,36 @@ pub struct ParsedMessage {
     pub contract_hash_for_validation: Option<Vec<u8>>,
 }
 
-pub fn reduct_custom_events(reply: &mut Reply) {
+pub fn redact_custom_events(reply: &mut Reply) {
     reply.result = match &reply.result {
         SubMsgResult::Ok(r) => {
             let mut events: Vec<Event> = Default::default();
-            let filtered_types = vec![
-                "execute".to_string(),
-                "instantiate".to_string(),
-                "wasm".to_string(),
-            ];
+
             let filtered_attributes = vec!["contract_address".to_string(), "code_id".to_string()];
+            let filtered_types = vec![
+                "coin_spent".to_string(),
+                "coin_received".to_string(),
+                "transfer".to_string(),
+            ];
             for ev in r.events.iter() {
                 if filtered_types.contains(&ev.ty) {
-                    let mut had_match = false;
-                    for attr in &ev.attributes {
-                        if filtered_attributes.contains(&attr.key) {
-                            had_match = true;
-                            break;
-                        }
-                    }
+                    continue;
+                }
 
-                    if had_match {
-                        continue;
+                let mut new_ev = Event {
+                    ty: ev.ty.clone(),
+                    attributes: vec![],
+                };
+
+                for attr in &ev.attributes {
+                    if !filtered_attributes.contains(&attr.key) {
+                        new_ev.attributes.push(attr.clone());
                     }
                 }
 
-                events.push(ev.clone());
+                if new_ev.attributes.len() > 0 {
+                    events.push(new_ev);
+                }
             }
 
             SubMsgResult::Ok(SubMsgResponse {
@@ -279,7 +283,7 @@ pub fn parse_message(
                     result: reply.result.clone(),
                 };
 
-                reduct_custom_events(&mut reply);
+                redact_custom_events(&mut reply);
                 let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&reply).map_err(|err| {
                     warn!(
                         "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
@@ -392,7 +396,7 @@ pub fn parse_message(
                             EnclaveError::FailedToSerialize
                         })?;
 
-                    reduct_custom_events(&mut parsed_encrypted_reply);
+                    redact_custom_events(&mut parsed_encrypted_reply);
                     let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&parsed_encrypted_reply).map_err(|err| {
                     warn!(
                         "got an error while trying to serialize encrypted reply into bytes {:?}: {}",

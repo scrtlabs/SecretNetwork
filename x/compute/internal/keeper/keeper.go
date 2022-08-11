@@ -879,10 +879,12 @@ func (k *Keeper) handleContractResponse(
 	ctx.EventManager().EmitEvents(events)
 
 	if len(evts) > 0 {
+
 		customEvents, err := types.NewCustomEvents(evts, contractAddr)
 		if err != nil {
 			return nil, err
 		}
+
 		ctx.EventManager().EmitEvents(customEvents)
 	}
 
@@ -938,8 +940,10 @@ func (k Keeper) autoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 	if bz != nil {
 		id = binary.BigEndian.Uint64(bz)
 	}
+
 	bz = sdk.Uint64ToBigEndian(id + 1)
 	store.Set(lastIDKey, bz)
+
 	return id
 }
 
@@ -1029,7 +1033,7 @@ func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAdd
 }
 
 // reply is only called from keeper internal functions (dispatchSubmessages) after processing the submessage
-func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, replyToContractHash []byte) ([]byte, error) {
+func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
@@ -1052,7 +1056,6 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 	marshaledReply, error := json.Marshal(reply)
-	// marshaledReply = append(replyToContractHash, marshaledReply...)
 	marshaledReply = append(ogTx[0:64], marshaledReply...)
 
 	if error != nil {
@@ -1070,6 +1073,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	case *v010wasmTypes.HandleResponse:
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
 	case *v1wasmTypes.Response:
+		consumeGas(ctx, gasUsed)
 
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventTypeReply,

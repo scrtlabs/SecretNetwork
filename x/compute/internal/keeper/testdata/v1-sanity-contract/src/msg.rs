@@ -5,11 +5,32 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum InstantiateMsg {
+    WasmMsg {
+        ty: String,
+    },
     Counter {
         counter: u64,
         expires: u64,
     },
-
+    AddAttributes {},
+    AddAttributesWithSubmessage {
+        id: u64,
+    },
+    AddPlaintextAttributes {},
+    AddPlaintextAttributesWithSubmessage {
+        id: u64,
+    },
+    AddEvents {},
+    AddEventsWithSubmessage {
+        id: u64,
+    },
+    AddMixedAttributesAndEvents {},
+    AddMixedAttributesAndEventsWithSubmessage {
+        id: u64,
+    },
+    MeasureGasForSubmessage {
+        id: u64,
+    },
     // These were ported from the v0.10 test-contract:
     Nop {},
     Callback {
@@ -72,9 +93,41 @@ pub enum InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    WasmMsg {
+        ty: String,
+    },
     Increment {
         addition: u64,
     },
+    SendFundsWithErrorWithReply {},
+    SendFundsWithReply {},
+    AddAttributes {},
+    AddAttributesWithSubmessage {
+        id: u64,
+    },
+    AddMoreAttributes {},
+    AddPlaintextAttributes {},
+    AddPlaintextAttributesWithSubmessage {
+        id: u64,
+    },
+    AddMorePlaintextAttributes {},
+    AddEvents {},
+    AddMoreEvents {},
+    AddEventsWithSubmessage {
+        id: u64,
+    },
+    AddMixedAttributesAndEvents {},
+    AddMixedAttributesAndEventsWithSubmessage {
+        id: u64,
+    },
+    AddMoreMixedAttributesAndEvents {},
+    AddAttributesFromV010 {
+        addr: String,
+        code_hash: String,
+        id: u64,
+    },
+    GasMeter {},
+    GasMeterProxy {},
     TransferMoney {
         amount: u64,
     },
@@ -96,6 +149,53 @@ funds
     },
     MultipleSubMessages {},
     MultipleSubMessagesNoReply {},
+    QuickError {},
+    MultipleSubMessagesNoReplyWithError {},
+    MultipleSubMessagesNoReplyWithPanic {},
+    MultipleSubMessagesWithReplyWithError {},
+    MultipleSubMessagesWithReplyWithPanic {},
+    InitV10 {
+        code_id: u64,
+        code_hash: String,
+        counter: u64,
+    },
+    ExecV10 {
+        address: String,
+        code_hash: String,
+    },
+    InitV10NoReply {
+        code_id: u64,
+        code_hash: String,
+        counter: u64,
+    },
+    ExecV10NoReply {
+        address: String,
+        code_hash: String,
+    },
+    QueryV10 {
+        address: String,
+        code_hash: String,
+    },
+    InitV10WithError {
+        code_id: u64,
+        code_hash: String,
+    },
+    ExecV10WithError {
+        address: String,
+        code_hash: String,
+    },
+    InitV10NoReplyWithError {
+        code_id: u64,
+        code_hash: String,
+    },
+    ExecV10NoReplyWithError {
+        address: String,
+        code_hash: String,
+    },
+    QueryV10WithError {
+        address: String,
+        code_hash: String,
+    },
 
     // These were ported from the v0.10 test-contract:
     A {
@@ -286,13 +386,15 @@ funds
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Get {},
-
     // These were ported from the v0.10 test-contract:
     ContractError {
         error_type: String,
     },
     Panic {},
     ReceiveExternalQuery {
+        num: u8,
+    },
+    ReceiveExternalQueryV1 {
         num: u8,
     },
     SendExternalQueryInfiniteLoop {
@@ -316,10 +418,18 @@ pub enum QueryMsg {
         code_hash: String,
         msg: String,
     },
+    GetContractVersion {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryRes {
     Get { count: u64 },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ExternalMessages {
+    GetCountFromV1 {},
+    QueryFromV1WithError {},
 }

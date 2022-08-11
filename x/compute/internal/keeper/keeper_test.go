@@ -443,7 +443,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			}
 
 			// when
-			addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
+			_, _, addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
 			// then
 			if spec.expError {
 				require.Error(t, err)
@@ -636,7 +636,7 @@ func TestExecute(t *testing.T) {
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
 
-	_, _, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, creatorPrivKey, `{"release":{}}`, true, false, defaultGasForTests, 0)
+	_, _, _, _, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, creatorPrivKey, `{"release":{}}`, true, false, defaultGasForTests, 0)
 	require.Error(t, trialExecErr)
 	require.Error(t, trialExecErr.Unauthorized)
 	require.Contains(t, trialExecErr.Error(), "unauthorized")
@@ -734,7 +734,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: bob, Beneficiary: fred})
 			require.NoError(t, err)
 
-			contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
+			_, _, contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
 			require.Empty(t, err)
 
 			wasmCalls := int64(-1)
@@ -743,7 +743,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			}
 
 			// when
-			_, _, _, err = execHelperImpl(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, false, defaultGasForTests, deposit, wasmCalls)
+			_, _, _, _, _, err = execHelperImpl(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, false, defaultGasForTests, deposit, wasmCalls)
 
 			// then
 			if spec.expError {
@@ -825,7 +825,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
 
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"panic":{}}`))
 	require.NoError(t, err)
@@ -987,7 +987,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	}
 	initMsgBz, err := json.Marshal(initMsg)
 
-	addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002
