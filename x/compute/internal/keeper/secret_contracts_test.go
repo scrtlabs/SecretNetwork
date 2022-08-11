@@ -336,12 +336,16 @@ func stringToCoins(balance string) sdk.Coins {
 
 	individualCoins := strings.Split(balance, ",")
 	for _, coin := range individualCoins {
+		if coin == "" {
+			continue
+		}
 		var amount int64
 		var denom string
 		fmt.Sscanf(coin, "%d%s", &amount, &denom)
 		result = result.Add(sdk.NewInt64Coin(denom, amount))
 	}
 
+	fmt.Println("THE RESULT OF COINS IS:", result)
 	return result
 }
 
@@ -359,6 +363,7 @@ func CoinsToInput(coins sdk.Coins) string {
 	}
 	result += "]"
 
+	fmt.Println("THE RESULT OF INPUT IS:", result)
 	return result
 }
 
@@ -3730,7 +3735,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "one, missing",
 							coinsToSend:              `20one`,
 							isSuccess:                false,
-							errorMsg:                 "todo define error",
+							errorMsg:                 "encrypted: dispatch: submessages: 0one is smaller than 20one: insufficient funds",
 							balancesBefore:           "5000another",
 							balancesAfter:            "5000another",
 							destinationBalancesAfter: "",
@@ -3739,7 +3744,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "one, not enough",
 							coinsToSend:              `20one`,
 							isSuccess:                false,
-							errorMsg:                 "todo define error",
+							errorMsg:                 "encrypted: dispatch: submessages: 19one is smaller than 20one: insufficient funds",
 							balancesBefore:           "5000another,19one",
 							balancesAfter:            "5000another,19one",
 							destinationBalancesAfter: "",
@@ -3764,7 +3769,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, missing one",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "todo define error",
+							errorMsg:                 "encrypted: dispatch: submessages: 0assaf is smaller than 130assaf: insufficient funds",
 							balancesBefore:           "200000denom",
 							balancesAfter:            "200000denom",
 							destinationBalancesAfter: "",
@@ -3773,7 +3778,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, not enough of one of them",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "todo define error",
+							errorMsg:                 "encrypted: dispatch: submessages: 10denom is smaller than 15denom: insufficient funds",
 							balancesBefore:           "5000assaf,10denom",
 							balancesAfter:            "5000assaf,10denom",
 							destinationBalancesAfter: "",
@@ -3782,7 +3787,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, not enough of all of them",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "todo define error",
+							errorMsg:                 "encrypted: dispatch: submessages: 12assaf is smaller than 130assaf: insufficient funds",
 							balancesBefore:           "12assaf,10denom",
 							balancesAfter:            "12assaf,10denom",
 							destinationBalancesAfter: "",
@@ -3791,6 +3796,7 @@ func TestSendFunds(t *testing.T) {
 						t.Run(test.description, func(t *testing.T) {
 							ctx, keeper, helperWallet, helperPrivKey, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
 
+							fmt.Println("THE FUNDING COINS ARE", stringToCoins(test.balancesBefore))
 							fundingWallet, fundingWalletPrivKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
 
 							fmt.Println("THE FUNDING WALLET IS", fundingWallet.String())
@@ -3825,7 +3831,11 @@ func TestSendFunds(t *testing.T) {
 							var originAddress sdk.AccAddress
 							var msg string
 
-							inputCoins := CoinsToInput(stringToCoins(test.coinsToSend))
+							fmt.Println("THE PREPARING COINS TO SEND", test.coinsToSend)
+							s := stringToCoins(test.coinsToSend)
+							fmt.Println("THE COINS TO SEND STR ARE", s)
+							inputCoins := CoinsToInput(s)
+							fmt.Println("THE COINS TO SEND ARE", inputCoins)
 							if destinationType == "user" {
 								// todo replace sending from bank to simply sending if there's such a thing. update: probably isn't
 								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), inputCoins)
@@ -3834,44 +3844,34 @@ func TestSendFunds(t *testing.T) {
 								msg = fmt.Sprintf(`{"send_multiple_funds_to_init_callback":{"code_id":%d,"coins":%s,"code_hash":"%s"}}`, destinationCodeId, inputCoins, destinationHash)
 								// destination address will only be known after the contract is init
 							} else {
-								msg = fmt.Sprintf(`{"send_multiple_funds_to_exec_callback":{"to":"%s","coins":%s,code_hash":"%s"}}`, destinationAddr, inputCoins, destinationHash)
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_exec_callback":{"to":"%s","coins":%s,"code_hash":"%s"}}`, destinationAddr, inputCoins, destinationHash)
 							}
 
-							// todo remove one or both of these, if unnecessary (probably needed for extraction of destination address on init)
-							//var data []byte
-							var wasmEvents []ContractEvent
-
 							fmt.Println("THE BALANCES BEFORE ARE", test.balancesBefore)
+							var wasmEvents []ContractEvent
 							if originType == "init" {
-								// todo maybe extract data or wasmEvents, to know the receiving contract's address
-								fmt.Println("THE SENDING", test.balancesBefore, "COINS ON INIT")
 								_, _, originAddress, wasmEvents, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
-
-								// verify that no coins where left in the intermediate contract
-								// todo this is incorrect since keeper does not revert first tx
-								//sendingContractCoins := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
-								//require.Equal(t, "", sendingContractCoins.String())
 							} else if originType == "exec" {
 								_, _, originAddress, _, _ = initHelper(t, keeper, ctx, originCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests)
 
-								// todo maybe extract data or wasmEvents, to know the receiving contract's address
-								_, _, _, wasmEvents, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, helperWallet, helperPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
-
-								// verify that no coins where left in the intermediate contract
-								// todo this is incorrect since keeper does not revert first tx
+								_, _, _, wasmEvents, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.balancesBefore))
 							} else {
 								// user sends directly to contract
 								if destinationType == "exec" {
 									_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, "{no_data:{}}", false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend))
 								} else {
+									fmt.Println("SENDING user->init")
 									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.coinsToSend))
 								}
 							}
 
 							if !test.isSuccess {
+								fmt.Println("SHOULD NOT BE SUCCESS NOW")
 								require.NotEmpty(t, err)
 								require.Equal(t, test.errorMsg, err.Error())
+								// todo maybe check balances here too
 							} else {
+								fmt.Println("SHOULD be SUCCESS NOW")
 								require.Empty(t, err)
 
 								originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
