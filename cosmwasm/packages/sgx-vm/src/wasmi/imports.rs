@@ -6,7 +6,7 @@ use sgx_types::{sgx_enclave_id_t, sgx_status_t, SgxResult};
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
 
-use crate::enclave::ENCLAVE_DOORBELL;
+// use crate::enclave::ENCLAVE_DOORBELL;
 
 extern "C" {
     /// Copy a buffer into the enclave memory space, and receive an opaque pointer to it.
@@ -121,14 +121,15 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
 
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
-    let enclave_access_token = ENCLAVE_DOORBELL
-        // This is always called from an ocall contxt
-        .get_access(true)
-        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    // let enclave_access_token = "ENCLAVE_DOORBELL" // elad
+    //                                   // This is always called from an ocall contxt
+    //                                   // .get_access(true)
+    //                                   // .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
 
-    let enclave_id = enclave_access_token
-        .expect("If we got here, surely the enclave has been loaded")
-        .geteid();
+    // let enclave_id = enclave_access_token
+    //     .expect("If we got here, surely the enclave has been loaded")
+    //     .geteid();
+    let enclave_id = 7_u64; // elad
 
     trace!(
         target: module_path!(),
@@ -137,16 +138,17 @@ pub(super) fn allocate_enclave_buffer(buffer: &[u8]) -> SgxResult<EnclaveBuffer>
         enclave_id,
     );
 
-    match unsafe { ecall_allocate(enclave_id, &mut enclave_buffer, ptr, len) } {
-        sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
-        failure_status => Err(failure_status),
-    }
+    Ok(enclave_buffer) // elad
+                       // match unsafe { ecall_allocate(enclave_id, &mut enclave_buffer, ptr, len) } {
+                       //     sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
+                       //     failure_status => Err(failure_status),
+                       // }
 }
 
 /// This is a safe wrapper for allocating buffers inside the query enclave.
 #[cfg(feature = "query-node")]
 pub(super) fn allocate_enclave_buffer_qe(buffer: &[u8]) -> SgxResult<EnclaveBuffer> {
-    use crate::enclave::QUERY_ENCLAVE_DOORBELL;
+    // use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 
     let ptr = buffer.as_ptr();
     let len = buffer.len();
@@ -154,14 +156,15 @@ pub(super) fn allocate_enclave_buffer_qe(buffer: &[u8]) -> SgxResult<EnclaveBuff
 
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
-    let enclave_access_token = QUERY_ENCLAVE_DOORBELL
-        // This is always called from an ocall contxt
-        .get_access(true)
-        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    // let enclave_access_token = "QUERY_ENCLAVE_DOORBELL" // elad
+    //     // This is always called from an ocall contxt
+    //     .get_access(true)
+    //     .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
 
-    let enclave_id = enclave_access_token
-        .expect("If we got here, surely the enclave has been loaded")
-        .geteid();
+    // let enclave_id = enclave_access_token
+    //     .expect("If we got here, surely the enclave has been loaded")
+    //     .geteid();
+    let enclave_id = 7_u64; // elad
 
     trace!(
         target: module_path!(),
@@ -169,9 +172,9 @@ pub(super) fn allocate_enclave_buffer_qe(buffer: &[u8]) -> SgxResult<EnclaveBuff
         len,
         enclave_id,
     );
-
-    match unsafe { ecall_allocate_qe(enclave_id, &mut enclave_buffer, ptr, len) } {
-        sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
-        failure_status => Err(failure_status),
-    }
+    Ok(enclave_buffer) // elad
+                       // match unsafe { ecall_allocate_qe(enclave_id, &mut enclave_buffer, ptr, len) } {
+                       //     sgx_status_t::SGX_SUCCESS => Ok(enclave_buffer),
+                       //     failure_status => Err(failure_status),
+                       // }
 }

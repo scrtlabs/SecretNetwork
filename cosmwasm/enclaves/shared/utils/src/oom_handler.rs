@@ -85,21 +85,22 @@ thread_local! {
     static OOM_HAPPENED: AtomicBool = AtomicBool::new(false);
 }
 
-#[cfg(all(not(feature = "production"), not(feature = "query-only")))]
-fn enable_backtraces() {
-    let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
-}
+// Elad
+// #[cfg(all(not(feature = "production"), not(feature = "query-only")))]
+// fn enable_backtraces() {
+//     let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
+// }
 
-#[cfg(all(not(feature = "production"), feature = "query-only"))]
-fn enable_backtraces() {
-    let _ = backtrace::enable_backtrace(
-        "librust_cosmwasm_query_enclave.signed.so",
-        PrintFormat::Full,
-    );
-}
+// #[cfg(all(not(feature = "production"), feature = "query-only"))]
+// fn enable_backtraces() {
+//     let _ = backtrace::enable_backtrace(
+//         "librust_cosmwasm_query_enclave.signed.so",
+//         PrintFormat::Full,
+//     );
+// }
 
-#[cfg(feature = "production")]
-fn enable_backtraces() {}
+// #[cfg(feature = "production")]
+// fn enable_backtraces() {}
 
 fn oom_handler(layout: std::alloc::Layout) {
     OOM_HAPPENED.with(|oom_happened| oom_happened.store(true, Ordering::SeqCst));
@@ -115,7 +116,8 @@ fn oom_handler(layout: std::alloc::Layout) {
 }
 
 pub fn register_oom_handler() -> Result<(), EnclaveError> {
-    enable_backtraces();
+    // Elad
+    // enable_backtraces();
 
     {
         SAFETY_BUFFER.lock().unwrap().restore()?;

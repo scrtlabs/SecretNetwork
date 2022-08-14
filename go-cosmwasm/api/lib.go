@@ -101,16 +101,18 @@ func ReleaseCache(cache Cache) {
 }
 
 func InitEnclaveRuntime(ModuleCacheSize uint8) error {
-	errmsg := C.Buffer{}
+	// Elad
 
-	config := C.EnclaveRuntimeConfig{
-		module_cache_size: u8(ModuleCacheSize),
-	}
-	_, err := C.configure_enclave_runtime(config, &errmsg)
-	if err != nil {
-		err = errorWithMessage(err, errmsg)
-		return err
-	}
+	// errmsg := C.Buffer{}
+
+	// config := C.EnclaveRuntimeConfig{
+	// 	module_cache_size: u8(ModuleCacheSize),
+	// }
+	// _, err := C.configure_enclave_runtime(config, &errmsg)
+	// if err != nil {
+	// 	err = errorWithMessage(err, errmsg)
+	// 	return err
+	// }
 	return nil
 }
 

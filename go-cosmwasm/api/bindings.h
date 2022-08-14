@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define ENCRYPTED_SEED_SIZE 48
+
 enum ErrnoValue {
   ErrnoValue_Success = 0,
   ErrnoValue_Other = 1,
@@ -52,10 +54,6 @@ typedef struct Buffer {
   uintptr_t len;
   uintptr_t cap;
 } Buffer;
-
-typedef struct EnclaveRuntimeConfig {
-  uint8_t module_cache_size;
-} EnclaveRuntimeConfig;
 
 typedef struct cache_t {
 
@@ -129,8 +127,6 @@ typedef struct GoQuerier {
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
-void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
-
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
 bool create_attestation_report(Buffer spid, Buffer api_key, Buffer *err);
@@ -140,8 +136,6 @@ void free_rust(Buffer buf);
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
-
-Buffer get_health_check(Buffer *err);
 
 Buffer handle(cache_t *cache,
               Buffer code_id,

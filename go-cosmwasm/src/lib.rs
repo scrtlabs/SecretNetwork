@@ -18,16 +18,17 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error, Error};
+pub const ENCRYPTED_SEED_SIZE: usize = 48; // Elad
 
-use cosmwasm_sgx_vm::untrusted_init_bootstrap;
+// use cosmwasm_sgx_vm::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, features_from_csv, Checksum,
     CosmCache, Extern,
 };
-use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen,
-};
+// use cosmwasm_sgx_vm::{
+//     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
+//     untrusted_init_node, untrusted_key_gen,
+// };
 
 use ctor::ctor;
 use log::*;
@@ -49,19 +50,19 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi, GoQue
     }
 }
 
-#[no_mangle]
-pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
-    match untrusted_health_check() {
-        Err(e) => {
-            set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
-        }
-        Ok(res) => {
-            clear_error();
-            Buffer::from_vec(format!("{}", res).into_bytes())
-        }
-    }
-}
+// #[no_mangle]
+// pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
+//     match untrusted_health_check() {
+//         Err(e) => {
+//             set_error(Error::enclave_err(e.to_string()), err);
+//             Buffer::default()
+//         }
+//         Ok(res) => {
+//             clear_error();
+//             Buffer::from_vec(format!("{}", res).into_bytes())
+//         }
+//     }
+// }
 
 #[no_mangle]
 pub extern "C" fn health_check_set_error(
@@ -101,23 +102,29 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
         }
         Some(r) => r,
     };
+
     trace!("Hello from right before untrusted_get_encrypted_seed");
-    match untrusted_get_encrypted_seed(cert_slice) {
-        Err(e) => {
-            // An error happened in the SGX sdk.
-            set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
-        }
-        Ok(Err(e)) => {
-            // An error was returned from the enclave.
-            set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
-        }
-        Ok(Ok(seed)) => {
-            clear_error();
-            Buffer::from_vec(seed.to_vec())
-        }
-    }
+    let mut seed = [0u8; ENCRYPTED_SEED_SIZE]; // Elad
+    clear_error();
+    Buffer::from_vec(seed.to_vec())
+    // match Ok(seed) {
+    //     // match untrusted_get_encrypted_seed(cert_slice) {
+    //     // Err(e) => {
+    //     //     // An error happened in the SGX sdk.
+    //     //     set_error(Error::enclave_err("e".to_string()), err);
+    //     //     Buffer::default()
+    //     // }
+    //     // Ok(Err(e)) => {
+    //     //     // An error was returned from the enclave.
+    //     //     set_error(Error::enclave_err("e".to_string()), err);
+    //     //     Buffer::default()
+    //     // }
+    //     Ok(seed) => {
+    //         clear_error();
+    //         Buffer::from_vec(seed.to_vec())
+    //     }
+    //     _ => Buffer::default(),
+    // }
 }
 
 #[no_mangle]
@@ -144,16 +151,20 @@ pub extern "C" fn init_bootstrap(
         Some(r) => r,
     };
 
-    match untrusted_init_bootstrap(spid_slice, api_key_slice) {
-        Err(e) => {
-            set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
-        }
-        Ok(r) => {
-            clear_error();
-            Buffer::from_vec(r.to_vec())
-        }
-    }
+    let mut public_key = [0u8; 32]; // Elad
+    clear_error();
+    Buffer::from_vec(public_key.to_vec())
+    // match Ok(public_key) {
+    //     // match untrusted_init_bootstrap(spid_slice, api_key_slice) {
+    //     Err(e) => {
+    //         set_error(Error::enclave_err("e".to_string()), err);
+    //         Buffer::default()
+    //     }
+    //     Ok(r) => {
+    //         clear_error();
+    //         Buffer::from_vec(r.to_vec())
+    //     }
+    // }
 }
 
 #[no_mangle]
@@ -177,16 +188,19 @@ pub extern "C" fn init_node(
         Some(r) => r,
     };
 
-    match untrusted_init_node(pk_slice, encrypted_seed_slice) {
-        Ok(_) => {
-            clear_error();
-            true
-        }
-        Err(e) => {
-            set_error(Error::enclave_err(e.to_string()), err);
-            false
-        }
-    }
+    // Elad
+    clear_error();
+    true
+    // match untrusted_init_node(pk_slice, encrypted_seed_slice) {
+    //     Ok(_) => {
+    //         clear_error();
+    //         true
+    //     }
+    //     Err(e) => {
+    //         set_error(Error::enclave_err(e.to_string()), err);
+    //         false
+    //     }
+    // }
 }
 
 #[no_mangle]
@@ -211,10 +225,10 @@ pub extern "C" fn create_attestation_report(
         Some(r) => r,
     };
 
-    if let Err(status) = create_attestation_report_u(spid_slice, api_key_slice) {
-        set_error(Error::enclave_err(status.to_string()), err);
-        return false;
-    }
+    // if let Err(status) = create_attestation_report_u(spid_slice, api_key_slice) {
+    //     set_error(Error::enclave_err(status.to_string()), err);
+    //     return false;
+    // }
     clear_error();
     true
 }
@@ -295,28 +309,37 @@ pub struct EnclaveRuntimeConfig {
     pub module_cache_size: u8,
 }
 
+// Elad
 impl EnclaveRuntimeConfig {
-    fn to_sgx_vm(&self) -> cosmwasm_sgx_vm::EnclaveRuntimeConfig {
-        cosmwasm_sgx_vm::EnclaveRuntimeConfig {
+    fn to_sgx_vm(&self) -> EnclaveRuntimeConfig {
+        EnclaveRuntimeConfig {
             module_cache_size: self.module_cache_size,
         }
     }
 }
 
-#[no_mangle]
-pub extern "C" fn configure_enclave_runtime(
-    config: EnclaveRuntimeConfig,
-    err: Option<&mut Buffer>,
-) {
-    let r = cosmwasm_sgx_vm::configure_enclave(config.to_sgx_vm())
-        .map_err(|err| Error::enclave_err(err.to_string()));
+// impl EnclaveRuntimeConfig {
+//     fn to_sgx_vm(&self) -> cosmwasm_sgx_vm::EnclaveRuntimeConfig {
+//         cosmwasm_sgx_vm::EnclaveRuntimeConfig {
+//             module_cache_size: self.module_cache_size,
+//         }
+//     }
+// }
 
-    if let Err(e) = r {
-        set_error(e, err);
-    } else {
-        clear_error();
-    }
-}
+// #[no_mangle]
+// pub extern "C" fn configure_enclave_runtime(
+//     config: EnclaveRuntimeConfig,
+//     err: Option<&mut Buffer>,
+// ) {
+//     let r = cosmwasm_sgx_vm::configure_enclave(config.to_sgx_vm())
+//         .map_err(|err| Error::enclave_err(err.to_string()));
+
+//     if let Err(e) = r {
+//         set_error(e, err);
+//     } else {
+//         clear_error();
+//     }
+// }
 
 #[no_mangle]
 pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
@@ -593,14 +616,19 @@ fn do_query(
 
 #[no_mangle]
 pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
-    match untrusted_key_gen() {
-        Err(e) => {
-            set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
-        }
-        Ok(r) => {
-            clear_error();
-            Buffer::from_vec(r.to_vec())
-        }
-    }
+    // Elad
+    let mut public_key = [0u8; 32];
+    clear_error();
+    Buffer::from_vec(public_key.to_vec())
+    // match Ok(public_key) {
+    //     // match untrusted_key_gen() {
+    //     Err(e) => {
+    //         set_error(Error::enclave_err(e.to_string()), err);
+    //         Buffer::default()
+    //     }
+    //     Ok(r) => {
+    //         clear_error();
+    //         Buffer::from_vec(r.to_vec())
+    //     }
+    // }
 }

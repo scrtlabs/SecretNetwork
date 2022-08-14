@@ -94,7 +94,6 @@ pub enum VmError {
     GasDepletion,
     #[snafu(display("Must not call a writing storage function in this context."))]
     WriteAccessDenied { backtrace: snafu::Backtrace },
-
     #[snafu(display("Enclave: {}", source))]
     EnclaveErr {
         #[snafu(backtrace)]

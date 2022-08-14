@@ -4,10 +4,11 @@ use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
-use crate::enclave::ENCLAVE_DOORBELL;
-#[cfg(feature = "query-node")]
-use crate::enclave::QUERY_ENCLAVE_DOORBELL;
+// use crate::enclave::ENCLAVE_DOORBELL;
+// #[cfg(feature = "query-node")]
+// use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
+// use crate::errors::VmResult;
 use crate::{Querier, Storage, VmError};
 
 use enclave_ffi_types::{Ctx, HandleResult, InitResult, QueryResult};
@@ -16,6 +17,8 @@ use sgx_types::sgx_status_t;
 
 use log::*;
 use serde::Deserialize;
+
+use http_client;
 
 use super::exports::FullContext;
 use super::imports;
@@ -105,28 +108,30 @@ where
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = ENCLAVE_DOORBELL
-            .get_access(false) // This can never be recursive
-            .ok_or_else(Self::busy_enclave_err)?;
-        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+        // let enclave_access_token = ENCLAVE_DOORBELL
+        //     .get_access(false) // This can never be recursive
+        //     .ok_or_else(Self::busy_enclave_err)?;
+        // let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
-        let status = unsafe {
-            imports::ecall_init(
-                enclave.geteid(),
-                init_result.as_mut_ptr(),
-                self.ctx.unsafe_clone(),
-                self.gas_left(),
-                &mut used_gas,
-                self.bytecode.as_ptr(),
-                self.bytecode.len(),
-                env.as_ptr(),
-                env.len(),
-                msg.as_ptr(),
-                msg.len(),
-                sig_info.as_ptr(),
-                sig_info.len(),
-            )
-        };
+        // ELAD
+        let status = sgx_status_t::SGX_SUCCESS;
+        // let status = unsafe {
+        //     imports::ecall_init(
+        //         enclave.geteid(),
+        //         init_result.as_mut_ptr(),
+        //         self.ctx.unsafe_clone(),
+        //         self.gas_left(),
+        //         &mut used_gas,
+        //         self.bytecode.as_ptr(),
+        //         self.bytecode.len(),
+        //         env.as_ptr(),
+        //         env.len(),
+        //         msg.as_ptr(),
+        //         msg.len(),
+        //         sig_info.as_ptr(),
+        //         sig_info.len(),
+        //     )
+        // };
 
         trace!(
             "init() returned with gas_used: {} (gas_limit: {})",
@@ -135,6 +140,7 @@ where
         );
         self.consume_gas(used_gas);
 
+        // ELAD
         match status {
             sgx_status_t::SGX_SUCCESS => {
                 let init_result = unsafe { init_result.assume_init() };
@@ -157,28 +163,30 @@ where
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = ENCLAVE_DOORBELL
-            .get_access(false) // This can never be recursive
-            .ok_or_else(Self::busy_enclave_err)?;
-        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+        // let enclave_access_token = ENCLAVE_DOORBELL
+        //     .get_access(false) // This can never be recursive
+        //     .ok_or_else(Self::busy_enclave_err)?;
+        // let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
-        let status = unsafe {
-            imports::ecall_handle(
-                enclave.geteid(),
-                handle_result.as_mut_ptr(),
-                self.ctx.unsafe_clone(),
-                self.gas_left(),
-                &mut used_gas,
-                self.bytecode.as_ptr(),
-                self.bytecode.len(),
-                env.as_ptr(),
-                env.len(),
-                msg.as_ptr(),
-                msg.len(),
-                sig_info.as_ptr(),
-                sig_info.len(),
-            )
-        };
+        // ELAD
+        let status = sgx_status_t::SGX_SUCCESS;
+        // let status = unsafe {
+        //     imports::ecall_handle(
+        //         enclave.geteid(),
+        //         handle_result.as_mut_ptr(),
+        //         self.ctx.unsafe_clone(),
+        //         self.gas_left(),
+        //         &mut used_gas,
+        //         self.bytecode.as_ptr(),
+        //         self.bytecode.len(),
+        //         env.as_ptr(),
+        //         env.len(),
+        //         msg.as_ptr(),
+        //         msg.len(),
+        //         sig_info.as_ptr(),
+        //         sig_info.len(),
+        //     )
+        // };
 
         trace!(
             "handle() returned with gas_used: {} (gas_limit: {})",
@@ -187,6 +195,7 @@ where
         );
         self.consume_gas(used_gas);
 
+        // ELAD
         match status {
             sgx_status_t::SGX_SUCCESS => {
                 let handle_result = unsafe { handle_result.assume_init() };
@@ -206,34 +215,37 @@ where
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
-        #[cfg(not(feature = "query-node"))]
-        let doorbell = &ENCLAVE_DOORBELL;
-        #[cfg(feature = "query-node")]
-        let doorbell = &QUERY_ENCLAVE_DOORBELL;
+        // #[cfg(not(feature = "query-node"))]
+        // let doorbell = &ENCLAVE_DOORBELL;
+        // #[cfg(feature = "query-node")]
+        // let doorbell = &QUERY_ENCLAVE_DOORBELL;
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
-        let enclave_access_token = doorbell
-            .get_access(is_query_recursive(env)?)
-            .ok_or_else(Self::busy_enclave_err)?;
-        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+        // let enclave_access_token = doorbell
+        //     .get_access(is_query_recursive(env)?)
+        //     .ok_or_else(Self::busy_enclave_err)?;
+        // let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
-        let status = unsafe {
-            imports::ecall_query(
-                // TODO use the _qe variant
-                enclave.geteid(),
-                query_result.as_mut_ptr(),
-                self.ctx.unsafe_clone(),
-                self.gas_left(),
-                &mut used_gas,
-                self.bytecode.as_ptr(),
-                self.bytecode.len(),
-                env.as_ptr(),
-                env.len(),
-                msg.as_ptr(),
-                msg.len(),
-            )
-        };
+        http_client::send_to_gramine();
+        // ELAD
+        let status = sgx_status_t::SGX_SUCCESS;
+        // let status = unsafe {
+        //     imports::ecall_query(
+        //         // TODO use the _qe variant
+        //         enclave.geteid(),
+        //         query_result.as_mut_ptr(),
+        //         self.ctx.unsafe_clone(),
+        //         self.gas_left(),
+        //         &mut used_gas,
+        //         self.bytecode.as_ptr(),
+        //         self.bytecode.len(),
+        //         env.as_ptr(),
+        //         env.len(),
+        //         msg.as_ptr(),
+        //         msg.len(),
+        //     )
+        // };
 
         trace!(
             "query() returned with gas_used: {} (gas_limit: {})",
@@ -242,6 +254,7 @@ where
         );
         self.consume_gas(used_gas);
 
+        // ELAD
         match status {
             sgx_status_t::SGX_SUCCESS => {
                 let query_result = unsafe { query_result.assume_init() };

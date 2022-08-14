@@ -40,7 +40,7 @@ impl From<enclave_ffi_types::EnclaveError> for VmError {
             enclave_ffi_types::EnclaveError::FailedOcall { vm_error }
                 if !vm_error.ptr.is_null() =>
             // This error is boxed during ocalls.
-            unsafe { *Box::<VmError>::from_raw(vm_error.ptr as *mut _) }
+            unsafe { *Box::<VmError>::from_raw(vm_error.ptr as *mut _) },
             other => EnclaveError::enclave_err(other).into(),
         }
     }

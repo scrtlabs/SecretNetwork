@@ -10,9 +10,9 @@ fn main() {
         .write_to_file("./api/bindings.h");
 
     println!("cargo:rustc-link-search=native=./lib");
-    println!("cargo:rustc-link-lib=static=Enclave_u");
-    #[cfg(feature = "query-node")]
-    println!("cargo:rustc-link-lib=static=QueryEnclave_u");
+    // println!("cargo:rustc-link-lib=static=Enclave_u");
+    // #[cfg(feature = "query-node")]
+    // println!("cargo:rustc-link-lib=static=QueryEnclave_u");
 
     // println!("cargo:rustc-link-lib=dylib=sgx_uae_service");
 

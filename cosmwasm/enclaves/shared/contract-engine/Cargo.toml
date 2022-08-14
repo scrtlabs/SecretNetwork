@@ -13,10 +13,11 @@ test = []
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
-  "backtrace"
-] }
-sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+# sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+#   "backtrace",
+# ] }
+# sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { path = "../sgx-types" }
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
@@ -26,7 +27,7 @@ enclave_cosmos_types = { path = "../cosmos-types" }
 enclave_cosmwasm_types = { path = "../cosmwasm-types" }
 enclave_utils = { path = "../utils" }
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
-  "derive"
+  "derive",
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }

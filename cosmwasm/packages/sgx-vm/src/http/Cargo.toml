@@ -1,0 +1,2 @@
+[workspace]
+members = ["http_client"]
