@@ -52,6 +52,12 @@ enum RawWasmOutput {
         internal_reply_enclave_sig: Option<Binary>,
         internal_msg_id: Option<Binary>,
     },
+    OkIBC {
+        #[serde(rename = "Ok")]
+        ok: enclave_cosmwasm_v1_types::ibc::IbcBasicResponse,
+        internal_reply_enclave_sig: Option<Binary>,
+        internal_msg_id: Option<Binary>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -429,6 +435,13 @@ pub fn encrypt_output(
                 None => None, // Not a reply, we don't need enclave sig
             }
         }
+        RawWasmOutput::OkIBC {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => {
+            //LIORRR TODO encryption
+        }
     };
 
     let final_output: WasmOutput = match output {
@@ -494,6 +507,22 @@ pub fn encrypt_output(
             v1: None,
             query: Some(QueryOutput {
                 ok: Some(ok),
+                err: None,
+            }),
+            internal_reply_enclave_sig: None,
+            internal_msg_id: None,
+        },
+
+        // LIORRRR TODO: make it work, maybe the same as in v1 response?
+        RawWasmOutput::OkIBC {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => WasmOutput {
+            v010: None,
+            v1: None,
+            query: Some(QueryOutput {
+                ok: None,
                 err: None,
             }),
             internal_reply_enclave_sig: None,

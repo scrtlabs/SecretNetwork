@@ -1,7 +1,9 @@
 use crate::addresses::Addr;
+use crate::results::{Event, SubMsg};
 use crate::timestamp::Timestamp;
-use enclave_cosmwasm_v010_types::encoding::Binary;
+use enclave_cosmwasm_v010_types::{encoding::Binary, types::Empty, types::LogAttribute};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// The message that is passed into `ibc_channel_open`
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -28,6 +30,39 @@ pub struct IbcChannel {
     /// The connection upon which this channel was created. If this is a multi-hop
     /// channel, we only expose the first hop.
     pub connection_id: String,
+}
+
+/// This is the return value for the majority of the ibc handlers.
+/// That are able to dispatch messages / events on their own,
+/// but have no meaningful return value to the calling code.
+///
+/// Callbacks that have return values (like receive_packet)
+/// or that cannot redispatch messages (like the handshake callbacks)
+/// will use other Response types
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub struct IbcBasicResponse<T = Empty>
+where
+    T: Clone + fmt::Debug + PartialEq,
+{
+    /// Optional list of messages to pass. These will be executed in order.
+    /// If the ReplyOn member is set, they will invoke this contract's `reply` entry point
+    /// after execution. Otherwise, they act like "fire and forget".
+    /// Use `SubMsg::new` to create messages with the older "fire and forget" semantics.
+    pub messages: Vec<SubMsg<T>>,
+    /// The attributes that will be emitted as part of a `wasm` event.
+    ///
+    /// More info about events (and their attributes) can be found in [*Cosmos SDK* docs].
+    ///
+    /// [*Cosmos SDK* docs]: https://docs.cosmos.network/v0.42/core/events.html
+    pub attributes: Vec<LogAttribute>,
+    /// Extra, custom events separate from the main `wasm` one. These will have
+    /// `wasm-` prepended to the type.
+    ///
+    /// More info about events can be found in [*Cosmos SDK* docs].
+    ///
+    /// [*Cosmos SDK* docs]: https://docs.cosmos.network/v0.42/core/events.html
+    pub events: Vec<Event>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -126,5 +161,13 @@ pub struct IbcTimeoutBlock {
 pub struct IbcPacketAckMsg {
     pub acknowledgement: IbcAcknowledgement,
     pub original_packet: IbcPacket,
+    pub relayer: Addr,
+}
+
+/// The message that is passed into `ibc_packet_timeout`
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub struct IbcPacketTimeoutMsg {
+    pub packet: IbcPacket,
     pub relayer: Addr,
 }

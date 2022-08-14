@@ -11,7 +11,7 @@ use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_cosmwasm_v010_types as cosmwasm_v010_types;
 use enclave_cosmwasm_v010_types::encoding::Binary;
 use enclave_cosmwasm_v1_types::addresses::Addr;
-use enclave_cosmwasm_v1_types::ibc::IbcPacketReceiveMsg;
+use enclave_cosmwasm_v1_types::ibc::{IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg};
 use enclave_cosmwasm_v1_types::results::{
     DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult,
 };
@@ -174,6 +174,7 @@ pub fn init(
 pub struct ParsedMessage {
     pub should_validate_sig_info: bool,
     pub was_msg_encrypted: bool,
+    pub is_ibc_msg: bool,
     pub secret_msg: SecretMessage,
     pub decrypted_msg: Vec<u8>,
     pub contract_hash_for_validation: Option<Vec<u8>>,
@@ -238,6 +239,7 @@ pub fn parse_message(
             Ok(ParsedMessage {
                 should_validate_sig_info: true,
                 was_msg_encrypted: true,
+                is_ibc_msg: false,
                 secret_msg: orig_secret_msg,
                 decrypted_msg,
                 contract_hash_for_validation: None,
@@ -310,6 +312,7 @@ pub fn parse_message(
                 return Ok(ParsedMessage {
                     should_validate_sig_info: false,
                     was_msg_encrypted: false,
+                    is_ibc_msg: false,
                     secret_msg: reply_secret_msg,
                     decrypted_msg: serialized_reply,
                     contract_hash_for_validation: None,
@@ -414,6 +417,7 @@ pub fn parse_message(
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
                         was_msg_encrypted: true,
+                        is_ibc_msg: false,
                         secret_msg: reply_secret_msg,
                         decrypted_msg: decrypted_reply_as_vec,
                         contract_hash_for_validation: Some(
@@ -507,6 +511,7 @@ pub fn parse_message(
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
                         was_msg_encrypted: true,
+                        is_ibc_msg: false,
                         secret_msg: reply_secret_msg,
                         decrypted_msg: decrypted_reply_as_vec,
                         contract_hash_for_validation: Some(
@@ -516,9 +521,32 @@ pub fn parse_message(
                 }
             }
         }
-        HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => todo!(),
-        HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => todo!(),
-        HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => todo!(),
+        HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => {
+            trace!(
+                "parsing {} msg (Should always be plaintext): {:?}",
+                HandleType::to_export_name(&handle_type),
+                base64::encode(&message)
+            );
+
+            let scrt_msg = SecretMessage {
+                nonce: [0; 32],
+                user_public_key: [0; 32],
+                msg: message.into(),
+            };
+
+            let decrypted_msg = scrt_msg.msg.clone();
+
+            Ok(ParsedMessage {
+                should_validate_sig_info: false,
+                was_msg_encrypted: false,
+                is_ibc_msg: true,
+                secret_msg: scrt_msg,
+                decrypted_msg,
+                contract_hash_for_validation: None,
+            })
+        }
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
             // LIORRR TODO: Maybe mark whether the message was encrypted or not.
             let orig_secret_msg = match SecretMessage::from_slice(message) {
@@ -542,7 +570,7 @@ pub fn parse_message(
             )
             .map_err(|err| {
                 warn!(
-            "IbcPacketReceiveMsg got an error while trying to deserialize msg input bytes into json {:?}: {}",
+            "ibc_packet_receive msg got an error while trying to deserialize msg input bytes into json {:?}: {}",
             String::from_utf8_lossy(&orig_secret_msg.msg),
             err
             );
@@ -574,6 +602,7 @@ pub fn parse_message(
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
                         was_msg_encrypted: true,
+                        is_ibc_msg: true,
                         secret_msg: orig_secret_msg,
                         decrypted_msg: serde_json::to_vec(&parsed_encrypted_ibc_packet_receive_msg).map_err(|err| {
                             warn!(
@@ -598,6 +627,7 @@ pub fn parse_message(
                     Ok(ParsedMessage {
                         should_validate_sig_info: false,
                         was_msg_encrypted: false,
+                        is_ibc_msg: true,
                         secret_msg: orig_secret_msg,
                         decrypted_msg,
                         contract_hash_for_validation: None,
@@ -605,8 +635,193 @@ pub fn parse_message(
                 }
             }
         }
-        HandleType::HANDLE_TYPE_IBC_PACKET_ACK => todo!(),
-        HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => todo!(),
+        HandleType::HANDLE_TYPE_IBC_PACKET_ACK => {
+            // LIORRR TODO: Maybe mark whether the message was encrypted or not.
+            let orig_secret_msg = match SecretMessage::from_slice(message) {
+                Ok(orig_secret_msg) => orig_secret_msg,
+                Err(_) => {
+                    trace!(
+                        "ibc_packet_ack msg is not SecretMessage (probably plaintext): {:?}",
+                        base64::encode(&message)
+                    );
+
+                    SecretMessage {
+                        nonce: [0; 32],
+                        user_public_key: [0; 32],
+                        msg: message.into(),
+                    }
+                }
+            };
+
+            let mut parsed_encrypted_ibc_packet_ack_msg: IbcPacketAckMsg = serde_json::from_slice(
+            &orig_secret_msg.msg.as_slice().to_vec(),
+            ).map_err(|err| {
+                warn!(
+                    "ibc_packet_ack msg got an error while trying to deserialize msg input bytes into json {:?}: {}",
+                    String::from_utf8_lossy(&orig_secret_msg.msg),
+                    err
+                );
+                    EnclaveError::FailedToDeserialize
+            })?;
+
+            let tmp_secret_data = SecretMessage {
+                nonce: orig_secret_msg.nonce,
+                user_public_key: orig_secret_msg.user_public_key,
+                msg: parsed_encrypted_ibc_packet_ack_msg
+                    .original_packet
+                    .data
+                    .as_slice()
+                    .to_vec(),
+            };
+
+            match tmp_secret_data.decrypt() {
+                Ok(decrypted_msg) => {
+                    // IBC packet was encrypted
+
+                    trace!(
+                        "ibc_packet_receive input before decryption: {:?}",
+                        base64::encode(&message)
+                    );
+
+                    parsed_encrypted_ibc_packet_ack_msg.original_packet.data =
+                        decrypted_msg.as_slice().into();
+
+                    let tmp_secret_ack_data = SecretMessage {
+                        nonce: orig_secret_msg.nonce,
+                        user_public_key: orig_secret_msg.user_public_key,
+                        msg: parsed_encrypted_ibc_packet_ack_msg
+                            .acknowledgement
+                            .data
+                            .as_slice()
+                            .to_vec(),
+                    };
+
+                    parsed_encrypted_ibc_packet_ack_msg.acknowledgement.data =
+                        tmp_secret_ack_data.decrypt()?.as_slice().into();
+
+                    Ok(ParsedMessage {
+                    should_validate_sig_info: true,
+                    was_msg_encrypted: true,
+                    is_ibc_msg: true,
+                    secret_msg: orig_secret_msg,
+                    decrypted_msg: serde_json::to_vec(&parsed_encrypted_ibc_packet_ack_msg).map_err(|err| {
+                        warn!(
+                            "got an error while trying to serialize ibc_packet_ack msg into bytes {:?}: {}",
+                            parsed_encrypted_ibc_packet_ack_msg, err
+                        );
+                        EnclaveError::FailedToSerialize
+                    })?,
+                    contract_hash_for_validation: None,
+                })
+                }
+                Err(_) => {
+                    // assume packet is not encrypted, continue in plaintext mode
+
+                    trace!(
+                        "ibc_packet_ack input is not encrypted: {:?}",
+                        base64::encode(&message)
+                    );
+
+                    let decrypted_msg = orig_secret_msg.msg.clone();
+
+                    Ok(ParsedMessage {
+                        should_validate_sig_info: false,
+                        was_msg_encrypted: false,
+                        is_ibc_msg: true,
+                        secret_msg: orig_secret_msg,
+                        decrypted_msg,
+                        contract_hash_for_validation: None,
+                    })
+                }
+            }
+        }
+        HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
+            // LIORRR TODO: Maybe mark whether the message was encrypted or not.
+            let orig_secret_msg = match SecretMessage::from_slice(message) {
+                Ok(orig_secret_msg) => orig_secret_msg,
+                Err(_) => {
+                    trace!(
+                        "ibc_packet_timeout msg is not SecretMessage (probably plaintext): {:?}",
+                        base64::encode(&message)
+                    );
+
+                    SecretMessage {
+                        nonce: [0; 32],
+                        user_public_key: [0; 32],
+                        msg: message.into(),
+                    }
+                }
+            };
+
+            let mut parsed_encrypted_ibc_packet_timeout_msg: IbcPacketTimeoutMsg = serde_json::from_slice(
+            &orig_secret_msg.msg.as_slice().to_vec(),
+            ).map_err(|err| {
+                warn!(
+                    "ibc_packet_timeout msg got an error while trying to deserialize msg input bytes into json {:?}: {}",
+                    String::from_utf8_lossy(&orig_secret_msg.msg),
+                    err
+                );
+                    EnclaveError::FailedToDeserialize
+            })?;
+
+            let tmp_secret_data = SecretMessage {
+                nonce: orig_secret_msg.nonce,
+                user_public_key: orig_secret_msg.user_public_key,
+                msg: parsed_encrypted_ibc_packet_timeout_msg
+                    .packet
+                    .data
+                    .as_slice()
+                    .to_vec(),
+            };
+
+            match tmp_secret_data.decrypt() {
+                Ok(decrypted_msg) => {
+                    // IBC packet was encrypted
+
+                    trace!(
+                        "ibc_packet_timeout input before decryption: {:?}",
+                        base64::encode(&message)
+                    );
+
+                    parsed_encrypted_ibc_packet_timeout_msg.packet.data =
+                        decrypted_msg.as_slice().into();
+
+                    Ok(ParsedMessage {
+                    should_validate_sig_info: true,
+                    was_msg_encrypted: true,
+                    is_ibc_msg: true,
+                    secret_msg: orig_secret_msg,
+                    decrypted_msg: serde_json::to_vec(&parsed_encrypted_ibc_packet_timeout_msg).map_err(|err| {
+                        warn!(
+                            "got an error while trying to serialize ibc_packet_timeout msg into bytes {:?}: {}",
+                            parsed_encrypted_ibc_packet_timeout_msg, err
+                        );
+                        EnclaveError::FailedToSerialize
+                    })?,
+                    contract_hash_for_validation: None,
+                })
+                }
+                Err(_) => {
+                    // assume packet is not encrypted, continue in plaintext mode
+
+                    trace!(
+                        "ibc_packet_timeout input is not encrypted: {:?}",
+                        base64::encode(&message)
+                    );
+
+                    let decrypted_msg = orig_secret_msg.msg.clone();
+
+                    Ok(ParsedMessage {
+                        should_validate_sig_info: false,
+                        was_msg_encrypted: false,
+                        is_ibc_msg: true,
+                        secret_msg: orig_secret_msg,
+                        decrypted_msg,
+                        contract_hash_for_validation: None,
+                    })
+                }
+            }
+        }
     };
 }
 
@@ -674,6 +889,7 @@ pub fn handle(
     let ParsedMessage {
         should_validate_sig_info,
         was_msg_encrypted,
+        is_ibc_msg,
         secret_msg,
         decrypted_msg,
         contract_hash_for_validation,
@@ -734,22 +950,25 @@ pub fn handle(
     let output = coalesce!(EnclaveError, {
         let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr, parsed_handle_type)?;
 
-        let output = engine.extract_vector(vec_ptr)?;
+        let mut output = engine.extract_vector(vec_ptr)?;
 
         debug!(
             "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
             secret_msg.nonce, secret_msg.user_public_key
         );
 
-        let output = encrypt_output(
-            output,
-            &secret_msg,
-            &canonical_contract_address,
-            &env_v010.contract_code_hash,
-            reply_params,
-            &canonical_sender_address,
-            false,
-        )?;
+        if !is_ibc_msg || was_msg_encrypted {
+            output = encrypt_output(
+                output,
+                &secret_msg,
+                &canonical_contract_address,
+                &env_v010.contract_code_hash,
+                reply_params,
+                &canonical_sender_address,
+                false,
+            )?;
+        }
+
         Ok(output)
     })
     .map_err(|err| {
