@@ -71,6 +71,15 @@ pub struct IbcEndpoint {
     pub channel_id: String,
 }
 
+impl IbcEndpoint {
+    pub fn default() -> Self {
+        IbcEndpoint {
+            port_id: String::default(),
+            channel_id: String::default(),
+        }
+    }
+}
+
 /// IbcOrder defines if a channel is ORDERED or UNORDERED
 /// Values come from https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80
 /// Naming comes from the protobuf files and go translations.
@@ -112,6 +121,61 @@ pub struct IbcPacketReceiveMsg {
     pub relayer: Addr,
 }
 
+pub trait IbcPacketTrait {
+    type Data;
+    fn get_packet(&self) -> &Self::Data;
+    fn set_packet(&mut self, data: Self::Data);
+    fn get_ack(&self) -> Option<Self::Data>;
+    fn set_ack(&mut self, data: Self::Data);
+}
+
+macro_rules! impl_IbcPacketTrait {
+    ($($t:ty),+) => {
+        $(impl IbcPacketTrait for $t {
+            type Data = Binary;
+            fn get_packet(&self) -> &Self::Data {
+                &self.packet.data
+            }
+            fn set_packet(&mut self, data: Self::Data) {
+                self.packet.data = data;
+            }
+            fn get_ack(&self) -> Option<Self::Data> {
+                return None;
+            }
+            fn set_ack(&mut self, _: Self::Data) {
+                // Nothing to do here
+            }
+        })*
+    }
+}
+
+impl_IbcPacketTrait! {IbcPacketReceiveMsg, IbcPacketTimeoutMsg}
+
+impl IbcPacketTrait for IbcPacketAckMsg {
+    type Data = Binary;
+    fn get_packet(&self) -> &Self::Data {
+        &self.original_packet.data
+    }
+    fn set_packet(&mut self, data: Self::Data) {
+        self.original_packet.data = data;
+    }
+    fn get_ack(&self) -> Option<Self::Data> {
+        return Some(self.acknowledgement.data.clone());
+    }
+    fn set_ack(&mut self, data: Self::Data) {
+        self.acknowledgement.data = data;
+    }
+}
+
+impl IbcPacketReceiveMsg {
+    pub fn default() -> Self {
+        Self {
+            packet: IbcPacket::default(),
+            relayer: Addr::unchecked("".to_string()),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct IbcPacket {
     /// The raw data sent from the other side in the packet
@@ -125,10 +189,30 @@ pub struct IbcPacket {
     pub timeout: IbcTimeout,
 }
 
+impl IbcPacket {
+    pub fn default() -> Self {
+        Self {
+            data: vec![].as_slice().into(),
+            src: IbcEndpoint::default(),
+            dest: IbcEndpoint::default(),
+            sequence: 0,
+            timeout: IbcTimeout::default(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct IbcAcknowledgement {
     pub data: Binary,
+}
+
+impl IbcAcknowledgement {
+    pub fn default() -> Self {
+        Self {
+            data: vec![].as_slice().into(),
+        }
+    }
 }
 
 /// In IBC each package must set at least one type of timeout:
@@ -140,6 +224,15 @@ pub struct IbcTimeout {
     // use private fields to enforce the use of constructors, which ensure that at least one is set
     block: Option<IbcTimeoutBlock>,
     timestamp: Option<Timestamp>,
+}
+
+impl IbcTimeout {
+    pub fn default() -> Self {
+        Self {
+            block: None,
+            timestamp: None,
+        }
+    }
 }
 
 /// IBCTimeoutHeight Height is a monotonically increasing data type
@@ -164,10 +257,29 @@ pub struct IbcPacketAckMsg {
     pub relayer: Addr,
 }
 
+impl IbcPacketAckMsg {
+    pub fn default() -> Self {
+        Self {
+            acknowledgement: IbcAcknowledgement::default(),
+            original_packet: IbcPacket::default(),
+            relayer: Addr::unchecked("".to_string()),
+        }
+    }
+}
+
 /// The message that is passed into `ibc_packet_timeout`
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct IbcPacketTimeoutMsg {
     pub packet: IbcPacket,
     pub relayer: Addr,
+}
+
+impl IbcPacketTimeoutMsg {
+    pub fn default() -> Self {
+        Self {
+            packet: IbcPacket::default(),
+            relayer: Addr::unchecked("".to_string()),
+        }
+    }
 }
