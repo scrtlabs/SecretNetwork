@@ -144,6 +144,9 @@ build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
+build-gramine:
+	$(MAKE) -C gramine-server SGX=1
+
 build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
 # _build-linux-with-query: vendor
 _build-linux-with-query:
@@ -169,7 +172,7 @@ build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
 	mv secretd-linux-arm64 secretcli-linux-arm64
 
-build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
+build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli build-gramine
 
 deb: build-linux deb-no-compile
 

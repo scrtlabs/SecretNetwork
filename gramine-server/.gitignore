@@ -1,0 +1,6 @@
+.vscode
+target
+gramine_secret_server.manifest
+gramine_secret_server.manifest.sgx
+gramine_secret_server.sig
+gramine_secret_server.token

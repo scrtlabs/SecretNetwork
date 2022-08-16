@@ -1,0 +1,19 @@
+[package]
+name = "gramine_secret_server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = "^1.0.34"
+serde_json = "^1.0.34"
+serde_derive = "^1.0.34"
+rocket = { version = "0.5.0-rc.2", features = ["json"] }
+rocket_dyn_templates = { version = "0.1.0-rc.2", features = ["tera"] }
+clap = { version = "3", features = ["derive"] }
+enclave-ffi-types = { path = "./src/enclaves/ffi-types" }
+enclave_contract_engine = { path = "./src/enclaves/shared/contract-engine", features = [
+    "query-only",
+] }

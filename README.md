@@ -110,12 +110,22 @@ Still, the non-enclave code can be modified and ran on mainnet as long as there 
 ```
 
 # Run against Gramine example
+
+**Run the Gramine server:**
+*From the repository root
+`make build-gramine`
+`cd gramine-server`
+`gramine-sgx gramine_secret_server`
+
+**Run the SecretNetwork node:**
+*From the repository root
 `SGX_MODE=SW make deb`
 `sudo apt-get --purge remove secretnetwork -y`
-`SGX_MODE=SW sudo apt install -y <path_to_the_repos_root>/secretnetwork_<>.deb`
+`SGX_MODE=SW sudo apt install -y ./secretnetwork_<>.deb`
 `rm -rf ~/.secretd/*`
 Adjust bootstrap_init.sh to your needs and run
-`SGX_MODE=SW bash <path_to_the_repos_root>/deployment/docker/bootstrap/bootstrap_init.sh`
+`cd ~`
+`SGX_MODE=SW bash <path_to_SecretNetwork>/deployment/docker/bootstrap/bootstrap_init.sh`
 
 # Running Something
 
