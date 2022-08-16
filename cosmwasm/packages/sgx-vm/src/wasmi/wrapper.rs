@@ -227,6 +227,7 @@ where
         //     .ok_or_else(Self::busy_enclave_err)?;
         // let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
+        // An example for a gramine invokation; it doesn't perform the query
         http_client::send_to_gramine();
         // ELAD
         let status = sgx_status_t::SGX_SUCCESS;

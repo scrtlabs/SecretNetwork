@@ -109,6 +109,52 @@ This is due to non-reproducible builds, and the fact that enclaves must be signe
 Still, the non-enclave code can be modified and ran on mainnet as long as there are no consensus-breaking changes
 ```
 
+# The new Gramine architecture:
+The old architecture ran the SGX enclave as part of the node's process.
+In order to migrate from teaclave-sgx-sdk, the Gramine infractructure was chosen.
+
+Instead of invoking the enclave inside the node, a Gramine server is run as a different process which the node communicates with
+via HTTP.
+The Gramine server listens for requests and runs its entire code inside the enclave once a request is made.
+
+An example of the old enclave invokation:
+```
+        let status = unsafe {
+            imports::ecall_query(
+                // TODO use the _qe variant
+                enclave.geteid(),
+                query_result.as_mut_ptr(),
+                self.ctx.unsafe_clone(),
+                self.gas_left(),
+                &mut used_gas,
+                self.bytecode.as_ptr(),
+                self.bytecode.len(),
+                env.as_ptr(),
+                env.len(),
+                msg.as_ptr(),
+                msg.len(),
+            )
+        };
+```
+With Gramine this call will be made as such:
+```
+let response = http_client::query(
+                    self.ctx,
+                    self.gas_left(),
+                    used_gas,
+                    self.bytecode,
+                    env,
+                    msg,
+                );
+
+```
+
+_The enclave can be easily invoked from the GO code as well:_
+```
+var gramineServerURL string = "http://127.0.0.1:9005/check-enclave"
+response, err := http.Get(gramineServerURL)
+```
+
 # Run against Gramine example
 
 **Run the Gramine server:**
