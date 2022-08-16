@@ -109,6 +109,14 @@ This is due to non-reproducible builds, and the fact that enclaves must be signe
 Still, the non-enclave code can be modified and ran on mainnet as long as there are no consensus-breaking changes
 ```
 
+# Run against Gramine example
+`SGX_MODE=SW make deb`
+`sudo apt-get --purge remove secretnetwork -y`
+`SGX_MODE=SW sudo apt install -y <path_to_the_repos_root>/secretnetwork_<>.deb`
+`rm -rf ~/.secretd/*`
+Adjust bootstrap_init.sh to your needs and run
+`SGX_MODE=SW bash <path_to_the_repos_root>/deployment/docker/bootstrap/bootstrap_init.sh`
+
 # Running Something
 
 ## Run tests
