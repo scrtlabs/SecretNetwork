@@ -184,6 +184,120 @@ fn b64_encode(data: &[u8]) -> String {
     base64::encode(data)
 }
 
+pub fn finalize_raw_output(raw_output: RawWasmOutput) -> WasmOutput {
+    return match raw_output {
+        RawWasmOutput::Err {
+            err,
+            internal_msg_id,
+            internal_reply_enclave_sig,
+        } => {
+            if is_query_output {
+                WasmOutput {
+                    v010: None,
+                    v1: None,
+                    ibc: None,
+                    ibc_receive: None,
+                    query: Some(QueryOutput {
+                        ok: None,
+                        err: Some(err),
+                    }),
+                    internal_reply_enclave_sig: None,
+                    internal_msg_id: None,
+                }
+            } else {
+                WasmOutput {
+                    v010: Some(V010WasmOutput {
+                        err: Some(err),
+                        ok: None,
+                    }),
+                    v1: None,
+                    ibc: None,
+                    ibc_receive: None,
+                    query: None,
+                    internal_reply_enclave_sig,
+                    internal_msg_id,
+                }
+            }
+        }
+        RawWasmOutput::OkV010 {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => WasmOutput {
+            v010: Some(V010WasmOutput {
+                err: None,
+                ok: Some(ok),
+            }),
+            v1: None,
+            ibc: None,
+            ibc_receive: None,
+            query: None,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        },
+        RawWasmOutput::OkV1 {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => WasmOutput {
+            v010: None,
+            v1: Some(V1WasmOutput {
+                err: None,
+                ok: Some(ok),
+            }),
+            ibc: None,
+            ibc_receive: None,
+            query: None,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        },
+        RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => WasmOutput {
+            v010: None,
+            v1: None,
+            ibc: None,
+            ibc_receive: None,
+            query: Some(QueryOutput {
+                ok: Some(ok),
+                err: None,
+            }),
+            internal_reply_enclave_sig: None,
+            internal_msg_id: None,
+        },
+        RawWasmOutput::OkIBC {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => WasmOutput {
+            v010: None,
+            v1: None,
+            ibc: Some(IBCOutput {
+                err: None,
+                ok: Some(ok),
+            }),
+            ibc_receive: None,
+            query: None,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        },
+        RawWasmOutput::OkIBCReceive {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => WasmOutput {
+            v010: None,
+            v1: None,
+            ibc: None,
+            ibc_receive: Some(IBCReceiveOutput {
+                err: None,
+                ok: Some(ok),
+            }),
+            query: None,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        },
+    };
+}
+
 pub fn encrypt_output(
     output: Vec<u8>,
     secret_msg: &SecretMessage,
@@ -668,118 +782,7 @@ pub fn encrypt_output(
         }
     };
 
-    let final_output: WasmOutput = match output {
-        RawWasmOutput::Err {
-            err,
-            internal_msg_id,
-            internal_reply_enclave_sig,
-        } => {
-            if is_query_output {
-                WasmOutput {
-                    v010: None,
-                    v1: None,
-                    ibc: None,
-                    ibc_receive: None,
-                    query: Some(QueryOutput {
-                        ok: None,
-                        err: Some(err),
-                    }),
-                    internal_reply_enclave_sig: None,
-                    internal_msg_id: None,
-                }
-            } else {
-                WasmOutput {
-                    v010: Some(V010WasmOutput {
-                        err: Some(err),
-                        ok: None,
-                    }),
-                    v1: None,
-                    ibc: None,
-                    ibc_receive: None,
-                    query: None,
-                    internal_reply_enclave_sig,
-                    internal_msg_id,
-                }
-            }
-        }
-        RawWasmOutput::OkV010 {
-            ok,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => WasmOutput {
-            v010: Some(V010WasmOutput {
-                err: None,
-                ok: Some(ok),
-            }),
-            v1: None,
-            ibc: None,
-            ibc_receive: None,
-            query: None,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        },
-        RawWasmOutput::OkV1 {
-            ok,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => WasmOutput {
-            v010: None,
-            v1: Some(V1WasmOutput {
-                err: None,
-                ok: Some(ok),
-            }),
-            ibc: None,
-            ibc_receive: None,
-            query: None,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        },
-        RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => WasmOutput {
-            v010: None,
-            v1: None,
-            ibc: None,
-            ibc_receive: None,
-            query: Some(QueryOutput {
-                ok: Some(ok),
-                err: None,
-            }),
-            internal_reply_enclave_sig: None,
-            internal_msg_id: None,
-        },
-        RawWasmOutput::OkIBC {
-            ok,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => WasmOutput {
-            v010: None,
-            v1: None,
-            ibc: Some(IBCOutput {
-                err: None,
-                ok: Some(ok),
-            }),
-            ibc_receive: None,
-            query: None,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        },
-        RawWasmOutput::OkIBCReceive {
-            ok,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => WasmOutput {
-            v010: None,
-            v1: None,
-            ibc: None,
-            ibc_receive: Some(IBCReceiveOutput {
-                err: None,
-                ok: Some(ok),
-            }),
-            query: None,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        },
-    };
-
+    let final_output = finalize_raw_output(output);
     trace!("WasmOutput: {:?}", final_output);
 
     let encrypted_output = serde_json::to_vec(&final_output).map_err(|err| {
