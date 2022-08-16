@@ -1,6 +1,9 @@
 package v1types
 
-import v010msgtypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+import (
+	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	v010msgtypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+)
 
 type IBCEndpoint struct {
 	PortID    string `json:"port_id"`
@@ -219,12 +222,14 @@ type IBC3ChannelOpenResponse struct {
 // will use other Response types
 type IBCBasicResult struct {
 	Ok  *IBCBasicResponse `json:"ok,omitempty"`
-	Err string            `json:"error,omitempty"`
+	Err *types.StdError   `json:"Err,omitempty"`
 }
 
 // IBCBasicResponse defines the return value on a successful processing.
 // This is the counterpart of [IbcBasicResponse](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L194-L216).
 type IBCBasicResponse struct {
+	// Used for internal purposes
+	InternalData []byte `json:"internal_data,omitempty"`
 	// Messages comes directly from the contract and is its request for action.
 	// If the ReplyOn value matches the result, the runtime will invoke this
 	// contract's `reply` entry point after execution. Otherwise, this is all
@@ -246,7 +251,7 @@ type IBCBasicResponse struct {
 // will use other Response types
 type IBCReceiveResult struct {
 	Ok  *IBCReceiveResponse `json:"ok,omitempty"`
-	Err string              `json:"error,omitempty"`
+	Err *types.StdError     `json:"Err,omitempty"`
 }
 
 // IBCReceiveResponse defines the return value on packet response processing.

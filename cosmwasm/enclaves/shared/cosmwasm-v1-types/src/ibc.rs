@@ -65,6 +65,40 @@ where
     pub events: Vec<Event>,
 }
 
+// This defines the return value on packet response processing.
+// This "success" case should be returned even in application-level errors,
+// Where the acknowledgement bytes contain an encoded error message to be returned to
+// the calling chain. (Returning ContractResult::Err will abort processing of this packet
+// and not inform the calling chain).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub struct IbcReceiveResponse<T = Empty>
+where
+    T: Clone + fmt::Debug + PartialEq,
+{
+    /// The bytes we return to the contract that sent the packet.
+    /// This may represent a success or error of exection
+    pub acknowledgement: Binary,
+    /// Optional list of messages to pass. These will be executed in order.
+    /// If the ReplyOn member is set, they will invoke this contract's `reply` entry point
+    /// after execution. Otherwise, they act like "fire and forget".
+    /// Use `call` or `msg.into()` to create messages with the older "fire and forget" semantics.
+    pub messages: Vec<SubMsg<T>>,
+    /// The attributes that will be emitted as part of a "wasm" event.
+    ///
+    /// More info about events (and their attributes) can be found in [*Cosmos SDK* docs].
+    ///
+    /// [*Cosmos SDK* docs]: https://docs.cosmos.network/v0.42/core/events.html
+    pub attributes: Vec<LogAttribute>,
+    /// Extra, custom events separate from the main `wasm` one. These will have
+    /// `wasm-` prepended to the type.
+    ///
+    /// More info about events can be found in [*Cosmos SDK* docs].
+    ///
+    /// [*Cosmos SDK* docs]: https://docs.cosmos.network/v0.42/core/events.html
+    pub events: Vec<Event>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct IbcEndpoint {
     pub port_id: String,
