@@ -25,7 +25,7 @@ use sha2::Digest;
 /// b. Authenticate the reply.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
-enum RawWasmOutput {
+pub enum RawWasmOutput {
     Err {
         #[serde(rename = "Err")]
         err: Value,
@@ -67,7 +67,7 @@ enum RawWasmOutput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct V010WasmOutput {
+pub struct V010WasmOutput {
     #[serde(rename = "Ok")]
     pub ok: Option<enclave_cosmwasm_v010_types::types::ContractResult>,
     #[serde(rename = "Err")]
@@ -75,7 +75,7 @@ struct V010WasmOutput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct V1WasmOutput {
+pub struct V1WasmOutput {
     #[serde(rename = "Ok")]
     pub ok: Option<enclave_cosmwasm_v1_types::results::Response>,
     #[serde(rename = "Err")]
@@ -83,7 +83,7 @@ struct V1WasmOutput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct IBCOutput {
+pub struct IBCOutput {
     #[serde(rename = "Ok")]
     pub ok: Option<enclave_cosmwasm_v1_types::ibc::IbcBasicResponse>,
     #[serde(rename = "Err")]
@@ -91,7 +91,7 @@ struct IBCOutput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct IBCReceiveOutput {
+pub struct IBCReceiveOutput {
     #[serde(rename = "Ok")]
     pub ok: Option<enclave_cosmwasm_v1_types::ibc::IbcReceiveResponse>,
     #[serde(rename = "Err")]
@@ -99,7 +99,7 @@ struct IBCReceiveOutput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct QueryOutput {
+pub struct QueryOutput {
     #[serde(rename = "Ok")]
     pub ok: Option<String>,
     #[serde(rename = "Err")]
@@ -107,7 +107,7 @@ struct QueryOutput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct WasmOutput {
+pub struct WasmOutput {
     pub v010: Option<V010WasmOutput>,
     pub v1: Option<V1WasmOutput>,
     pub ibc: Option<IBCOutput>,
@@ -184,7 +184,7 @@ fn b64_encode(data: &[u8]) -> String {
     base64::encode(data)
 }
 
-pub fn finalize_raw_output(raw_output: RawWasmOutput) -> WasmOutput {
+pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> WasmOutput {
     return match raw_output {
         RawWasmOutput::Err {
             err,
@@ -782,7 +782,7 @@ pub fn encrypt_output(
         }
     };
 
-    let final_output = finalize_raw_output(output);
+    let final_output = finalize_raw_output(output, is_query_output);
     trace!("WasmOutput: {:?}", final_output);
 
     let encrypted_output = serde_json::to_vec(&final_output).map_err(|err| {

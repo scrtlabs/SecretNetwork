@@ -30,7 +30,7 @@ use super::contract_validation::{
     verify_params, ContractKey,
 };
 use super::gas::WasmCosts;
-use super::io::encrypt_output;
+use super::io::{encrypt_output, finalize_raw_output, RawWasmOutput};
 use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
 use super::wasm::{ContractInstance, ContractOperation, Engine};
@@ -851,6 +851,22 @@ pub fn handle(
                 &canonical_sender_address,
                 false,
             )?;
+        } else {
+            let raw_output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
+                warn!("got an error while trying to deserialize output bytes into json");
+                trace!("output: {:?} error: {:?}", output, err);
+                EnclaveError::FailedToDeserialize
+            })?;
+
+            let finalized_output = finalize_raw_output(raw_output, false);
+
+            output = serde_json::to_vec(&finalized_output).map_err(|err| {
+                debug!(
+                    "got an error while trying to serialize output json into bytes {:?}: {}",
+                    finalized_output, err
+                );
+                EnclaveError::FailedToSerialize
+            })?;
         }
 
         Ok(output)
