@@ -88,6 +88,16 @@ pub enum InstantiateMsg {
         amount: Vec<Coin>,
     },
     CosmosMsgCustom {},
+    SendMultipleFundsToInitCallback {
+        coins: Vec<Coin>,
+        code_id: u64,
+        code_hash: String,
+    },
+    SendMultipleFundsToExecCallback {
+        coins: Vec<Coin>,
+        to: String,
+        code_hash: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -284,9 +294,19 @@ pub enum ExecuteMsg {
         code_id: u64,
         code_hash: String,
     },
+    SendMultipleFundsToInitCallback {
+        coins: Vec<Coin>,
+        code_id: u64,
+        code_hash: String,
+    },
     SendFundsToExecCallback {
         amount: u32,
         denom: String,
+        to: String,
+        code_hash: String,
+    },
+    SendMultipleFundsToExecCallback {
+        coins: Vec<Coin>,
         to: String,
         code_hash: String,
     },
