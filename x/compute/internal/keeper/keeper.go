@@ -72,18 +72,17 @@ type Keeper struct {
 	messenger        Messenger
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
-	serviceRouter MsgServiceRouter
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
 }
 
-// MsgServiceRouter expected MsgServiceRouter interface
-type MsgServiceRouter interface {
-	Handler(msg sdk.Msg) baseapp.MsgServiceHandler
-}
-
 func moduleLogger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+}
+
+// MessageRouter ADR 031 request type routing
+type MessageRouter interface {
+	Handler(msg sdk.Msg) baseapp.MsgServiceHandler
 }
 
 func NewKeeper(
@@ -100,7 +99,8 @@ func NewKeeper(
 	portKeeper portkeeper.Keeper,
 	portSource types.ICS20TransferPortSource,
 	channelKeeper channelkeeper.Keeper,
-	router sdk.Router,
+	msgRouter MessageRouter,
+	queryRouter GRPCQueryRouter,
 	homeDir string,
 	wasmConfig *types.WasmConfig,
 	supportedFeatures string,
@@ -128,10 +128,10 @@ func NewKeeper(
 		bankKeeper:       bankKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
-		messenger:        NewMessageHandler(router, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
+		messenger:        NewMessageHandler(msgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 	}
-	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, &keeper).Merge(customPlugins)
+	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper).Merge(customPlugins)
 
 	return keeper
 }

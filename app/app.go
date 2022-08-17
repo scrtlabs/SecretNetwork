@@ -399,7 +399,6 @@ func NewSecretNetworkApp(
 		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.ibcKeeper.ClientKeeper))
 
 	// Just re-use the full router - do we want to limit this more?
-	computeRouter := app.Router()
 	regRouter := app.Router()
 
 	// Replace with bootstrap flag when we figure out how to test properly and everything works
@@ -435,7 +434,8 @@ func NewSecretNetworkApp(
 		app.ibcKeeper.PortKeeper,
 		app.transferKeeper,
 		app.ibcKeeper.ChannelKeeper,
-		computeRouter,
+		app.MsgServiceRouter(),
+		app.GRPCQueryRouter(),
 		computeDir,
 		computeConfig,
 		supportedFeatures,

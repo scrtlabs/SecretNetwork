@@ -2,10 +2,12 @@ package keeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
@@ -21,6 +23,10 @@ import (
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
+
+type GRPCQueryRouter interface {
+	Route(path string) baseapp.GRPCQueryHandler
+}
 
 type QueryHandler struct {
 	Ctx     sdk.Context
@@ -71,24 +77,26 @@ func (q QueryHandler) GasConsumed() uint64 {
 type CustomQuerier func(ctx sdk.Context, request json.RawMessage) ([]byte, error)
 
 type QueryPlugins struct {
-	Bank    func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error)
-	Custom  CustomQuerier
-	Staking func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
-	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
-	Dist    func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
-	Mint    func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
-	Gov     func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
+	Bank     func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error)
+	Custom   CustomQuerier
+	Staking  func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
+	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	Dist     func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
+	Mint     func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
+	Stargate func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error)
+	Gov      func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(gov govkeeper.Keeper, dist distrkeeper.Keeper, mint mintkeeper.Keeper, bank bankkeeper.Keeper, staking stakingkeeper.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(gov govkeeper.Keeper, dist distrkeeper.Keeper, mint mintkeeper.Keeper, bank bankkeeper.Keeper, staking stakingkeeper.Keeper, stargateQueryRouter GRPCQueryRouter, wasm *Keeper) QueryPlugins {
 	return QueryPlugins{
-		Bank:    BankQuerier(bank),
-		Custom:  NoCustomQuerier,
-		Staking: StakingQuerier(staking, dist),
-		Wasm:    WasmQuerier(wasm),
-		Dist:    DistQuerier(dist),
-		Mint:    MintQuerier(mint),
-		Gov:     GovQuerier(gov),
+		Bank:     BankQuerier(bank),
+		Custom:   NoCustomQuerier,
+		Staking:  StakingQuerier(staking, dist),
+		Wasm:     WasmQuerier(wasm),
+		Dist:     DistQuerier(dist),
+		Mint:     MintQuerier(mint),
+		Gov:      GovQuerier(gov),
+		Stargate: StargateQuerier(stargateQueryRouter),
 	}
 }
 
@@ -119,6 +127,117 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 		e.Gov = o.Gov
 	}
 	return e
+}
+
+// Assaf: stargateQueryAllowlist is a list of all safe and efficient queries
+//
+// excluded from this list (should be safe, but needs a clear use case):
+//   - /secret.registration.*
+//   - /ibc.core.*
+//   - /secret.intertx.*
+//   - /cosmos.evidence.*
+//   - /cosmos.upgrade.*
+//
+// we reserve the right to add/remove queries in future chain upgrades
+//
+// used this to find all query paths:
+// find -name query.proto | sort | xargs grep -Poin 'package [a-z0-9.]+;|rpc [a-zA-Z]+\('
+var stargateQueryAllowlist = map[string]bool{
+	"/cosmos.auth.v1beta1.Query.Account":  true,
+	"/cosmos.auth.v1beta1.Query.Accounts": true,
+	"/cosmos.auth.v1beta1.Query.Params":   true,
+
+	"/cosmos.authz.v1beta1.Query.Grants":        true,
+	"/cosmos.authz.v1beta1.Query.GranterGrants": true,
+	"/cosmos.authz.v1beta1.Query.GranteeGrants": true,
+
+	"/cosmos.bank.v1beta1.Query.Balance":           true,
+	"/cosmos.bank.v1beta1.Query.AllBalances":       true,
+	"/cosmos.bank.v1beta1.Query.SpendableBalances": true,
+	"/cosmos.bank.v1beta1.Query.TotalSupply":       true,
+	"/cosmos.bank.v1beta1.Query.SupplyOf":          true,
+	"/cosmos.bank.v1beta1.Query.Params":            true,
+	"/cosmos.bank.v1beta1.Query.DenomMetadata":     true,
+	"/cosmos.bank.v1beta1.Query.DenomsMetadata":    true,
+
+	"/cosmos.distribution.v1beta1.Query.Params":                      true,
+	"/cosmos.distribution.v1beta1.Query.ValidatorOutstandingRewards": true,
+	"/cosmos.distribution.v1beta1.Query.ValidatorCommission":         true,
+	"/cosmos.distribution.v1beta1.Query.ValidatorSlashes":            true,
+	"/cosmos.distribution.v1beta1.Query.DelegationRewards":           true,
+	"/cosmos.distribution.v1beta1.Query.DelegationTotalRewards":      true,
+	"/cosmos.distribution.v1beta1.Query.DelegatorValidators":         true,
+	"/cosmos.distribution.v1beta1.Query.DelegatorWithdrawAddress":    true,
+	"/cosmos.distribution.v1beta1.Query.CommunityPool":               true,
+	"/cosmos.distribution.v1beta1.Query.FoundationTax":               true,
+
+	"/cosmos.feegrant.v1beta1.Query.Allowance":  true,
+	"/cosmos.feegrant.v1beta1.Query.Allowances": true,
+
+	"/cosmos.gov.v1beta1.Query.Proposal":    true,
+	"/cosmos.gov.v1beta1.Query.Proposals":   true,
+	"/cosmos.gov.v1beta1.Query.Vote":        true,
+	"/cosmos.gov.v1beta1.Query.Votes":       true,
+	"/cosmos.gov.v1beta1.Query.Params":      true,
+	"/cosmos.gov.v1beta1.Query.Deposit":     true,
+	"/cosmos.gov.v1beta1.Query.Deposits":    true,
+	"/cosmos.gov.v1beta1.Query.TallyResult": true,
+
+	"/cosmos.mint.v1beta1.Query.Params":           true,
+	"/cosmos.mint.v1beta1.Query.Inflation":        true,
+	"/cosmos.mint.v1beta1.Query.AnnualProvisions": true,
+
+	"/cosmos.params.v1beta1.Query.Params": true,
+
+	"/cosmos.slashing.v1beta1.Query.Params":       true,
+	"/cosmos.slashing.v1beta1.Query.SigningInfo":  true,
+	"/cosmos.slashing.v1beta1.Query.SigningInfos": true,
+
+	"/cosmos.staking.v1beta1.Query.Validators":                    true,
+	"/cosmos.staking.v1beta1.Query.Validator":                     true,
+	"/cosmos.staking.v1beta1.Query.ValidatorDelegations":          true,
+	"/cosmos.staking.v1beta1.Query.ValidatorUnbondingDelegations": true,
+	"/cosmos.staking.v1beta1.Query.Delegation":                    true,
+	"/cosmos.staking.v1beta1.Query.UnbondingDelegation":           true,
+	"/cosmos.staking.v1beta1.Query.DelegatorDelegations":          true,
+	"/cosmos.staking.v1beta1.Query.DelegatorUnbondingDelegations": true,
+	"/cosmos.staking.v1beta1.Query.Redelegations":                 true,
+	"/cosmos.staking.v1beta1.Query.DelegatorValidators":           true,
+	"/cosmos.staking.v1beta1.Query.DelegatorValidator":            true,
+	"/cosmos.staking.v1beta1.Query.HistoricalInfo":                true,
+	"/cosmos.staking.v1beta1.Query.Pool":                          true,
+	"/cosmos.staking.v1beta1.Query.Params":                        true,
+
+	"/ibc.applications.transfer.v1.Query.DenomTrace":  true,
+	"/ibc.applications.transfer.v1.Query.DenomTraces": true,
+	"/ibc.applications.transfer.v1.Query.Params":      true,
+	"/ibc.applications.transfer.v1.Query.DenomHash":   true,
+
+	"/secret.compute.v1beta1.Query.ContractInfo":    true,
+	"/secret.compute.v1beta1.Query.ContractsByCode": true,
+	"/secret.compute.v1beta1.Query.Codes":           true,
+}
+
+func StargateQuerier(queryRouter GRPCQueryRouter) func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error) {
+	return func(ctx sdk.Context, msg *wasmTypes.StargateQuery) ([]byte, error) {
+		if !stargateQueryAllowlist[msg.Path] {
+			return nil, wasmTypes.UnsupportedRequest{Kind: fmt.Sprintf("query path '%s' is not allowed from the contract", msg.Path)}
+		}
+
+		route := queryRouter.Route(msg.Path)
+		if route == nil {
+			return nil, wasmTypes.UnsupportedRequest{Kind: fmt.Sprintf("No route to query path '%s'", msg.Path)}
+		}
+		req := abci.RequestQuery{
+			Data: msg.Data,
+			Path: msg.Path,
+		}
+		res, err := route(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return res.Value, nil
+	}
 }
 
 func GovQuerier(keeper govkeeper.Keeper) func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {

@@ -117,7 +117,7 @@ type (
 	CreatedAt               = types.AbsoluteTxPosition
 	WasmConfig              = types.WasmConfig
 	CodeInfoResponse        = types.CodeInfoResponse
-	MessageHandler          = keeper.MessageHandler
+	MessageHandler          = keeper.SDKMessageHandler
 	BankEncoder             = keeper.BankEncoder
 	CustomEncoder           = keeper.CustomEncoder
 	StakingEncoder          = keeper.StakingEncoder
