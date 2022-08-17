@@ -86,13 +86,12 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 
 // This struct helps us to distinguish between v0.10 contract response and v1 contract response
 type ContractExecResponse struct {
-	V1                     *V1ContractExecResponse       `json:"v1,omitempty"`
-	V010                   *V010ContractExecResponse     `json:"v010,omitempty"`
-	InternaReplyEnclaveSig []byte                        `json:"internal_reply_enclave_sig"`
-	InternalMsgId          []byte                        `json:"internal_msg_id"`
-	IBCChannelOpen         *v1types.IBCChannelOpenResult `json:"ibc_channel_open,omitempty"`
-	IBC                    *v1types.IBCBasicResult       `json:"ibc,omitempty"`
-	IBCReceive             *v1types.IBCReceiveResult     `json:"ibc_receive,omitempty"`
+	V1                     *V1ContractExecResponse   `json:"v1,omitempty"`
+	V010                   *V010ContractExecResponse `json:"v010,omitempty"`
+	InternaReplyEnclaveSig []byte                    `json:"internal_reply_enclave_sig"`
+	InternalMsgId          []byte                    `json:"internal_msg_id"`
+	IBCBasic               *v1types.IBCBasicResult   `json:"ibc_basic,omitempty"`
+	IBCPacketReceive       *v1types.IBCReceiveResult `json:"ibc_packet_receive,omitempty"`
 }
 
 type V010ContractExecResponse struct {
@@ -315,55 +314,23 @@ func (w *Wasmer) Execute(
 		}
 	}
 
-	// handle IBCChannelOpen response
-	if resp.IBCChannelOpen != nil {
-		if resp.IBCChannelOpen.Err != "" {
-			return nil, gasUsed, fmt.Errorf("%s", resp.IBCChannelOpen.Err)
-		} else if resp.IBCChannelOpen.Ok != nil {
-			return resp.IBCChannelOpen.Ok, gasUsed, nil
+	if resp.IBCBasic != nil {
+		if resp.IBCBasic.Err != nil {
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCBasic.Err)
+		} else if resp.IBCBasic.Ok != nil {
+			return resp.IBCBasic.Ok, gasUsed, nil
 		} else {
-			return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelOpen response: %+v", resp)
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCBasic response: %+v", resp)
 		}
 	}
 
-	// handle IBCChannelConnect response
-	if resp.IBC != nil {
-		if resp.IBC.Err != nil {
-			return v1types.DataWithInternalReplyInfo{
-				InternalMsgId:          resp.InternalMsgId,
-				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
-				Data:                   []byte(resp.IBC.Err.GenericErr.Msg),
-			}, gasUsed, fmt.Errorf("%+v", resp.IBC.Err)
-		} else if resp.IBC.Ok != nil {
-			if isOutputAddressedToReply {
-				resp.IBC.Ok.InternalData, err = AppendReplyInternalDataToData([]byte{}, resp.InternaReplyEnclaveSig, resp.InternalMsgId)
-				if err != nil {
-					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
-				}
-			}
-			return resp.V1.Ok, gasUsed, nil
+	if resp.IBCPacketReceive != nil {
+		if resp.IBCPacketReceive.Err != nil {
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCPacketReceive.Err)
+		} else if resp.IBCPacketReceive.Ok != nil {
+			return resp.IBCPacketReceive.Ok, gasUsed, nil
 		} else {
-			return nil, gasUsed, fmt.Errorf("cannot parse v1 handle response: %+v", resp)
-		}
-	}
-
-	if resp.IBCReceive != nil {
-		if resp.IBCReceive.Err != nil {
-			return v1types.DataWithInternalReplyInfo{
-				InternalMsgId:          resp.InternalMsgId,
-				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
-				Data:                   []byte(resp.IBCReceive.Err.GenericErr.Msg),
-			}, gasUsed, fmt.Errorf("%+v", resp.IBCReceive.Err)
-		} else if resp.IBCReceive.Ok != nil {
-			if isOutputAddressedToReply {
-				resp.IBCReceive.Ok.Acknowledgement, err = AppendReplyInternalDataToData(resp.IBCReceive.Ok.Acknowledgement, resp.InternaReplyEnclaveSig, resp.InternalMsgId)
-				if err != nil {
-					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
-				}
-			}
-			return resp.V1.Ok, gasUsed, nil
-		} else {
-			return nil, gasUsed, fmt.Errorf("cannot parse v1 handle response: %+v", resp)
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketReceive response: %+v", resp)
 		}
 	}
 

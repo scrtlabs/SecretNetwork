@@ -179,7 +179,6 @@ pub fn init(
 pub struct ParsedMessage {
     pub should_validate_sig_info: bool,
     pub was_msg_encrypted: bool,
-    pub is_ibc_msg: bool,
     pub secret_msg: SecretMessage,
     pub decrypted_msg: Vec<u8>,
     pub contract_hash_for_validation: Option<Vec<u8>>,
@@ -313,9 +312,8 @@ where
             }
 
             Ok(ParsedMessage {
-                should_validate_sig_info: true,
+                should_validate_sig_info: false,
                 was_msg_encrypted: true,
-                is_ibc_msg: true,
                 secret_msg: orig_secret_msg,
                 decrypted_msg: serde_json::to_vec(&parsed_encrypted_ibc_packet).map_err(|err| {
                     warn!(
@@ -331,7 +329,7 @@ where
             // assume packet is not encrypted, continue in plaintext mode
 
             trace!(
-                "{} input is not encrypted: {:?}",
+                "{} input was plaintext: {:?}",
                 function_name,
                 base64::encode(&message)
             );
@@ -341,7 +339,6 @@ where
             Ok(ParsedMessage {
                 should_validate_sig_info: false,
                 was_msg_encrypted: false,
-                is_ibc_msg: true,
                 secret_msg: orig_secret_msg,
                 decrypted_msg,
                 contract_hash_for_validation: None,
@@ -357,23 +354,39 @@ pub fn parse_message(
     handle_type: &HandleType,
 ) -> Result<ParsedMessage, EnclaveError> {
     return match handle_type {
-        HandleType::HANDLE_TYPE_EXECUTE => {
-            let orig_secret_msg = SecretMessage::from_slice(message)?;
+        HandleType::HANDLE_TYPE_EXECUTE => match try_get_decrypted_secret_msg(message) {
+            Some(decrypted_secret_msg) => {
+                trace!(
+                    "execute input before decryption: {:?}",
+                    base64::encode(&message)
+                );
 
-            trace!(
-                "execute input before decryption: {:?}",
-                base64::encode(&message)
-            );
-            let decrypted_msg = orig_secret_msg.decrypt()?;
-            Ok(ParsedMessage {
-                should_validate_sig_info: true,
-                was_msg_encrypted: true,
-                is_ibc_msg: false,
-                secret_msg: orig_secret_msg,
-                decrypted_msg,
-                contract_hash_for_validation: None,
-            })
-        }
+                Ok(ParsedMessage {
+                    should_validate_sig_info: true,
+                    was_msg_encrypted: true,
+                    secret_msg: decrypted_secret_msg.secret_msg,
+                    decrypted_msg: decrypted_secret_msg.decrypted_msg,
+                    contract_hash_for_validation: None,
+                })
+            }
+            None => {
+                trace!(
+                    "execute input was plaintext: {:?}",
+                    base64::encode(&message)
+                );
+
+                let secret_msg = get_secret_msg(message);
+                let decrypted_msg = secret_msg.msg.clone();
+
+                Ok(ParsedMessage {
+                    should_validate_sig_info: true,
+                    was_msg_encrypted: false,
+                    secret_msg,
+                    decrypted_msg,
+                    contract_hash_for_validation: None,
+                })
+            }
+        },
         HandleType::HANDLE_TYPE_REPLY => {
             let orig_secret_msg = SecretMessage::from_slice(message)?;
 
@@ -441,7 +454,6 @@ pub fn parse_message(
                 return Ok(ParsedMessage {
                     should_validate_sig_info: false,
                     was_msg_encrypted: false,
-                    is_ibc_msg: false,
                     secret_msg: reply_secret_msg,
                     decrypted_msg: serialized_reply,
                     contract_hash_for_validation: None,
@@ -546,7 +558,6 @@ pub fn parse_message(
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
                         was_msg_encrypted: true,
-                        is_ibc_msg: false,
                         secret_msg: reply_secret_msg,
                         decrypted_msg: decrypted_reply_as_vec,
                         contract_hash_for_validation: Some(
@@ -640,7 +651,6 @@ pub fn parse_message(
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
                         was_msg_encrypted: true,
-                        is_ibc_msg: false,
                         secret_msg: reply_secret_msg,
                         decrypted_msg: decrypted_reply_as_vec,
                         contract_hash_for_validation: Some(
@@ -670,7 +680,6 @@ pub fn parse_message(
             Ok(ParsedMessage {
                 should_validate_sig_info: false,
                 was_msg_encrypted: false,
-                is_ibc_msg: true,
                 secret_msg: scrt_msg,
                 decrypted_msg,
                 contract_hash_for_validation: None,
@@ -773,7 +782,6 @@ pub fn handle(
     let ParsedMessage {
         should_validate_sig_info,
         was_msg_encrypted,
-        is_ibc_msg,
         secret_msg,
         decrypted_msg,
         contract_hash_for_validation,
@@ -841,7 +849,7 @@ pub fn handle(
             secret_msg.nonce, secret_msg.user_public_key
         );
 
-        if !is_ibc_msg || was_msg_encrypted {
+        if was_msg_encrypted {
             output = encrypt_output(
                 output,
                 &secret_msg,
