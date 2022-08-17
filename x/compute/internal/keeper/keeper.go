@@ -1066,12 +1066,12 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+		return nil, sdkerrors.Wrap(types.ErrReplyFailed, execErr.Error())
 	}
 
 	switch res := response.(type) {
 	case *v010wasmTypes.HandleResponse:
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
+		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("response of reply should always be a CosmWasm v1 response type: %+v", res))
 	case *v1wasmTypes.Response:
 		consumeGas(ctx, gasUsed)
 
@@ -1082,11 +1082,11 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, ogTx, ogSigInfo, wasmTypes.CosmosMsgVersionV1)
 		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
+			return nil, sdkerrors.Wrap(types.ErrReplyFailed, err.Error())
 		}
 
 		return data, nil
 	default:
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot detect response type: %+v", res))
+		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }
