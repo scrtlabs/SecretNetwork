@@ -174,11 +174,6 @@ where
 }
 
 pub struct Engine {
-    // WARNING!
-    // This box is dropped when the Engine is dropped. You MUST NOT use the pointer
-    // after destroying the engine. Using this pointer in the `host_*` functions
-    // is only legal because we do not provide direct access to the `runtime` field outside
-    // the Engine. We also use a RefCell to ensure that we don't access the Context incorrectly.
     context: Context,
     gas_limit: u64,
     used_gas: u64,
