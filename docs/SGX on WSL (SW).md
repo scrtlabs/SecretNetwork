@@ -9,7 +9,7 @@ Todo: Try to compile sgx driver and include it
 
 ### 1. Install dependencies
 
-`sudo apt install build-essential flex bison libssl-dev libelf-dev`
+`sudo apt install build-essential flex bison dwarves libssl-dev libelf-dev`
 
 ### 2. Clone the WSL2 Repo
 
