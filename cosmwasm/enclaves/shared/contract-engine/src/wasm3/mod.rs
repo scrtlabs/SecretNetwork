@@ -1,14 +1,11 @@
-use std::cell::RefCell;
 use std::convert::{TryFrom, TryInto};
-use std::marker::PhantomData;
-use std::ops::DerefMut;
 
 use log::*;
 
 use bech32::{FromBase32, ToBase32};
 use rand_chacha::ChaChaRng;
 use rand_core::SeedableRng;
-use wasm3::error::Trap;
+use wasm3::{Memory, Trap};
 
 use enclave_cosmos_types::types::ContractCode;
 use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
@@ -19,17 +16,18 @@ use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
 use crate::db::{remove_encrypted_key, write_encrypted_key};
-use crate::errors::{wasm3_error_to_enclave_error, WasmEngineError, WasmEngineResult};
+use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngineResult};
 use crate::gas::WasmCosts;
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::ContractOperation;
+use crate::wasm3::gas::get_remaining_gas;
 
 mod gas;
 mod validation;
 
-type Wasm3RsError = wasm3::error::Error;
-type Wasm3RsResult<T> = wasm3::error::Result<T>;
+type Wasm3RsError = wasm3::Error;
+type Wasm3RsResult<T> = Result<T, wasm3::Error>;
 
 macro_rules! debug_err {
     ($message: literal) => {
@@ -50,25 +48,16 @@ macro_rules! set_last_error {
     ($context: expr) => {
         |err| {
             $context.set_last_error(err);
-            wasm3::error::Trap::Exit
+            wasm3::Trap::Abort
         }
     };
 }
 
 macro_rules! link_fn {
-    ($module: expr, $context_ptr: expr, $name: expr, $implementation: expr) => {
-        $module
-            .link_closure("env", $name, move |call_context, args| {
-                debug!("{} was called", $name);
-                let context = unsafe { &*$context_ptr };
-                let mut context = context.borrow_mut();
-                let ret = $implementation(&mut context, call_context, args)
-                    .map_err(set_last_error!(context));
-                debug!("{} finished", $name);
-                ret
-            })
-            .allow_missing_import()
-    };
+    ($instance: expr, $name: expr, $implementation: expr) => {{
+        let func = expect_context($implementation);
+        $instance.link_function("env", $name, func)
+    }};
 }
 
 trait Wasm3ResultEx {
@@ -79,13 +68,29 @@ impl Wasm3ResultEx for Wasm3RsResult<()> {
     fn allow_missing_import(self) -> Self {
         match self {
             Err(Wasm3RsError::FunctionNotFound) => Ok(()),
+            // TODO check how this looks like in oasis's version
             // Workaround for erroneous non-enumerated error in this case in wasm3.
             // Search for the string "function signature mismatch" in the C source
-            Err(Wasm3RsError::Wasm3(wasm3_error)) if Trap::from(wasm3_error) == Trap::Abort => {
-                Err(Wasm3RsError::InvalidFunctionSignature)
-            }
+            // Err(Wasm3RsError::Wasm3(wasm3_error)) if Trap::from(wasm3_error) == Trap::Abort => {
+            //     Err(Wasm3RsError::InvalidFunctionSignature)
+            // }
             other => other,
         }
+    }
+}
+
+trait Wasm3RuntimeEx {
+    fn try_with_memory_or<F, R, E>(&self, error: E, f: F) -> Result<R, E>
+    where
+        F: FnOnce(wasm3::Memory<'_>) -> R;
+}
+
+impl<'env, C> Wasm3RuntimeEx for wasm3::Runtime<'env, C> {
+    fn try_with_memory_or<F, R, E>(&self, error: E, f: F) -> Result<R, E>
+    where
+        F: FnOnce(Memory<'_>) -> R,
+    {
+        self.try_with_memory(f).map_err(|_err| error)
     }
 }
 
@@ -150,15 +155,35 @@ impl Context {
     }
 }
 
+/// Wrap the hook function such that we expect the context to be passed in,
+/// and we save the WasmEngineError in the Context.
+fn expect_context<F, A, R>(
+    mut func: F,
+) -> impl FnMut(wasm3::CallContext<Context>, A) -> Result<R, Trap> + 'static
+where
+    F: FnMut(&mut Context, &wasm3::Instance<Context>, A) -> Result<R, WasmEngineError> + 'static,
+    A: wasm3::Arg,
+    R: wasm3::Arg,
+{
+    move |call_context, input| {
+        let err_msg = "module functions must be called with a context";
+        let context = call_context.context.expect(err_msg);
+        let instance = call_context.instance;
+        func(context, instance, input).map_err(set_last_error!(context))
+    }
+}
+
 pub struct Engine {
     // WARNING!
     // This box is dropped when the Engine is dropped. You MUST NOT use the pointer
     // after destroying the engine. Using this pointer in the `host_*` functions
     // is only legal because we do not provide direct access to the `runtime` field outside
     // the Engine. We also use a RefCell to ensure that we don't access the Context incorrectly.
-    context: *mut RefCell<Context>,
+    context: Context,
+    gas_limit: u64,
+    used_gas: u64,
     environment: wasm3::Environment,
-    runtime: wasm3::Runtime,
+    code: Vec<u8>,
 }
 
 impl Engine {
@@ -188,7 +213,7 @@ impl Engine {
 
         gas::add_metering(&mut module);
 
-        let transformed_code = module.emit_wasm();
+        let code = module.emit_wasm();
 
         let context = Context {
             context,
@@ -202,172 +227,177 @@ impl Engine {
             user_public_key,
             last_error: None,
         };
-        let context = Box::new(RefCell::new(context));
-        let context_ptr = Box::into_raw(context);
 
-        Engine::setup_runtime(context_ptr, &transformed_code, gas_limit).map_err(|err| unsafe {
-            let context = &*context_ptr;
-            let mut context = context.borrow_mut();
-            wasm3_error_to_enclave_error(context.deref_mut(), err)
-        })
-    }
-
-    fn setup_runtime(
-        context_ptr: *mut RefCell<Context>,
-        contract_bytes: &[u8],
-        gas_limit: u64,
-    ) -> Wasm3RsResult<Engine> {
         debug!("setting up runtime");
-        let environment = wasm3::Environment::new()?;
+        let environment = wasm3::Environment::new().to_enclave_result()?;
         debug!("initialized environment");
-        let runtime = environment.create_runtime(1024 * 60)?;
-        debug!("initialized runtime");
-
-        let mut module = runtime.parse_and_load_module(contract_bytes)?;
-        debug!("parsed module");
-
-        gas::set_gas_limit(&module, gas_limit);
-        debug!("set gas limit");
-
-        #[rustfmt::skip] {
-        link_fn!(module, context_ptr, "db_read", host_read_db)?;
-        #[cfg(not(feature = "query-only"))] {
-            link_fn!(module, context_ptr, "db_write", host_write_db)?;
-            link_fn!(module, context_ptr, "db_remove", host_remove_db)?;
-        }
-        link_fn!(module, context_ptr, "canonicalize_address", host_canonicalize_address)?;
-        link_fn!(module, context_ptr, "humanize_address", host_humanize_address)?;
-        link_fn!(module, context_ptr, "query_chain", host_query_chain)?;
-        link_fn!(module, context_ptr, "debug_print", host_debug_print)?;
-        link_fn!(module, context_ptr, "gas", host_gas)?;
-        link_fn!(module, context_ptr, "secp256k1_verify", host_secp256k1_verify)?;
-        link_fn!(module, context_ptr, "secp256k1_recover_pubkey", host_secp256k1_recover_pubkey)?;
-        link_fn!(module, context_ptr, "ed25519_verify", host_ed25519_verify)?;
-        link_fn!(module, context_ptr, "ed25519_batch_verify", host_ed25519_batch_verify)?;
-        link_fn!(module, context_ptr, "secp256k1_sign", host_secp256k1_sign)?;
-        link_fn!(module, context_ptr, "ed25519_sign", host_ed25519_sign)?;
-        }
-        debug!("linked functions");
 
         Ok(Self {
-            context: context_ptr,
+            context,
+            gas_limit,
+            used_gas: 0,
             environment,
-            runtime,
+            code,
         })
     }
 
-    fn init_fn(&self) -> Wasm3RsResult<wasm3::Function<(u32, u32), u32>> {
-        self.runtime.find_function::<(u32, u32), u32>("init")
+    fn with_instance<F>(&mut self, func: F) -> Result<Vec<u8>, EnclaveError>
+    where
+        F: FnOnce(&mut wasm3::Instance<Context>, &mut Context) -> Result<Vec<u8>, EnclaveError>,
+    {
+        let runtime = self
+            .environment
+            .new_runtime::<Context>(1024 * 60, Some(192 /* 12 MiB */))
+            .to_enclave_result()?;
+        debug!("initialized runtime");
+
+        let module = self
+            .environment
+            .parse_module(&self.code)
+            .to_enclave_result()?;
+        debug!("parsed module");
+
+        let mut instance = runtime.load_module(module).to_enclave_result()?;
+        debug!("created instance");
+
+        gas::set_gas_limit(&instance, self.gas_limit)?;
+        debug!("set gas limit");
+
+        Self::link_host_functions(&mut instance)
+            .allow_missing_import()
+            .to_enclave_result()?;
+        debug!("linked functions");
+
+        let result = func(&mut instance, &mut self.context);
+        debug!("function returned {:?}", result);
+
+        // TODO make gas reporting more accurate
+        self.used_gas = self.gas_limit - get_remaining_gas(&instance);
+
+        result
     }
 
-    fn handle_fn(&self) -> Wasm3RsResult<wasm3::Function<(u32, u32), u32>> {
-        self.runtime.find_function::<(u32, u32), u32>("handle")
+    fn link_host_functions(instance: &mut wasm3::Instance<Context>) -> Wasm3RsResult<()> {
+        link_fn!(instance, "db_read", host_read_db)?;
+        #[cfg(not(feature = "query-only"))]
+        {
+            link_fn!(instance, "db_write", host_write_db)?;
+            link_fn!(instance, "db_remove", host_remove_db)?;
+        }
+        link_fn!(instance, "canonicalize_address", host_canonicalize_address)?;
+        link_fn!(instance, "humanize_address", host_humanize_address)?;
+        link_fn!(instance, "query_chain", host_query_chain)?;
+        link_fn!(instance, "debug_print", host_debug_print)?;
+        link_fn!(instance, "gas", host_gas)?;
+        link_fn!(instance, "secp256k1_verify", host_secp256k1_verify)?;
+        link_fn!(
+            instance,
+            "secp256k1_recover_pubkey",
+            host_secp256k1_recover_pubkey
+        )?;
+        link_fn!(instance, "ed25519_verify", host_ed25519_verify)?;
+        link_fn!(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
+        link_fn!(instance, "secp256k1_sign", host_secp256k1_sign)?;
+        link_fn!(instance, "ed25519_sign", host_ed25519_sign)?;
+
+        Ok(())
     }
 
-    fn query_fn(&self) -> Wasm3RsResult<wasm3::Function<u32, u32>> {
-        self.runtime.find_function::<u32, u32>("query")
-    }
-
+    /// get the amount of gas used by the last contract execution
     pub fn gas_used(&self) -> u64 {
-        // let context = unsafe { &*self.context };
-        // let context = context.borrow();
-        // context.gas_used
-        0
+        self.used_gas
     }
 
-    pub fn write_to_memory(&mut self, buffer: &[u8]) -> Result<u32, WasmEngineError> {
-        write_to_memory(&mut self.runtime, buffer)
+    pub fn init(&mut self, env: Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+        self.with_instance(|instance, context| {
+            let env_ptr = write_to_memory(instance, &env)?;
+            let msg_ptr = write_to_memory(instance, &msg)?;
+
+            let init = instance
+                .find_function::<(u32, u32), u32>("init")
+                .to_enclave_result()?;
+
+            let output_ptr = init
+                .call_with_context(context, (env_ptr, msg_ptr))
+                .map_err(|err| match context.take_last_error() {
+                    Some(err) => err.into(),
+                    None => err.to_enclave_error(),
+                })?;
+
+            let output = read_from_memory(instance, output_ptr)?;
+
+            Ok(output)
+        })
     }
 
-    pub fn extract_vector(&mut self, region_ptr: u32) -> Result<Vec<u8>, WasmEngineError> {
-        let mem = CWMemory::new(&mut self.runtime);
-        mem.extract_vector(region_ptr)
+    pub fn handle(&mut self, env: Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+        self.with_instance(|instance, context| {
+            let env_ptr = write_to_memory(instance, &env)?;
+            debug!("handle written env");
+            let msg_ptr = write_to_memory(instance, &msg)?;
+            debug!("handle written msg");
+
+            let handle = instance
+                .find_function::<(u32, u32), u32>("handle")
+                .map_err(debug_err!(err => "couldn't find handle: {err:?}"))
+                .to_enclave_result()?;
+            debug!("found handle");
+
+            let output_ptr = handle
+                .call_with_context(context, (env_ptr, msg_ptr))
+                .map_err(debug_err!(err => "failed to call handle: {err:?}"))
+                .map_err(|err| match context.take_last_error() {
+                    Some(err) => err.into(),
+                    None => err.to_enclave_error(),
+                })?;
+            debug!("called handle");
+
+            let output = read_from_memory(instance, output_ptr)?;
+            debug!("extracted handle output: {:?}", output);
+
+            Ok(output)
+        })
     }
 
-    pub fn init(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        let handle_wasm3_err = |err| unsafe {
-            debug!("init failed with {:?}", err);
-            let context = &*self.context;
-            let mut context = context.borrow_mut();
-            debug!("borrowed context");
-            wasm3_error_to_enclave_error(context.deref_mut(), err)
-        };
+    pub fn query(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+        self.with_instance(|instance, context| {
+            let msg_ptr = write_to_memory(instance, &msg)?;
 
-        debug!("init starting");
-        let ret = self
-            .init_fn()
-            .map_err(handle_wasm3_err)?
-            .call(env_ptr, msg_ptr)
-            .map_err(handle_wasm3_err);
-        debug!("init returned {:?}", ret);
-        ret
-    }
+            let query = instance
+                .find_function::<u32, u32>("query")
+                .to_enclave_result()?;
 
-    pub fn handle(&mut self, env_ptr: u32, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        let handle_wasm3_err = |err| unsafe {
-            debug!("handle failed with {:?}", err);
-            let context = &*self.context;
-            let mut context = context.borrow_mut();
-            debug!("borrowed context");
-            wasm3_error_to_enclave_error(context.deref_mut(), err)
-        };
+            let output_ptr =
+                query.call_with_context(context, msg_ptr).map_err(|err| {
+                    match context.take_last_error() {
+                        Some(err) => err.into(),
+                        None => err.to_enclave_error(),
+                    }
+                })?;
 
-        debug!("handle starting");
-        let ret = self
-            .handle_fn()
-            .map_err(handle_wasm3_err)?
-            .call(env_ptr, msg_ptr)
-            .map_err(handle_wasm3_err);
-        debug!("handle returned {:?}", ret);
-        ret
-    }
+            let output = read_from_memory(instance, output_ptr)?;
 
-    pub fn query(&mut self, msg_ptr: u32) -> Result<u32, EnclaveError> {
-        let handle_wasm3_err = |err| unsafe {
-            debug!("query failed with {:?}", err);
-            let context = &*self.context;
-            let mut context = context.borrow_mut();
-            debug!("borrowed context");
-            wasm3_error_to_enclave_error(context.deref_mut(), err)
-        };
-
-        debug!("query starting");
-        let ret = self
-            .query_fn()
-            .map_err(handle_wasm3_err)?
-            .call(msg_ptr)
-            .map_err(handle_wasm3_err);
-        debug!("query returned {:?}", ret);
-        ret
-    }
-}
-
-impl Drop for Engine {
-    fn drop(&mut self) {
-        let context = unsafe { Box::from_raw(self.context) };
-        drop(context)
+            Ok(output)
+        })
     }
 }
 
 struct CWMemory<'m> {
-    memory: &'m mut [u8],
-    _phantom: PhantomData<&'m mut wasm3::Runtime>,
+    memory: wasm3::Memory<'m>,
 }
 
 const SIZE_OF_U32: usize = std::mem::size_of::<u32>();
 
 impl<'m> CWMemory<'m> {
-    fn new(runtime: &'m mut wasm3::Runtime) -> Self {
-        Self {
-            memory: runtime.memory(),
-            _phantom: PhantomData,
-        }
+    fn new(memory: wasm3::Memory<'m>) -> Self {
+        Self { memory }
     }
 
     fn get_u32_at(&self, idx: u32) -> WasmEngineResult<u32> {
         let idx = idx as usize;
         let bytes: [u8; SIZE_OF_U32] = self
             .memory
+            .as_slice()
             .get(idx..idx + SIZE_OF_U32)
             .ok_or(WasmEngineError::MemoryReadError)?
             .try_into()
@@ -378,6 +408,7 @@ impl<'m> CWMemory<'m> {
     fn set_u32_at(&mut self, idx: u32, val: u32) -> WasmEngineResult<u32> {
         let i = idx as usize;
         self.memory
+            .as_slice_mut()
             .get_mut(i..i + SIZE_OF_U32)
             .ok_or(WasmEngineError::MemoryReadError)?
             .copy_from_slice(&val.to_le_bytes());
@@ -396,7 +427,7 @@ impl<'m> CWMemory<'m> {
             return Err(WasmEngineError::MemoryReadError);
         }
 
-        match self.memory.get(vec_ptr..vec_ptr + vec_len) {
+        match self.memory.as_slice().get(vec_ptr..vec_ptr + vec_len) {
             Some(slice) => Ok(slice.to_owned()),
             None => Err(WasmEngineError::MemoryReadError),
         }
@@ -417,7 +448,7 @@ impl<'m> CWMemory<'m> {
         let data_len = self.get_u32_at(region_ptr + (SIZE_OF_U32 as u32) * 2)? as usize;
         let mut remaining_len = data_len as usize;
 
-        let data = self.memory.get(data_ptr..data_ptr + data_len);
+        let data = self.memory.as_slice().get(data_ptr..data_ptr + data_len);
         let data = data.ok_or(WasmEngineError::MemoryReadError)?;
 
         let mut result: Vec<Vec<u8>> = vec![];
@@ -456,6 +487,7 @@ impl<'m> CWMemory<'m> {
 
         let idx = vec_ptr as usize;
         self.memory
+            .as_slice_mut()
             .get_mut(idx..idx + buffer.len())
             .ok_or(WasmEngineError::MemoryReadError)?
             .copy_from_slice(buffer);
@@ -465,17 +497,49 @@ impl<'m> CWMemory<'m> {
     }
 }
 
-fn write_to_memory(runtime: &mut wasm3::Runtime, buffer: &[u8]) -> WasmEngineResult<u32> {
+fn read_from_memory<C>(
+    instance: &wasm3::Instance<C>,
+    region_ptr: u32,
+) -> WasmEngineResult<Vec<u8>> {
+    let runtime = instance.runtime();
+    runtime.try_with_memory_or(WasmEngineError::MemoryReadError, |memory| {
+        CWMemory::new(memory).extract_vector(region_ptr)
+    })?
+}
+
+fn decode_sections_from_memory<C>(
+    instance: &wasm3::Instance<C>,
+    region_ptr: u32,
+) -> WasmEngineResult<Vec<Vec<u8>>> {
+    let runtime = instance.runtime();
+    runtime.try_with_memory_or(WasmEngineError::MemoryReadError, |memory| {
+        CWMemory::new(memory).decode_sections(region_ptr)
+    })?
+}
+
+fn write_to_memory<C>(instance: &wasm3::Instance<C>, buffer: &[u8]) -> WasmEngineResult<u32> {
     let region_ptr = (|| {
-        let alloc_fn = runtime.find_function::<u32, u32>("allocate")?;
+        let alloc_fn = instance.find_function::<u32, u32>("allocate")?;
         alloc_fn.call(buffer.len() as u32)
     })()
     .map_err(debug_err!(err => "failed to allocate {} bytes in contract: {err}", buffer.len()))
     .map_err(|_| WasmEngineError::MemoryAllocationError)?;
-    let mut memory = CWMemory::new(runtime);
-    memory
-        .write_to_allocated_memory(region_ptr, buffer)
-        .map_err(debug_err!(err => "failed to write to contract memory {err}"))
+
+    write_to_allocated_memory(instance, region_ptr, buffer)
+}
+
+fn write_to_allocated_memory<C>(
+    instance: &wasm3::Instance<C>,
+    region_ptr: u32,
+    buffer: &[u8],
+) -> WasmEngineResult<u32> {
+    instance
+        .runtime()
+        .try_with_memory_or(WasmEngineError::MemoryWriteError, |memory| {
+            CWMemory::new(memory)
+                .write_to_allocated_memory(region_ptr, buffer)
+                .map_err(debug_err!(err => "failed to write to contract memory {err}"))
+        })?
 }
 
 fn show_bytes(bytes: &[u8]) -> String {
@@ -508,12 +572,10 @@ fn to_low_half(data: u32) -> u64 {
 
 fn host_read_db(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     state_key_region_ptr: i32,
 ) -> WasmEngineResult<i32> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
-    let state_key_name = memory.extract_vector(state_key_region_ptr as u32).map_err(
+    let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_read failed to extract vector from state_key_region_ptr: {err}"),
     )?;
 
@@ -535,7 +597,7 @@ fn host_read_db(
         None => return Ok(0),
     };
 
-    let region_ptr = write_to_memory(&mut call_context.runtime, &value)?;
+    let region_ptr = write_to_memory(instance, &value)?;
 
     Ok(region_ptr as i32)
 }
@@ -543,17 +605,15 @@ fn host_read_db(
 #[cfg(not(feature = "query-only"))]
 fn host_remove_db(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     state_key_region_ptr: i32,
 ) -> WasmEngineResult<()> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
     if context.operation.is_query() {
         debug!("db_remove was called while in query mode");
         return Err(WasmEngineError::UnauthorizedWrite);
     }
 
-    let state_key_name = memory.extract_vector(state_key_region_ptr as u32).map_err(
+    let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_remove failed to extract vector from state_key_region_ptr: {err}"),
     )?;
 
@@ -568,21 +628,18 @@ fn host_remove_db(
 #[cfg(not(feature = "query-only"))]
 fn host_write_db(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (state_key_region_ptr, value_region_ptr): (i32, i32),
 ) -> WasmEngineResult<()> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
     if context.operation.is_query() {
         debug!("db_write was called while in query mode");
         return Err(WasmEngineError::UnauthorizedWrite);
     }
 
-    let state_key_name = memory.extract_vector(state_key_region_ptr as u32).map_err(
+    let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
     )?;
-
-    let value = memory.extract_vector(value_region_ptr as u32).map_err(
+    let value = read_from_memory(instance, value_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
     )?;
 
@@ -606,19 +663,14 @@ fn host_write_db(
 
 fn host_canonicalize_address(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (human_region_ptr, canonical_region_ptr): (i32, i32),
 ) -> WasmEngineResult<i32> {
-    let mut memory = CWMemory::new(&mut call_context.runtime);
-
     let cost = context.gas_costs.external_canonicalize_address as u64;
     context.use_gas_externally(cost)?;
 
-    let human = memory
-        .extract_vector(human_region_ptr as u32)
-        .map_err(
-            debug_err!(err => "canonicalize_address failed to extract vector from human_region_ptr: {err}"),
-        )?;
+    let human = read_from_memory(instance, human_region_ptr as u32)
+        .map_err(debug_err!(err => "canonicalize_address failed to extract vector from human_region_ptr: {err}"))?;
 
     let mut human_addr_str = match std::str::from_utf8(&human) {
         Ok(addr) => addr,
@@ -627,7 +679,7 @@ fn host_canonicalize_address(
                 "canonicalize_address input was not valid UTF-8: {}",
                 show_bytes(&human)
             );
-            return write_to_memory(&mut call_context.runtime, b"input is not valid UTF-8")
+            return write_to_memory(instance, b"input is not valid UTF-8")
                 .map(|n| n as i32)
                 .map_err(debug_err!("failed to write error message to contract"));
         }
@@ -635,7 +687,7 @@ fn host_canonicalize_address(
     human_addr_str = human_addr_str.trim();
     if human_addr_str.is_empty() {
         debug!("canonicalize_address input was empty");
-        return write_to_memory(&mut call_context.runtime, b"input is empty")
+        return write_to_memory(instance, b"input is empty")
             .map(|n| n as i32)
             .map_err(debug_err!("failed to write error message to contract"));
     }
@@ -649,7 +701,7 @@ fn host_canonicalize_address(
                 "canonicalize_address failed to parse input as bech32: {:?}",
                 err
             );
-            return write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
+            return write_to_memory(instance, err.to_string().as_bytes())
                 .map(|n| n as i32)
                 .map_err(debug_err!("failed to write error message to contract"));
         }
@@ -658,7 +710,7 @@ fn host_canonicalize_address(
     if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
         debug!("canonicalize_address was called with an unexpected address prefix");
         return write_to_memory(
-            &mut call_context.runtime,
+            instance,
             format!("wrong address prefix: {:?}", decoded_prefix).as_bytes(),
         )
         .map(|n| n as i32)
@@ -677,11 +729,7 @@ fn host_canonicalize_address(
         hex::encode(human_addr_str)
     );
 
-    memory
-        .write_to_allocated_memory(canonical_region_ptr as u32, &canonical)
-        .map_err(debug_err!(
-            "canonicalize_address failed to write to canonical_region_ptr"
-        ))?;
+    write_to_allocated_memory(instance, canonical_region_ptr as u32, &canonical)?;
 
     // return 0 == ok
     Ok(0)
@@ -689,19 +737,14 @@ fn host_canonicalize_address(
 
 fn host_humanize_address(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (canonical_region_ptr, human_region_ptr): (i32, i32),
 ) -> WasmEngineResult<i32> {
-    let mut memory = CWMemory::new(&mut call_context.runtime);
-
     let cost = context.gas_costs.external_canonicalize_address as u64;
     context.use_gas_externally(cost)?;
 
-    let canonical = memory
-        .extract_vector(canonical_region_ptr as u32)
-        .map_err(
-            debug_err!(err => "humanize_address failed to extract vector from canonical_region_ptr: {err}"),
-        )?;
+    let canonical = read_from_memory(instance, canonical_region_ptr as u32)
+        .map_err(debug_err!(err => "humanize_address failed to extract vector from canonical_region_ptr: {err}"))?;
 
     debug!(
         "humanize_address was called with {}",
@@ -712,7 +755,7 @@ fn host_humanize_address(
         Ok(addr) => addr,
         Err(err) => {
             debug!("humanize_address failed to encode address as bech32");
-            return write_to_memory(&mut call_context.runtime, err.to_string().as_bytes())
+            return write_to_memory(instance, err.to_string().as_bytes())
                 .map(|n| n as i32)
                 .map_err(debug_err!("failed to write error message to contract"));
         }
@@ -722,11 +765,7 @@ fn host_humanize_address(
 
     let human_bytes = human_addr_str.into_bytes();
 
-    memory
-        .write_to_allocated_memory(human_region_ptr as u32, &human_bytes)
-        .map_err(debug_err!(
-            "humanize_address failed to write to canonical_region_ptr"
-        ))?;
+    write_to_allocated_memory(instance, human_region_ptr as u32, &human_bytes)?;
 
     // return 0 == ok
     Ok(0)
@@ -734,12 +773,10 @@ fn host_humanize_address(
 
 fn host_query_chain(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     query_region_ptr: i32,
 ) -> WasmEngineResult<i32> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
-    let query_buffer = memory.extract_vector(query_region_ptr as u32).map_err(
+    let query_buffer = read_from_memory(instance, query_region_ptr as u32).map_err(
         debug_err!(err => "query_chain failed to extract vector from query_region_ptr: {err}"),
     )?;
 
@@ -755,18 +792,15 @@ fn host_query_chain(
 
     context.use_gas_externally(gas_used)?;
 
-    write_to_memory(&mut call_context.runtime, &answer).map(|region_ptr| region_ptr as i32)
+    write_to_memory(instance, &answer).map(|region_ptr| region_ptr as i32)
 }
 
 fn host_debug_print(
     _context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     message_region_ptr: i32,
 ) -> WasmEngineResult<()> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
-    let message_buffer = memory.extract_vector(message_region_ptr as u32)?;
-
+    let message_buffer = read_from_memory(instance, message_region_ptr as u32)?;
     let message =
         String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
 
@@ -777,7 +811,7 @@ fn host_debug_print(
 
 fn host_gas(
     context: &mut Context,
-    mut _call_context: wasm3::CallContext,
+    _instance: &wasm3::Instance<Context>,
     gas_amount: i32,
 ) -> WasmEngineResult<()> {
     context.use_gas(gas_amount as u64)?;
@@ -786,23 +820,18 @@ fn host_gas(
 
 fn host_secp256k1_verify(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (message_hash_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
 ) -> WasmEngineResult<i32> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
     let cost = context.gas_costs.external_secp256k1_verify as u64;
     context.use_gas_externally(cost)?;
 
-    let message_hash_data = memory.extract_vector(message_hash_ptr as u32).map_err(
-    debug_err!(err => "secp256k1_verify error while trying to read message_hash from wasm memory: {err}")
-    )?;
-    let signature_data = memory.extract_vector(signature_ptr as u32).map_err(
-        debug_err!(err => "secp256k1_verify error while trying to read signature from wasm memory: {err}")
-    )?;
-    let public_key = memory.extract_vector(public_key_ptr as u32).map_err(
-        debug_err!(err => "secp256k1_verify error while trying to read public_key from wasm memory: {err}")
-    )?;
+    let message_hash_data = read_from_memory(instance, message_hash_ptr as u32)
+        .map_err(debug_err!(err => "secp256k1_verify error while trying to read message_hash from wasm memory: {err}"))?;
+    let signature_data = read_from_memory(instance, signature_ptr as u32)
+        .map_err(debug_err!(err => "secp256k1_verify error while trying to read signature from wasm memory: {err}"))?;
+    let public_key = read_from_memory(instance, public_key_ptr as u32)
+        .map_err(debug_err!(err => "secp256k1_verify error while trying to read public_key from wasm memory: {err}"))?;
 
     trace!(
         "secp256k1_verify() was called from WASM code with message_hash {:x?} (len {:?} should be 32)",
@@ -898,20 +927,16 @@ fn host_secp256k1_verify(
 
 fn host_secp256k1_recover_pubkey(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (message_hash_ptr, signature_ptr, recovery_param): (i32, i32, i32),
 ) -> WasmEngineResult<i64> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
     let cost = context.gas_costs.external_secp256k1_recover_pubkey as u64;
     context.use_gas_externally(cost)?;
 
-    let message_hash_data = memory.extract_vector(message_hash_ptr as u32).map_err(
-        debug_err!(err => "secp256k1_recover_pubkey error while trying to read message_hash from wasm memory: {err}")
-    )?;
-    let signature_data = memory.extract_vector(signature_ptr as u32).map_err(
-        debug_err!(err => "secp256k1_recover_pubkey error while trying to read signature from wasm memory: {err}")
-    )?;
+    let message_hash_data = read_from_memory(instance, message_hash_ptr as u32)
+        .map_err(debug_err!(err => "secp256k1_recover_pubkey error while trying to read message_hash from wasm memory: {err}"))?;
+    let signature_data = read_from_memory(instance, signature_ptr as u32)
+        .map_err(debug_err!(err => "secp256k1_recover_pubkey error while trying to read signature from wasm memory: {err}"))?;
 
     trace!(
         "secp256k1_recover_pubkey was called from WASM code with message_hash {:x?} (len {:?} should be 32)",
@@ -986,7 +1011,7 @@ fn host_secp256k1_recover_pubkey(
         }
         Ok(pubkey) => {
             let answer = pubkey.serialize();
-            let ptr_to_region_in_wasm_vm = write_to_memory(&mut call_context.runtime, &answer).map_err(|err| {
+            let ptr_to_region_in_wasm_vm = write_to_memory(instance, &answer).map_err(|err| {
                 debug!(
                         "secp256k1_recover_pubkey() error while trying to allocate and write the answer {:?} to the WASM VM",
                         &answer,
@@ -1002,23 +1027,18 @@ fn host_secp256k1_recover_pubkey(
 
 fn host_ed25519_verify(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (message_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
 ) -> WasmEngineResult<i32> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
     let cost = context.gas_costs.external_ed25519_verify as u64;
     context.use_gas_externally(cost)?;
 
-    let message_data = memory.extract_vector(message_ptr as u32).map_err(
-        debug_err!(err => "ed25519_verify error while trying to read message_hash from wasm memory: {err}")
-    )?;
-    let signature_data = memory.extract_vector(signature_ptr as u32).map_err(
-        debug_err!(err => "ed25519_verify error while trying to read signature from wasm memory: {err}")
-    )?;
-    let public_key_data = memory.extract_vector(public_key_ptr as u32).map_err(
-        debug_err!(err => "ed25519_verify error while trying to read public_key from wasm memory: {err}")
-    )?;
+    let message_data = read_from_memory(instance, message_ptr as u32)
+        .map_err(debug_err!(err => "ed25519_verify error while trying to read message_hash from wasm memory: {err}"))?;
+    let signature_data = read_from_memory(instance, signature_ptr as u32)
+        .map_err(debug_err!(err => "ed25519_verify error while trying to read signature from wasm memory: {err}"))?;
+    let public_key_data = read_from_memory(instance, public_key_ptr as u32)
+        .map_err(debug_err!(err => "ed25519_verify error while trying to read public_key from wasm memory: {err}"))?;
 
     trace!(
         "ed25519_verify was called from WASM code with message {:x?} (len {:?})",
@@ -1083,28 +1103,17 @@ fn host_ed25519_verify(
 
 fn host_ed25519_batch_verify(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (messages_ptr, signatures_ptr, public_keys_ptr): (i32, i32, i32),
 ) -> WasmEngineResult<i32> {
-    let memory = CWMemory::new(&mut call_context.runtime);
+    let messages_data = decode_sections_from_memory(instance, messages_ptr as u32)
+        .map_err(debug_err!(err => "ed25519_batch_verify error while trying to read messages from wasm memory: {err}"))?;
 
-    let messages_data = memory
-        .decode_sections(messages_ptr as u32)
-        .map_err(debug_err!(
-            err => "ed25519_batch_verify error while trying to read messages from wasm memory: {err}"
-        ))?;
+    let signatures_data = decode_sections_from_memory(instance, signatures_ptr as u32)
+        .map_err(debug_err!(err => "ed25519_batch_verify error while trying to read signatures from wasm memory: {err}"))?;
 
-    let signatures_data = memory
-        .decode_sections(signatures_ptr as u32)
-        .map_err(debug_err!(
-            err => "ed25519_batch_verify error while trying to read signatures from wasm memory: {err}"
-        ))?;
-
-    let pubkeys_data = memory
-        .decode_sections(public_keys_ptr as u32)
-        .map_err(debug_err!(
-            err => "ed25519_batch_verify error while trying to read public_keys from wasm memory: {err}"
-        ))?;
+    let pubkeys_data = decode_sections_from_memory(instance, public_keys_ptr as u32)
+        .map_err(debug_err!(err => "ed25519_batch_verify error while trying to read public_keys from wasm memory: {err}"))?;
 
     let messages_len = messages_data.len();
     let signatures_len = signatures_data.len();
@@ -1235,20 +1244,16 @@ fn host_ed25519_batch_verify(
 
 fn host_secp256k1_sign(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (message_ptr, private_key_ptr): (i32, i32),
 ) -> WasmEngineResult<i64> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
     let cost = context.gas_costs.external_secp256k1_sign as u64;
     context.use_gas_externally(cost)?;
 
-    let message_data = memory.extract_vector(message_ptr as u32).map_err(
-        debug_err!(err => "secp256k1_sign error while trying to read message_hash from wasm memory: {err}")
-    )?;
-    let private_key_data = memory.extract_vector(private_key_ptr as u32).map_err(
-        debug_err!(err => "secp256k1_sign error while trying to read private key from wasm memory: {err}")
-    )?;
+    let message_data = read_from_memory(instance, message_ptr as u32)
+        .map_err(debug_err!(err => "secp256k1_sign error while trying to read message_hash from wasm memory: {err}"))?;
+    let private_key_data = read_from_memory(instance, private_key_ptr as u32)
+        .map_err(debug_err!(err => "secp256k1_sign error while trying to read private key from wasm memory: {err}"))?;
 
     trace!(
         "secp256k1_sign() was called from WASM code with message {:x?} (len {:?} should be 32)",
@@ -1297,14 +1302,13 @@ fn host_secp256k1_sign(
         .sign_ecdsa(&secp256k1_msg, &secp256k1_signing_key)
         .serialize_compact();
 
-    let ptr_to_region_in_wasm_vm =
-        write_to_memory(&mut call_context.runtime, &sig).map_err(|err| {
-            debug!(
+    let ptr_to_region_in_wasm_vm = write_to_memory(instance, &sig).map_err(|err| {
+        debug!(
             "secp256k1_sign() error while trying to allocate and write the sig {:?} to the WASM VM",
             &sig,
         );
-            err
-        })?;
+        err
+    })?;
 
     // Return pointer to the allocated buffer with the value written to it
     Ok(to_low_half(ptr_to_region_in_wasm_vm) as i64)
@@ -1312,18 +1316,16 @@ fn host_secp256k1_sign(
 
 fn host_ed25519_sign(
     context: &mut Context,
-    mut call_context: wasm3::CallContext,
+    instance: &wasm3::Instance<Context>,
     (message_ptr, private_key_ptr): (i32, i32),
 ) -> WasmEngineResult<i64> {
-    let memory = CWMemory::new(&mut call_context.runtime);
-
     let cost = context.gas_costs.external_ed25519_sign as u64;
     context.use_gas_externally(cost)?;
 
-    let message_data = memory.extract_vector(message_ptr as u32).map_err(
+    let message_data = read_from_memory(instance, message_ptr as u32).map_err(
         debug_err!(err => "ed25519_sign error while trying to read message_hash from wasm memory: {err}")
     )?;
-    let private_key_data = memory.extract_vector(private_key_ptr as u32).map_err(
+    let private_key_data = read_from_memory(instance, private_key_ptr as u32).map_err(
         debug_err!(err => "ed25519_sign error while trying to read private key from wasm memory: {err}")
     )?;
 
@@ -1358,11 +1360,11 @@ fn host_ed25519_sign(
 
     let sig: [u8; 64] = ed25519_signing_key.sign(message_data.as_slice()).into();
 
-    let ptr_to_region_in_wasm_vm = write_to_memory(&mut call_context.runtime, &sig).map_err(|err| {
+    let ptr_to_region_in_wasm_vm = write_to_memory(instance, &sig).map_err(|err| {
         debug!(
-                "ed25519_sign() error while trying to allocate and write the sig {:?} to the WASM VM",
-                &sig,
-            );
+            "ed25519_sign() error while trying to allocate and write the sig {:?} to the WASM VM",
+            &sig,
+        );
         err
     })?;
 

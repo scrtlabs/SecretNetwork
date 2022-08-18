@@ -111,32 +111,20 @@ pub fn init(
         EnclaveError::FailedToSerialize
     })?;
 
-    let env_ptr = engine.write_to_memory(&new_env)?;
-    let msg_ptr = engine.write_to_memory(&validated_msg)?;
-
-    // This wrapper is used to coalesce all errors in this block to one object
-    // so we can `.map_err()` in one place for all of them
-    let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.init(env_ptr, msg_ptr)?;
-        let output = engine.extract_vector(vec_ptr)?;
-        // TODO: copy cosmwasm's structures to enclave
-        // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
-        // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
-        let output = encrypt_output(
-            output,
-            secret_msg.nonce,
-            secret_msg.user_public_key,
-            &canonical_contract_address,
-        )?;
-
-        Ok(output)
-    })
-    .map_err(|err| {
-        *used_gas = engine.gas_used();
-        err
-    })?;
-
+    let result = engine.init(new_env, validated_msg);
     *used_gas = engine.gas_used();
+    let output = result?;
+
+    // TODO: copy cosmwasm's structures to enclave
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
+    let output = encrypt_output(
+        output,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
+        &canonical_contract_address,
+    )?;
+
     // todo: can move the key to somewhere in the output message if we want
 
     Ok(InitSuccess {
@@ -229,34 +217,21 @@ pub fn handle(
         EnclaveError::FailedToSerialize
     })?;
 
-    let env_ptr = engine.write_to_memory(&new_env)?;
-    let msg_ptr = engine.write_to_memory(&validated_msg)?;
-
-    // This wrapper is used to coalesce all errors in this block to one object
-    // so we can `.map_err()` in one place for all of them
-    let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.handle(env_ptr, msg_ptr)?;
-
-        let output = engine.extract_vector(vec_ptr)?;
-
-        debug!(
-            "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
-            secret_msg.nonce, secret_msg.user_public_key
-        );
-        let output = encrypt_output(
-            output,
-            secret_msg.nonce,
-            secret_msg.user_public_key,
-            &canonical_contract_address,
-        )?;
-        Ok(output)
-    })
-    .map_err(|err| {
-        *used_gas = engine.gas_used();
-        err
-    })?;
-
+    let result = engine.handle(new_env, validated_msg);
     *used_gas = engine.gas_used();
+    let output = result?;
+
+    debug!(
+        "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
+        secret_msg.nonce, secret_msg.user_public_key
+    );
+    let output = encrypt_output(
+        output,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
+        &canonical_contract_address,
+    )?;
+
     Ok(HandleSuccess { output })
 }
 
@@ -318,29 +293,17 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
-    let msg_ptr = engine.write_to_memory(&validated_msg)?;
-
-    // This wrapper is used to coalesce all errors in this block to one object
-    // so we can `.map_err()` in one place for all of them
-    let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.query(msg_ptr)?;
-
-        let output = engine.extract_vector(vec_ptr)?;
-
-        let output = encrypt_output(
-            output,
-            secret_msg.nonce,
-            secret_msg.user_public_key,
-            &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
-        )?;
-        Ok(output)
-    })
-    .map_err(|err| {
-        *used_gas = engine.gas_used();
-        err
-    })?;
-
+    let result = engine.query(validated_msg);
     *used_gas = engine.gas_used();
+    let output = result?;
+
+    let output = encrypt_output(
+        output,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
+        &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
+    )?;
+
     Ok(QuerySuccess { output })
 }
 

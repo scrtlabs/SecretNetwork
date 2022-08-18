@@ -1,5 +1,4 @@
 //! Gas metering instrumentation.
-use std::collections::BTreeMap;
 
 use walrus::{ir::*, FunctionBuilder, GlobalId, LocalFunction, Module};
 
@@ -11,36 +10,39 @@ pub const EXPORT_GAS_LIMIT: &str = "gas_limit";
 pub const EXPORT_GAS_LIMIT_EXHAUSTED: &str = "gas_limit_exhausted";
 
 /// Configures the gas limit on the given instance.
-pub fn set_gas_limit(instance: &wasm3::Module<'_>, gas_limit: u64) -> Result<(), EnclaveError> {
+pub fn set_gas_limit<C>(
+    instance: &wasm3::Instance<'_, '_, C>,
+    gas_limit: u64,
+) -> Result<(), EnclaveError> {
     instance
         .set_global(EXPORT_GAS_LIMIT, gas_limit)
         .map_err(|_err| EnclaveError::FailedGasMeteringInjection)
 }
 
 /// Returns the remaining gas.
-pub fn get_remaining_gas(instance: &wasm3::Module<'_>) -> u64 {
+pub fn get_remaining_gas<C>(instance: &wasm3::Instance<'_, '_, C>) -> u64 {
     instance.get_global(EXPORT_GAS_LIMIT).unwrap_or_default()
 }
 
 /// Returns the amount of gas requested that was over the limit.
-pub fn get_exhausted_amount(instance: &wasm3::Module<'_>) -> u64 {
+pub fn get_exhausted_amount<C>(instance: &wasm3::Instance<'_, '_, C>) -> u64 {
     instance
         .get_global(EXPORT_GAS_LIMIT_EXHAUSTED)
         .unwrap_or_default()
 }
 
 /// Attempts to use the given amount of gas.
-pub fn use_gas(instance: &wasm3::Module<'_>, amount: u64) -> Result<(), wasm3::error::Trap> {
+pub fn use_gas<C>(instance: &wasm3::Instance<'_, '_, C>, amount: u64) -> Result<(), wasm3::Trap> {
     let gas_limit: u64 = instance
         .get_global(EXPORT_GAS_LIMIT)
-        .map_err(|_| wasm3::error::Trap::Abort)?;
+        .map_err(|_| wasm3::Trap::Abort)?;
     if gas_limit < amount {
         let _ = instance.set_global(EXPORT_GAS_LIMIT_EXHAUSTED, amount);
-        return Err(wasm3::error::Trap::Abort);
+        return Err(wasm3::Trap::Abort);
     }
     instance
         .set_global(EXPORT_GAS_LIMIT, gas_limit - amount)
-        .map_err(|_| wasm3::error::Trap::Abort)?;
+        .map_err(|_| wasm3::Trap::Abort)?;
     Ok(())
 }
 
@@ -84,9 +86,6 @@ struct MeteredBlock {
     start_index: usize,
     /// Instruction cost.
     cost: u64,
-    /// Indication of whether the metered block can be merged in case instruction sequence and start
-    /// index match. In case the block cannot be merged this contains the index
-    merge_index: Option<usize>,
 }
 
 impl MeteredBlock {
@@ -95,17 +94,6 @@ impl MeteredBlock {
             seq_id,
             start_index,
             cost: 0,
-            merge_index: None,
-        }
-    }
-
-    /// Create a mergable version of this metered block with the given start index.
-    fn mergable(&self, start_index: usize) -> Self {
-        Self {
-            seq_id: self.seq_id,
-            start_index,
-            cost: 0,
-            merge_index: Some(self.start_index),
         }
     }
 }
@@ -115,15 +103,18 @@ fn transform_function(
     gas_limit_global: GlobalId,
     gas_limit_exhausted_global: GlobalId,
 ) {
-    let block_ids: Vec<_> = func.blocks().map(|(block_id, block)| block_id).collect();
+    let block_ids: Vec<_> = func.blocks().map(|(block_id, _block)| block_id).collect();
     for block_id in block_ids {
         let block = func.block(block_id);
         let new_block_len = block.len() + METERING_INSTRUCTION_COUNT;
         let mut new_block = Vec::with_capacity(new_block_len);
 
         let mut metered_block = MeteredBlock::new(block_id, 0);
-        // todo replace with usage of fn instruction_cost
-        metered_block.cost = block.len() as u64;
+        metered_block.cost = block
+            .instrs
+            .iter()
+            .map(|(inst, _instr_loc)| instruction_cost(inst))
+            .sum();
 
         let builder = func.builder_mut();
         inject_metering(

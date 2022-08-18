@@ -117,6 +117,9 @@ pub enum EnclaveError {
     /// The contract has run out of space on the stack.
     #[display(fmt = "the contract has run out of space on the stack")]
     ContractPanicStackOverflow,
+    /// The contract performed integer overflow.
+    #[display(fmt = "the contract has run out of space on the stack")]
+    ContractPanicIntegerOverflow,
     /// The contract tried to call a function but expected an incorrect function signature.
     #[display(
         fmt = "the contract tried to call a function but expected an incorrect function signature"

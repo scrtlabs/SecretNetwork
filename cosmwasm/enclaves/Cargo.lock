@@ -116,9 +116,9 @@ checksum = "2dabbe35f96fb9507f7330793dc490461b2962659ac5d427181e451a623751d1"
 
 [[package]]
 name = "bindgen"
-version = "0.59.2"
+version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bd2a9a458e8f4304c52c43ebb0cfbd520289f8379a52e329a38afda99bf8eb8"
+checksum = "0f8523b410d7187a43085e7e064416ea32ded16bd0a4e6fc025e21616d01258f"
 dependencies = [
  "bitflags",
  "cexpr",
@@ -134,7 +134,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex 1.1.0",
- "which",
+ "which 3.1.1",
 ]
 
 [[package]]
@@ -224,9 +224,9 @@ checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
 
 [[package]]
 name = "cexpr"
-version = "0.6.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fac387a98bb7c37292057cffc56d62ecb629900026402633ae9160df93a8766"
+checksum = "f4aedb84272dbe89af497cf81375129abda4fc0a9e7c5d317498c15cc30c0d27"
 dependencies = [
  "nom",
 ]
@@ -564,9 +564,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.9.0"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b2cf0344971ee6c64c31be0d530793fba457d322dfec2810c453d0ef228f9c3"
+checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
 dependencies = [
  "atty",
  "humantime",
@@ -690,6 +690,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25a2bc672d1148e28034f176e01fffebb08b35768468cc954630da77a1449005"
 
 [[package]]
+name = "impl-trait-for-tuples"
+version = "0.2.2"
+source = "git+https://github.com/scrtlabs/impl-trait-for-tuples?tag=v0.2.2-secret#ec2ad4dd1b381f0395c95a9ad7c1505aff83df45"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "instant"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -789,19 +799,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
 
 [[package]]
-name = "minimal-lexical"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
-
-[[package]]
 name = "nom"
-version = "7.1.1"
+version = "5.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8903e5a29a317527874d0402f867152a3d21c908bb0b933e416c65e301d4c36"
+checksum = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
 dependencies = [
  "memchr",
- "minimal-lexical",
+ "version_check",
 ]
 
 [[package]]
@@ -946,7 +950,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ac70cfc8935f5db2a29c0929db697035d02284011a9b78a5ef5d48092ce9673"
 dependencies = [
  "log",
- "which",
+ "which 4.2.4",
 ]
 
 [[package]]
@@ -1656,17 +1660,19 @@ checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
 
 [[package]]
 name = "wasm3"
-version = "0.5.0"
-source = "git+https://github.com/scrtlabs/wasm3-rs?rev=004a3e7#004a3e7c38bea53b21f7991ab250476139c302c5"
+version = "0.3.1"
+source = "git+https://github.com/scrtlabs/wasm3-rs?rev=ad1c868#ad1c868bb6c5f62161f33d80f90c5b4541190018"
 dependencies = [
  "cty",
+ "impl-trait-for-tuples",
+ "thiserror",
  "wasm3-sys",
 ]
 
 [[package]]
 name = "wasm3-sys"
-version = "0.5.0"
-source = "git+https://github.com/scrtlabs/wasm3-rs?rev=004a3e7#004a3e7c38bea53b21f7991ab250476139c302c5"
+version = "0.3.1"
+source = "git+https://github.com/scrtlabs/wasm3-rs?rev=ad1c868#ad1c868bb6c5f62161f33d80f90c5b4541190018"
 dependencies = [
  "bindgen",
  "cc",
@@ -1719,6 +1725,15 @@ source = "git+https://github.com/mesalock-linux/webpki-roots?rev=6ff3be547ac13cc
 dependencies = [
  "sgx_tstd 1.1.3 (git+https://github.com/apache/teaclave-sgx-sdk.git?rev=v1.1.3)",
  "webpki",
+]
+
+[[package]]
+name = "which"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d011071ae14a2f6671d0b74080ae0cd8ebf3a6f8c9589a2cd45f23126fe29724"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

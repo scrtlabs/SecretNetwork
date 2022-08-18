@@ -3,6 +3,8 @@ use log::*;
 
 use wasmi::{Error as InterpreterError, HostError, TrapKind};
 
+use wasm3::Error as Wasm3RsError;
+
 use enclave_ffi_types::{EnclaveError, UntrustedVmError};
 
 use crate::external::ecalls::BufferRecoveryError;
@@ -73,36 +75,68 @@ impl From<Box<WasmEngineError>> for EnclaveError {
     }
 }
 
-pub fn wasm3_error_to_enclave_error(
-    context: &mut crate::wasm3::Context,
-    wasm3_error: wasm3::error::Error,
-) -> EnclaveError {
-    use wasm3::error::Error as Wasm3RsError;
-    use wasm3::error::Trap;
+/// This trait is used to convert foreign error types to EnclaveError
+pub trait ToEnclaveError {
+    fn to_enclave_error(self) -> EnclaveError;
+}
 
-    match context.take_last_error() {
-        Some(wasm_engine_error) => wasm_engine_error.into(),
-        None => match wasm3_error {
-            Wasm3RsError::Wasm3(wasm3_error) => match Trap::from(wasm3_error) {
-                Trap::OutOfBoundsMemoryAccess => EnclaveError::ContractPanicMemoryAccessOutOfBounds,
-                Trap::DivisionByZero => EnclaveError::ContractPanicDivisionByZero,
-                Trap::IntegerOverflow => EnclaveError::Panic,
-                Trap::IntegerConversion => EnclaveError::ContractPanicInvalidConversionToInt,
-                Trap::IndirectCallTypeMismatch => EnclaveError::FailedFunctionCall,
-                Trap::TableIndexOutOfRange => EnclaveError::ContractPanicTableAccessOutOfBounds,
-                Trap::Exit => EnclaveError::Panic,
-                Trap::Abort => EnclaveError::Panic,
-                Trap::Unreachable => EnclaveError::ContractPanicUnreachable,
-                Trap::StackOverflow => EnclaveError::ContractPanicStackOverflow,
-            },
-            Wasm3RsError::InvalidFunctionSignature => EnclaveError::InvalidWasm,
-            Wasm3RsError::FunctionNotFound => EnclaveError::FailedFunctionCall,
-            Wasm3RsError::ModuleNotFound => EnclaveError::InvalidWasm,
-            Wasm3RsError::ModuleLoadEnvMismatch => EnclaveError::FailedFunctionCall,
-            Wasm3RsError::RuntimeIsActive => EnclaveError::FailedFunctionCall,
+impl ToEnclaveError for Wasm3RsError {
+    fn to_enclave_error(self) -> EnclaveError {
+        match self {
+            Wasm3RsError::MemoryAllocationFailure => EnclaveError::MemoryAllocationError,
+            Wasm3RsError::ParseError(_parse_error) => EnclaveError::InvalidWasm,
+            Wasm3RsError::ModuleAlreadyLinked => EnclaveError::CannotInitializeWasmMemory,
+            Wasm3RsError::ModuleTooLarge => EnclaveError::InvalidWasm,
+            Wasm3RsError::MalformedModuleName => EnclaveError::InvalidWasm,
+            Wasm3RsError::MalformedFunctionName => EnclaveError::InvalidWasm,
+            Wasm3RsError::MalformedFunctionSignature => EnclaveError::InvalidWasm,
+            Wasm3RsError::MalformedGlobalName => EnclaveError::InvalidWasm,
             Wasm3RsError::GlobalNotFound => EnclaveError::InvalidWasm,
-            Wasm3RsError::ArgumentTypeMismatch => EnclaveError::InvalidWasm,
-        },
+            Wasm3RsError::FunctionNotFound => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::FunctionImportMissing => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::ArgumentCountMismatch => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::ArgumentTypeMismatch => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::MemoryInUse => EnclaveError::MemoryReadError,
+            Wasm3RsError::OutOfMemory => EnclaveError::OutOfMemory,
+
+            // Traps.
+            Wasm3RsError::OutOfBoundsMemoryAccess => {
+                EnclaveError::ContractPanicMemoryAccessOutOfBounds
+            }
+            Wasm3RsError::DivisionByZero => EnclaveError::ContractPanicDivisionByZero,
+            Wasm3RsError::IntegerOverflow => EnclaveError::ContractPanicUnreachable,
+            Wasm3RsError::InvalidIntegerConversion => {
+                EnclaveError::ContractPanicInvalidConversionToInt
+            }
+            Wasm3RsError::IndirectCallTypeMismatch => {
+                EnclaveError::ContractPanicUnexpectedSignature
+            }
+            Wasm3RsError::UndefinedTableElement => {
+                EnclaveError::ContractPanicTableAccessOutOfBounds
+            }
+            Wasm3RsError::NullTableElement => EnclaveError::ContractPanicTableAccessOutOfBounds,
+            Wasm3RsError::ExitCalled => EnclaveError::ContractPanicUnreachable,
+            Wasm3RsError::AbortCalled => EnclaveError::ContractPanicUnreachable,
+            Wasm3RsError::UnreachableExecuted => EnclaveError::ContractPanicUnreachable,
+            Wasm3RsError::StackOverflow => EnclaveError::ContractPanicStackOverflow,
+
+            // Other errors.
+            Wasm3RsError::Unknown(_string) => EnclaveError::Unknown,
+        }
+    }
+}
+
+/// This trait is used to convert foreign result types to EnclaveError
+pub trait ToEnclaveResult<T> {
+    fn to_enclave_result(self) -> Result<T, EnclaveError>;
+}
+
+impl<T, E> ToEnclaveResult<T> for Result<T, E>
+where
+    E: ToEnclaveError,
+{
+    fn to_enclave_result(self) -> Result<T, EnclaveError> {
+        self.map_err(|err| err.to_enclave_error())
     }
 }
 
