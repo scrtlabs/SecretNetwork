@@ -254,91 +254,73 @@ pub fn try_get_decrypted_secret_msg(message: &[u8]) -> Option<DecryptedSecretMes
     }
 }
 
-pub fn parse_ibc_packet<T>(
-    _t: T,
-    message: &[u8],
-    orig_secret_msg: SecretMessage,
-    function_name: &str,
-) -> Result<ParsedMessage, EnclaveError>
+pub fn parse_ibc_packet<T>(_t: T, message: &[u8], function_name: &str) -> ParsedMessage
 where
     T: IbcPacketTrait<Data = Binary> + Serialize + DeserializeOwned + Debug,
 {
-    let mut parsed_encrypted_ibc_packet: T =
-        serde_json::from_slice(&orig_secret_msg.msg.as_slice().to_vec()).map_err(|err| {
-            warn!(
+    let mut parsed_encrypted_ibc_packet: T = serde_json::from_slice(&message.as_slice().to_vec())
+        .map_err(|err| {
+        warn!(
             "{} msg got an error while trying to deserialize msg input bytes into json {:?}: {}",
             function_name,
             String::from_utf8_lossy(&orig_secret_msg.msg),
             err
         );
-            EnclaveError::FailedToDeserialize
-        })?;
+        EnclaveError::FailedToDeserialize
+    })?;
 
-    let tmp_secret_data = SecretMessage {
-        nonce: orig_secret_msg.nonce,
-        user_public_key: orig_secret_msg.user_public_key,
-        msg: parsed_encrypted_ibc_packet.get_packet().as_slice().to_vec(),
-    };
+    let tmp_secret_data = get_secret_msg(parsed_encrypted_ibc_packet.get_packet().as_slice());
+    let was_msg_encrypted = false;
+    let orig_secret_msg = tmp_secret_data;
 
     match tmp_secret_data.decrypt() {
         Ok(decrypted_msg) => {
             // IBC packet was encrypted
 
             trace!(
-                "{} input before decryption: {:?}",
+                "{} data before decryption: {:?}",
                 function_name,
                 base64::encode(&message)
             );
 
             parsed_encrypted_ibc_packet.set_packet(decrypted_msg.as_slice().into());
-
-            match parsed_encrypted_ibc_packet.get_ack() {
-                Some(ack_data) => {
-                    let tmp_secret_ack_data = SecretMessage {
-                        nonce: orig_secret_msg.nonce,
-                        user_public_key: orig_secret_msg.user_public_key,
-                        msg: ack_data.as_slice().to_vec(),
-                    };
-
-                    parsed_encrypted_ibc_packet
-                        .set_ack(tmp_secret_ack_data.decrypt()?.as_slice().into());
-                }
-                None => {}
-            }
-
-            Ok(ParsedMessage {
-                should_validate_sig_info: false,
-                was_msg_encrypted: true,
-                secret_msg: orig_secret_msg,
-                decrypted_msg: serde_json::to_vec(&parsed_encrypted_ibc_packet).map_err(|err| {
-                    warn!(
-                        "got an error while trying to serialize {} msg into bytes {:?}: {}",
-                        function_name, parsed_encrypted_ibc_packet, err
-                    );
-                    EnclaveError::FailedToSerialize
-                })?,
-                contract_hash_for_validation: None,
-            })
+            was_msg_encrypted = true;
         }
         Err(_) => {
-            // assume packet is not encrypted, continue in plaintext mode
+            // assume data is not encrypted
 
             trace!(
-                "{} input was plaintext: {:?}",
+                "{} data was plaintext: {:?}",
                 function_name,
                 base64::encode(&message)
             );
-
-            let decrypted_msg = orig_secret_msg.msg.clone();
-
-            Ok(ParsedMessage {
-                should_validate_sig_info: false,
-                was_msg_encrypted: false,
-                secret_msg: orig_secret_msg,
-                decrypted_msg,
-                contract_hash_for_validation: None,
-            })
         }
+    }
+
+    let tmp_secret_ack = get_secret_msg(parsed_encrypted_ibc_packet.get_ack().as_slice());
+
+    match tmp_secret_ack.decrypt() {
+        Ok(ack_data) => {
+            parsed_encrypted_ibc_packet.set_ack(ack_data.as_slice().into());
+            was_msg_encrypted = true;
+
+            orig_secret_msg = tmp_secret_ack;
+        }
+        Err(_) => {}
+    }
+
+    ParsedMessage {
+        should_validate_sig_info: false,
+        was_msg_encrypted,
+        secret_msg: orig_secret_msg,
+        decrypted_msg: serde_json::to_vec(&parsed_encrypted_ibc_packet).map_err(|err| {
+            warn!(
+                "got an error while trying to serialize {} msg into bytes {:?}: {}",
+                function_name, parsed_encrypted_ibc_packet, err
+            );
+            EnclaveError::FailedToSerialize
+        })?,
+        contract_hash_for_validation: None,
     }
 }
 
@@ -683,32 +665,29 @@ pub fn parse_message(
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
             // LIORRR TODO: Maybe mark whether the message was encrypted or not.
             let orig_secret_msg = get_secret_msg(message);
-            parse_ibc_packet(
+            Ok(parse_ibc_packet(
                 IbcPacketReceiveMsg::default(),
                 message,
-                orig_secret_msg,
                 "ibc_packet_receive",
-            )
+            ))
         }
         HandleType::HANDLE_TYPE_IBC_PACKET_ACK => {
             // LIORRR TODO: Maybe mark whether the message was encrypted or not.
             let orig_secret_msg = get_secret_msg(message);
-            parse_ibc_packet(
+            Ok(parse_ibc_packet(
                 IbcPacketAckMsg::default(),
                 message,
-                orig_secret_msg,
                 "ibc_packet_receive",
-            )
+            ))
         }
         HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
             // LIORRR TODO: Maybe mark whether the message was encrypted or not.
             let orig_secret_msg = get_secret_msg(message);
-            parse_ibc_packet(
+            Ok(parse_ibc_packet(
                 IbcPacketTimeoutMsg::default(),
                 message,
-                orig_secret_msg,
                 "ibc_packet_timeout",
-            )
+            ))
         }
     };
 }
