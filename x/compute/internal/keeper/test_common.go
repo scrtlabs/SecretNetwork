@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -89,6 +90,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
+	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
@@ -494,20 +496,13 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract)
 	return res, nil
 }
 
-func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
-	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
-	require.NoError(t, err)
-
-	initMsg := wasmtypes.MsgInstantiateContract{
-		Sender:    creator,
-		CodeID:    codeID,
-		Label:     "demo contract 1",
-		InitMsg:   encMsg,
-		InitFunds: funds,
+func PrepareIBCOpenAck(t *testing.T, keeper Keeper, ctx sdk.Context, ibcOpenAck v1types.IBCOpenAck, ibcOpenConfirm v1types.IBCOpenConfirm) sdk.Context {
+	channelConnectMsg := v1types.IBCChannelConnectMsg{
+		OpenAck:     &ibcOpenAck,
+		OpenConfirm: &ibcOpenConfirm,
 	}
-	tx := NewTestTx(&initMsg, creatorAcc, privKey)
 
-	txBytes, err := tx.Marshal()
+	txBytes, err := json.Marshal(channelConnectMsg)
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
@@ -524,6 +519,25 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 		SentFunds: funds,
 	}
 	tx := NewTestTx(&executeMsg, creatorAcc, privKey)
+
+	txBytes, err := tx.Marshal()
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
+func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
+	require.NoError(t, err)
+
+	initMsg := wasmtypes.MsgInstantiateContract{
+		Sender:    creator,
+		CodeID:    codeID,
+		Label:     "demo contract 1",
+		InitMsg:   encMsg,
+		InitFunds: funds,
+	}
+	tx := NewTestTx(&initMsg, creatorAcc, privKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
