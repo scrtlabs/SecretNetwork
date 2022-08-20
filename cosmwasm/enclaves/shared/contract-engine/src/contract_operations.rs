@@ -254,26 +254,30 @@ pub fn try_get_decrypted_secret_msg(message: &[u8]) -> Option<DecryptedSecretMes
     }
 }
 
-pub fn parse_ibc_packet<T>(_t: T, message: &[u8], function_name: &str) -> ParsedMessage
+pub fn parse_ibc_packet<T>(
+    _t: T,
+    message: &[u8],
+    function_name: &str,
+) -> Result<ParsedMessage, EnclaveError>
 where
     T: IbcPacketTrait<Data = Binary> + Serialize + DeserializeOwned + Debug,
 {
-    let mut parsed_encrypted_ibc_packet: T = serde_json::from_slice(&message.as_slice().to_vec())
-        .map_err(|err| {
-        warn!(
+    let mut parsed_encrypted_ibc_packet: T =
+        serde_json::from_slice(&message.to_vec()).map_err(|err| {
+            warn!(
             "{} msg got an error while trying to deserialize msg input bytes into json {:?}: {}",
             function_name,
-            String::from_utf8_lossy(&orig_secret_msg.msg),
+            String::from_utf8_lossy(&message),
             err
         );
-        EnclaveError::FailedToDeserialize
-    })?;
+            EnclaveError::FailedToDeserialize
+        })?;
 
     let tmp_secret_data = get_secret_msg(parsed_encrypted_ibc_packet.get_packet().as_slice());
-    let was_msg_encrypted = false;
-    let orig_secret_msg = tmp_secret_data;
+    let mut was_msg_encrypted = false;
+    let mut orig_secret_msg = tmp_secret_data;
 
-    match tmp_secret_data.decrypt() {
+    match orig_secret_msg.decrypt() {
         Ok(decrypted_msg) => {
             // IBC packet was encrypted
 
@@ -297,7 +301,8 @@ where
         }
     }
 
-    let tmp_secret_ack = get_secret_msg(parsed_encrypted_ibc_packet.get_ack().as_slice());
+    let ack = parsed_encrypted_ibc_packet.get_ack();
+    let tmp_secret_ack = get_secret_msg(ack.unwrap_or(Binary::from(vec![].as_slice())).as_slice());
 
     match tmp_secret_ack.decrypt() {
         Ok(ack_data) => {
@@ -309,7 +314,7 @@ where
         Err(_) => {}
     }
 
-    ParsedMessage {
+    Ok(ParsedMessage {
         should_validate_sig_info: false,
         was_msg_encrypted,
         secret_msg: orig_secret_msg,
@@ -321,7 +326,7 @@ where
             EnclaveError::FailedToSerialize
         })?,
         contract_hash_for_validation: None,
-    }
+    })
 }
 
 // Parse the message that was passed to handle (Based on the assumption that it might be a reply or IBC as well)
@@ -664,30 +669,23 @@ pub fn parse_message(
         }
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
             // LIORRR TODO: Maybe mark whether the message was encrypted or not.
-            let orig_secret_msg = get_secret_msg(message);
-            Ok(parse_ibc_packet(
+            parse_ibc_packet(
                 IbcPacketReceiveMsg::default(),
                 message,
                 "ibc_packet_receive",
-            ))
+            )
         }
         HandleType::HANDLE_TYPE_IBC_PACKET_ACK => {
             // LIORRR TODO: Maybe mark whether the message was encrypted or not.
-            let orig_secret_msg = get_secret_msg(message);
-            Ok(parse_ibc_packet(
-                IbcPacketAckMsg::default(),
-                message,
-                "ibc_packet_receive",
-            ))
+            parse_ibc_packet(IbcPacketAckMsg::default(), message, "ibc_packet_receive")
         }
         HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
             // LIORRR TODO: Maybe mark whether the message was encrypted or not.
-            let orig_secret_msg = get_secret_msg(message);
-            Ok(parse_ibc_packet(
+            parse_ibc_packet(
                 IbcPacketTimeoutMsg::default(),
                 message,
                 "ibc_packet_timeout",
-            ))
+            )
         }
     };
 }
