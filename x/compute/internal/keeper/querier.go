@@ -190,6 +190,18 @@ func (q GrpcQuerier) ContractHash(c context.Context, req *types.QueryContractHas
 	return &types.QueryContractHashResponse{CodeHash: rsp}, nil
 }
 
+func (q GrpcQuerier) ContractHashByID(c context.Context, req *types.QueryContractHashByIDRequest) (*types.QueryContractHashResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	rsp, err := queryContractHashByID(ctx, req.CodeId, q.keeper)
+	switch {
+	case err != nil:
+		return nil, err
+	case rsp == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryContractHashResponse{CodeHash: rsp}, nil
+}
+
 func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {
 	info := keeper.GetContractInfo(ctx, addr)
 	if info == nil {
@@ -317,5 +329,15 @@ func queryContractHash(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) (
 		return nil, nil
 	}
 
-	return keeper.GetCodeInfo(ctx, res.CodeID).CodeHash, nil
+	return queryContractHashByID(ctx, res.CodeID, keeper)
+}
+
+func queryContractHashByID(ctx sdk.Context, codeID uint64, keeper Keeper) ([]byte, error) {
+	codeInfo := keeper.GetCodeInfo(ctx, codeID)
+
+	if codeInfo == nil {
+		return nil, nil
+	}
+
+	return codeInfo.CodeHash, nil
 }

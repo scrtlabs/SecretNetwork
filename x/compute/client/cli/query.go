@@ -47,6 +47,7 @@ func GetQueryCmd() *cobra.Command {
 		GetQueryDecryptTxCmd(),
 		GetCmdQueryLabel(),
 		GetCmdCodeHashByContract(),
+		GetCmdCodeHashByID(),
 		CmdDecryptText(),
 		// GetCmdGetContractHistory(cdc),
 	)
@@ -120,7 +121,7 @@ func GetCmdQueryLabel() *cobra.Command {
 	return cmd
 }
 
-// GetCmdListCode lists all wasm code uploaded
+// GetCmdCodeHashByContract return the code hash of a contract by address
 func GetCmdCodeHashByContract() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "contract-hash [address]",
@@ -141,6 +142,39 @@ func GetCmdCodeHashByContract() *cobra.Command {
 
 			addr := hex.EncodeToString(res)
 			fmt.Printf("0x%s", addr)
+			return nil
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// GetCmdCodeHashByID return the code hash of a contract by ID
+func GetCmdCodeHashByID() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "contract-hash-by-id [code_id]",
+		Short: "Return the code hash of a contract represented by ID",
+		Long:  "Return the code hash of a contract represented by ID",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHashByID, args[0])
+			res, _, err := clientCtx.Query(route)
+			if err != nil {
+				return fmt.Errorf("error querying contract hash by id: %s", err)
+			}
+
+			if len(res) == 0 {
+				return fmt.Errorf("contract with id %s not found", args[0])
+			}
+
+			addr := hex.EncodeToString(res)
+			fmt.Printf("0x%s\n", addr)
 			return nil
 		},
 	}
