@@ -56,7 +56,9 @@ macro_rules! set_last_error {
 macro_rules! link_fn {
     ($instance: expr, $name: expr, $implementation: expr) => {{
         let func = expect_context($implementation);
-        $instance.link_function("env", $name, func)
+        $instance
+            .link_function("env", $name, func)
+            .allow_missing_import()
     }};
 }
 
@@ -197,6 +199,10 @@ impl Engine {
             .parse(contract_code.code())
             .map_err(|_| EnclaveError::InvalidWasm)?;
 
+        for import in module.imports.iter() {
+            eprintln!("import {:?}", import)
+        }
+
         validation::validate_memory(&mut module)?;
 
         if let ContractOperation::Init = operation {
@@ -258,9 +264,7 @@ impl Engine {
         gas::set_gas_limit(&instance, self.gas_limit)?;
         debug!("set gas limit");
 
-        Self::link_host_functions(&mut instance)
-            .allow_missing_import()
-            .to_enclave_result()?;
+        Self::link_host_functions(&mut instance).to_enclave_result()?;
         debug!("linked functions");
 
         let result = func(&mut instance, &mut self.context);
@@ -274,22 +278,16 @@ impl Engine {
 
     fn link_host_functions(instance: &mut wasm3::Instance<Context>) -> Wasm3RsResult<()> {
         link_fn!(instance, "db_read", host_read_db)?;
-        #[cfg(not(feature = "query-only"))]
-        {
-            link_fn!(instance, "db_write", host_write_db)?;
-            link_fn!(instance, "db_remove", host_remove_db)?;
-        }
+        link_fn!(instance, "db_write", host_write_db)?;
+        link_fn!(instance, "db_remove", host_remove_db)?;
         link_fn!(instance, "canonicalize_address", host_canonicalize_address)?;
         link_fn!(instance, "humanize_address", host_humanize_address)?;
         link_fn!(instance, "query_chain", host_query_chain)?;
         link_fn!(instance, "debug_print", host_debug_print)?;
         link_fn!(instance, "gas", host_gas)?;
         link_fn!(instance, "secp256k1_verify", host_secp256k1_verify)?;
-        link_fn!(
-            instance,
-            "secp256k1_recover_pubkey",
-            host_secp256k1_recover_pubkey
-        )?;
+        #[rustfmt::skip]
+        link_fn!(instance, "secp256k1_recover_pubkey", host_secp256k1_recover_pubkey)?;
         link_fn!(instance, "ed25519_verify", host_ed25519_verify)?;
         link_fn!(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
         link_fn!(instance, "secp256k1_sign", host_secp256k1_sign)?;
@@ -305,6 +303,7 @@ impl Engine {
 
     pub fn init(&mut self, env: Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
         self.with_instance(|instance, context| {
+            debug!("starting init");
             let env_ptr = write_to_memory(instance, &env)?;
             let msg_ptr = write_to_memory(instance, &msg)?;
 
@@ -327,6 +326,7 @@ impl Engine {
 
     pub fn handle(&mut self, env: Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
         self.with_instance(|instance, context| {
+            debug!("starting handle");
             let env_ptr = write_to_memory(instance, &env)?;
             debug!("handle written env");
             let msg_ptr = write_to_memory(instance, &msg)?;
@@ -356,6 +356,7 @@ impl Engine {
 
     pub fn query(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
         self.with_instance(|instance, context| {
+            debug!("starting query");
             let msg_ptr = write_to_memory(instance, &msg)?;
 
             let query = instance
@@ -654,6 +655,24 @@ fn host_write_db(
     context.use_gas_externally(used_gas)?;
 
     Ok(())
+}
+
+#[cfg(feature = "query-only")]
+fn host_remove_db(
+    _context: &mut Context,
+    _instance: &wasm3::Instance<Context>,
+    _state_key_region_ptr: i32,
+) -> WasmEngineResult<()> {
+    Err(WasmEngineError::UnauthorizedWrite)
+}
+
+#[cfg(feature = "query-only")]
+fn host_write_db(
+    _context: &mut Context,
+    _instance: &wasm3::Instance<Context>,
+    (_state_key_region_ptr, _value_region_ptr): (i32, i32),
+) -> WasmEngineResult<()> {
+    Err(WasmEngineError::UnauthorizedWrite)
 }
 
 fn host_canonicalize_address(
