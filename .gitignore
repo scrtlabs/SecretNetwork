@@ -25,6 +25,7 @@ SHA256SUMS*
 __debug_bin
 id_tx_io.json
 .idea
+.vscode
 x/compute/internal/keeper/debug.test
 ias_keys/production
 api_key.txt
