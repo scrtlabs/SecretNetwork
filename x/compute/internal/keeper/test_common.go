@@ -405,6 +405,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// stakingtypes.RegisterMsgServer(serviceRouter, stakingMsgServer)
 	// distrtypes.RegisterMsgServer(serviceRouter, distrMsgServer)
 
+	queryRouter := baseapp.NewGRPCQueryRouter()
+	queryRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
+	msgRouter := baseapp.NewMsgServiceRouter()
+	msgRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
+
 	keeper := NewKeeper(
 		encodingConfig.Marshaler,
 		*encodingConfig.Amino,
@@ -420,8 +425,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		ibcKeeper.PortKeeper,
 		MockIBCTransferKeeper{},
 		ibcKeeper.ChannelKeeper,
-		baseapp.NewMsgServiceRouter(),
-		baseapp.NewGRPCQueryRouter(),
+		msgRouter,
+		queryRouter,
 		tempDir,
 		wasmConfig,
 		supportedFeatures,

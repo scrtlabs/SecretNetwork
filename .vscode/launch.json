@@ -10,6 +10,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${file}",
+      "cwd": "${workspaceFolder}/x/compute/internal/keeper",
       "env": { "SGX_MODE": "SW", "RUST_BACKTRACE": "1" },
       "args": [
         "test",

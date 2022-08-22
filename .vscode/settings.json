@@ -20,7 +20,6 @@
   "go.useLanguageServer": true,
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "workspace",
-  "go.buildTags": "secretcli",
   "gopls": {
     "formatting.gofumpt": true
   },
