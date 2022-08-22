@@ -311,8 +311,7 @@ func CmdDecryptText() *cobra.Command {
 				return fmt.Errorf("error while trying to decode the encrypted output data from base64: %w", err)
 			}
 
-			nonce := dataCipherBz[0:32]
-			originalTxSenderPubkey := dataCipherBz[32:64]
+			nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(dataCipherBz)
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
@@ -324,7 +323,7 @@ func CmdDecryptText() *cobra.Command {
 				return fmt.Errorf("cannot decrypt, not original tx sender")
 			}
 
-			dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataCipherBz[64:], nonce)
+			dataPlaintextB64Bz, err := wasmCtx.Decrypt(ciphertextInput, nonce)
 			if err != nil {
 				return fmt.Errorf("error while trying to decrypt the output data: %w", err)
 			}
@@ -392,13 +391,10 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return fmt.Errorf("TX is not a compute transaction")
 			}
 
-			// decrypt input
-			if len(encryptedInput) < 64 {
-				return fmt.Errorf("input must be > 64 bytes. Got %d", len(encryptedInput))
+			nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(encryptedInput)
+			if err != nil {
+				return fmt.Errorf("can't parse encrypted blob: %w", err)
 			}
-
-			nonce := encryptedInput[0:32]
-			originalTxSenderPubkey := encryptedInput[32:64]
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
@@ -410,7 +406,6 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return fmt.Errorf("cannot decrypt, not original tx sender")
 			}
 
-			ciphertextInput := encryptedInput[64:]
 			var plaintextInput []byte
 			if len(ciphertextInput) > 0 {
 				plaintextInput, err = wasmCtx.Decrypt(ciphertextInput, nonce)
@@ -591,7 +586,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 	if err != nil {
 		return err
 	}
-	nonce := queryData[:32]
+	nonce, _, _, _ := parseEncryptedBlob(queryData) // Ignoring error since we just encrypted it
 
 	res, _, err := cliCtx.QueryWithData(route, queryData)
 	if err != nil {
