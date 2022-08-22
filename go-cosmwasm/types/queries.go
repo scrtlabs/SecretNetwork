@@ -64,13 +64,15 @@ func ToQuerierResult(response []byte, err error) QuerierResult {
 // QueryRequest is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type QueryRequest struct {
-	Bank    *BankQuery      `json:"bank,omitempty"`
-	Custom  json.RawMessage `json:"custom,omitempty"`
-	Staking *StakingQuery   `json:"staking,omitempty"`
-	Wasm    *WasmQuery      `json:"wasm,omitempty"`
-	Dist    *DistQuery      `json:"dist,omitempty"`
-	Mint    *MintQuery      `json:"mint,omitempty"`
-	Gov     *GovQuery       `json:"gov,omitempty"`
+	Bank     *BankQuery      `json:"bank,omitempty"`
+	Custom   json.RawMessage `json:"custom,omitempty"`
+	Staking  *StakingQuery   `json:"staking,omitempty"`
+	Wasm     *WasmQuery      `json:"wasm,omitempty"`
+	Dist     *DistQuery      `json:"dist,omitempty"`
+	Mint     *MintQuery      `json:"mint,omitempty"`
+	Gov      *GovQuery       `json:"gov,omitempty"`
+	IBC      *IBCQuery       `json:"ibc,omitempty"`
+	Stargate *StargateQuery  `json:"stargate,omitempty"`
 }
 
 type BankQuery struct {

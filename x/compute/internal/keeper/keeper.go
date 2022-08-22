@@ -391,6 +391,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	querier := QueryHandler{
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	// instantiate wasm contract
@@ -527,6 +528,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	querier := QueryHandler{
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	gas := gasForContract(ctx)
@@ -590,7 +592,7 @@ func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress
 	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, true)
 }
 
-func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool, recursive bool) ([]byte, error) {
+func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, req []byte, useDefaultGasLimit bool, recursive bool) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "query")
 
 	if useDefaultGasLimit {
@@ -599,7 +601,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: query")
 
-	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
+	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -608,16 +610,17 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 	querier := QueryHandler{
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	store := ctx.KVStore(k.storeKey)
 	// 0x01 | codeID (uint64) -> ContractInfo
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddr))
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 	params := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* empty because it's unused in queries */
 		[]sdk.Coin{},     /* empty because it's unused in queries */
-		contractAddr,
+		contractAddress,
 		contractKey,
 	)
 	params.Recursive = recursive
@@ -625,7 +628,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, req, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
 
-	telemetry.SetGauge(float32(gasUsed), "compute", "keeper", "query", contractAddr.String(), "gasUsed")
+	telemetry.SetGauge(float32(gasUsed), "compute", "keeper", "query", contractAddress.String(), "gasUsed")
 
 	if qErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
@@ -1030,6 +1033,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	querier := QueryHandler{
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	// instantiate wasm contract

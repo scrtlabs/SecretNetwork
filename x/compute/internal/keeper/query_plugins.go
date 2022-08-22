@@ -32,6 +32,7 @@ type GRPCQueryRouter interface {
 type QueryHandler struct {
 	Ctx     sdk.Context
 	Plugins QueryPlugins
+	Caller  sdk.AccAddress
 }
 
 var _ wasmTypes.Querier = QueryHandler{}
@@ -67,6 +68,12 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]
 	}
 	if request.Gov != nil {
 		return q.Plugins.Gov(q.Ctx, request.Gov)
+	}
+	if request.IBC != nil {
+		return q.Plugins.IBC(q.Ctx, q.Caller, request.IBC)
+	}
+	if request.Stargate != nil {
+		return q.Plugins.Stargate(q.Ctx, request.Stargate)
 	}
 	return nil, wasmTypes.Unknown{}
 }

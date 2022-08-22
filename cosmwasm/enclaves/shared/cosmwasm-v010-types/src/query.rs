@@ -18,6 +18,7 @@ pub enum QueryRequest {
     Mint(MintQuery),
     Gov(GovQuery),
     Ibc(IbcQuery),
+    Stargate { path: String, data: Binary },
 }
 
 /// These are queries to the various IBC modules to see the state of the contract's
