@@ -5,7 +5,7 @@ use log::*;
 use bech32::{FromBase32, ToBase32};
 use rand_chacha::ChaChaRng;
 use rand_core::SeedableRng;
-use wasm3::{Memory, Trap};
+use wasm3::{Instance, Memory, Trap};
 
 use enclave_cosmos_types::types::ContractCode;
 use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
@@ -21,7 +21,7 @@ use crate::gas::WasmCosts;
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::ContractOperation;
-use crate::wasm3::gas::get_remaining_gas;
+use crate::wasm3::gas::{get_exhausted_amount, get_remaining_gas, use_gas};
 
 mod gas;
 mod validation;
@@ -42,24 +42,6 @@ macro_rules! debug_err {
     ($err: ident => $message: literal, $($args: tt)*) => {
         |$err| { debug!($message, $($args)*, $err = $err); $err }
     };
-}
-
-macro_rules! set_last_error {
-    ($context: expr) => {
-        |err| {
-            $context.set_last_error(err);
-            wasm3::Trap::Abort
-        }
-    };
-}
-
-macro_rules! link_fn {
-    ($instance: expr, $name: expr, $implementation: expr) => {{
-        let func = expect_context($implementation);
-        $instance
-            .link_function("env", $name, func)
-            .allow_missing_import()
-    }};
 }
 
 trait Wasm3ResultEx {
@@ -99,16 +81,14 @@ impl<'env, C> Wasm3RuntimeEx for wasm3::Runtime<'env, C> {
 pub struct Context {
     context: Ctx,
     gas_limit: u64,
-    /// Gas used by wasmi
-    gas_used: u64,
-    /// Gas used by external services. This is tracked separately so we don't double-charge for external services later.
-    gas_used_externally: u64,
     gas_costs: WasmCosts,
-    contract_key: ContractKey,
     #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
+
+    contract_key: ContractKey,
     user_nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+
     last_error: Option<WasmEngineError>,
 }
 
@@ -119,41 +99,6 @@ impl Context {
 
     pub fn set_last_error(&mut self, error: WasmEngineError) {
         self.last_error = Some(error);
-    }
-
-    /// Track gas used inside wasmi
-    fn use_gas(&mut self, gas_amount: u64) -> Result<(), WasmEngineError> {
-        self.gas_used = self.gas_used.saturating_add(gas_amount);
-        self.check_gas_usage()
-    }
-
-    fn check_gas_usage(&self) -> Result<(), WasmEngineError> {
-        // Check if new amount is bigger than gas limit
-        // If is above the limit, halt execution
-        if self.is_gas_depleted() {
-            debug!(
-                "Out of gas! Gas limit: {}, gas used: {}, gas used externally: {}",
-                self.gas_limit, self.gas_used, self.gas_used_externally
-            );
-            Err(WasmEngineError::OutOfGas)
-        } else {
-            Ok(())
-        }
-    }
-
-    fn is_gas_depleted(&self) -> bool {
-        self.gas_limit < self.gas_used.saturating_add(self.gas_used_externally)
-    }
-
-    fn use_gas_externally(&mut self, gas_amount: u64) -> WasmEngineResult<()> {
-        self.gas_used_externally = self.gas_used_externally.saturating_add(gas_amount);
-        self.check_gas_usage()
-    }
-
-    fn gas_left(&self) -> u64 {
-        self.gas_limit
-            .saturating_sub(self.gas_used)
-            .saturating_sub(self.gas_used_externally)
     }
 }
 
@@ -171,8 +116,47 @@ where
         let err_msg = "module functions must be called with a context";
         let context = call_context.context.expect(err_msg);
         let instance = call_context.instance;
-        func(context, instance, input).map_err(set_last_error!(context))
+        func(context, instance, input).map_err(|err| {
+            context.set_last_error(err);
+            wasm3::Trap::Abort
+        })
     }
+}
+
+fn link_fn<F, A, R>(instance: &mut Instance<Context>, name: &str, func: F) -> Wasm3RsResult<()>
+where
+    F: FnMut(&mut Context, &wasm3::Instance<Context>, A) -> Result<R, WasmEngineError> + 'static,
+    A: wasm3::Arg + 'static,
+    R: wasm3::Arg + 'static,
+{
+    let func = expect_context(func);
+    instance
+        .link_function("env", name, func)
+        .allow_missing_import()
+}
+
+fn check_execution_result<T>(
+    instance: &Instance<Context>,
+    context: &mut Context,
+    result: Result<T, wasm3::Error>,
+) -> Result<T, EnclaveError> {
+    result.map_err(|err| match err {
+        // If Unreachable was executed, and "exhausted" isn't 0, that means we ran out of gas.
+        wasm3::Error::UnreachableExecuted if get_exhausted_amount(instance) != 0 => {
+            debug!(
+                "Detected out of gas! Limit: {}, Remaining: {}, Exhausted: {}",
+                context.gas_limit,
+                get_remaining_gas(instance),
+                get_exhausted_amount(instance)
+            );
+            EnclaveError::OutOfGas
+        }
+        // Otherwise, check if a hook set an error, in which case we propagate it.
+        err => match context.take_last_error() {
+            Some(err) => err.into(),
+            None => err.to_enclave_error(),
+        },
+    })
 }
 
 pub struct Engine {
@@ -219,11 +203,9 @@ impl Engine {
         let context = Context {
             context,
             gas_limit,
-            gas_used: 0,
-            gas_used_externally: 0,
             gas_costs,
-            contract_key,
             operation,
+            contract_key,
             user_nonce,
             user_public_key,
             last_error: None,
@@ -270,28 +252,27 @@ impl Engine {
         let result = func(&mut instance, &mut self.context);
         debug!("function returned {:?}", result);
 
-        // TODO make gas reporting more accurate
-        self.used_gas = self.gas_limit - get_remaining_gas(&instance);
+        self.used_gas =
+            self.gas_limit - get_remaining_gas(&instance) + get_exhausted_amount(&instance);
 
         result
     }
 
     fn link_host_functions(instance: &mut wasm3::Instance<Context>) -> Wasm3RsResult<()> {
-        link_fn!(instance, "db_read", host_read_db)?;
-        link_fn!(instance, "db_write", host_write_db)?;
-        link_fn!(instance, "db_remove", host_remove_db)?;
-        link_fn!(instance, "canonicalize_address", host_canonicalize_address)?;
-        link_fn!(instance, "humanize_address", host_humanize_address)?;
-        link_fn!(instance, "query_chain", host_query_chain)?;
-        link_fn!(instance, "debug_print", host_debug_print)?;
-        link_fn!(instance, "gas", host_gas)?;
-        link_fn!(instance, "secp256k1_verify", host_secp256k1_verify)?;
+        link_fn(instance, "db_read", host_read_db)?;
+        link_fn(instance, "db_write", host_write_db)?;
+        link_fn(instance, "db_remove", host_remove_db)?;
+        link_fn(instance, "canonicalize_address", host_canonicalize_address)?;
+        link_fn(instance, "humanize_address", host_humanize_address)?;
+        link_fn(instance, "query_chain", host_query_chain)?;
+        link_fn(instance, "debug_print", host_debug_print)?;
+        link_fn(instance, "secp256k1_verify", host_secp256k1_verify)?;
         #[rustfmt::skip]
-        link_fn!(instance, "secp256k1_recover_pubkey", host_secp256k1_recover_pubkey)?;
-        link_fn!(instance, "ed25519_verify", host_ed25519_verify)?;
-        link_fn!(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
-        link_fn!(instance, "secp256k1_sign", host_secp256k1_sign)?;
-        link_fn!(instance, "ed25519_sign", host_ed25519_sign)?;
+        link_fn(instance, "secp256k1_recover_pubkey", host_secp256k1_recover_pubkey)?;
+        link_fn(instance, "ed25519_verify", host_ed25519_verify)?;
+        link_fn(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
+        link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
+        link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
 
         Ok(())
     }
@@ -311,12 +292,8 @@ impl Engine {
                 .find_function::<(u32, u32), u32>("init")
                 .to_enclave_result()?;
 
-            let output_ptr = init
-                .call_with_context(context, (env_ptr, msg_ptr))
-                .map_err(|err| match context.take_last_error() {
-                    Some(err) => err.into(),
-                    None => err.to_enclave_error(),
-                })?;
+            let result = init.call_with_context(context, (env_ptr, msg_ptr));
+            let output_ptr = check_execution_result(instance, context, result)?;
 
             let output = read_from_memory(instance, output_ptr)?;
 
@@ -338,13 +315,8 @@ impl Engine {
                 .to_enclave_result()?;
             debug!("found handle");
 
-            let output_ptr = handle
-                .call_with_context(context, (env_ptr, msg_ptr))
-                .map_err(debug_err!(err => "failed to call handle: {err:?}"))
-                .map_err(|err| match context.take_last_error() {
-                    Some(err) => err.into(),
-                    None => err.to_enclave_error(),
-                })?;
+            let result = handle.call_with_context(context, (env_ptr, msg_ptr));
+            let output_ptr = check_execution_result(instance, context, result)?;
             debug!("called handle");
 
             let output = read_from_memory(instance, output_ptr)?;
@@ -363,13 +335,8 @@ impl Engine {
                 .find_function::<u32, u32>("query")
                 .to_enclave_result()?;
 
-            let output_ptr =
-                query.call_with_context(context, msg_ptr).map_err(|err| {
-                    match context.take_last_error() {
-                        Some(err) => err.into(),
-                        None => err.to_enclave_error(),
-                    }
-                })?;
+            let result = query.call_with_context(context, msg_ptr);
+            let output_ptr = check_execution_result(instance, context, result)?;
 
             let output = read_from_memory(instance, output_ptr)?;
 
@@ -577,10 +544,10 @@ fn host_read_db(
 
     debug!("db_read reading key {}", show_bytes(&state_key_name));
 
-    let (value, gas_used) =
+    let (value, used_gas) =
         read_encrypted_key(&state_key_name, &context.context, &context.contract_key)
             .map_err(debug_err!("db_read failed to read key from storage"))?;
-    context.use_gas_externally(gas_used)?;
+    use_gas(instance, used_gas)?;
 
     debug!(
         "db_read received value {:?}",
@@ -615,8 +582,8 @@ fn host_remove_db(
 
     debug!("db_remove removing key {}", show_bytes(&state_key_name));
 
-    let gas_used = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)?;
-    context.use_gas_externally(gas_used)?;
+    let used_gas = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)?;
+    use_gas(instance, used_gas)?;
 
     Ok(())
 }
@@ -652,7 +619,7 @@ fn host_write_db(
         &context.contract_key,
     )
     .map_err(debug_err!("db_write failed to write key to storage",))?;
-    context.use_gas_externally(used_gas)?;
+    use_gas(instance, used_gas)?;
 
     Ok(())
 }
@@ -680,8 +647,8 @@ fn host_canonicalize_address(
     instance: &wasm3::Instance<Context>,
     (human_region_ptr, canonical_region_ptr): (i32, i32),
 ) -> WasmEngineResult<i32> {
-    let cost = context.gas_costs.external_canonicalize_address as u64;
-    context.use_gas_externally(cost)?;
+    let used_gas = context.gas_costs.external_canonicalize_address as u64;
+    use_gas(instance, used_gas)?;
 
     let human = read_from_memory(instance, human_region_ptr as u32)
         .map_err(debug_err!(err => "canonicalize_address failed to extract vector from human_region_ptr: {err}"))?;
@@ -754,8 +721,8 @@ fn host_humanize_address(
     instance: &wasm3::Instance<Context>,
     (canonical_region_ptr, human_region_ptr): (i32, i32),
 ) -> WasmEngineResult<i32> {
-    let cost = context.gas_costs.external_canonicalize_address as u64;
-    context.use_gas_externally(cost)?;
+    let used_gas = context.gas_costs.external_canonicalize_address as u64;
+    use_gas(instance, used_gas)?;
 
     let canonical = read_from_memory(instance, canonical_region_ptr as u32)
         .map_err(debug_err!(err => "humanize_address failed to extract vector from canonical_region_ptr: {err}"))?;
@@ -794,17 +761,17 @@ fn host_query_chain(
         debug_err!(err => "query_chain failed to extract vector from query_region_ptr: {err}"),
     )?;
 
-    let mut gas_used: u64 = 0;
+    let mut used_gas: u64 = 0;
     let answer = encrypt_and_query_chain(
         &query_buffer,
         &context.context,
         context.user_nonce,
         context.user_public_key,
-        &mut gas_used,
-        context.gas_left(),
+        &mut used_gas,
+        get_remaining_gas(instance),
     )?;
 
-    context.use_gas_externally(gas_used)?;
+    use_gas(instance, used_gas)?;
 
     write_to_memory(instance, &answer).map(|region_ptr| region_ptr as i32)
 }
@@ -823,22 +790,13 @@ fn host_debug_print(
     Ok(())
 }
 
-fn host_gas(
-    context: &mut Context,
-    _instance: &wasm3::Instance<Context>,
-    gas_amount: i32,
-) -> WasmEngineResult<()> {
-    context.use_gas(gas_amount as u64)?;
-    Ok(())
-}
-
 fn host_secp256k1_verify(
     context: &mut Context,
     instance: &wasm3::Instance<Context>,
     (message_hash_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
 ) -> WasmEngineResult<i32> {
-    let cost = context.gas_costs.external_secp256k1_verify as u64;
-    context.use_gas_externally(cost)?;
+    let used_gas = context.gas_costs.external_secp256k1_verify as u64;
+    use_gas(instance, used_gas)?;
 
     let message_hash_data = read_from_memory(instance, message_hash_ptr as u32)
         .map_err(debug_err!(err => "secp256k1_verify error while trying to read message_hash from wasm memory: {err}"))?;
@@ -944,8 +902,8 @@ fn host_secp256k1_recover_pubkey(
     instance: &wasm3::Instance<Context>,
     (message_hash_ptr, signature_ptr, recovery_param): (i32, i32, i32),
 ) -> WasmEngineResult<i64> {
-    let cost = context.gas_costs.external_secp256k1_recover_pubkey as u64;
-    context.use_gas_externally(cost)?;
+    let used_gas = context.gas_costs.external_secp256k1_recover_pubkey as u64;
+    use_gas(instance, used_gas)?;
 
     let message_hash_data = read_from_memory(instance, message_hash_ptr as u32)
         .map_err(debug_err!(err => "secp256k1_recover_pubkey error while trying to read message_hash from wasm memory: {err}"))?;
@@ -1044,8 +1002,8 @@ fn host_ed25519_verify(
     instance: &wasm3::Instance<Context>,
     (message_ptr, signature_ptr, public_key_ptr): (i32, i32, i32),
 ) -> WasmEngineResult<i32> {
-    let cost = context.gas_costs.external_ed25519_verify as u64;
-    context.use_gas_externally(cost)?;
+    let used_gas = context.gas_costs.external_ed25519_verify as u64;
+    use_gas(instance, used_gas)?;
 
     let message_data = read_from_memory(instance, message_ptr as u32)
         .map_err(debug_err!(err => "ed25519_verify error while trying to read message_hash from wasm memory: {err}"))?;
@@ -1173,7 +1131,8 @@ fn host_ed25519_batch_verify(
 
     let base_cost = context.gas_costs.external_ed25519_batch_verify_base as u64;
     let each_cost = context.gas_costs.external_ed25519_batch_verify_each as u64;
-    context.use_gas_externally(base_cost + (signatures.len() as u64) * each_cost)?;
+    let used_gas = base_cost + (signatures.len() as u64) * each_cost;
+    use_gas(instance, used_gas)?;
 
     let mut batch = ed25519_zebra::batch::Verifier::new();
     for i in 0..signatures.len() {
@@ -1228,11 +1187,9 @@ fn host_ed25519_batch_verify(
     rng_entropy.append(&mut messages_data.into_iter().flatten().collect());
     rng_entropy.append(&mut signatures_data.into_iter().flatten().collect());
     rng_entropy.append(&mut pubkeys_data.into_iter().flatten().collect());
-    rng_entropy.append(
-        &mut (context.gas_used.saturating_add(context.gas_used_externally))
-            .to_be_bytes()
-            .to_vec(),
-    );
+    let remaining_gas = get_remaining_gas(instance);
+    let used_gas = context.gas_limit.saturating_sub(remaining_gas);
+    rng_entropy.append(&mut used_gas.to_be_bytes().to_vec());
 
     let rng_seed: [u8; 32] = sha_256(&rng_entropy);
     let mut rng = ChaChaRng::from_seed(rng_seed);
@@ -1261,8 +1218,8 @@ fn host_secp256k1_sign(
     instance: &wasm3::Instance<Context>,
     (message_ptr, private_key_ptr): (i32, i32),
 ) -> WasmEngineResult<i64> {
-    let cost = context.gas_costs.external_secp256k1_sign as u64;
-    context.use_gas_externally(cost)?;
+    let used_gas = context.gas_costs.external_secp256k1_sign as u64;
+    use_gas(instance, used_gas)?;
 
     let message_data = read_from_memory(instance, message_ptr as u32)
         .map_err(debug_err!(err => "secp256k1_sign error while trying to read message_hash from wasm memory: {err}"))?;
@@ -1333,8 +1290,8 @@ fn host_ed25519_sign(
     instance: &wasm3::Instance<Context>,
     (message_ptr, private_key_ptr): (i32, i32),
 ) -> WasmEngineResult<i64> {
-    let cost = context.gas_costs.external_ed25519_sign as u64;
-    context.use_gas_externally(cost)?;
+    let used_gas = context.gas_costs.external_ed25519_sign as u64;
+    use_gas(instance, used_gas)?;
 
     let message_data = read_from_memory(instance, message_ptr as u32).map_err(
         debug_err!(err => "ed25519_sign error while trying to read message_hash from wasm memory: {err}")
