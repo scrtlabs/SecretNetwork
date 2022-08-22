@@ -173,8 +173,7 @@ var xxx_messageInfo_ContractCustomInfo proto.InternalMessageInfo
 type ContractInfo struct {
 	CodeID  uint64                                        `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
 	Creator github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,2,opt,name=creator,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"creator,omitempty"`
-	//    bytes admin = 3 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
-	Label string `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	Label   string                                        `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	// never show this in query results, just use for sorting
 	// (Note: when using json tag "-" amino refused to serialize it...)
 	Created *AbsoluteTxPosition `protobuf:"bytes,5,opt,name=created,proto3" json:"created,omitempty"`
