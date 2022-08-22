@@ -916,7 +916,9 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-	codeHash := keeper.GetContractHash(ctx, addr)
+	codeHash, err := keeper.GetContractHash(ctx, addr)
+	require.NoError(t, err)
+	
 	codeHashStr := hex.EncodeToString(codeHash)
 
 	msg2 := types.SecretMsg{
@@ -1002,7 +1004,9 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		require.True(t, ok, "%+v", r)
 	}()
 
-	codeHash := keeper.GetContractHash(ctx, addr)
+	codeHash, err := keeper.GetContractHash(ctx, addr)
+	require.NoError(t, err)
+
 	codeHashStr := hex.EncodeToString(codeHash)
 
 	msg := types.SecretMsg{

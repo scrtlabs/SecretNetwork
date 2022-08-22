@@ -53,10 +53,14 @@ var testContracts = []TestContract{
 // if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
 func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
 	var hash []byte
+	var err error
+
 	if codeId != 0 {
 		hash = keeper.GetCodeInfo(ctx, codeId).CodeHash
 	} else {
-		hash = keeper.GetContractHash(ctx, contractAddress)
+		hash, err = keeper.GetContractHash(ctx, contractAddress)
+		require.NoError(t, err)
+
 	}
 
 	if hash == nil {
@@ -400,7 +404,10 @@ func queryHelperImpl(
 	contractAddr sdk.AccAddress, input string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64,
 ) (string, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))
+	hash, err := keeper.GetContractHash(ctx, contractAddr)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(hash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -473,7 +480,10 @@ func execHelperMultipleCoinsImpl(
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
+	hash, err := keeper.GetContractHash(ctx, contractAddress)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(hash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),

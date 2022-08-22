@@ -712,12 +712,18 @@ func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress
 	return contractAddress
 }
 
-func (k Keeper) GetContractHash(ctx sdk.Context, contractAddress sdk.AccAddress) []byte {
-	codeId := k.GetContractInfo(ctx, contractAddress).CodeID
+func (k Keeper) GetContractHash(ctx sdk.Context, contractAddress sdk.AccAddress) ([]byte, error) {
+	contractInfo := k.GetContractInfo(ctx, contractAddress)
+
+	if contractInfo == nil {
+		return nil, fmt.Errorf("failed to contract info for the following address: %s", contractAddress.String())
+	}
+
+	codeId := contractInfo.CodeID
 
 	hash := k.GetCodeInfo(ctx, codeId).CodeHash
 
-	return hash
+	return hash, nil
 }
 
 func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {
