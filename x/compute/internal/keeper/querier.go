@@ -233,17 +233,18 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper Keeper) (*types.QueryCodeR
 	if codeID == 0 {
 		return nil, nil
 	}
-	res := keeper.GetCodeInfo(ctx, codeID)
-	if res == nil {
-		// nil, nil leads to 404 in rest handler
+
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	if err != nil {
 		return nil, nil
 	}
+
 	info := types.CodeInfoResponse{
 		CodeID:   codeID,
-		Creator:  res.Creator,
-		DataHash: res.CodeHash,
-		Source:   res.Source,
-		Builder:  res.Builder,
+		Creator:  codeInfo.Creator,
+		DataHash: codeInfo.CodeHash,
+		Source:   codeInfo.Source,
+		Builder:  codeInfo.Builder,
 	}
 
 	code, err := keeper.GetByteCode(ctx, codeID)
@@ -269,30 +270,6 @@ func queryCodeList(ctx sdk.Context, keeper Keeper) ([]types.CodeInfoResponse, er
 	return info, nil
 }
 
-/*
-func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, error) {
-	contractAddr, err := sdk.AccAddressFromBech32(bech)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
-	}
-	entries := keeper.GetContractHistory(ctx, contractAddr)
-	if entries == nil {
-		// nil, nil leads to 404 in rest handler
-		return nil, nil
-	}
-	// redact response
-	for i := range entries {
-		entries[i].Updated = nil
-	}
-
-	bz, err := json.MarshalIndent(entries, "", "  ")
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-	return bz, nil
-}
-*/
-
 func queryContractAddress(ctx sdk.Context, label string, keeper Keeper) (sdk.AccAddress, error) {
 	res := keeper.GetContractAddress(ctx, label)
 	if res == nil {
@@ -317,5 +294,10 @@ func queryContractHash(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) (
 		return nil, nil
 	}
 
-	return keeper.GetCodeInfo(ctx, res.CodeID).CodeHash, nil
+	codeInfo, err := keeper.GetCodeInfo(ctx, res.CodeID)
+	if err != nil {
+		return nil, nil
+	}
+
+	return codeInfo.CodeHash, nil
 }

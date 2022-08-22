@@ -48,7 +48,10 @@ func TestQueryContractLabel(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	hash := codeInfo.CodeHash
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
@@ -149,7 +152,10 @@ func TestQueryContractState(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	key := codeInfo.CodeHash
 	keyStr := hex.EncodeToString(key)
 
 	msg := types.SecretMsg{
@@ -290,7 +296,10 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	key := keeper.GetCodeInfo(ctx, codeID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	key := codeInfo.CodeHash
 	keyStr := hex.EncodeToString(key)
 
 	msg := types.SecretMsg{

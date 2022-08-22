@@ -716,14 +716,17 @@ func (k Keeper) GetContractHash(ctx sdk.Context, contractAddress sdk.AccAddress)
 	contractInfo := k.GetContractInfo(ctx, contractAddress)
 
 	if contractInfo == nil {
-		return nil, fmt.Errorf("failed to contract info for the following address: %s", contractAddress.String())
+		return nil, fmt.Errorf("failed to get contract info for the following address: %s", contractAddress.String())
 	}
 
 	codeId := contractInfo.CodeID
 
-	hash := k.GetCodeInfo(ctx, codeId).CodeHash
+	codeInfo, err := k.GetCodeInfo(ctx, codeId)
+	if err != nil {
+		return nil, err
+	}
 
-	return hash, nil
+	return codeInfo.CodeHash, nil
 }
 
 func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {
@@ -825,15 +828,15 @@ func (k Keeper) fixContractState(ctx sdk.Context, contractAddress sdk.AccAddress
 	return nil
 }
 
-func (k Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) *types.CodeInfo {
+func (k Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) (types.CodeInfo, error) {
 	store := ctx.KVStore(k.storeKey)
 	var codeInfo types.CodeInfo
 	codeInfoBz := store.Get(types.GetCodeKey(codeID))
 	if codeInfoBz == nil {
-		return nil
+		return types.CodeInfo{}, fmt.Errorf("failed to get code info for code id %d", codeID)
 	}
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
-	return &codeInfo
+	return codeInfo, nil
 }
 
 func (k Keeper) containsCodeInfo(ctx sdk.Context, codeID uint64) bool {
