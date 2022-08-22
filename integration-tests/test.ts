@@ -125,7 +125,7 @@ describe("BankMsg::Send", () => {
         contractAddress: v1Address,
         codeHash: v1CodeHash,
         msg: {
-          bank_msg: {
+          bank_msg_send: {
             to_address: accounts.b.address,
             amount: [{ amount: "1", denom: "uscrt" }],
           },
