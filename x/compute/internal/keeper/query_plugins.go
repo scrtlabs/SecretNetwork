@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -83,11 +84,12 @@ type QueryPlugins struct {
 	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
 	Dist     func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
 	Mint     func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
-	Stargate func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error)
 	Gov      func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
+	IBC      func(ctx sdk.Context, caller sdk.AccAddress, request *wasmTypes.IBCQuery) ([]byte, error)
+	Stargate func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(gov govkeeper.Keeper, dist distrkeeper.Keeper, mint mintkeeper.Keeper, bank bankkeeper.Keeper, staking stakingkeeper.Keeper, stargateQueryRouter GRPCQueryRouter, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(gov govkeeper.Keeper, dist distrkeeper.Keeper, mint mintkeeper.Keeper, bank bankkeeper.Keeper, staking stakingkeeper.Keeper, stargateQueryRouter GRPCQueryRouter, wasm *Keeper, channelKeeper types.ChannelKeeper) QueryPlugins {
 	return QueryPlugins{
 		Bank:     BankQuerier(bank),
 		Custom:   NoCustomQuerier,
@@ -97,6 +99,7 @@ func DefaultQueryPlugins(gov govkeeper.Keeper, dist distrkeeper.Keeper, mint min
 		Mint:     MintQuerier(mint),
 		Gov:      GovQuerier(gov),
 		Stargate: StargateQuerier(stargateQueryRouter),
+		IBC:      IBCQuerier(wasm, channelKeeper),
 	}
 }
 
@@ -125,6 +128,12 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 	}
 	if o.Gov != nil {
 		e.Gov = o.Gov
+	}
+	if o.IBC != nil {
+		e.IBC = o.IBC
+	}
+	if o.Stargate != nil {
+		e.Stargate = o.Stargate
 	}
 	return e
 }
@@ -265,6 +274,77 @@ func GovQuerier(keeper govkeeper.Keeper) func(ctx sdk.Context, request *wasmType
 			return json.Marshal(wasmTypes.ProposalsResponse{Proposals: activeProps})
 		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown GovQuery variant"}
+	}
+}
+
+func IBCQuerier(wasm *Keeper, channelKeeper types.ChannelKeeper) func(ctx sdk.Context, caller sdk.AccAddress, request *wasmTypes.IBCQuery) ([]byte, error) {
+	return func(ctx sdk.Context, caller sdk.AccAddress, request *wasmTypes.IBCQuery) ([]byte, error) {
+		if request.PortID != nil {
+			contractInfo := wasm.GetContractInfo(ctx, caller)
+			res := wasmTypes.PortIDResponse{
+				PortID: contractInfo.IBCPortID,
+			}
+			return json.Marshal(res)
+		}
+		if request.ListChannels != nil {
+			portID := request.ListChannels.PortID
+			channels := make(wasmTypes.IBCChannels, 0)
+			channelKeeper.IterateChannels(ctx, func(ch channeltypes.IdentifiedChannel) bool {
+				// it must match the port and be in open state
+				if (portID == "" || portID == ch.PortId) && ch.State == channeltypes.OPEN {
+					newChan := wasmTypes.IBCChannel{
+						Endpoint: wasmTypes.IBCEndpoint{
+							PortID:    ch.PortId,
+							ChannelID: ch.ChannelId,
+						},
+						CounterpartyEndpoint: wasmTypes.IBCEndpoint{
+							PortID:    ch.Counterparty.PortId,
+							ChannelID: ch.Counterparty.ChannelId,
+						},
+						Order:        ch.Ordering.String(),
+						Version:      ch.Version,
+						ConnectionID: ch.ConnectionHops[0],
+					}
+					channels = append(channels, newChan)
+				}
+				return false
+			})
+			res := wasmTypes.ListChannelsResponse{
+				Channels: channels,
+			}
+			return json.Marshal(res)
+		}
+		if request.Channel != nil {
+			channelID := request.Channel.ChannelID
+			portID := request.Channel.PortID
+			if portID == "" {
+				contractInfo := wasm.GetContractInfo(ctx, caller)
+				portID = contractInfo.IBCPortID
+			}
+			got, found := channelKeeper.GetChannel(ctx, portID, channelID)
+			var channel *wasmTypes.IBCChannel
+			// it must be in open state
+			if found && got.State == channeltypes.OPEN {
+				channel = &wasmTypes.IBCChannel{
+					Endpoint: wasmTypes.IBCEndpoint{
+						PortID:    portID,
+						ChannelID: channelID,
+					},
+					CounterpartyEndpoint: wasmTypes.IBCEndpoint{
+						PortID:    got.Counterparty.PortId,
+						ChannelID: got.Counterparty.ChannelId,
+					},
+					Order:        got.Ordering.String(),
+					Version:      got.Version,
+					ConnectionID: got.ConnectionHops[0],
+				}
+			}
+			res := wasmTypes.ChannelResponse{
+				Channel: channel,
+			}
+			return json.Marshal(res)
+		}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown IBCQuery variant"}
 	}
 }
 
@@ -470,6 +550,40 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 
 			return json.Marshal(res)
 
+		}
+		if request.Validator != nil {
+			valAddr, err := sdk.ValAddressFromBech32(request.Validator.Address)
+			if err != nil {
+				return nil, err
+			}
+			v, found := keeper.GetValidator(ctx, valAddr)
+			res := wasmTypes.ValidatorResponse{}
+			if found {
+				res.Validator = &wasmTypes.Validator{
+					Address:       v.OperatorAddress,
+					Commission:    v.Commission.Rate.String(),
+					MaxCommission: v.Commission.MaxRate.String(),
+					MaxChangeRate: v.Commission.MaxChangeRate.String(),
+				}
+			}
+			return json.Marshal(res)
+		}
+		if request.AllValidators != nil {
+			validators := keeper.GetBondedValidatorsByPower(ctx)
+			// validators := keeper.GetAllValidators(ctx)
+			wasmVals := make([]wasmTypes.Validator, len(validators))
+			for i, v := range validators {
+				wasmVals[i] = wasmTypes.Validator{
+					Address:       v.OperatorAddress,
+					Commission:    v.Commission.Rate.String(),
+					MaxCommission: v.Commission.MaxRate.String(),
+					MaxChangeRate: v.Commission.MaxChangeRate.String(),
+				}
+			}
+			res := wasmTypes.AllValidatorsResponse{
+				Validators: wasmVals,
+			}
+			return json.Marshal(res)
 		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown Staking variant"}
 	}

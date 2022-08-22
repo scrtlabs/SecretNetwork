@@ -1,5 +1,9 @@
 import { SecretNetworkClient, toBase64, toHex, Wallet } from "secretjs";
 import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
+import {
+  QueryBalanceRequest,
+  QueryBalanceResponse,
+} from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/query";
 import { sha256 } from "@noble/hashes/sha256";
 import * as fs from "fs";
 
@@ -117,7 +121,7 @@ async function waitForBlocks() {
   }
 }
 
-describe("BankMsg::Send", () => {
+describe("Bank::MsgSend", () => {
   test("v1", async () => {
     const tx = await accounts.a.tx.compute.executeContract(
       {
@@ -241,8 +245,25 @@ describe("StargateMsg", () => {
       ]
     );
   });
+});
 
-  test("v0.10", async () => {
-    // TODO
+describe("StargateQuery", () => {
+  test("v1", async () => {
+    const result = await accounts.a.query.compute.queryContract({
+      contractAddress: v1Address,
+      codeHash: v1CodeHash,
+      query: {
+        stargate_query: {
+          path: "/cosmos.bank.v1beta1.Query.Balance",
+          data: toBase64(
+            QueryBalanceRequest.encode({
+              address: accounts.a.address,
+              denom: "uscrt",
+            }).finish()
+          ),
+        },
+      },
+    });
+    console.log(result);
   });
 });

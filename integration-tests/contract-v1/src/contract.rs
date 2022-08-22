@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     entry_point, BankMsg, Binary, CosmosMsg, Deps, DepsMut, DistributionMsg, Env, GovMsg, IbcMsg,
-    MessageInfo, Response, StakingMsg, StdResult, WasmMsg,
+    MessageInfo, QueryRequest, Response, StakingMsg, StdResult, WasmMsg,
 };
 
 use crate::msg::{Msg, QueryMsg};
@@ -141,6 +141,14 @@ fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdRes
 }
 
 #[entry_point]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    return Ok(Binary(vec![]));
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::StargateQuery { path, data } => {
+            let res = deps
+                .querier
+                .query::<Binary>(&QueryRequest::Stargate { path, data });
+            deps.api.debug(&format!("ASSAF {:?}", res));
+            return Ok(res?);
+        }
+    }
 }
