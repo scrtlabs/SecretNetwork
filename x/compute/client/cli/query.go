@@ -369,26 +369,27 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 			if len(txInputs) != 1 {
 				return fmt.Errorf("can only decrypt txs with 1 input. Got %d", len(txInputs))
 			}
-			txInput, ok := txInputs[0].(*types.MsgExecuteContract)
-			if !ok {
-				txInput2, ok := txInputs[0].(*types.MsgInstantiateContract)
-				if !ok {
-					txInput3, ok := txInputs[0].(*types.MsgStoreCode)
-					if ok {
-						txInput3.WASMByteCode = nil
-						return clientCtx.PrintProto(txInput3)
-					}
-					return fmt.Errorf("TX is not a compute transaction")
 
+			switch txInput := txInputs[0].(type) {
+			case *types.MsgExecuteContract:
+				{
+					encryptedInput = txInput.Msg
+					dataOutputHexB64 = result.Data
+					answer.Type = "execute"
 				}
-				encryptedInput = txInput2.InitMsg
-				dataOutputHexB64 = result.Data
-				answer.Type = "instantiate"
-
-			} else {
-				encryptedInput = txInput.Msg
-				dataOutputHexB64 = result.Data
-				answer.Type = "execute"
+			case *types.MsgInstantiateContract:
+				{
+					encryptedInput = txInput.InitMsg
+					dataOutputHexB64 = result.Data
+					answer.Type = "instantiate"
+				}
+			case *types.MsgStoreCode:
+				{
+					txInput.WASMByteCode = nil
+					return clientCtx.PrintProto(txInput)
+				}
+			default:
+				return fmt.Errorf("TX is not a compute transaction")
 			}
 
 			// decrypt input
