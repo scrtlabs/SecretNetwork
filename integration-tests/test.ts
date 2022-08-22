@@ -254,7 +254,7 @@ describe("StargateQuery", () => {
       codeHash: v1CodeHash,
       query: {
         stargate_query: {
-          path: "/cosmos.bank.v1beta1.Query.Balance",
+          path: "/cosmos.bank.v1beta1.Query/Balance",
           data: toBase64(
             QueryBalanceRequest.encode({
               address: accounts.a.address,
