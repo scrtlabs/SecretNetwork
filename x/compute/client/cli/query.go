@@ -370,7 +370,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 			answers := types.DecryptedAnswers{
 				Answers:        make([]*types.DecryptedAnswer, len(txInputs)),
 				OutputLogs:     []sdk.StringEvent{},
-				OutputError:    []byte{},
+				OutputError:    "",
 				PlaintextError: "",
 			}
 			nonces := make([][]byte, len(txInputs))
@@ -499,11 +499,11 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 
 			if types.IsEncryptedErrorCode(result.Code) && types.ContainsEncryptedString(result.RawLog) {
 				for i, nonce := range nonces {
-					stdErr, err := wasmCtx.DecryptError(result.RawLog, answers.Answers[i].Type, nonce)
+					stdErr, err := wasmCtx.DecryptError(result.RawLog, nonce)
 					if err != nil {
 						continue
 					}
-					answers.OutputError = append(json.RawMessage(fmt.Sprintf("message inedx %d: ", i)), stdErr...)
+					answers.OutputError = string(append(json.RawMessage(fmt.Sprintf("message inedx %d: ", i)), stdErr...))
 					break
 				}
 			} else if types.ContainsEnclaveError(result.RawLog) {
@@ -601,7 +601,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 	res, _, err := cliCtx.QueryWithData(route, queryData)
 	if err != nil {
 		if types.ErrContainsQueryError(err) {
-			errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)
+			errorPlainBz, err := wasmCtx.DecryptError(err.Error(), nonce)
 			if err != nil {
 				return err
 			}

@@ -268,7 +268,7 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 
 var re = regexp.MustCompile("encrypted: (.+?):")
 
-func (ctx WASMContext) DecryptError(errString string, msgType string, nonce []byte) (json.RawMessage, error) {
+func (ctx WASMContext) DecryptError(errString string, nonce []byte) (json.RawMessage, error) {
 	regexMatch := re.FindStringSubmatch(errString)
 	if len(regexMatch) != 2 {
 		return nil, fmt.Errorf("got an error finding base64 of the error: regexMatch '%v' should have a length of 2. error: %v", regexMatch, errString)
