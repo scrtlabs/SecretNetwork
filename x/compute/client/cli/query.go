@@ -359,42 +359,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return fmt.Errorf("no transaction found with hash %s", args[0])
 			}
 
-			var answer types.DecryptedAnswer
-			var encryptedInput []byte
-			var dataOutputHexB64 string
-
 			txInputs := result.GetTx().GetMsgs()
-
-			if len(txInputs) != 1 {
-				return fmt.Errorf("can only decrypt txs with 1 input. Got %d", len(txInputs))
-			}
-
-			switch txInput := txInputs[0].(type) {
-			case *types.MsgExecuteContract:
-				{
-					encryptedInput = txInput.Msg
-					dataOutputHexB64 = result.Data
-					answer.Type = "execute"
-				}
-			case *types.MsgInstantiateContract:
-				{
-					encryptedInput = txInput.InitMsg
-					dataOutputHexB64 = result.Data
-					answer.Type = "instantiate"
-				}
-			case *types.MsgStoreCode:
-				{
-					txInput.WASMByteCode = nil
-					return clientCtx.PrintProto(txInput)
-				}
-			default:
-				return fmt.Errorf("TX is not a compute transaction")
-			}
-
-			nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(encryptedInput)
-			if err != nil {
-				return fmt.Errorf("can't parse encrypted blob: %w", err)
-			}
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
@@ -402,22 +367,56 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return fmt.Errorf("error in GetTxSenderKeyPair: %w", err)
 			}
 
-			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
-				return fmt.Errorf("cannot decrypt, not original tx sender")
+			answers := types.DecryptedAnswers{
+				Answers:        make([]*types.DecryptedAnswer, len(txInputs)),
+				OutputLogs:     []sdk.StringEvent{},
+				OutputError:    []byte{},
+				PlaintextError: "",
 			}
+			nonces := make([][]byte, len(txInputs))
 
-			var plaintextInput []byte
-			if len(ciphertextInput) > 0 {
-				plaintextInput, err = wasmCtx.Decrypt(ciphertextInput, nonce)
-				if err != nil {
-					return fmt.Errorf("error while trying to decrypt the tx input: %w", err)
+			for i, tx := range txInputs {
+				var encryptedInput []byte
+				answers.Answers[i] = &types.DecryptedAnswer{}
+
+				switch txInput := tx.(type) {
+				case *types.MsgExecuteContract:
+					{
+						encryptedInput = txInput.Msg
+						answers.Answers[i].Type = "execute"
+					}
+				case *types.MsgInstantiateContract:
+					{
+						encryptedInput = txInput.InitMsg
+						answers.Answers[i].Type = "instantiate"
+					}
+				}
+
+				if encryptedInput != nil {
+					nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(encryptedInput)
+					if err != nil {
+						return fmt.Errorf("can't parse encrypted blob: %w", err)
+					}
+
+					if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
+						return fmt.Errorf("cannot decrypt, not original tx sender")
+					}
+
+					var plaintextInput []byte
+					if len(ciphertextInput) > 0 {
+						plaintextInput, err = wasmCtx.Decrypt(ciphertextInput, nonce)
+						if err != nil {
+							return fmt.Errorf("error while trying to decrypt the tx input: %w", err)
+						}
+					}
+
+					answers.Answers[i].Input = string(plaintextInput)
+					nonces[i] = nonce
 				}
 			}
 
-			answer.Input = string(plaintextInput)
-
-			// decrypt data
-			if answer.Type == "execute" {
+			dataOutputHexB64 := result.Data
+			if dataOutputHexB64 != "" {
 				dataOutputAsProtobuf, err := hex.DecodeString(dataOutputHexB64)
 				if err != nil {
 					return fmt.Errorf("error while trying to decode the encrypted output data from hex string: %w", err)
@@ -429,29 +428,27 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					return fmt.Errorf("error while trying to parse data as protobuf: %w: %s", err, dataOutputHexB64)
 				}
 
-				if len(txData.Data) > 1 {
-					println("WARN: more than one response in tx data. only deciphering the first.")
-				}
+				for i, data := range txData.Data {
+					if len(data.Data) != 0 {
+						dataPlaintextB64Bz, err := wasmCtx.Decrypt(data.Data, nonces[i])
+						if err != nil {
+							continue
+						}
+						dataPlaintextB64 := string(dataPlaintextB64Bz)
+						answers.Answers[i].OutputData = dataPlaintextB64
 
-				if len(txData.Data) > 0 {
-					dataPlaintextB64Bz, err := wasmCtx.Decrypt(txData.Data[0].Data, nonce)
-					if err != nil {
-						return fmt.Errorf("error while trying to decrypt the output data: %w", err)
+						dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
+						if err != nil {
+							continue
+						}
+
+						answers.Answers[i].OutputDataAsString = string(dataPlaintext)
 					}
-					dataPlaintextB64 := string(dataPlaintextB64Bz)
-					answer.OutputData = dataPlaintextB64
-
-					dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
-					if err != nil {
-						return fmt.Errorf("error while trying to decode the decrypted output data from base64 '%s': %w", dataPlaintextB64, err)
-					}
-
-					answer.OutputDataAsString = string(dataPlaintext)
 				}
 			}
 
 			// decrypt logs
-			answer.OutputLogs = []sdk.StringEvent{}
+			answers.OutputLogs = []sdk.StringEvent{}
 			for _, l := range result.Logs {
 				for _, e := range l.Events {
 					if e.Type == "wasm" {
@@ -461,11 +458,17 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 								if a.Key != "" {
 									// Try to decrypt the log key. If it doesn't look encrypted, leave it as-is
 									keyCiphertext, err := base64.StdEncoding.DecodeString(a.Key)
-									if err == nil {
+									if err != nil {
+										continue
+									}
+
+									for _, nonce := range nonces {
 										keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
-										if err == nil {
-											a.Key = string(keyPlaintext)
+										if err != nil {
+											continue
 										}
+										a.Key = string(keyPlaintext)
+										break
 									}
 								}
 
@@ -473,34 +476,41 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 								if a.Value != "" {
 									// Try to decrypt the log value. If it doesn't look encrypted, leave it as-is
 									valueCiphertext, err := base64.StdEncoding.DecodeString(a.Value)
-									if err == nil {
+									if err != nil {
+										continue
+									}
+									for _, nonce := range nonces {
 										valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
 										if err == nil {
-											a.Value = string(valuePlaintext)
+											continue
 										}
+										a.Value = string(valuePlaintext)
+										break
 									}
 								}
 
 								e.Attributes[i] = a
 							}
 						}
-						answer.OutputLogs = append(answer.OutputLogs, e)
+						answers.OutputLogs = append(answers.OutputLogs, e)
 					}
 				}
 			}
 
 			if types.IsEncryptedErrorCode(result.Code) && types.ContainsEncryptedString(result.RawLog) {
-				stdErr, err := wasmCtx.DecryptError(result.RawLog, answer.Type, nonce)
-				if err != nil {
-					return err
+				for i, nonce := range nonces {
+					stdErr, err := wasmCtx.DecryptError(result.RawLog, answers.Answers[i].Type, nonce)
+					if err != nil {
+						continue
+					}
+					answers.OutputError = append(json.RawMessage(fmt.Sprintf("message inedx %d: ", i)), stdErr...)
+					break
 				}
-
-				answer.OutputError = stdErr
 			} else if types.ContainsEnclaveError(result.RawLog) {
-				answer.PlaintextError = result.RawLog
+				answers.PlaintextError = result.RawLog
 			}
 
-			return clientCtx.PrintObjectLegacy(&answer)
+			return clientCtx.PrintObjectLegacy(&answers)
 		},
 	}
 
