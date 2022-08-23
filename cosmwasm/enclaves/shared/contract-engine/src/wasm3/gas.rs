@@ -33,6 +33,7 @@ pub fn get_exhausted_amount<C>(instance: &wasm3::Instance<C>) -> u64 {
 
 /// Attempts to use the given amount of gas.
 pub fn use_gas<C>(instance: &wasm3::Instance<C>, amount: u64) -> WasmEngineResult<()> {
+    debug!("external service used gas: {}", amount);
     let gas_limit: u64 = instance
         .get_global(EXPORT_GAS_LIMIT)
         .map_err(|_| WasmEngineError::OutOfGas)?;
