@@ -1,7 +1,10 @@
 use cosmwasm_std::{
-    entry_point, to_binary, to_vec, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Deps,
-    DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, MessageInfo, QueryRequest, Response,
-    StakingMsg, StdResult, WasmMsg,
+    entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse,
+    AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse,
+    ChannelResponse, ContractInfoResponse, CosmosMsg, DelegationResponse, Deps, DepsMut,
+    DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse, MessageInfo,
+    PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdResult, ValidatorResponse,
+    WasmMsg, WasmQuery,
 };
 
 use crate::msg::{Msg, QueryMsg};
@@ -145,21 +148,93 @@ fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdRes
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Stargate { path, data } => {
-            let res = deps
-                .querier
-                .raw_query(&to_vec(&QueryRequest::<Empty>::Stargate { path, data })?)
-                .unwrap()
-                .unwrap();
-            return Ok(to_binary(&res)?);
+            return Ok(to_binary(
+                &deps
+                    .querier
+                    .raw_query(&to_vec(&QueryRequest::<Empty>::Stargate { path, data })?)
+                    .unwrap()
+                    .unwrap(),
+            )?);
         }
         QueryMsg::BankBalance { address, denom } => {
-            let res =
-                deps.querier
-                    .query::<BalanceResponse>(&QueryRequest::Bank(BankQuery::Balance {
-                        address,
-                        denom,
-                    }))?;
-            return Ok(to_binary(&res)?);
+            return Ok(to_binary(&deps.querier.query::<BalanceResponse>(
+                &QueryRequest::Bank(BankQuery::Balance { address, denom }),
+            )?)?);
+        }
+        QueryMsg::BankAllBalances { address } => {
+            return Ok(to_binary(&deps.querier.query::<AllBalanceResponse>(
+                &QueryRequest::Bank(BankQuery::AllBalances { address }),
+            )?)?);
+        }
+        QueryMsg::StakingBondedDenom {} => {
+            return Ok(to_binary(&deps.querier.query::<BondedDenomResponse>(
+                &QueryRequest::Staking(StakingQuery::BondedDenom {}),
+            )?)?);
+        }
+        QueryMsg::StakingAllDelegations { delegator } => {
+            return Ok(to_binary(&deps.querier.query::<AllDelegationsResponse>(
+                &QueryRequest::Staking(StakingQuery::AllDelegations { delegator }),
+            )?)?);
+        }
+        QueryMsg::StakingDelegation {
+            delegator,
+            validator,
+        } => {
+            return Ok(to_binary(&deps.querier.query::<DelegationResponse>(
+                &QueryRequest::Staking(StakingQuery::Delegation {
+                    delegator,
+                    validator,
+                }),
+            )?)?);
+        }
+        QueryMsg::StakingAllValidators {} => {
+            return Ok(to_binary(&deps.querier.query::<AllValidatorsResponse>(
+                &QueryRequest::Staking(StakingQuery::AllValidators {}),
+            )?)?);
+        }
+        QueryMsg::StakingValidator { address } => {
+            return Ok(to_binary(&deps.querier.query::<ValidatorResponse>(
+                &QueryRequest::Staking(StakingQuery::Validator { address }),
+            )?)?);
+        }
+        QueryMsg::IbcPortId {} => {
+            return Ok(to_binary(&deps.querier.query::<PortIdResponse>(
+                &QueryRequest::Ibc(IbcQuery::PortId {}),
+            )?)?);
+        }
+        QueryMsg::IbcListChannels { port_id } => {
+            return Ok(to_binary(&deps.querier.query::<ListChannelsResponse>(
+                &QueryRequest::Ibc(IbcQuery::ListChannels { port_id }),
+            )?)?);
+        }
+        QueryMsg::IbcChannel {
+            channel_id,
+            port_id,
+        } => {
+            return Ok(to_binary(&deps.querier.query::<ChannelResponse>(
+                &QueryRequest::Ibc(IbcQuery::Channel {
+                    channel_id,
+                    port_id,
+                }),
+            )?)?);
+        }
+        QueryMsg::WasmSmart {
+            contract_addr,
+            code_hash,
+            msg,
+        } => {
+            return Ok(to_binary(&deps.querier.query::<Binary /* TODO fix */>(
+                &QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr,
+                    code_hash,
+                    msg,
+                }),
+            )?)?);
+        }
+        QueryMsg::WasmContractInfo { contract_addr } => {
+            return Ok(to_binary(&deps.querier.query::<ContractInfoResponse>(
+                &QueryRequest::Wasm(WasmQuery::ContractInfo { contract_addr }),
+            )?)?);
         }
     }
 }

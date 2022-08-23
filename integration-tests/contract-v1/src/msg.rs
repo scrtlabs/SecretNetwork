@@ -70,6 +70,43 @@ pub enum Msg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    BankBalance { address: String, denom: String },
-    Stargate { path: String, data: Binary },
+    BankBalance {
+        address: String,
+        denom: String,
+    },
+    BankAllBalances {
+        address: String,
+    },
+    StakingBondedDenom {},
+    StakingAllDelegations {
+        delegator: String,
+    },
+    StakingDelegation {
+        delegator: String,
+        validator: String,
+    },
+    StakingAllValidators {},
+    StakingValidator {
+        address: String,
+    },
+    Stargate {
+        path: String,
+        data: Binary,
+    },
+    IbcPortId {},
+    IbcListChannels {
+        port_id: Option<String>,
+    },
+    IbcChannel {
+        channel_id: String,
+        port_id: Option<String>,
+    },
+    WasmSmart {
+        contract_addr: String,
+        code_hash: String,
+        msg: Binary,
+    },
+    WasmContractInfo {
+        contract_addr: String,
+    },
 }
