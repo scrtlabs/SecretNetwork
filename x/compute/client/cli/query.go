@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strconv"
+	"strings"
 
 	"github.com/gogo/protobuf/proto"
 
@@ -96,7 +97,11 @@ func GetCmdQueryLabel() *cobra.Command {
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, args[0])
 			res, _, err := clientCtx.Query(route)
 			if err != nil {
-				if err == sdkErrors.ErrUnknownAddress {
+				// In a case when the label will not be found err will be of type ErrUnknownAddress.
+				// But will include a lot of prior wrapping information for example:
+				// Error: error querying: rpc error: code = Unknown desc = l: unknown address
+				// In order to identify the error correctly we need to find the desc of ErrUnknownAddress in err
+				if strings.Contains(err.Error(), sdkErrors.ErrUnknownAddress.Error()) {
 					fmt.Printf("Label is available and not in use\n")
 					return nil
 				}
