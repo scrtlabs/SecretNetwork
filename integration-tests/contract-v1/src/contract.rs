@@ -1,10 +1,10 @@
 use cosmwasm_std::{
     entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse,
     AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse,
-    ChannelResponse, ContractInfoResponse, CosmosMsg, DelegationResponse, Deps, DepsMut,
-    DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse, MessageInfo,
-    PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdResult, ValidatorResponse,
-    WasmMsg, WasmQuery,
+    ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps,
+    DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse,
+    MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError,
+    StdResult, ValidatorResponse, WasmMsg, WasmQuery,
 };
 
 use crate::msg::{Msg, QueryMsg};
@@ -223,13 +223,19 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             code_hash,
             msg,
         } => {
-            return Ok(to_binary(&deps.querier.query::<Binary /* TODO fix */>(
-                &QueryRequest::Wasm(WasmQuery::Smart {
+            let result = &deps
+                .querier
+                .raw_query(&to_vec(&QueryRequest::Wasm::<Empty>(WasmQuery::Smart {
                     contract_addr,
                     code_hash,
                     msg,
-                }),
-            )?)?);
+                }))?)
+                .unwrap();
+
+            match result {
+                ContractResult::Ok(ok) => Ok(Binary(ok.0.to_vec())),
+                ContractResult::Err(err) => Err(StdError::generic_err(err)),
+            }
         }
         QueryMsg::WasmContractInfo { contract_addr } => {
             return Ok(to_binary(&deps.querier.query::<ContractInfoResponse>(
