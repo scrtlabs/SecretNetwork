@@ -12,7 +12,7 @@ use enclave_crypto::{
 
 use cosmos_proto as proto;
 
-use enclave_cosmwasm_v010_types::{
+use cw_types_v010::{
     coins::Coin,
     encoding::Binary,
     math::Uint128,

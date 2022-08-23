@@ -6,15 +6,14 @@ use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::wasm::CosmWasmApiVersion;
 use cosmos_proto::tx::signing::SignMode;
-use cosmwasm_v010_types::types::CanonicalAddr;
+use cw_types_generic::{BaseEnv, CwEnv};
+use cw_types_v010;
+use cw_types_v010::encoding::Binary;
+use cw_types_v010::types::CanonicalAddr;
+use cw_types_v1::addresses::Addr;
+use cw_types_v1::results::{DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult};
+use cw_types_v1::timestamp::Timestamp;
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
-use enclave_cosmwasm_v010_types as cosmwasm_v010_types;
-use enclave_cosmwasm_v010_types::encoding::Binary;
-use enclave_cosmwasm_v1_types::addresses::Addr;
-use enclave_cosmwasm_v1_types::results::{
-    DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult,
-};
-use enclave_cosmwasm_v1_types::timestamp::Timestamp;
 
 use enclave_crypto::{Ed25519PublicKey, HASH_SIZE};
 use enclave_utils::coalesce;
@@ -56,40 +55,42 @@ pub fn init(
     sig_info: &[u8],    // info about signature verification
 ) -> Result<InitSuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
+    let contract_hash = contract_code.hash();
 
-    let mut env_v010: cosmwasm_v010_types::types::Env =
-        serde_json::from_slice(env).map_err(|err| {
-            warn!(
-                "init got an error while trying to deserialize env input bytes into json {:?}: {}",
-                String::from_utf8_lossy(&env),
-                err
-            );
-            EnclaveError::FailedToDeserialize
-        })?;
-    env_v010.contract_code_hash = hex::encode(contract_code.hash());
-
-    let canonical_contract_address = CanonicalAddr::from_human(&env_v010.contract.address).map_err(|err| {
+    let base_env: BaseEnv = serde_json::from_slice(env).map_err(|err| {
         warn!(
-            "init got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
-            env_v010.contract.address, err
+            "init got an error while trying to deserialize env input bytes into json {:?}: {}",
+            String::from_utf8_lossy(&env),
+            err
         );
         EnclaveError::FailedToDeserialize
     })?;
 
-    trace!("init env_v010: {:?}", env_v010);
+    let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
 
-    let canonical_sender_address = CanonicalAddr::from_human(&env_v010.message.sender).map_err(|err| {
+    let canonical_contract_address = CanonicalAddr::from_human(&contract_address).map_err(|err| {
+        warn!(
+            "init got an error while trying to deserialize env_v010.contract.address from bech32 string to bytes {:?}: {}",
+            contract_address, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
+    //
+    // trace!("init env_v010: {:?}", env_v010);
+    //
+    let canonical_sender_address = CanonicalAddr::from_human(&sender).map_err(|err| {
         warn!(
             "init got an error while trying to deserialize env_v010.message.sender from bech32 string to bytes {:?}: {}",
-            env_v010.message.sender, err
+            sender, err
         );
         EnclaveError::FailedToDeserialize
     })?;
 
     let contract_key = generate_encryption_key(
-        &env_v010,
-        contract_code.hash(),
-        &(canonical_contract_address.0).0,
+        &canonical_sender_address,
+        &block_height,
+        &contract_hash,
+        &canonical_contract_address,
     )?;
     trace!("init contract key: {:?}", hex::encode(contract_key));
 
@@ -105,7 +106,13 @@ pub fn init(
     trace!("init input before decryption: {:?}", base64::encode(&msg));
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    verify_params(&parsed_sig_info, &env_v010, &secret_msg)?;
+    verify_params(
+        &parsed_sig_info,
+        &sent_funds,
+        &canonical_sender_address,
+        &contract_address,
+        &secret_msg,
+    )?;
 
     let decrypted_msg = secret_msg.decrypt()?;
 
@@ -129,11 +136,15 @@ pub fn init(
         secret_msg.user_public_key,
     )?;
 
-    let (contract_env_bytes, contract_msg_info_bytes) =
-        env_to_env_msg_info_bytes(&engine, &mut env_v010)?;
+    let mut versioned_env =
+        base_env.into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
 
-    let env_ptr = engine.write_to_memory(&contract_env_bytes)?;
-    let msg_info_ptr = engine.write_to_memory(&contract_msg_info_bytes)?;
+    versioned_env.set_contract_hash(&contract_hash);
+
+    let (env_bytes, msg_info_bytes) = versioned_env.get_wasm_ptrs()?;
+
+    let env_ptr = engine.write_to_memory(&env_bytes)?;
+    let msg_info_ptr = engine.write_to_memory(&msg_info_bytes)?;
     let msg_ptr = engine.write_to_memory(&validated_msg)?;
 
     // This wrapper is used to coalesce all errors in this block to one object
@@ -148,7 +159,7 @@ pub fn init(
             output,
             &secret_msg,
             &canonical_contract_address,
-            &env_v010.contract_code_hash,
+            versioned_env.get_contract_hash(),
             reply_params,
             &canonical_sender_address,
             false,
@@ -523,14 +534,13 @@ pub fn handle(
 ) -> Result<HandleSuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 
-    let mut env_v010: cosmwasm_v010_types::types::Env =
-        serde_json::from_slice(env).map_err(|err| {
-            warn!(
+    let mut env_v010: cw_types_v010::types::Env = serde_json::from_slice(env).map_err(|err| {
+        warn!(
             "handle got an error while trying to deserialize env input bytes into json {:?}: {}",
             env, err
         );
-            EnclaveError::FailedToDeserialize
-        })?;
+        EnclaveError::FailedToDeserialize
+    })?;
     env_v010.contract_code_hash = hex::encode(contract_code.hash());
 
     trace!("handle env_v010: {:?}", env_v010);
@@ -585,7 +595,13 @@ pub fn handle(
     //  Reply (that is not WASM reply)
     if should_validate_sig_info {
         // Verify env parameters against the signed tx
-        verify_params(&parsed_sig_info, &env_v010, &secret_msg)?;
+        verify_params(
+            &parsed_sig_info,
+            &env_v010.message.sent_funds,
+            &canonical_sender_address,
+            &env_v010.contract.address,
+            &secret_msg,
+        )?;
     }
 
     let mut validated_msg = decrypted_msg.clone();
@@ -671,14 +687,13 @@ pub fn query(
 ) -> Result<QuerySuccess, EnclaveError> {
     let contract_code = ContractCode::new(contract);
 
-    let mut env_v010: cosmwasm_v010_types::types::Env =
-        serde_json::from_slice(env).map_err(|err| {
-            warn!(
-                "query got an error while trying to deserialize env input bytes into json {:?}: {}",
-                env, err
-            );
-            EnclaveError::FailedToDeserialize
-        })?;
+    let mut env_v010: cw_types_v010::types::Env = serde_json::from_slice(env).map_err(|err| {
+        warn!(
+            "query got an error while trying to deserialize env input bytes into json {:?}: {}",
+            env, err
+        );
+        EnclaveError::FailedToDeserialize
+    })?;
     env_v010.contract_code_hash = hex::encode(contract_code.hash());
 
     trace!("query env_v010: {:?}", env_v010);
@@ -784,7 +799,7 @@ fn start_engine(
 
 fn env_to_env_msg_info_bytes(
     engine: &Engine,
-    env_v010: &mut cosmwasm_v010_types::types::Env,
+    env_v010: &mut cw_types_v010::types::Env,
 ) -> Result<(Vec<u8>, Vec<u8>), EnclaveError> {
     match engine.contract_instance.cosmwasm_api_version {
         CosmWasmApiVersion::V010 => {
@@ -812,13 +827,13 @@ fn env_to_env_msg_info_bytes(
             Ok((env_v010_bytes, msg_info_v010_bytes))
         }
         CosmWasmApiVersion::V1 => {
-            let env_v1 = enclave_cosmwasm_v1_types::types::Env {
-                block: enclave_cosmwasm_v1_types::types::BlockInfo {
+            let env_v1 = cw_types_v1::types::Env {
+                block: cw_types_v1::types::BlockInfo {
                     height: env_v010.block.height,
                     time: Timestamp::from_nanos(env_v010.block.time),
                     chain_id: env_v010.block.chain_id.clone(),
                 },
-                contract: enclave_cosmwasm_v1_types::types::ContractInfo {
+                contract: cw_types_v1::types::ContractInfo {
                     address: Addr(env_v010.contract.address.0.clone()),
                     code_hash: env_v010.contract_code_hash.clone(),
                 },
@@ -832,19 +847,16 @@ fn env_to_env_msg_info_bytes(
                 EnclaveError::FailedToSerialize
             })?;
 
-            let msg_info_v1 = enclave_cosmwasm_v1_types::types::MessageInfo {
+            let msg_info_v1 = cw_types_v1::types::MessageInfo {
                 sender: Addr(env_v010.message.sender.0.clone()),
                 funds: env_v010
                     .message
                     .sent_funds
                     .iter()
                     .map(|coin| {
-                        enclave_cosmwasm_v1_types::coins::Coin::new(
-                            coin.amount.u128(),
-                            coin.denom.clone(),
-                        )
+                        cw_types_v1::coins::Coin::new(coin.amount.u128(), coin.denom.clone())
                     })
-                    .collect::<Vec<enclave_cosmwasm_v1_types::coins::Coin>>(),
+                    .collect::<Vec<cw_types_v1::coins::Coin>>(),
             };
 
             let msg_info_v1_bytes =  serde_json::to_vec(&msg_info_v1).map_err(|err| {

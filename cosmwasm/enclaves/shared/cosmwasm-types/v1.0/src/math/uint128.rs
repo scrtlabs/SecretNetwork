@@ -6,6 +6,8 @@ use std::ops;
 
 use crate::errors::{DivideByZeroError, OverflowError, OverflowOperation, StdError};
 
+use cw_types_v010::math::Uint128 as V010Uint128;
+
 /// A thin wrapper around u128 that is using strings for JSON encoding/decoding,
 /// such that the full u128 range can be used for clients that convert JSON numbers to floats,
 /// like JavaScript and jq.
@@ -318,6 +320,12 @@ impl Sum<Uint128> for Uint128 {
 impl<'a> Sum<&'a Uint128> for Uint128 {
     fn sum<I: Iterator<Item = &'a Uint128>>(iter: I) -> Self {
         iter.fold(Uint128::zero(), ops::Add::add)
+    }
+}
+
+impl From<V010Uint128> for Uint128 {
+    fn from(other: V010Uint128) -> Self {
+        Uint128(other.0)
     }
 }
 

@@ -9,7 +9,9 @@ use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, Run
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
-use enclave_cosmwasm_v010_types::consts::BECH32_PREFIX_ACC_ADDR;
+use cw_types_generic::CosmWasmApiVersion;
+use cw_types_v010::consts::BECH32_PREFIX_ACC_ADDR;
+
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 
 use crate::contract_validation::ContractKey;
@@ -27,14 +29,6 @@ use crate::wasm::traits::WasmiApi;
 mod api_marker {
     pub const V0_10: &str = "cosmwasm_vm_version_3";
     pub const V1: &str = "interface_version_8";
-}
-
-/// CosmwasmApiVersion is used to decide how to handle contract inputs and outputs
-pub enum CosmWasmApiVersion {
-    /// CosmWasm v0.10 API
-    V010,
-    /// CosmWasm v1 API
-    V1,
 }
 
 /// Right now ContractOperation is used to detect queris and prevent state changes

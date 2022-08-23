@@ -19,7 +19,7 @@ sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://gi
 cosmos_proto = { path = "../cosmos-proto" }
 enclave-ffi-types = { path = "../../ffi-types" }
 enclave_crypto = { path = "../crypto" }
-enclave_cosmwasm_v010_types = { path = "../cosmwasm-v010-types" }
+cw_types_v010 = { path = "../cosmwasm-types/v0.10" }
 log = "0.4.14"
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"

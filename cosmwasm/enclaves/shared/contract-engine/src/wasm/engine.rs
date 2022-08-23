@@ -4,7 +4,9 @@ use wasmi::{ModuleRef, RuntimeValue};
 
 use enclave_ffi_types::EnclaveError;
 
-use super::contract::{ContractInstance, CosmWasmApiVersion};
+use cw_types_generic::CosmWasmApiVersion;
+
+use super::contract::ContractInstance;
 use crate::errors::{wasmi_error_to_enclave_error, WasmEngineError};
 use enclave_cosmos_types::types::HandleType;
 
