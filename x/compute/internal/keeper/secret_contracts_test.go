@@ -3516,6 +3516,40 @@ type v1QueryResponse struct {
 	Get GetResponse `json:"get"`
 }
 
+type EnvResponse struct {
+	Height           int64  `json:"height"`
+	Time             uint64 `json:"time"`
+	ChainID          string `json:"chain_id"`
+	ContractAddress  string `json:"contract_address"`
+	ContractCodeHash string `json:"code_hash"`
+}
+type v1GetEnvResponse struct {
+	Get EnvResponse `json:"get_env_params"`
+}
+
+type MessageInfoResponse struct {
+	Sender string    `json:"sender"`
+	Funds  sdk.Coins `json:"funds"`
+}
+
+type V1MessageInfoResponse struct {
+	Get MessageInfoResponse `json:"get_msg_info"`
+}
+
+type V010EnvResponse struct {
+	Height           int64     `json:"height"`
+	ChainID          string    `json:"chain_id"`
+	ContractAddress  string    `json:"contract_address"`
+	ContractKey      string    `json:"contract_key"`
+	ContractCodeHash string    `json:"contract_code_hash"`
+	Time             uint64    `json:"time"`
+	Sender           string    `json:"sender"`
+	SentFunds        sdk.Coins `json:"sent_funds"`
+}
+type V010GetEnvResponse struct {
+	Get V010EnvResponse `json:"get_env_params"`
+}
+
 func TestV1EndpointsSanity(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
@@ -3550,6 +3584,92 @@ func TestV1QueryWorksWithEnv(t *testing.T) {
 	e := json.Unmarshal([]byte(queryRes), &resp)
 	require.NoError(t, e)
 	require.Equal(t, uint32(0), resp.Get.Count)
+}
+
+func TestV010EnvParams(t *testing.T) {
+	coins := sdk.NewCoins()
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/test-contract/contract.wasm", coins)
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
+	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env_params":{}}`, false, false, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+
+	var resp V010GetEnvResponse
+	e := json.Unmarshal([]byte(data), &resp)
+	require.NoError(t, e)
+
+	timeFromContract := convertU64TimeToTimeString(resp.Get.Time)
+	require.Equal(t, ctx.BlockTime().String(), timeFromContract)
+
+	require.Equal(t, ctx.BlockHeight(), resp.Get.Height)
+	require.Equal(t, ctx.ChainID(), resp.Get.ChainID)
+	require.Equal(t, contractAddress.String(), resp.Get.ContractAddress)
+	require.Equal(t, codeHash, resp.Get.ContractCodeHash)
+	require.Equal(t, base64.StdEncoding.EncodeToString(keeper.GetContractKey(ctx, contractAddress)), resp.Get.ContractKey)
+	require.Equal(t, walletA.String(), resp.Get.Sender)
+	require.Equal(t, coins, resp.Get.SentFunds)
+}
+
+func convertU64TimeToTimeString(timeFromContract uint64) string {
+	return time.Unix(int64(timeFromContract), 0).String()
+}
+
+func verifyGetEnvFromContract(t *testing.T, ctx sdk.Context, resp v1GetEnvResponse, contractAddress sdk.AccAddress, codeHash string) {
+	require.Equal(t, ctx.BlockHeight(), resp.Get.Height)
+	require.Equal(t, ctx.ChainID(), resp.Get.ChainID)
+	require.Equal(t, contractAddress.String(), resp.Get.ContractAddress)
+	require.Equal(t, codeHash, resp.Get.ContractCodeHash)
+
+	timeFromContract := convertU64TimeToTimeString(resp.Get.Time)
+	require.Equal(t, ctx.BlockTime().String(), timeFromContract)
+}
+
+func TestV1EnvParamsFromQuery(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
+
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get_env_params":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	var resp v1GetEnvResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+
+	verifyGetEnvFromContract(t, ctx, resp, contractAddress, codeHash)
+}
+
+func TestV1EnvParamsFromExec(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
+
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env_params":{}}`, true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+
+	var resp v1GetEnvResponse
+	e := json.Unmarshal([]byte(data), &resp)
+	require.NoError(t, e)
+
+	verifyGetEnvFromContract(t, ctx, resp, contractAddress, codeHash)
+}
+
+func TestV1MessageInfoFromExec(t *testing.T) {
+	coins := sdk.NewCoins()
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", coins)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_msg_info":{}}`, true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+
+	var resp V1MessageInfoResponse
+	e := json.Unmarshal([]byte(data), &resp)
+	require.NoError(t, e)
+	require.Equal(t, walletA.String(), resp.Get.Sender)
+	require.Equal(t, coins, resp.Get.Funds)
 }
 
 func TestV1ReplySanity(t *testing.T) {

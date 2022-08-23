@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Coin};
+use cosmwasm_std::{Addr, Binary, Coin, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -394,12 +394,15 @@ pub enum ExecuteMsg {
         amount: Vec<Coin>,
     },
     CosmosMsgCustom {},
+    GetMsgInfo {},
+    GetEnvParams {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Get {},
+    GetEnvParams {},
     // These were ported from the v0.10 test-contract:
     ContractError {
         error_type: String,
@@ -438,7 +441,20 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryRes {
-    Get { count: u64 },
+    Get {
+        count: u64,
+    },
+    GetEnvParams {
+        height: u64,
+        time: u64,
+        chain_id: String,
+        contract_address: Addr,
+        code_hash: String,
+    },
+    GetMsgInfo {
+        sender: Addr,
+        funds: Vec<Coin>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

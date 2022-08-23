@@ -318,6 +318,7 @@ pub enum HandleMsg {
     },
     CosmosMsgCustom {},
     InitNewContract {},
+    GetEnvParams {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -360,6 +361,21 @@ pub enum QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryRes {
     Get { count: u64 },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleRes {
+    GetEnvParams {
+        height: u64,
+        time: u64,
+        chain_id: String,
+        sender: HumanAddr,
+        sent_funds: Vec<Coin>,
+        contract_address: HumanAddr,
+        contract_key: Option<String>,
+        contract_code_hash: String,
+    },
 }
 
 /////////////////////////////// Init ///////////////////////////////
@@ -546,7 +562,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             messages: vec![CosmosMsg::Custom(Empty {})],
             log: vec![],
         }),
-        InitMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(InitResponse {
+        InitMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(InitResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to,
                 msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
@@ -555,16 +575,20 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             })],
             log: vec![],
         }),
-        InitMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(InitResponse {
+        InitMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(InitResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
                 msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
                 callback_code_hash: code_hash,
                 send: coins,
-                label: "test".to_string()
+                label: "test".to_string(),
             })],
             log: vec![],
-        })
+        }),
     }
 }
 
@@ -1243,7 +1267,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
-        HandleMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(HandleResponse {
+        HandleMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to,
                 msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
@@ -1253,17 +1281,39 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
-        HandleMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(HandleResponse {
+        HandleMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
                 msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
                 callback_code_hash: code_hash,
                 send: coins,
-                label: "test".to_string()
+                label: "test".to_string(),
             })],
             log: vec![],
             data: None,
-        })
+        }),
+        HandleMsg::GetEnvParams {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(
+                to_binary(&HandleRes::GetEnvParams {
+                    height: env.block.height,
+                    time: env.block.time,
+                    chain_id: env.block.chain_id,
+                    sender: env.message.sender,
+                    sent_funds: env.message.sent_funds,
+                    contract_address: env.contract.address,
+                    contract_key: env.contract_key,
+                    contract_code_hash: env.contract_code_hash,
+                })
+                .unwrap(),
+            ),
+            // data: Some(to_binary(&env.message.sent_funds).unwrap()),,
+        }),
     }
 }
 
