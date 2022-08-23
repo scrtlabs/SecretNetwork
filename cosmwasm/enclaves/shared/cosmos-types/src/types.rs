@@ -1,6 +1,7 @@
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
+use proto::tx::signing::SignMode;
 use protobuf::Message;
 use serde::{Deserialize, Serialize};
 
@@ -120,10 +121,15 @@ impl CosmosAminoPubkey for CosmosPubKey {
 }
 
 impl VerifyingKey for CosmosPubKey {
-    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+    fn verify_bytes(
+        &self,
+        bytes: &[u8],
+        sig: &[u8],
+        sign_mode: SignMode,
+    ) -> Result<(), CryptoError> {
         match self {
-            CosmosPubKey::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig),
-            CosmosPubKey::Multisig(pubkey) => pubkey.verify_bytes(bytes, sig),
+            CosmosPubKey::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig, sign_mode),
+            CosmosPubKey::Multisig(pubkey) => pubkey.verify_bytes(bytes, sig, sign_mode),
         }
     }
 }
@@ -139,6 +145,7 @@ pub enum SignModeDef {
     SIGN_MODE_DIRECT = 1,
     SIGN_MODE_TEXTUAL = 2,
     SIGN_MODE_LEGACY_AMINO_JSON = 127,
+    SIGN_MODE_EIP_191 = 191,
 }
 
 #[allow(non_camel_case_types)]

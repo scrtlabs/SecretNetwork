@@ -1156,6 +1156,7 @@ pub enum SignMode {
     SIGN_MODE_DIRECT = 1,
     SIGN_MODE_TEXTUAL = 2,
     SIGN_MODE_LEGACY_AMINO_JSON = 127,
+    SIGN_MODE_EIP_191 = 191
 }
 
 impl ::protobuf::ProtobufEnum for SignMode {
@@ -1169,6 +1170,7 @@ impl ::protobuf::ProtobufEnum for SignMode {
             1 => ::std::option::Option::Some(SignMode::SIGN_MODE_DIRECT),
             2 => ::std::option::Option::Some(SignMode::SIGN_MODE_TEXTUAL),
             127 => ::std::option::Option::Some(SignMode::SIGN_MODE_LEGACY_AMINO_JSON),
+            191 => ::std::option::Option::Some(SignMode::SIGN_MODE_EIP_191),
             _ => ::std::option::Option::None
         }
     }
@@ -1179,6 +1181,7 @@ impl ::protobuf::ProtobufEnum for SignMode {
             SignMode::SIGN_MODE_DIRECT,
             SignMode::SIGN_MODE_TEXTUAL,
             SignMode::SIGN_MODE_LEGACY_AMINO_JSON,
+            SignMode::SIGN_MODE_EIP_191,
         ];
         values
     }
