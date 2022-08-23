@@ -177,6 +177,11 @@ func GetCmdListContractByCode() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			if len(res) == 0 {
+				return fmt.Errorf("can not find contract with code id %d", codeID)
+			}
+
 			fmt.Println(string(res))
 			return nil
 		},
