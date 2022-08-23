@@ -8,6 +8,7 @@ then
   rm -rf /opt/secret/.sgx_secrets/*
 
   chain_id=${CHAINID:-secretdev-1}
+  LOG_LEVEL=${LOG_LEVEL:-INFO}
 
   mkdir -p ./.sgx_secrets
   secretd config chain-id "$chain_id"
@@ -67,5 +68,5 @@ setsid node faucet_server.js &
 # Setup secretcli
 cp $(which secretd) $(dirname $(which secretd))/secretcli
 
-source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG_LEVEL=INFO secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG_LEVEL="$LOG_LEVEL" secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
 
