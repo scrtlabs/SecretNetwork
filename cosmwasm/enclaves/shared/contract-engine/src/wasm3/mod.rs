@@ -1091,11 +1091,6 @@ fn host_ed25519_batch_verify(
     let signatures_len = signatures_data.len();
     let pubkeys_len = pubkeys_data.len();
 
-    if messages_len == 0 || signatures_len == 0 || pubkeys_len == 0 {
-        debug!("ed25519_batch_verify trying to bach verify with empty inputs!");
-        return Err(WasmEngineError::MemoryReadError);
-    }
-
     let lengths = (messages_len, signatures_len, pubkeys_len);
     let (messages, signatures, pubkeys): (Vec<&[u8]>, Vec<&[u8]>, Vec<&[u8]>) = match lengths {
         (ml, sl, pl) if ml == sl && sl == pl => {
