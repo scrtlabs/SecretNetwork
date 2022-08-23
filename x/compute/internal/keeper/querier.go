@@ -126,13 +126,14 @@ func (q GrpcQuerier) LabelByAddress(c context.Context, req *types.QueryByAddress
 func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryByLabelRequest) (*types.QueryContractAddressResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 	rsp, err := queryContractAddress(ctx, req.Label, q.keeper)
+
 	switch {
 	case err != nil:
 		return nil, err
 	case rsp == nil:
 		return nil, types.ErrNotFound
 	}
-	return &types.QueryContractAddressResponse{Address: rsp}, nil
+	return &types.QueryContractAddressResponse{Address: rsp.String()}, nil
 }
 
 func (q GrpcQuerier) ContractKey(c context.Context, req *types.QueryByAddressRequest) (*types.QueryContractKeyResponse, error) {
@@ -195,7 +196,7 @@ func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper Keeper) (*ty
 	// redact the Created field (just used for sorting, not part of public API)
 	info.Created = nil
 	return &types.ContractInfoWithAddress{
-		Address:      addr,
+		Address:      addr.String(),
 		ContractInfo: info,
 	}, nil
 }
@@ -206,7 +207,7 @@ func queryContractListByCode(ctx sdk.Context, codeID uint64, keeper Keeper) ([]t
 		if info.CodeID == codeID {
 			// and add the address
 			infoWithAddress := types.ContractInfoWithAddress{
-				Address:      addr,
+				Address:      addr.String(),
 				ContractInfo: &info,
 			}
 			contracts = append(contracts, infoWithAddress)
@@ -237,7 +238,7 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper Keeper) (*types.QueryCodeR
 	}
 	info := types.CodeInfoResponse{
 		CodeID:   codeID,
-		Creator:  res.Creator,
+		Creator:  res.Creator.String(),
 		DataHash: res.CodeHash,
 		Source:   res.Source,
 		Builder:  res.Builder,
@@ -256,7 +257,7 @@ func queryCodeList(ctx sdk.Context, keeper Keeper) ([]types.CodeInfoResponse, er
 	keeper.IterateCodeInfos(ctx, func(i uint64, res types.CodeInfo) bool {
 		info = append(info, types.CodeInfoResponse{
 			CodeID:   i,
-			Creator:  res.Creator,
+			Creator:  res.Creator.String(),
 			DataHash: res.CodeHash,
 			Source:   res.Source,
 			Builder:  res.Builder,
