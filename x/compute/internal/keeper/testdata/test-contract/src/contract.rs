@@ -298,6 +298,7 @@ pub enum HandleMsg {
     },
     CosmosMsgCustom {},
     InitNewContract {},
+    GetEnvParams {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -340,6 +341,21 @@ pub enum QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryRes {
     Get { count: u64 },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleRes {
+    GetEnvParams {
+        height: u64,
+        time: u64,
+        chain_id: String,
+        sender: HumanAddr,
+        sent_funds: Vec<Coin>,
+        contract_address: HumanAddr,
+        contract_key: Option<String>,
+        contract_code_hash: String,
+    },
 }
 
 /////////////////////////////// Init ///////////////////////////////
@@ -1203,6 +1219,24 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             })],
             log: vec![],
             data: None,
+        }),
+        HandleMsg::GetEnvParams {} => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(
+                to_binary(&HandleRes::GetEnvParams {
+                    height: env.block.height,
+                    time: env.block.time,
+                    chain_id: env.block.chain_id,
+                    sender: env.message.sender,
+                    sent_funds: env.message.sent_funds,
+                    contract_address: env.contract.address,
+                    contract_key: env.contract_key,
+                    contract_code_hash: env.contract_code_hash,
+                })
+                .unwrap(),
+            ),
+            // data: Some(to_binary(&env.message.sent_funds).unwrap()),,
         }),
     }
 }

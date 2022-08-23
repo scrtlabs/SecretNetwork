@@ -636,6 +636,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     resp.data = Some((count as u32).to_be_bytes().into());
                     return Ok(resp);
                 }
+                _ => Ok(Response::default()),
             }
         }
 
@@ -1105,6 +1106,16 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::CosmosMsgCustom {} => {
             Ok(Response::new().add_message(CosmosMsg::Custom(Empty {})))
+        }
+        ExecuteMsg::GetMsgInfo {} => Ok(Response::new().set_data(
+            to_binary(&QueryRes::GetMsgInfo {
+                sender: info.sender,
+                funds: info.funds,
+            })
+            .unwrap(),
+        )),
+        ExecuteMsg::GetEnvParams {} => {
+            Ok(Response::new().set_data(to_binary(&get_env_params(env)?).unwrap()))
         }
     }
 }
@@ -1627,6 +1638,7 @@ pub fn init_new_contract_with_error(env: Env, _deps: DepsMut) -> StdResult<Respo
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Get {} => to_binary(&get(deps, env)?),
+        QueryMsg::GetEnvParams {} => to_binary(&get_env_params(env)?),
 
         // These were ported from the v0.10 test-contract:
         QueryMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
@@ -1744,6 +1756,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
                         resp.data = Some((count as u32).to_be_bytes().into());
                         return Ok(resp);
                     }
+                    _ => Ok(Response::default()),
                 }
             }
             None => Err(StdError::generic_err(format!(
@@ -1963,6 +1976,16 @@ fn get(deps: Deps, env: Env) -> StdResult<QueryRes> {
     }
 
     Ok(QueryRes::Get { count })
+}
+
+fn get_env_params(env: Env) -> StdResult<QueryRes> {
+    Ok(QueryRes::GetEnvParams {
+        height: env.block.height,
+        time: env.block.time.seconds(),
+        chain_id: env.block.chain_id,
+        contract_address: env.contract.address,
+        code_hash: env.contract.code_hash,
+    })
 }
 
 fn map_string_to_error(error_type: String) -> StdError {
