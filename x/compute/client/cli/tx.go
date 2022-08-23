@@ -406,5 +406,9 @@ func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddres
 		return nil, err
 	}
 
+	if len(res) == 0 {
+		return nil, fmt.Errorf("contract with address %s not found", contractAddr.String())
+	}
+
 	return []byte(hex.EncodeToString(res)), nil
 }
