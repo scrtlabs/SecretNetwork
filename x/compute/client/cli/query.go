@@ -144,8 +144,12 @@ func GetCmdCodeHashByContract() *cobra.Command {
 				return fmt.Errorf("error querying contract hash: %s", err)
 			}
 
-			addr := hex.EncodeToString(res)
-			fmt.Printf("0x%s", addr)
+			if len(res) == 0 {
+				return fmt.Errorf("contract with address %s not found", args[0])
+			}
+
+			codeHash := hex.EncodeToString(res)
+			fmt.Printf("0x%s\n", codeHash)
 			return nil
 		},
 	}
