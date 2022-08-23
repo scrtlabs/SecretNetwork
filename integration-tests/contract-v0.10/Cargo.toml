@@ -1,9 +1,9 @@
 [package]
-name = "test-contract"
+name = "contract-v010"
 version = "0.0.1"
 authors = ["Enigma <info@enigma.co>"]
 edition = "2018"
-description = "A Test contract intended to use in system tests for the Secret Netowrk"
+description = "A test contract intended to use in integration tests for the Secret Netowrk"
 license = "MIT"
 exclude = [
   # Those files are cosmwasm-opt artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -40,4 +40,3 @@ serde = { version = "1.0.114", default-features = false, features = [
   "alloc"
 ] }
 serde-json-wasm = "0.2.1"
-secp256k1 = "0.20.3"

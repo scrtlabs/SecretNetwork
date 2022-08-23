@@ -70,5 +70,6 @@ pub enum Msg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    StargateQuery { path: String, data: Binary },
+    BankBalance { address: String, denom: String },
+    Stargate { path: String, data: Binary },
 }

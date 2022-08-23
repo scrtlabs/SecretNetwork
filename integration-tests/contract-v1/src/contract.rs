@@ -1,6 +1,7 @@
 use cosmwasm_std::{
-    entry_point, BankMsg, Binary, CosmosMsg, Deps, DepsMut, DistributionMsg, Env, GovMsg, IbcMsg,
-    MessageInfo, QueryRequest, Response, StakingMsg, StdResult, WasmMsg,
+    entry_point, to_binary, to_vec, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Deps,
+    DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, MessageInfo, QueryRequest, Response,
+    StakingMsg, StdResult, WasmMsg,
 };
 
 use crate::msg::{Msg, QueryMsg};
@@ -143,12 +144,22 @@ fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdRes
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::StargateQuery { path, data } => {
+        QueryMsg::Stargate { path, data } => {
             let res = deps
                 .querier
-                .query::<Binary>(&QueryRequest::Stargate { path, data });
-            deps.api.debug(&format!("ASSAF {:?}", res));
-            return Ok(res?);
+                .raw_query(&to_vec(&QueryRequest::<Empty>::Stargate { path, data })?)
+                .unwrap()
+                .unwrap();
+            return Ok(to_binary(&res)?);
+        }
+        QueryMsg::BankBalance { address, denom } => {
+            let res =
+                deps.querier
+                    .query::<BalanceResponse>(&QueryRequest::Bank(BankQuery::Balance {
+                        address,
+                        denom,
+                    }))?;
+            return Ok(to_binary(&res)?);
         }
     }
 }
