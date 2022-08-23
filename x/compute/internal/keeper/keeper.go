@@ -775,30 +775,6 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 	return nil
 }
 
-func (k Keeper) fixContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.Model) error {
-	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
-	for _, model := range models {
-		if model.Value == nil {
-			model.Value = []byte{}
-		}
-
-		if !prefixStore.Has(model.Key) {
-			prefixStore.Set(model.Key, model.Value)
-			continue
-		}
-
-		existingValue := prefixStore.Get(model.Key)
-		if bytes.Equal(existingValue, model.Value) {
-			continue
-		} else {
-			prefixStore.Set(model.Key, model.Value)
-		}
-
-	}
-	return nil
-}
-
 func (k Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) *types.CodeInfo {
 	store := ctx.KVStore(k.storeKey)
 	var codeInfo types.CodeInfo
