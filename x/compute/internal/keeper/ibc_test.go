@@ -180,7 +180,9 @@ func ibcPacketReceiveHelper(
 	internalPacket := packet
 
 	if shouldEncryptMsg {
-		hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))
+		contractHash, err := keeper.GetContractHash(ctx, contractAddr)
+		require.NoError(t, err)
+		hashStr := hex.EncodeToString(contractHash)
 
 		msg := types.SecretMsg{
 			CodeHash: []byte(hashStr),
@@ -232,7 +234,9 @@ func ibcPacketAckHelper(
 	var nonce []byte
 
 	if shouldEncryptMsg {
-		hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))
+		contractHash, err := keeper.GetContractHash(ctx, contractAddr)
+		require.NoError(t, err)
+		hashStr := hex.EncodeToString(contractHash)
 
 		msg := types.SecretMsg{
 			CodeHash: []byte(hashStr),
@@ -287,7 +291,9 @@ func ibcPacketTimeoutHelper(
 	var nonce []byte
 
 	if shouldEncryptMsg {
-		hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))
+		contractHash, err := keeper.GetContractHash(ctx, contractAddr)
+		require.NoError(t, err)
+		hashStr := hex.EncodeToString(contractHash)
 
 		msg := types.SecretMsg{
 			CodeHash: []byte(hashStr),

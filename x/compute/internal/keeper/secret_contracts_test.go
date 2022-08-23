@@ -53,10 +53,17 @@ var testContracts = []TestContract{
 // if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
 func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
 	var hash []byte
+	var err error
+
 	if codeId != 0 {
-		hash = keeper.GetCodeInfo(ctx, codeId).CodeHash
+		codeInfo, err := keeper.GetCodeInfo(ctx, codeId)
+		require.NoError(t, err)
+
+		hash = codeInfo.CodeHash
 	} else {
-		hash = keeper.GetContractHash(ctx, contractAddress)
+		hash, err = keeper.GetContractHash(ctx, contractAddress)
+		require.NoError(t, err)
+
 	}
 
 	if hash == nil {
@@ -81,7 +88,10 @@ func uploadCode(ctx sdk.Context, t *testing.T, keeper Keeper, wasmPath string, w
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	codeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	return codeID, codeHash
 }
@@ -400,7 +410,10 @@ func queryHelperImpl(
 	contractAddr sdk.AccAddress, input string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64,
 ) (string, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))
+	hash, err := keeper.GetContractHash(ctx, contractAddr)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(hash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -473,7 +486,10 @@ func execHelperMultipleCoinsImpl(
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
+	hash, err := keeper.GetContractHash(ctx, contractAddress)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(hash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -537,7 +553,10 @@ func initHelperImpl(
 	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, sentFunds sdk.Coins, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(codeInfo.CodeHash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -3690,7 +3709,6 @@ func TestSendFunds(t *testing.T) {
 		originType, destinationType := callTypes[0], callTypes[1]
 
 		t.Run(originType+"->"+destinationType, func(t *testing.T) {
-
 			alreadyTested := make(map[string]bool)
 			alreadyTested["useruser->useruser"] = true // we are only testing contracts here
 			for _, currentSubjects := range multisetsFrom(testContracts, 2) {
@@ -3935,7 +3953,9 @@ func TestWasmMsgStructure(t *testing.T) {
 											require.NoError(t, err)
 
 											toCodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-											toCodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, toCodeID).CodeHash)
+											codeInfo, err := keeper.GetCodeInfo(ctx, toCodeID)
+											require.NoError(t, err)
+											toCodeHash := hex.EncodeToString(codeInfo.CodeHash)
 											require.NoError(t, err)
 
 											toAddress := sdk.AccAddress{}
@@ -4104,7 +4124,9 @@ func TestV1InitV010ContractWithReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10":{"counter":80, "code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -4133,7 +4155,9 @@ func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4157,7 +4181,9 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_no_reply":{"counter":180, "code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -4186,7 +4212,9 @@ func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4215,7 +4243,9 @@ func TestV1QueryV010Contract(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4239,7 +4269,9 @@ func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_with_error":{"code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -4258,7 +4290,9 @@ func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4281,7 +4315,9 @@ func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_no_reply_with_error":{"code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -4301,7 +4337,9 @@ func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4325,7 +4363,9 @@ func TestV1QueryV010ContractWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5863,7 +5903,9 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
@@ -5923,7 +5965,9 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
