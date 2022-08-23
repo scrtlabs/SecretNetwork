@@ -294,10 +294,16 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: Build docker testnet
+      - name: Build LocalSecret
         run: |
           echo not_a_key | tee {api_key,spid}.txt
           DOCKER_TAG=v0.0.0 make build-localsecret
+      - name: Run integration tests
+        run: |
+          cd integration-tests
+          yarn
+          TAG=v0.0.0 make run-localsecret & 
+          yarn test
       - name: Run secret.js tests
         run: |
           git clone --depth 1 https://github.com/scrtlabs/secret.js

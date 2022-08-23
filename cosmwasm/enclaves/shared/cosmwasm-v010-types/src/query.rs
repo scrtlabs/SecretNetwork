@@ -17,6 +17,34 @@ pub enum QueryRequest {
     Dist(DistQuery),
     Mint(MintQuery),
     Gov(GovQuery),
+    Ibc(IbcQuery),
+    Stargate { path: String, data: Binary },
+}
+
+/// These are queries to the various IBC modules to see the state of the contract's
+/// IBC connection. These will return errors if the contract is not "ibc enabled"
+#[non_exhaustive]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum IbcQuery {
+    /// Gets the Port ID the current contract is bound to.
+    ///
+    /// Returns a `PortIdResponse`.
+    PortId {},
+    /// Lists all channels that are bound to a given port.
+    /// If `port_id` is omitted, this list all channels bound to the contract's port.
+    ///
+    /// Returns a `ListChannelsResponse`.
+    ListChannels { port_id: Option<String> },
+    /// Lists all information for a (portID, channelID) pair.
+    /// If port_id is omitted, it will default to the contract's own channel.
+    /// (To save a PortId{} call)
+    ///
+    /// Returns a `ChannelResponse`.
+    Channel {
+        channel_id: String,
+        port_id: Option<String>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -97,6 +125,8 @@ pub enum WasmQuery {
         /// Key is the raw key used in the contracts Storage
         key: Binary,
     },
+    /// returns a ContractInfoResponse with metadata on the contract from the runtime
+    ContractInfo { contract_addr: String },
 }
 
 impl From<GovQuery> for QueryRequest {
@@ -153,6 +183,19 @@ pub enum StakingQuery {
     Validators {},
     /// Returns all the unbonding delegations by the delegator
     UnbondingDelegations { delegator: HumanAddr },
+
+    /// Returns all validators in the currently active validator set.
+    ///
+    /// The query response type is `AllValidatorsResponse`.
+    AllValidators {},
+    /// Returns the validator at the given address. Returns None if the validator is
+    /// not part of the currently active validator set.
+    ///
+    /// The query response type is `ValidatorResponse`.
+    Validator {
+        /// The validator's address (e.g. (e.g. cosmosvaloper1...))
+        address: String,
+    },
 }
 
 /// Delegation is basic (cheap to query) data about a delegation

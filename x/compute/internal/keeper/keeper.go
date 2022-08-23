@@ -112,13 +112,6 @@ func NewKeeper(
 		panic(err)
 	}
 
-	/*
-		// set KeyTable if it has not already been set
-		if !paramSpace.HasKeyTable() {
-			paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
-		}
-	*/
-
 	keeper := Keeper{
 		storeKey:         storeKey,
 		cdc:              cdc,
@@ -131,47 +124,13 @@ func NewKeeper(
 		messenger:        NewMessageHandler(msgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 	}
-	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper).Merge(customPlugins)
+	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
 }
 
-/*
-func (k Keeper) getUploadAccessConfig(ctx sdk.Context) types.AccessConfig {
-	var a types.AccessConfig
-	k.paramSpace.Get(ctx, types.ParamStoreKeyUploadAccess, &a)
-	return a
-}
-
-func (k Keeper) getInstantiateAccessConfig(ctx sdk.Context) types.AccessType {
-	var a types.AccessType
-	k.paramSpace.Get(ctx, types.ParamStoreKeyInstantiateAccess, &a)
-	return a
-}
-
-// GetParams returns the total set of wasm parameters.
-func (k Keeper) GetParams(ctx sdk.Context) types.Params {
-	var params types.Params
-	k.paramSpace.GetParamSet(ctx, &params)
-	return params
-}
-
-func (k Keeper) setParams(ctx sdk.Context, ps types.Params) {
-	k.paramSpace.SetParamSet(ctx, &ps)
-}
-*/
-
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string) (codeID uint64, err error) {
-	/*
-		return k.create(ctx, creator, wasmCode, source, builder, &types.AccessConfig{Type: types.Everybody}  , k.authZPolicy )
-		}
-
-		func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, source string, builder string, instantiateAccess *types.AccessConfig ) (codeID uint64, err error) {
-		if !authZ.CanCreateCode(k.getUploadAccessConfig(ctx), creator) {
-			return 0, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "can not create code")
-		}
-	*/
 	wasmCode, err = uncompress(wasmCode)
 	if err != nil {
 		return 0, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
@@ -185,13 +144,8 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	}
 	store := ctx.KVStore(k.storeKey)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
-	/*
-		if instantiateAccess == nil {
-			defaultAccessConfig := k.getInstantiateAccessConfig(ctx).With(creator)
-			instantiateAccess = &defaultAccessConfig
-		}
-	*/
-	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder /* , *instantiateAccess */)
+
+	codeInfo := types.NewCodeInfo(codeHash, creator, source, builder)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshal(&codeInfo))
 
@@ -264,6 +218,9 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	}
 
 	signatures, err := protobufTx.GetSignaturesV2()
+	if err != nil {
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, "couldn't GetSignaturesV2")
+	}
 	var signMode sdktxsigning.SignMode
 	switch signData := signatures[pkIndex].Data.(type) {
 	case *sdktxsigning.SingleSignatureData:
@@ -434,6 +391,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	querier := QueryHandler{
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	// instantiate wasm contract
@@ -570,6 +528,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	querier := QueryHandler{
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	gas := gasForContract(ctx)
@@ -633,7 +592,7 @@ func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress
 	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, true)
 }
 
-func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool, recursive bool) ([]byte, error) {
+func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, req []byte, useDefaultGasLimit bool, recursive bool) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "query")
 
 	if useDefaultGasLimit {
@@ -642,7 +601,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: query")
 
-	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
+	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -651,16 +610,17 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 	querier := QueryHandler{
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	store := ctx.KVStore(k.storeKey)
 	// 0x01 | codeID (uint64) -> ContractInfo
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddr))
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 	params := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* empty because it's unused in queries */
 		[]sdk.Coin{},     /* empty because it's unused in queries */
-		contractAddr,
+		contractAddress,
 		contractKey,
 	)
 	params.Recursive = recursive
@@ -668,7 +628,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddr sdk.AccAddress, req
 	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, req, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
 
-	telemetry.SetGauge(float32(gasUsed), "compute", "keeper", "query", contractAddr.String(), "gasUsed")
+	telemetry.SetGauge(float32(gasUsed), "compute", "keeper", "query", contractAddress.String(), "gasUsed")
 
 	if qErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
@@ -810,30 +770,6 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 			return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
 		}
 		prefixStore.Set(model.Key, model.Value)
-
-	}
-	return nil
-}
-
-func (k Keeper) fixContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.Model) error {
-	prefixStoreKey := types.GetContractStorePrefixKey(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
-	for _, model := range models {
-		if model.Value == nil {
-			model.Value = []byte{}
-		}
-
-		if !prefixStore.Has(model.Key) {
-			prefixStore.Set(model.Key, model.Value)
-			continue
-		}
-
-		existingValue := prefixStore.Get(model.Key)
-		if bytes.Equal(existingValue, model.Value) {
-			continue
-		} else {
-			prefixStore.Set(model.Key, model.Value)
-		}
 
 	}
 	return nil
@@ -1073,6 +1009,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	querier := QueryHandler{
 		Ctx:     ctx,
 		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
 	}
 
 	// instantiate wasm contract

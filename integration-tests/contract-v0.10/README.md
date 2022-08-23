@@ -1,0 +1,1 @@
+Just `make`. :rainbow:
