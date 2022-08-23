@@ -302,7 +302,7 @@ jobs:
         run: |
           cd integration-tests
           yarn
-          TAG=v0.0.0 make run-localsecret & 
+          docker run -d -p 9091:9091 --name localsecret ghcr.io/scrtlabs/localsecret:v0.0.0
           yarn test
       - name: Run secret.js tests
         run: |
