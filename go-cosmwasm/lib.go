@@ -205,7 +205,7 @@ func (w *Wasmer) Instantiate(
 			if isOutputAddressedToReply {
 				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 				if err != nil {
-					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
 				}
 			} else {
 				respV010orV1.V1.Ok.Data = nil
@@ -305,7 +305,7 @@ func (w *Wasmer) Execute(
 			if isOutputAddressedToReply {
 				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 				if err != nil {
-					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
 				}
 			}
 			return respV010orV1.V1.Ok, gasUsed, nil

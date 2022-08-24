@@ -434,6 +434,7 @@ func NewSecretNetworkApp(
 		app.ibcKeeper.PortKeeper,
 		app.transferKeeper,
 		app.ibcKeeper.ChannelKeeper,
+		app.Router(),
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
 		computeDir,

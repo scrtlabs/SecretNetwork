@@ -194,7 +194,7 @@ impl IbcPacketTrait for IbcPacketAckMsg {
         self.original_packet.data = data;
     }
     fn get_ack(&self) -> Option<Self::Data> {
-        return Some(self.acknowledgement.data.clone());
+        Some(self.acknowledgement.data.clone())
     }
     fn set_ack(&mut self, data: Self::Data) {
         self.acknowledgement.data = data;

@@ -302,13 +302,13 @@ jobs:
         run: |
           cd integration-tests
           yarn
-          TAG=v0.0.0 make run-localsecret & 
+          docker run -d -p 9091:9091 --name localsecret ghcr.io/scrtlabs/localsecret:v0.0.0
+          sleep 30
+          docker logs localsecret
           yarn test
       - name: Run secret.js tests
         run: |
           git clone --depth 1 https://github.com/scrtlabs/secret.js
-          # Copy v1 contract to tests directory
-          cp ./target/wasm32-unknown-unknown/release/v1_sanity_contract.wasm ./secret.js/test/test_contract_v1.wasm
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*

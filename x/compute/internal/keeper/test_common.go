@@ -425,6 +425,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		ibcKeeper.PortKeeper,
 		MockIBCTransferKeeper{},
 		ibcKeeper.ChannelKeeper,
+		router,
 		msgRouter,
 		queryRouter,
 		tempDir,
@@ -436,6 +437,16 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
+
+	am := module.NewManager( // minimal module set that we use for message/ query tests
+		bank.NewAppModule(encodingConfig.Marshaler, bankKeeper, authKeeper),
+		staking.NewAppModule(encodingConfig.Marshaler, stakingKeeper, authKeeper, bankKeeper),
+		distribution.NewAppModule(encodingConfig.Marshaler, distKeeper, authKeeper, bankKeeper, stakingKeeper),
+		gov.NewAppModule(encodingConfig.Marshaler, govKeeper, authKeeper, bankKeeper),
+	)
+	am.RegisterServices(module.NewConfigurator(encodingConfig.Marshaler, msgRouter, queryRouter))
+	wasmtypes.RegisterMsgServer(msgRouter, NewMsgServerImpl(keeper))
+	wasmtypes.RegisterQueryServer(queryRouter, NewGrpcQuerier(keeper))
 
 	keepers := TestKeepers{
 		AccountKeeper: authKeeper,

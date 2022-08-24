@@ -385,7 +385,7 @@ pub fn encrypt_output(
                 Some(_) => {
                     let mut events: Vec<Event> = vec![];
 
-                    if ok.attributes.len() > 0 {
+                    if !ok.attributes.is_empty() {
                         events.push(Event {
                             ty: "wasm".to_string(),
                             attributes: ok.attributes.clone(),

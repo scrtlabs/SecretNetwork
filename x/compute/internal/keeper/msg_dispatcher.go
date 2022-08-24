@@ -279,14 +279,14 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			if reply.Result.Ok != nil {
 				err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
 				if err != nil {
-					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
 				}
 
 				reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
 			} else {
 				err = json.Unmarshal(data[0], &dataWithInternalReplyInfo)
 				if err != nil {
-					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
 				}
 			}
 
