@@ -12,6 +12,7 @@ pub mod external;
 mod gas;
 mod io;
 mod memory;
+mod message;
 pub(crate) mod module_cache;
 mod query_chain;
 pub(crate) mod types;

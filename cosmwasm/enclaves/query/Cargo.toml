@@ -1,6 +1,6 @@
 [package]
 name = "secret-query-enclave"
-version = "1.2.4"
+version = "1.4.0"
 authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"

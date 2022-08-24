@@ -9,7 +9,8 @@ use cw_types_v010::types as v010types;
 use cw_types_v1::types as v1types;
 
 use enclave_ffi_types::EnclaveError;
-use hex;
+
+pub const CONTRACT_KEY_LENGTH: usize = 64;
 
 /// CosmwasmApiVersion is used to decide how to handle contract inputs and outputs
 pub enum CosmWasmApiVersion {
@@ -19,12 +20,43 @@ pub enum CosmWasmApiVersion {
     V1,
 }
 
+pub type BaseAddr = HumanAddr;
+pub type BaseCoin = v010types::Coin;
+pub type BaseCanoncalAddr = v010types::CanonicalAddr;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct BaseEnv(pub V010Env);
 
 impl BaseEnv {
-    pub fn get_verification_params(&self) -> (&HumanAddr, &HumanAddr, u64, &Vec<v010types::Coin>) {
+
+    pub fn get_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+
+        let contract_key = if let Some(b64_key) = &self.0.contract_key {
+            base64::decode(b64_key).map_err(|err| {
+                warn!(
+                "got an error while trying to decode contract key {:?}: {}",
+                b64_key, err
+            );
+                EnclaveError::FailedContractAuthentication
+            })?
+        } else {
+            warn!("Contract execute with empty contract key");
+            return Err(EnclaveError::FailedContractAuthentication);
+        };
+
+        if contract_key.len() != CONTRACT_KEY_LENGTH {
+            warn!("Contract execute with empty contract key");
+            return Err(EnclaveError::FailedContractAuthentication);
+        }
+
+        let mut key_as_bytes = [0u8; CONTRACT_KEY_LENGTH];
+        key_as_bytes.copy_from_slice(&contract_key);
+
+        Ok(key_as_bytes)
+    }
+
+    pub fn get_verification_params(&self) -> (&BaseAddr, &BaseAddr, u64, &Vec<BaseCoin>) {
         (
             &self.0.message.sender,
             &self.0.contract.address,

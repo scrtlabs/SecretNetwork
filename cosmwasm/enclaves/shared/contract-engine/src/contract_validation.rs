@@ -1,3 +1,4 @@
+use cw_types_generic::BaseEnv;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
@@ -53,34 +54,9 @@ pub fn generate_encryption_key(
     encryption_key[0..32].copy_from_slice(&sender_id);
     encryption_key[32..].copy_from_slice(&authenticated_contract_id);
 
+    trace!("contract key: {:?}", hex::encode(encryption_key));
+
     Ok(encryption_key)
-}
-
-pub fn extract_contract_key(env: &Env) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
-    if env.contract_key.is_none() {
-        warn!("Contract execute with empty contract key");
-        return Err(EnclaveError::FailedContractAuthentication);
-    }
-
-    let contract_key =
-        base64::decode(env.contract_key.as_ref().unwrap().as_bytes()).map_err(|err| {
-            warn!(
-                "got an error while trying to deserialize output bytes into json {:?}: {}",
-                env, err
-            );
-            EnclaveError::FailedContractAuthentication
-        })?;
-
-    if contract_key.len() != CONTRACT_KEY_LENGTH {
-        warn!("Contract execute with empty contract key");
-        return Err(EnclaveError::FailedContractAuthentication);
-    }
-
-    let mut key_as_bytes = [0u8; CONTRACT_KEY_LENGTH];
-
-    key_as_bytes.copy_from_slice(&contract_key);
-
-    Ok(key_as_bytes)
 }
 
 pub fn generate_sender_id(msg_sender: &[u8], block_height: &u64) -> [u8; HASH_SIZE] {
@@ -107,7 +83,7 @@ pub fn validate_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
     contract_address: &CanonicalAddr,
     contract_code: &ContractCode,
-) -> bool {
+) -> Result<(), EnclaveError> {
     // parse contract key -> < signer_id || authentication_code >
     let mut signer_id: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
     signer_id.copy_from_slice(&contract_key[0..HASH_SIZE]);
@@ -132,7 +108,13 @@ pub fn validate_contract_key(
         contract_address.as_slice(),
     );
 
-    calculated_authentication_id == expected_authentication_id
+    return if calculated_authentication_id == expected_authentication_id {
+        trace!("Successfully authenticated the contract!");
+        Ok(())
+    } else {
+        warn!("got an error while trying to deserialize output bytes");
+        Err(EnclaveError::FailedContractAuthentication)
+    };
 }
 
 pub struct ValidatedMessage {
@@ -148,7 +130,7 @@ pub struct ReplyParams {
 /// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.
 pub fn validate_msg(
     msg: &[u8],
-    contract_hash: [u8; HASH_SIZE],
+    contract_hash: &[u8; HASH_SIZE],
     contract_hash_for_validation: Option<Vec<u8>>,
 ) -> Result<ValidatedMessage, EnclaveError> {
     if contract_hash_for_validation.is_none() && msg.len() < HEX_ENCODED_HASH_SIZE {
@@ -406,7 +388,7 @@ fn verify_funds(msg: &CosmWasmMsg, sent_funds_msg: &[Coin]) -> bool {
         | CosmWasmMsg::Instantiate {
             init_funds: sent_funds,
             ..
-        } => &sent_funds_msg == sent_funds,
+        } => sent_funds_msg == sent_funds,
         CosmWasmMsg::Other => false,
     }
 }
