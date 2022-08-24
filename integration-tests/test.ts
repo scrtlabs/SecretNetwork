@@ -150,12 +150,13 @@ async function waitForBlocks() {
 
     try {
       const { block } = await secretjs.query.tendermint.getLatestBlock({});
+      console.log("block:", JSON.stringify(block));
 
       if (Number(block?.header?.height) >= 1) {
         break;
       }
     } catch (e) {
-      // console.error(e);
+      console.error("block error:", e);
     }
     await sleep(100);
   }
