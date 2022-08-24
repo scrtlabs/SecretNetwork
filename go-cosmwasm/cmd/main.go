@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
@@ -12,13 +11,17 @@ import (
 func main() {
 	file := os.Args[1]
 	fmt.Printf("Running %s...\n", file)
-	bz, err := ioutil.ReadFile(file)
+	bz, err := os.ReadFile(file)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Loaded!")
 
-	os.MkdirAll("tmp", 0o755)
+	err = os.MkdirAll("tmp", 0o755)
+	if err != nil {
+		panic(err)
+	}
+
 	wasmer, err := wasm.NewWasmer("tmp", "staking,stargate,ibc3", 0, 15)
 	if err != nil {
 		panic(err)

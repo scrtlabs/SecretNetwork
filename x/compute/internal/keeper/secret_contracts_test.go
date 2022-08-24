@@ -6,9 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,8 @@ import (
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	v010cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+
+	"gonum.org/v1/gonum/stat/combin"
 )
 
 type ContractEvent []v010cosmwasm.LogAttribute
@@ -71,7 +74,19 @@ func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress s
 	return queryBz, nil
 }
 
-func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, uint64, string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
+func uploadCode(ctx sdk.Context, t *testing.T, keeper Keeper, wasmPath string, walletA sdk.AccAddress) (uint64, string) {
+	wasmCode, err := os.ReadFile(wasmPath)
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+
+	return codeID, codeHash
+}
+
+func setupBasicTest(t *testing.T, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
 	encodingConfig := MakeEncodingConfig()
 	var transferPortSource types.ICS20TransferPortSource
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
@@ -84,13 +99,13 @@ func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins
 	walletA, privKeyA := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...))
 	walletB, privKeyB := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...))
 
-	wasmCode, err := ioutil.ReadFile(wasmPath)
-	require.NoError(t, err)
+	return ctx, keeper, walletA, privKeyA, walletB, privKeyB
+}
 
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
+func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, uint64, string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
+	ctx, keeper, walletA, privKeyA, walletB, privKeyB := setupBasicTest(t, additionalCoinsInWallets)
 
-	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+	codeID, codeHash := uploadCode(ctx, t, keeper, wasmPath, walletA)
 
 	return ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB
 }
@@ -316,6 +331,62 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 
 var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
+func stringToCoins(balance string) sdk.Coins {
+	result := sdk.NewCoins()
+
+	individualCoins := strings.Split(balance, ",")
+	for _, coin := range individualCoins {
+		if coin == "" {
+			continue
+		}
+		var amount int64
+		var denom string
+		fmt.Sscanf(coin, "%d%s", &amount, &denom)
+		result = result.Add(sdk.NewInt64Coin(denom, amount))
+	}
+
+	return result
+}
+
+func CoinsToInput(coins sdk.Coins) string {
+	result := "["
+	for i, coin := range coins {
+		result += `{"amount":"`
+		result += coin.Amount.String()
+		result += `","denom":"`
+		result += coin.Denom
+		result += `"}`
+		if i != len(coins)-1 {
+			result += `,`
+		}
+	}
+	result += "]"
+
+	return result
+}
+
+func multisetsFrom[t any](elements []t, size int) [][]t {
+	// init slice with 'size' elements, each one being the number of elements in the input slice
+	lengths := make([]int, size)
+	length := len(elements)
+	for i := 0; i < len(lengths); i++ {
+		lengths[i] = length
+	}
+
+	product := combin.Cartesian(lengths)
+	// map indexes to element
+	result := make([][]t, 0)
+	for _, indexes := range product {
+		inner := make([]t, 0)
+		for _, j := range indexes {
+			inner = append(inner, elements[j])
+		}
+		result = append(result, inner)
+	}
+
+	return result
+}
+
 func queryHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddr sdk.AccAddress, input string,
@@ -373,6 +444,14 @@ func queryHelperImpl(
 	return string(resultBz), cosmwasm.StdError{}
 }
 
+func execHelperMultipleCoins(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, shouldSkipAttributes ...bool,
+) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coins, -1, shouldSkipAttributes...)
+}
+
 func execHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
@@ -385,6 +464,14 @@ func execHelperImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
+) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), wasmCallCount, shouldSkipAttributes...)
+}
+
+func execHelperMultipleCoinsImpl(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
 	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
 
@@ -408,10 +495,10 @@ func execHelperImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)))
+	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, coins)
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), nil)
+	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, coins, nil)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 
@@ -1969,6 +2056,8 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
+			// The state here should have been reverted by the APP but in go-tests we create our own keeper
+			// so it is not reverted in this case.
 			require.Equal(t, "17denom", contractCoinsAfter.String())
 			require.Equal(t, "199983denom", walletCoinsAfter.String())
 		})
@@ -2037,6 +2126,8 @@ func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
 			contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
 			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
+			// The state here should have been reverted by the APP but in go-tests we create our own keeper
+			// so it is not reverted in this case.
 			require.Equal(t, "17denom", contractCoinsAfter.String())
 			require.Equal(t, "", contract2CoinsAfter.String())
 			require.Equal(t, "199983denom", walletCoinsAfter.String())
@@ -2184,7 +2275,7 @@ func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
 
 	walletA, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/static-too-high-initial-memory.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/static-too-high-initial-memory.wasm")
 	require.NoError(t, err)
 
 	_, err = keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3594,6 +3685,203 @@ func TestBankMsgSend(t *testing.T) {
 	}
 }
 
+func TestSendFunds(t *testing.T) {
+	for _, callTypes := range multisetsFrom([]string{"init", "exec", "user"}, 2) {
+		originType, destinationType := callTypes[0], callTypes[1]
+
+		t.Run(originType+"->"+destinationType, func(t *testing.T) {
+			alreadyTested := make(map[string]bool)
+			alreadyTested["useruser->useruser"] = true // we are only testing contracts here
+			for _, currentSubjects := range multisetsFrom(testContracts, 2) {
+				originVersion, destinationVersion := currentSubjects[0], currentSubjects[1]
+
+				// users don't have versions, so skip the repeating tests (user v1 = user v10)
+				if originType == "user" {
+					originVersion.CosmWasmVersion = "user"
+				}
+				if destinationType == "user" {
+					destinationVersion.CosmWasmVersion = "user"
+				}
+				testTitle := originType + originVersion.CosmWasmVersion + "->" + destinationType + destinationVersion.CosmWasmVersion
+				if _, value := alreadyTested[testTitle]; value {
+					continue
+				}
+				alreadyTested[testTitle] = true
+
+				t.Run(testTitle, func(t *testing.T) {
+					for _, test := range []struct {
+						description              string
+						coinsToSend              string
+						isSuccess                bool
+						errorMsg                 string
+						balancesBefore           string
+						balancesAfter            string
+						destinationBalancesAfter string
+					}{
+						{
+							description:              "one, has all",
+							coinsToSend:              `20one`,
+							isSuccess:                true,
+							balancesBefore:           "200000denom,5000one",
+							balancesAfter:            "200000denom,4980one",
+							destinationBalancesAfter: "20one",
+						},
+						{
+							description:              "one, missing",
+							coinsToSend:              `20one`,
+							isSuccess:                false,
+							errorMsg:                 "0one is smaller than 20one: insufficient funds",
+							balancesBefore:           "5000another",
+							balancesAfter:            "5000another",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "one, not enough",
+							coinsToSend:              `20one`,
+							isSuccess:                false,
+							errorMsg:                 "19one is smaller than 20one: insufficient funds",
+							balancesBefore:           "5000another,19one",
+							balancesAfter:            "5000another,19one",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "zero",
+							coinsToSend:              ``,
+							isSuccess:                true,
+							balancesBefore:           "5000assaf,200000denom",
+							balancesAfter:            "5000assaf,200000denom",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "multi-coin, has all",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                true,
+							balancesBefore:           "5000assaf,200000denom",
+							balancesAfter:            "4870assaf,199985denom",
+							destinationBalancesAfter: "130assaf,15denom",
+						},
+						{
+							description:              "multi-coin, missing one",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "0assaf is smaller than 130assaf: insufficient funds",
+							balancesBefore:           "200000denom",
+							balancesAfter:            "200000denom",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "multi-coin, not enough of one of them",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "10denom is smaller than 15denom: insufficient funds",
+							balancesBefore:           "5000assaf,10denom",
+							balancesAfter:            "5000assaf,10denom",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "multi-coin, not enough of all of them",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "12assaf is smaller than 130assaf: insufficient funds",
+							balancesBefore:           "12assaf,10denom",
+							balancesAfter:            "12assaf,10denom",
+							destinationBalancesAfter: "",
+						},
+					} {
+						t.Run(test.description, func(t *testing.T) {
+							ctx, keeper, helperWallet, helperPrivKey, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
+
+							fundingWallet, fundingWalletPrivKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
+							receivingWallet, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins())
+
+							// verify that the account was funded correctly
+							fundingWalletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, fundingWallet)
+							require.Equal(t, test.balancesBefore, fundingWalletCoinsBefore.String())
+
+							var originCodeId uint64
+							if originType != "user" {
+								originCodeId, _ = uploadCode(ctx, t, keeper, originVersion.WasmFilePath, helperWallet)
+							}
+
+							var destinationCodeId uint64
+							var destinationHash string
+							var destinationAddr sdk.AccAddress
+
+							// prepare receiving contract
+							if destinationType != "user" {
+								destinationCodeId, destinationHash = uploadCode(ctx, t, keeper, destinationVersion.WasmFilePath, helperWallet)
+
+								if destinationType == "exec" {
+									_, _, destinationAddr, _, _ = initHelperImpl(t, keeper, ctx, destinationCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins())
+								}
+							}
+
+							var err cosmwasm.StdError
+							var originAddress sdk.AccAddress
+							var msg string
+
+							inputCoins := CoinsToInput(stringToCoins(test.coinsToSend))
+							if destinationType == "user" {
+								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), inputCoins)
+								destinationAddr = receivingWallet
+							} else if destinationType == "init" {
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_init_callback":{"code_id":%d,"coins":%s,"code_hash":"%s"}}`, destinationCodeId, inputCoins, destinationHash)
+								// destination address will only be known after the contract is init
+							} else {
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_exec_callback":{"to":"%s","coins":%s,"code_hash":"%s"}}`, destinationAddr, inputCoins, destinationHash)
+							}
+
+							var wasmEvents []ContractEvent
+							if originType == "init" {
+								_, _, originAddress, wasmEvents, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
+							} else if originType == "exec" {
+								_, _, originAddress, _, _ = initHelper(t, keeper, ctx, originCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests)
+
+								_, _, _, wasmEvents, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.balancesBefore))
+							} else {
+								// user sends directly to contract
+								originAddress = fundingWallet
+								wasmCount := int64(-1)
+								if !test.isSuccess {
+									wasmCount = 0
+								}
+								if destinationType == "exec" {
+									_, _, _, _, _, err = execHelperMultipleCoinsImpl(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, `{"no_data":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend), wasmCount)
+								} else {
+									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, destinationCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, wasmCount, stringToCoins(test.coinsToSend))
+								}
+							}
+
+							if !test.isSuccess {
+								require.NotEmpty(t, err)
+
+								expectedErrorMsg := test.errorMsg
+								if originType != "user" {
+									expectedErrorMsg = "dispatch: submessages: " + expectedErrorMsg
+								}
+								expectedErrorMsg = "encrypted: " + expectedErrorMsg
+								require.Equal(t, expectedErrorMsg, err.Error())
+							} else {
+								require.Empty(t, err)
+
+								originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
+								require.Equal(t, test.balancesAfter, originCoinsAfter.String())
+
+								if destinationType == "init" && originType != "user" {
+									destinationAddr, _ = sdk.AccAddressFromBech32(wasmEvents[1][0].Value)
+								}
+
+								destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
+								require.Equal(t, test.destinationBalancesAfter, destinationCoinsAfter.String())
+							}
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestWasmMsgStructure(t *testing.T) {
 	for _, from := range testContracts {
 		t.Run(fmt.Sprintf("from %s", from.CosmWasmVersion), func(t *testing.T) {
@@ -3642,7 +3930,7 @@ func TestWasmMsgStructure(t *testing.T) {
 										t.Run(test.description, func(t *testing.T) {
 											ctx, keeper, fromCodeID, _, walletA, privKeyA, _, _ := setupTest(t, from.WasmFilePath, sdk.NewCoins())
 
-											wasmCode, err := ioutil.ReadFile(to.WasmFilePath)
+											wasmCode, err := os.ReadFile(to.WasmFilePath)
 											require.NoError(t, err)
 
 											toCodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3809,7 +4097,7 @@ func TestV1MultipleSubmessagesNoReply(t *testing.T) {
 func TestV1InitV010ContractWithReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3838,7 +4126,7 @@ func TestV1InitV010ContractWithReply(t *testing.T) {
 func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3862,7 +4150,7 @@ func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 func TestV1InitV010ContractNoReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3891,7 +4179,7 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3920,7 +4208,7 @@ func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 func TestV1QueryV010Contract(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3944,7 +4232,7 @@ func TestV1QueryV010Contract(t *testing.T) {
 func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3963,7 +4251,7 @@ func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3986,7 +4274,7 @@ func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4006,7 +4294,7 @@ func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4030,7 +4318,7 @@ func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 func TestV1QueryV010ContractWithError(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4054,7 +4342,7 @@ func TestV1QueryV010ContractWithError(t *testing.T) {
 func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4079,7 +4367,7 @@ func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4109,7 +4397,7 @@ func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4133,7 +4421,7 @@ func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
 func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4158,7 +4446,7 @@ func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
 func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4181,7 +4469,7 @@ func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4206,7 +4494,7 @@ func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4219,7 +4507,7 @@ func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
 func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4239,7 +4527,7 @@ func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
 func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4254,7 +4542,7 @@ func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
 func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4270,7 +4558,7 @@ func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
 func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4284,7 +4572,7 @@ func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
 func TestV010QueryV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -5568,7 +5856,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -5628,7 +5916,7 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -5712,7 +6000,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 func TestV010SendsLogsMixedWithV1(t *testing.T) {
 	ctx, keeper, codeID, v1CodeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")

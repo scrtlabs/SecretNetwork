@@ -152,7 +152,7 @@ func (v Validators) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (v *Validators) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == "null" { //nolint:goconst
 		return nil
 	}
 	var raw []Validator
@@ -245,7 +245,7 @@ type WasmQuery struct {
 	ContractInfo *ContractInfoQuery `json:"contract_info,omitempty"`
 }
 
-// SmartQuery respone is raw bytes ([]byte)
+// SmartQuery response is raw bytes ([]byte)
 type SmartQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`

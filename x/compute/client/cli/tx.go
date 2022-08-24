@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -89,7 +89,7 @@ func StoreCodeCmd() *cobra.Command {
 }
 
 func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSet) (types.MsgStoreCode, error) {
-	wasm, err := ioutil.ReadFile(args[0])
+	wasm, err := os.ReadFile(args[0])
 	if err != nil {
 		return types.MsgStoreCode{}, err
 	}
@@ -191,7 +191,10 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 
 	label, err := initFlags.GetString(flagLabel)
 	if label == "" {
-		return types.MsgInstantiateContract{}, fmt.Errorf("Label is required on all contracts")
+		return types.MsgInstantiateContract{}, fmt.Errorf("label is required on all contracts")
+	}
+	if err != nil {
+		return types.MsgInstantiateContract{}, err
 	}
 
 	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
@@ -220,6 +223,9 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		initMsg.Msg = []byte(args[1])
 
 		encryptedMsg, err = wasmCtx.OfflineEncrypt(initMsg.Serialize(), ioKeyPath)
+		if err != nil {
+			return types.MsgInstantiateContract{}, fmt.Errorf("ioKeyPath: %s", err)
+		}
 	} else {
 		// if we aren't creating an offline transaction we can validate the chosen label
 		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
@@ -272,8 +278,14 @@ func ExecuteContractCmd() *cobra.Command {
 			var ioKeyPath string
 
 			genOnly, err := cmd.Flags().GetBool(flags.FlagGenerateOnly)
+			if err != nil {
+				return err
+			}
 
 			amountStr, err := cmd.Flags().GetString(flagAmount)
+			if err != nil {
+				return err
+			}
 
 			if len(args) == 1 {
 

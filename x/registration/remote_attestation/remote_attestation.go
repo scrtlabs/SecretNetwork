@@ -13,15 +13,14 @@ import (
 )
 
 /*
- Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
+	 Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
 
- We verify that:
-	- the report is valid, that no outstanding issues exist (todo: match enclave hash or something?)
-	- Intel's certificate signed the report
-	- The public key of the enclave/node exists, so we can use that to encrypt the seed
+	 We verify that:
+		- the report is valid, that no outstanding issues exist (todo: match enclave hash or something?)
+		- Intel's certificate signed the report
+		- The public key of the enclave/node exists, so we can use that to encrypt the seed
 
- In software mode this will just return the raw netscape comment, as it is the public key of the signer
-
+	 In software mode this will just return the raw netscape comment, as it is the public key of the signer
 */
 func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	// printCert(rawCert)
@@ -79,7 +78,7 @@ func extractAsn1Value(cert []byte, oid []byte) ([]byte, error) {
 	}
 
 	// Obtain Netscape Comment
-	offset += 1
+	offset++
 	payload := cert[offset : offset+length]
 
 	return payload, nil
@@ -184,14 +183,14 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 				if err != nil && len(platInfo) != 105 {
 					return nil, errors.New("illegal PlatformInfoBlob")
 				}
-				platInfo = platInfo[4:]
+				platInfo = platInfo[4:] //nolint:staticcheck
 
-				//piBlob := parsePlatform(platInfo)
-				//piBlobJson, err := json.Marshal(piBlob)
-				//if err != nil {
+				// piBlob := parsePlatform(platInfo)
+				// piBlobJson, err := json.Marshal(piBlob)
+				// if err != nil {
 				//	return nil, err
 				//}
-				//fmt.Println("Platform info is: " + string(piBlobJson))
+				// fmt.Println("Platform info is: " + string(piBlobJson))
 			} else {
 				return nil, errors.New("Failed to fetch platformInfoBlob from attestation report")
 			}

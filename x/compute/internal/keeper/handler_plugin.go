@@ -388,7 +388,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk
 		if err != nil {
 			return nil, err
 		}
-		//sdkMsg := stakingtypes.MsgDelegate{
+		// sdkMsg := stakingtypes.MsgDelegate{
 		//	DelegatorAddress: sender.String(),
 		//	ValidatorAddress: msg.Delegate.Validator,
 		//	Amount:           coin,

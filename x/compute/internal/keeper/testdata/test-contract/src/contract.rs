@@ -93,6 +93,16 @@ pub enum InitMsg {
         from: Option<HumanAddr>,
     },
     CosmosMsgCustom {},
+    SendMultipleFundsToInitCallback {
+        coins: Vec<Coin>,
+        code_id: u64,
+        code_hash: String,
+    },
+    SendMultipleFundsToExecCallback {
+        coins: Vec<Coin>,
+        to: HumanAddr,
+        code_hash: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -198,9 +208,19 @@ pub enum HandleMsg {
         code_id: u64,
         code_hash: String,
     },
+    SendMultipleFundsToInitCallback {
+        coins: Vec<Coin>,
+        code_id: u64,
+        code_hash: String,
+    },
     SendFundsToExecCallback {
         amount: u32,
         denom: String,
+        to: HumanAddr,
+        code_hash: String,
+    },
+    SendMultipleFundsToExecCallback {
+        coins: Vec<Coin>,
         to: HumanAddr,
         code_hash: String,
     },
@@ -526,6 +546,25 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             messages: vec![CosmosMsg::Custom(Empty {})],
             log: vec![],
         }),
+        InitMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to,
+                msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+            })],
+            log: vec![],
+        }),
+        InitMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+                label: "test".to_string()
+            })],
+            log: vec![],
+        })
     }
 }
 
@@ -1204,6 +1243,27 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
+        HandleMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to,
+                msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+                label: "test".to_string()
+            })],
+            log: vec![],
+            data: None,
+        })
     }
 }
 

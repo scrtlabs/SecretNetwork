@@ -2,7 +2,7 @@ package keeper
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
@@ -62,7 +62,7 @@ func TestMintQuerier(t *testing.T) {
 	distKeeper.AllocateTokensToValidator(ctx, v, sdk.NewDecCoins(sdk.NewDecCoin(sdk.DefaultBondDenom, sdk.NewInt(100))))
 
 	// upload staking derivates code
-	govCode, err := ioutil.ReadFile("./testdata/mint.wasm")
+	govCode, err := os.ReadFile("./testdata/mint.wasm")
 	require.NoError(t, err)
 	govId, err := keeper.Create(ctx, creator, govCode, "", "")
 	require.NoError(t, err)
