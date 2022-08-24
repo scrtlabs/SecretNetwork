@@ -99,6 +99,7 @@ func NewKeeper(
 	portKeeper portkeeper.Keeper,
 	portSource types.ICS20TransferPortSource,
 	channelKeeper channelkeeper.Keeper,
+	legacyMsgRouter sdk.Router,
 	msgRouter MessageRouter,
 	queryRouter GRPCQueryRouter,
 	homeDir string,
@@ -121,7 +122,7 @@ func NewKeeper(
 		bankKeeper:       bankKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
-		messenger:        NewMessageHandler(msgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
+		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
