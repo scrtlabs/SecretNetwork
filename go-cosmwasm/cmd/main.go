@@ -18,7 +18,11 @@ func main() {
 	}
 	fmt.Println("Loaded!")
 
-	os.MkdirAll("tmp", 0o755)
+	err = os.MkdirAll("tmp", 0o755)
+	if err != nil {
+		panic(err)
+	}
+
 	wasmer, err := wasm.NewWasmer("tmp", "staking", 0, 15)
 	if err != nil {
 		panic(err)
