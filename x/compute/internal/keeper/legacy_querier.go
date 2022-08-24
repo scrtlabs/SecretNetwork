@@ -21,6 +21,7 @@ const (
 	QueryContractAddress    = "label"
 	QueryContractKey        = "contract-key"
 	QueryContractHash       = "contract-hash"
+	QueryContractHashByID   = "contract-hash-by-id"
 	// QueryContractHistory    = "contract-history"
 )
 
@@ -91,6 +92,12 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
 			bz, err = queryContractHash(ctx, addr, keeper)
+		case QueryContractHashByID:
+			codeID, err := strconv.ParseUint(path[1], 10, 64)
+			if err != nil {
+				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
+			}
+			bz, err = queryContractHashByID(ctx, codeID, keeper)
 		default:
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, fmt.Sprintf("unknown data query endpoint %v", path[0]))
 		}
