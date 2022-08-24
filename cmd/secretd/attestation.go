@@ -17,7 +17,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
@@ -124,8 +123,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
-			depCdc := clientCtx.Codec
-			cdc := depCdc.(codec.Codec)
+			cdc := clientCtx.Codec
 
 			serverCtx := server.GetServerContextFromCmd(cmd)
 			config := serverCtx.Config
@@ -175,8 +173,8 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				return err
 			}
 
-			fmt.Println(fmt.Sprintf("%s", hex.EncodeToString(pubkey)))
-			fmt.Println(fmt.Sprintf("%s", hex.EncodeToString(masterKey)))
+			fmt.Printf("%s\n", hex.EncodeToString(pubkey))
+			fmt.Printf("%s\n", hex.EncodeToString(masterKey))
 
 			// sanity check - make sure the certificate we're using matches the generated key
 			if hex.EncodeToString(pubkey) != hex.EncodeToString(masterKey) {
@@ -239,7 +237,7 @@ func ParseCert() *cobra.Command {
 				return err
 			}
 
-			fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(pubkey)))
+			fmt.Printf("0x%s\n", hex.EncodeToString(pubkey))
 			return nil
 		},
 	}
@@ -313,7 +311,7 @@ func HealthCheck() *cobra.Command {
 				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
 			}
 
-			fmt.Println(fmt.Sprintf("SGX enclave health status: %s", res))
+			fmt.Printf("SGX enclave health status: %s\n", res)
 			return nil
 		},
 	}
@@ -491,7 +489,11 @@ Please report any issues with this command
 				"certificate": "%s"
 			}`, base64.StdEncoding.EncodeToString(cert)))
 
-			resp, err := http.Post(fmt.Sprintf(`%s`, regUrl), "application/json", bytes.NewBuffer(data))
+			resp, err := http.Post(regUrl, "application/json", bytes.NewBuffer(data))
+			if err != nil {
+				log.Fatalln(err)
+			}
+
 			defer resp.Body.Close()
 
 			body, err := ioutil.ReadAll(resp.Body)
@@ -515,7 +517,7 @@ Please report any issues with this command
 			}
 
 			seed := details.Details.Value
-			log.Printf(fmt.Sprintf(`seed: %s`, seed))
+			log.Printf(`seed: %s\n`, seed)
 
 			if len(seed) > 2 {
 				seed = seed[2:]
