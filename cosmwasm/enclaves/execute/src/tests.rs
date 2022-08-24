@@ -35,7 +35,6 @@ mod test {
             enclave_contract_engine::tests::run_tests();
             enclave_cosmos_types::tests::run_tests();
             crate::registration::tests::run_tests();
-            crate::logging_tests::run_tests();
 
             // example failing tests:
             // panic!("AAAAA");
