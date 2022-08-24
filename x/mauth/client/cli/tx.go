@@ -2,7 +2,7 @@ package cli
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -92,7 +92,7 @@ func getSubmitTxCmd() *cobra.Command {
 			if err := cdc.UnmarshalInterfaceJSON([]byte(args[0]), &txMsg); err != nil {
 
 				// check for file path if JSON input is not provided
-				contents, err := ioutil.ReadFile(args[0])
+				contents, err := os.ReadFile(args[0])
 				if err != nil {
 					return errors.Wrap(err, "neither JSON input nor path to .json file for sdk msg were provided")
 				}

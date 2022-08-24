@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -30,7 +29,7 @@ func uncompress(src []byte) ([]byte, error) {
 	}
 	zr.Multistream(false)
 
-	return ioutil.ReadAll(io.LimitReader(zr, maxSize))
+	return io.ReadAll(io.LimitReader(zr, maxSize))
 }
 
 func getFile(src string) ([]byte, error) {
@@ -41,7 +40,7 @@ func getFile(src string) ([]byte, error) {
 	}
 	defer file.Close()
 
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 	return b, err
 }
 
