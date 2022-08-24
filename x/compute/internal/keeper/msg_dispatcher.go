@@ -11,6 +11,7 @@ import (
 	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 	v1wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -277,16 +278,37 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
 
 			if reply.Result.Ok != nil {
-				err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
-				if err != nil {
-					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+				if msg.Msg.Wasm != nil && msg.Msg.Wasm.Execute != nil {
+					var execResponse types.MsgExecuteContractResponse
+					err = proto.Unmarshal(reply.Result.Ok.Data, &execResponse)
+					if err != nil {
+						return nil, fmt.Errorf("exec: cannot decode v1 DataWithInternalReplyInfo from protobuf: %w", err)
+					}
+
+					err = json.Unmarshal(execResponse.Data, &dataWithInternalReplyInfo)
+					if err != nil {
+						return nil, fmt.Errorf("exec: cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
+					}
+				} else if msg.Msg.Wasm != nil && msg.Msg.Wasm.Instantiate != nil {
+					var initResponse types.MsgInstantiateContractResponse
+					err = proto.Unmarshal(reply.Result.Ok.Data, &initResponse)
+					if err != nil {
+						return nil, fmt.Errorf("init: cannot decode v1 DataWithInternalReplyInfo from protobuf: %w", err)
+					}
+
+					err = json.Unmarshal(initResponse.Data, &dataWithInternalReplyInfo)
+					if err != nil {
+						return nil, fmt.Errorf("init: cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
+					}
+				} else {
+					return nil, fmt.Errorf("cannot detect wasm msg type: %+v", msg.Msg)
 				}
 
 				reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
 			} else {
 				err = json.Unmarshal(data[0], &dataWithInternalReplyInfo)
 				if err != nil {
-					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
 				}
 			}
 
