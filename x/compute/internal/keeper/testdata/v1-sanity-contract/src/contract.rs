@@ -296,23 +296,31 @@ pub fn instantiate(
         InstantiateMsg::CosmosMsgCustom {} => {
             Ok(Response::new().add_message(CosmosMsg::Custom(Empty {})))
         }
-        InstantiateMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(
+        InstantiateMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(
             Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
                 code_hash,
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 funds: coins,
-                label: "init test".to_string()
-            }))
+                label: "init test".to_string(),
+            })),
         ),
-        InstantiateMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(
+        InstantiateMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(
             Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to,
                 code_hash,
                 msg: Binary("{\"no_data\":{}}".as_bytes().to_vec()),
                 funds: coins,
-            }))
-        )
+            })),
+        ),
     }
 }
 
@@ -1131,22 +1139,30 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::CosmosMsgCustom {} => {
             Ok(Response::new().add_message(CosmosMsg::Custom(Empty {})))
         }
-        ExecuteMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(
+        ExecuteMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(
             Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
                 code_hash,
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 funds: coins,
-                label: "test".to_string()
-            }))
+                label: "test".to_string(),
+            })),
         ),
-        ExecuteMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(
+        ExecuteMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(
             Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to,
                 code_hash,
                 msg: Binary("{\"no_data\":{}}".as_bytes().to_vec()),
                 funds: coins,
-            }))
+            })),
         ),
     }
 }
