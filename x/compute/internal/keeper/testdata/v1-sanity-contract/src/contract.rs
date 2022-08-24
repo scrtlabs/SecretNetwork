@@ -531,7 +531,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             )
             .add_attribute("attr3", "🐙")
             .add_attribute_plaintext("attr4", "🦄")),
-        ExecuteMsg::GasMeter {} => loop {},
+        ExecuteMsg::GasMeter {} => {
+            // busy work
+            let mut v = vec![0; 65536];
+            let mut x = 0;
+            loop {
+                x += (x + 1) % 65536;
+                v[x] = 65536 - x;
+            }
+        }
         ExecuteMsg::GasMeterProxy {} => Ok(Response::default()),
         ExecuteMsg::TransferMoney { amount } => transfer_money(deps, amount),
         ExecuteMsg::RecursiveReply {} => recursive_reply(env, deps),
