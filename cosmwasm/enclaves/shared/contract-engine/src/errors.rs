@@ -9,12 +9,6 @@ use crate::external::ecalls::BufferRecoveryError;
 
 #[derive(Debug, Display)]
 #[non_exhaustive]
-pub enum ContractError {
-    DeserializingEnvErr
-}
-
-#[derive(Debug, Display)]
-#[non_exhaustive]
 pub enum WasmEngineError {
     #[display(fmt = "FailedOcall")]
     FailedOcall(UntrustedVmError),

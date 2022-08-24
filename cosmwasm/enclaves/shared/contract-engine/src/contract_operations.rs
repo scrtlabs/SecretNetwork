@@ -1,14 +1,10 @@
-use cosmos_proto::tx::signing::SignMode;
-
 use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::CanonicalAddr;
 
-use cw_types_v1::types::{Addr, Timestamp};
-
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
-use enclave_crypto::{Ed25519PublicKey, HASH_SIZE};
+use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use enclave_utils::coalesce;
 use log::*;

@@ -1,10 +1,9 @@
-use cw_types_generic::BaseEnv;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
-use cw_types_v010::types::{CanonicalAddr, Coin, Env, HumanAddr};
+use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
     ContractCode, CosmWasmMsg, CosmosPubKey, SigInfo, SignDoc, StdSignDoc,
@@ -29,16 +28,6 @@ pub fn generate_encryption_key(
     contract_address: &CanonicalAddr,
 ) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
-
-    // todo: check that this is just getting the canonicaladdr
-    // let (_, sender_address_u5) = bech32::decode(sender.as_str()).map_err(|err| {
-    //     warn!(
-    //         "got an error while trying to deserialize env.message.sender from bech32 string to bytes {:?}: {}",
-    //         env.message.sender, err
-    //     );
-    //     EnclaveError::FailedToDeserialize
-    // })?;
-    // let snder_address: Vec<u8> = sender_address_u5.iter().map(|x| x.to_u8()).collect();
 
     let sender_id = generate_sender_id(&(sender.0).0, block_height);
 
@@ -108,13 +97,13 @@ pub fn validate_contract_key(
         contract_address.as_slice(),
     );
 
-    return if calculated_authentication_id == expected_authentication_id {
+    if calculated_authentication_id == expected_authentication_id {
         trace!("Successfully authenticated the contract!");
         Ok(())
     } else {
         warn!("got an error while trying to deserialize output bytes");
         Err(EnclaveError::FailedContractAuthentication)
-    };
+    }
 }
 
 pub struct ValidatedMessage {
