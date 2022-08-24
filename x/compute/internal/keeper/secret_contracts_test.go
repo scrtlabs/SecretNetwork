@@ -603,23 +603,19 @@ func TestCallbackSanity(t *testing.T) {
 
 			_, _, data, execEvents, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 			require.Empty(t, err)
-			require.Equal(t,
-				[]ContractEvent{
-					{
-						{Key: "contract_address", Value: contractAddress.String()},
-						{Key: "banana", Value: "🍌"},
-					},
-					{
-						{Key: "contract_address", Value: contractAddress.String()},
-						{Key: "kiwi", Value: "🥝"},
-					},
-					{
-						{Key: "contract_address", Value: contractAddress.String()},
-						{Key: "watermelon", Value: "🍉"},
-					},
-				},
-				execEvents,
-			)
+			require.Equal(t, len(execEvents), 3)
+			require.Equal(t, len(execEvents[0]), 2)
+			require.Equal(t, len(execEvents[1]), 2)
+			require.Equal(t, len(execEvents[2]), 2)
+
+			require.Contains(t, execEvents[0], v010cosmwasm.LogAttribute{Key: "contract_address", Value: contractAddress.String()})
+			require.Contains(t, execEvents[1], v010cosmwasm.LogAttribute{Key: "contract_address", Value: contractAddress.String()})
+			require.Contains(t, execEvents[2], v010cosmwasm.LogAttribute{Key: "contract_address", Value: contractAddress.String()})
+
+			require.Contains(t, execEvents[0], v010cosmwasm.LogAttribute{Key: "banana", Value: "🍌"})
+			require.Contains(t, execEvents[1], v010cosmwasm.LogAttribute{Key: "kiwi", Value: "🥝"})
+			require.Contains(t, execEvents[2], v010cosmwasm.LogAttribute{Key: "watermelon", Value: "🍉"})
+
 			require.Equal(t, []byte{2, 3}, data)
 		})
 	}
