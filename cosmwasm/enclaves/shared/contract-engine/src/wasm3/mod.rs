@@ -196,7 +196,7 @@ impl Engine {
             }
         }
 
-        gas::add_metering(&mut module);
+        gas::add_metering(&mut module, &gas_costs);
 
         let code = module.emit_wasm();
 
