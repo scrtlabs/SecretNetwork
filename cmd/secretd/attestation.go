@@ -159,12 +159,12 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 			// Load consensus_seed_exchange_pubkey
 			cert := []byte(nil)
 			if len(args) >= 1 {
-				cert, err = ioutil.ReadFile(args[0])
+				cert, err = os.ReadFile(args[0])
 				if err != nil {
 					return err
 				}
 			} else {
-				cert, err = ioutil.ReadFile(filepath.Join(userHome, reg.NodeExchMasterCertPath))
+				cert, err = os.ReadFile(filepath.Join(userHome, reg.NodeExchMasterCertPath))
 				if err != nil {
 					return err
 				}
@@ -187,12 +187,12 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			// Load consensus_io_exchange_pubkey
 			if len(args) == 2 {
-				cert, err = ioutil.ReadFile(args[1])
+				cert, err = os.ReadFile(args[1])
 				if err != nil {
 					return err
 				}
 			} else {
-				cert, err = ioutil.ReadFile(filepath.Join(userHome, reg.IoExchMasterCertPath))
+				cert, err = os.ReadFile(filepath.Join(userHome, reg.IoExchMasterCertPath))
 				if err != nil {
 					return err
 				}
@@ -229,7 +229,7 @@ func ParseCert() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// parse coins trying to be sent
-			cert, err := ioutil.ReadFile(args[0])
+			cert, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
 			}
@@ -254,7 +254,7 @@ func ConfigureSecret() *cobra.Command {
 			"seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cert, err := ioutil.ReadFile(args[0])
+			cert, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
 			}
@@ -289,7 +289,7 @@ func ConfigureSecret() *cobra.Command {
 
 			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedConfig)
 
-			err = ioutil.WriteFile(seedFilePath, cfgBytes, 0o664)
+			err = os.WriteFile(seedFilePath, cfgBytes, 0o664)
 			if err != nil {
 				return err
 			}
@@ -449,7 +449,7 @@ Please report any issues with this command
 			}
 
 			// read the attestation certificate that we just created
-			cert, err := ioutil.ReadFile(sgxAttestationCert)
+			cert, err := os.ReadFile(sgxAttestationCert)
 			if err != nil {
 				_ = os.Remove(sgxAttestationCert)
 				return err
@@ -494,7 +494,7 @@ Please report any issues with this command
 			resp, err := http.Post(fmt.Sprintf(`%s`, regUrl), "application/json", bytes.NewBuffer(data))
 			defer resp.Body.Close()
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -559,7 +559,7 @@ Please report any issues with this command
 			// write seed to file - if file doesn't exist, write it. If it does, delete the existing one and create this
 			_, err = os.Stat(seedCfgFile)
 			if os.IsNotExist(err) {
-				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0o644)
+				err = os.WriteFile(seedCfgFile, cfgBytes, 0o644)
 				if err != nil {
 					return err
 				}
@@ -569,7 +569,7 @@ Please report any issues with this command
 					return fmt.Errorf("failed to modify file '%s': %w", seedCfgFile, err)
 				}
 
-				err = ioutil.WriteFile(seedCfgFile, cfgBytes, 0o644)
+				err = os.WriteFile(seedCfgFile, cfgBytes, 0o644)
 				if err != nil {
 					return fmt.Errorf("failed to create file '%s': %w", seedCfgFile, err)
 				}
