@@ -3,11 +3,13 @@ mod db;
 mod error;
 mod gas_meter;
 mod iterator;
+mod logger;
 mod memory;
 mod querier;
 
 pub use api::GoApi;
 pub use db::{db_t, DB};
+use logger::get_log_level;
 pub use memory::{free_rust, Buffer};
 pub use querier::GoQuerier;
 
@@ -31,7 +33,8 @@ use log::*;
 
 #[ctor]
 fn init_logger() {
-    simple_logger::init_with_level(log::Level::Info).unwrap();
+    let default_log_level = log::Level::Info;
+    simple_logger::init_with_level(get_log_level(default_log_level)).unwrap();
 }
 
 #[repr(C)]
