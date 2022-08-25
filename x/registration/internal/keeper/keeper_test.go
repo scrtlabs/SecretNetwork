@@ -1,15 +1,16 @@
 package keeper
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	eng "github.com/enigmampc/SecretNetwork/types"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func init() {
@@ -21,24 +22,20 @@ func init() {
 }
 
 func TestNewKeeper(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "reg")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	_, regKeeper := CreateTestInput(t, false, tempDir, true)
 	require.NotNil(t, regKeeper)
 }
 
 func TestNewKeeper_Node(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "reg")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	seedPath := filepath.Join(tempDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
-	err = os.MkdirAll(filepath.Join(tempDir, types.SecretNodeCfgFolder), 0700)
+	err := os.MkdirAll(filepath.Join(tempDir, types.SecretNodeCfgFolder), 0o700)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(seedPath, CreateTestSeedConfig(t), 0700)
+	err = ioutil.WriteFile(seedPath, CreateTestSeedConfig(t), 0o700)
 	require.NoError(t, err)
 
 	_, regKeeper := CreateTestInput(t, false, tempDir, false)
@@ -46,9 +43,7 @@ func TestNewKeeper_Node(t *testing.T) {
 }
 
 func TestKeeper_RegisterationStore(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
@@ -72,9 +67,7 @@ func TestKeeper_RegisterationStore(t *testing.T) {
 }
 
 func TestKeeper_RegisterNode(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
@@ -89,5 +82,4 @@ func TestKeeper_RegisterNode(t *testing.T) {
 
 	_, err = regKeeper.RegisterNode(ctx, cert)
 	require.NoError(t, err)
-
 }

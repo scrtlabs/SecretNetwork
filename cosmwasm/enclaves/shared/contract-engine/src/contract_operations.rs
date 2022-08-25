@@ -88,7 +88,7 @@ pub fn init(
 
     let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
 
-    trace!(
+    info!(
         "Init input after decryption: {:?}",
         String::from_utf8_lossy(&validated_msg)
     );

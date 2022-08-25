@@ -26,7 +26,7 @@ __debug_bin
 id_tx_io.json
 .idea
 x/compute/internal/keeper/debug.test
-ias_keys
+ias_keys/production
 api_key.txt
 spid.txt
 ias_bin_dev.go

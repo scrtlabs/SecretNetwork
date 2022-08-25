@@ -1,3 +1,4 @@
+//go:build secretcli
 // +build secretcli
 
 package api
@@ -75,7 +76,7 @@ func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cach
 }
 
 func ReleaseCache(cache Cache) {
-	//C.release_cache(cache.ptr)
+	// C.release_cache(cache.ptr)
 }
 
 func InitEnclaveRuntime(ModuleCacheSize uint8) error {

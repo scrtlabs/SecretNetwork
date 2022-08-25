@@ -1,18 +1,16 @@
 package keeper
 
 import (
+	"io/ioutil"
+	"testing"
+
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"testing"
 )
 
 func TestInitGenesisNoMaster(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 	//
 	//cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
@@ -28,9 +26,7 @@ func TestInitGenesisNoMaster(t *testing.T) {
 }
 
 func TestInitGenesis(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
@@ -46,9 +42,7 @@ func TestInitGenesis(t *testing.T) {
 }
 
 func TestExportGenesis(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")

@@ -5,21 +5,19 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
+	"io/ioutil"
+	"testing"
+
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
-	"io/ioutil"
-	"os"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 func TestNewQuerier(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	nodeIdInvalid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
