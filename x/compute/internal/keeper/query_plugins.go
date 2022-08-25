@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -404,6 +405,7 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, err.Error())
 			}
+			query = handleRewardsNull(query)
 
 			var res wasmTypes.RewardsResponse
 
@@ -435,6 +437,15 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown DistQuery variant"}
 	}
+}
+
+// This function handles the case of making a DistQuery::Rewards, where the delegator does not have any pending rewards;
+// thus the query returns null for rewards; e.g. {"rewards":null,"total":[]}
+// The desired result is to return an empty vector in such a case; e.g. {"rewards":[],"total":[]}
+func handleRewardsNull(query []byte) []byte {
+	query = bytes.Replace(
+		query, []byte(`"rewards":null`), []byte(`"rewards":[]`), 1)
+	return query
 }
 
 func BankQuerier(bankKeeper bankkeeper.ViewKeeper) func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error) {

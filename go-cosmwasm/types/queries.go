@@ -469,8 +469,8 @@ type RewardsQuery struct {
 
 // DelegationResponse is the expected response to DelegationsQuery
 type RewardsResponse struct {
-	Rewards []Rewards   `json:"rewards,omitempty"`
-	Total   RewardCoins `json:"total,omitempty"`
+	Rewards []Rewards   `json:"rewards"`
+	Total   RewardCoins `json:"total"`
 }
 
 type Rewards struct {
