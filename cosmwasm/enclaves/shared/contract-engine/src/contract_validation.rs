@@ -48,33 +48,6 @@ pub fn generate_encryption_key(
     Ok(encryption_key)
 }
 
-pub fn extract_contract_key(env: &Env) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
-    if env.contract_key.is_none() {
-        warn!("Contract execute with empty contract key");
-        return Err(EnclaveError::FailedContractAuthentication);
-    }
-
-    let contract_key =
-        base64::decode(env.contract_key.as_ref().unwrap().as_bytes()).map_err(|err| {
-            warn!(
-                "got an error while trying to decode contract key {:?}: {}",
-                env, err
-            );
-            EnclaveError::FailedContractAuthentication
-        })?;
-
-    if contract_key.len() != CONTRACT_KEY_LENGTH {
-        warn!("Contract execute with empty contract key");
-        return Err(EnclaveError::FailedContractAuthentication);
-    }
-
-    let mut key_as_bytes = [0u8; CONTRACT_KEY_LENGTH];
-
-    key_as_bytes.copy_from_slice(&contract_key);
-
-    Ok(key_as_bytes)
-}
-
 pub fn generate_sender_id(msg_sender: &[u8], block_height: &u64) -> [u8; HASH_SIZE] {
     let mut input_data = msg_sender.to_vec();
     input_data.extend_from_slice(&block_height.to_be_bytes());

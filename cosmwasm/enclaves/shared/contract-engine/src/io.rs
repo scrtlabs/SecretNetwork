@@ -54,11 +54,11 @@ pub enum RawWasmOutput {
     },
     OkIBCBasic {
         #[serde(rename = "Ok")]
-        ok: enclave_cosmwasm_v1_types::ibc::IbcBasicResponse,
+        ok: cw_types_v1::ibc::IbcBasicResponse,
     },
     OkIBCPacketReceive {
         #[serde(rename = "Ok")]
-        ok: enclave_cosmwasm_v1_types::ibc::IbcReceiveResponse,
+        ok: cw_types_v1::ibc::IbcReceiveResponse,
     },
 }
 
@@ -81,7 +81,7 @@ pub struct V1WasmOutput {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct IBCOutput {
     #[serde(rename = "Ok")]
-    pub ok: Option<enclave_cosmwasm_v1_types::ibc::IbcBasicResponse>,
+    pub ok: Option<cw_types_v1::ibc::IbcBasicResponse>,
     #[serde(rename = "Err")]
     pub err: Option<Value>,
 }
@@ -89,7 +89,7 @@ pub struct IBCOutput {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct IBCReceiveOutput {
     #[serde(rename = "Ok")]
-    pub ok: Option<enclave_cosmwasm_v1_types::ibc::IbcReceiveResponse>,
+    pub ok: Option<cw_types_v1::ibc::IbcReceiveResponse>,
     #[serde(rename = "Err")]
     pub err: Option<Value>,
 }
@@ -457,9 +457,7 @@ pub fn encrypt_output(
             internal_msg_id,
         } => {
             for sub_msg in &mut ok.messages {
-                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) =
-                    &mut sub_msg.msg
-                {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
                     encrypt_v1_wasm_msg(
                         wasm_msg,
                         &sub_msg.reply_on,
@@ -563,9 +561,7 @@ pub fn encrypt_output(
         }
         RawWasmOutput::OkIBCBasic { ok } => {
             for sub_msg in &mut ok.messages {
-                if let enclave_cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) =
-                    &mut sub_msg.msg
-                {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
                     encrypt_v1_wasm_msg(
                         wasm_msg,
                         &sub_msg.reply_on,
@@ -598,9 +594,7 @@ pub fn encrypt_output(
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
             for sub_msg in &mut ok.messages {
-                if let enclave_cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) =
-                    &mut sub_msg.msg
-                {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
                     encrypt_v1_wasm_msg(
                         wasm_msg,
                         &sub_msg.reply_on,
@@ -725,9 +719,8 @@ fn encrypt_v1_wasm_msg(
             // it will treat the next 64 bytes as a recipient code-hash and prepend this code-hash to its output.
             let mut hash_appended_msg = code_hash.as_bytes().to_vec();
             if *reply_on != ReplyOn::Never {
-                hash_appended_msg.extend_from_slice(
-                    cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES,
-                );
+                hash_appended_msg
+                    .extend_from_slice(cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES);
                 hash_appended_msg.extend_from_slice(&msg_id.to_be_bytes());
                 hash_appended_msg.extend_from_slice(reply_recipient_contract_hash.as_bytes());
             }
