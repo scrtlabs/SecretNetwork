@@ -4,6 +4,7 @@
     "./cosmwasm/enclaves/Cargo.toml",
     "./x/compute/internal/keeper/testdata/v1-sanity-contract/Cargo.toml",
     "./x/compute/internal/keeper/testdata/test-contract/Cargo.toml",
+    "./x/compute/internal/keeper/testdata/ibc/Cargo.toml",
     "./cosmwasm/enclaves/shared/cosmwasm-v1-types/Cargo.toml",
     "./cosmwasm/enclaves/shared/cosmwasm-v010-types/Cargo.toml"
   ],
