@@ -86,12 +86,13 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 
 // This struct helps us to distinguish between v0.10 contract response and v1 contract response
 type ContractExecResponse struct {
-	V1                     *V1ContractExecResponse   `json:"v1,omitempty"`
-	V010                   *V010ContractExecResponse `json:"v010,omitempty"`
-	InternaReplyEnclaveSig []byte                    `json:"internal_reply_enclave_sig"`
-	InternalMsgId          []byte                    `json:"internal_msg_id"`
-	IBCBasic               *v1types.IBCBasicResult   `json:"ibc_basic,omitempty"`
-	IBCPacketReceive       *v1types.IBCReceiveResult `json:"ibc_packet_receive,omitempty"`
+	V1                     *V1ContractExecResponse       `json:"v1,omitempty"`
+	V010                   *V010ContractExecResponse     `json:"v010,omitempty"`
+	InternaReplyEnclaveSig []byte                        `json:"internal_reply_enclave_sig"`
+	InternalMsgId          []byte                        `json:"internal_msg_id"`
+	IBCBasic               *v1types.IBCBasicResult       `json:"ibc_basic,omitempty"`
+	IBCPacketReceive       *v1types.IBCReceiveResult     `json:"ibc_packet_receive,omitempty"`
+	IBCChannelOpen         *v1types.IBCOpenChannelResult `json:"ibc_open_channel,omitempty"`
 }
 
 type V010ContractExecResponse struct {
@@ -331,6 +332,17 @@ func (w *Wasmer) Execute(
 			return resp.IBCPacketReceive.Ok, gasUsed, nil
 		} else {
 			return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketReceive response: %+v", resp)
+		}
+	}
+
+	if resp.IBCChannelOpen != nil {
+		if resp.IBCChannelOpen.Err != nil {
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCChannelOpen.Err)
+		} else if resp.IBCChannelOpen.Ok != nil {
+			// ibc_channel_open actually returns no data
+			return resp.IBCChannelOpen.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelOpen response: %+v", resp)
 		}
 	}
 

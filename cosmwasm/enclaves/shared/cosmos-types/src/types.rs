@@ -166,6 +166,12 @@ impl HandleType {
         match value {
             0 => Ok(HandleType::HANDLE_TYPE_EXECUTE),
             1 => Ok(HandleType::HANDLE_TYPE_REPLY),
+            2 => Ok(HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN),
+            3 => Ok(HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT),
+            4 => Ok(HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE),
+            5 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE),
+            6 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_ACK),
+            7 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT),
             _ => {
                 error!("unrecognized handle type: {}", value);
                 Err(EnclaveError::FailedToDeserialize)

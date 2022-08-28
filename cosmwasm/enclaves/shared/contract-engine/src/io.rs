@@ -60,6 +60,10 @@ pub enum RawWasmOutput {
         #[serde(rename = "Ok")]
         ok: cw_types_v1::ibc::IbcReceiveResponse,
     },
+    OkIBCOpenChannel {
+        #[serde(rename = "Ok")]
+        ok: enclave_cosmwasm_v1_types::ibc::IbcChannelOpenResponse,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -80,7 +84,7 @@ pub struct V1WasmOutput {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct IBCOutput {
-    #[serde(rename = "Ok")]
+    #[serde(rename = "ok")]
     pub ok: Option<cw_types_v1::ibc::IbcBasicResponse>,
     #[serde(rename = "Err")]
     pub err: Option<Value>,
@@ -88,8 +92,16 @@ pub struct IBCOutput {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct IBCReceiveOutput {
-    #[serde(rename = "Ok")]
+    #[serde(rename = "ok")]
     pub ok: Option<cw_types_v1::ibc::IbcReceiveResponse>,
+    #[serde(rename = "Err")]
+    pub err: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct IBCOpenChannelOutput {
+    #[serde(rename = "ok")]
+    pub ok: Option<String>,
     #[serde(rename = "Err")]
     pub err: Option<Value>,
 }
@@ -108,6 +120,7 @@ pub struct WasmOutput {
     pub v1: Option<V1WasmOutput>,
     pub ibc_basic: Option<IBCOutput>,
     pub ibc_packet_receive: Option<IBCReceiveOutput>,
+    pub ibc_open_channel: Option<IBCOpenChannelOutput>,
     pub query: Option<QueryOutput>,
     pub internal_reply_enclave_sig: Option<Binary>,
     pub internal_msg_id: Option<Binary>,
@@ -193,6 +206,7 @@ pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> 
                     v1: None,
                     ibc_basic: None,
                     ibc_packet_receive: None,
+                    ibc_open_channel: None,
                     query: Some(QueryOutput {
                         ok: None,
                         err: Some(err),
@@ -209,6 +223,7 @@ pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> 
                     v1: None,
                     ibc_basic: None,
                     ibc_packet_receive: None,
+                    ibc_open_channel: None,
                     query: None,
                     internal_reply_enclave_sig,
                     internal_msg_id,
@@ -227,6 +242,7 @@ pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> 
             v1: None,
             ibc_basic: None,
             ibc_packet_receive: None,
+            ibc_open_channel: None,
             query: None,
             internal_reply_enclave_sig,
             internal_msg_id,
@@ -243,6 +259,7 @@ pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> 
             }),
             ibc_basic: None,
             ibc_packet_receive: None,
+            ibc_open_channel: None,
             query: None,
             internal_reply_enclave_sig,
             internal_msg_id,
@@ -252,6 +269,7 @@ pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> 
             v1: None,
             ibc_basic: None,
             ibc_packet_receive: None,
+            ibc_open_channel: None,
             query: Some(QueryOutput {
                 ok: Some(ok),
                 err: None,
@@ -267,6 +285,7 @@ pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> 
                 ok: Some(ok),
             }),
             ibc_packet_receive: None,
+            ibc_open_channel: None,
             query: None,
             internal_reply_enclave_sig: None,
             internal_msg_id: None,
@@ -278,6 +297,23 @@ pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> 
             ibc_packet_receive: Some(IBCReceiveOutput {
                 err: None,
                 ok: Some(ok),
+            }),
+            ibc_open_channel: None,
+            query: None,
+            internal_reply_enclave_sig: None,
+            internal_msg_id: None,
+        },
+        RawWasmOutput::OkIBCOpenChannel { ok } => WasmOutput {
+            v010: None,
+            v1: None,
+            ibc_basic: None,
+            ibc_packet_receive: None,
+            ibc_open_channel: Some(IBCOpenChannelOutput {
+                err: None,
+                ok: match ok {
+                    Some(o) => Some(o.version),
+                    None => Some("".to_string()),
+                },
             }),
             query: None,
             internal_reply_enclave_sig: None,
@@ -631,6 +667,7 @@ pub fn encrypt_output(
                 &reply_params,
             )?)?;
         }
+        RawWasmOutput::OkIBCOpenChannel { ok: _ } => {}
     };
 
     let final_output = finalize_raw_output(output, is_query_output);
