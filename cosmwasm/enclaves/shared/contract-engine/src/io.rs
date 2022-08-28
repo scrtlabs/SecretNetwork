@@ -5,9 +5,9 @@ use crate::contract_validation::ReplyParams;
 /// that is unique to the user and the enclave
 ///
 use super::types::{IoNonce, SecretMessage};
-use enclave_cosmwasm_v010_types::encoding::Binary;
-use enclave_cosmwasm_v010_types::types::{CanonicalAddr, Coin};
-use enclave_cosmwasm_v1_types::results::{Event, Reply, ReplyOn, SubMsgResponse, SubMsgResult};
+use cw_types_v010::encoding::Binary;
+use cw_types_v010::types::{CanonicalAddr, Coin};
+use cw_types_v1::results::{Event, Reply, ReplyOn, SubMsgResponse, SubMsgResult};
 
 use enclave_ffi_types::EnclaveError;
 
@@ -42,13 +42,13 @@ pub enum RawWasmOutput {
     },
     OkV010 {
         #[serde(rename = "Ok")]
-        ok: enclave_cosmwasm_v010_types::types::ContractResult,
+        ok: cw_types_v010::types::ContractResult,
         internal_reply_enclave_sig: Option<Binary>,
         internal_msg_id: Option<Binary>,
     },
     OkV1 {
         #[serde(rename = "Ok")]
-        ok: enclave_cosmwasm_v1_types::results::Response,
+        ok: cw_types_v1::results::Response,
         internal_reply_enclave_sig: Option<Binary>,
         internal_msg_id: Option<Binary>,
     },
@@ -65,7 +65,7 @@ pub enum RawWasmOutput {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct V010WasmOutput {
     #[serde(rename = "Ok")]
-    pub ok: Option<enclave_cosmwasm_v010_types::types::ContractResult>,
+    pub ok: Option<cw_types_v010::types::ContractResult>,
     #[serde(rename = "Err")]
     pub err: Option<Value>,
 }
@@ -73,7 +73,7 @@ pub struct V010WasmOutput {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct V1WasmOutput {
     #[serde(rename = "Ok")]
-    pub ok: Option<enclave_cosmwasm_v1_types::results::Response>,
+    pub ok: Option<cw_types_v1::results::Response>,
     #[serde(rename = "Err")]
     pub err: Option<Value>,
 }
@@ -374,7 +374,7 @@ pub fn encrypt_output(
             internal_msg_id,
         } => {
             for msg in &mut ok.messages {
-                if let enclave_cosmwasm_v010_types::types::CosmosMsg::Wasm(wasm_msg) = msg {
+                if let cw_types_v010::types::CosmosMsg::Wasm(wasm_msg) = msg {
                     encrypt_v010_wasm_msg(
                         wasm_msg,
                         secret_msg.nonce,
@@ -457,7 +457,7 @@ pub fn encrypt_output(
             internal_msg_id,
         } => {
             for sub_msg in &mut ok.messages {
-                if let enclave_cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) =
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) =
                     &mut sub_msg.msg
                 {
                     encrypt_v1_wasm_msg(
@@ -654,20 +654,20 @@ pub fn encrypt_output(
 }
 
 fn encrypt_v010_wasm_msg(
-    wasm_msg: &mut enclave_cosmwasm_v010_types::types::WasmMsg,
+    wasm_msg: &mut cw_types_v010::types::WasmMsg,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     contract_addr: &CanonicalAddr,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        enclave_cosmwasm_v010_types::types::WasmMsg::Execute {
+        cw_types_v010::types::WasmMsg::Execute {
             msg,
             callback_code_hash,
             callback_sig,
             send,
             ..
         }
-        | enclave_cosmwasm_v010_types::types::WasmMsg::Instantiate {
+        | cw_types_v010::types::WasmMsg::Instantiate {
             msg,
             callback_code_hash,
             callback_sig,
@@ -694,7 +694,7 @@ fn encrypt_v010_wasm_msg(
 }
 
 fn encrypt_v1_wasm_msg(
-    wasm_msg: &mut enclave_cosmwasm_v1_types::results::WasmMsg,
+    wasm_msg: &mut cw_types_v1::results::WasmMsg,
     reply_on: &ReplyOn,
     msg_id: u64, // In every submessage there is a field called "id", currently used only by "reply".
     nonce: IoNonce,
@@ -703,14 +703,14 @@ fn encrypt_v1_wasm_msg(
     reply_recipient_contract_hash: &str,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        enclave_cosmwasm_v1_types::results::WasmMsg::Execute {
+        cw_types_v1::results::WasmMsg::Execute {
             msg,
             code_hash,
             callback_sig,
             funds,
             ..
         }
-        | enclave_cosmwasm_v1_types::results::WasmMsg::Instantiate {
+        | cw_types_v1::results::WasmMsg::Instantiate {
             msg,
             code_hash,
             callback_sig,
@@ -726,7 +726,7 @@ fn encrypt_v1_wasm_msg(
             let mut hash_appended_msg = code_hash.as_bytes().to_vec();
             if *reply_on != ReplyOn::Never {
                 hash_appended_msg.extend_from_slice(
-                    enclave_cosmwasm_v1_types::results::REPLY_ENCRYPTION_MAGIC_BYTES,
+                    cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES,
                 );
                 hash_appended_msg.extend_from_slice(&msg_id.to_be_bytes());
                 hash_appended_msg.extend_from_slice(reply_recipient_contract_hash.as_bytes());
@@ -748,11 +748,11 @@ fn encrypt_v1_wasm_msg(
                 &msg_to_pass,
                 &funds
                     .iter()
-                    .map(|coin| enclave_cosmwasm_v010_types::types::Coin {
+                    .map(|coin| cw_types_v010::types::Coin {
                         denom: coin.denom.clone(),
-                        amount: enclave_cosmwasm_v010_types::math::Uint128(coin.amount.u128()),
+                        amount: cw_types_v010::math::Uint128(coin.amount.u128()),
                     })
-                    .collect::<Vec<enclave_cosmwasm_v010_types::types::Coin>>()[..],
+                    .collect::<Vec<cw_types_v010::types::Coin>>()[..],
             ));
         }
     }

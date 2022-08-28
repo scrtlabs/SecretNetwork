@@ -1,4 +1,4 @@
-use enclave_cosmwasm_v010_types::types::LogAttribute;
+use cw_types_v010::types::LogAttribute;
 use serde::{Deserialize, Serialize};
 /// A full [*Cosmos SDK* event].
 ///

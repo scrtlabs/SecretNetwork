@@ -4,6 +4,7 @@ mod externals;
 mod import_resolver;
 pub mod traits;
 
-pub use contract::{ContractInstance, ContractOperation, CosmWasmApiVersion};
+pub use contract::{ContractInstance, ContractOperation};
+pub use cw_types_generic::CosmWasmApiVersion;
 pub use engine::Engine;
 pub use import_resolver::{create_builder, WasmiImportResolver};

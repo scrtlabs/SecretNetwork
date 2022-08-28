@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use enclave_cosmwasm_v010_types::{encoding::Binary, types::LogAttribute};
+use cw_types_v010::{encoding::Binary, types::LogAttribute};
 
 use super::{Empty, Event, SubMsg};
 

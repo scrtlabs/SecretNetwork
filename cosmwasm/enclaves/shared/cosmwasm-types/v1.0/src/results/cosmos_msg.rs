@@ -3,7 +3,7 @@ use std::fmt;
 
 use crate::{coins::Coin, ibc::IbcTimeout};
 
-use enclave_cosmwasm_v010_types::encoding::Binary;
+use cw_types_v010::encoding::Binary;
 
 use super::Empty;
 

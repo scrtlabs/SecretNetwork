@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+use cw_types_v010::coins::Coin as V010Coin;
+
 use super::math::Uint128;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -25,5 +27,14 @@ impl fmt::Display for Coin {
         // https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/types/coin.go#L643-L645
         // For communication to end users, Coin needs to transformed anways (e.g. convert integer uatom to decimal ATOM).
         write!(f, "{}{}", self.amount, self.denom)
+    }
+}
+
+impl From<V010Coin> for Coin {
+    fn from(other: V010Coin) -> Self {
+        Coin {
+            amount: other.amount.into(),
+            denom: other.denom,
+        }
     }
 }
