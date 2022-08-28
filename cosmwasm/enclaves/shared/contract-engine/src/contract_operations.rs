@@ -226,7 +226,7 @@ pub fn handle(
     )?;
 
     let mut versioned_env =
-        base_env.into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
+        base_env.clone().into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -250,10 +250,10 @@ pub fn handle(
 
         if was_msg_encrypted {
 
-            let canonical_sender_address = CanonicalAddr::from_human(&env_v010.message.sender).map_err(|err| {
+            let canonical_sender_address = CanonicalAddr::from_human(&sender).map_err(|err| {
                 warn!(
-                    "handle got an error while trying to deserialize env_v010.message.sender from bech32 string to bytes {:?}: {}",
-                    env_v010.message.sender, err
+                    "handle got an error while trying to deserialize sender from bech32 string to bytes {:?}: {}",
+                    sender, err
                 );
                 EnclaveError::FailedToDeserialize
             })?;

@@ -62,7 +62,7 @@ pub enum RawWasmOutput {
     },
     OkIBCOpenChannel {
         #[serde(rename = "Ok")]
-        ok: enclave_cosmwasm_v1_types::ibc::IbcChannelOpenResponse,
+        ok: cw_types_v1::ibc::IbcChannelOpenResponse,
     },
 }
 
