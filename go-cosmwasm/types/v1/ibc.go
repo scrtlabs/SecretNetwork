@@ -252,6 +252,11 @@ type IBCReceiveResult struct {
 	Err *types.StdError     `json:"Err,omitempty"`
 }
 
+type IBCOpenChannelResult struct {
+	Ok  *string         `json:"ok,omitempty"`
+	Err *types.StdError `json:"Err,omitempty"`
+}
+
 // IBCReceiveResponse defines the return value on packet response processing.
 // This "success" case should be returned even in application-level errors,
 // Where the Acknowledgement bytes contain an encoded error message to be returned to

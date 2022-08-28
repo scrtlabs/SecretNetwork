@@ -723,14 +723,6 @@ pub fn handle(
         EnclaveError::FailedToDeserialize
     })?;
 
-    let canonical_sender_address = CanonicalAddr::from_human(&env_v010.message.sender).map_err(|err| {
-        warn!(
-            "init got an error while trying to deserialize env_v010.message.sender from bech32 string to bytes {:?}: {}",
-            env_v010.message.sender, err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
-
     let contract_key = extract_contract_key(&env_v010)?;
 
     if !validate_contract_key(&contract_key, &canonical_contract_address, &contract_code) {
@@ -822,6 +814,15 @@ pub fn handle(
         );
 
         if was_msg_encrypted {
+
+            let canonical_sender_address = CanonicalAddr::from_human(&env_v010.message.sender).map_err(|err| {
+                warn!(
+                    "handle got an error while trying to deserialize env_v010.message.sender from bech32 string to bytes {:?}: {}",
+                    env_v010.message.sender, err
+                );
+                EnclaveError::FailedToDeserialize
+            })?;
+
             output = encrypt_output(
                 output,
                 &secret_msg,

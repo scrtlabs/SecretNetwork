@@ -32,6 +32,15 @@ pub struct IbcChannel {
     pub connection_id: String,
 }
 
+/// This serializes either as "null" or a JSON object.
+pub type IbcChannelOpenResponse = Option<Ibc3ChannelOpenResponse>;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Ibc3ChannelOpenResponse {
+    /// We can set the channel version to a different one than we were called with
+    pub version: String,
+}
+
 /// This is the return value for the majority of the ibc handlers.
 /// That are able to dispatch messages / events on their own,
 /// but have no meaningful return value to the calling code.
