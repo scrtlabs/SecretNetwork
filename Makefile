@@ -348,7 +348,7 @@ build-test-contract:
 	# sudo apt install -y binaryen
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/test-contract
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/v1-sanity-contract
-	$(MAKE) -C ./x/compute/internal/keeper/testdata/ibc-contract
+	$(MAKE) -C ./x/compute/internal/keeper/testdata/ibc
 
 
 prep-go-tests: build-test-contract

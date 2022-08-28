@@ -100,12 +100,8 @@ func (k Keeper) OnOpenChannel(
 	}
 
 	switch resp := res.(type) {
-	case *v1types.IBC3ChannelOpenResponse:
-		if resp != nil {
-			return resp.Version, nil
-		} else {
-			return "", nil
-		}
+	case *string:
+		return *resp, nil
 	default:
 		return "", sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-open-channel: cannot cast res to IBC3ChannelOpenResponse: %+v", res))
 	}

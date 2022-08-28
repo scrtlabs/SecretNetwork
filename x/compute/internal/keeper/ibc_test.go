@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"math"
 	"testing"
 
@@ -355,11 +354,8 @@ func TestIBCChannelOpen(t *testing.T) {
 	_, err = ibcChannelOpenHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, false, ibcChannel)
 	require.Empty(t, err)
 
-	queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{}`, true, true, math.MaxUint64)
+	queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
 	require.Empty(t, err)
 
-	var resp uint64
-	e := json.Unmarshal([]byte(queryRes), &resp)
-	require.NoError(t, e)
-	require.Equal(t, uint64(1), resp)
+	require.Equal(t, "1", queryRes)
 }

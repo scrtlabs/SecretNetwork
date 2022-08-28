@@ -312,7 +312,7 @@ pub fn finalize_raw_output(raw_output: RawWasmOutput, is_query_output: bool) -> 
                 err: None,
                 ok: match ok {
                     Some(o) => Some(o.version),
-                    None => None,
+                    None => Some("".to_string()),
                 },
             }),
             query: None,

@@ -1,7 +1,8 @@
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{count, count_read};
 use cosmwasm_std::{
-    entry_point, Binary, Deps, DepsMut, Env, IbcChannelOpenMsg, MessageInfo, Response, StdResult,
+    entry_point, to_binary, Binary, Deps, DepsMut, Env, IbcChannelOpenMsg, MessageInfo, Response,
+    StdResult,
 };
 
 #[entry_point]
@@ -26,7 +27,8 @@ pub fn execute(
 
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    Ok(count_read(deps.storage).load()?.to_be_bytes().into())
+    let answer = count_read(deps.storage).load()?;
+    Ok(to_binary(&answer)?)
 }
 
 #[entry_point]
