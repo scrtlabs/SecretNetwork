@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use super::addresses::Addr;
-use super::coins::Coin;
-use super::timestamp::Timestamp;
+pub use super::addresses::Addr;
+pub use super::coins::Coin;
+pub use super::timestamp::Timestamp;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Env {

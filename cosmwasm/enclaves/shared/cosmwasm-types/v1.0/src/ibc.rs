@@ -1,7 +1,7 @@
 use crate::addresses::Addr;
 use crate::results::{Event, SubMsg};
 use crate::timestamp::Timestamp;
-use enclave_cosmwasm_v010_types::{encoding::Binary, types::Empty, types::LogAttribute};
+use cw_types_v010::{encoding::Binary, types::Empty, types::LogAttribute};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

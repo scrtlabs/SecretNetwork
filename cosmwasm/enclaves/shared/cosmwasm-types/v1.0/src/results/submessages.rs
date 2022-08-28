@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use enclave_cosmwasm_v010_types::encoding::Binary;
+use cw_types_v010::encoding::Binary;
 
 use super::{CosmosMsg, Empty, Event};
 

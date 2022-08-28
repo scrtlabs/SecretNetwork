@@ -657,12 +657,12 @@ func TestCallbackSanity(t *testing.T) {
 						{Key: "banana", Value: "🍌"},
 					},
 					{
-						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "kiwi", Value: "🥝"},
+						{Key: "contract_address", Value: contractAddress.String()},
 					},
 					{
-						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "watermelon", Value: "🍉"},
+						{Key: "contract_address", Value: contractAddress.String()},
 					},
 				},
 				execEvents,

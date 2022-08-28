@@ -1,5 +1,17 @@
 [workspace]
-members = ["ffi-types", "execute", "query", "shared/*"]
+members = [
+  "ffi-types",
+  "execute",
+  "query",
+  "shared/contract-engine",
+  "shared/cosmos-proto",
+  "shared/cosmos-types",
+  "shared/crypto",
+  "shared/utils",
+  "shared/cosmwasm-types/v1.0",
+  "shared/cosmwasm-types/v0.10",
+  "shared/cosmwasm-types/generic"
+]
 exclude = ["test"]
 
 [profile.release]

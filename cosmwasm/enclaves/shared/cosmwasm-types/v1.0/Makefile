@@ -6,7 +6,7 @@ else
 	Rust_Flags := "-Z force-unstable-if-unmarked -C target-cpu=skylake"
 endif
 
-Rust_Target_Path = "$(CURDIR)/../../xargo"
+Rust_Target_Path = "$(CURDIR)/../../../xargo"
 
 .PHONY: check
 check:

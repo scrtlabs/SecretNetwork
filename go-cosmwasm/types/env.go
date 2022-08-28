@@ -15,6 +15,10 @@ type Env struct {
 	Recursive bool         `json:"recursive"`
 }
 
+type BaseEnv[T Env] struct {
+	First T
+}
+
 type ContractKey string
 
 type BlockInfo struct {

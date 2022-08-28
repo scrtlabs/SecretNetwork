@@ -1,11 +1,13 @@
 use snafu::Snafu;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use super::communication_error::CommunicationError;
 // use crate::backends::InsufficientGasLeft;
 use crate::ffi::FfiError;
 
 use super::EnclaveError;
+
+const MAX_ERR_LEN: usize = 4096;
 
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
@@ -105,11 +107,17 @@ pub enum VmError {
 #[allow(unused)]
 impl VmError {
     pub(crate) fn cache_err<S: Into<String>>(msg: S) -> Self {
-        CacheErr { msg: msg.into() }.build()
+        CacheErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn compile_err<S: Into<String>>(msg: S) -> Self {
-        CompileErr { msg: msg.into() }.build()
+        CompileErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn conversion_err<S: Into<String>, T: Into<String>, U: Into<String>>(
@@ -118,19 +126,25 @@ impl VmError {
         input: U,
     ) -> Self {
         ConversionErr {
-            from_type: from_type.into(),
-            to_type: to_type.into(),
-            input: input.into(),
+            from_type: &Self::truncate_input(from_type),
+            to_type: &Self::truncate_input(to_type),
+            input: &Self::truncate_input(input),
         }
         .build()
     }
 
     pub(crate) fn generic_err<S: Into<String>>(msg: S) -> Self {
-        GenericErr { msg: msg.into() }.build()
+        GenericErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn instantiation_err<S: Into<String>>(msg: S) -> Self {
-        InstantiationErr { msg: msg.into() }.build()
+        InstantiationErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn integrity_err() -> Self {
@@ -142,36 +156,57 @@ impl VmError {
         IteratorDoesNotExist { id: iterator_id }.build()
     }
 
-    pub(crate) fn parse_err<T: Into<String>, M: Display>(target: T, msg: M) -> Self {
+    pub(crate) fn parse_err<T: Into<String>, M: Into<String>>(target: T, msg: M) -> Self {
         ParseErr {
-            target: target.into(),
-            msg: msg.to_string(),
+            target: &Self::truncate_input(target),
+            msg: &Self::truncate_input(msg),
         }
         .build()
     }
 
-    pub(crate) fn serialize_err<S: Into<String>, M: Display>(source: S, msg: M) -> Self {
+    pub(crate) fn serialize_err<S: Into<String>, M: Into<String>>(source: S, msg: M) -> Self {
         SerializeErr {
-            source: source.into(),
-            msg: msg.to_string(),
+            source: &Self::truncate_input(source),
+            msg: &Self::truncate_input(msg),
         }
         .build()
     }
 
     pub(crate) fn resolve_err<S: Into<String>>(msg: S) -> Self {
-        ResolveErr { msg: msg.into() }.build()
+        ResolveErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn runtime_err<S: Into<String>>(msg: S) -> Self {
-        RuntimeErr { msg: msg.into() }.build()
+        RuntimeErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn static_validation_err<S: Into<String>>(msg: S) -> Self {
-        StaticValidationErr { msg: msg.into() }.build()
+        StaticValidationErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn uninitialized_context_data<S: Into<String>>(kind: S) -> Self {
-        UninitializedContextData { kind: kind.into() }.build()
+        UninitializedContextData {
+            kind: &Self::truncate_input(kind),
+        }
+        .build()
+    }
+
+    // this is not super ideal, as we don't want super long strings to be copied and moved around
+    // but it'll at least limit the shit that gets thrown on-chain
+    fn truncate_input<S: Into<String>>(msg: S) -> String {
+        let mut s: String = msg.into();
+
+        s.truncate(MAX_ERR_LEN);
+        s
     }
 
     pub(crate) fn write_access_denied() -> Self {
@@ -195,57 +230,6 @@ impl From<FfiError> for VmError {
         }
     }
 }
-
-/*
-impl From<wasmer_runtime_core::cache::Error> for VmError {
-    fn from(original: wasmer_runtime_core::cache::Error) -> Self {
-        VmError::cache_err(format!("Wasmer cache error: {:?}", original))
-    }
-}
-
-impl From<wasmer_runtime_core::error::CompileError> for VmError {
-    fn from(original: wasmer_runtime_core::error::CompileError) -> Self {
-        VmError::compile_err(format!("Wasmer compile error: {:?}", original))
-    }
-}
-
-impl From<wasmer_runtime_core::error::ResolveError> for VmError {
-    fn from(original: wasmer_runtime_core::error::ResolveError) -> Self {
-        VmError::resolve_err(format!("Wasmer resolve error: {:?}", original))
-    }
-}
-
-impl From<wasmer_runtime_core::error::RuntimeError> for VmError {
-    fn from(original: wasmer_runtime_core::error::RuntimeError) -> Self {
-        use wasmer_runtime_core::error::{InvokeError, RuntimeError};
-
-        fn runtime_error(err: RuntimeError) -> VmError {
-            VmError::runtime_err(format!("Wasmer runtime error: {:?}", err))
-        }
-
-        match original {
-            // TODO: fix the issue described below:
-            // `InvokeError::FailedWithNoError` happens when running out of gas in singlepass v0.17
-            // but it's supposed to indicate bugs in Wasmer...
-            // https://github.com/wasmerio/wasmer/issues/1452
-            // https://github.com/CosmWasm/cosmwasm/issues/375
-            RuntimeError::InvokeError(InvokeError::FailedWithNoError) => VmError::GasDepletion,
-            // This variant contains the error we return from imports.
-            RuntimeError::User(err) => match err.downcast::<VmError>() {
-                Ok(err) => *err,
-                Err(err) => runtime_error(RuntimeError::User(err)),
-            },
-            _ => runtime_error(original),
-        }
-    }
-}
-
-impl From<InsufficientGasLeft> for VmError {
-    fn from(_original: InsufficientGasLeft) -> Self {
-        VmError::GasDepletion
-    }
-}
-*/
 
 #[cfg(test)]
 mod test {
@@ -296,6 +280,18 @@ mod test {
         match error {
             VmError::GenericErr { msg, .. } => {
                 assert_eq!(msg, String::from("7 is too low"));
+            }
+            e => panic!("Unexpected error: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn truncation_of_error_works() {
+        let long_string = String::from_utf8(vec![b'X'; 4096]).unwrap();
+        let error = VmError::generic_err(format!("{} should not be here", long_string));
+        match error {
+            VmError::GenericErr { msg, .. } => {
+                assert_eq!(msg, long_string);
             }
             e => panic!("Unexpected error: {:?}", e),
         }
