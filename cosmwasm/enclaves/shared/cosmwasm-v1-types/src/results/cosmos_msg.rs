@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::coins::Coin;
-#[cfg(feature = "stargate")]
-use crate::ibc::IbcMsg;
+use crate::{coins::Coin, ibc::IbcTimeout};
+
 use enclave_cosmwasm_v010_types::encoding::Binary;
 
 use super::Empty;
@@ -19,21 +18,16 @@ where
     // by default we use RawMsg, but a contract can override that
     // to call into more app-specific code (whatever they define)
     Custom(T),
-    #[cfg(feature = "staking")]
     Staking(StakingMsg),
-    #[cfg(feature = "staking")]
     Distribution(DistributionMsg),
     /// A Stargate message encoded the same way as a protobuf [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
     /// This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
-    #[cfg(feature = "stargate")]
     Stargate {
         type_url: String,
         value: Binary,
     },
-    #[cfg(feature = "stargate")]
     Ibc(IbcMsg),
     Wasm(WasmMsg),
-    #[cfg(feature = "stargate")]
     Gov(GovMsg),
 }
 
@@ -57,12 +51,47 @@ pub enum BankMsg {
     Burn { amount: Vec<Coin> },
 }
 
+/// These are messages in the IBC lifecycle. Only usable by IBC-enabled contracts
+/// (contracts that directly speak the IBC protocol via 6 entry points)
+#[non_exhaustive]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum IbcMsg {
+    /// Sends bank tokens owned by the contract to the given address on another chain.
+    /// The channel must already be established between the ibctransfer module on this chain
+    /// and a matching module on the remote chain.
+    /// We cannot select the port_id, this is whatever the local chain has bound the ibctransfer
+    /// module to.
+    Transfer {
+        /// exisiting channel to send the tokens over
+        channel_id: String,
+        /// address on the remote chain to receive these tokens
+        to_address: String,
+        /// packet data only supports one coin
+        /// https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/applications/transfer/v1/transfer.proto#L11-L20
+        amount: Coin,
+        /// when packet times out, measured on remote chain
+        timeout: IbcTimeout,
+    },
+    /// Sends an IBC packet with given data over the existing channel.
+    /// Data should be encoded in a format defined by the channel version,
+    /// and the module on the other side should know how to parse this.
+    SendPacket {
+        channel_id: String,
+        data: Binary,
+        /// when packet times out, measured on remote chain
+        timeout: IbcTimeout,
+    },
+    /// This will close an existing channel that is owned by this contract.
+    /// Port is auto-assigned to the contract's IBC port
+    CloseChannel { channel_id: String },
+}
+
 pub const REPLY_ENCRYPTION_MAGIC_BYTES: &[u8] = b"REPLY01";
 
 /// The message types of the staking module.
 ///
 /// See https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto
-#[cfg(feature = "staking")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum StakingMsg {
@@ -84,7 +113,6 @@ pub enum StakingMsg {
 /// The message types of the distribution module.
 ///
 /// See https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto
-#[cfg(feature = "staking")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum DistributionMsg {
@@ -147,7 +175,6 @@ pub enum WasmMsg {
     },
 }
 
-#[cfg(feature = "stargate")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum GovMsg {
@@ -155,7 +182,6 @@ pub enum GovMsg {
     Vote { proposal_id: u64, vote: VoteOption },
 }
 
-#[cfg(feature = "stargate")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum VoteOption {
@@ -163,62 +189,4 @@ pub enum VoteOption {
     No,
     Abstain,
     NoWithVeto,
-}
-
-impl<T> From<BankMsg> for CosmosMsg<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn from(msg: BankMsg) -> Self {
-        CosmosMsg::Bank(msg)
-    }
-}
-
-#[cfg(feature = "staking")]
-impl<T> From<StakingMsg> for CosmosMsg<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn from(msg: StakingMsg) -> Self {
-        CosmosMsg::Staking(msg)
-    }
-}
-
-#[cfg(feature = "staking")]
-impl<T> From<DistributionMsg> for CosmosMsg<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn from(msg: DistributionMsg) -> Self {
-        CosmosMsg::Distribution(msg)
-    }
-}
-
-impl<T> From<WasmMsg> for CosmosMsg<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn from(msg: WasmMsg) -> Self {
-        CosmosMsg::Wasm(msg)
-    }
-}
-
-#[cfg(feature = "stargate")]
-impl<T> From<IbcMsg> for CosmosMsg<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn from(msg: IbcMsg) -> Self {
-        CosmosMsg::Ibc(msg)
-    }
-}
-
-#[cfg(feature = "stargate")]
-impl<T> From<GovMsg> for CosmosMsg<T>
-where
-    T: Clone + fmt::Debug + PartialEq,
-{
-    fn from(msg: GovMsg) -> Self {
-        CosmosMsg::Gov(msg)
-    }
 }

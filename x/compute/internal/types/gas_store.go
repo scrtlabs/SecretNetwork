@@ -2,9 +2,9 @@ package types
 
 // Leaving this here in case we want to add a custom gas store in the future
 
-//package types
+// package types
 //
-//import (
+// import (
 //	"io"
 //	"time"
 //
@@ -14,11 +14,11 @@ package types
 //	sdk "github.com/cosmos/cosmos-sdk/types"
 //)
 //
-//var _ types.KVStore = &Store{}
+// var _ types.KVStore = &Store{}
 //
 //// KVStore return new gas KVStore which fixed
 //// https://github.com/cosmos/cosmos-sdk/issues/10243
-//func KVStore(ctx sdk.Context, key sdk.StoreKey) types.KVStore {
+// func KVStore(ctx sdk.Context, key sdk.StoreKey) types.KVStore {
 //	//if (ctx.ChainID() == "secret-4" && ctx.BlockHeight() < 7_800_000) ||
 //	//	(ctx.ChainID() == "pulsar-2" && ctx.BlockHeight() < 6_470_000) {
 //	//	return gaskv.NewStore(ctx.MultiStore().GetKVStore(key), ctx.GasMeter(), stypes.KVGasConfig())
@@ -29,14 +29,14 @@ package types
 //
 //// Store applies gas tracking to an underlying KVStore. It implements the
 //// KVStore interface.
-//type Store struct {
+// type Store struct {
 //	gasMeter  types.GasMeter
 //	gasConfig types.GasConfig
 //	parent    types.KVStore
 //}
 //
 //// NewStore returns a reference to a new GasKVStore.
-//func NewStore(parent types.KVStore, gasMeter types.GasMeter, gasConfig types.GasConfig) *Store {
+// func NewStore(parent types.KVStore, gasMeter types.GasMeter, gasConfig types.GasConfig) *Store {
 //	kvs := &Store{
 //		gasMeter:  gasMeter,
 //		gasConfig: gasConfig,
@@ -47,12 +47,12 @@ package types
 //}
 //
 //// GetStoreType implements Store.
-//func (gs *Store) GetStoreType() types.StoreType {
+// func (gs *Store) GetStoreType() types.StoreType {
 //	return gs.parent.GetStoreType()
 //}
 //
 //// Get implements KVStore.
-//func (gs *Store) Get(key []byte) (value []byte) {
+// func (gs *Store) Get(key []byte) (value []byte) {
 //	gs.gasMeter.ConsumeGas(gs.gasConfig.ReadCostFlat, types.GasReadCostFlatDesc)
 //	value = gs.parent.Get(key)
 //	// TODO overflow-safe math?
@@ -63,7 +63,7 @@ package types
 //}
 //
 //// Set implements KVStore.
-//func (gs *Store) Set(key []byte, value []byte) {
+// func (gs *Store) Set(key []byte, value []byte) {
 //	types.AssertValidKey(key)
 //	types.AssertValidValue(value)
 //	gs.gasMeter.ConsumeGas(gs.gasConfig.WriteCostFlat, types.GasWriteCostFlatDesc)
@@ -74,14 +74,14 @@ package types
 //}
 //
 //// Has implements KVStore.
-//func (gs *Store) Has(key []byte) bool {
+// func (gs *Store) Has(key []byte) bool {
 //	defer telemetry.MeasureSince(time.Now(), "store", "gaskv", "has")
 //	gs.gasMeter.ConsumeGas(gs.gasConfig.HasCost, types.GasHasDesc)
 //	return gs.parent.Has(key)
 //}
 //
 //// Delete implements KVStore.
-//func (gs *Store) Delete(key []byte) {
+// func (gs *Store) Delete(key []byte) {
 //	defer telemetry.MeasureSince(time.Now(), "store", "gaskv", "delete")
 //	// charge gas to prevent certain attack vectors even though space is being freed
 //	gs.gasMeter.ConsumeGas(gs.gasConfig.DeleteCost, types.GasDeleteDesc)

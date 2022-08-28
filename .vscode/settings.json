@@ -1,11 +1,12 @@
 {
   "rust-analyzer.linkedProjects": [
-    "./cosmwasm/Cargo.toml",
-    "./cosmwasm/enclaves/Cargo.toml",
-    "./x/compute/internal/keeper/testdata/v1-sanity-contract/Cargo.toml",
-    "./x/compute/internal/keeper/testdata/test-contract/Cargo.toml",
-    "./cosmwasm/enclaves/shared/cosmwasm-v1-types/Cargo.toml",
-    "./cosmwasm/enclaves/shared/cosmwasm-v010-types/Cargo.toml"
+    "cosmwasm/Cargo.toml",
+    "cosmwasm/enclaves/Cargo.toml",
+    "x/compute/internal/keeper/testdata/v1-sanity-contract/Cargo.toml",
+    "x/compute/internal/keeper/testdata/test-contract/Cargo.toml",
+    "integration-tests/contract-v1/Cargo.toml",
+    "integration-tests/contract-v0.10/Cargo.toml",
+    "go-cosmwasm/Cargo.toml"
   ],
   "rust-analyzer.diagnostics.experimental.enable": true,
   "rust-analyzer.rustfmt.rangeFormatting.enable": true,
@@ -22,7 +23,6 @@
   "go.useLanguageServer": true,
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "workspace",
-  "go.buildTags": "secretcli",
   "gopls": {
     "formatting.gofumpt": true
   },

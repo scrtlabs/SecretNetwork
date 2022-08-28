@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -166,7 +166,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -221,7 +221,7 @@ jobs:
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
           LOG_LEVEL=ERROR go test -v ./x/compute/client/...
-          LOG_LEVEL=ERROR go test -p 1 -timeout 20m -v ./x/compute/internal/...
+          LOG_LEVEL=ERROR go test -p 1 -timeout 40m -v ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-20.04
@@ -280,7 +280,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@latest
@@ -294,15 +294,21 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: Build docker testnet
+      - name: Build LocalSecret
         run: |
           echo not_a_key | tee {api_key,spid}.txt
           DOCKER_TAG=v0.0.0 make build-localsecret
+      - name: Run integration tests
+        run: |
+          cd integration-tests
+          yarn
+          docker run -d -p 9091:9091 --name localsecret ghcr.io/scrtlabs/localsecret:v0.0.0
+          sleep 30
+          docker logs localsecret
+          yarn test
       - name: Run secret.js tests
         run: |
           git clone --depth 1 https://github.com/scrtlabs/secret.js
-          # Copy v1 contract to tests directory
-          cp ./target/wasm32-unknown-unknown/release/v1_sanity_contract.wasm ./secret.js/test/test_contract_v1.wasm
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*

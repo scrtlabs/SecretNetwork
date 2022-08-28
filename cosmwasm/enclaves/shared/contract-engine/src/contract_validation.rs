@@ -63,7 +63,7 @@ pub fn extract_contract_key(env: &Env) -> Result<[u8; CONTRACT_KEY_LENGTH], Encl
     let contract_key =
         base64::decode(env.contract_key.as_ref().unwrap().as_bytes()).map_err(|err| {
             warn!(
-                "got an error while trying to deserialize output bytes into json {:?}: {}",
+                "got an error while trying to decode contract key {:?}: {}",
                 env, err
             );
             EnclaveError::FailedContractAuthentication
@@ -243,6 +243,7 @@ pub fn verify_params(
         .verify_bytes(
             sig_info.sign_bytes.as_slice(),
             sig_info.signature.as_slice(),
+            sig_info.sign_mode,
         )
         .map_err(|err| {
             warn!("Signature verification failed: {:?}", err);
@@ -290,7 +291,7 @@ fn get_signer_and_messages(
 
             Ok((sender_public_key.clone(), sign_doc.body.messages))
         }
-        SIGN_MODE_LEGACY_AMINO_JSON => {
+        SIGN_MODE_LEGACY_AMINO_JSON | SIGN_MODE_EIP_191 => {
             use protobuf::well_known_types::Any as AnyProto;
             use protobuf::Message;
 

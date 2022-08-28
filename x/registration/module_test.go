@@ -10,7 +10,7 @@ package registration
 //
 //// returns a cleanup function, which must be defered on
 //func setupTest(t *testing.T) (testData, func()) {
-//	tempDir, err := ioutil.TempDir("", "wasm")
+//	tempDir, err := os.MkdirTemp("", "wasm")
 //	require.NoError(t, err)
 //
 //	ctx, acctKeeper, keeper := CreateTestInput(t, false, tempDir)
@@ -32,7 +32,7 @@ package registration
 //}
 //
 //func mustLoad(path string) []byte {
-//	bz, err := ioutil.ReadFile(path)
+//	bz, err := os.ReadFile(path)
 //	if err != nil {
 //		panic(err)
 //	}

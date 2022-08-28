@@ -16,7 +16,7 @@ type GrpcQuerier struct {
 }
 
 // todo: this needs proper tests and doc
-func NewQuerier(keeper Keeper) GrpcQuerier {
+func NewGrpcQuerier(keeper Keeper) GrpcQuerier {
 	return GrpcQuerier{keeper: keeper}
 }
 
@@ -37,24 +37,6 @@ func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInf
 	}, nil
 }
 
-/*
-func (q GrpcQuerier) ContractHistory(c context.Context, req *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
-		return nil, err
-	}
-	rsp, err := queryContractHistory(sdk.UnwrapSDKContext(c), req.Address, q.keeper)
-	switch {
-	case err != nil:
-		return nil, err
-	case rsp == nil:
-		return nil, types.ErrNotFound
-	}
-	return &types.QueryContractHistoryResponse{
-		Entries: rsp,
-	}, nil
-}
-*/
-
 func (q GrpcQuerier) ContractsByCode(c context.Context, req *types.QueryContractsByCodeRequest) (*types.QueryContractsByCodeResponse, error) {
 	if req.CodeId == 0 {
 		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
@@ -70,40 +52,6 @@ func (q GrpcQuerier) ContractsByCode(c context.Context, req *types.QueryContract
 		ContractInfos: rsp,
 	}, nil
 }
-
-/*
-func (q GrpcQuerier) AllContractState(c context.Context, req *types.QueryAllContractStateRequest) (*types.QueryAllContractStateResponse, error) {
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
-		return nil, err
-	}
-	ctx := sdk.UnwrapSDKContext(c)
-	if !q.keeper.containsContractInfo(ctx, req.Address) {
-		return nil, types.ErrNotFound
-	}
-	var resultData []types.Model
-	for iter := q.keeper.GetContractState(ctx, req.Address); iter.Valid(); iter.Next() {
-		resultData = append(resultData, types.Model{
-			Key:   iter.Key(),
-			Value: iter.Value(),
-		})
-	}
-	return &types.QueryAllContractStateResponse{Models: resultData}, nil
-}
-
-func (q GrpcQuerier) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
-	ctx := sdk.UnwrapSDKContext(c)
-
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
-		return nil, err
-	}
-
-	if !q.keeper.containsContractInfo(ctx, req.Address) {
-		return nil, types.ErrNotFound
-	}
-	rsp := q.keeper.QueryRaw(ctx, req.Address, req.QueryData)
-	return &types.QueryRawContractStateResponse{Data: rsp}, nil
-}
-*/
 
 func (q GrpcQuerier) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (*types.QuerySmartContractStateResponse, error) {
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {

@@ -211,7 +211,7 @@ pub fn redact_custom_events(reply: &mut Reply) {
                     }
                 }
 
-                if new_ev.attributes.len() > 0 {
+                if !new_ev.attributes.is_empty() {
                     events.push(new_ev);
                 }
             }

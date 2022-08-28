@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
@@ -14,7 +15,6 @@ import (
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	v1wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 
-	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -34,15 +34,22 @@ type MessageHandlerChain struct {
 	handlers []Messenger
 }
 
-type MessageHandler struct {
-	router   sdk.Router
-	encoders MessageEncoders
+// SDKMessageHandler can handles messages that can be encoded into sdk.Message types and routed.
+type SDKMessageHandler struct {
+	// router is used to route StargateMsg and any other msg except for MsgExecuteContract & MsgInstantiateContrat.
+	router MessageRouter
+	// legacyRouter is used to route MsgExecuteContract & MsgInstantiateContrat.
+	// the reason is those msgs use the data field internally for reply, which is
+	// truncated if the msg erred
+	legacyRouter sdk.Router
+	encoders     MessageEncoders
 }
 
-func NewSDKMessageHandler(router sdk.Router, encoders MessageEncoders) MessageHandler {
-	return MessageHandler{
-		router:   router,
-		encoders: encoders,
+func NewSDKMessageHandler(router MessageRouter, legacyRouter sdk.Router, encoders MessageEncoders) SDKMessageHandler {
+	return SDKMessageHandler{
+		router:       router,
+		legacyRouter: legacyRouter,
+		encoders:     encoders,
 	}
 }
 
@@ -67,7 +74,8 @@ func NewMessageHandlerChain(first Messenger, others ...Messenger) *MessageHandle
 }
 
 func NewMessageHandler(
-	router sdk.Router,
+	msgRouter MessageRouter,
+	legacyMsgRouter sdk.Router,
 	customEncoders *MessageEncoders,
 	channelKeeper channelkeeper.Keeper,
 	capabilityKeeper capabilitykeeper.ScopedKeeper,
@@ -76,7 +84,7 @@ func NewMessageHandler(
 ) Messenger {
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
-		NewSDKMessageHandler(router, encoders),
+		NewSDKMessageHandler(msgRouter, legacyMsgRouter, encoders),
 		NewIBCRawPacketHandler(channelKeeper, capabilityKeeper),
 	)
 }
@@ -380,7 +388,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk
 		if err != nil {
 			return nil, err
 		}
-		//sdkMsg := stakingtypes.MsgDelegate{
+		// sdkMsg := stakingtypes.MsgDelegate{
 		//	DelegatorAddress: sender.String(),
 		//	ValidatorAddress: msg.Delegate.Validator,
 		//	Amount:           coin,
@@ -515,7 +523,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, 
 	}
 }
 
-func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) ([]sdk.Event, [][]byte, error) {
+func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) ([]sdk.Event, [][]byte, error) {
 	sdkMsgs, err := h.encoders.Encode(ctx, contractAddr, contractIBCPortID, msg)
 	if err != nil {
 		return nil, nil, err
@@ -526,81 +534,70 @@ func (h MessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress
 		data   [][]byte
 	)
 	for _, sdkMsg := range sdkMsgs {
-		sdkEvents, sdkData, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
+		res, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
 		if err != nil {
-			data = append(data, sdkData)
+			if res != nil {
+				data = append(data, res.Data)
+			}
 			return nil, data, err
 		}
 		// append data
-		data = append(data, sdkData)
+		data = append(data, res.Data)
+
+		// append events
+		sdkEvents := make([]sdk.Event, len(res.Events))
+		for i := range res.Events {
+			sdkEvents[i] = sdk.Event(res.Events[i])
+		}
 		events = append(events, sdkEvents...)
 	}
 
 	return events, data, nil
-
-	// return nil, nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Unknown variant of CosmosMsgVersion")
 }
 
-func (h MessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (sdk.Events, []byte, error) {
+func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (*sdk.Result, error) {
 	if err := msg.ValidateBasic(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	// make sure this account can send it
+	// make sure the contract account is also the "signer" on the message
 	for _, acct := range msg.GetSigners() {
 		if !acct.Equals(contractAddr) {
-			return nil, nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
+			return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
 		}
 	}
 
-	var res *sdk.Result
-	var err error
-	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
-		msgRoute := legacyMsg.Route()
-		handler := h.router.Route(ctx, msgRoute)
-		if handler == nil {
-			return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s", msgRoute)
-		}
+	_, isMsgInitContract := msg.(*types.MsgInstantiateContract)
+	_, isMsgExecContract := msg.(*types.MsgExecuteContract)
 
-		res, err = handler(ctx, msg)
-		if err != nil {
-			var errData []byte
-			errData = nil
-			if res != nil {
-				errData = make([]byte, len(res.Data))
-				copy(errData, res.Data)
+	if isMsgInitContract || isMsgExecContract {
+		// legacyMsgRouter logic (CosmWasm v0.10)
+		if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
+			msgRoute := legacyMsg.Route()
+			handler := h.legacyRouter.Route(ctx, msgRoute)
+			if handler == nil {
+				return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 			}
 
-			return nil, errData, err
+			return handler(ctx, msg)
+		} else {
+			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))
 		}
-	} else {
-		return nil, nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))
-
-		// todo: grpc routing
-		//handler := k.serviceRouter.Handler(msg)
-		//if handler == nil {
-		//	return nil, nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, sdk.MsgTypeURL(msg))
-		//}
-		//res, err := handler(ctx, msg)
-		//if err != nil {
-		//	return nil, nil, err
-		//}
 	}
 
-	var events []sdk.Event
-	data := make([]byte, len(res.Data))
-	copy(data, res.Data)
-	//
-	// convert Tendermint.Events to sdk.Event
-	sdkEvents := make(sdk.Events, len(res.Events))
-	for i := range res.Events {
-		sdkEvents[i] = sdk.Event(res.Events[i])
+	// msgRouter logic (CosmWasm v1)
+
+	// find the handler and execute it
+	if handler := h.router.Handler(msg); handler != nil {
+		// ADR 031 request type routing
+		return handler(ctx, msg)
 	}
 
-	// append message action attribute
-	events = append(events, sdkEvents...)
-
-	return events, data, nil
+	// Assuming that the app developer has migrated all their Msgs to
+	// proto messages and has registered all `Msg services`, then this
+	// path should never be called, because all those Msgs should be
+	// registered within the `msgServiceRouter` already.
+	return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 }
 
 // convertWasmIBCTimeoutHeightToCosmosHeight converts a wasm type ibc timeout height to ibc module type height

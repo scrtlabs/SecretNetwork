@@ -155,7 +155,7 @@ func validateSeedParams(config types.SeedConfig) error {
 		return err
 	}
 
-	res, err = ra.VerifyRaCert(res)
+	_, err = ra.VerifyRaCert(res)
 	if err != nil {
 		return err
 	}
