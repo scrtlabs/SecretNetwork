@@ -541,6 +541,25 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	return ctx.WithTxBytes(txBytes)
 }
 
+func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
+	require.NoError(t, err)
+
+	initMsg := wasmtypes.MsgInstantiateContract{
+		Sender:    creator,
+		CodeID:    codeID,
+		Label:     "demo contract 1",
+		InitMsg:   encMsg,
+		InitFunds: funds,
+	}
+	tx := NewTestTx(&initMsg, creatorAcc, privKey)
+
+	txBytes, err := tx.Marshal()
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
 func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
 	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }

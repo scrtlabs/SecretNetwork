@@ -169,7 +169,9 @@ pub fn handle(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let contract_key = extract_contract_key(&env_v010)?;
+    let canonical_sender_address = to_canonical(sender)?;
+
+    let contract_key = base_env.get_contract_key()?;
 
     validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
 

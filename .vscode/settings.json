@@ -1,22 +1,13 @@
 {
   "rust-analyzer.linkedProjects": [
-<<<<<<< HEAD
     "cosmwasm/Cargo.toml",
     "cosmwasm/enclaves/Cargo.toml",
     "x/compute/internal/keeper/testdata/v1-sanity-contract/Cargo.toml",
     "x/compute/internal/keeper/testdata/test-contract/Cargo.toml",
+    "./x/compute/internal/keeper/testdata/ibc/Cargo.toml",
     "integration-tests/contract-v1/Cargo.toml",
     "integration-tests/contract-v0.10/Cargo.toml",
     "go-cosmwasm/Cargo.toml"
-=======
-    "./cosmwasm/Cargo.toml",
-    "./cosmwasm/enclaves/Cargo.toml",
-    "./x/compute/internal/keeper/testdata/v1-sanity-contract/Cargo.toml",
-    "./x/compute/internal/keeper/testdata/test-contract/Cargo.toml",
-    "./x/compute/internal/keeper/testdata/ibc/Cargo.toml",
-    "./cosmwasm/enclaves/shared/cosmwasm-v1-types/Cargo.toml",
-    "./cosmwasm/enclaves/shared/cosmwasm-v010-types/Cargo.toml"
->>>>>>> cw-1-ibc-receive-hooks
   ],
   "rust-analyzer.diagnostics.experimental.enable": true,
   "rust-analyzer.rustfmt.rangeFormatting.enable": true,
