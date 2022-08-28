@@ -113,7 +113,7 @@ func ibcChannelCloseHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
 	gas uint64, shouldSendCloseConfirn bool, channel v1types.IBCChannel,
-) cosmwasm.StdError {
+) (sdk.Context, []ContractEvent, cosmwasm.StdError) {
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
@@ -147,10 +147,13 @@ func ibcChannelCloseHelper(
 	require.NotZero(t, gasMeter.GetWasmCounter(), err)
 
 	if err != nil {
-		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
+		return ctx, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	return cosmwasm.StdError{}
+	// wasmEvents comes from all the callbacks as well
+	wasmEvents := tryDecryptWasmEvents(ctx, []byte{}, true)
+
+	return ctx, wasmEvents, cosmwasm.StdError{}
 }
 
 func createIBCEndpoint(port string, channel string) v1types.IBCEndpoint {
@@ -513,4 +516,174 @@ func TestIBCChannelConnect(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIBCChannelConnectOpenAck(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/ibc/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	ibcChannel := v1types.IBCChannel{
+		Endpoint:             createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+		CounterpartyEndpoint: createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
+		Order:                v1types.Unordered,
+		Version:              "1",
+		ConnectionID:         "1",
+	}
+
+	ctx, _, err = ibcChannelConnectHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, true, ibcChannel)
+	require.Empty(t, err)
+
+	queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, err)
+
+	require.Equal(t, "3", queryRes)
+}
+
+func TestIBCChannelClose(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/ibc/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	for _, test := range []struct {
+		description   string
+		connectionID  string
+		output        string
+		isSuccess     bool
+		hasAttributes bool
+		hasEvents     bool
+	}{
+		{
+			description:   "Default",
+			connectionID:  "0",
+			output:        "6",
+			isSuccess:     true,
+			hasAttributes: false,
+			hasEvents:     false,
+		},
+		{
+			description:   "SubmessageNoReply",
+			connectionID:  "1",
+			output:        "12",
+			isSuccess:     true,
+			hasAttributes: false,
+			hasEvents:     false,
+		},
+		{
+			description:   "SubmessageWithReply",
+			connectionID:  "2",
+			output:        "19",
+			isSuccess:     true,
+			hasAttributes: false,
+			hasEvents:     false,
+		},
+		{
+			description:   "Attributes",
+			connectionID:  "3",
+			output:        "9",
+			isSuccess:     true,
+			hasAttributes: true,
+			hasEvents:     false,
+		},
+		{
+			description:   "Events",
+			connectionID:  "4",
+			output:        "10",
+			isSuccess:     true,
+			hasAttributes: false,
+			hasEvents:     true,
+		},
+		{
+			description:   "Error",
+			connectionID:  "5",
+			output:        "",
+			isSuccess:     false,
+			hasAttributes: false,
+			hasEvents:     false,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			ibcChannel := v1types.IBCChannel{
+				Endpoint:             createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+				CounterpartyEndpoint: createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
+				Order:                v1types.Unordered,
+				Version:              "1",
+				ConnectionID:         test.connectionID,
+			}
+
+			ctx, events, err := ibcChannelCloseHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, true, ibcChannel)
+
+			if !test.isSuccess {
+				require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
+			} else {
+				require.Empty(t, err)
+				if test.hasAttributes {
+					require.Equal(t,
+						[]ContractEvent{
+							{
+								{Key: "contract_address", Value: contractAddress.String()},
+								{Key: "attr1", Value: "😗"},
+							},
+						},
+						events,
+					)
+				}
+
+				if test.hasEvents {
+					hadCyber1 := false
+					evts := ctx.EventManager().Events()
+					for _, e := range evts {
+						if e.Type == "wasm-cyber1" {
+							require.False(t, hadCyber1)
+							attrs, err := parseAndDecryptAttributes(e.Attributes, []byte{}, false)
+							require.Empty(t, err)
+
+							require.Equal(t,
+								[]v010cosmwasm.LogAttribute{
+									{Key: "contract_address", Value: contractAddress.String()},
+									{Key: "attr1", Value: "🤯"},
+								},
+								attrs,
+							)
+
+							hadCyber1 = true
+						}
+					}
+
+					require.True(t, hadCyber1)
+				}
+
+				queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
+
+				require.Empty(t, err)
+
+				require.Equal(t, test.output, queryRes)
+			}
+		})
+	}
+}
+
+func TestIBCChannelCloseInit(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/ibc/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	ibcChannel := v1types.IBCChannel{
+		Endpoint:             createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+		CounterpartyEndpoint: createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
+		Order:                v1types.Unordered,
+		Version:              "1",
+		ConnectionID:         "1",
+	}
+
+	ctx, _, err = ibcChannelCloseHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, false, ibcChannel)
+	require.Empty(t, err)
+
+	queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, err)
+
+	require.Equal(t, "5", queryRes)
 }
