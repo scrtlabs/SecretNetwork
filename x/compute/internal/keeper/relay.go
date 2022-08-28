@@ -94,7 +94,7 @@ func (k Keeper) OnOpenChannel(
 		return "", sdkerrors.Wrap(err, "ibc-open-channel")
 	}
 
-	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelConnect)
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelOpen)
 	if err != nil {
 		return "", sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
@@ -196,7 +196,7 @@ func (k Keeper) OnRecvPacket(
 		return nil, sdkerrors.Wrap(err, "ibc-recv-packet")
 	}
 
-	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcChannelConnect)
+	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketReceive)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
