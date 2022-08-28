@@ -1,10 +1,9 @@
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{count, count_read};
 use cosmwasm_std::{
-    coins, entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event,
-    Ibc3ChannelOpenResponse, IbcBasicResponse, IbcChannelConnectMsg, IbcChannelOpenMsg,
-    IbcChannelOpenResponse, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
-    SubMsgResult, WasmMsg,
+    entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event, Ibc3ChannelOpenResponse,
+    IbcBasicResponse, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, MessageInfo,
+    Reply, ReplyOn, Response, StdError, StdResult, SubMsg, SubMsgResult, WasmMsg,
 };
 
 pub const IBC_APP_VERSION: &str = "ibc-v1";
@@ -129,6 +128,7 @@ pub fn ibc_channel_connect(
                 3 => Ok(IbcBasicResponse::new().add_attribute("attr1", "😗")),
                 4 => Ok(IbcBasicResponse::new()
                     .add_event(Event::new("cyber1".to_string()).add_attribute("attr1", "🤯"))),
+                5 => Err(StdError::generic_err("Intentional")),
                 _ => Err(StdError::generic_err("Unsupported channel connect type")),
             }
         }

@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use enclave_cosmwasm_v010_types::{encoding::Binary, types::LogAttribute};
+use enclave_cosmwasm_v010_types::{encoding::Binary, types::Empty, types::LogAttribute};
 
-use super::{Empty, Event, SubMsg};
+use super::{Event, SubMsg};
 
 /// A response of a contract entry point, such as `instantiate` or `execute`.
 ///

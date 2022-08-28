@@ -30,7 +30,10 @@ use super::contract_validation::{
     verify_params, ContractKey,
 };
 use super::gas::WasmCosts;
-use super::io::{encrypt_output, finalize_raw_output, RawWasmOutput};
+use super::io::{
+    encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    set_all_logs_to_plaintext,
+};
 use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
 use super::wasm::{ContractInstance, ContractOperation, Engine};
@@ -157,6 +160,7 @@ pub fn init(
             &env_v010.contract_code_hash,
             reply_params,
             &canonical_sender_address,
+            false,
             false,
         )?;
 
@@ -361,7 +365,7 @@ pub fn parse_message(
                 let decrypted_msg = secret_msg.msg.clone();
 
                 Ok(ParsedMessage {
-                    should_validate_sig_info: true,
+                    should_validate_sig_info: false,
                     was_msg_encrypted: false,
                     secret_msg,
                     decrypted_msg,
@@ -690,6 +694,18 @@ pub fn parse_message(
     };
 }
 
+pub fn is_ibc_msg(handle_type: HandleType) -> bool {
+    match handle_type {
+        HandleType::HANDLE_TYPE_EXECUTE | HandleType::HANDLE_TYPE_REPLY => false,
+        HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
+        | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => true,
+    }
+}
+
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub fn handle(
     context: Ctx,
@@ -804,7 +820,7 @@ pub fn handle(
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr, parsed_handle_type)?;
+        let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr, parsed_handle_type.clone())?;
 
         let mut output = engine.extract_vector(vec_ptr)?;
 
@@ -831,15 +847,14 @@ pub fn handle(
                 reply_params,
                 &canonical_sender_address,
                 false,
+                is_ibc_msg(parsed_handle_type.clone()),
             )?;
         } else {
-            let raw_output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
-                warn!("got an error while trying to deserialize output bytes into json");
-                trace!("output: {:?} error: {:?}", output, err);
-                EnclaveError::FailedToDeserialize
-            })?;
+            let mut raw_output = manipulate_callback_sig_for_plaintext(output)?;
+            set_all_logs_to_plaintext(&mut raw_output);
 
-            let finalized_output = finalize_raw_output(raw_output, false);
+            let finalized_output = finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false);
+            trace!("Wasm output for plaintext message is: {:?}", finalized_output);
 
             output = serde_json::to_vec(&finalized_output).map_err(|err| {
                 debug!(
@@ -942,6 +957,7 @@ pub fn query(
             None,            // Not used for queries (Query response is not replied to the caller),
             &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
             true,
+            false,
         )?;
         Ok(output)
     })

@@ -139,7 +139,19 @@ func (e UnsupportedRequest) Error() string {
 
 // Reply is encrypted only when it is a contract reply
 func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
-	return (msg.Wasm != nil)
+	if msg.Wasm == nil {
+		return false
+	}
+
+	if msg.Wasm.Execute != nil {
+		return len(msg.Wasm.Execute.CallbackCodeHash) != 0
+	}
+
+	if msg.Wasm.Instantiate != nil {
+		return len(msg.Wasm.Instantiate.CallbackCodeHash) != 0
+	}
+
+	return true
 }
 
 // Issue #759 - we don't return error string for worries of non-determinism
@@ -177,7 +189,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		switch msg.ReplyOn {
 		case v1wasmTypes.ReplySuccess, v1wasmTypes.ReplyError, v1wasmTypes.ReplyAlways, v1wasmTypes.ReplyNever:
 		default:
-			return nil, sdkerrors.Wrap(types.ErrInvalid, "replyOn value")
+			return nil, sdkerrors.Wrap(types.ErrInvalid, "ReplyOn value")
 		}
 
 		// first, we build a sub-context which we can use inside the submessages
