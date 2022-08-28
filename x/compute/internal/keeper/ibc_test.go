@@ -16,7 +16,7 @@ import (
 
 func ibcChannelConnectHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey, msg string,
+	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
 	gas uint64, shouldSendOpenAck bool, channel v1types.IBCChannel,
 ) cosmwasm.StdError {
 	// create new ctx with the same storage and a gas limit
@@ -351,11 +351,77 @@ func TestIBCChannelOpen(t *testing.T) {
 		Version:              "1",
 		ConnectionID:         "1",
 	}
-	_, err = ibcChannelOpenHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, false, ibcChannel)
+
+	version, err := ibcChannelOpenHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, false, ibcChannel)
 	require.Empty(t, err)
+	require.Equal(t, version, "ibc-v1")
 
 	queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
 	require.Empty(t, err)
 
 	require.Equal(t, "1", queryRes)
+}
+
+func TestIBCChannelOpenTry(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/ibc/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	ibcChannel := v1types.IBCChannel{
+		Endpoint:             createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+		CounterpartyEndpoint: createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
+		Order:                v1types.Unordered,
+		Version:              "1",
+		ConnectionID:         "1",
+	}
+
+	version, err := ibcChannelOpenHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, true, ibcChannel)
+	require.Empty(t, err)
+	require.Equal(t, version, "ibc-v1")
+
+	queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, err)
+
+	require.Equal(t, "2", queryRes)
+}
+
+func TestIBCChannelConnect(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/ibc/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	for _, test := range []struct {
+		connectionID  string
+		output        string
+		hasAttributes bool
+		hasEvents     bool
+	}{
+		{
+			connectionID:   "1",
+			output:         ``,
+			isSuccuss:      true,
+			balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+			balancesAfter:  "4998assaf,199998denom 5000assaf,5002denom",
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			ibcChannel := v1types.IBCChannel{
+				Endpoint:             createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+				CounterpartyEndpoint: createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
+				Order:                v1types.Unordered,
+				Version:              "1",
+				ConnectionID:         "1",
+			}
+
+			err = ibcChannelConnectHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, false, ibcChannel)
+			require.Empty(t, err)
+
+			queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
+			require.Empty(t, err)
+
+			require.Equal(t, "3", queryRes)
+		})
+	}
 }
