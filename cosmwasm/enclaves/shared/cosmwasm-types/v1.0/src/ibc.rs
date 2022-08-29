@@ -74,6 +74,20 @@ where
     pub events: Vec<Event>,
 }
 
+impl IbcBasicResponse<Empty> {
+    pub fn new(
+        messages: Vec<SubMsg<Empty>>,
+        attributes: Vec<LogAttribute>,
+        events: Vec<Event>,
+    ) -> Self {
+        IbcBasicResponse {
+            messages,
+            attributes,
+            events,
+        }
+    }
+}
+
 // This defines the return value on packet response processing.
 // This "success" case should be returned even in application-level errors,
 // Where the acknowledgement bytes contain an encoded error message to be returned to

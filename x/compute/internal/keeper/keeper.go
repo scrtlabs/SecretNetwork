@@ -836,6 +836,7 @@ func (k *Keeper) handleContractResponse(
 	ogCosmosMessageVersion wasmTypes.CosmosMsgVersion,
 ) ([]byte, error) {
 	events := types.ContractLogsToSdkEvents(logs, contractAddr)
+
 	ctx.EventManager().EmitEvents(events)
 
 	if len(evts) > 0 {

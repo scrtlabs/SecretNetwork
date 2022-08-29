@@ -198,7 +198,7 @@ pub fn parse_message(
                 let decrypted_msg = secret_msg.msg.clone();
 
                 Ok(ParsedMessage {
-                    should_validate_sig_info: true,
+                    should_validate_sig_info: false,
                     was_msg_encrypted: false,
                     secret_msg,
                     decrypted_msg,
@@ -361,12 +361,12 @@ pub fn parse_message(
 
                     redact_custom_events(&mut parsed_encrypted_reply);
                     let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&parsed_encrypted_reply).map_err(|err| {
-                        warn!(
+                    warn!(
                         "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
                         parsed_encrypted_reply, err
                     );
-                        EnclaveError::FailedToSerialize
-                    })?;
+                    EnclaveError::FailedToSerialize
+                })?;
 
                     let reply_secret_msg = SecretMessage {
                         nonce: orig_secret_msg.nonce,
@@ -454,12 +454,12 @@ pub fn parse_message(
                         })?;
 
                     let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&parsed_encrypted_reply).map_err(|err| {
-                        warn!(
+                    warn!(
                         "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
                         parsed_encrypted_reply, err
                     );
-                        EnclaveError::FailedToSerialize
-                    })?;
+                    EnclaveError::FailedToSerialize
+                })?;
 
                     let reply_secret_msg = SecretMessage {
                         nonce: orig_secret_msg.nonce,
@@ -525,4 +525,16 @@ pub fn parse_message(
             )
         }
     };
+}
+
+pub fn is_ibc_msg(handle_type: HandleType) -> bool {
+    match handle_type {
+        HandleType::HANDLE_TYPE_EXECUTE | HandleType::HANDLE_TYPE_REPLY => false,
+        HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
+        | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => true,
+    }
 }

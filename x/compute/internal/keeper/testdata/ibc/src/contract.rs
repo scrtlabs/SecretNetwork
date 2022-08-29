@@ -1,8 +1,8 @@
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{count, count_read};
 use cosmwasm_std::{
-    coins, entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event,
-    Ibc3ChannelOpenResponse, IbcBasicResponse, IbcChannelConnectMsg, IbcChannelOpenMsg,
+    entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event, Ibc3ChannelOpenResponse,
+    IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
     IbcChannelOpenResponse, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
     SubMsgResult, WasmMsg,
 };
@@ -79,6 +79,41 @@ pub fn increment(deps: DepsMut, c: u64) -> StdResult<Response> {
     Ok(resp)
 }
 
+pub fn get_resp_based_on_num(env: Env, num: u64) -> StdResult<IbcBasicResponse> {
+    match num {
+        0 => Ok(IbcBasicResponse::default()),
+        1 => Ok(IbcBasicResponse::new().add_submessage(SubMsg {
+            id: 1,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                code_hash: env.contract.code_hash,
+                contract_addr: env.contract.address.into_string(),
+                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                funds: vec![],
+            })
+            .into(),
+            reply_on: ReplyOn::Never,
+            gas_limit: None,
+        })),
+        2 => Ok(IbcBasicResponse::new().add_submessage(SubMsg {
+            id: 1,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                code_hash: env.contract.code_hash,
+                contract_addr: env.contract.address.into_string(),
+                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                funds: vec![],
+            })
+            .into(),
+            reply_on: ReplyOn::Always,
+            gas_limit: None,
+        })),
+        3 => Ok(IbcBasicResponse::new().add_attribute("attr1", "😗")),
+        4 => Ok(IbcBasicResponse::new()
+            .add_event(Event::new("cyber1".to_string()).add_attribute("attr1", "🤯"))),
+        5 => Err(StdError::generic_err("Intentional")),
+        _ => Err(StdError::generic_err("Unsupported channel connect type")),
+    }
+}
+
 #[entry_point]
 pub fn ibc_channel_connect(
     deps: DepsMut,
@@ -100,38 +135,33 @@ pub fn ibc_channel_connect(
 
             count(deps.storage).save(&(num + 4))?;
 
-            match num {
-                0 => Ok(IbcBasicResponse::default()),
-                1 => Ok(IbcBasicResponse::new().add_submessage(SubMsg {
-                    id: 1,
-                    msg: CosmosMsg::Wasm(WasmMsg::Execute {
-                        code_hash: env.contract.code_hash,
-                        contract_addr: env.contract.address.into_string(),
-                        msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
-                        funds: vec![],
-                    })
-                    .into(),
-                    reply_on: ReplyOn::Never,
-                    gas_limit: None,
-                })),
-                2 => Ok(IbcBasicResponse::new().add_submessage(SubMsg {
-                    id: 1,
-                    msg: CosmosMsg::Wasm(WasmMsg::Execute {
-                        code_hash: env.contract.code_hash,
-                        contract_addr: env.contract.address.into_string(),
-                        msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
-                        funds: vec![],
-                    })
-                    .into(),
-                    reply_on: ReplyOn::Always,
-                    gas_limit: None,
-                })),
-                3 => Ok(IbcBasicResponse::new().add_attribute("attr1", "😗")),
-                4 => Ok(IbcBasicResponse::new()
-                    .add_event(Event::new("cyber1".to_string()).add_attribute("attr1", "🤯"))),
-                _ => Err(StdError::generic_err("Unsupported channel connect type")),
-            }
+            get_resp_based_on_num(env, num)
         }
         _ => Err(StdError::generic_err("Unsupported channel connect")),
+    }
+}
+
+#[entry_point]
+/// On closed channel, we take all tokens from reflect contract to this contract.
+/// We also delete the channel entry from accounts.
+pub fn ibc_channel_close(
+    deps: DepsMut,
+    env: Env,
+    msg: IbcChannelCloseMsg,
+) -> StdResult<IbcBasicResponse> {
+    match msg {
+        IbcChannelCloseMsg::CloseInit { channel: _ } => {
+            count(deps.storage).save(&5)?;
+            Ok(IbcBasicResponse::default())
+        }
+        IbcChannelCloseMsg::CloseConfirm { channel } => {
+            let num: u64 = channel.connection_id.parse::<u64>().map_err(|err| {
+                StdError::generic_err(format!("Got an error from parsing: {:?}", err))
+            })?;
+
+            count(deps.storage).save(&(num + 6))?;
+            get_resp_based_on_num(env, num)
+        }
+        _ => Err(StdError::generic_err("Unsupported channel close")),
     }
 }

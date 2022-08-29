@@ -132,10 +132,9 @@ func (k Keeper) OnConnectChannel(
 	if err != nil {
 		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
-
 	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
-		sdkerrors.Wrap(err, "ibc-connect-channel")
+		return sdkerrors.Wrap(err, "ibc-connect-channel")
 	}
 	return nil
 }
@@ -246,7 +245,7 @@ func (k Keeper) OnAckPacket(
 
 	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
-		sdkerrors.Wrap(err, "ibc-ack-packet")
+		return sdkerrors.Wrap(err, "ibc-ack-packet")
 	}
 	return nil
 }
@@ -275,7 +274,7 @@ func (k Keeper) OnTimeoutPacket(
 
 	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
-		sdkerrors.Wrap(err, "ibc-timeout-packet")
+		return sdkerrors.Wrap(err, "ibc-timeout-packet")
 	}
 	return nil
 }

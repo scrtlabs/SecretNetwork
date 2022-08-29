@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use cw_types_v010::{encoding::Binary, types::LogAttribute};
+use cw_types_v010::{encoding::Binary, types::Empty, types::LogAttribute};
 
-use super::{Empty, Event, SubMsg};
+use super::{Event, SubMsg};
 
 /// A response of a contract entry point, such as `instantiate` or `execute`.
 ///

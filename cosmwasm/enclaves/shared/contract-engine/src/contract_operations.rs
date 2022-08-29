@@ -11,13 +11,16 @@ use log::*;
 
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
-use crate::message::{parse_message, ParsedMessage};
+use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
 
 use super::contract_validation::{
     generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
 };
 use super::gas::WasmCosts;
-use super::io::{encrypt_output, finalize_raw_output, RawWasmOutput};
+use super::io::{
+    encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    set_all_logs_to_plaintext,
+};
 use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
 use super::wasm::{ContractInstance, ContractOperation, Engine};
@@ -119,6 +122,7 @@ pub fn init(
             reply_params,
             &canonical_sender_address,
             false,
+            false,
         )?;
 
         Ok(output)
@@ -169,8 +173,6 @@ pub fn handle(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let canonical_sender_address = to_canonical(sender)?;
-
     let contract_key = base_env.get_contract_key()?;
 
     validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
@@ -189,12 +191,18 @@ pub fn handle(
         contract_hash_for_validation,
     } = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 
+    let mut canonical_sender_address = CanonicalAddr::from_vec(vec![]);
+    if should_validate_sig_info || was_msg_encrypted {
+        canonical_sender_address = to_canonical(sender)?;
+    }
+
     // There is no signature to verify when the input isn't signed.
     // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
     // All of these functions go through handle but the data isn't signed:
     //  Reply (that is not WASM reply)
     if should_validate_sig_info {
         // Verify env parameters against the signed tx
+
         verify_params(
             &parsed_sig_info,
             sent_funds,
@@ -225,8 +233,9 @@ pub fn handle(
         secret_msg.user_public_key,
     )?;
 
-    let mut versioned_env =
-        base_env.clone().into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
+    let mut versioned_env = base_env
+        .clone()
+        .into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -239,7 +248,7 @@ pub fn handle(
     // This wrapper is used to coalesce all errors in this block to one object
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr, parsed_handle_type)?;
+        let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr, parsed_handle_type.clone())?;
 
         let mut output = engine.extract_vector(vec_ptr)?;
 
@@ -249,15 +258,6 @@ pub fn handle(
         );
 
         if was_msg_encrypted {
-
-            let canonical_sender_address = CanonicalAddr::from_human(&sender).map_err(|err| {
-                warn!(
-                    "handle got an error while trying to deserialize sender from bech32 string to bytes {:?}: {}",
-                    sender, err
-                );
-                EnclaveError::FailedToDeserialize
-            })?;
-
             output = encrypt_output(
                 output,
                 &secret_msg,
@@ -266,15 +266,18 @@ pub fn handle(
                 reply_params,
                 &canonical_sender_address,
                 false,
+                is_ibc_msg(parsed_handle_type.clone()),
             )?;
         } else {
-            let raw_output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
-                warn!("got an error while trying to deserialize output bytes into json");
-                trace!("output: {:?} error: {:?}", output, err);
-                EnclaveError::FailedToDeserialize
-            })?;
+            let mut raw_output = manipulate_callback_sig_for_plaintext(output)?;
+            set_all_logs_to_plaintext(&mut raw_output);
 
-            let finalized_output = finalize_raw_output(raw_output, false);
+            let finalized_output =
+                finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false);
+            trace!(
+                "Wasm output for plaintext message is: {:?}",
+                finalized_output
+            );
 
             output = serde_json::to_vec(&finalized_output).map_err(|err| {
                 debug!(
@@ -371,6 +374,7 @@ pub fn query(
             None,            // Not used for queries (Query response is not replied to the caller),
             &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
             true,
+            false,
         )?;
         Ok(output)
     })
