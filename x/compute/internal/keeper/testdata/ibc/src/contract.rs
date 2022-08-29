@@ -3,8 +3,8 @@ use crate::state::{count, count_read};
 use cosmwasm_std::{
     entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event, Ibc3ChannelOpenResponse,
     IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
-    IbcChannelOpenResponse, IbcPacketReceiveMsg, IbcReceiveResponse, MessageInfo, Reply, ReplyOn,
-    Response, StdError, StdResult, SubMsg, SubMsgResult, WasmMsg,
+    IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcReceiveResponse, MessageInfo,
+    Reply, ReplyOn, Response, StdError, StdResult, SubMsg, SubMsgResult, WasmMsg,
 };
 
 pub const IBC_APP_VERSION: &str = "ibc-v1";
@@ -177,8 +177,6 @@ pub fn ibc_channel_connect(
 }
 
 #[entry_point]
-/// On closed channel, we take all tokens from reflect contract to this contract.
-/// We also delete the channel entry from accounts.
 pub fn ibc_channel_close(
     deps: DepsMut,
     env: Env,
@@ -202,9 +200,6 @@ pub fn ibc_channel_close(
 }
 
 #[entry_point]
-/// we look for a the proper reflect contract to relay to and send the message
-/// We cannot return any meaningful response value as we do not know the response value
-/// of execution. We just return ok if we dispatched, error if we failed to dispatch
 pub fn ibc_packet_receive(
     deps: DepsMut,
     env: Env,
@@ -220,4 +215,21 @@ pub fn ibc_packet_receive(
     }
 
     resp
+}
+
+#[entry_point]
+pub fn ibc_packet_ack(
+    deps: DepsMut,
+    env: Env,
+    msg: IbcPacketAckMsg,
+) -> StdResult<IbcBasicResponse> {
+    let mut ack = [0u8; 8];
+    ack.copy_from_slice(&msg.acknowledgement.data.as_slice()[0..8]);
+
+    if u64::from_le_bytes(ack) != msg.original_packet.sequence {
+        return Err(StdError::generic_err("Wrong ack"));
+    }
+
+    count(deps.storage).save(&(msg.original_packet.sequence + 8))?;
+    get_resp_based_on_num(env, msg.original_packet.sequence)
 }
