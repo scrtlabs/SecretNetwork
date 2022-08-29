@@ -179,52 +179,6 @@ pub struct IbcPacketReceiveMsg {
     pub relayer: Addr,
 }
 
-pub trait IbcPacketTrait {
-    type Data;
-    fn get_packet(&self) -> &Self::Data;
-    fn set_packet(&mut self, data: Self::Data);
-    fn get_ack(&self) -> Option<Self::Data>;
-    fn set_ack(&mut self, data: Self::Data);
-}
-
-macro_rules! impl_IbcPacketTrait {
-    ($($t:ty),+) => {
-        $(impl IbcPacketTrait for $t {
-            type Data = Binary;
-            fn get_packet(&self) -> &Self::Data {
-                &self.packet.data
-            }
-            fn set_packet(&mut self, data: Self::Data) {
-                self.packet.data = data;
-            }
-            fn get_ack(&self) -> Option<Self::Data> {
-                return None;
-            }
-            fn set_ack(&mut self, _: Self::Data) {
-                // Nothing to do here
-            }
-        })*
-    }
-}
-
-impl_IbcPacketTrait! {IbcPacketReceiveMsg, IbcPacketTimeoutMsg}
-
-impl IbcPacketTrait for IbcPacketAckMsg {
-    type Data = Binary;
-    fn get_packet(&self) -> &Self::Data {
-        &self.original_packet.data
-    }
-    fn set_packet(&mut self, data: Self::Data) {
-        self.original_packet.data = data;
-    }
-    fn get_ack(&self) -> Option<Self::Data> {
-        Some(self.acknowledgement.data.clone())
-    }
-    fn set_ack(&mut self, data: Self::Data) {
-        self.acknowledgement.data = data;
-    }
-}
-
 impl IbcPacketReceiveMsg {
     pub fn default() -> Self {
         Self {
