@@ -146,11 +146,11 @@ func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
 	}
 
 	if msg.Wasm.Execute != nil {
-		return len(msg.Wasm.Execute.CallbackCodeHash) != 0
+		return len(msg.Wasm.Execute.CallbackSignature) != 0
 	}
 
 	if msg.Wasm.Instantiate != nil {
-		return len(msg.Wasm.Instantiate.CallbackCodeHash) != 0
+		return len(msg.Wasm.Instantiate.CallbackSignature) != 0
 	}
 
 	return true
@@ -255,7 +255,6 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			if len(data) > 0 {
 				responseData = data[0]
 			}
-
 			result = v1wasmTypes.SubMsgResult{
 				// Copy first 64 bytes of the OG message in order to preserve the pubkey.
 				Ok: &v1wasmTypes.SubMsgResponse{
@@ -322,7 +321,6 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			replySigInfo = ogSigInfo
 			reply.ID = dataWithInternalReplyInfo.InternalMsgId
 			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
-
 		}
 
 		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo)

@@ -60,6 +60,7 @@ use super::{Event, SubMsg};
 /// }
 /// ```
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Response<T = Empty>
 where
     T: Clone + fmt::Debug + PartialEq,

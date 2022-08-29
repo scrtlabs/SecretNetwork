@@ -598,7 +598,7 @@ pub fn encrypt_output(
 
             if let Some(data) = &mut ok.data {
                 if is_ibc_output {
-                    warn!("IBC output should not containt any data");
+                    warn!("IBC output should not contain any data");
                     return Err(EnclaveError::InternalError);
                 }
 

@@ -184,7 +184,7 @@ func ibcPacketReceiveHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
 	shouldEncryptMsg bool, gas uint64, packet v1types.IBCPacket,
-) ([]byte, cosmwasm.StdError) {
+) (sdk.Context, []byte, []ContractEvent, []byte, cosmwasm.StdError) {
 	var nonce []byte
 	internalPacket := packet
 
@@ -224,40 +224,29 @@ func ibcPacketReceiveHelper(
 
 	require.NotZero(t, gasMeter.GetWasmCounter(), err)
 
+	// wasmEvents comes from all the callbacks as well
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce, !shouldEncryptMsg)
+
 	if err != nil {
 		if shouldEncryptMsg {
-			return nil, extractInnerError(t, err, nonce, true, true)
+			return ctx, nil, nil, nil, extractInnerError(t, err, nonce, true, true)
 		}
 
-		return nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
+		return ctx, nil, nil, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	return res, cosmwasm.StdError{}
+	data := res
+	if shouldEncryptMsg {
+		data = getDecryptedData(t, res, nonce)
+	}
+
+	return ctx, nonce, wasmEvents, data, cosmwasm.StdError{}
 }
 
 func ibcPacketAckHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
-	shouldEncryptMsg bool, gas uint64, originalPacket v1types.IBCPacket, ack []byte,
+	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey, gas uint64, originalPacket v1types.IBCPacket, ack []byte,
 ) cosmwasm.StdError {
-	var nonce []byte
-
-	if shouldEncryptMsg {
-		contractHash, err := keeper.GetContractHash(ctx, contractAddr)
-		require.NoError(t, err)
-		hashStr := hex.EncodeToString(contractHash)
-
-		msg := types.SecretMsg{
-			CodeHash: []byte(hashStr),
-			Msg:      ack,
-		}
-
-		ackBz, err := wasmCtx.Encrypt(msg.Serialize())
-		require.NoError(t, err)
-		nonce = ackBz[0:32]
-		ack = ackBz
-	}
-
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
@@ -282,10 +271,6 @@ func ibcPacketAckHelper(
 	require.NotZero(t, gasMeter.GetWasmCounter(), err)
 
 	if err != nil {
-		if shouldEncryptMsg {
-			return extractInnerError(t, err, nonce, true, true)
-		}
-
 		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
@@ -294,27 +279,8 @@ func ibcPacketAckHelper(
 
 func ibcPacketTimeoutHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
-	shouldEncryptMsg bool, gas uint64, originalPacket v1types.IBCPacket,
+	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey, gas uint64, originalPacket v1types.IBCPacket,
 ) cosmwasm.StdError {
-	var nonce []byte
-
-	if shouldEncryptMsg {
-		contractHash, err := keeper.GetContractHash(ctx, contractAddr)
-		require.NoError(t, err)
-		hashStr := hex.EncodeToString(contractHash)
-
-		msg := types.SecretMsg{
-			CodeHash: []byte(hashStr),
-			Msg:      originalPacket.Data,
-		}
-
-		dataBz, err := wasmCtx.Encrypt(msg.Serialize())
-		require.NoError(t, err)
-		nonce = dataBz[0:32]
-		originalPacket.Data = dataBz
-	}
-
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
@@ -336,10 +302,6 @@ func ibcPacketTimeoutHelper(
 	require.NotZero(t, gasMeter.GetWasmCounter(), err)
 
 	if err != nil {
-		if shouldEncryptMsg {
-			return extractInnerError(t, err, nonce, true, true)
-		}
-
 		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
@@ -686,4 +648,128 @@ func TestIBCChannelCloseInit(t *testing.T) {
 	require.Empty(t, err)
 
 	require.Equal(t, "5", queryRes)
+}
+
+func TestIBCPacketReceive(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/ibc/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	for _, isEncrypted := range []bool{false, true} {
+		for _, test := range []struct {
+			description   string
+			sequence      uint64
+			output        string
+			isSuccess     bool
+			hasAttributes bool
+			hasEvents     bool
+		}{
+			{
+				description:   "Default",
+				sequence:      0,
+				output:        "7",
+				isSuccess:     true,
+				hasAttributes: false,
+				hasEvents:     false,
+			},
+			{
+				description:   "SubmessageNoReply",
+				sequence:      1,
+				output:        "13",
+				isSuccess:     true,
+				hasAttributes: false,
+				hasEvents:     false,
+			},
+			{
+				description:   "SubmessageWithReply",
+				sequence:      2,
+				output:        "20",
+				isSuccess:     true,
+				hasAttributes: false,
+				hasEvents:     false,
+			},
+			{
+				description:   "Attributes",
+				sequence:      3,
+				output:        "10",
+				isSuccess:     true,
+				hasAttributes: true,
+				hasEvents:     false,
+			},
+			{
+				description:   "Events",
+				sequence:      4,
+				output:        "11",
+				isSuccess:     true,
+				hasAttributes: false,
+				hasEvents:     true,
+			},
+			{
+				description:   "Error",
+				sequence:      5,
+				output:        "",
+				isSuccess:     false,
+				hasAttributes: false,
+				hasEvents:     false,
+			},
+		} {
+			t.Run(fmt.Sprintf("%s-Encryption:%t", test.description, isEncrypted), func(t *testing.T) {
+				ibcPacket := createIBCPacket(createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
+					createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+					test.sequence,
+					createIBCTimeout(math.MaxUint64),
+					[]byte{},
+				)
+				ctx, nonce, events, data, err := ibcPacketReceiveHelper(t, keeper, ctx, contractAddress, privKeyA, isEncrypted, defaultGasForTests, ibcPacket)
+
+				if !test.isSuccess {
+					require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
+				} else {
+					require.Empty(t, err)
+					require.Equal(t, "\"out\"", string(data))
+
+					if test.hasAttributes {
+						require.Equal(t,
+							[]ContractEvent{
+								{
+									{Key: "contract_address", Value: contractAddress.String()},
+									{Key: "attr1", Value: "😗"},
+								},
+							},
+							events,
+						)
+					}
+
+					if test.hasEvents {
+						hadCyber1 := false
+						evts := ctx.EventManager().Events()
+						for _, e := range evts {
+							if e.Type == "wasm-cyber1" {
+								require.False(t, hadCyber1)
+								attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, isEncrypted)
+								require.Empty(t, err)
+
+								require.Equal(t,
+									[]v010cosmwasm.LogAttribute{
+										{Key: "contract_address", Value: contractAddress.String()},
+										{Key: "attr1", Value: "🤯"},
+									},
+									attrs,
+								)
+
+								hadCyber1 = true
+							}
+						}
+
+						require.True(t, hadCyber1)
+					}
+
+					queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
+
+					require.Empty(t, err)
+					require.Equal(t, test.output, queryRes)
+				}
+			})
+		}
+	}
 }

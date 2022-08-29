@@ -94,6 +94,7 @@ impl IbcBasicResponse<Empty> {
 // the calling chain. (Returning ContractResult::Err will abort processing of this packet
 // and not inform the calling chain).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct IbcReceiveResponse<T = Empty>
 where
