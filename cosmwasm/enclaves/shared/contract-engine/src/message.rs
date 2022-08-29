@@ -505,7 +505,7 @@ pub fn parse_message(
             })
         }
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
-            // LIORRR TODO: Maybe mark whether the message was encrypted or not.
+            // TODO: Maybe mark whether the message was encrypted or not.
             parse_ibc_packet(
                 IbcPacketReceiveMsg::default(),
                 message,
@@ -513,11 +513,11 @@ pub fn parse_message(
             )
         }
         HandleType::HANDLE_TYPE_IBC_PACKET_ACK => {
-            // LIORRR TODO: Maybe mark whether the message was encrypted or not.
+            // TODO: Maybe mark whether the message was encrypted or not.
             parse_ibc_packet(IbcPacketAckMsg::default(), message, "ibc_packet_receive")
         }
         HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
-            // LIORRR TODO: Maybe mark whether the message was encrypted or not.
+            // TODO: Maybe mark whether the message was encrypted or not.
             parse_ibc_packet(
                 IbcPacketTimeoutMsg::default(),
                 message,

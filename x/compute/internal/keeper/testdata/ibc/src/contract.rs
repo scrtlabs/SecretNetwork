@@ -3,8 +3,8 @@ use crate::state::{count, count_read};
 use cosmwasm_std::{
     entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event, Ibc3ChannelOpenResponse,
     IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
-    IbcChannelOpenResponse, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
-    SubMsgResult, WasmMsg,
+    IbcChannelOpenResponse, IbcPacketReceiveMsg, IbcReceiveResponse, MessageInfo, Reply, ReplyOn,
+    Response, StdError, StdResult, SubMsg, SubMsgResult, WasmMsg,
 };
 
 pub const IBC_APP_VERSION: &str = "ibc-v1";
@@ -114,6 +114,41 @@ pub fn get_resp_based_on_num(env: Env, num: u64) -> StdResult<IbcBasicResponse> 
     }
 }
 
+pub fn get_recv_resp_based_on_num(env: Env, num: u64) -> StdResult<IbcReceiveResponse> {
+    match num {
+        0 => Ok(IbcReceiveResponse::default()),
+        1 => Ok(IbcReceiveResponse::new().add_submessage(SubMsg {
+            id: 1,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                code_hash: env.contract.code_hash,
+                contract_addr: env.contract.address.into_string(),
+                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                funds: vec![],
+            })
+            .into(),
+            reply_on: ReplyOn::Never,
+            gas_limit: None,
+        })),
+        2 => Ok(IbcReceiveResponse::new().add_submessage(SubMsg {
+            id: 1,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                code_hash: env.contract.code_hash,
+                contract_addr: env.contract.address.into_string(),
+                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                funds: vec![],
+            })
+            .into(),
+            reply_on: ReplyOn::Always,
+            gas_limit: None,
+        })),
+        3 => Ok(IbcReceiveResponse::new().add_attribute("attr1", "😗")),
+        4 => Ok(IbcReceiveResponse::new()
+            .add_event(Event::new("cyber1".to_string()).add_attribute("attr1", "🤯"))),
+        5 => Err(StdError::generic_err("Intentional")),
+        _ => Err(StdError::generic_err("Unsupported channel connect type")),
+    }
+}
+
 #[entry_point]
 pub fn ibc_channel_connect(
     deps: DepsMut,
@@ -164,4 +199,25 @@ pub fn ibc_channel_close(
         }
         _ => Err(StdError::generic_err("Unsupported channel close")),
     }
+}
+
+#[entry_point]
+/// we look for a the proper reflect contract to relay to and send the message
+/// We cannot return any meaningful response value as we do not know the response value
+/// of execution. We just return ok if we dispatched, error if we failed to dispatch
+pub fn ibc_packet_receive(
+    deps: DepsMut,
+    env: Env,
+    msg: IbcPacketReceiveMsg,
+) -> StdResult<IbcReceiveResponse> {
+    count(deps.storage).save(&(msg.packet.sequence + 7))?;
+    let mut resp = get_recv_resp_based_on_num(env, msg.packet.sequence);
+    match &mut resp {
+        Ok(r) => {
+            r.acknowledgement = to_binary(&"out".to_string())?;
+        }
+        Err(_) => {}
+    }
+
+    resp
 }

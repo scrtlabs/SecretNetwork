@@ -167,7 +167,7 @@ func decryptAttribute(attr v010cosmwasm.LogAttribute, nonce []byte) (v010cosmwas
 	}
 	keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
 	if err != nil {
-		return v010cosmwasm.LogAttribute{}, fmt.Errorf("Failed Decrypt for key %+v", keyPlainBz)
+		return v010cosmwasm.LogAttribute{}, fmt.Errorf("Failed Decrypt for key %+v", keyCipherBz)
 	}
 	newAttr.Key = string(keyPlainBz)
 
@@ -232,8 +232,11 @@ func tryDecryptWasmEvents(ctx sdk.Context, nonce []byte, shouldSkipAttributes ..
 
 				if !shouldSkip && newLog.Key != "contract_address" {
 					// key
+					fmt.Printf("LIORRR before %+v nonce %+v", newLog, nonce)
 					newAttr, err := decryptAttribute(newLog, nonce)
+					fmt.Printf("LIORRR after %+v", newAttr)
 					if err != nil {
+						fmt.Printf("LIORRR here %+v", err)
 						continue
 					}
 
