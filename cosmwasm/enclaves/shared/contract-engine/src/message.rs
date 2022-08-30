@@ -199,7 +199,7 @@ pub fn parse_message(
                 return Ok(ParsedMessage {
                     should_validate_sig_info: false,
                     was_msg_encrypted: false,
-                    should_encrypt_output: true, // When replies are plaintext it doesn't mean we can't encrypt them
+                    should_encrypt_output: reply.was_msg_encrypted,
                     secret_msg: reply_secret_msg,
                     decrypted_msg: serialized_reply,
                     contract_hash_for_validation: None,

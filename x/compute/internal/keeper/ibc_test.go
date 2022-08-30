@@ -3,8 +3,10 @@ package keeper
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"testing"
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -719,6 +721,14 @@ func TestIBCPacketReceive(t *testing.T) {
 				hasAttributes: false,
 				hasEvents:     false,
 			},
+			{
+				description:   "SubmessageWithReplyThatCallsToSubmessage",
+				sequence:      6,
+				output:        "35",
+				isSuccess:     true,
+				hasAttributes: false,
+				hasEvents:     false,
+			},
 		} {
 			t.Run(fmt.Sprintf("%s-Encryption:%t", test.description, isEncrypted), func(t *testing.T) {
 				ibcPacket := createIBCPacket(createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
@@ -778,6 +788,68 @@ func TestIBCPacketReceive(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+type ContractInfo struct {
+	Address string `json:"address"`
+	Hash    string `json:"hash"`
+}
+
+func TestIBCPacketReceiveCallsV010Contract(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/ibc/contract.wasm", sdk.NewCoins())
+
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
+	require.NoError(t, err)
+
+	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"counter":{"counter":10}}`, true, false, defaultGasForTests)
+	require.Empty(t, err)
+	contractInfo := ContractInfo{
+		Address: v010ContractAddress.String(),
+		Hash:    v010CodeHash,
+	}
+
+	contractInfoBz, err := json.Marshal(contractInfo)
+	require.NoError(t, err)
+
+	ibcPacket := createIBCPacket(createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
+		createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+		7,
+		createIBCTimeout(math.MaxUint64),
+		contractInfoBz,
+	)
+
+	expected_v010_result := uint32(15)
+
+	for _, isEncrypted := range []bool{true, true} {
+		t.Run(fmt.Sprintf("Encryption:%t", isEncrypted), func(t *testing.T) {
+			ctx, _, _, data, err := ibcPacketReceiveHelper(t, keeper, ctx, contractAddress, privKeyA, isEncrypted, defaultGasForTests, ibcPacket)
+			require.Empty(t, err)
+			require.Equal(t, "\"out\"", string(data))
+
+			queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
+
+			require.Empty(t, err)
+			require.Equal(t, "20", queryRes)
+
+			queryRes, qErr := queryHelper(t, keeper, ctx, v010ContractAddress, `{"get":{}}`, true, false, math.MaxUint64)
+			require.Empty(t, qErr)
+
+			var resp v1QueryResponse
+			e := json.Unmarshal([]byte(queryRes), &resp)
+			require.NoError(t, e)
+			require.Equal(t, expected_v010_result, resp.Get.Count)
+			expected_v010_result += 5
+		})
 	}
 }
 
