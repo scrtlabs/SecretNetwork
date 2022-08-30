@@ -303,12 +303,12 @@ pub fn ibc_packet_ack(
     get_resp_based_on_num(env, msg.original_packet.sequence)
 }
 
-// #[entry_point]
-// pub fn ibc_packet_timeout(
-//     deps: DepsMut,
-//     env: Env,
-//     msg: IbcPacketTimeoutMsg,
-// ) -> StdResult<IbcBasicResponse> {
-//     count(deps.storage).save(&(msg.packet.sequence + 9))?;
-//     get_resp_based_on_num(env, msg.packet.sequence)
-// }
+#[entry_point]
+pub fn ibc_packet_timeout(
+    deps: DepsMut,
+    env: Env,
+    msg: IbcPacketTimeoutMsg,
+) -> StdResult<IbcBasicResponse> {
+    count(deps.storage).save(&(msg.packet.sequence + 9))?;
+    get_resp_based_on_num(env, msg.packet.sequence)
+}
