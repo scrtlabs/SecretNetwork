@@ -528,10 +528,14 @@ pub fn encrypt_output(
                 Some(_) => {
                     let events = match ok.log.len() {
                         0 => vec![],
-                        _ => vec![Event {
-                            ty: "wasm".to_string(),
-                            attributes: ok.log.clone(),
-                        }],
+                        _ => {
+                            let mut logs = ok.log.clone();
+                            logs.sort_by(|a, b| a.key.cmp(&b.key));
+                            vec![Event {
+                                ty: "wasm".to_string(),
+                                attributes: logs,
+                            }]
+                        }
                     };
 
                     let reply = Reply {
@@ -647,6 +651,8 @@ pub fn encrypt_output(
                         if event.ty != "wasm" {
                             event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
                         }
+
+                        event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
                     }
 
                     let reply = Reply {
