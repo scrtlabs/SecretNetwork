@@ -1280,33 +1280,6 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 	}
 }
 
-func TestExecuteNotEncryptedInputError(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
-
-			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
-			require.Empty(t, initErr)
-
-			//ctx = sdk.NewContext(
-			//	ctx.MultiStore(),
-			//	ctx.BlockHeader(),
-			//	ctx.IsCheckTx(),
-			//	log.NewNopLogger(),
-			//).WithGasMeter(sdk.NewGasMeter(defaultGas))
-
-			execMsg := []byte(`{"empty_log_key_value":{}}`)
-
-			ctx = PrepareExecSignedTx(t, keeper, ctx, walletA, privKeyA, execMsg, contractAddress, nil)
-
-			_, err := keeper.Execute(ctx, contractAddress, walletA, execMsg, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-			require.Error(t, err)
-
-			require.Contains(t, err.Error(), "failed to decrypt data")
-		})
-	}
-}
-
 func TestQueryNotEncryptedInputError(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
