@@ -232,11 +232,8 @@ func tryDecryptWasmEvents(ctx sdk.Context, nonce []byte, shouldSkipAttributes ..
 
 				if !shouldSkip && newLog.Key != "contract_address" {
 					// key
-					fmt.Printf("LIORRR before %+v nonce %+v", newLog, nonce)
 					newAttr, err := decryptAttribute(newLog, nonce)
-					fmt.Printf("LIORRR after %+v", newAttr)
 					if err != nil {
-						fmt.Printf("LIORRR here %+v", err)
 						continue
 					}
 

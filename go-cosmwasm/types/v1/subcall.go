@@ -66,15 +66,17 @@ type SubMsgResult struct {
 // SubMsg wraps a CosmosMsg with some metadata for handling replies (ID) and optionally
 // limiting the gas usage (GasLimit)
 type SubMsg struct {
-	ID       uint64    `json:"id"`
-	Msg      CosmosMsg `json:"msg"`
-	GasLimit *uint64   `json:"gas_limit,omitempty"`
-	ReplyOn  replyOn   `json:"reply_on"`
+	ID              uint64    `json:"id"`
+	Msg             CosmosMsg `json:"msg"`
+	GasLimit        *uint64   `json:"gas_limit,omitempty"`
+	ReplyOn         replyOn   `json:"reply_on"`
+	WasMsgEncrypted bool      `json:"was_msg_encrypted"`
 }
 
 type Reply struct {
-	ID     []byte       `json:"id"`
-	Result SubMsgResult `json:"result"`
+	ID              []byte       `json:"id"`
+	Result          SubMsgResult `json:"result"`
+	WasMsgEncrypted bool         `json:"was_msg_encrypted"`
 }
 
 // SubcallResult is the raw response we return from the sdk -> reply after executing a SubMsg.

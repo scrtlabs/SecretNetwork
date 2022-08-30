@@ -274,8 +274,9 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		msg_id := []byte(fmt.Sprint(msg.ID))
 		// now handle the reply, we use the parent context, and abort on error
 		reply := v1wasmTypes.Reply{
-			ID:     msg_id,
-			Result: result,
+			ID:              msg_id,
+			Result:          result,
+			WasMsgEncrypted: msg.WasMsgEncrypted,
 		}
 
 		// we can ignore any result returned as there is nothing to do with the data

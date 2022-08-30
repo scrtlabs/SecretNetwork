@@ -3,9 +3,12 @@ use crate::state::{count, count_read};
 use cosmwasm_std::{
     entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event, Ibc3ChannelOpenResponse,
     IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
-    IbcChannelOpenResponse, IbcPacketReceiveMsg, IbcReceiveResponse, MessageInfo, Reply, ReplyOn,
-    Response, StdError, StdResult, SubMsg, SubMsgResult, WasmMsg,
+    IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
+    IbcReceiveResponse, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
+    SubMsgResult, WasmMsg,
 };
+use serde::{Deserialize, Serialize};
+use serde_json_wasm as serde_json;
 
 pub const IBC_APP_VERSION: &str = "ibc-v1";
 
@@ -38,12 +41,28 @@ pub fn query(deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[entry_point]
-pub fn reply(deps: DepsMut, _env: Env, reply: Reply) -> StdResult<Response> {
+pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
     match (reply.id, reply.result) {
         (1, SubMsgResult::Err(_)) => Err(StdError::generic_err("Failed to inc")),
         (1, SubMsgResult::Ok(_)) => {
             increment(deps, 6)?;
-            Ok(Response::default())
+            Ok(Response::new().set_data(to_binary(&"out".to_string())?))
+        }
+        (2, SubMsgResult::Err(_)) => Err(StdError::generic_err("Failed to inc")),
+        (2, SubMsgResult::Ok(_)) => {
+            increment(deps, 6)?;
+            Ok(Response::new().add_submessage(SubMsg {
+                id: 1,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: ReplyOn::Always,
+                gas_limit: None,
+            }))
         }
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
@@ -114,7 +133,24 @@ pub fn get_resp_based_on_num(env: Env, num: u64) -> StdResult<IbcBasicResponse> 
     }
 }
 
-pub fn get_recv_resp_based_on_num(env: Env, num: u64) -> StdResult<IbcReceiveResponse> {
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ContractInfo {
+    pub address: String,
+    pub hash: String,
+}
+
+pub fn is_reply_on(num: u64) -> bool {
+    match num {
+        2 | 6 => true,
+        _ => false,
+    }
+}
+
+pub fn get_recv_resp_based_on_num(
+    env: Env,
+    num: u64,
+    data: Binary,
+) -> StdResult<IbcReceiveResponse> {
     match num {
         0 => Ok(IbcReceiveResponse::default()),
         1 => Ok(IbcReceiveResponse::new().add_submessage(SubMsg {
@@ -145,6 +181,37 @@ pub fn get_recv_resp_based_on_num(env: Env, num: u64) -> StdResult<IbcReceiveRes
         4 => Ok(IbcReceiveResponse::new()
             .add_event(Event::new("cyber1".to_string()).add_attribute("attr1", "🤯"))),
         5 => Err(StdError::generic_err("Intentional")),
+        6 => Ok(IbcReceiveResponse::new().add_submessage(SubMsg {
+            id: 2,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                code_hash: env.contract.code_hash,
+                contract_addr: env.contract.address.into_string(),
+                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                funds: vec![],
+            })
+            .into(),
+            reply_on: ReplyOn::Always,
+            gas_limit: None,
+        })),
+        7 => {
+            let contract_info: ContractInfo = serde_json::from_slice(data.as_slice()).unwrap();
+            Ok(IbcReceiveResponse::new().add_submessage(SubMsg {
+                id: 1,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: contract_info.hash,
+                    contract_addr: contract_info.address,
+                    msg: Binary::from(
+                        "{\"increment_from_v1\":{\"addition\":5}}"
+                            .as_bytes()
+                            .to_vec(),
+                    ),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: ReplyOn::Always,
+                gas_limit: None,
+            }))
+        }
         _ => Err(StdError::generic_err("Unsupported channel connect type")),
     }
 }
@@ -177,8 +244,6 @@ pub fn ibc_channel_connect(
 }
 
 #[entry_point]
-/// On closed channel, we take all tokens from reflect contract to this contract.
-/// We also delete the channel entry from accounts.
 pub fn ibc_channel_close(
     deps: DepsMut,
     env: Env,
@@ -202,22 +267,48 @@ pub fn ibc_channel_close(
 }
 
 #[entry_point]
-/// we look for a the proper reflect contract to relay to and send the message
-/// We cannot return any meaningful response value as we do not know the response value
-/// of execution. We just return ok if we dispatched, error if we failed to dispatch
 pub fn ibc_packet_receive(
     deps: DepsMut,
     env: Env,
     msg: IbcPacketReceiveMsg,
 ) -> StdResult<IbcReceiveResponse> {
     count(deps.storage).save(&(msg.packet.sequence + 7))?;
-    let mut resp = get_recv_resp_based_on_num(env, msg.packet.sequence);
+    let mut resp = get_recv_resp_based_on_num(env, msg.packet.sequence, msg.packet.data);
     match &mut resp {
         Ok(r) => {
-            r.acknowledgement = to_binary(&"out".to_string())?;
+            if !is_reply_on(msg.packet.sequence) {
+                r.acknowledgement = to_binary(&"out".to_string())?;
+            }
         }
         Err(_) => {}
     }
 
     resp
 }
+
+#[entry_point]
+pub fn ibc_packet_ack(
+    deps: DepsMut,
+    env: Env,
+    msg: IbcPacketAckMsg,
+) -> StdResult<IbcBasicResponse> {
+    let mut ack = [0u8; 8];
+    ack.copy_from_slice(&msg.acknowledgement.data.as_slice()[0..8]);
+
+    if u64::from_le_bytes(ack) != msg.original_packet.sequence {
+        return Err(StdError::generic_err("Wrong ack"));
+    }
+
+    count(deps.storage).save(&(msg.original_packet.sequence + 8))?;
+    get_resp_based_on_num(env, msg.original_packet.sequence)
+}
+
+// #[entry_point]
+// pub fn ibc_packet_timeout(
+//     deps: DepsMut,
+//     env: Env,
+//     msg: IbcPacketTimeoutMsg,
+// ) -> StdResult<IbcBasicResponse> {
+//     count(deps.storage).save(&(msg.packet.sequence + 9))?;
+//     get_resp_based_on_num(env, msg.packet.sequence)
+// }
