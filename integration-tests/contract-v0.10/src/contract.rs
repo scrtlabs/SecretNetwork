@@ -1,8 +1,4 @@
-use cosmwasm_std::{
-    to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult, Storage,
-    VoteOption,
-};
+use cosmwasm_std::{to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, Env, Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest, QueryResult, Storage, VoteOption, CosmosMsg, BankMsg};
 
 /////////////////////////////// Messages ///////////////////////////////
 
@@ -14,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub enum Msg {
     Nop {},
     BankMsgSend {
-        to_address: String,
+        to_address: HumanAddr,
         amount: Vec<Coin>,
     },
     StargateMsg {
@@ -83,15 +79,27 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    _msg: Msg,
+    env: Env,
+    msg: Msg,
 ) -> HandleResult {
-    // match msg {}
-    return Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: None,
-    });
+    match msg {
+        Msg::BankMsgSend { to_address, amount } => Ok(
+            HandleResponse {
+                messages: vec![
+                    CosmosMsg::Bank(BankMsg::Send { from_address: env.contract.address, to_address, amount })
+                ],
+                log: vec![],
+                data: None,
+            }
+        ),
+        _ => Ok(
+            HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            }
+        ),
+    }
 }
 
 /////////////////////////////// Query ///////////////////////////////
