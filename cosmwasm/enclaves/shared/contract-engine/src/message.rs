@@ -1,5 +1,4 @@
 use log::{trace, warn};
-use serde::Serialize;
 
 use cosmos_proto::tx::signing::SignMode;
 use cw_types_v010::encoding::Binary;
@@ -15,6 +14,7 @@ const HEX_ENCODED_HASH_SIZE: usize = 64;
 pub struct ParsedMessage {
     pub should_validate_sig_info: bool,
     pub was_msg_encrypted: bool,
+    pub should_encrypt_output: bool,
     pub secret_msg: SecretMessage,
     pub decrypted_msg: Vec<u8>,
     pub contract_hash_for_validation: Option<Vec<u8>>,
@@ -107,6 +107,7 @@ pub fn parse_message(
                 Ok(ParsedMessage {
                     should_validate_sig_info: true,
                     was_msg_encrypted: true,
+                    should_encrypt_output: true,
                     secret_msg: decrypted_secret_msg.secret_msg,
                     decrypted_msg: decrypted_secret_msg.decrypted_msg,
                     contract_hash_for_validation: None,
@@ -124,6 +125,7 @@ pub fn parse_message(
                 Ok(ParsedMessage {
                     should_validate_sig_info: false,
                     was_msg_encrypted: false,
+                    should_encrypt_output: false,
                     secret_msg,
                     decrypted_msg,
                     contract_hash_for_validation: None,
@@ -197,6 +199,7 @@ pub fn parse_message(
                 return Ok(ParsedMessage {
                     should_validate_sig_info: false,
                     was_msg_encrypted: false,
+                    should_encrypt_output: true, // When replies are plaintext it doesn't mean we can't encrypt them
                     secret_msg: reply_secret_msg,
                     decrypted_msg: serialized_reply,
                     contract_hash_for_validation: None,
@@ -301,6 +304,7 @@ pub fn parse_message(
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
                         was_msg_encrypted: true,
+                        should_encrypt_output: true,
                         secret_msg: reply_secret_msg,
                         decrypted_msg: decrypted_reply_as_vec,
                         contract_hash_for_validation: Some(
@@ -394,6 +398,7 @@ pub fn parse_message(
                     Ok(ParsedMessage {
                         should_validate_sig_info: true,
                         was_msg_encrypted: true,
+                        should_encrypt_output: true,
                         secret_msg: reply_secret_msg,
                         decrypted_msg: decrypted_reply_as_vec,
                         contract_hash_for_validation: Some(
@@ -425,6 +430,7 @@ pub fn parse_message(
             Ok(ParsedMessage {
                 should_validate_sig_info: false,
                 was_msg_encrypted: false,
+                should_encrypt_output: false,
                 secret_msg: scrt_msg,
                 decrypted_msg,
                 contract_hash_for_validation: None,
@@ -471,6 +477,7 @@ pub fn parse_message(
             Ok(ParsedMessage {
                 should_validate_sig_info: false,
                 was_msg_encrypted,
+                should_encrypt_output: was_msg_encrypted,
                 secret_msg: orig_secret_msg,
                 decrypted_msg: serde_json::to_vec(&parsed_encrypted_ibc_packet).map_err(|err| {
                     warn!(

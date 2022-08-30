@@ -3,8 +3,9 @@ use crate::state::{count, count_read};
 use cosmwasm_std::{
     entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event, Ibc3ChannelOpenResponse,
     IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
-    IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcReceiveResponse, MessageInfo,
-    Reply, ReplyOn, Response, StdError, StdResult, SubMsg, SubMsgResult, WasmMsg,
+    IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
+    IbcReceiveResponse, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
+    SubMsgResult, WasmMsg,
 };
 
 pub const IBC_APP_VERSION: &str = "ibc-v1";
@@ -43,7 +44,7 @@ pub fn reply(deps: DepsMut, _env: Env, reply: Reply) -> StdResult<Response> {
         (1, SubMsgResult::Err(_)) => Err(StdError::generic_err("Failed to inc")),
         (1, SubMsgResult::Ok(_)) => {
             increment(deps, 6)?;
-            Ok(Response::default())
+            Ok(Response::new().set_data(to_binary(&"out2".to_string())?))
         }
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
@@ -233,3 +234,13 @@ pub fn ibc_packet_ack(
     count(deps.storage).save(&(msg.original_packet.sequence + 8))?;
     get_resp_based_on_num(env, msg.original_packet.sequence)
 }
+
+// #[entry_point]
+// pub fn ibc_packet_timeout(
+//     deps: DepsMut,
+//     env: Env,
+//     msg: IbcPacketTimeoutMsg,
+// ) -> StdResult<IbcBasicResponse> {
+//     count(deps.storage).save(&(msg.packet.sequence + 9))?;
+//     get_resp_based_on_num(env, msg.packet.sequence)
+// }

@@ -411,8 +411,8 @@ pub fn encrypt_output(
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
     trace!(
-        "Output before encryption: {:?}",
-        String::from_utf8_lossy(&output)
+        "Output before encryption: {:?} {:?} {:?}",
+        String::from_utf8_lossy(&output), secret_msg.nonce, secret_msg.user_public_key
     );
 
     let mut output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {

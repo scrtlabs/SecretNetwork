@@ -369,6 +369,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	)
 
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+	for _, v := range memKeys {
+		ms.MountStoreWithDB(v, sdk.StoreTypeMemory, db)
+	}
 
 	upgradeKeeper := upgradekeeper.NewKeeper(
 		map[int64]bool{},

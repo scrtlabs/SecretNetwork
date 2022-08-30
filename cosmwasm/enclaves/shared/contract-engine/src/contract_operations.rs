@@ -186,6 +186,7 @@ pub fn handle(
     let ParsedMessage {
         should_validate_sig_info,
         was_msg_encrypted,
+        should_encrypt_output,
         secret_msg,
         decrypted_msg,
         contract_hash_for_validation,
@@ -262,7 +263,7 @@ pub fn handle(
             secret_msg.nonce, secret_msg.user_public_key
         );
 
-        if was_msg_encrypted {
+        if should_encrypt_output {
             output = encrypt_output(
                 output,
                 &secret_msg,

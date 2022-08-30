@@ -905,3 +905,126 @@ func TestIBCPacketAck(t *testing.T) {
 		})
 	}
 }
+
+func TestIBCPacketTimeout(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/ibc/contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	for _, test := range []struct {
+		description   string
+		sequence      uint64
+		output        string
+		isSuccess     bool
+		hasAttributes bool
+		hasEvents     bool
+	}{
+		{
+			description:   "Default",
+			sequence:      0,
+			output:        "9",
+			isSuccess:     true,
+			hasAttributes: false,
+			hasEvents:     false,
+		},
+		{
+			description:   "SubmessageNoReply",
+			sequence:      1,
+			output:        "15",
+			isSuccess:     true,
+			hasAttributes: false,
+			hasEvents:     false,
+		},
+		{
+			description:   "SubmessageWithReply",
+			sequence:      2,
+			output:        "22",
+			isSuccess:     true,
+			hasAttributes: false,
+			hasEvents:     false,
+		},
+		{
+			description:   "Attributes",
+			sequence:      3,
+			output:        "12",
+			isSuccess:     true,
+			hasAttributes: true,
+			hasEvents:     false,
+		},
+		{
+			description:   "Events",
+			sequence:      4,
+			output:        "13",
+			isSuccess:     true,
+			hasAttributes: false,
+			hasEvents:     true,
+		},
+		{
+			description:   "Error",
+			sequence:      5,
+			output:        "",
+			isSuccess:     false,
+			hasAttributes: false,
+			hasEvents:     false,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			ibcPacket := createIBCPacket(createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
+				createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+				test.sequence,
+				createIBCTimeout(math.MaxUint64),
+				[]byte{},
+			)
+
+			ctx, events, err := ibcPacketTimeoutHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, ibcPacket)
+
+			if !test.isSuccess {
+				require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
+			} else {
+				require.Empty(t, err)
+				if test.hasAttributes {
+					require.Equal(t,
+						[]ContractEvent{
+							{
+								{Key: "contract_address", Value: contractAddress.String()},
+								{Key: "attr1", Value: "😗"},
+							},
+						},
+						events,
+					)
+				}
+
+				if test.hasEvents {
+					hadCyber1 := false
+					evts := ctx.EventManager().Events()
+					for _, e := range evts {
+						if e.Type == "wasm-cyber1" {
+							require.False(t, hadCyber1)
+							attrs, err := parseAndDecryptAttributes(e.Attributes, []byte{}, false)
+							require.Empty(t, err)
+
+							require.Equal(t,
+								[]v010cosmwasm.LogAttribute{
+									{Key: "contract_address", Value: contractAddress.String()},
+									{Key: "attr1", Value: "🤯"},
+								},
+								attrs,
+							)
+
+							hadCyber1 = true
+						}
+					}
+
+					require.True(t, hadCyber1)
+				}
+
+				queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
+
+				require.Empty(t, err)
+
+				require.Equal(t, test.output, queryRes)
+			}
+		})
+	}
+}
