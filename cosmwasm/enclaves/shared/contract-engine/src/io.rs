@@ -411,8 +411,10 @@ pub fn encrypt_output(
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
     trace!(
-        "Output before encryption: {:?}",
-        String::from_utf8_lossy(&output)
+        "Output before encryption: {:?} {:?} {:?}",
+        String::from_utf8_lossy(&output),
+        secret_msg.nonce,
+        secret_msg.user_public_key
     );
 
     let mut output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
@@ -449,6 +451,7 @@ pub fn encrypt_output(
                     let reply = Reply {
                         id: msg_id.unwrap(),
                         result: SubMsgResult::Err(encrypted_err),
+                        was_msg_encrypted: true,
                     };
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
                         warn!(
@@ -537,6 +540,7 @@ pub fn encrypt_output(
                             events,
                             data: ok.data.clone(),
                         }),
+                        was_msg_encrypted: true,
                     };
 
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
@@ -580,6 +584,8 @@ pub fn encrypt_output(
                     // We don't encrypt it here to remain with the same type (u64)
                     sub_msg.id = 0;
                 }
+
+                sub_msg.was_msg_encrypted = true;
             }
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
@@ -598,7 +604,7 @@ pub fn encrypt_output(
 
             if let Some(data) = &mut ok.data {
                 if is_ibc_output {
-                    warn!("IBC output should not containt any data");
+                    warn!("IBC output should not contain any data");
                     return Err(EnclaveError::InternalError);
                 }
 
@@ -649,6 +655,7 @@ pub fn encrypt_output(
                             events,
                             data: ok.data.clone(),
                         }),
+                        was_msg_encrypted: true,
                     };
 
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
@@ -689,6 +696,8 @@ pub fn encrypt_output(
                     // We don't encrypt it here to remain with the same type (u64)
                     sub_msg.id = 0;
                 }
+
+                sub_msg.was_msg_encrypted = true;
             }
 
             // v1: The attributes that will be emitted as part of a "wasm" event.

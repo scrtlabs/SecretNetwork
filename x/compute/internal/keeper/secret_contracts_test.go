@@ -167,7 +167,7 @@ func decryptAttribute(attr v010cosmwasm.LogAttribute, nonce []byte) (v010cosmwas
 	}
 	keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
 	if err != nil {
-		return v010cosmwasm.LogAttribute{}, fmt.Errorf("Failed Decrypt for key %+v", keyPlainBz)
+		return v010cosmwasm.LogAttribute{}, fmt.Errorf("Failed Decrypt for key %+v", keyCipherBz)
 	}
 	newAttr.Key = string(keyPlainBz)
 

@@ -67,9 +67,9 @@ func (k Keeper) parseThenHandleIBCBasicContractResponse(ctx sdk.Context,
 			}
 
 			return k.handleIBCBasicContractResponse(ctx, contractAddress, contractInfo.IBCPortID, inputMsg, resp)
-		} else {
-			return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("null pointer IBCBasicResponse: %+v", res))
 		}
+
+		return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("null pointer IBCBasicResponse: %+v", res))
 	default:
 		return sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot cast res to IBCBasicResponse: %+v", res))
 	}
@@ -203,15 +203,23 @@ func (k Keeper) OnRecvPacket(
 			if err != nil {
 				return nil, err
 			}
-			verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
+			verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
+
+			ogTx := msg.Packet.Data
+
+			// If the data contains less than 64 bytes (means plaintext)
+			// use the whole message just for compilation
+			if len(ogTx) < 64 {
+				ogTx = msgBz
+			}
 
 			// note submessage reply results can overwrite the `Acknowledgement` data
-			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, msgBz, verificationInfo, wasmTypes.CosmosMsgVersionV1)
-		} else {
-			// should never get here as it's already checked in
-			// https://github.com/scrtlabs/SecretNetwork/blob/bd46776c/go-cosmwasm/lib.go#L358
-			return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: null pointer IBCReceiveResponse: %+v", res))
+			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, ogTx, verificationInfo, wasmTypes.CosmosMsgVersionV1)
 		}
+
+		// should never get here as it's already checked in
+		// https://github.com/scrtlabs/SecretNetwork/blob/bd46776c/go-cosmwasm/lib.go#L358
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: null pointer IBCReceiveResponse: %+v", res))
 	default:
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("ibc-recv-packet: cannot cast res to IBCReceiveResponse: %+v", res))
 	}

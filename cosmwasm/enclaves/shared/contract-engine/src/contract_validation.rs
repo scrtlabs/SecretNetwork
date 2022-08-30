@@ -1,17 +1,18 @@
+use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
-
-use enclave_ffi_types::EnclaveError;
 
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmWasmMsg, CosmosPubKey, SigInfo, SignDoc, StdSignDoc,
+    ContractCode, CosmWasmMsg, CosmosPubKey, HandleType, SigInfo, SignDoc, StdSignDoc,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
+use enclave_ffi_types::EnclaveError;
 
 use crate::io::create_callback_signature;
+use crate::message::is_ibc_msg;
 use crate::types::SecretMessage;
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
@@ -118,6 +119,64 @@ pub struct ReplyParams {
 
 /// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.
 pub fn validate_msg(
+    msg: &[u8],
+    contract_hash: &[u8; HASH_SIZE],
+    contract_hash_for_validation: Option<Vec<u8>>,
+    handle_type: Option<HandleType>,
+) -> Result<ValidatedMessage, EnclaveError> {
+    match handle_type {
+        None => validate_basic_msg(msg, contract_hash, contract_hash_for_validation),
+        Some(h) => match is_ibc_msg(h.clone()) {
+            false => validate_basic_msg(msg, contract_hash, contract_hash_for_validation),
+            true => validate_ibc_msg(msg, contract_hash, contract_hash_for_validation, h),
+        },
+    }
+}
+
+pub fn validate_ibc_msg(
+    msg: &[u8],
+    contract_hash: &[u8; HASH_SIZE],
+    contract_hash_for_validation: Option<Vec<u8>>,
+    handle_type: HandleType,
+) -> Result<ValidatedMessage, EnclaveError> {
+    match handle_type {
+        HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
+            let mut parsed_ibc_packet: IbcPacketReceiveMsg =
+                serde_json::from_slice(&msg.to_vec()).map_err(|err| {
+                    warn!(
+                    "IbcPacketReceive msg got an error while trying to deserialize msg input bytes into json {:?}: {}",
+                    String::from_utf8_lossy(&msg),
+                    err
+                );
+                    EnclaveError::FailedToDeserialize
+                })?;
+
+            let validated_msg = validate_basic_msg(
+                parsed_ibc_packet.packet.data.as_slice(),
+                contract_hash,
+                contract_hash_for_validation,
+            )?;
+            parsed_ibc_packet.packet.data = validated_msg.validated_msg.as_slice().into();
+
+            Ok(ValidatedMessage{
+                validated_msg: serde_json::to_vec(&parsed_ibc_packet).map_err(|err| {
+                    warn!(
+                        "got an error while trying to serialize parsed_ibc_packet msg into bytes {:?}: {}",
+                        parsed_ibc_packet, err
+                    );
+                    EnclaveError::FailedToSerialize
+                })?,
+                reply_params: validated_msg.reply_params,
+            })
+        }
+        _ => {
+            warn!("Malformed message - in IBC, only packet receive message can be encrypted");
+            Err(EnclaveError::ValidationFailure)
+        }
+    }
+}
+
+pub fn validate_basic_msg(
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
     contract_hash_for_validation: Option<Vec<u8>>,

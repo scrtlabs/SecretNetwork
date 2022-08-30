@@ -364,11 +364,14 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
-		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey,
+		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, "compute",
 		feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey,
 	)
 
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+	for _, v := range memKeys {
+		ms.MountStoreWithDB(v, sdk.StoreTypeMemory, db)
+	}
 
 	upgradeKeeper := upgradekeeper.NewKeeper(
 		map[int64]bool{},

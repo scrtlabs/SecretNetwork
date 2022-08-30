@@ -263,7 +263,6 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, err
 	}
 
-	fmt.Printf("LIORRR data %+v", data)
 	var resp ContractExecResponse
 	err = json.Unmarshal(data, &resp)
 

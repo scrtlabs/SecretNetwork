@@ -86,7 +86,7 @@ pub fn init(
     let ValidatedMessage {
         validated_msg,
         reply_params,
-    } = validate_msg(&decrypted_msg, &contract_hash, None)?;
+    } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
 
     let mut engine = start_engine(
         context,
@@ -186,15 +186,16 @@ pub fn handle(
     let ParsedMessage {
         should_validate_sig_info,
         was_msg_encrypted,
+        should_encrypt_output,
         secret_msg,
         decrypted_msg,
         contract_hash_for_validation,
     } = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
 
-    let mut canonical_sender_address = CanonicalAddr::from_vec(vec![]);
-    if should_validate_sig_info || was_msg_encrypted {
-        canonical_sender_address = to_canonical(sender)?;
-    }
+    let canonical_sender_address = match to_canonical(sender) {
+        Ok(can) => can,
+        Err(_) => CanonicalAddr::from_vec(vec![]),
+    };
 
     // There is no signature to verify when the input isn't signed.
     // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
@@ -215,7 +216,12 @@ pub fn handle(
     let mut validated_msg = decrypted_msg.clone();
     let mut reply_params: Option<ReplyParams> = None;
     if was_msg_encrypted {
-        let x = validate_msg(&decrypted_msg, &contract_hash, contract_hash_for_validation)?;
+        let x = validate_msg(
+            &decrypted_msg,
+            &contract_hash,
+            contract_hash_for_validation,
+            Some(parsed_handle_type.clone()),
+        )?;
         validated_msg = x.validated_msg;
         reply_params = x.reply_params;
     }
@@ -257,7 +263,7 @@ pub fn handle(
             secret_msg.nonce, secret_msg.user_public_key
         );
 
-        if was_msg_encrypted {
+        if should_encrypt_output {
             output = encrypt_output(
                 output,
                 &secret_msg,
@@ -337,7 +343,7 @@ pub fn query(
     let decrypted_msg = secret_msg.decrypt()?;
 
     let ValidatedMessage { validated_msg, .. } =
-        validate_msg(&decrypted_msg, &contract_hash, None)?;
+        validate_msg(&decrypted_msg, &contract_hash, None, None)?;
 
     let mut engine = start_engine(
         context,

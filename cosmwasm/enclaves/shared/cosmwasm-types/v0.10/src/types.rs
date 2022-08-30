@@ -133,6 +133,7 @@ pub struct ContractInfo {
 
 // This should be in correlation with cosmwasm-std/init_handle's InitResponse and HandleResponse
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct ContractResult {
     pub messages: Vec<CosmosMsg>,
     pub log: Vec<LogAttribute>,
