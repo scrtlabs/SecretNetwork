@@ -104,8 +104,7 @@ func TestGovQueryProposals(t *testing.T) {
 // an active proposal and checking that there is 1 active
 func TestGovVote(t *testing.T) {
 	encodingConfig := MakeEncodingConfig()
-	var transferPortSource wasmTypes.ICS20TransferPortSource
-	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+	transferPortSource := MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
 	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)

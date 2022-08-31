@@ -31,7 +31,6 @@ const (
 	flagProposalType           = "type"
 	flagIoMasterKey            = "enclave-key"
 	flagCodeHash               = "code-hash"
-	// flagAdmin                  = "admin"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -47,10 +46,6 @@ func GetTxCmd() *cobra.Command {
 		StoreCodeCmd(),
 		InstantiateContractCmd(),
 		ExecuteContractCmd(),
-		// Currently not supporting these commands
-		// MigrateContractCmd(cdc),
-		// UpdateContractAdminCmd(cdc),
-		// ClearContractAdminCmd(cdc),
 	)
 	return txCmd
 }
@@ -105,20 +100,6 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 		return types.MsgStoreCode{}, fmt.Errorf("invalid input file. Use wasm binary or gzip")
 	}
 
-	/*
-		var perm *types.AccessConfig
-		if onlyAddrStr := viper.GetString(flagInstantiateByAddress); onlyAddrStr != "" {
-			allowedAddr, err := sdk.AccAddressFromBech32(onlyAddrStr)
-			if err != nil {
-				return types.MsgStoreCode{}, sdkerrors.Wrap(err, flagInstantiateByAddress)
-			}
-			x := types.OnlyAddress.With(allowedAddr)
-			perm = &x
-		} else if everybody := viper.GetBool(flagInstantiateByEverybody); everybody {
-			perm = &types.AllowEverybody
-		}
-	*/
-
 	source, err := flags.GetString(flagSource)
 	if err != nil {
 		return types.MsgStoreCode{}, fmt.Errorf("source: %s", err)
@@ -134,7 +115,6 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 		WASMByteCode: wasm,
 		Source:       source,
 		Builder:      builder,
-		// InstantiatePermission: perm,
 	}
 	return msg, nil
 }
@@ -142,7 +122,7 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.
 func InstantiateContractCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "instantiate [code_id_int64] [json_encoded_init_args] --label [text] " /* --admin [address,optional] */ + "--amount [coins,optional]",
+		Use:   "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --amount [coins,optional]",
 		Short: "Instantiate a wasm contract",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -399,7 +399,6 @@ func NewSecretNetworkApp(
 		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.ibcKeeper.ClientKeeper))
 
 	// Just re-use the full router - do we want to limit this more?
-	computeRouter := app.Router()
 	regRouter := app.Router()
 
 	// Replace with bootstrap flag when we figure out how to test properly and everything works
@@ -419,7 +418,7 @@ func NewSecretNetworkApp(
 
 	// The last arguments can contain custom message handlers, and custom query handlers,
 	// if we want to allow any custom callbacks
-	supportedFeatures := "staking"
+	supportedFeatures := "staking,stargate,ibc3"
 
 	app.computeKeeper = compute.NewKeeper(
 		appCodec,
@@ -435,7 +434,9 @@ func NewSecretNetworkApp(
 		app.ibcKeeper.PortKeeper,
 		app.transferKeeper,
 		app.ibcKeeper.ChannelKeeper,
-		computeRouter,
+		app.Router(),
+		app.MsgServiceRouter(),
+		app.GRPCQueryRouter(),
 		computeDir,
 		computeConfig,
 		supportedFeatures,

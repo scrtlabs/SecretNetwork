@@ -22,7 +22,7 @@ import (
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 )
 
-const SupportedFeatures = "staking"
+const SupportedFeatures = "staking,stargate,ibc3"
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath:  "/tmp/id_tx_io.json",
@@ -88,104 +88,6 @@ func TestCreate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wasmCode, storedCode)
 }
-
-/*
-func TestCreateStoresInstantiatePermission(t *testing.T) {
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
-	require.NoError(t, err)
-	var (
-		deposit = sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-		myAddr  = bytes.Repeat([]byte{1}, sdk.AddrLen)
-	)
-
-	specs := map[string]struct {
-		srcPermission types.AccessType
-		expInstConf   types.AccessConfig
-	}{
-		"default": {
-			srcPermission: types.DefaultParams().DefaultInstantiatePermission,
-			expInstConf:   types.AllowEverybody,
-		},
-		"everybody": {
-			srcPermission: types.Everybody,
-			expInstConf:   types.AllowEverybody,
-		},
-		"nobody": {
-			srcPermission: types.Nobody,
-			expInstConf:   types.AllowNobody,
-		},
-		"onlyAddress with matching address": {
-			srcPermission: types.OnlyAddress,
-			expInstConf:   types.AccessConfig{Type: types.OnlyAddress, Address: myAddr},
-		},
-	}
-	for msg, spec := range specs {
-		t.Run(msg, func(t *testing.T) {
-			tempDir, err := os.MkdirTemp("", "wasm")
-			require.NoError(t, err)
-			defer os.RemoveAll(tempDir)
-
-			ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-			accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-			fundAccounts(ctx, accKeeper, myAddr, deposit)
-
-			codeID, err := keeper.Create(ctx, myAddr, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "any/builder:tag")
-			require.NoError(t, err)
-
-			codeInfo := keeper.GetCodeInfo(ctx, codeID)
-			require.NotNil(t, codeInfo)
-			assert.True(t, spec.expInstConf.Equals(codeInfo.InstantiateConfig), "got %#v", codeInfo.InstantiateConfig)
-		})
-	}
-}
-
-func TestCreateWithParamPermissions(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
-
-	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator := CreateFakeFundedAccount(ctx, accKeeper, deposit)
-	otherAddr := CreateFakeFundedAccount(ctx, accKeeper, deposit)
-
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
-	require.NoError(t, err)
-
-	specs := map[string]struct {
-		srcPermission types.AccessConfig
-		expError      *sdkerrors.Error
-	}{
-		"default": {
-			srcPermission: types.DefaultUploadAccess,
-		},
-		"everybody": {
-			srcPermission: types.AllowEverybody,
-		},
-		"nobody": {
-			srcPermission: types.AllowNobody,
-			expError:      sdkerrors.ErrUnauthorized,
-		},
-		"onlyAddress with matching address": {
-			srcPermission: types.OnlyAddress.With(creator),
-		},
-		"onlyAddress with non matching address": {
-			srcPermission: types.OnlyAddress.With(otherAddr),
-			expError:      sdkerrors.ErrUnauthorized,
-		},
-	}
-	for msg, spec := range specs {
-		t.Run(msg, func(t *testing.T) {
-			_, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/CosmWasm/wasmd/blob/master/x/wasm/testdata/escrow.wasm", "any/builder:tag")
-			require.True(t, spec.expError.Is(err), err)
-			if spec.expError != nil {
-				return
-			}
-		})
-	}
-}
-*/
 
 func TestCreateDuplicate(t *testing.T) {
 	encodingConfig := MakeEncodingConfig()
@@ -340,7 +242,10 @@ func TestInstantiate(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	key := codeInfo.CodeHash
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(key)),
@@ -530,8 +435,10 @@ func TestExecute(t *testing.T) {
 	}
 	initMsgBz, err := json.Marshal(initMsg)
 
-	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
-	// keyStr := hex.EncodeToString(key)
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	key := codeInfo.CodeHash
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(key)),
@@ -586,8 +493,7 @@ func TestExecute(t *testing.T) {
 
 	initMsgBz = []byte(`{"release":{}}`)
 
-	key = keeper.GetCodeInfo(ctx, contractID).CodeHash
-	// keyStr := hex.EncodeToString(key)
+	require.NoError(t, err)
 
 	msg = types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(key)),
@@ -815,7 +721,10 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	hash := codeInfo.CodeHash
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
@@ -851,7 +760,9 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-	codeHash := keeper.GetContractHash(ctx, addr)
+	codeHash, err := keeper.GetContractHash(ctx, addr)
+	require.NoError(t, err)
+
 	codeHashStr := hex.EncodeToString(codeHash)
 
 	msg2 := types.SecretMsg{
@@ -937,7 +848,9 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		require.True(t, ok, "%+v", r)
 	}()
 
-	codeHash := keeper.GetContractHash(ctx, addr)
+	codeHash, err := keeper.GetContractHash(ctx, addr)
+	require.NoError(t, err)
+
 	codeHashStr := hex.EncodeToString(codeHash)
 
 	msg := types.SecretMsg{

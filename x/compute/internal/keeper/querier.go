@@ -16,7 +16,7 @@ type GrpcQuerier struct {
 }
 
 // todo: this needs proper tests and doc
-func NewQuerier(keeper Keeper) GrpcQuerier {
+func NewGrpcQuerier(keeper Keeper) GrpcQuerier {
 	return GrpcQuerier{keeper: keeper}
 }
 
@@ -37,24 +37,6 @@ func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInf
 	}, nil
 }
 
-/*
-func (q GrpcQuerier) ContractHistory(c context.Context, req *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
-		return nil, err
-	}
-	rsp, err := queryContractHistory(sdk.UnwrapSDKContext(c), req.Address, q.keeper)
-	switch {
-	case err != nil:
-		return nil, err
-	case rsp == nil:
-		return nil, types.ErrNotFound
-	}
-	return &types.QueryContractHistoryResponse{
-		Entries: rsp,
-	}, nil
-}
-*/
-
 func (q GrpcQuerier) ContractsByCode(c context.Context, req *types.QueryContractsByCodeRequest) (*types.QueryContractsByCodeResponse, error) {
 	if req.CodeId == 0 {
 		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
@@ -70,40 +52,6 @@ func (q GrpcQuerier) ContractsByCode(c context.Context, req *types.QueryContract
 		ContractInfos: rsp,
 	}, nil
 }
-
-/*
-func (q GrpcQuerier) AllContractState(c context.Context, req *types.QueryAllContractStateRequest) (*types.QueryAllContractStateResponse, error) {
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
-		return nil, err
-	}
-	ctx := sdk.UnwrapSDKContext(c)
-	if !q.keeper.containsContractInfo(ctx, req.Address) {
-		return nil, types.ErrNotFound
-	}
-	var resultData []types.Model
-	for iter := q.keeper.GetContractState(ctx, req.Address); iter.Valid(); iter.Next() {
-		resultData = append(resultData, types.Model{
-			Key:   iter.Key(),
-			Value: iter.Value(),
-		})
-	}
-	return &types.QueryAllContractStateResponse{Models: resultData}, nil
-}
-
-func (q GrpcQuerier) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
-	ctx := sdk.UnwrapSDKContext(c)
-
-	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
-		return nil, err
-	}
-
-	if !q.keeper.containsContractInfo(ctx, req.Address) {
-		return nil, types.ErrNotFound
-	}
-	rsp := q.keeper.QueryRaw(ctx, req.Address, req.QueryData)
-	return &types.QueryRawContractStateResponse{Data: rsp}, nil
-}
-*/
 
 func (q GrpcQuerier) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (*types.QuerySmartContractStateResponse, error) {
 	if err := sdk.VerifyAddressFormat(req.Address); err != nil {
@@ -233,17 +181,18 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper Keeper) (*types.QueryCodeR
 	if codeID == 0 {
 		return nil, nil
 	}
-	res := keeper.GetCodeInfo(ctx, codeID)
-	if res == nil {
-		// nil, nil leads to 404 in rest handler
+
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	if err != nil {
 		return nil, nil
 	}
+
 	info := types.CodeInfoResponse{
 		CodeID:   codeID,
-		Creator:  res.Creator,
-		DataHash: res.CodeHash,
-		Source:   res.Source,
-		Builder:  res.Builder,
+		Creator:  codeInfo.Creator,
+		DataHash: codeInfo.CodeHash,
+		Source:   codeInfo.Source,
+		Builder:  codeInfo.Builder,
 	}
 
 	code, err := keeper.GetByteCode(ctx, codeID)
@@ -269,30 +218,6 @@ func queryCodeList(ctx sdk.Context, keeper Keeper) ([]types.CodeInfoResponse, er
 	return info, nil
 }
 
-/*
-func queryContractHistory(ctx sdk.Context, bech string, keeper Keeper) ([]byte, error) {
-	contractAddr, err := sdk.AccAddressFromBech32(bech)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
-	}
-	entries := keeper.GetContractHistory(ctx, contractAddr)
-	if entries == nil {
-		// nil, nil leads to 404 in rest handler
-		return nil, nil
-	}
-	// redact response
-	for i := range entries {
-		entries[i].Updated = nil
-	}
-
-	bz, err := json.MarshalIndent(entries, "", "  ")
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-	return bz, nil
-}
-*/
-
 func queryContractAddress(ctx sdk.Context, label string, keeper Keeper) (sdk.AccAddress, error) {
 	res := keeper.GetContractAddress(ctx, label)
 	if res == nil {
@@ -317,5 +242,10 @@ func queryContractHash(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) (
 		return nil, nil
 	}
 
-	return keeper.GetCodeInfo(ctx, res.CodeID).CodeHash, nil
+	codeInfo, err := keeper.GetCodeInfo(ctx, res.CodeID)
+	if err != nil {
+		return nil, nil
+	}
+
+	return codeInfo.CodeHash, nil
 }

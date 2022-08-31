@@ -53,10 +53,17 @@ var testContracts = []TestContract{
 // if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
 func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
 	var hash []byte
+	var err error
+
 	if codeId != 0 {
-		hash = keeper.GetCodeInfo(ctx, codeId).CodeHash
+		codeInfo, err := keeper.GetCodeInfo(ctx, codeId)
+		require.NoError(t, err)
+
+		hash = codeInfo.CodeHash
 	} else {
-		hash = keeper.GetContractHash(ctx, contractAddress)
+		hash, err = keeper.GetContractHash(ctx, contractAddress)
+		require.NoError(t, err)
+
 	}
 
 	if hash == nil {
@@ -81,7 +88,10 @@ func uploadCode(ctx sdk.Context, t *testing.T, keeper Keeper, wasmPath string, w
 	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	codeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	return codeID, codeHash
 }
@@ -157,7 +167,7 @@ func decryptAttribute(attr v010cosmwasm.LogAttribute, nonce []byte) (v010cosmwas
 	}
 	keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
 	if err != nil {
-		return v010cosmwasm.LogAttribute{}, fmt.Errorf("Failed Decrypt for key %+v", keyPlainBz)
+		return v010cosmwasm.LogAttribute{}, fmt.Errorf("Failed Decrypt for key %+v", keyCipherBz)
 	}
 	newAttr.Key = string(keyPlainBz)
 
@@ -400,7 +410,10 @@ func queryHelperImpl(
 	contractAddr sdk.AccAddress, input string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64,
 ) (string, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))
+	hash, err := keeper.GetContractHash(ctx, contractAddr)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(hash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -473,7 +486,10 @@ func execHelperMultipleCoinsImpl(
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
+	hash, err := keeper.GetContractHash(ctx, contractAddress)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(hash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -537,7 +553,10 @@ func initHelperImpl(
 	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, sentFunds sdk.Coins, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(codeInfo.CodeHash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -582,6 +601,33 @@ func initHelperImpl(
 	return nonce, ctx, contractAddress, wasmEvents, cosmwasm.StdError{}
 }
 
+// requireEvents checks events output
+// Events are now sorted (since wasmd v0.28),
+// but for us they're sorted while encrypted so when testing with random encryption keys
+// this is non-deterministic
+func requireEvents(t *testing.T, a, b []ContractEvent) {
+	require.Equal(t, len(a), len(b))
+
+	for i := range b {
+		require.Equal(t, len(a[i]), len(b[i]))
+		for j := range b[i] {
+			require.Contains(t, a[i], b[i][j])
+		}
+	}
+}
+
+// requireLogAttributes checks events output
+// Events are now sorted (since wasmd v0.28),
+// but for us they're sorted while encrypted so when testing with random encryption keys
+// this is non-deterministic
+func requireLogAttributes(t *testing.T, a, b []v010cosmwasm.LogAttribute) {
+	require.Equal(t, len(a), len(b))
+
+	for i := range b {
+		require.Contains(t, a, b[i])
+	}
+}
+
 func TestCallbackSanity(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -591,35 +637,37 @@ func TestCallbackSanity(t *testing.T) {
 			_, _, contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
+				initEvents,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "init", Value: "🌈"},
 					},
 				},
-				initEvents,
 			)
 
 			_, _, data, execEvents, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 			require.Empty(t, err)
-			require.Equal(t,
+
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "banana", Value: "🍌"},
 					},
 					{
-						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "kiwi", Value: "🥝"},
+						{Key: "contract_address", Value: contractAddress.String()},
 					},
 					{
-						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "watermelon", Value: "🍉"},
+						{Key: "contract_address", Value: contractAddress.String()},
 					},
 				},
 				execEvents,
 			)
+
 			require.Equal(t, []byte{2, 3}, data)
 		})
 	}
@@ -650,7 +698,7 @@ func TestSanity(t *testing.T) {
 
 	require.Empty(t, err)
 	require.Empty(t, data)
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -680,7 +728,7 @@ func TestInitLogs(t *testing.T) {
 			_, _, contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 			require.Equal(t, 1, len(initEvents))
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -704,7 +752,7 @@ func TestEmptyLogKeyValue(t *testing.T) {
 			_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"empty_log_key_value":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, execErr)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -796,7 +844,7 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 			_, _, firstContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: firstContractAddress.String()},
@@ -810,7 +858,7 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 			_, _, contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "code_hash": "%s"}}`, firstContractAddress.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -1232,33 +1280,6 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 	}
 }
 
-func TestExecuteNotEncryptedInputError(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
-
-			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
-			require.Empty(t, initErr)
-
-			//ctx = sdk.NewContext(
-			//	ctx.MultiStore(),
-			//	ctx.BlockHeader(),
-			//	ctx.IsCheckTx(),
-			//	log.NewNopLogger(),
-			//).WithGasMeter(sdk.NewGasMeter(defaultGas))
-
-			execMsg := []byte(`{"empty_log_key_value":{}}`)
-
-			ctx = PrepareExecSignedTx(t, keeper, ctx, walletA, privKeyA, execMsg, contractAddress, nil)
-
-			_, err := keeper.Execute(ctx, contractAddress, walletA, execMsg, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-			require.Error(t, err)
-
-			require.Contains(t, err.Error(), "failed to decrypt data")
-		})
-	}
-}
-
 func TestQueryNotEncryptedInputError(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -1321,20 +1342,25 @@ func TestExecCallbackToInit(t *testing.T) {
 			require.Empty(t, execData)
 
 			require.Equal(t, 2, len(execEvents))
-			require.Equal(t,
+			requireLogAttributes(t,
 				ContractEvent{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "instantiating a new contract", Value: "🪂"},
 				},
 				execEvents[0],
 			)
-			require.Equal(t,
+			require.Contains(t,
+				execEvents[1],
 				v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
-				execEvents[1][1],
 			)
-			require.Equal(t, "contract_address", execEvents[1][0].Key)
-
-			secondContractAddressBech32 := execEvents[1][0].Value
+			var secondContractAddressBech32 string
+			for _, v := range execEvents[1] {
+				if v.Key == "contract_address" {
+					secondContractAddressBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, secondContractAddressBech32)
 			secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
 			require.NoError(t, err)
 
@@ -1356,20 +1382,26 @@ func TestInitCallbackToInit(t *testing.T) {
 			require.Empty(t, initErr)
 
 			require.Equal(t, 2, len(initEvents))
-			require.Equal(t,
+			requireLogAttributes(t,
 				ContractEvent{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "instantiating a new contract from init!", Value: "🐙"},
 				},
 				initEvents[0],
 			)
-			require.Equal(t,
-				v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
-				initEvents[1][1],
-			)
-			require.Equal(t, "contract_address", initEvents[1][0].Key)
 
-			secondContractAddressBech32 := initEvents[1][0].Value
+			require.Contains(t,
+				initEvents[1],
+				v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+			)
+			var secondContractAddressBech32 string
+			for _, v := range initEvents[1] {
+				if v.Key == "contract_address" {
+					secondContractAddressBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, secondContractAddressBech32)
 			secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
 			require.NoError(t, err)
 
@@ -1793,7 +1825,7 @@ func TestMsgSenderInCallback(t *testing.T) {
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t, []ContractEvent{
+			requireEvents(t, []ContractEvent{
 				{
 					{Key: "contract_address", Value: addr.String()},
 					{Key: "hi", Value: "hey"},
@@ -1876,7 +1908,7 @@ func TestQueryRecursionLimitEnforcedInInits(t *testing.T) {
 
 			require.Nil(t, err.GenericErr)
 
-			require.Equal(t, []ContractEvent{
+			requireEvents(t, []ContractEvent{
 				{
 					{Key: "contract_address", Value: addr.String()},
 					{Key: "message", Value: "Recursion limit was correctly enforced"},
@@ -2021,7 +2053,16 @@ func TestContractSendFundsToInitCallback(t *testing.T) {
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-			newContract, err := sdk.AccAddressFromBech32(execEvents[1][0].Value)
+			var newContractBech32 string
+			for _, v := range execEvents[1] {
+				if v.Key == "contract_address" {
+					newContractBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, newContractBech32)
+
+			newContract, err := sdk.AccAddressFromBech32(newContractBech32)
 			require.NoError(t, err)
 			newContractCoins := keeper.bankKeeper.GetAllBalances(ctx, newContract)
 
@@ -2406,14 +2447,24 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				_, _, addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.Empty(t, err)
-				require.Equal(t,
+
+				var newContractBech32 string
+				for _, v := range events[1] {
+					if v.Key == "contract_address" {
+						newContractBech32 = v.Value
+						break
+					}
+				}
+				require.NotEmpty(t, newContractBech32)
+
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr.String()},
 							{Key: "a", Value: "a"},
 						},
 						{
-							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "contract_address", Value: newContractBech32},
 							{Key: "init", Value: "🌈"},
 						},
 					},
@@ -2472,7 +2523,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				_, _, addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr2.String()},
@@ -2538,7 +2589,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 				_, _, addr2, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr2.String()},
@@ -2600,14 +2651,24 @@ func TestCodeHashExecCallInit(t *testing.T) {
 				_, _, _, events, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 
 				require.Empty(t, err)
-				require.Equal(t,
+
+				var newContractBech32 string
+				for _, v := range events[1] {
+					if v.Key == "contract_address" {
+						newContractBech32 = v.Value
+						break
+					}
+				}
+				require.NotEmpty(t, newContractBech32)
+
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr.String()},
 							{Key: "a", Value: "a"},
 						},
 						{
-							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "contract_address", Value: newContractBech32},
 							{Key: "init", Value: "🌈"},
 						},
 					},
@@ -2692,14 +2753,24 @@ func TestCodeHashExecCallExec(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+
+				var newContractBech32 string
+				for _, v := range events[1] {
+					if v.Key == "contract_address" {
+						newContractBech32 = v.Value
+						break
+					}
+				}
+				require.NotEmpty(t, newContractBech32)
+
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr.String()},
 							{Key: "b", Value: "b"},
 						},
 						{
-							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "contract_address", Value: newContractBech32},
 							{Key: "watermelon", Value: "🍉"},
 						},
 					},
@@ -2783,7 +2854,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr.String()},
@@ -2910,7 +2981,7 @@ func TestEncryptedAndPlaintextLogs(t *testing.T) {
 	_, _, _, events, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, "{}", true, false, defaultGasForTests, 0, 1)
 
 	require.Empty(t, err)
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: addr.String()},
@@ -2937,7 +3008,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2951,7 +3022,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2965,7 +3036,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2979,7 +3050,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2993,7 +3064,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3007,7 +3078,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3021,7 +3092,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"AoSdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXc","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3035,7 +3106,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BISdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXcFWl11YCgu65hzvNDQE2Qo1hwTMQ/42Xif8O/MrxzvxI=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3100,7 +3171,7 @@ func TestEd25519Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3114,7 +3185,7 @@ func TestEd25519Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmUK"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3128,7 +3199,7 @@ func TestEd25519Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3142,7 +3213,7 @@ func TestEd25519Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3169,7 +3240,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3183,7 +3254,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3197,7 +3268,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3211,7 +3282,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3225,7 +3296,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3239,7 +3310,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":[],"msgs":[]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3253,7 +3324,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":[]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3267,7 +3338,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3281,7 +3352,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3295,7 +3366,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg==","uuNxLEzAYDbuJ+BiYN94pTqhD7UhvCJNbxAbnWz0B9DivkPXmqIULko0DddP2/tVXPtjJ90J20faiWCEC3QkDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","cGVhY2Ugb3V0"]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3321,7 +3392,7 @@ func TestSecp256k1RecoverPubkey(t *testing.T) {
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":0,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -3334,7 +3405,7 @@ func TestSecp256k1RecoverPubkey(t *testing.T) {
 			_, _, _, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":1,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -3369,7 +3440,7 @@ func TestSecp256k1Sign(t *testing.T) {
 			_, _, _, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"secp256k1_verify":{"iterations":1,"pubkey":"ArQojoh5TVlSSNA1HFlH5HcQsv0jnrpeE7hgwR/N46nS","sig":"%s","msg_hash":"K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA="}}`, signature), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -3404,7 +3475,7 @@ func TestEd25519Sign(t *testing.T) {
 			_, _, _, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"ed25519_verify":{"iterations":1,"pubkey":"jh58UkC0FDsiupZBLdaqKUqYubJbk3LDaruZiJiy0Po=","sig":"%s","msg":"d2VuIG1vb24="}}`, signature), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -3535,7 +3606,17 @@ func TestInitCreateNewContract(t *testing.T) {
 			_, _, _, ev, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, testContract.IsCosmWasmV1, math.MaxUint64, 0)
 
 			require.Empty(t, err)
-			newContractAddress, Aerr := sdk.AccAddressFromBech32(ev[1][0].Value)
+
+			var newContractBech32 string
+			for _, v := range ev[1] {
+				if v.Key == "contract_address" {
+					newContractBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, newContractBech32)
+
+			newContractAddress, Aerr := sdk.AccAddressFromBech32(newContractBech32)
 			require.Empty(t, Aerr)
 			queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
 			require.Empty(t, qErr)
@@ -3868,7 +3949,16 @@ func TestSendFunds(t *testing.T) {
 								require.Equal(t, test.balancesAfter, originCoinsAfter.String())
 
 								if destinationType == "init" && originType != "user" {
-									destinationAddr, _ = sdk.AccAddressFromBech32(wasmEvents[1][0].Value)
+									var newContractBech32 string
+									for _, v := range wasmEvents[1] {
+										if v.Key == "contract_address" {
+											newContractBech32 = v.Value
+											break
+										}
+									}
+									require.NotEmpty(t, newContractBech32)
+
+									destinationAddr, _ = sdk.AccAddressFromBech32(newContractBech32)
 								}
 
 								destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
@@ -3934,7 +4024,9 @@ func TestWasmMsgStructure(t *testing.T) {
 											require.NoError(t, err)
 
 											toCodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-											toCodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, toCodeID).CodeHash)
+											codeInfo, err := keeper.GetCodeInfo(ctx, toCodeID)
+											require.NoError(t, err)
+											toCodeHash := hex.EncodeToString(codeInfo.CodeHash)
 											require.NoError(t, err)
 
 											toAddress := sdk.AccAddress{}
@@ -4103,7 +4195,9 @@ func TestV1InitV010ContractWithReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10":{"counter":80, "code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -4132,7 +4226,9 @@ func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4156,7 +4252,9 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_no_reply":{"counter":180, "code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -4164,7 +4262,17 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 	_, _, _, ev, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, true, true, math.MaxUint64, 0)
 
 	require.Empty(t, err)
-	accAddress, err := sdk.AccAddressFromBech32(ev[1][0].Value)
+
+	var newContractBech32 string
+	for _, v := range ev[1] {
+		if v.Key == "contract_address" {
+			newContractBech32 = v.Value
+			break
+		}
+	}
+	require.NotEmpty(t, newContractBech32)
+
+	accAddress, err := sdk.AccAddressFromBech32(newContractBech32)
 	require.Empty(t, err)
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, accAddress, `{"get_count_from_v1":{}}`, true, false, math.MaxUint64)
@@ -4185,7 +4293,9 @@ func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4214,7 +4324,9 @@ func TestV1QueryV010Contract(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4238,7 +4350,9 @@ func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_with_error":{"code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -4257,7 +4371,9 @@ func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4280,7 +4396,9 @@ func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_no_reply_with_error":{"code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -4300,7 +4418,9 @@ func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4324,7 +4444,9 @@ func TestV1QueryV010ContractWithError(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4355,7 +4477,15 @@ func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 	require.Equal(t, queryRes, "10")
 
 	require.Empty(t, err)
-	accAddress, err := sdk.AccAddressFromBech32(initEvents[1][0].Value)
+	var newContractBech32 string
+	for _, v := range initEvents[1] {
+		if v.Key == "contract_address" {
+			newContractBech32 = v.Value
+			break
+		}
+	}
+	require.NotEmpty(t, newContractBech32)
+	accAddress, err := sdk.AccAddressFromBech32(newContractBech32)
 	require.Empty(t, err)
 
 	queryRes, qErr = queryHelper(t, keeper, ctx, accAddress, `{"get_contract_version":{}}`, true, false, math.MaxUint64)
@@ -4385,7 +4515,15 @@ func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	require.Empty(t, execErr)
 	require.Empty(t, execData)
 
-	accAddress, err := sdk.AccAddressFromBech32(execEvents[1][0].Value)
+	var newContractBech32 string
+	for _, v := range execEvents[1] {
+		if v.Key == "contract_address" {
+			newContractBech32 = v.Value
+			break
+		}
+	}
+	require.NotEmpty(t, newContractBech32)
+	accAddress, err := sdk.AccAddressFromBech32(newContractBech32)
 	require.Empty(t, err)
 
 	queryRes, qErr = queryHelper(t, keeper, ctx, accAddress, `{"get_contract_version":{}}`, true, false, math.MaxUint64)
@@ -4455,7 +4593,7 @@ func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	_, _, v010ContractAddress, events, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"receive_external_query_v1\":{\"num\":1}}`), true, true, defaultGasForTests)
 	require.Empty(t, err)
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v010ContractAddress.String()},
@@ -4480,7 +4618,7 @@ func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 
 	_, _, _, events, _, err := execHelper(t, keeper, ctx, v010ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"receive_external_query_v1\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v010ContractAddress.String()},
@@ -4593,7 +4731,7 @@ func TestSendEncryptedAttributesFromInitWithoutSubmessageWithoutReply(t *testing
 			_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_attributes":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4615,7 +4753,7 @@ func TestSendEncryptedAttributesFromInitWithSubmessageWithoutReply(t *testing.T)
 			_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":0}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4640,7 +4778,7 @@ func TestV1SendsEncryptedAttributesFromInitWithSubmessageWithReply(t *testing.T)
 	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":2200}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -4672,7 +4810,7 @@ func TestSendEncryptedAttributesFromExecuteWithoutSubmessageWithoutReply(t *test
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4696,7 +4834,7 @@ func TestSendEncryptedAttributesFromExecuteWithSubmessageWithoutReply(t *testing
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":0}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4723,7 +4861,7 @@ func TestV1SendsEncryptedAttributesFromExecuteWithSubmessageWithReply(t *testing
 	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":2200}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -4753,7 +4891,7 @@ func TestSendPlaintextFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 			_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4775,7 +4913,7 @@ func TestSendPlaintextAttributesFromInitWithSubmessageWithoutReply(t *testing.T)
 			_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":0}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4800,7 +4938,7 @@ func TestV1SendsPlaintextAttributesFromInitWithSubmessageWithReply(t *testing.T)
 	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, true)
 	require.Empty(t, err)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -4832,7 +4970,7 @@ func TestSendPlaintextAttributesFromExecuteWithoutSubmessageWithoutReply(t *test
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4856,7 +4994,7 @@ func TestSendPlaintextAttributesFromExecuteWithSubmessageWithoutReply(t *testing
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":0}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4883,7 +5021,7 @@ func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithReply(t *testing
 	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, 0, true)
 	require.Empty(t, err)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -4922,7 +5060,7 @@ func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -4939,7 +5077,7 @@ func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -4975,7 +5113,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -4992,7 +5130,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -5009,7 +5147,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🤯"},
@@ -5026,7 +5164,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😅"},
@@ -5066,7 +5204,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5083,7 +5221,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -5100,7 +5238,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🤯"},
@@ -5117,7 +5255,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😅"},
@@ -5134,7 +5272,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "😗"},
@@ -5151,7 +5289,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😉"},
@@ -5191,7 +5329,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5208,7 +5346,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -5246,7 +5384,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5263,7 +5401,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -5280,7 +5418,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🤯"},
@@ -5297,7 +5435,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😅"},
@@ -5339,7 +5477,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5356,7 +5494,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -5373,7 +5511,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🤯"},
@@ -5390,7 +5528,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😅"},
@@ -5407,7 +5545,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "😗"},
@@ -5424,7 +5562,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😉"},
@@ -5461,7 +5599,7 @@ func TestV1SendsMixedLogsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, false)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5476,7 +5614,7 @@ func TestV1SendsMixedLogsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 
 	require.True(t, hadCyber1)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5505,7 +5643,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5522,7 +5660,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5538,7 +5676,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *te
 	require.True(t, hadCyber1)
 	require.True(t, hadCyber2)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5573,7 +5711,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5590,7 +5728,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5607,7 +5745,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr9", Value: "🤯"},
@@ -5624,7 +5762,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 	require.True(t, hadCyber2)
 	require.True(t, hadCyber3)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5664,7 +5802,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReply
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, false)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5679,7 +5817,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReply
 
 	require.True(t, hadCyber1)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5710,7 +5848,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5727,7 +5865,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5743,7 +5881,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t 
 	require.True(t, hadCyber1)
 	require.True(t, hadCyber2)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5780,7 +5918,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5797,7 +5935,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5814,7 +5952,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr9", Value: "🤯"},
@@ -5831,7 +5969,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 	require.True(t, hadCyber2)
 	require.True(t, hadCyber3)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5862,7 +6000,9 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
@@ -5881,7 +6021,7 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: v1ContractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5896,7 +6036,7 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 
 	require.True(t, hadCyber1)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v1ContractAddress.String()},
@@ -5922,7 +6062,9 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
@@ -5942,7 +6084,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: v1ContractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5959,7 +6101,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: v1ContractAddress.String()},
 					{Key: "attr9", Value: "🤯"},
@@ -5975,7 +6117,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 	require.True(t, hadCyber1)
 	require.True(t, hadCyber3)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v1ContractAddress.String()},
@@ -6023,7 +6165,7 @@ func TestV010SendsLogsMixedWithV1(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: v1ContractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -6038,7 +6180,7 @@ func TestV010SendsLogsMixedWithV1(t *testing.T) {
 
 	require.True(t, hadCyber2)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v010ContractAddress.String()},

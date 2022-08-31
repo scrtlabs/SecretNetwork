@@ -56,7 +56,7 @@ func GetCmdEncryptedSeed() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(res))) //nolint:gosimple
+			fmt.Printf("0x%s\n", hex.EncodeToString(res))
 			return nil
 		},
 	}

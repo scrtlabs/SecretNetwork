@@ -66,7 +66,7 @@ var (
 	EncodeStakingMsg          = keeper.EncodeStakingMsg
 	EncodeWasmMsg             = keeper.EncodeWasmMsg
 	NewKeeper                 = keeper.NewKeeper
-	NewQuerier                = keeper.NewQuerier
+	NewQuerier                = keeper.NewGrpcQuerier
 	NewLegacyQuerier          = keeper.NewLegacyQuerier
 	DefaultQueryPlugins       = keeper.DefaultQueryPlugins
 	BankQuerier               = keeper.BankQuerier
@@ -116,7 +116,7 @@ type (
 	CreatedAt               = types.AbsoluteTxPosition
 	WasmConfig              = types.WasmConfig
 	CodeInfoResponse        = types.CodeInfoResponse
-	MessageHandler          = keeper.MessageHandler
+	MessageHandler          = keeper.SDKMessageHandler
 	BankEncoder             = keeper.BankEncoder
 	CustomEncoder           = keeper.CustomEncoder
 	StakingEncoder          = keeper.StakingEncoder
