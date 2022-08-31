@@ -3,4 +3,4 @@ all:
 	$(MAKE) -C contract-v0.10
 
 run-localsecret:
-	docker run --rm -it -p 9091:9091 --name localsecret ghcr.io/scrtlabs/localsecret:"$(TAG)"
+	docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up 

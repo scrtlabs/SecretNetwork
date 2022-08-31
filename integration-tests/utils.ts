@@ -1,5 +1,5 @@
 import { sha256 } from "@noble/hashes/sha256";
-import {toHex, toUtf8} from "secretjs";
+import { SecretNetworkClient, toHex, toUtf8 } from "secretjs";
 
 interface BytesObj {
   [key: string]: number;
@@ -61,9 +61,53 @@ export const ibcDenom = (
   const prefix = prefixes.join("/");
   const denom = `${prefix}/${coinMinimalDenom}`;
 
-  return (
-    "ibc/" +
-    toHex(sha256(toUtf8(denom)))
-      .toUpperCase()
-  );
+  return "ibc/" + toHex(sha256(toUtf8(denom))).toUpperCase();
 };
+
+export async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+export async function waitForBlocks() {
+  const secretjs = await SecretNetworkClient.create({
+    grpcWebUrl: "http://localhost:9091",
+    chainId: "secretdev-1",
+  });
+
+  while (true) {
+    try {
+      const { block } = await secretjs.query.tendermint.getLatestBlock({});
+
+      if (Number(block?.header?.height) >= 1) {
+        console.log("Current block:", JSON.stringify(block.header.height));
+        break;
+      }
+    } catch (e) {
+      // console.error("block error:", e);
+    }
+    await sleep(100);
+  }
+}
+
+// the docker compose opens the transfer channel so if we find an open channel that means that a client and a connection
+// have already been set up
+export async function waitForIBC(chainId: string, grpcWebUrl: string) {
+  const secretjs = await SecretNetworkClient.create({
+    grpcWebUrl,
+    chainId,
+  });
+
+  console.log("Looking for open channels on", chainId + "...");
+  while (true) {
+    try {
+      const { channels } = await secretjs.query.ibc_channel.channels({});
+
+      if (channels.length >= 1) {
+        console.log("Found open channel on", chainId);
+        break;
+      }
+    } catch (e) {
+      // console.error("IBC error:", e, "on chain", chainId);
+    }
+    await sleep(100);
+  }
+}
