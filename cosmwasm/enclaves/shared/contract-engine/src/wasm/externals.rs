@@ -324,7 +324,9 @@ impl Externals for ContractInstance {
 
                 self.ed25519_batch_verify(messages, signatures, public_keys)
             }
-            HostFunctions::DebugIndex => {
+            HostFunctions::DebugIndex =>
+            #[cfg(feature = "debug-print")]
+            {
                 let message: i32 = args.nth_checked(0).map_err(|err| {
                     warn!("debug() error reading argument, stopping wasm: {:?}", err);
                     err
@@ -332,7 +334,9 @@ impl Externals for ContractInstance {
 
                 self.debug_print_index(message)
             }
-            HostFunctions::DebugPrintIndex => {
+            HostFunctions::DebugPrintIndex =>
+            #[cfg(feature = "debug-print")]
+            {
                 let message: i32 = args.nth_checked(0).map_err(|err| {
                     warn!(
                         "debug_print() error reading argument, stopping wasm: {:?}",
