@@ -325,23 +325,35 @@ impl Externals for ContractInstance {
                 self.ed25519_batch_verify(messages, signatures, public_keys)
             }
             HostFunctions::DebugIndex => {
-                let message: i32 = args.nth_checked(0).map_err(|err| {
-                    warn!("debug() error reading argument, stopping wasm: {:?}", err);
-                    err
-                })?;
+                #[cfg(feature = "debug-print")]
+                {
+                    // this comment is here to let rustfmt know that it's an idiot
+                    let message: i32 = args.nth_checked(0).map_err(|err| {
+                        warn!("debug() error reading argument, stopping wasm: {:?}", err);
+                        err
+                    })?;
 
-                self.debug_print_index(message)
+                    self.debug_print_index(message)
+                }
+                #[cfg(not(feature = "debug-print"))]
+                Ok(None)
             }
             HostFunctions::DebugPrintIndex => {
-                let message: i32 = args.nth_checked(0).map_err(|err| {
-                    warn!(
-                        "debug_print() error reading argument, stopping wasm: {:?}",
+                #[cfg(feature = "debug-print")]
+                {
+                    // this comment is here to let rustfmt know that it's an idiot
+                    let message: i32 = args.nth_checked(0).map_err(|err| {
+                        warn!(
+                            "debug_print() error reading argument, stopping wasm: {:?}",
+                            err
+                        );
                         err
-                    );
-                    err
-                })?;
+                    })?;
 
-                self.debug_print_index(message)
+                    self.debug_print_index(message)
+                }
+                #[cfg(not(feature = "debug-print"))]
+                Ok(None)
             }
             HostFunctions::Unknown => {
                 warn!("unknown function index");

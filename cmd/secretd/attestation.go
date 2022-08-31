@@ -168,7 +168,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			pubkey, err := ra.VerifyRaCert(cert)
+			pubkey, err := ra.UNSAFE_VerifyRaCert(cert)
 			if err != nil {
 				return err
 			}
@@ -232,7 +232,7 @@ func ParseCert() *cobra.Command {
 				return err
 			}
 
-			pubkey, err := ra.VerifyRaCert(cert)
+			pubkey, err := ra.UNSAFE_VerifyRaCert(cert)
 			if err != nil {
 				return err
 			}
@@ -456,7 +456,7 @@ Please report any issues with this command
 			_ = os.Remove(sgxAttestationCert)
 
 			// verify certificate
-			_, err = ra.VerifyRaCert(cert)
+			_, err = ra.UNSAFE_VerifyRaCert(cert)
 			if err != nil {
 				return err
 			}
