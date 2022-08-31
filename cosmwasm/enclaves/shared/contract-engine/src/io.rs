@@ -195,7 +195,7 @@ pub fn finalize_raw_output(
     is_ibc: bool,
     is_msg_encrypted: bool,
 ) -> WasmOutput {
-    return match raw_output {
+    match raw_output {
         RawWasmOutput::Err {
             err,
             internal_msg_id,
@@ -329,7 +329,7 @@ pub fn finalize_raw_output(
             internal_reply_enclave_sig: None,
             internal_msg_id: None,
         },
-    };
+    }
 }
 
 pub fn manipulate_callback_sig_for_plaintext(
@@ -396,6 +396,7 @@ pub fn set_all_logs_to_plaintext(raw_output: &mut RawWasmOutput) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn encrypt_output(
     output: Vec<u8>,
     secret_msg: &SecretMessage,

@@ -70,11 +70,11 @@ pub fn get_secret_msg(message: &[u8]) -> SecretMessage {
                 base64::encode(&message)
             );
 
-            return SecretMessage {
+            SecretMessage {
                 nonce: [0; 32],
                 user_public_key: [0; 32],
                 msg: message.into(),
-            };
+            }
         }
     }
 }
