@@ -104,14 +104,11 @@ beforeAll(async () => {
     console.error(tx.rawLog);
   }
   expect(tx.code).toBe(0);
-  console.log("tx", cleanBytes(tx));
 
   v1CodeID = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
-  console.log("v1CodeID:", v1CodeID);
   v010CodeID = Number(
     tx.arrayLog.reverse().find((x) => x.key === "code_id").value
   );
-  console.log("v010CodeID:", v010CodeID);
 
   tx = await accounts.a.tx.broadcast(
     [
@@ -147,21 +144,45 @@ async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 async function waitForBlocks() {
-  while (true) {
-    const secretjs = await SecretNetworkClient.create({
-      grpcWebUrl: "http://localhost:9091",
-      chainId: "secretdev-1",
-    });
+  const secretjs = await SecretNetworkClient.create({
+    grpcWebUrl: "http://localhost:9091",
+    chainId: "secretdev-1",
+  });
 
+  while (true) {
     try {
       const { block } = await secretjs.query.tendermint.getLatestBlock({});
 
       if (Number(block?.header?.height) >= 1) {
-        console.log("blocks are running, current block:", JSON.stringify(block.header.height));
+        console.log("Current block:", JSON.stringify(block.header.height));
         break;
       }
     } catch (e) {
-      console.error("block error:", e);
+      // console.error("block error:", e);
+    }
+    await sleep(100);
+  }
+}
+
+// the docker compose opens the transfer channel so if we find an open channel that means that a client and a connection
+// have already been set up
+async function waitForIBC(chainId: string, grpcWebUrl: string) {
+  const secretjs = await SecretNetworkClient.create({
+    grpcWebUrl,
+    chainId,
+  });
+
+  console.log("Looking for open channels on", chainId + "...");
+  while (true) {
+    try {
+      const { channels } = await secretjs.query.ibc_channel.channels({});
+
+      if (channels.length >= 1) {
+        console.log("Found open channel on", chainId);
+        break;
+      }
+    } catch (e) {
+      // console.error("IBC error:", e, "on chain", chainId);
     }
     await sleep(100);
   }
@@ -402,3 +423,15 @@ describe("BankQuery", () => {
     });
   });
 });
+
+describe("IBC", () => {
+  beforeAll(async () => {
+    console.log("Waiting for IBC to set up...");
+    await waitForIBC("secretdev-1", "http://localhost:9091");
+    await waitForIBC("secretdev-2", "http://localhost:9391");
+  });
+
+  test("eshel", async () => {
+    expect(1).toBe(1);
+  });
+})
