@@ -46,7 +46,7 @@ var testContracts = []TestContract{
 	}, {
 		CosmWasmVersion: "v1",
 		IsCosmWasmV1:    true,
-		WasmFilePath:    "./testdata/v1-sanity-contract/contract.wasm",
+		WasmFilePath:    "./testdata/v1-sanity-contract/v1-contract.wasm",
 	},
 }
 
@@ -3517,7 +3517,7 @@ type v1QueryResponse struct {
 }
 
 func TestV1EndpointsSanity(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -3537,7 +3537,7 @@ func TestV1EndpointsSanity(t *testing.T) {
 }
 
 func TestV1QueryWorksWithEnv(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
@@ -3553,7 +3553,7 @@ func TestV1QueryWorksWithEnv(t *testing.T) {
 }
 
 func TestV1ReplySanity(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -3637,7 +3637,7 @@ func TestInitCreateNewContract(t *testing.T) {
 }
 
 func TestV1ReplyLoop(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -4080,7 +4080,7 @@ func TestBankMsgBurn(t *testing.T) {
 					},
 				} {
 					t.Run(test.description, func(t *testing.T) {
-						ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+						ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 						var err cosmwasm.StdError
 						var contractAddress sdk.AccAddress
@@ -4134,7 +4134,7 @@ func TestCosmosMsgCustom(t *testing.T) {
 }
 
 func TestV1SendsFundsWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, true, defaultGasForTests, 200)
@@ -4146,7 +4146,7 @@ func TestV1SendsFundsWithReply(t *testing.T) {
 }
 
 func TestV1SendsFundsWithErrorWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 
@@ -4157,7 +4157,7 @@ func TestV1SendsFundsWithErrorWithReply(t *testing.T) {
 }
 
 func TestV1ReplyOnMultipleSubmessages(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -4168,7 +4168,7 @@ func TestV1ReplyOnMultipleSubmessages(t *testing.T) {
 }
 
 func TestV1MultipleSubmessagesNoReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -4187,7 +4187,7 @@ func TestV1MultipleSubmessagesNoReply(t *testing.T) {
 }
 
 func TestV1InitV010ContractWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4218,7 +4218,7 @@ func TestV1InitV010ContractWithReply(t *testing.T) {
 }
 
 func TestV1ExecuteV010ContractWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4244,7 +4244,7 @@ func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 }
 
 func TestV1InitV010ContractNoReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4285,7 +4285,7 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 }
 
 func TestV1ExecuteV010ContractNoReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4316,7 +4316,7 @@ func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 }
 
 func TestV1QueryV010Contract(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4342,7 +4342,7 @@ func TestV1QueryV010Contract(t *testing.T) {
 }
 
 func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4363,7 +4363,7 @@ func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 }
 
 func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4388,7 +4388,7 @@ func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 }
 
 func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4410,7 +4410,7 @@ func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 }
 
 func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4436,7 +4436,7 @@ func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 }
 
 func TestV1QueryV010ContractWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4462,7 +4462,7 @@ func TestV1QueryV010ContractWithError(t *testing.T) {
 }
 
 func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4495,7 +4495,7 @@ func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 }
 
 func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4533,7 +4533,7 @@ func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 }
 
 func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4557,7 +4557,7 @@ func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
 }
 
 func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4582,7 +4582,7 @@ func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
 }
 
 func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4605,7 +4605,7 @@ func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 }
 
 func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4630,7 +4630,7 @@ func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 }
 
 func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4643,7 +4643,7 @@ func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
 }
 
 func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4663,7 +4663,7 @@ func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
 }
 
 func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4678,7 +4678,7 @@ func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
 }
 
 func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4694,7 +4694,7 @@ func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
 }
 
 func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4708,7 +4708,7 @@ func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
 }
 
 func TestV010QueryV1ContractFromExecuteWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -4773,7 +4773,7 @@ func TestSendEncryptedAttributesFromInitWithSubmessageWithoutReply(t *testing.T)
 }
 
 func TestV1SendsEncryptedAttributesFromInitWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":2200}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4854,7 +4854,7 @@ func TestSendEncryptedAttributesFromExecuteWithSubmessageWithoutReply(t *testing
 }
 
 func TestV1SendsEncryptedAttributesFromExecuteWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4933,7 +4933,7 @@ func TestSendPlaintextAttributesFromInitWithSubmessageWithoutReply(t *testing.T)
 }
 
 func TestV1SendsPlaintextAttributesFromInitWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, true)
 	require.Empty(t, err)
@@ -5014,7 +5014,7 @@ func TestSendPlaintextAttributesFromExecuteWithSubmessageWithoutReply(t *testing
 }
 
 func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5044,7 +5044,7 @@ func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithReply(t *testing
 }
 
 func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_events":{}}`, true, true, defaultGasForTests)
 
@@ -5095,7 +5095,7 @@ func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.
 }
 
 func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_events_with_submessage":{"id":0}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5184,7 +5184,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 }
 
 func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_events_with_submessage":{"id":2400}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5311,7 +5311,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 }
 
 func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5364,7 +5364,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReply(t *testi
 }
 
 func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5455,7 +5455,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 }
 
 func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5584,7 +5584,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 }
 
 func TestV1SendsMixedLogsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, logs, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_mixed_attributes_and_events":{}}`, true, true, defaultGasForTests, true)
 
@@ -5627,7 +5627,7 @@ func TestV1SendsMixedLogsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 }
 
 func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, logs, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_mixed_attributes_and_events_with_submessage":{"id":0}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5694,7 +5694,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *te
 }
 
 func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, logs, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_mixed_attributes_and_events_with_submessage":{"id":2500}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5785,7 +5785,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 }
 
 func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5830,7 +5830,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReply
 }
 
 func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5899,7 +5899,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t 
 }
 
 func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5992,7 +5992,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 }
 
 func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -6054,7 +6054,7 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 }
 
 func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -6140,7 +6140,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 }
 
 func TestV010SendsLogsMixedWithV1(t *testing.T) {
-	ctx, keeper, codeID, v1CodeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, v1CodeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
@@ -6198,7 +6198,7 @@ func TestV010SendsLogsMixedWithV1(t *testing.T) {
 }
 
 func TestSubmessageGasExceedingMessageGas(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	defer func() {
 		r := recover()
@@ -6210,7 +6210,7 @@ func TestSubmessageGasExceedingMessageGas(t *testing.T) {
 }
 
 func TestReplyGasExceedingMessageGas(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	defer func() {
 		r := recover()

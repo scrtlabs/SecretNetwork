@@ -137,7 +137,11 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: v1-contract.wasm
-          path: ./x/compute/internal/keeper/testdata/v1-sanity-contract/contract.wasm
+          path: ./x/compute/internal/keeper/testdata/v1-sanity-contract/v1-contract.wasm
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ibc.wasm
+          path: ./x/compute/internal/keeper/testdata/ibc/ibc.wasm
       - uses: actions/upload-artifact@v2
         with:
           name: enclave
@@ -188,6 +192,10 @@ jobs:
         with:
           name: v1-contract.wasm
           path: ./x/compute/internal/keeper/testdata/v1-sanity-contract
+      - uses: actions/download-artifact@v2
+        with:
+          name: ibc.wasm
+          path: ./x/compute/internal/keeper/testdata/ibc
       - uses: actions/download-artifact@v2
         with:
           name: contract_with_floats.wasm
