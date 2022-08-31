@@ -232,9 +232,20 @@ pub fn parse_message(
                                 msg: data.as_slice().to_vec(),
                             };
 
-                            Some(Binary(
-                                tmp_secret_msg_data.decrypt()?[HEX_ENCODED_HASH_SIZE..].to_vec(),
-                            ))
+                            let base64_data =
+                                tmp_secret_msg_data.decrypt()?[HEX_ENCODED_HASH_SIZE..].to_vec();
+
+                            Some(Binary::from_base64(
+                                String::from_utf8(base64_data.clone())
+                                    .map_err(|err| {
+                                        warn!(
+                                            "Failed to parse result data as string {:?}: {}",
+                                            base64_data, err
+                                        );
+                                        EnclaveError::FailedToDeserialize
+                                    })?
+                                    .as_str(),
+                            )?)
                         }
                         None => None,
                     };

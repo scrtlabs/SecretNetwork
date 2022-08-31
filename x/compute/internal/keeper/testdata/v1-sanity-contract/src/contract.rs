@@ -1790,9 +1790,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             Some(x) => {
                 let response = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     code_hash: env.contract.code_hash,
-                    contract_addr: String::from_utf8(
-                        Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
-                    )?,
+                    contract_addr: String::from_utf8(x.to_vec())?,
                     msg: to_binary(&QueryMsg::Get {})?,
                 }))?;
 
@@ -1827,9 +1825,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
 
         (1500, SubMsgResult::Ok(iter)) => match iter.data {
             Some(x) => {
-                let it = String::from_utf8(
-                    Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
-                )?;
+                let it = String::from_utf8(x.to_vec())?;
                 let mut resp = Response::default();
 
                 let msg = "{\"sub_msg_loop_iner\":{\"iter\":".to_string() + it.as_str() + "}}";
@@ -1926,9 +1922,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (1700, SubMsgResult::Err(_)) => Err(StdError::generic_err("Failed to init v010 contract")),
         (1800, SubMsgResult::Ok(s)) => match s.data {
             Some(x) => {
-                let counter = String::from_utf8(
-                    Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
-                )?;
+                let counter = String::from_utf8(x.to_vec())?;
                 let mut resp = Response::default();
                 resp.data = Some(counter.as_bytes().into());
 
