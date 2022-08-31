@@ -1979,7 +1979,15 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (2500, SubMsgResult::Err(_)) => {
             Err(StdError::generic_err(format!("Add mixed events failed",)))
         }
-        (2600, SubMsgResult::Ok(_)) => loop {},
+        (2600, SubMsgResult::Ok(_)) => {
+            // busy work
+            let mut v = vec![0; 65536];
+            let mut x = 0;
+            loop {
+                x += (x + 1) % 65536;
+                v[x] = 65536 - x;
+            }
+        }
         (2600, SubMsgResult::Err(_)) => {
             Err(StdError::generic_err(format!("Gas submessage failed",)))
         }
