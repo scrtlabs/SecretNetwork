@@ -154,7 +154,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 		}
 	}
 
-	ioPubkey, err := ra.VerifyRaCert(masterIoKey.Key)
+	ioPubkey, err := ra.UNSAFE_VerifyRaCert(masterIoKey.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (ctx WASMContext) OfflineEncrypt(plaintext []byte, pathToMasterIoKey string
 		return nil, err
 	}
 
-	pubkey, err := ra.VerifyRaCert(cert)
+	pubkey, err := ra.UNSAFE_VerifyRaCert(cert)
 	if err != nil {
 		return nil, err
 	}

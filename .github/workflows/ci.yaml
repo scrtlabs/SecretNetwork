@@ -282,7 +282,7 @@ jobs:
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
-  XBuild-CLI:
+  MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -291,12 +291,10 @@ jobs:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
-          go install github.com/crazy-max/xgo@latest
+          go install github.com/crazy-max/xgo@v0.17.0
           xgo || true # check installation
       - name: Build MacOS CLI
-        run: make build_macos_cli
-      - name: Build Windows CLI
-        run: make build_windows_cli
+        run: make build_macos_arm64_cli
 
   Integration-Tests:
     runs-on: ubuntu-20.04
@@ -306,13 +304,14 @@ jobs:
         run: |
           echo not_a_key | tee {api_key,spid}.txt
           DOCKER_TAG=v0.0.0 make build-localsecret
+      - name: Build Hermes
+        run: |
+          DOCKER_TAG=v0.0.0 make build-ibc-hermes
       - name: Run integration tests
         run: |
           cd integration-tests
           yarn
-          docker run -d -p 9091:9091 --name localsecret ghcr.io/scrtlabs/localsecret:v0.0.0
-          sleep 30
-          docker logs localsecret
+          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
           yarn test
       - name: Run secret.js tests
         run: |

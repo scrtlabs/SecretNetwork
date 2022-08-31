@@ -1,3 +1,5 @@
+import { sha256 } from "@noble/hashes/sha256";
+import * as fs from "fs";
 import {
   fromBase64,
   MsgInstantiateContract,
@@ -7,20 +9,29 @@ import {
   toHex,
   Wallet,
 } from "secretjs";
-import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
 import {
   QueryBalanceRequest,
   QueryBalanceResponse,
 } from "secretjs//dist/protobuf_stuff/cosmos/bank/v1beta1/query";
-import { sha256 } from "@noble/hashes/sha256";
-import * as fs from "fs";
+import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
+import { ibcDenom } from "./utils";
 
 // @ts-ignore
+// accounts on secretdev-1
 const accounts: {
   a: SecretNetworkClient;
   b: SecretNetworkClient;
   c: SecretNetworkClient;
-  d: SecretNetworkClient;
+  // to prevent a sequence mismatch, avoid using account d which is used by the ibc relayer
+} = {};
+
+// @ts-ignore
+// accounts on secretdev-2
+const accounts2: {
+  a: SecretNetworkClient;
+  b: SecretNetworkClient;
+  c: SecretNetworkClient;
+  // to prevent a sequence mismatch, avoid using account d which is used by the ibc relayer
 } = {};
 
 let v1CodeID: number;
@@ -32,40 +43,58 @@ let v010Address: string;
 let v010CodeHash: string;
 
 beforeAll(async () => {
+  const walletA = new Wallet(
+    "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
+  );
+
+  const walletB = new Wallet(
+    "jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
+  );
+
+  const walletC = new Wallet(
+    "chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge"
+  );
+
   accounts.a = await SecretNetworkClient.create({
     chainId: "secretdev-1",
     grpcWebUrl: "http://localhost:9091",
-    wallet: new Wallet(
-      "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
-    ),
-    walletAddress: "secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03",
+    wallet: walletA,
+    walletAddress: walletA.address,
   });
 
   accounts.b = await SecretNetworkClient.create({
     chainId: "secretdev-1",
     grpcWebUrl: "http://localhost:9091",
-    wallet: new Wallet(
-      "jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
-    ),
-    walletAddress: "secret1fc3fzy78ttp0lwuujw7e52rhspxn8uj52zfyne",
+    wallet: walletB,
+    walletAddress: walletB.address,
   });
 
   accounts.c = await SecretNetworkClient.create({
     chainId: "secretdev-1",
     grpcWebUrl: "http://localhost:9091",
-    wallet: new Wallet(
-      "chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge"
-    ),
-    walletAddress: "secret1ajz54hz8azwuy34qwy9fkjnfcrvf0dzswy0lqq",
+    wallet: walletC,
+    walletAddress: walletC.address,
   });
 
-  accounts.d = await SecretNetworkClient.create({
+  accounts2.a = await SecretNetworkClient.create({
+    chainId: "secretdev-2",
+    grpcWebUrl: "http://localhost:9391",
+    wallet: walletA,
+    walletAddress: walletA.address,
+  });
+
+  accounts.b = await SecretNetworkClient.create({
     chainId: "secretdev-1",
     grpcWebUrl: "http://localhost:9091",
-    wallet: new Wallet(
-      "word twist toast cloth movie predict advance crumble escape whale sail such angry muffin balcony keen move employ cook valve hurt glimpse breeze brick"
-    ),
-    walletAddress: "secret1ldjxljw7v4vk6zhyduywh04hpj0jdwxsmrlatf",
+    wallet: walletB,
+    walletAddress: walletB.address,
+  });
+
+  accounts.c = await SecretNetworkClient.create({
+    chainId: "secretdev-1",
+    grpcWebUrl: "http://localhost:9091",
+    wallet: walletC,
+    walletAddress: walletC.address,
   });
 
   console.log("Waiting for LocalSecret to start...");
@@ -81,7 +110,9 @@ beforeAll(async () => {
   ) as Uint8Array;
   v010CodeHash = toHex(sha256(v010Wasm));
 
-  let tx = await accounts.a.tx.broadcast(
+  console.log("Uploading contracts...");
+  let tx;
+  tx = await accounts.a.tx.broadcast(
     [
       new MsgStoreCode({
         sender: accounts.a.address,
@@ -142,21 +173,45 @@ async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 async function waitForBlocks() {
-  while (true) {
-    const secretjs = await SecretNetworkClient.create({
-      grpcWebUrl: "http://localhost:9091",
-      chainId: "secretdev-1",
-    });
+  const secretjs = await SecretNetworkClient.create({
+    grpcWebUrl: "http://localhost:9091",
+    chainId: "secretdev-1",
+  });
 
+  while (true) {
     try {
       const { block } = await secretjs.query.tendermint.getLatestBlock({});
 
       if (Number(block?.header?.height) >= 1) {
-        console.log("blocks are running, current block:", JSON.stringify(block.header.height));
+        console.log("Current block:", JSON.stringify(block.header.height));
         break;
       }
     } catch (e) {
-      console.error("block error:", e);
+      // console.error("block error:", e);
+    }
+    await sleep(100);
+  }
+}
+
+// the docker compose opens the transfer channel so if we find an open channel that means that a client and a connection
+// have already been set up
+async function waitForIBC(chainId: string, grpcWebUrl: string) {
+  const secretjs = await SecretNetworkClient.create({
+    grpcWebUrl,
+    chainId,
+  });
+
+  console.log("Looking for open channels on", chainId + "...");
+  while (true) {
+    try {
+      const { channels } = await secretjs.query.ibc_channel.channels({});
+
+      if (channels.length >= 1) {
+        console.log("Found open channel on", chainId);
+        break;
+      }
+    } catch (e) {
+      // console.error("IBC error:", e, "on chain", chainId);
     }
     await sleep(100);
   }
@@ -221,19 +276,19 @@ describe("Bank::MsgSend", () => {
 
   test("v0.10", async () => {
     const tx = await accounts.a.tx.compute.executeContract(
-        {
-          sender: accounts.a.address,
-          contractAddress: v010Address,
-          codeHash: v010CodeHash,
-          msg: {
-            bank_msg_send: {
-              to_address: accounts.b.address,
-              amount: [{ amount: "1", denom: "uscrt" }],
-            },
+      {
+        sender: accounts.a.address,
+        contractAddress: v010Address,
+        codeHash: v010CodeHash,
+        msg: {
+          bank_msg_send: {
+            to_address: accounts.b.address,
+            amount: [{ amount: "1", denom: "uscrt" }],
           },
-          sentFunds: [{ amount: "1", denom: "uscrt" }],
         },
-        { gasLimit: 250_000 }
+        sentFunds: [{ amount: "1", denom: "uscrt" }],
+      },
+      { gasLimit: 250_000 }
     );
     if (tx.code !== 0) {
       console.error(tx.rawLog);
@@ -256,22 +311,22 @@ describe("Bank::MsgSend", () => {
       { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
     ]);
     expect(tx.arrayLog.filter((x) => x.type === "coin_received")).toStrictEqual(
-        [
-          {
-            key: "receiver",
-            msg: 0,
-            type: "coin_received",
-            value: v010Address,
-          },
-          { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-          {
-            key: "receiver",
-            msg: 0,
-            type: "coin_received",
-            value: accounts.b.address,
-          },
-          { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-        ]
+      [
+        {
+          key: "receiver",
+          msg: 0,
+          type: "coin_received",
+          value: v010Address,
+        },
+        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
+        {
+          key: "receiver",
+          msg: 0,
+          type: "coin_received",
+          value: accounts.b.address,
+        },
+        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
+      ]
     );
   });
 });
@@ -396,4 +451,72 @@ describe("BankQuery", () => {
       expect(Number(result?.amount?.amount)).toBeGreaterThanOrEqual(1);
     });
   });
+});
+
+describe("IBC", () => {
+  beforeAll(async () => {
+    console.log("Waiting for IBC to set up...");
+    await waitForIBC("secretdev-1", "http://localhost:9091");
+    await waitForIBC("secretdev-2", "http://localhost:9391");
+  }, 3 * 60 * 1000);
+
+  test(
+    "transfer sanity",
+    async () => {
+      const denom = ibcDenom(
+        [
+          {
+            portId: "transfer",
+            channelId: "channel-0",
+          },
+        ],
+        "uscrt"
+      );
+      const { balance: balanceBefore } = await accounts2.a.query.bank.balance({
+        address: accounts2.a.address,
+        denom,
+      });
+      const amountBefore = Number(balanceBefore?.amount ?? "0");
+
+      const result = await accounts.a.tx.ibc.transfer({
+        receiver: accounts.a.address,
+        sender: accounts.a.address,
+        sourceChannel: "channel-0",
+        sourcePort: "transfer",
+        token: {
+          denom: "uscrt",
+          amount: "1",
+        },
+        timeoutTimestampSec: String(Math.floor(Date.now() / 1000 + 30)),
+      });
+
+      if (result.code !== 0) {
+        console.error(result.rawLog);
+      }
+
+      expect(result.code).toBe(0);
+
+      // TODO check ack on secretdev-1
+
+      while (true) {
+        try {
+          const { balance: balanceAfter } =
+            await accounts2.a.query.bank.balance({
+              address: accounts2.a.address,
+              denom,
+            });
+          const amountAfter = Number(balanceAfter?.amount ?? "0");
+
+          if (amountAfter === amountBefore + 1) {
+            break;
+          }
+        } catch (e) {
+          // console.error("ibc denom balance error:", e);
+        }
+        await sleep(200);
+      }
+      expect(true).toBe(true);
+    },
+    1000 * 30
+  );
 });

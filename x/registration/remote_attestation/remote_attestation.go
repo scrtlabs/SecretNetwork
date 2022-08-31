@@ -55,6 +55,43 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	return pubK[0:32], nil
 }
 
+// UNSAFE_VerifyRaCert This function is a variant that should be used in the CLI - since parsing certificates is different in
+// software or hardware modes, this function tries the HW route and goes with Software otherwise. Since there's no verification in
+// SW mode it will return the 32 bytes of the public key it finds.
+// TODO: a more elegant fix for this issue would be to return whether we are in HW or SW when querying for the tx key (although this could fail in offline modes, so maybe not)
+func UNSAFE_VerifyRaCert(rawCert []byte) ([]byte, error) {
+	// printCert(rawCert)
+	// get the pubkey and payload from raw data
+
+	pubK, payload, err := unmarshalCert(rawCert)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load Intel CA, Verify Cert and Signature
+	attnReportRaw, err := verifyCert(payload)
+	if err != nil {
+		pk, err := base64.StdEncoding.DecodeString(string(payload))
+		if err != nil {
+			return nil, err
+		}
+
+		if len(pk) != 32 {
+			return nil, errors.New("Failed to parse certificate. Is node working?")
+		}
+
+		return pk, nil
+	}
+
+	// Verify attestation report
+	pubK, err = verifyAttReport(attnReportRaw, pubK)
+	if err != nil {
+		return nil, err
+	}
+	// verifyAttReport returns all the report_data field, which is 64 bytes - we just want the first 32 of them (rest are 0)
+	return pubK[0:32], nil
+}
+
 func extractAsn1Value(cert []byte, oid []byte) ([]byte, error) {
 	offset := uint(bytes.Index(cert, oid))
 	offset += 12 // 11 + TAG (0x04)
