@@ -14,6 +14,7 @@ import {
 } from "secretjs//dist/protobuf_stuff/cosmos/bank/v1beta1/query";
 import { sha256 } from "@noble/hashes/sha256";
 import * as fs from "fs";
+import { cleanBytes } from "./utils";
 
 // @ts-ignore
 const accounts: {
@@ -81,7 +82,8 @@ beforeAll(async () => {
   ) as Uint8Array;
   v010CodeHash = toHex(sha256(v010Wasm));
 
-  let tx = await accounts.a.tx.broadcast(
+  let tx;
+  tx = await accounts.a.tx.broadcast(
     [
       new MsgStoreCode({
         sender: accounts.a.address,
@@ -102,11 +104,14 @@ beforeAll(async () => {
     console.error(tx.rawLog);
   }
   expect(tx.code).toBe(0);
+  console.log("tx", cleanBytes(tx));
 
   v1CodeID = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
+  console.log("v1CodeID:", v1CodeID);
   v010CodeID = Number(
     tx.arrayLog.reverse().find((x) => x.key === "code_id").value
   );
+  console.log("v010CodeID:", v010CodeID);
 
   tx = await accounts.a.tx.broadcast(
     [

@@ -61,8 +61,13 @@ export const cleanBytes = (tx) => {
     const output = {
         ...tx,
         events,
-        txBytes: undefined,
     };
+
+    // these fields clutter the output too much
+    output.txBytes = "redacted";
+    output.tx.authInfo = "redacted";
+    output.tx.body.messages.forEach(m => m.value.wasmByteCode = "redacted")
+
     // console.log("output:", JSON.stringify(output, null, 2));
     return output;
 }
