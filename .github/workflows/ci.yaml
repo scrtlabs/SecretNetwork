@@ -274,7 +274,7 @@ jobs:
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
-  XBuild-CLI:
+  MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -283,12 +283,10 @@ jobs:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
-          go install github.com/crazy-max/xgo@latest
+          go install github.com/crazy-max/xgo@v0.17.0
           xgo || true # check installation
       - name: Build MacOS CLI
-        run: make build_macos_cli
-      - name: Build Windows CLI
-        run: make build_windows_cli
+        run: make build_macos_arm64_cli
 
   Integration-Tests:
     runs-on: ubuntu-20.04
