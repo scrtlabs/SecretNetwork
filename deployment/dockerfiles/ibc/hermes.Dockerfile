@@ -16,9 +16,9 @@ ENV PATH="${PATH}:/hermes-installation"
 COPY --chown=hermes-user ["./hermes-config.toml", "/home/hermes-user/.hermes/config.toml"]
 
 # add keys on both chains
-COPY ["./50s03.mnemonic", "/home/hermes-user/50s03.mnemonic"]
-RUN ["hermes", "keys", "add", "--hd-path", "m/44'/529'/0'/0/0", "--mnemonic-file", "/home/hermes-user/50s03.mnemonic", "--chain", "secretdev-1"]
-RUN ["hermes", "keys", "add", "--hd-path", "m/44'/529'/0'/0/0", "--mnemonic-file", "/home/hermes-user/50s03.mnemonic", "--chain", "secretdev-2"]
+COPY ["./d.mnemonic", "/home/hermes-user/d.mnemonic"]
+RUN ["hermes", "keys", "add", "--hd-path", "m/44'/529'/0'/0/0", "--mnemonic-file", "/home/hermes-user/d.mnemonic", "--chain", "secretdev-1"]
+RUN ["hermes", "keys", "add", "--hd-path", "m/44'/529'/0'/0/0", "--mnemonic-file", "/home/hermes-user/d.mnemonic", "--chain", "secretdev-2"]
 
 # start hermes
 COPY --chown=hermes-user ["./entrypoint-hermes.sh", "/home/hermes-user/entrypoint.sh"]

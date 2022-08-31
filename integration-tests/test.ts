@@ -21,7 +21,7 @@ const accounts: {
   a: SecretNetworkClient;
   b: SecretNetworkClient;
   c: SecretNetworkClient;
-  d: SecretNetworkClient;
+  // to prevent a sequence mismatch, avoid using account d which is used by the ibc relayer
 } = {};
 
 let v1CodeID: number;
@@ -58,15 +58,6 @@ beforeAll(async () => {
       "chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge"
     ),
     walletAddress: "secret1ajz54hz8azwuy34qwy9fkjnfcrvf0dzswy0lqq",
-  });
-
-  accounts.d = await SecretNetworkClient.create({
-    chainId: "secretdev-1",
-    grpcWebUrl: "http://localhost:9091",
-    wallet: new Wallet(
-      "word twist toast cloth movie predict advance crumble escape whale sail such angry muffin balcony keen move employ cook valve hurt glimpse breeze brick"
-    ),
-    walletAddress: "secret1ldjxljw7v4vk6zhyduywh04hpj0jdwxsmrlatf",
   });
 
   console.log("Waiting for LocalSecret to start...");
