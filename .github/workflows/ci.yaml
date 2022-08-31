@@ -306,7 +306,7 @@ jobs:
           DOCKER_TAG=v0.0.0 make build-localsecret
       - name: Build Hermes
         run: |
-          DOCKER_TAG=v0.0.0 make build-hermes
+          DOCKER_TAG=v0.0.0 make build-ibc-hermes
       - name: Run integration tests
         run: |
           cd integration-tests
