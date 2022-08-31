@@ -81,9 +81,12 @@ To compile the code and run tests, you'll need to install the SGX SDK and PSW. T
 For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script in the following way:
 
 ```bash
+chmod +x ./scripts/install-sgx.sh
 sudo ./scripts/install-sgx.sh true true true false
 ```
 
+Note: If you are using WSL you'll need to use the 5.15 kernel which you can find how to do [here](https://github.com/scrtlabs/SecretNetwork/blob/master/docs/SGX%20on%20WSL%20(SW).md), otherwise you'll have to run anything SGX related only in docker
+  
 ### Install Xargo
 
 We need a very specific version of xargo for everything to compile happily together

@@ -384,6 +384,11 @@ func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 		return nil, err
 	}
 
+	// When querying for an unknown code id the output is an empty result (without any error)
+	if len(res) == 0 {
+		return nil, fmt.Errorf("failed to query contract code hash, unknown code id (%s)", codeID)
+	}
+
 	var codeResp types.QueryCodeResponse
 
 	err = json.Unmarshal(res, &codeResp)
@@ -399,6 +404,10 @@ func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddres
 	res, _, err := cliCtx.Query(route)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(res) == 0 {
+		return nil, fmt.Errorf("contract with address %s not found", contractAddr.String())
 	}
 
 	return []byte(hex.EncodeToString(res)), nil
