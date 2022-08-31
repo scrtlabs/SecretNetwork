@@ -99,5 +99,6 @@ func TestNewQuerier(t *testing.T) {
 	keeper.setMasterCertificate(ctx, types.MasterCertificate{Bytes: regInfo.Certificate}, types.MasterIoKeyId)
 
 	binResult, err := querier(ctx, []string{QueryMasterCertificate}, abci.RequestQuery{Data: []byte("")})
+	require.NoError(t, err)
 	require.Equal(t, string(binResult), string(expectedSecretParams))
 }

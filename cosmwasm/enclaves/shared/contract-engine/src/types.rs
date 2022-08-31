@@ -28,6 +28,7 @@ impl SecretMessage {
     }
 
     pub fn decrypt(&self) -> Result<Vec<u8>, EnclaveError> {
+        trace!("input before decryption: {:?}", base64::encode(&self.msg));
         let key = self.encryption_key();
 
         // pass
@@ -35,6 +36,11 @@ impl SecretMessage {
             error!("got an error while trying to decrypt the msg: {:?}", err);
             EnclaveError::DecryptionError
         })?;
+
+        trace!(
+            "input after decryption: {:?}",
+            String::from_utf8_lossy(&msg)
+        );
 
         Ok(msg)
     }

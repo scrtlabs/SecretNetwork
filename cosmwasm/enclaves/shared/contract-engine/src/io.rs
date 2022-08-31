@@ -5,9 +5,9 @@ use crate::contract_validation::ReplyParams;
 /// that is unique to the user and the enclave
 ///
 use super::types::{IoNonce, SecretMessage};
-use enclave_cosmwasm_v010_types::encoding::Binary;
-use enclave_cosmwasm_v010_types::types::{CanonicalAddr, Coin};
-use enclave_cosmwasm_v1_types::results::{Event, Reply, ReplyOn, SubMsgResponse, SubMsgResult};
+use cw_types_v010::encoding::Binary;
+use cw_types_v010::types::{CanonicalAddr, Coin, LogAttribute};
+use cw_types_v1::results::{Event, Reply, ReplyOn, SubMsgResponse, SubMsgResult};
 
 use enclave_ffi_types::EnclaveError;
 
@@ -25,7 +25,7 @@ use sha2::Digest;
 /// b. Authenticate the reply.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
-enum RawWasmOutput {
+pub enum RawWasmOutput {
     Err {
         #[serde(rename = "Err")]
         err: Value,
@@ -42,36 +42,68 @@ enum RawWasmOutput {
     },
     OkV010 {
         #[serde(rename = "Ok")]
-        ok: enclave_cosmwasm_v010_types::types::ContractResult,
+        ok: cw_types_v010::types::ContractResult,
         internal_reply_enclave_sig: Option<Binary>,
         internal_msg_id: Option<Binary>,
     },
     OkV1 {
         #[serde(rename = "Ok")]
-        ok: enclave_cosmwasm_v1_types::results::Response,
+        ok: cw_types_v1::results::Response,
         internal_reply_enclave_sig: Option<Binary>,
         internal_msg_id: Option<Binary>,
+    },
+    OkIBCPacketReceive {
+        #[serde(rename = "Ok")]
+        ok: cw_types_v1::ibc::IbcReceiveResponse,
+    },
+    OkIBCOpenChannel {
+        #[serde(rename = "Ok")]
+        ok: cw_types_v1::ibc::IbcChannelOpenResponse,
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct V010WasmOutput {
+pub struct V010WasmOutput {
     #[serde(rename = "Ok")]
-    pub ok: Option<enclave_cosmwasm_v010_types::types::ContractResult>,
+    pub ok: Option<cw_types_v010::types::ContractResult>,
     #[serde(rename = "Err")]
     pub err: Option<Value>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct V1WasmOutput {
+pub struct V1WasmOutput {
     #[serde(rename = "Ok")]
-    pub ok: Option<enclave_cosmwasm_v1_types::results::Response>,
+    pub ok: Option<cw_types_v1::results::Response>,
     #[serde(rename = "Err")]
     pub err: Option<Value>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct QueryOutput {
+pub struct IBCOutput {
+    #[serde(rename = "ok")]
+    pub ok: Option<cw_types_v1::ibc::IbcBasicResponse>,
+    #[serde(rename = "Err")]
+    pub err: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct IBCReceiveOutput {
+    #[serde(rename = "ok")]
+    pub ok: Option<cw_types_v1::ibc::IbcReceiveResponse>,
+    #[serde(rename = "Err")]
+    pub err: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct IBCOpenChannelOutput {
+    #[serde(rename = "ok")]
+    pub ok: Option<String>,
+    #[serde(rename = "Err")]
+    pub err: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct QueryOutput {
     #[serde(rename = "Ok")]
     pub ok: Option<String>,
     #[serde(rename = "Err")]
@@ -79,9 +111,12 @@ struct QueryOutput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct WasmOutput {
+pub struct WasmOutput {
     pub v010: Option<V010WasmOutput>,
     pub v1: Option<V1WasmOutput>,
+    pub ibc_basic: Option<IBCOutput>,
+    pub ibc_packet_receive: Option<IBCReceiveOutput>,
+    pub ibc_open_channel: Option<IBCOpenChannelOutput>,
     pub query: Option<QueryOutput>,
     pub internal_reply_enclave_sig: Option<Binary>,
     pub internal_msg_id: Option<Binary>,
@@ -154,6 +189,213 @@ fn b64_encode(data: &[u8]) -> String {
     base64::encode(data)
 }
 
+pub fn finalize_raw_output(
+    raw_output: RawWasmOutput,
+    is_query_output: bool,
+    is_ibc: bool,
+    is_msg_encrypted: bool,
+) -> WasmOutput {
+    return match raw_output {
+        RawWasmOutput::Err {
+            err,
+            internal_msg_id,
+            internal_reply_enclave_sig,
+        } => {
+            if is_query_output {
+                WasmOutput {
+                    v010: None,
+                    v1: None,
+                    ibc_basic: None,
+                    ibc_packet_receive: None,
+                    ibc_open_channel: None,
+                    query: Some(QueryOutput {
+                        ok: None,
+                        err: Some(err),
+                    }),
+                    internal_reply_enclave_sig: None,
+                    internal_msg_id: None,
+                }
+            } else {
+                WasmOutput {
+                    v010: Some(V010WasmOutput {
+                        err: match is_msg_encrypted {
+                            true => Some(err),
+                            false => Some(json!({"generic_err":{"msg":err}})),
+                        },
+                        ok: None,
+                    }),
+                    v1: None,
+                    ibc_basic: None,
+                    ibc_packet_receive: None,
+                    ibc_open_channel: None,
+                    query: None,
+                    internal_reply_enclave_sig,
+                    internal_msg_id,
+                }
+            }
+        }
+        RawWasmOutput::OkV010 {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => WasmOutput {
+            v010: Some(V010WasmOutput {
+                err: None,
+                ok: Some(ok),
+            }),
+            v1: None,
+            ibc_basic: None,
+            ibc_packet_receive: None,
+            ibc_open_channel: None,
+            query: None,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        },
+        RawWasmOutput::OkV1 {
+            ok,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => match is_ibc {
+            false => WasmOutput {
+                v010: None,
+                v1: Some(V1WasmOutput {
+                    err: None,
+                    ok: Some(ok),
+                }),
+                ibc_basic: None,
+                ibc_packet_receive: None,
+                ibc_open_channel: None,
+                query: None,
+                internal_reply_enclave_sig,
+                internal_msg_id,
+            },
+            true => WasmOutput {
+                v010: None,
+                v1: None,
+                ibc_basic: Some(IBCOutput {
+                    err: None,
+                    ok: Some(cw_types_v1::ibc::IbcBasicResponse::new(
+                        ok.messages,
+                        ok.attributes,
+                        ok.events,
+                    )),
+                }),
+                ibc_packet_receive: None,
+                ibc_open_channel: None,
+                query: None,
+                internal_reply_enclave_sig,
+                internal_msg_id,
+            },
+        },
+        RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => WasmOutput {
+            v010: None,
+            v1: None,
+            ibc_basic: None,
+            ibc_packet_receive: None,
+            ibc_open_channel: None,
+            query: Some(QueryOutput {
+                ok: Some(ok),
+                err: None,
+            }),
+            internal_reply_enclave_sig: None,
+            internal_msg_id: None,
+        },
+        RawWasmOutput::OkIBCPacketReceive { ok } => WasmOutput {
+            v010: None,
+            v1: None,
+            ibc_basic: None,
+            ibc_packet_receive: Some(IBCReceiveOutput {
+                err: None,
+                ok: Some(ok),
+            }),
+            ibc_open_channel: None,
+            query: None,
+            internal_reply_enclave_sig: None,
+            internal_msg_id: None,
+        },
+        RawWasmOutput::OkIBCOpenChannel { ok } => WasmOutput {
+            v010: None,
+            v1: None,
+            ibc_basic: None,
+            ibc_packet_receive: None,
+            ibc_open_channel: Some(IBCOpenChannelOutput {
+                err: None,
+                ok: match ok {
+                    Some(o) => Some(o.version),
+                    None => Some("".to_string()),
+                },
+            }),
+            query: None,
+            internal_reply_enclave_sig: None,
+            internal_msg_id: None,
+        },
+    };
+}
+
+pub fn manipulate_callback_sig_for_plaintext(
+    output: Vec<u8>,
+) -> Result<RawWasmOutput, EnclaveError> {
+    let mut raw_output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
+        warn!("got an error while trying to deserialize output bytes into json");
+        trace!("output: {:?} error: {:?}", output, err);
+        EnclaveError::FailedToDeserialize
+    })?;
+
+    match &mut raw_output {
+        RawWasmOutput::OkV1 { ok, .. } => {
+            for sub_msg in &mut ok.messages {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+                    match wasm_msg {
+                        cw_types_v1::results::WasmMsg::Execute { callback_sig, .. }
+                        | cw_types_v1::results::WasmMsg::Instantiate { callback_sig, .. } => {
+                            *callback_sig = Some(vec![])
+                        }
+                    }
+                }
+            }
+        }
+        RawWasmOutput::OkIBCPacketReceive { ok } => {
+            for sub_msg in &mut ok.messages {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+                    match wasm_msg {
+                        cw_types_v1::results::WasmMsg::Execute { callback_sig, .. }
+                        | cw_types_v1::results::WasmMsg::Instantiate { callback_sig, .. } => {
+                            *callback_sig = Some(vec![])
+                        }
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+
+    Ok(raw_output)
+}
+
+pub fn set_attributes_to_plaintext(attributes: &mut Vec<LogAttribute>) {
+    for attr in attributes {
+        attr.encrypted = false;
+    }
+}
+
+pub fn set_all_logs_to_plaintext(raw_output: &mut RawWasmOutput) {
+    match raw_output {
+        RawWasmOutput::OkV1 { ok, .. } => {
+            set_attributes_to_plaintext(&mut ok.attributes);
+            for ev in &mut ok.events {
+                set_attributes_to_plaintext(&mut ev.attributes);
+            }
+        }
+        RawWasmOutput::OkIBCPacketReceive { ok } => {
+            set_attributes_to_plaintext(&mut ok.attributes);
+            for ev in &mut ok.events {
+                set_attributes_to_plaintext(&mut ev.attributes);
+            }
+        }
+        _ => {}
+    }
+}
+
 pub fn encrypt_output(
     output: Vec<u8>,
     secret_msg: &SecretMessage,
@@ -162,14 +404,17 @@ pub fn encrypt_output(
     reply_params: Option<ReplyParams>,
     sender_addr: &CanonicalAddr,
     is_query_output: bool,
+    is_ibc_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
     // When encrypting an output we might encrypt an output that is a reply to a caller contract (Via "Reply" endpoint).
     // Therefore if reply_recipient_contract_hash is not "None" we append it to any encrypted data besided submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
     trace!(
-        "Output before encryption: {:?}",
-        String::from_utf8_lossy(&output)
+        "Output before encryption: {:?} {:?} {:?}",
+        String::from_utf8_lossy(&output),
+        secret_msg.nonce,
+        secret_msg.user_public_key
     );
 
     let mut output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
@@ -185,10 +430,7 @@ pub fn encrypt_output(
             internal_msg_id,
         } => {
             let encrypted_err = encrypt_serializable(&encryption_key, err, &reply_params)?;
-
-            // Putting the error inside a 'generic_err' envelope, so we can encrypt the error itself
             *err = json!({"generic_err":{"msg":encrypted_err}});
-
             let msg_id = match reply_params {
                 Some(ref r) => {
                     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
@@ -209,6 +451,7 @@ pub fn encrypt_output(
                     let reply = Reply {
                         id: msg_id.unwrap(),
                         result: SubMsgResult::Err(encrypted_err),
+                        was_msg_encrypted: true,
                     };
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
                         warn!(
@@ -242,7 +485,7 @@ pub fn encrypt_output(
             internal_msg_id,
         } => {
             for msg in &mut ok.messages {
-                if let enclave_cosmwasm_v010_types::types::CosmosMsg::Wasm(wasm_msg) = msg {
+                if let cw_types_v010::types::CosmosMsg::Wasm(wasm_msg) = msg {
                     encrypt_v010_wasm_msg(
                         wasm_msg,
                         secret_msg.nonce,
@@ -285,10 +528,14 @@ pub fn encrypt_output(
                 Some(_) => {
                     let events = match ok.log.len() {
                         0 => vec![],
-                        _ => vec![Event {
-                            ty: "wasm".to_string(),
-                            attributes: ok.log.clone(),
-                        }],
+                        _ => {
+                            let mut logs = ok.log.clone();
+                            logs.sort_by(|a, b| a.key.cmp(&b.key));
+                            vec![Event {
+                                ty: "wasm".to_string(),
+                                attributes: logs,
+                            }]
+                        }
                     };
 
                     let reply = Reply {
@@ -297,6 +544,7 @@ pub fn encrypt_output(
                             events,
                             data: ok.data.clone(),
                         }),
+                        was_msg_encrypted: true,
                     };
 
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
@@ -325,9 +573,7 @@ pub fn encrypt_output(
             internal_msg_id,
         } => {
             for sub_msg in &mut ok.messages {
-                if let enclave_cosmwasm_v1_types::results::CosmosMsg::Wasm(wasm_msg) =
-                    &mut sub_msg.msg
-                {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
                     encrypt_v1_wasm_msg(
                         wasm_msg,
                         &sub_msg.reply_on,
@@ -342,6 +588,8 @@ pub fn encrypt_output(
                     // We don't encrypt it here to remain with the same type (u64)
                     sub_msg.id = 0;
                 }
+
+                sub_msg.was_msg_encrypted = true;
             }
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
@@ -359,6 +607,11 @@ pub fn encrypt_output(
             }
 
             if let Some(data) = &mut ok.data {
+                if is_ibc_output {
+                    warn!("IBC output should not contain any data");
+                    return Err(EnclaveError::InternalError);
+                }
+
                 *data = Binary::from_base64(&encrypt_serializable(
                     &encryption_key,
                     data,
@@ -385,7 +638,7 @@ pub fn encrypt_output(
                 Some(_) => {
                     let mut events: Vec<Event> = vec![];
 
-                    if ok.attributes.len() > 0 {
+                    if !ok.attributes.is_empty() {
                         events.push(Event {
                             ty: "wasm".to_string(),
                             attributes: ok.attributes.clone(),
@@ -398,6 +651,8 @@ pub fn encrypt_output(
                         if event.ty != "wasm" {
                             event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
                         }
+
+                        event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
                     }
 
                     let reply = Reply {
@@ -406,6 +661,7 @@ pub fn encrypt_output(
                             events,
                             data: ok.data.clone(),
                         }),
+                        was_msg_encrypted: true,
                     };
 
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
@@ -429,78 +685,51 @@ pub fn encrypt_output(
                 None => None, // Not a reply, we don't need enclave sig
             }
         }
-    };
+        RawWasmOutput::OkIBCPacketReceive { ok } => {
+            for sub_msg in &mut ok.messages {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+                    encrypt_v1_wasm_msg(
+                        wasm_msg,
+                        &sub_msg.reply_on,
+                        sub_msg.id,
+                        secret_msg.nonce,
+                        secret_msg.user_public_key,
+                        contract_addr,
+                        contract_hash,
+                    )?;
 
-    let final_output: WasmOutput = match output {
-        RawWasmOutput::Err {
-            err,
-            internal_msg_id,
-            internal_reply_enclave_sig,
-        } => {
-            if is_query_output {
-                WasmOutput {
-                    v010: None,
-                    v1: None,
-                    query: Some(QueryOutput {
-                        ok: None,
-                        err: Some(err),
-                    }),
-                    internal_reply_enclave_sig: None,
-                    internal_msg_id: None,
+                    // The ID can be extracted from the encrypted wasm msg
+                    // We don't encrypt it here to remain with the same type (u64)
+                    sub_msg.id = 0;
                 }
-            } else {
-                WasmOutput {
-                    v010: Some(V010WasmOutput {
-                        err: Some(err),
-                        ok: None,
-                    }),
-                    v1: None,
-                    query: None,
-                    internal_reply_enclave_sig,
-                    internal_msg_id,
+
+                sub_msg.was_msg_encrypted = true;
+            }
+
+            // v1: The attributes that will be emitted as part of a "wasm" event.
+            for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
+                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
+                attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
+            }
+
+            // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
+            for event in ok.events.iter_mut() {
+                for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
+                    attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
+                    attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
                 }
             }
+
+            ok.acknowledgement = Binary::from_base64(&encrypt_serializable(
+                &encryption_key,
+                &ok.acknowledgement,
+                &reply_params,
+            )?)?;
         }
-        RawWasmOutput::OkV010 {
-            ok,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => WasmOutput {
-            v010: Some(V010WasmOutput {
-                err: None,
-                ok: Some(ok),
-            }),
-            v1: None,
-            query: None,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        },
-        RawWasmOutput::OkV1 {
-            ok,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => WasmOutput {
-            v010: None,
-            v1: Some(V1WasmOutput {
-                err: None,
-                ok: Some(ok),
-            }),
-            query: None,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        },
-        RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => WasmOutput {
-            v010: None,
-            v1: None,
-            query: Some(QueryOutput {
-                ok: Some(ok),
-                err: None,
-            }),
-            internal_reply_enclave_sig: None,
-            internal_msg_id: None,
-        },
+        RawWasmOutput::OkIBCOpenChannel { ok: _ } => {}
     };
 
+    let final_output = finalize_raw_output(output, is_query_output, is_ibc_output, true);
     trace!("WasmOutput: {:?}", final_output);
 
     let encrypted_output = serde_json::to_vec(&final_output).map_err(|err| {
@@ -515,20 +744,20 @@ pub fn encrypt_output(
 }
 
 fn encrypt_v010_wasm_msg(
-    wasm_msg: &mut enclave_cosmwasm_v010_types::types::WasmMsg,
+    wasm_msg: &mut cw_types_v010::types::WasmMsg,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     contract_addr: &CanonicalAddr,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        enclave_cosmwasm_v010_types::types::WasmMsg::Execute {
+        cw_types_v010::types::WasmMsg::Execute {
             msg,
             callback_code_hash,
             callback_sig,
             send,
             ..
         }
-        | enclave_cosmwasm_v010_types::types::WasmMsg::Instantiate {
+        | cw_types_v010::types::WasmMsg::Instantiate {
             msg,
             callback_code_hash,
             callback_sig,
@@ -555,7 +784,7 @@ fn encrypt_v010_wasm_msg(
 }
 
 fn encrypt_v1_wasm_msg(
-    wasm_msg: &mut enclave_cosmwasm_v1_types::results::WasmMsg,
+    wasm_msg: &mut cw_types_v1::results::WasmMsg,
     reply_on: &ReplyOn,
     msg_id: u64, // In every submessage there is a field called "id", currently used only by "reply".
     nonce: IoNonce,
@@ -564,14 +793,14 @@ fn encrypt_v1_wasm_msg(
     reply_recipient_contract_hash: &str,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        enclave_cosmwasm_v1_types::results::WasmMsg::Execute {
+        cw_types_v1::results::WasmMsg::Execute {
             msg,
             code_hash,
             callback_sig,
             funds,
             ..
         }
-        | enclave_cosmwasm_v1_types::results::WasmMsg::Instantiate {
+        | cw_types_v1::results::WasmMsg::Instantiate {
             msg,
             code_hash,
             callback_sig,
@@ -586,9 +815,8 @@ fn encrypt_v1_wasm_msg(
             // it will treat the next 64 bytes as a recipient code-hash and prepend this code-hash to its output.
             let mut hash_appended_msg = code_hash.as_bytes().to_vec();
             if *reply_on != ReplyOn::Never {
-                hash_appended_msg.extend_from_slice(
-                    enclave_cosmwasm_v1_types::results::REPLY_ENCRYPTION_MAGIC_BYTES,
-                );
+                hash_appended_msg
+                    .extend_from_slice(cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES);
                 hash_appended_msg.extend_from_slice(&msg_id.to_be_bytes());
                 hash_appended_msg.extend_from_slice(reply_recipient_contract_hash.as_bytes());
             }
@@ -609,11 +837,11 @@ fn encrypt_v1_wasm_msg(
                 &msg_to_pass,
                 &funds
                     .iter()
-                    .map(|coin| enclave_cosmwasm_v010_types::types::Coin {
+                    .map(|coin| cw_types_v010::types::Coin {
                         denom: coin.denom.clone(),
-                        amount: enclave_cosmwasm_v010_types::math::Uint128(coin.amount.u128()),
+                        amount: cw_types_v010::math::Uint128(coin.amount.u128()),
                     })
-                    .collect::<Vec<enclave_cosmwasm_v010_types::types::Coin>>()[..],
+                    .collect::<Vec<cw_types_v010::types::Coin>>()[..],
             ));
         }
     }

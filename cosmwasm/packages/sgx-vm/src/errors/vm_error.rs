@@ -1,5 +1,5 @@
 use snafu::Snafu;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use super::communication_error::CommunicationError;
 // use crate::backends::InsufficientGasLeft;
@@ -107,11 +107,17 @@ pub enum VmError {
 #[allow(unused)]
 impl VmError {
     pub(crate) fn cache_err<S: Into<String>>(msg: S) -> Self {
-        CacheErr { msg: &Self::truncate_input(msg) }.build()
+        CacheErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn compile_err<S: Into<String>>(msg: S) -> Self {
-        CompileErr { msg: &Self::truncate_input(msg) }.build()
+        CompileErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn conversion_err<S: Into<String>, T: Into<String>, U: Into<String>>(
@@ -128,11 +134,17 @@ impl VmError {
     }
 
     pub(crate) fn generic_err<S: Into<String>>(msg: S) -> Self {
-        GenericErr { msg: &Self::truncate_input(msg) }.build()
+        GenericErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn instantiation_err<S: Into<String>>(msg: S) -> Self {
-        InstantiationErr { msg: &Self::truncate_input(msg) }.build()
+        InstantiationErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn integrity_err() -> Self {
@@ -161,19 +173,31 @@ impl VmError {
     }
 
     pub(crate) fn resolve_err<S: Into<String>>(msg: S) -> Self {
-        ResolveErr { msg: &Self::truncate_input(msg) }.build()
+        ResolveErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn runtime_err<S: Into<String>>(msg: S) -> Self {
-        RuntimeErr { msg: &Self::truncate_input(msg) }.build()
+        RuntimeErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn static_validation_err<S: Into<String>>(msg: S) -> Self {
-        StaticValidationErr { msg: &Self::truncate_input(msg) }.build()
+        StaticValidationErr {
+            msg: &Self::truncate_input(msg),
+        }
+        .build()
     }
 
     pub(crate) fn uninitialized_context_data<S: Into<String>>(kind: S) -> Self {
-        UninitializedContextData { kind: &Self::truncate_input(kind) }.build()
+        UninitializedContextData {
+            kind: &Self::truncate_input(kind),
+        }
+        .build()
     }
 
     // this is not super ideal, as we don't want super long strings to be copied and moved around

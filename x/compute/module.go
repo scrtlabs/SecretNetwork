@@ -103,7 +103,9 @@ func NewAppModule(keeper Keeper) AppModule {
 func (AppModule) ConsensusVersion() uint64 { return 1 }
 
 func (am AppModule) RegisterServices(configurator module.Configurator) {
+	types.RegisterMsgServer(configurator.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
+	// TODO register migrations here if needed
 }
 
 func (am AppModule) LegacyQuerierHandler(amino *codec.LegacyAmino) sdk.Querier {

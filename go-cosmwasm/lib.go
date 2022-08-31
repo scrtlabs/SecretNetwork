@@ -85,11 +85,14 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 }
 
 // This struct helps us to distinguish between v0.10 contract response and v1 contract response
-type V010orV1ContractExecResponse struct {
-	V1                     *V1ContractExecResponse   `json:"v1,omitempty"`
-	V010                   *V010ContractExecResponse `json:"v010,omitempty"`
-	InternaReplyEnclaveSig []byte                    `json:"internal_reply_enclave_sig"`
-	InternalMsgId          []byte                    `json:"internal_msg_id"`
+type ContractExecResponse struct {
+	V1                     *V1ContractExecResponse       `json:"v1,omitempty"`
+	V010                   *V010ContractExecResponse     `json:"v010,omitempty"`
+	InternaReplyEnclaveSig []byte                        `json:"internal_reply_enclave_sig"`
+	InternalMsgId          []byte                        `json:"internal_msg_id"`
+	IBCBasic               *v1types.IBCBasicResult       `json:"ibc_basic,omitempty"`
+	IBCPacketReceive       *v1types.IBCReceiveResult     `json:"ibc_packet_receive,omitempty"`
+	IBCChannelOpen         *v1types.IBCOpenChannelResult `json:"ibc_open_channel,omitempty"`
 }
 
 type V010ContractExecResponse struct {
@@ -205,7 +208,7 @@ func (w *Wasmer) Instantiate(
 			if isOutputAddressedToReply {
 				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 				if err != nil {
-					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
 				}
 			} else {
 				respV010orV1.V1.Ok.Data = nil
@@ -260,55 +263,86 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, err
 	}
 
-	var respV010orV1 V010orV1ContractExecResponse
-	err = json.Unmarshal(data, &respV010orV1)
+	var resp ContractExecResponse
+	err = json.Unmarshal(data, &resp)
 
 	if err != nil {
 		// unidentified response 🤷
 		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
-	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
+	isOutputAddressedToReply := (len(resp.InternaReplyEnclaveSig) > 0 && len(resp.InternalMsgId) > 0)
 
 	// handle v0.10 response
-	if respV010orV1.V010 != nil {
-		if respV010orV1.V010.Err != nil {
+	if resp.V010 != nil {
+		if resp.V010.Err != nil {
 			return v1types.DataWithInternalReplyInfo{
-				InternalMsgId:          respV010orV1.InternalMsgId,
-				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
-				Data:                   []byte(respV010orV1.V010.Err.GenericErr.Msg),
-			}, gasUsed, fmt.Errorf("%+v", respV010orV1.V010.Err)
-		}
-
-		if respV010orV1.V010.Ok != nil {
+				InternalMsgId:          resp.InternalMsgId,
+				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
+				Data:                   []byte(resp.V010.Err.GenericErr.Msg),
+			}, gasUsed, fmt.Errorf("%+v", resp.V010.Err)
+		} else if resp.V010.Ok != nil {
 			if isOutputAddressedToReply {
-				respV010orV1.V010.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+				resp.V010.Ok.Data, err = AppendReplyInternalDataToData(resp.V010.Ok.Data, resp.InternaReplyEnclaveSig, resp.InternalMsgId)
 				if err != nil {
-					return nil, gasUsed, fmt.Errorf("cannot serialize v010 DataWithInternalReplyInfo into binary : %w", err)
+					return nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
 				}
 			}
-			return respV010orV1.V010.Ok, gasUsed, nil
+			return resp.V010.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse v0.10 handle response: %+v", resp)
 		}
 	}
 
 	// handle v1 response
-	if respV010orV1.V1 != nil {
-		if respV010orV1.V1.Err != nil {
+	if resp.V1 != nil {
+		if resp.V1.Err != nil {
 			return v1types.DataWithInternalReplyInfo{
-				InternalMsgId:          respV010orV1.InternalMsgId,
-				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
-				Data:                   []byte(respV010orV1.V1.Err.GenericErr.Msg),
-			}, gasUsed, fmt.Errorf("%+v", respV010orV1.V1.Err)
-		}
-
-		if respV010orV1.V1.Ok != nil {
+				InternalMsgId:          resp.InternalMsgId,
+				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
+				Data:                   []byte(resp.V1.Err.GenericErr.Msg),
+			}, gasUsed, fmt.Errorf("%+v", resp.V1.Err)
+		} else if resp.V1.Ok != nil {
 			if isOutputAddressedToReply {
-				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+				resp.V1.Ok.Data, err = AppendReplyInternalDataToData(resp.V1.Ok.Data, resp.InternaReplyEnclaveSig, resp.InternalMsgId)
 				if err != nil {
-					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary : %w", err)
+					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
 				}
 			}
-			return respV010orV1.V1.Ok, gasUsed, nil
+			return resp.V1.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse v1 handle response: %+v", resp)
+		}
+	}
+
+	if resp.IBCBasic != nil {
+		if resp.IBCBasic.Err != nil {
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCBasic.Err)
+		} else if resp.IBCBasic.Ok != nil {
+			return resp.IBCBasic.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCBasic response: %+v", resp)
+		}
+	}
+
+	if resp.IBCPacketReceive != nil {
+		if resp.IBCPacketReceive.Err != nil {
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCPacketReceive.Err)
+		} else if resp.IBCPacketReceive.Ok != nil {
+			return resp.IBCPacketReceive.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketReceive response: %+v", resp)
+		}
+	}
+
+	if resp.IBCChannelOpen != nil {
+		if resp.IBCChannelOpen.Err != nil {
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCChannelOpen.Err)
+		} else if resp.IBCChannelOpen.Ok != nil {
+			// ibc_channel_open actually returns no data
+			return resp.IBCChannelOpen.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelOpen response: %+v", resp)
 		}
 	}
 

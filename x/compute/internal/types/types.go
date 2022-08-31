@@ -172,7 +172,8 @@ func ContractLogsToSdkEvents(logs []wasmTypesV010.LogAttribute, contractAddr sdk
 			attrs = append(attrs, attr)
 		}
 	}
-	// each wasm invokation always returns one sdk.Event
+
+	// each wasm invocation always returns one sdk.Event
 	return sdk.Events{sdk.NewEvent(CustomEventType, attrs...)}
 }
 

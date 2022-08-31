@@ -155,7 +155,10 @@ func TestGasCostOnQuery(t *testing.T) {
 			recurse := tc.msg
 			recurse.Contract = contractAddr
 
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
+
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
 
 			data, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 			require.Empty(t, qErr)
@@ -169,7 +172,7 @@ func TestGasCostOnQuery(t *testing.T) {
 
 			// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
 			var resp recurseResponse
-			err := json.Unmarshal([]byte(data), &resp)
+			err = json.Unmarshal([]byte(data), &resp)
 			require.NoError(t, err)
 			if recurse.Work == 0 {
 				assert.Equal(t, len(resp.Hashed), len(creator.String()))
@@ -233,14 +236,18 @@ func TestGasOnExternalQuery(t *testing.T) {
 
 			recurse := tc.msg
 			recurse.Contract = contractAddr
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
+
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
 
 			secretMsg := types.SecretMsg{
-				CodeHash: []byte(hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))),
+				CodeHash: []byte(hex.EncodeToString(codeHash)),
 				Msg:      msg,
 			}
 
-			msg, err := wasmCtx.Encrypt(secretMsg.Serialize())
+			msg, err = wasmCtx.Encrypt(secretMsg.Serialize())
 			require.NoError(t, err)
 
 			// do the query
@@ -349,7 +356,11 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			// prepare the query
 			recurse := tc.msg
 			recurse.Contract = contractAddr
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
+
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
 
 			// if we expect out of gas, make sure this panics
 			if tc.expectOutOfGas {
