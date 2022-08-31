@@ -224,6 +224,9 @@ build-localsecret:
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
+build-ibc-hermes:
+    docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:${DOCKER_TAG} .
+
 build-custom-dev-image:
     # .dockerignore excludes .so files so we rename these so that the dockerfile can find them
 	cd go-cosmwasm/api && cp libgo_cosmwasm.so libgo_cosmwasm.so.x
