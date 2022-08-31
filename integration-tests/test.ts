@@ -420,9 +420,10 @@ describe("IBC", () => {
     console.log("Waiting for IBC to set up...");
     await waitForIBC("secretdev-1", "http://localhost:9091");
     await waitForIBC("secretdev-2", "http://localhost:9391");
-  });
+  }, 3 * 60 * 1000);
 
   test("eshel", async () => {
+
     expect(1).toBe(1);
   });
 })
