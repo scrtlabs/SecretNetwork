@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   localsecret-1:
-    # ports are only here in case interaction 
+    # ports are only here in case interaction
     # between localhost and container is desired
     ports:
       - "26657:26657"
@@ -12,9 +12,9 @@ services:
       - "1317:1317"
     image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
   localsecret-2:
-    # ports are only here in case interaction 
+    # ports are only here in case interaction
     # between localhost and container is desired
-    ports: 
+    ports:
       - "36657:26657"
       - "36656:26656"
       - "9391:9091"
@@ -22,8 +22,7 @@ services:
       - "3337:1337"
       - "3317:1317"
     environment:
-        CHAINID: "secretdev-2"
+      CHAINID: "secretdev-2"
     image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
   relayer:
     image: "hermes:v0.0.0"
-

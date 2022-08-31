@@ -7,7 +7,7 @@ module.exports = {
   // globalSetup: "<rootDir>/test/globalSetup.ts",
   // globalTeardown: "<rootDir>/test/globalTeardown.js",
   // setupFilesAfterEnv: ["<rootDir>/test/setup.ts"],
-  globals: {
-    TEST_ACCOUNTS: {},
-  },
+  //   globals: {
+  //     TEST_ACCOUNTS: {},
+  //   },
 };
