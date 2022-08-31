@@ -1,3 +1,5 @@
+import { sha256 } from "@noble/hashes/sha256";
+import * as fs from "fs";
 import {
   fromBase64,
   MsgInstantiateContract,
@@ -7,14 +9,12 @@ import {
   toHex,
   Wallet,
 } from "secretjs";
-import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
 import {
   QueryBalanceRequest,
   QueryBalanceResponse,
 } from "secretjs//dist/protobuf_stuff/cosmos/bank/v1beta1/query";
-import { sha256 } from "@noble/hashes/sha256";
-import * as fs from "fs";
-import {cleanBytes, ibcDenom} from "./utils";
+import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
+import { ibcDenom } from "./utils";
 
 // @ts-ignore
 // accounts on secretdev-1
@@ -460,49 +460,63 @@ describe("IBC", () => {
     await waitForIBC("secretdev-2", "http://localhost:9391");
   }, 3 * 60 * 1000);
 
-  test("transfer sanity", async () => {
-    const denom = ibcDenom([{
-          portId: "transfer",
-          channelId: "channel-0",
-        }],
-        "uscrt",
-    );
-    const { balance: balanceBefore } = await accounts2.a.query.bank.balance({address: accounts2.a.address, denom});
-    const amountBefore = Number(balanceBefore?.amount ?? "0");
+  test(
+    "transfer sanity",
+    async () => {
+      const denom = ibcDenom(
+        [
+          {
+            portId: "transfer",
+            channelId: "channel-0",
+          },
+        ],
+        "uscrt"
+      );
+      const { balance: balanceBefore } = await accounts2.a.query.bank.balance({
+        address: accounts2.a.address,
+        denom,
+      });
+      const amountBefore = Number(balanceBefore?.amount ?? "0");
 
-    const result = await accounts.a.tx.ibc.transfer({
-      receiver: accounts.a.address,
-      sender: accounts.a.address,
-      sourceChannel: "channel-0",
-      sourcePort: "transfer",
-      token: {
-        denom: "uscrt",
-        amount: "1",
-      },
-      timeoutTimestampSec: String(Math.floor(Date.now() / 1000 + 30)),
-    });
+      const result = await accounts.a.tx.ibc.transfer({
+        receiver: accounts.a.address,
+        sender: accounts.a.address,
+        sourceChannel: "channel-0",
+        sourcePort: "transfer",
+        token: {
+          denom: "uscrt",
+          amount: "1",
+        },
+        timeoutTimestampSec: String(Math.floor(Date.now() / 1000 + 30)),
+      });
 
-    if (result.code !== 0) {
-      console.error(result.rawLog);
-    }
-
-    expect(result.code).toBe(0);
-
-    // TODO check ack on secretdev-1
-
-    while (true) {
-      try {
-        const { balance: balanceAfter } = await accounts2.a.query.bank.balance({address: accounts2.a.address, denom});
-        const amountAfter = Number(balanceAfter?.amount ?? "0");
-
-        if (amountAfter === amountBefore + 1) {
-          break;
-        }
-      } catch (e) {
-        // console.error("ibc denom balance error:", e);
+      if (result.code !== 0) {
+        console.error(result.rawLog);
       }
-      await sleep(200);
-    }
-    expect(true).toBe(true);
-  }, 1000 * 30);
+
+      expect(result.code).toBe(0);
+
+      // TODO check ack on secretdev-1
+
+      while (true) {
+        try {
+          const { balance: balanceAfter } =
+            await accounts2.a.query.bank.balance({
+              address: accounts2.a.address,
+              denom,
+            });
+          const amountAfter = Number(balanceAfter?.amount ?? "0");
+
+          if (amountAfter === amountBefore + 1) {
+            break;
+          }
+        } catch (e) {
+          // console.error("ibc denom balance error:", e);
+        }
+        await sleep(200);
+      }
+      expect(true).toBe(true);
+    },
+    1000 * 30
+  );
 });
