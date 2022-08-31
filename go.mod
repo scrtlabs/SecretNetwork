@@ -19,7 +19,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.1
-	github.com/tendermint/tendermint v0.34.19
+	github.com/tendermint/tendermint v0.34.21
 	github.com/tendermint/tm-db v0.6.7
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	google.golang.org/genproto v0.0.0-20220505152158-f39f71e6c8f3
@@ -128,7 +128,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk v0.45.4 => github.com/scrtlabs/cosmos-sdk v0.45.4-scrt.0.20220524151842-19338330a997
+	github.com/cosmos/cosmos-sdk v0.45.4 => github.com/scrtlabs/cosmos-sdk v0.45.8-0.20220831124348-ff5a07e2a4da
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
