@@ -315,6 +315,7 @@ jobs:
           docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
           docker compose logs -f &
           yarn test
+          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml kill
       - name: Run secret.js tests
         run: |
           git clone --depth 1 https://github.com/scrtlabs/secret.js
