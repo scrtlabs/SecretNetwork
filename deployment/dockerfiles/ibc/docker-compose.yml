@@ -10,6 +10,14 @@ services:
       - "9090:9090"
       - "9091:9091"
       - "1317:1317"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:26657/status | jq -e '.result.sync_info.latest_block_height | tonumber > 0'",
+        ]
+      interval: 5s
+      timeout: 1s
 
   localsecret-2:
     image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
@@ -23,6 +31,14 @@ services:
       - "3317:1317"
     environment:
       CHAINID: "secretdev-2"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:26657/status | jq -e '.result.sync_info.latest_block_height | tonumber > 0'",
+        ]
+      interval: 5s
+      timeout: 1s
 
   relayer:
     image: "hermes:v0.0.0"
