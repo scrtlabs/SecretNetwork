@@ -132,6 +132,10 @@ jobs:
           path: secretd
       - uses: actions/upload-artifact@v2
         with:
+          name: hackatom.wasm
+          path: ./x/compute/internal/keeper/testdata/contract.wasm
+      - uses: actions/upload-artifact@v2
+        with:
           name: contract.wasm
           path: ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
       - uses: actions/upload-artifact@v2
@@ -187,6 +191,10 @@ jobs:
           name: enclave
       - uses: actions/download-artifact@v2
         with:
+          name: hackatom.wasm
+          path: ./x/compute/internal/keeper/testdata/
+      - uses: actions/download-artifact@v2
+        with:
           name: contract.wasm
       - uses: actions/download-artifact@v2
         with:
@@ -214,6 +222,7 @@ jobs:
           cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
           cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+          mv ./go-cosmwasm/api/testdata/hackatom.wasm ./x/compute/internal/keeper/testdata/contract.wasm
           find "$(pwd)" -name \*.wasm
       - name: Test x/registration
         run: |
