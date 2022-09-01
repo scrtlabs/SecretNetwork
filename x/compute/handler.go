@@ -11,6 +11,10 @@ import (
 )
 
 // NewHandler returns a handler for "compute" type messages.
+// We still need this legacy handler to pass reply info in the data field
+// as the new grpc handler truncates the data field if there's an error
+// this handler is only used here: https://github.com/scrtlabs/SecretNetwork/blob/d8492253/x/compute/internal/keeper/handler_plugin.go#L574-L582
+// As a reference point see the x/bank legacy msg handler which just wraps the new grpc handler https://github.com/scrtlabs/cosmos-sdk/blob/67c2d41286/x/bank/handler.go#L10-L30
 func NewHandler(k Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
