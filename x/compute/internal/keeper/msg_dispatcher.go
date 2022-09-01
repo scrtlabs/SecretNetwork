@@ -233,7 +233,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// we only callback if requested. Short-circuit here the cases we don't want to
 		if (msg.ReplyOn == v1wasmTypes.ReplySuccess || msg.ReplyOn == v1wasmTypes.ReplyNever) && err != nil {
-			// Note: this also handles the case of v010 submessage for which the execution failed
+			// Note: this also handles the case of v0.10 submessage for which the execution failed
 			return nil, err
 		}
 
