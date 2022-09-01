@@ -300,7 +300,7 @@ describe("BankMsg", () => {
         ]);
       });
 
-      test.skip("error", async () => {
+      test("error", async () => {
         const { balance } = await readonly.query.bank.balance({
           address: v010Address,
           denom: "uscrt",
@@ -326,7 +326,7 @@ describe("BankMsg", () => {
 
         expect(tx.code).toBe(TxResultCode.ErrInsufficientFunds);
         expect(tx.rawLog).toContain(
-          `${contractBalance + 1}uscrt is smaller than ${contractBalance}uscrt`
+          `${contractBalance}uscrt is smaller than ${contractBalance + 1}uscrt`
         );
       });
     });
@@ -379,7 +379,7 @@ describe("StakingMsg", () => {
         });
       });
 
-      test.skip("error", async () => {
+      test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
