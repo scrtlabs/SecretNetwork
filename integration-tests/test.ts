@@ -241,60 +241,94 @@ describe("BankMsg", () => {
       ]);
     });
 
-    test("v0.10", async () => {
-      const tx = await accounts.a.tx.compute.executeContract(
-        {
-          sender: accounts.a.address,
-          contractAddress: v010Address,
-          codeHash: v010CodeHash,
-          msg: {
-            bank_msg_send: {
-              to_address: accounts.b.address,
-              amount: [{ amount: "1", denom: "uscrt" }],
+    describe("v0.10", () => {
+      test("success", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              bank_msg_send: {
+                to_address: accounts.b.address,
+                amount: [{ amount: "1", denom: "uscrt" }],
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
+          },
+          { gasLimit: 250_000 }
+        );
+        if (tx.code !== 0) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+        expect(
+          tx.arrayLog.filter((x) => x.type === "coin_spent")
+        ).toStrictEqual([
+          {
+            key: "spender",
+            msg: 0,
+            type: "coin_spent",
+            value: accounts.a.address,
+          },
+          { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
+          {
+            key: "spender",
+            msg: 0,
+            type: "coin_spent",
+            value: v010Address,
+          },
+          { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
+        ]);
+        expect(
+          tx.arrayLog.filter((x) => x.type === "coin_received")
+        ).toStrictEqual([
+          {
+            key: "receiver",
+            msg: 0,
+            type: "coin_received",
+            value: v010Address,
+          },
+          { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
+          {
+            key: "receiver",
+            msg: 0,
+            type: "coin_received",
+            value: accounts.b.address,
+          },
+          { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
+        ]);
+      });
+
+      test.skip("error", async () => {
+        const { balance } = await readonly.query.bank.balance({
+          address: v010Address,
+          denom: "uscrt",
+        });
+        const contractBalance = Number(balance?.amount) ?? 0;
+
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              bank_msg_send: {
+                to_address: accounts.b.address,
+                amount: [
+                  { amount: String(contractBalance + 1), denom: "uscrt" },
+                ],
+              },
             },
           },
-          sentFunds: [{ amount: "1", denom: "uscrt" }],
-        },
-        { gasLimit: 250_000 }
-      );
-      if (tx.code !== 0) {
-        console.error(tx.rawLog);
-      }
-      expect(tx.code).toBe(TxResultCode.Success);
-      expect(tx.arrayLog.filter((x) => x.type === "coin_spent")).toStrictEqual([
-        {
-          key: "spender",
-          msg: 0,
-          type: "coin_spent",
-          value: accounts.a.address,
-        },
-        { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-        {
-          key: "spender",
-          msg: 0,
-          type: "coin_spent",
-          value: v010Address,
-        },
-        { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-      ]);
-      expect(
-        tx.arrayLog.filter((x) => x.type === "coin_received")
-      ).toStrictEqual([
-        {
-          key: "receiver",
-          msg: 0,
-          type: "coin_received",
-          value: v010Address,
-        },
-        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-        {
-          key: "receiver",
-          msg: 0,
-          type: "coin_received",
-          value: accounts.b.address,
-        },
-        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-      ]);
+          { gasLimit: 250_000 }
+        );
+
+        expect(tx.code).toBe(TxResultCode.ErrInsufficientFunds);
+        expect(tx.rawLog).toContain(
+          `${contractBalance + 1}uscrt is smaller than ${contractBalance}uscrt`
+        );
+      });
     });
   });
 });
