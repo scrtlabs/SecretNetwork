@@ -312,7 +312,6 @@ jobs:
           cd integration-tests
           yarn
           docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
-          docker logs ibc-relayer-1 -f &
           yarn test
       - name: Run secret.js tests
         run: |
