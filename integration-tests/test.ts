@@ -8,6 +8,7 @@ import {
   toBase64,
   toHex,
   Tx,
+  TxResultCode,
   Wallet,
 } from "secretjs";
 import {
@@ -145,7 +146,7 @@ beforeAll(async () => {
   if (tx.code !== 0) {
     console.error(tx.rawLog);
   }
-  expect(tx.code).toBe(0);
+  expect(tx.code).toBe(TxResultCode.Success);
 
   v1CodeID = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
   v010CodeID = Number(
@@ -174,7 +175,7 @@ beforeAll(async () => {
   if (tx.code !== 0) {
     console.error(tx.rawLog);
   }
-  expect(tx.code).toBe(0);
+  expect(tx.code).toBe(TxResultCode.Success);
 
   v1Address = tx.arrayLog.find((x) => x.key === "contract_address").value;
   v010Address = tx.arrayLog
@@ -203,7 +204,7 @@ describe("BankMsg", () => {
       if (tx.code !== 0) {
         console.error(tx.rawLog);
       }
-      expect(tx.code).toBe(0);
+      expect(tx.code).toBe(TxResultCode.Success);
       expect(tx.arrayLog.filter((x) => x.type === "coin_spent")).toStrictEqual([
         {
           key: "spender",
@@ -259,7 +260,7 @@ describe("BankMsg", () => {
       if (tx.code !== 0) {
         console.error(tx.rawLog);
       }
-      expect(tx.code).toBe(0);
+      expect(tx.code).toBe(TxResultCode.Success);
       expect(tx.arrayLog.filter((x) => x.type === "coin_spent")).toStrictEqual([
         {
           key: "spender",
@@ -399,7 +400,7 @@ describe("StargateMsg", () => {
     if (tx.code !== 0) {
       console.error(tx.rawLog);
     }
-    expect(tx.code).toBe(0);
+    expect(tx.code).toBe(TxResultCode.Success);
     expect(tx.arrayLog.filter((x) => x.type === "coin_spent")).toStrictEqual([
       {
         key: "spender",
@@ -534,7 +535,7 @@ describe("IBC", () => {
       console.error(result.rawLog);
     }
 
-    expect(result.code).toBe(0);
+    expect(result.code).toBe(TxResultCode.Success);
 
     // TODO check ack/timeout on secretdev-1 might be cleaner
 
