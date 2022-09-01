@@ -30,7 +30,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		$MAKE_ME_ROOT apt update
-		$MAKE_ME_ROOT apt install -y curl jq tar build-essential clang libclang-dev
+		$MAKE_ME_ROOT apt install -y binaryen curl jq tar build-essential clang libclang-dev
 	else
 		echo "Unknown Linux distribution."
 		echo "This OS is not supported with this script at present. Sorry."
