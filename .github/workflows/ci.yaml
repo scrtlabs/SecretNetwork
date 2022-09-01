@@ -313,6 +313,7 @@ jobs:
           yarn
           docker compose version
           docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
+          docker compose logs -f &
           yarn test
       - name: Run secret.js tests
         run: |
