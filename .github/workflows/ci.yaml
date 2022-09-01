@@ -120,7 +120,7 @@ jobs:
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
       - name: Build Contracts
         run: |
-          make build-all-test-contracts
+          RUSTC_WRAPPER="$HOME/sccache" make build-all-test-contracts
           cp x/compute/internal/keeper/testdata/erc20.wasm .
       - uses: actions/upload-artifact@v2
         with:
