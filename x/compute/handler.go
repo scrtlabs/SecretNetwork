@@ -10,7 +10,7 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
-// NewHandler returns a handler for "bank" type messages.
+// NewHandler returns a handler for "compute" type messages.
 func NewHandler(k Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
@@ -23,14 +23,6 @@ func NewHandler(k Keeper) sdk.Handler {
 			return handleInstantiate(ctx, k, msg)
 		case *MsgExecuteContract:
 			return handleExecute(ctx, k, msg)
-			/*
-				case MsgMigrateContract:
-					return handleMigration(ctx, k, &msg)
-				case MsgUpdateAdmin:
-					return handleUpdateContractAdmin(ctx, k, &msg)
-				case MsgClearAdmin:
-					return handleClearContractAdmin(ctx, k, &msg)
-			*/
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
