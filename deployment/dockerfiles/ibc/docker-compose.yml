@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   localsecret-1:
+    image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
     # ports are only here in case interaction
     # between localhost and container is desired
     ports:
@@ -10,8 +11,14 @@ services:
       - "9091:9091"
       - "1337:1337"
       - "1317:1317"
-    image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:26657"]
+        interval: 5s
+        timeout: 3s
+        retries: 50
+
   localsecret-2:
+    image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
     # ports are only here in case interaction
     # between localhost and container is desired
     ports:
@@ -23,6 +30,16 @@ services:
       - "3317:1317"
     environment:
       CHAINID: "secretdev-2"
-    image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:26657"]
+        interval: 5s
+        timeout: 3s
+        retries: 50
+
   relayer:
     image: "hermes:v0.0.0"
+    depends_on:
+        localsecret-1:
+            condition: service_healthy
+        localsecret-2:
+            condition: service_healthy
