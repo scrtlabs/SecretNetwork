@@ -23,7 +23,6 @@ const (
 	RouterKey = ModuleName
 )
 
-// nolint
 var (
 	CodeKeyPrefix           = []byte{0x01}
 	ContractKeyPrefix       = []byte{0x02}
