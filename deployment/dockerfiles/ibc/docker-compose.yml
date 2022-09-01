@@ -34,7 +34,7 @@ services:
         test: ["CMD", "curl", "-f", "http://localhost:26657"]
         interval: 5s
         timeout: 3s
-        retries: 50
+        retries: 120  # 10 minutes to let the chains boot
 
   relayer:
     image: "hermes:v0.0.0"
