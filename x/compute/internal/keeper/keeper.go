@@ -396,7 +396,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	consumeGas(ctx, gasUsed)
 
 	if err != nil {
-		switch res := response.(type) {
+		switch res := response.(type) { //nolint:gocritic
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result, e := json.Marshal(res)
 			if e != nil {
@@ -532,7 +532,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	if execErr != nil {
 		var result sdk.Result
-		switch res := response.(type) {
+		switch res := response.(type) { //nolint:gocritic
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result.Data, err = json.Marshal(res)
 			if err != nil {
