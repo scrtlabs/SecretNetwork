@@ -302,10 +302,10 @@ describe("BankMsg", () => {
 describe("StakingMsg", () => {
   describe("Delegate", () => {
     describe("v1", () => {
-      test("success", async () => {
+      test.skip("success", async () => {
         // TODO
       });
-      test("error", async () => {
+      test.skip("error", async () => {
         // TODO
       });
     });
