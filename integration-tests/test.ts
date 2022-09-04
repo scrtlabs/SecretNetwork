@@ -16,7 +16,13 @@ import {
   QueryBalanceResponse,
 } from "secretjs//dist/protobuf_stuff/cosmos/bank/v1beta1/query";
 import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
-import { ibcDenom, sleep, waitForBlocks, waitForIBC } from "./utils";
+import {
+  ibcDenom,
+  sleep,
+  waitForBlocks,
+  waitForIBCChannel,
+  waitForIBCConnection,
+} from "./utils";
 
 // @ts-ignore
 // accounts on secretdev-1
@@ -111,8 +117,7 @@ beforeAll(async () => {
     grpcWebUrl: "http://localhost:9391",
   });
 
-  console.log("Waiting for LocalSecret to start...");
-  await waitForBlocks();
+  await waitForBlocks("secretdev-1");
 
   const v1Wasm = fs.readFileSync(
     `${__dirname}/contract-v1/contract.wasm`
@@ -533,8 +538,19 @@ describe("BankQuery", () => {
 describe("IBC", () => {
   beforeAll(async () => {
     console.log("Waiting for IBC to set up...");
-    await waitForIBC("secretdev-1", "http://localhost:9091");
-    await waitForIBC("secretdev-2", "http://localhost:9391");
+    await waitForIBCConnection("secretdev-1", "http://localhost:9091");
+    await waitForIBCConnection("secretdev-2", "http://localhost:9391");
+
+    await waitForIBCChannel(
+      "secretdev-1",
+      "http://localhost:9091",
+      "channel-0"
+    );
+    await waitForIBCChannel(
+      "secretdev-2",
+      "http://localhost:9391",
+      "channel-0"
+    );
   }, 180_000 /* 3 minutes */);
 
   test("transfer sanity", async () => {
@@ -571,8 +587,7 @@ describe("IBC", () => {
 
     expect(result.code).toBe(TxResultCode.Success);
 
-    // TODO check ack/timeout on secretdev-1 might be cleaner
-
+    // checking ack/timeout on secretdev-1 might be cleaner
     while (true) {
       try {
         const { balance: balanceAfter } = await readonly2.query.bank.balance({

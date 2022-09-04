@@ -12,10 +12,13 @@ services:
       - "1337:1337"
       - "1317:1317"
     healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:26657"]
-        interval: 5s
-        timeout: 3s
-        retries: 50
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:26657/status | jq -e '.result.sync_info.latest_block_height | tonumber > 0'",
+        ]
+      interval: 5s
+      timeout: 1s
 
   localsecret-2:
     image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
@@ -31,15 +34,18 @@ services:
     environment:
       CHAINID: "secretdev-2"
     healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:26657"]
-        interval: 5s
-        timeout: 3s
-        retries: 120  # 10 minutes to let the chains boot
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:26657/status | jq -e '.result.sync_info.latest_block_height | tonumber > 0'",
+        ]
+      interval: 5s
+      timeout: 1s
 
   relayer:
     image: "hermes:v0.0.0"
     depends_on:
-        localsecret-1:
-            condition: service_healthy
-        localsecret-2:
-            condition: service_healthy
+      localsecret-1:
+        condition: service_healthy
+      localsecret-2:
+        condition: service_healthy
