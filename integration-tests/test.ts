@@ -187,6 +187,33 @@ beforeAll(async () => {
   v010Address = tx.arrayLog
     .reverse()
     .find((x) => x.key === "contract_address").value;
+
+  // create a second validator for MsgRedelegate tests
+  const { validators } = await readonly.query.staking.validators({});
+  if (validators.length === 1) {
+    tx = await accounts.b.tx.staking.createValidator(
+      {
+        selfDelegatorAddress: accounts.b.address,
+        commission: {
+          maxChangeRate: 0.01,
+          maxRate: 0.1,
+          rate: 0.05,
+        },
+        description: {
+          moniker: "banana",
+          identity: "papaya",
+          website: "watermelon.com",
+          securityContact: "info@watermelon.com",
+          details: "We are the banana papaya validator",
+        },
+        pubkey: toBase64(new Uint8Array(32).fill(1)),
+        minSelfDelegation: "1",
+        initialDelegation: { amount: "1", denom: "uscrt" },
+      },
+      { gasLimit: 100_000 }
+    );
+    expect(tx.code).toBe(TxResultCode.Success);
+  }
 });
 
 describe("BankMsg", () => {
@@ -484,6 +511,100 @@ describe("StakingMsg", () => {
             msg: {
               staking_msg_undelegate: {
                 validator: validator + "garbage",
+                amount: { amount: "1", denom: "uscrt" },
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
+          },
+          { gasLimit: 250_000 }
+        );
+
+        expect(tx.code).toBe(TxResultCode.ErrInvalidAddress);
+        expect(tx.rawLog).toContain(
+          `${validator + "garbage"}: invalid address`
+        );
+      });
+    });
+  });
+
+  describe("Redelegate", () => {
+    describe("v1", () => {
+      test.skip("success", async () => {
+        // TODO
+      });
+      test.skip("error", async () => {
+        // TODO
+      });
+    });
+
+    describe("v0.10", () => {
+      test("success", async () => {
+        const { validators } = await readonly.query.staking.validators({});
+        const validatorA = validators[0].operatorAddress;
+        const validatorB = validators[1].operatorAddress;
+
+        const tx = await accounts.a.tx.broadcast(
+          [
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v010Address,
+              codeHash: v010CodeHash,
+              msg: {
+                staking_msg_delegate: {
+                  validator: validatorA,
+                  amount: { amount: "1", denom: "uscrt" },
+                },
+              },
+              sentFunds: [{ amount: "1", denom: "uscrt" }],
+            }),
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v010Address,
+              codeHash: v010CodeHash,
+              msg: {
+                staking_msg_redelegate: {
+                  src_validator: validatorA,
+                  dst_validator: validatorB,
+                  amount: { amount: "1", denom: "uscrt" },
+                },
+              },
+              sentFunds: [{ amount: "1", denom: "uscrt" }],
+            }),
+          ],
+          { gasLimit: 250_000 }
+        );
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[1].events.find(
+          (x) => x.type === "redelegate"
+        );
+        expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
+        expect(attributes).toContainEqual({
+          key: "source_validator",
+          value: validatorA,
+        });
+        expect(attributes).toContainEqual({
+          key: "destination_validator",
+          value: validatorB,
+        });
+      });
+
+      test("error", async () => {
+        const { validators } = await readonly.query.staking.validators({});
+        const validator = validators[0].operatorAddress;
+
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              staking_msg_redelegate: {
+                src_validator: validator,
+                dst_validator: validator + "garbage",
                 amount: { amount: "1", denom: "uscrt" },
               },
             },
