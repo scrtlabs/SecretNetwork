@@ -2,6 +2,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import * as fs from "fs";
 import {
   fromBase64,
+  MsgExecuteContract,
   MsgInstantiateContract,
   MsgStoreCode,
   SecretNetworkClient,
@@ -148,7 +149,7 @@ beforeAll(async () => {
     ],
     { gasLimit: 5_000_000 }
   );
-  if (tx.code !== 0) {
+  if (tx.code !== TxResultCode.Success) {
     console.error(tx.rawLog);
   }
   expect(tx.code).toBe(TxResultCode.Success);
@@ -177,7 +178,7 @@ beforeAll(async () => {
     ],
     { gasLimit: 200_000 }
   );
-  if (tx.code !== 0) {
+  if (tx.code !== TxResultCode.Success) {
     console.error(tx.rawLog);
   }
   expect(tx.code).toBe(TxResultCode.Success);
@@ -206,7 +207,7 @@ describe("BankMsg", () => {
         },
         { gasLimit: 250_000 }
       );
-      if (tx.code !== 0) {
+      if (tx.code !== TxResultCode.Success) {
         console.error(tx.rawLog);
       }
       expect(tx.code).toBe(TxResultCode.Success);
@@ -263,7 +264,7 @@ describe("BankMsg", () => {
           },
           { gasLimit: 250_000 }
         );
-        if (tx.code !== 0) {
+        if (tx.code !== TxResultCode.Success) {
           console.error(tx.rawLog);
         }
         expect(tx.code).toBe(TxResultCode.Success);
@@ -369,7 +370,7 @@ describe("StakingMsg", () => {
           },
           { gasLimit: 250_000 }
         );
-        if (tx.code !== 0) {
+        if (tx.code !== TxResultCode.Success) {
           console.error(tx.rawLog);
         }
         expect(tx.code).toBe(TxResultCode.Success);
@@ -411,6 +412,93 @@ describe("StakingMsg", () => {
       });
     });
   });
+
+  describe("Undelegate", () => {
+    describe("v1", () => {
+      test.skip("success", async () => {
+        // TODO
+      });
+      test.skip("error", async () => {
+        // TODO
+      });
+    });
+
+    describe.only("v0.10", () => {
+      test("success", async () => {
+        const { validators } = await readonly.query.staking.validators({});
+        const validator = validators[0].operatorAddress;
+
+        const tx = await accounts.a.tx.broadcast(
+          [
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v010Address,
+              codeHash: v010CodeHash,
+              msg: {
+                staking_msg_delegate: {
+                  validator,
+                  amount: { amount: "1", denom: "uscrt" },
+                },
+              },
+              sentFunds: [{ amount: "1", denom: "uscrt" }],
+            }),
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v010Address,
+              codeHash: v010CodeHash,
+              msg: {
+                staking_msg_undelegate: {
+                  validator,
+                  amount: { amount: "1", denom: "uscrt" },
+                },
+              },
+              sentFunds: [{ amount: "1", denom: "uscrt" }],
+            }),
+          ],
+          { gasLimit: 250_000 }
+        );
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[1].events.find(
+          (x) => x.type === "unbond"
+        );
+        expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
+        expect(attributes).toContainEqual({
+          key: "validator",
+          value: validator,
+        });
+      });
+
+      test("error", async () => {
+        const { validators } = await readonly.query.staking.validators({});
+        const validator = validators[0].operatorAddress;
+
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              staking_msg_undelegate: {
+                validator: validator + "garbage",
+                amount: { amount: "1", denom: "uscrt" },
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
+          },
+          { gasLimit: 250_000 }
+        );
+
+        expect(tx.code).toBe(TxResultCode.ErrInvalidAddress);
+        expect(tx.rawLog).toContain(
+          `${validator + "garbage"}: invalid address`
+        );
+      });
+    });
+  });
 });
 
 describe("StargateMsg", () => {
@@ -436,7 +524,7 @@ describe("StargateMsg", () => {
       },
       { gasLimit: 250_000 }
     );
-    if (tx.code !== 0) {
+    if (tx.code !== TxResultCode.Success) {
       console.error(tx.rawLog);
     }
     expect(tx.code).toBe(TxResultCode.Success);
