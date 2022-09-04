@@ -423,7 +423,7 @@ describe("StakingMsg", () => {
       });
     });
 
-    describe.only("v0.10", () => {
+    describe("v0.10", () => {
       test("success", async () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
