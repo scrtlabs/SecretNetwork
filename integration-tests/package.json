@@ -3,7 +3,7 @@
   "version": "1.4.0",
   "license": "MIT",
   "scripts": {
-    "test": "make && jest"
+    "test": "make && jest --forceExit"
   },
   "devDependencies": {
     "@noble/hashes": "1.1.2",
