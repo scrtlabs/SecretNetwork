@@ -5,7 +5,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/enigmampc/SecretNetwork/app"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -26,7 +25,7 @@ type Upgrade struct {
 
 	// CreateUpgradeHandler defines the function that creates an upgrade handler
 	// mm *module.Manager, computeModule *computetypes.AppModule, configurator module.Configurator
-	CreateUpgradeHandler func(*module.Manager, *app.SecretNetworkApp, module.Configurator) upgradetypes.UpgradeHandler
+	CreateUpgradeHandler func(*module.Manager, module.Configurator) upgradetypes.UpgradeHandler
 
 	// Store upgrades, should be used for any new modules introduced, new modules deleted, or store names renamed.
 	StoreUpgrades store.StoreUpgrades

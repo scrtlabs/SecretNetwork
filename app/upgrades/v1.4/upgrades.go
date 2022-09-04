@@ -5,7 +5,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/enigmampc/SecretNetwork/app"
 	"github.com/enigmampc/SecretNetwork/app/upgrades"
 )
 
@@ -17,7 +16,7 @@ var Upgrade = upgrades.Upgrade{
 
 const UpgradeName = "v1.4"
 
-func CreateUpgradeHandler(mm *module.Manager, _ *app.SecretNetworkApp, configurator module.Configurator,
+func CreateUpgradeHandler(mm *module.Manager, configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		// Assaf: Set version map for all modules because for some

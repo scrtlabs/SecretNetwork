@@ -756,7 +756,6 @@ func (app *SecretNetworkApp) setupUpgradeHandlers(icamodule *ica.AppModule) {
 			upgradeDetails.UpgradeName,
 			upgradeDetails.CreateUpgradeHandler(
 				app.mm,
-				app,
 				app.configurator,
 			),
 		)
