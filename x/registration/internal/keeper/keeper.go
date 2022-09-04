@@ -47,6 +47,9 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	// get PK from CLI
 	// get encrypted master key
 	byteValue, err := getFile(seedPath)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
 
 	var seedCfg types.SeedConfig
 
@@ -69,8 +72,6 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
-
-	return
 }
 
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
@@ -154,7 +155,7 @@ func validateSeedParams(config types.SeedConfig) error {
 		return err
 	}
 
-	res, err = ra.VerifyRaCert(res)
+	_, err = ra.VerifyRaCert(res)
 	if err != nil {
 		return err
 	}

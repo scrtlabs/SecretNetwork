@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,7 +21,7 @@ func init() {
 }
 
 func TestNewKeeper(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "reg")
+	tempDir, err := os.MkdirTemp("", "reg")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 	_, regKeeper := CreateTestInput(t, false, tempDir, true)
@@ -30,7 +29,7 @@ func TestNewKeeper(t *testing.T) {
 }
 
 func TestNewKeeper_Node(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "reg")
+	tempDir, err := os.MkdirTemp("", "reg")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
@@ -39,7 +38,7 @@ func TestNewKeeper_Node(t *testing.T) {
 	err = os.MkdirAll(filepath.Join(tempDir, types.SecretNodeCfgFolder), 0o700)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(seedPath, CreateTestSeedConfig(t), 0o700)
+	err = os.WriteFile(seedPath, CreateTestSeedConfig(t), 0o700)
 	require.NoError(t, err)
 
 	_, regKeeper := CreateTestInput(t, false, tempDir, false)
@@ -47,12 +46,12 @@ func TestNewKeeper_Node(t *testing.T) {
 }
 
 func TestKeeper_RegisterationStore(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir, err := os.MkdirTemp("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{
@@ -73,12 +72,12 @@ func TestKeeper_RegisterationStore(t *testing.T) {
 }
 
 func TestKeeper_RegisterNode(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir, err := os.MkdirTemp("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{

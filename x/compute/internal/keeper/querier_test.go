@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,7 @@ func TestQueryContractLabel(t *testing.T) {
 	creator, privCreator := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -48,7 +48,10 @@ func TestQueryContractLabel(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	hash := codeInfo.CodeHash
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
@@ -135,7 +138,7 @@ func TestQueryContractState(t *testing.T) {
 	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -149,7 +152,10 @@ func TestQueryContractState(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	key := codeInfo.CodeHash
 	keyStr := hex.EncodeToString(key)
 
 	msg := types.SecretMsg{
@@ -276,7 +282,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -290,7 +296,10 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	key := keeper.GetCodeInfo(ctx, codeID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	key := codeInfo.CodeHash
 	keyStr := hex.EncodeToString(key)
 
 	msg := types.SecretMsg{
@@ -363,7 +372,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 /*
 func TestQueryContractHistory(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir, err := os.MkdirTemp("", "wasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)

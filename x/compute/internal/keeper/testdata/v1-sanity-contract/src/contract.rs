@@ -21,6 +21,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     match msg {
+        InstantiateMsg::WasmMsg { ty } => wasm_msg(ty),
         InstantiateMsg::Counter { counter, expires } => {
             if counter == 0 {
                 return Err(StdError::generic_err("got wrong counter on init"));
@@ -295,13 +296,81 @@ pub fn instantiate(
         InstantiateMsg::CosmosMsgCustom {} => {
             Ok(Response::new().add_message(CosmosMsg::Custom(Empty {})))
         }
+        InstantiateMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(
+            Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                code_hash,
+                msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+                funds: coins,
+                label: "init test".to_string(),
+            })),
+        ),
+        InstantiateMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(
+            Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to,
+                code_hash,
+                msg: Binary("{\"no_data\":{}}".as_bytes().to_vec()),
+                funds: coins,
+            })),
+        ),
     }
+}
+
+pub fn wasm_msg(ty: String) -> StdResult<Response> {
+    if ty == "success" {
+        return Ok(Response::default());
+    } else if ty == "err" {
+        return Err(StdError::generic_err("custom error"));
+    } else if ty == "panic" {
+        panic!()
+    }
+
+    return Err(StdError::generic_err("custom error"));
 }
 
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::Increment { addition } => increment(deps, addition),
+        ExecuteMsg::WasmMsg { ty } => wasm_msg(ty),
+        ExecuteMsg::Increment { addition } => increment(env, deps, addition),
+        ExecuteMsg::SendFundsWithErrorWithReply {} => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: 8000,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: coins(100, "lior"),
+                })
+                .into(),
+                reply_on: ReplyOn::Always,
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
+        ExecuteMsg::SendFundsWithReply {} => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: 8001,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                    funds: coins(100, "denom"),
+                })
+                .into(),
+                reply_on: ReplyOn::Always,
+                gas_limit: None,
+            })
+            .add_attribute("attr1", "🦄")
+            .add_attribute("attr2", "🌈")),
         ExecuteMsg::AddAttributes {} => Ok(Response::new()
             .add_attribute("attr1", "🦄")
             .add_attribute("attr2", "🌈")),
@@ -470,7 +539,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             )
             .add_attribute("attr3", "🐙")
             .add_attribute_plaintext("attr4", "🦄")),
-        ExecuteMsg::GasMeter {} => loop {},
+        ExecuteMsg::GasMeter {} => {
+            // busy work
+            let mut v = vec![0; 65536];
+            let mut x = 0;
+            loop {
+                x += (x + 1) % 65536;
+                v[x] = 65536 - x;
+            }
+        }
         ExecuteMsg::GasMeterProxy {} => Ok(Response::default()),
         ExecuteMsg::TransferMoney { amount } => transfer_money(deps, amount),
         ExecuteMsg::RecursiveReply {} => recursive_reply(env, deps),
@@ -481,6 +558,22 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::SubMsgLoopIner { iter } => sub_msg_loop_iner(env, deps, iter),
         ExecuteMsg::MultipleSubMessages {} => send_multiple_sub_messages(env, deps),
         ExecuteMsg::MultipleSubMessagesNoReply {} => send_multiple_sub_messages_no_reply(env, deps),
+        ExecuteMsg::QuickError {} => {
+            count(deps.storage).save(&123456)?;
+            Err(StdError::generic_err("error in execute"))
+        }
+        ExecuteMsg::MultipleSubMessagesNoReplyWithError {} => {
+            send_multiple_sub_messages_no_reply_with_error(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesNoReplyWithPanic {} => {
+            send_multiple_sub_messages_no_reply_with_panic(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesWithReplyWithError {} => {
+            send_multiple_sub_messages_with_reply_with_error(env, deps)
+        }
+        ExecuteMsg::MultipleSubMessagesWithReplyWithPanic {} => {
+            send_multiple_sub_messages_with_reply_with_panic(env, deps)
+        }
         ExecuteMsg::InitV10 {
             counter,
             code_id,
@@ -1046,12 +1139,66 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::CosmosMsgCustom {} => {
             Ok(Response::new().add_message(CosmosMsg::Custom(Empty {})))
         }
+        ExecuteMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(
+            Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                code_hash,
+                msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+                funds: coins,
+                label: "test".to_string(),
+            })),
+        ),
+        ExecuteMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(
+            Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to,
+                code_hash,
+                msg: Binary("{\"no_data\":{}}".as_bytes().to_vec()),
+                funds: coins,
+            })),
+        ),
     }
 }
 
-pub fn increment(deps: DepsMut, c: u64) -> StdResult<Response> {
+pub fn increment(env: Env, deps: DepsMut, c: u64) -> StdResult<Response> {
     if c == 0 {
         return Err(StdError::generic_err("got wrong counter on increment"));
+    }
+
+    if c == 9875 {
+        let new_count = count_read(deps.storage).load()? + 100;
+        count(deps.storage).save(&new_count)?;
+        return Err(StdError::generic_err("got wrong counter on increment"));
+    }
+
+    if c == 9876 {
+        let new_count = count_read(deps.storage).load()? + 100;
+        count(deps.storage).save(&new_count)?;
+        panic!()
+    }
+
+    if c == 9911 {
+        let mut resp = Response::default();
+        resp.messages.push(SubMsg {
+            id: 1304,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address.into_string(),
+                code_hash: env.contract.code_hash,
+                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                funds: vec![],
+            }),
+            gas_limit: Some(10000000_u64),
+            reply_on: ReplyOn::Always,
+        });
+
+        return Ok(resp);
     }
 
     let new_count = count_read(deps.storage).load()? + c;
@@ -1122,7 +1269,7 @@ pub fn sub_msg_loop_iner(_env: Env, deps: DepsMut, iter: u64) -> StdResult<Respo
         return Err(StdError::generic_err("stopped loop"));
     }
 
-    increment(deps, 1)?;
+    increment(_env, deps, 1)?;
 
     let mut resp = Response::default();
     resp.data = Some(((iter - 1) as u64).to_string().as_bytes().into());
@@ -1241,6 +1388,229 @@ pub fn send_multiple_sub_messages_no_reply(env: Env, deps: DepsMut) -> StdResult
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Never,
     });
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_no_reply_with_error(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 1610,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1611,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Success,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1613,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_with_reply_with_error(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 3000,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3003,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9875}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_with_reply_with_panic(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 3000,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Always,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 3001,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Error,
+    });
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
+
+    resp.data = Some(
+        (count_read(deps.storage).load()? as u32)
+            .to_be_bytes()
+            .into(),
+    );
+    Ok(resp)
+}
+
+pub fn send_multiple_sub_messages_no_reply_with_panic(
+    env: Env,
+    deps: DepsMut,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 1610,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1611,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":9876}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    resp.messages.push(SubMsg {
+        id: 1613,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from("{\"increment\":{\"addition\":2}}".as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on: ReplyOn::Never,
+    });
+
+    let new_count = count_read(deps.storage).load()? + 5;
+    count(deps.storage).save(&new_count)?;
 
     resp.data = Some(
         (count_read(deps.storage).load()? as u32)
@@ -1420,9 +1790,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             Some(x) => {
                 let response = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     code_hash: env.contract.code_hash,
-                    contract_addr: String::from_utf8(
-                        Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
-                    )?,
+                    contract_addr: String::from_utf8(x.to_vec())?,
                     msg: to_binary(&QueryMsg::Get {})?,
                 }))?;
 
@@ -1457,9 +1825,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
 
         (1500, SubMsgResult::Ok(iter)) => match iter.data {
             Some(x) => {
-                let it = String::from_utf8(
-                    Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
-                )?;
+                let it = String::from_utf8(x.to_vec())?;
                 let mut resp = Response::default();
 
                 let msg = "{\"sub_msg_loop_iner\":{\"iter\":".to_string() + it.as_str() + "}}";
@@ -1556,9 +1922,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (1700, SubMsgResult::Err(_)) => Err(StdError::generic_err("Failed to init v010 contract")),
         (1800, SubMsgResult::Ok(s)) => match s.data {
             Some(x) => {
-                let counter = String::from_utf8(
-                    Binary::from_base64(String::from_utf8(x.to_vec())?.as_str())?.to_vec(),
-                )?;
+                let counter = String::from_utf8(x.to_vec())?;
                 let mut resp = Response::default();
                 resp.data = Some(counter.as_bytes().into());
 
@@ -1615,9 +1979,35 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (2500, SubMsgResult::Err(_)) => {
             Err(StdError::generic_err(format!("Add mixed events failed",)))
         }
-        (2600, SubMsgResult::Ok(_)) => loop {},
+        (2600, SubMsgResult::Ok(_)) => {
+            // busy work
+            let mut v = vec![0; 65536];
+            let mut x = 0;
+            loop {
+                x += (x + 1) % 65536;
+                v[x] = 65536 - x;
+            }
+        }
         (2600, SubMsgResult::Err(_)) => {
             Err(StdError::generic_err(format!("Gas submessage failed",)))
+        }
+        (3000, SubMsgResult::Ok(_)) => {
+            let new_count = count_read(deps.storage).load()? + 3;
+            count(deps.storage).save(&new_count)?;
+            Ok(Response::default())
+        }
+        (3000, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Revert submessage failed",)))
+        }
+        (3001, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!(
+            "Revert submessage should fail",
+        ))),
+        (3001, SubMsgResult::Err(_)) => Ok(Response::default()),
+        (8000, SubMsgResult::Ok(_)) => Err(StdError::generic_err(format!("Unreachable",))),
+        (8000, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Unreachable",))),
+        (8001, SubMsgResult::Ok(_)) => Ok(Response::default()),
+        (8001, SubMsgResult::Err(_)) => {
+            Err(StdError::generic_err(format!("Funds message failed",)))
         }
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
@@ -1672,8 +2062,8 @@ fn send_external_query_recursion_limit(
             ),
         }));
 
-    // 5 is the current recursion limit.
-    if depth != 5 {
+    // 10 is the current recursion limit.
+    if depth != 10 {
         result
     } else {
         match result {

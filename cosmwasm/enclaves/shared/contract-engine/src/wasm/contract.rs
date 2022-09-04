@@ -9,7 +9,9 @@ use wasmi::{Error as InterpreterError, MemoryInstance, MemoryRef, ModuleRef, Run
 
 use enclave_ffi_types::{Ctx, EnclaveError};
 
-use enclave_cosmwasm_v010_types::consts::BECH32_PREFIX_ACC_ADDR;
+use cw_types_generic::CosmWasmApiVersion;
+use cw_types_v010::consts::BECH32_PREFIX_ACC_ADDR;
+
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 
 use crate::contract_validation::ContractKey;
@@ -27,14 +29,6 @@ use crate::wasm::traits::WasmiApi;
 mod api_marker {
     pub const V0_10: &str = "cosmwasm_vm_version_3";
     pub const V1: &str = "interface_version_8";
-}
-
-/// CosmwasmApiVersion is used to decide how to handle contract inputs and outputs
-pub enum CosmWasmApiVersion {
-    /// CosmWasm v0.10 API
-    V010,
-    /// CosmWasm v1 API
-    V1,
 }
 
 /// Right now ContractOperation is used to detect queris and prevent state changes
@@ -59,6 +53,8 @@ impl ContractOperation {
         matches!(self, ContractOperation::Query)
     }
 }
+
+const MAX_LOG_LENGTH: usize = 8192;
 
 /// SecretContract maps function index to implementation
 /// When instantiating a module we give it the SecretNetworkImportResolver resolver
@@ -862,16 +858,17 @@ impl WasmiApi for ContractInstance {
     }
 
     fn debug_print_index(&self, message_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        let message_buffer = self.extract_vector(message_ptr_ptr as u32).map_err(|err| {
+        let mut message_buffer = self.extract_vector(message_ptr_ptr as u32).map_err(|err| {
             debug!("debug_print() error while trying to read message from wasm memory",);
             err
         })?;
 
-        let _message =
-            String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
+        message_buffer.truncate(MAX_LOG_LENGTH);
 
-        #[cfg(feature = "debug-print")]
-        info!("debug_print: {:?}", _message);
+        info!(
+            "debug_print: {:?}",
+            String::from_utf8_lossy(&message_buffer)
+        );
 
         Ok(None)
     }

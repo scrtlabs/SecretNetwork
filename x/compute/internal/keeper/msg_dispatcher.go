@@ -1,8 +1,10 @@
 package keeper
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -139,24 +141,36 @@ func (e UnsupportedRequest) Error() string {
 
 // Reply is encrypted only when it is a contract reply
 func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
-	return (msg.Wasm != nil)
+	if msg.Wasm == nil {
+		return false
+	}
+
+	if msg.Wasm.Execute != nil {
+		return len(msg.Wasm.Execute.CallbackSignature) != 0
+	}
+
+	if msg.Wasm.Instantiate != nil {
+		return len(msg.Wasm.Instantiate.CallbackSignature) != 0
+	}
+
+	return true
 }
 
 // Issue #759 - we don't return error string for worries of non-determinism
-func redactError(err error) error {
+func redactError(err error) (bool, error) {
 	// Do not redact encrypted wasm contract errors
 	if strings.HasPrefix(err.Error(), "encrypted:") {
 		// remove encrypted sign
 		e := strings.ReplaceAll(err.Error(), "encrypted: ", "")
 		e = strings.ReplaceAll(e, ": execute contract failed", "")
 		e = strings.ReplaceAll(e, ": instantiate contract failed", "")
-		return fmt.Errorf("%s", e)
+		return false, fmt.Errorf("%s", e)
 	}
 
 	// Do not redact system errors
 	// SystemErrors must be created in x/wasm and we can ensure determinism
 	if wasmTypes.ToSystemError(err) != nil {
-		return err
+		return false, err
 	}
 
 	// FIXME: do we want to hardcode some constant string mappings here as well?
@@ -165,7 +179,7 @@ func redactError(err error) error {
 	// sdk/5 is insufficient funds (on bank send)
 	// (we can theoretically redact less in the future, but this is a first step to safety)
 	codespace, code, _ := sdkerrors.ABCIInfo(err, false)
-	return fmt.Errorf("codespace: %s, code: %d", codespace, code)
+	return true, fmt.Errorf("codespace: %s, code: %d. For more info please use the following link: https://github.com/scrtlabs/cosmos-sdk/blob/HEAD/types/errors/errors.go", codespace, code)
 }
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
@@ -177,7 +191,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		switch msg.ReplyOn {
 		case v1wasmTypes.ReplySuccess, v1wasmTypes.ReplyError, v1wasmTypes.ReplyAlways, v1wasmTypes.ReplyNever:
 		default:
-			return nil, sdkerrors.Wrap(types.ErrInvalid, "replyOn value")
+			return nil, sdkerrors.Wrap(types.ErrInvalid, "ReplyOn value")
 		}
 
 		// first, we build a sub-context which we can use inside the submessages
@@ -204,11 +218,22 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			commit()
 			filteredEvents = filterEvents(append(em.Events(), events...))
 			ctx.EventManager().EmitEvents(filteredEvents)
+
+			if msg.Msg.Wasm == nil {
+				filteredEvents = []sdk.Event{}
+			} else {
+				for _, e := range filteredEvents {
+					attributes := e.Attributes
+					sort.SliceStable(attributes, func(i, j int) bool {
+						return bytes.Compare(attributes[i].Key, attributes[j].Key) < 0
+					})
+				}
+			}
 		} // on failure, revert state from sandbox, and ignore events (just skip doing the above)
 
 		// we only callback if requested. Short-circuit here the cases we don't want to
 		if (msg.ReplyOn == v1wasmTypes.ReplySuccess || msg.ReplyOn == v1wasmTypes.ReplyNever) && err != nil {
-			// Note: this also handles the case of v010 submessage for which the execution failed
+			// Note: this also handles the case of v0.10 submessage for which the execution failed
 			return nil, err
 		}
 
@@ -220,6 +245,9 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		// Basically, handle replying to the contract
 		// We need to create a SubMsgResult and pass it into the calling contract
 		var result v1wasmTypes.SubMsgResult
+		var redactedErr error
+
+		isSdkError := false
 		if err == nil {
 			// just take the first one for now if there are multiple sub-sdk messages
 			// and safely return nothing if no data
@@ -227,7 +255,6 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			if len(data) > 0 {
 				responseData = data[0]
 			}
-
 			result = v1wasmTypes.SubMsgResult{
 				// Copy first 64 bytes of the OG message in order to preserve the pubkey.
 				Ok: &v1wasmTypes.SubMsgResponse{
@@ -238,16 +265,18 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		} else {
 			// Issue #759 - we don't return error string for worries of non-determinism
 			moduleLogger(ctx).Info("Redacting submessage error", "cause", err)
+			isSdkError, redactedErr = redactError(err)
 			result = v1wasmTypes.SubMsgResult{
-				Err: redactError(err).Error(),
+				Err: redactedErr.Error(),
 			}
 		}
 
 		msg_id := []byte(fmt.Sprint(msg.ID))
 		// now handle the reply, we use the parent context, and abort on error
 		reply := v1wasmTypes.Reply{
-			ID:     msg_id,
-			Result: result,
+			ID:              msg_id,
+			Result:          result,
+			WasMsgEncrypted: msg.WasMsgEncrypted,
 		}
 
 		// we can ignore any result returned as there is nothing to do with the data
@@ -263,20 +292,26 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			SignMode:  "SIGN_MODE_UNSPECIFIED",
 		}
 
+		// In a case when the reply is encrypted but the sdk failed (Most likely, funds issue)
+		// we return a error
+		if isReplyEncrypted(msg.Msg, reply) && isSdkError {
+			return nil, fmt.Errorf("an sdk error occoured while sending a sub-message: %s", redactedErr.Error())
+		}
+
 		if isReplyEncrypted(msg.Msg, reply) {
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
 
 			if reply.Result.Ok != nil {
 				err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
 				if err != nil {
-					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
 				}
 
 				reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
 			} else {
 				err = json.Unmarshal(data[0], &dataWithInternalReplyInfo)
 				if err != nil {
-					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json : %w", err)
+					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
 				}
 			}
 
@@ -287,7 +322,6 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			replySigInfo = ogSigInfo
 			reply.ID = dataWithInternalReplyInfo.InternalMsgId
 			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
-
 		}
 
 		rspData, err := d.keeper.reply(ctx, contractAddr, reply, ogTx, replySigInfo)

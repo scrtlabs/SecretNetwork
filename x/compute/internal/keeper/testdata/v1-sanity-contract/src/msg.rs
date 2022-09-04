@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum InstantiateMsg {
+    WasmMsg {
+        ty: String,
+    },
     Counter {
         counter: u64,
         expires: u64,
@@ -85,14 +88,29 @@ pub enum InstantiateMsg {
         amount: Vec<Coin>,
     },
     CosmosMsgCustom {},
+    SendMultipleFundsToInitCallback {
+        coins: Vec<Coin>,
+        code_id: u64,
+        code_hash: String,
+    },
+    SendMultipleFundsToExecCallback {
+        coins: Vec<Coin>,
+        to: String,
+        code_hash: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    WasmMsg {
+        ty: String,
+    },
     Increment {
         addition: u64,
     },
+    SendFundsWithErrorWithReply {},
+    SendFundsWithReply {},
     AddAttributes {},
     AddAttributesWithSubmessage {
         id: u64,
@@ -135,6 +153,11 @@ pub enum ExecuteMsg {
     },
     MultipleSubMessages {},
     MultipleSubMessagesNoReply {},
+    QuickError {},
+    MultipleSubMessagesNoReplyWithError {},
+    MultipleSubMessagesNoReplyWithPanic {},
+    MultipleSubMessagesWithReplyWithError {},
+    MultipleSubMessagesWithReplyWithPanic {},
     InitV10 {
         code_id: u64,
         code_hash: String,
@@ -271,9 +294,19 @@ pub enum ExecuteMsg {
         code_id: u64,
         code_hash: String,
     },
+    SendMultipleFundsToInitCallback {
+        coins: Vec<Coin>,
+        code_id: u64,
+        code_hash: String,
+    },
     SendFundsToExecCallback {
         amount: u32,
         denom: String,
+        to: String,
+        code_hash: String,
+    },
+    SendMultipleFundsToExecCallback {
+        coins: Vec<Coin>,
         to: String,
         code_hash: String,
     },

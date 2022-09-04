@@ -2,8 +2,8 @@ package keeper
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -15,7 +15,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
@@ -39,7 +38,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -89,6 +87,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
+	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/enigmampc/SecretNetwork/x/registration"
 )
@@ -184,31 +183,46 @@ type TestConfigType struct {
 
 // encoders can be nil to accept the defaults, or set it to override some of the message handlers (like default)
 func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, encoders *MessageEncoders, queriers *QueryPlugins) (sdk.Context, TestKeepers) {
-	tempDir, err := ioutil.TempDir("", "wasm")
+	tempDir, err := os.MkdirTemp("", "wasm")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(tempDir) })
 
-	keyContract := sdk.NewKVStoreKey(wasmtypes.StoreKey)
-	keyAcc := sdk.NewKVStoreKey(authtypes.StoreKey)
-	keyStaking := sdk.NewKVStoreKey(stakingtypes.StoreKey)
-	keyDistro := sdk.NewKVStoreKey(distrtypes.StoreKey)
-	mintStore := sdk.NewKVStoreKey(minttypes.StoreKey)
-	keyParams := sdk.NewKVStoreKey(paramstypes.StoreKey)
-	tkeyParams := sdk.NewTransientStoreKey(paramstypes.TStoreKey)
-	keyGov := sdk.NewKVStoreKey(govtypes.StoreKey)
-	keyBank := sdk.NewKVStoreKey(banktypes.StoreKey)
+	//keyContract := sdk.NewKVStoreKey(wasmtypes.StoreKey)
+	//keyAcc := sdk.NewKVStoreKey(authtypes.StoreKey)
+	//keyStaking := sdk.NewKVStoreKey(stakingtypes.StoreKey)
+	//keyDistro := sdk.NewKVStoreKey(distrtypes.StoreKey)
+	//mintStore := sdk.NewKVStoreKey(minttypes.StoreKey)
+	//keyParams := sdk.NewKVStoreKey(paramstypes.StoreKey)
+	//tkeyParams := sdk.NewTransientStoreKey(paramstypes.TStoreKey)
+	//keyGov := sdk.NewKVStoreKey(govtypes.StoreKey)
+	//keyBank := sdk.NewKVStoreKey(banktypes.StoreKey)
+
+	keys := sdk.NewKVStoreKeys(
+		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
+		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
+		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
+		evidencetypes.StoreKey, ibctransfertypes.StoreKey,
+		capabilitytypes.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey,
+		wasmtypes.StoreKey,
+	)
 
 	db := dbm.NewMemDB()
+
 	ms := store.NewCommitMultiStore(db)
-	ms.MountStoreWithDB(keyContract, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyAcc, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyParams, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyStaking, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(mintStore, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyDistro, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(tkeyParams, sdk.StoreTypeTransient, db)
-	ms.MountStoreWithDB(keyGov, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyBank, sdk.StoreTypeIAVL, db)
+	for _, v := range keys {
+		ms.MountStoreWithDB(v, sdk.StoreTypeIAVL, db)
+	}
+
+	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
+	for _, v := range tkeys {
+		ms.MountStoreWithDB(v, sdk.StoreTypeTransient, db)
+	}
+
+	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+	for _, v := range memKeys {
+		ms.MountStoreWithDB(v, sdk.StoreTypeMemory, db)
+	}
+
 	require.NoError(t, ms.LoadLatestVersion())
 
 	ctx := sdk.NewContext(ms, tmproto.Header{
@@ -217,7 +231,12 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		ChainID: TestConfig.ChainID,
 	}, isCheckTx, log.NewNopLogger())
 	encodingConfig := MakeEncodingConfig()
-	paramsKeeper := paramskeeper.NewKeeper(encodingConfig.Marshaler, encodingConfig.Amino, keyParams, tkeyParams)
+	paramsKeeper := paramskeeper.NewKeeper(
+		encodingConfig.Marshaler,
+		encodingConfig.Amino,
+		keys[paramstypes.StoreKey],
+		tkeys[paramstypes.TStoreKey],
+	)
 	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)
 	paramsKeeper.Subspace(stakingtypes.ModuleName)
@@ -240,7 +259,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	authSubsp, _ := paramsKeeper.GetSubspace(authtypes.ModuleName)
 	authKeeper := authkeeper.NewAccountKeeper(
 		encodingConfig.Marshaler,
-		keyAcc, // target store
+		keys[authtypes.StoreKey], // target store
 		authSubsp,
 		authtypes.ProtoBaseAccount, // prototype
 		maccPerms,
@@ -254,7 +273,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bankSubsp, _ := paramsKeeper.GetSubspace(banktypes.ModuleName)
 	bankKeeper := bankkeeper.NewBaseKeeper(
 		encodingConfig.Marshaler,
-		keyBank,
+		keys[banktypes.StoreKey],
 		authKeeper,
 		bankSubsp,
 		blockedAddrs,
@@ -264,12 +283,18 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bankKeeper.SetParams(ctx, banktypes.DefaultParams())
 
 	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
-	stakingKeeper := stakingkeeper.NewKeeper(encodingConfig.Marshaler, keyStaking, authKeeper, bankKeeper, stakingSubsp)
+	stakingKeeper := stakingkeeper.NewKeeper(
+		encodingConfig.Marshaler,
+		keys[stakingtypes.StoreKey],
+		authKeeper,
+		bankKeeper,
+		stakingSubsp,
+	)
 	stakingKeeper.SetParams(ctx, TestingStakeParams)
 
 	// mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
 
-	//mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
+	// mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
 	//	keyBank,
 	//	mintSubsp,
 	//	stakingKeeper,
@@ -278,12 +303,12 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	//	authtypes.FeeCollectorName,
 	//	)
 	//
-	//bankkeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
+	// bankkeeper.SetSupply(ctx, banktypes.NewSupply(sdk.NewCoins((sdk.NewInt64Coin("stake", 1)))))
 
 	distSubsp, _ := paramsKeeper.GetSubspace(distrtypes.ModuleName)
 	distKeeper := distrkeeper.NewKeeper(
 		encodingConfig.Marshaler,
-		keyDistro,
+		keys[distrtypes.StoreKey],
 		distSubsp,
 		authKeeper,
 		bankKeeper,
@@ -336,19 +361,19 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
 
 	govKeeper := govkeeper.NewKeeper(
-		encodingConfig.Marshaler, keyGov, paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
+		encodingConfig.Marshaler, keys[govtypes.StoreKey], paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable()), authKeeper, bankKeeper, stakingKeeper, govRouter,
 	)
 
 	// bank := bankKeeper.
 	// bk := bank.Keeper(bankKeeper)
 
 	mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
-	mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler, mintStore, mintSubsp, stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName)
+	mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler, keys[minttypes.StoreKey], mintSubsp, stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName)
 	mintKeeper.SetMinter(ctx, minttypes.DefaultInitialMinter())
 
-	//keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
+	// keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	//// add wasm handler so we can loop-back (contracts calling contracts)
-	//router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
+	// router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 
 	govKeeper.SetProposalID(ctx, govtypes.DefaultStartingProposalID)
 	govKeeper.SetDepositParams(ctx, govtypes.DefaultDepositParams())
@@ -360,15 +385,17 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
 
-	keys := sdk.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
-		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
-		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
-		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey,
-		feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey,
-	)
-
-	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+	//keys := sdk.NewKVStoreKeys(
+	//	authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
+	//	minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
+	//	govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
+	//	evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, "compute",
+	//	feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey,
+	//)
+	//memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+	//for _, v := range memKeys {
+	//	ms.MountStoreWithDB(v, sdk.StoreTypeMemory, db)
+	//}
 
 	upgradeKeeper := upgradekeeper.NewKeeper(
 		map[int64]bool{},
@@ -385,11 +412,16 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	)
 
 	scopedIBCKeeper := capabilityKeeper.ScopeToModule(ibchost.ModuleName)
-	scopedWasmKeeper := capabilityKeeper.ScopeToModule("compute")
+	scopedWasmKeeper := capabilityKeeper.ScopeToModule(wasmtypes.ModuleName)
 
 	ibchostSubSp, _ := paramsKeeper.GetSubspace(ibchost.ModuleName)
 	ibcKeeper := ibckeeper.NewKeeper(
-		encodingConfig.Marshaler, keys[ibchost.StoreKey], ibchostSubSp, stakingKeeper, upgradeKeeper, scopedIBCKeeper,
+		encodingConfig.Marshaler,
+		keys[ibchost.StoreKey],
+		ibchostSubSp,
+		stakingKeeper,
+		upgradeKeeper,
+		scopedIBCKeeper,
 	)
 
 	// todo: new grpc routing
@@ -405,10 +437,15 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// stakingtypes.RegisterMsgServer(serviceRouter, stakingMsgServer)
 	// distrtypes.RegisterMsgServer(serviceRouter, distrMsgServer)
 
+	queryRouter := baseapp.NewGRPCQueryRouter()
+	queryRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
+	msgRouter := baseapp.NewMsgServiceRouter()
+	msgRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
+
 	keeper := NewKeeper(
 		encodingConfig.Marshaler,
 		*encodingConfig.Amino,
-		keyContract,
+		keys[wasmtypes.StoreKey],
 		authKeeper,
 		bankKeeper,
 		govKeeper,
@@ -421,6 +458,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		MockIBCTransferKeeper{},
 		ibcKeeper.ChannelKeeper,
 		router,
+		msgRouter,
+		queryRouter,
 		tempDir,
 		wasmConfig,
 		supportedFeatures,
@@ -430,6 +469,16 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
+
+	am := module.NewManager( // minimal module set that we use for message/ query tests
+		bank.NewAppModule(encodingConfig.Marshaler, bankKeeper, authKeeper),
+		staking.NewAppModule(encodingConfig.Marshaler, stakingKeeper, authKeeper, bankKeeper),
+		distribution.NewAppModule(encodingConfig.Marshaler, distKeeper, authKeeper, bankKeeper, stakingKeeper),
+		gov.NewAppModule(encodingConfig.Marshaler, govKeeper, authKeeper, bankKeeper),
+	)
+	am.RegisterServices(module.NewConfigurator(encodingConfig.Marshaler, msgRouter, queryRouter))
+	wasmtypes.RegisterMsgServer(msgRouter, NewMsgServerImpl(keeper))
+	wasmtypes.RegisterQueryServer(queryRouter, NewGrpcQuerier(keeper))
 
 	keepers := TestKeepers{
 		AccountKeeper: authKeeper,
@@ -494,20 +543,13 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract)
 	return res, nil
 }
 
-func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
-	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
-	require.NoError(t, err)
-
-	initMsg := wasmtypes.MsgInstantiateContract{
-		Sender:    creator,
-		CodeID:    codeID,
-		Label:     "demo contract 1",
-		InitMsg:   encMsg,
-		InitFunds: funds,
+func PrepareIBCOpenAck(t *testing.T, keeper Keeper, ctx sdk.Context, ibcOpenAck v1types.IBCOpenAck, ibcOpenConfirm v1types.IBCOpenConfirm) sdk.Context {
+	channelConnectMsg := v1types.IBCChannelConnectMsg{
+		OpenAck:     &ibcOpenAck,
+		OpenConfirm: &ibcOpenConfirm,
 	}
-	tx := NewTestTx(&initMsg, creatorAcc, privKey)
 
-	txBytes, err := tx.Marshal()
+	txBytes, err := json.Marshal(channelConnectMsg)
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
@@ -531,11 +573,30 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	return ctx.WithTxBytes(txBytes)
 }
 
-func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *sdktx.Tx {
+func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
+	require.NoError(t, err)
+
+	initMsg := wasmtypes.MsgInstantiateContract{
+		Sender:    creator,
+		CodeID:    codeID,
+		Label:     "demo contract 1",
+		InitMsg:   encMsg,
+		InitFunds: funds,
+	}
+	tx := NewTestTx(&initMsg, creatorAcc, privKey)
+
+	txBytes, err := tx.Marshal()
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
+func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
 	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
 
-func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *sdktx.Tx {
+func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
 		panic("length of `msgs` `creatorAccs` and `privKeys` must be the same")
 	}
@@ -581,6 +642,9 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 			Sequence:      creatorAcc.GetSequence(),
 		}
 		bytesToSign, err := signModeHandler.GetSignBytes(sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
+		if err != nil {
+			panic(err)
+		}
 
 		signBytes, err := privKey.Sign(bytesToSign)
 		if err != nil {
@@ -651,7 +715,7 @@ type protoTxProvider interface {
 	GetProtoTx() *tx.Tx
 }
 
-func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) { // nolint
+func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) {
 	protoProvider, ok := txBuilder.(protoTxProvider)
 	if !ok {
 		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expected proto tx builder, got %T", txBuilder)

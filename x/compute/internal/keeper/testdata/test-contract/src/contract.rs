@@ -22,6 +22,9 @@ const REALLY_LONG: &[u8] = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum InitMsg {
+    WasmMsg {
+        ty: String,
+    },
     Nop {},
     Callback {
         contract_addr: HumanAddr,
@@ -73,6 +76,9 @@ pub enum InitMsg {
     InitFromV1 {
         counter: u64,
     },
+    Counter {
+        counter: u64,
+    },
     AddAttributes {},
     AddAttributesWithSubmessage {},
     AddPlaintextAttributes {},
@@ -87,11 +93,24 @@ pub enum InitMsg {
         from: Option<HumanAddr>,
     },
     CosmosMsgCustom {},
+    SendMultipleFundsToInitCallback {
+        coins: Vec<Coin>,
+        code_id: u64,
+        code_hash: String,
+    },
+    SendMultipleFundsToExecCallback {
+        coins: Vec<Coin>,
+        to: HumanAddr,
+        code_hash: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    WasmMsg {
+        ty: String,
+    },
     A {
         contract_addr: HumanAddr,
         code_hash: String,
@@ -189,9 +208,19 @@ pub enum HandleMsg {
         code_id: u64,
         code_hash: String,
     },
+    SendMultipleFundsToInitCallback {
+        coins: Vec<Coin>,
+        code_id: u64,
+        code_hash: String,
+    },
     SendFundsToExecCallback {
         amount: u32,
         denom: String,
+        to: HumanAddr,
+        code_hash: String,
+    },
+    SendMultipleFundsToExecCallback {
+        coins: Vec<Coin>,
         to: HumanAddr,
         code_hash: String,
     },
@@ -288,6 +317,7 @@ pub enum HandleMsg {
         code_hash: String,
     },
     CosmosMsgCustom {},
+    InitNewContract {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -322,6 +352,7 @@ pub enum QueryMsg {
         msg: String,
     },
     GetCountFromV1 {},
+    Get {},
     GetContractVersion {},
 }
 
@@ -339,6 +370,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> InitResult {
     match msg {
+        InitMsg::WasmMsg { ty } => {
+            if ty == "success" {
+                return Ok(InitResponse::default());
+            } else if ty == "err" {
+                return Err(StdError::generic_err("custom error"));
+            } else if ty == "panic" {
+                panic!()
+            }
+
+            return Err(StdError::generic_err("custom error"));
+        }
         InitMsg::Nop {} => Ok(InitResponse {
             messages: vec![],
             log: vec![log("init", "🌈")],
@@ -443,6 +485,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 log: vec![],
             })
         }
+        InitMsg::Counter { counter } => {
+            count(&mut deps.storage).save(&counter)?;
+
+            Ok(InitResponse {
+                messages: vec![],
+                log: vec![],
+            })
+        }
         InitMsg::AddAttributes {} => Ok(InitResponse {
             messages: vec![],
             log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
@@ -496,6 +546,25 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             messages: vec![CosmosMsg::Custom(Empty {})],
             log: vec![],
         }),
+        InitMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to,
+                msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+            })],
+            log: vec![],
+        }),
+        InitMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+                label: "test".to_string()
+            })],
+            log: vec![],
+        })
     }
 }
 
@@ -591,6 +660,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> HandleResult {
     match msg {
+        HandleMsg::WasmMsg { ty } => {
+            if ty == "success" {
+                return Ok(HandleResponse::default());
+            } else if ty == "err" {
+                return Err(StdError::generic_err("custom error"));
+            } else if ty == "panic" {
+                panic!()
+            }
+
+            return Err(StdError::generic_err("custom error"));
+        }
         HandleMsg::A {
             contract_addr,
             code_hash,
@@ -1148,6 +1228,42 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
             data: None,
         }),
+        HandleMsg::InitNewContract {} => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id: 1,
+                msg: Binary::from(
+                    "{\"counter\":{\"counter\":150, \"expires\":100}}"
+                        .as_bytes()
+                        .to_vec(),
+                ),
+                callback_code_hash: env.contract_code_hash,
+                send: vec![],
+                label: String::from("fi"),
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to,
+                msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(HandleResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+                label: "test".to_string()
+            })],
+            log: vec![],
+            data: None,
+        })
     }
 }
 
@@ -1230,8 +1346,8 @@ fn send_external_query_recursion_limit<S: Storage, A: Api, Q: Querier>(
             ),
         }));
 
-    // 5 is the current recursion limit.
-    if depth != 5 {
+    // 10 is the current recursion limit.
+    if depth != 10 {
         result
     } else {
         match result {
@@ -1709,6 +1825,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             return Ok(to_binary(&answer)?);
         }
         QueryMsg::GetCountFromV1 {} => {
+            let count = count_read(&deps.storage).load()?;
+
+            Ok(to_binary(&QueryRes::Get { count })?)
+        }
+        QueryMsg::Get {} => {
             let count = count_read(&deps.storage).load()?;
 
             Ok(to_binary(&QueryRes::Get { count })?)

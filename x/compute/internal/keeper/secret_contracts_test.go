@@ -6,9 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,8 @@ import (
 	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
 	v010cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+
+	"gonum.org/v1/gonum/stat/combin"
 )
 
 type ContractEvent []v010cosmwasm.LogAttribute
@@ -43,17 +46,24 @@ var testContracts = []TestContract{
 	}, {
 		CosmWasmVersion: "v1",
 		IsCosmWasmV1:    true,
-		WasmFilePath:    "./testdata/v1-sanity-contract/contract.wasm",
+		WasmFilePath:    "./testdata/v1-sanity-contract/v1-contract.wasm",
 	},
 }
 
 // if codeID isn't 0, it will try to use that. Otherwise will take the contractAddress
 func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress sdk.AccAddress, codeId uint64, msg []byte) ([]byte, error) {
 	var hash []byte
+	var err error
+
 	if codeId != 0 {
-		hash = keeper.GetCodeInfo(ctx, codeId).CodeHash
+		codeInfo, err := keeper.GetCodeInfo(ctx, codeId)
+		require.NoError(t, err)
+
+		hash = codeInfo.CodeHash
 	} else {
-		hash = keeper.GetContractHash(ctx, contractAddress)
+		hash, err = keeper.GetContractHash(ctx, contractAddress)
+		require.NoError(t, err)
+
 	}
 
 	if hash == nil {
@@ -71,7 +81,22 @@ func testEncrypt(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress s
 	return queryBz, nil
 }
 
-func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, uint64, string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
+func uploadCode(ctx sdk.Context, t *testing.T, keeper Keeper, wasmPath string, walletA sdk.AccAddress) (uint64, string) {
+	wasmCode, err := os.ReadFile(wasmPath)
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	codeHash := hex.EncodeToString(codeInfo.CodeHash)
+
+	return codeID, codeHash
+}
+
+func setupBasicTest(t *testing.T, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
 	encodingConfig := MakeEncodingConfig()
 	var transferPortSource types.ICS20TransferPortSource
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
@@ -84,13 +109,13 @@ func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins
 	walletA, privKeyA := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...))
 	walletB, privKeyB := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...))
 
-	wasmCode, err := ioutil.ReadFile(wasmPath)
-	require.NoError(t, err)
+	return ctx, keeper, walletA, privKeyA, walletB, privKeyB
+}
 
-	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
-	require.NoError(t, err)
+func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, uint64, string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
+	ctx, keeper, walletA, privKeyA, walletB, privKeyB := setupBasicTest(t, additionalCoinsInWallets)
 
-	codeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+	codeID, codeHash := uploadCode(ctx, t, keeper, wasmPath, walletA)
 
 	return ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB
 }
@@ -142,7 +167,7 @@ func decryptAttribute(attr v010cosmwasm.LogAttribute, nonce []byte) (v010cosmwas
 	}
 	keyPlainBz, err := wasmCtx.Decrypt(keyCipherBz, nonce)
 	if err != nil {
-		return v010cosmwasm.LogAttribute{}, fmt.Errorf("Failed Decrypt for key %+v", keyPlainBz)
+		return v010cosmwasm.LogAttribute{}, fmt.Errorf("Failed Decrypt for key %+v", keyCipherBz)
 	}
 	newAttr.Key = string(keyPlainBz)
 
@@ -316,6 +341,62 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 
 var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
+func stringToCoins(balance string) sdk.Coins {
+	result := sdk.NewCoins()
+
+	individualCoins := strings.Split(balance, ",")
+	for _, coin := range individualCoins {
+		if coin == "" {
+			continue
+		}
+		var amount int64
+		var denom string
+		fmt.Sscanf(coin, "%d%s", &amount, &denom)
+		result = result.Add(sdk.NewInt64Coin(denom, amount))
+	}
+
+	return result
+}
+
+func CoinsToInput(coins sdk.Coins) string {
+	result := "["
+	for i, coin := range coins {
+		result += `{"amount":"`
+		result += coin.Amount.String()
+		result += `","denom":"`
+		result += coin.Denom
+		result += `"}`
+		if i != len(coins)-1 {
+			result += `,`
+		}
+	}
+	result += "]"
+
+	return result
+}
+
+func multisetsFrom[t any](elements []t, size int) [][]t {
+	// init slice with 'size' elements, each one being the number of elements in the input slice
+	lengths := make([]int, size)
+	length := len(elements)
+	for i := 0; i < len(lengths); i++ {
+		lengths[i] = length
+	}
+
+	product := combin.Cartesian(lengths)
+	// map indexes to element
+	result := make([][]t, 0)
+	for _, indexes := range product {
+		inner := make([]t, 0)
+		for _, j := range indexes {
+			inner = append(inner, elements[j])
+		}
+		result = append(result, inner)
+	}
+
+	return result
+}
+
 func queryHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddr sdk.AccAddress, input string,
@@ -329,7 +410,10 @@ func queryHelperImpl(
 	contractAddr sdk.AccAddress, input string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64,
 ) (string, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))
+	hash, err := keeper.GetContractHash(ctx, contractAddr)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(hash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -373,6 +457,14 @@ func queryHelperImpl(
 	return string(resultBz), cosmwasm.StdError{}
 }
 
+func execHelperMultipleCoins(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, shouldSkipAttributes ...bool,
+) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coins, -1, shouldSkipAttributes...)
+}
+
 func execHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
@@ -386,7 +478,18 @@ func execHelperImpl(
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetContractHash(ctx, contractAddress))
+	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), wasmCallCount, shouldSkipAttributes...)
+}
+
+func execHelperMultipleCoinsImpl(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
+) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+	hash, err := keeper.GetContractHash(ctx, contractAddress)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(hash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -408,10 +511,10 @@ func execHelperImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)))
+	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, coins)
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), nil)
+	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, coins, nil)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 
@@ -450,7 +553,10 @@ func initHelperImpl(
 	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, sentFunds sdk.Coins, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	hashStr := hex.EncodeToString(keeper.GetCodeInfo(ctx, codeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(codeInfo.CodeHash)
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hashStr),
@@ -495,6 +601,33 @@ func initHelperImpl(
 	return nonce, ctx, contractAddress, wasmEvents, cosmwasm.StdError{}
 }
 
+// requireEvents checks events output
+// Events are now sorted (since wasmd v0.28),
+// but for us they're sorted while encrypted so when testing with random encryption keys
+// this is non-deterministic
+func requireEvents(t *testing.T, a, b []ContractEvent) {
+	require.Equal(t, len(a), len(b))
+
+	for i := range b {
+		require.Equal(t, len(a[i]), len(b[i]))
+		for j := range b[i] {
+			require.Contains(t, a[i], b[i][j])
+		}
+	}
+}
+
+// requireLogAttributes checks events output
+// Events are now sorted (since wasmd v0.28),
+// but for us they're sorted while encrypted so when testing with random encryption keys
+// this is non-deterministic
+func requireLogAttributes(t *testing.T, a, b []v010cosmwasm.LogAttribute) {
+	require.Equal(t, len(a), len(b))
+
+	for i := range b {
+		require.Contains(t, a, b[i])
+	}
+}
+
 func TestCallbackSanity(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -504,35 +637,37 @@ func TestCallbackSanity(t *testing.T) {
 			_, _, contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
+				initEvents,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "init", Value: "🌈"},
 					},
 				},
-				initEvents,
 			)
 
 			_, _, data, execEvents, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 			require.Empty(t, err)
-			require.Equal(t,
+
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "banana", Value: "🍌"},
 					},
 					{
-						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "kiwi", Value: "🥝"},
+						{Key: "contract_address", Value: contractAddress.String()},
 					},
 					{
-						{Key: "contract_address", Value: contractAddress.String()},
 						{Key: "watermelon", Value: "🍉"},
+						{Key: "contract_address", Value: contractAddress.String()},
 					},
 				},
 				execEvents,
 			)
+
 			require.Equal(t, []byte{2, 3}, data)
 		})
 	}
@@ -563,7 +698,7 @@ func TestSanity(t *testing.T) {
 
 	require.Empty(t, err)
 	require.Empty(t, data)
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -593,7 +728,7 @@ func TestInitLogs(t *testing.T) {
 			_, _, contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 			require.Equal(t, 1, len(initEvents))
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -617,7 +752,7 @@ func TestEmptyLogKeyValue(t *testing.T) {
 			_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"empty_log_key_value":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, execErr)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -709,7 +844,7 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 			_, _, firstContractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: firstContractAddress.String()},
@@ -723,7 +858,7 @@ func TestCallbackFromInitAndCallbackEvents(t *testing.T) {
 			_, _, contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"callback":{"contract_addr":"%s", "code_hash": "%s"}}`, firstContractAddress.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -1145,33 +1280,6 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 	}
 }
 
-func TestExecuteNotEncryptedInputError(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
-
-			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
-			require.Empty(t, initErr)
-
-			//ctx = sdk.NewContext(
-			//	ctx.MultiStore(),
-			//	ctx.BlockHeader(),
-			//	ctx.IsCheckTx(),
-			//	log.NewNopLogger(),
-			//).WithGasMeter(sdk.NewGasMeter(defaultGas))
-
-			execMsg := []byte(`{"empty_log_key_value":{}}`)
-
-			ctx = PrepareExecSignedTx(t, keeper, ctx, walletA, privKeyA, execMsg, contractAddress, nil)
-
-			_, err := keeper.Execute(ctx, contractAddress, walletA, execMsg, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-			require.Error(t, err)
-
-			require.Contains(t, err.Error(), "failed to decrypt data")
-		})
-	}
-}
-
 func TestQueryNotEncryptedInputError(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
@@ -1234,20 +1342,25 @@ func TestExecCallbackToInit(t *testing.T) {
 			require.Empty(t, execData)
 
 			require.Equal(t, 2, len(execEvents))
-			require.Equal(t,
+			requireLogAttributes(t,
 				ContractEvent{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "instantiating a new contract", Value: "🪂"},
 				},
 				execEvents[0],
 			)
-			require.Equal(t,
+			require.Contains(t,
+				execEvents[1],
 				v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
-				execEvents[1][1],
 			)
-			require.Equal(t, "contract_address", execEvents[1][0].Key)
-
-			secondContractAddressBech32 := execEvents[1][0].Value
+			var secondContractAddressBech32 string
+			for _, v := range execEvents[1] {
+				if v.Key == "contract_address" {
+					secondContractAddressBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, secondContractAddressBech32)
 			secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
 			require.NoError(t, err)
 
@@ -1269,20 +1382,26 @@ func TestInitCallbackToInit(t *testing.T) {
 			require.Empty(t, initErr)
 
 			require.Equal(t, 2, len(initEvents))
-			require.Equal(t,
+			requireLogAttributes(t,
 				ContractEvent{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "instantiating a new contract from init!", Value: "🐙"},
 				},
 				initEvents[0],
 			)
-			require.Equal(t,
-				v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
-				initEvents[1][1],
-			)
-			require.Equal(t, "contract_address", initEvents[1][0].Key)
 
-			secondContractAddressBech32 := initEvents[1][0].Value
+			require.Contains(t,
+				initEvents[1],
+				v010cosmwasm.LogAttribute{Key: "init", Value: "🌈"},
+			)
+			var secondContractAddressBech32 string
+			for _, v := range initEvents[1] {
+				if v.Key == "contract_address" {
+					secondContractAddressBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, secondContractAddressBech32)
 			secondContractAddress, err := sdk.AccAddressFromBech32(secondContractAddressBech32)
 			require.NoError(t, err)
 
@@ -1706,7 +1825,7 @@ func TestMsgSenderInCallback(t *testing.T) {
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t, []ContractEvent{
+			requireEvents(t, []ContractEvent{
 				{
 					{Key: "contract_address", Value: addr.String()},
 					{Key: "hi", Value: "hey"},
@@ -1746,7 +1865,7 @@ func TestQueryRecursionLimitEnforcedInQueries(t *testing.T) {
 			_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests)
+			data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 2*defaultGasForTests)
 
 			require.NotEmpty(t, data)
 			require.Equal(t, data, "\"Recursion limit was correctly enforced\"")
@@ -1764,7 +1883,7 @@ func TestQueryRecursionLimitEnforcedInHandles(t *testing.T) {
 			_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			_, _, data, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, data, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 2*defaultGasForTests, 0)
 
 			require.NotEmpty(t, data)
 			require.Equal(t, string(data), "\"Recursion limit was correctly enforced\"")
@@ -1784,12 +1903,12 @@ func TestQueryRecursionLimitEnforcedInInits(t *testing.T) {
 			require.Empty(t, err)
 
 			// Initialize the contract that will be running the test
-			_, _, addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests)
+			_, _, addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 2*defaultGasForTests)
 			require.Empty(t, err)
 
 			require.Nil(t, err.GenericErr)
 
-			require.Equal(t, []ContractEvent{
+			requireEvents(t, []ContractEvent{
 				{
 					{Key: "contract_address", Value: addr.String()},
 					{Key: "message", Value: "Recursion limit was correctly enforced"},
@@ -1934,7 +2053,16 @@ func TestContractSendFundsToInitCallback(t *testing.T) {
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-			newContract, err := sdk.AccAddressFromBech32(execEvents[1][0].Value)
+			var newContractBech32 string
+			for _, v := range execEvents[1] {
+				if v.Key == "contract_address" {
+					newContractBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, newContractBech32)
+
+			newContract, err := sdk.AccAddressFromBech32(newContractBech32)
 			require.NoError(t, err)
 			newContractCoins := keeper.bankKeeper.GetAllBalances(ctx, newContract)
 
@@ -1969,6 +2097,8 @@ func TestContractSendFundsToInitCallbackNotEnough(t *testing.T) {
 			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
 			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
+			// The state here should have been reverted by the APP but in go-tests we create our own keeper
+			// so it is not reverted in this case.
 			require.Equal(t, "17denom", contractCoinsAfter.String())
 			require.Equal(t, "199983denom", walletCoinsAfter.String())
 		})
@@ -2037,6 +2167,8 @@ func TestContractSendFundsToExecCallbackNotEnough(t *testing.T) {
 			contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
 			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
+			// The state here should have been reverted by the APP but in go-tests we create our own keeper
+			// so it is not reverted in this case.
 			require.Equal(t, "17denom", contractCoinsAfter.String())
 			require.Equal(t, "", contract2CoinsAfter.String())
 			require.Equal(t, "199983denom", walletCoinsAfter.String())
@@ -2184,7 +2316,7 @@ func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
 
 	walletA, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/static-too-high-initial-memory.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/static-too-high-initial-memory.wasm")
 	require.NoError(t, err)
 
 	_, err = keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -2315,14 +2447,24 @@ func TestCodeHashInitCallInit(t *testing.T) {
 				_, _, addr, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.Empty(t, err)
-				require.Equal(t,
+
+				var newContractBech32 string
+				for _, v := range events[1] {
+					if v.Key == "contract_address" {
+						newContractBech32 = v.Value
+						break
+					}
+				}
+				require.NotEmpty(t, newContractBech32)
+
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr.String()},
 							{Key: "a", Value: "a"},
 						},
 						{
-							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "contract_address", Value: newContractBech32},
 							{Key: "init", Value: "🌈"},
 						},
 					},
@@ -2381,7 +2523,7 @@ func TestCodeHashInitCallExec(t *testing.T) {
 				_, _, addr2, events, err := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 2, sdk.NewCoins())
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr2.String()},
@@ -2447,7 +2589,7 @@ func TestCodeHashInitCallQuery(t *testing.T) {
 				_, _, addr2, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr2.String()},
@@ -2509,14 +2651,24 @@ func TestCodeHashExecCallInit(t *testing.T) {
 				_, _, _, events, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 
 				require.Empty(t, err)
-				require.Equal(t,
+
+				var newContractBech32 string
+				for _, v := range events[1] {
+					if v.Key == "contract_address" {
+						newContractBech32 = v.Value
+						break
+					}
+				}
+				require.NotEmpty(t, newContractBech32)
+
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr.String()},
 							{Key: "a", Value: "a"},
 						},
 						{
-							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "contract_address", Value: newContractBech32},
 							{Key: "init", Value: "🌈"},
 						},
 					},
@@ -2601,14 +2753,24 @@ func TestCodeHashExecCallExec(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, codeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+
+				var newContractBech32 string
+				for _, v := range events[1] {
+					if v.Key == "contract_address" {
+						newContractBech32 = v.Value
+						break
+					}
+				}
+				require.NotEmpty(t, newContractBech32)
+
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr.String()},
 							{Key: "b", Value: "b"},
 						},
 						{
-							{Key: "contract_address", Value: events[1][0].Value},
+							{Key: "contract_address", Value: newContractBech32},
 							{Key: "watermelon", Value: "🍉"},
 						},
 					},
@@ -2692,7 +2854,7 @@ func TestCodeHashExecCallQuery(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: addr.String()},
@@ -2819,7 +2981,7 @@ func TestEncryptedAndPlaintextLogs(t *testing.T) {
 	_, _, _, events, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, "{}", true, false, defaultGasForTests, 0, 1)
 
 	require.Empty(t, err)
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: addr.String()},
@@ -2846,7 +3008,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2860,7 +3022,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2874,7 +3036,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2888,7 +3050,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2902,7 +3064,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2916,7 +3078,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2930,7 +3092,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"AoSdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXc","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -2944,7 +3106,7 @@ func TestSecp256k1Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BISdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXcFWl11YCgu65hzvNDQE2Qo1hwTMQ/42Xif8O/MrxzvxI=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3009,7 +3171,7 @@ func TestEd25519Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3023,7 +3185,7 @@ func TestEd25519Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmUK"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3037,7 +3199,7 @@ func TestEd25519Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3051,7 +3213,7 @@ func TestEd25519Verify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3078,7 +3240,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3092,7 +3254,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3106,7 +3268,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3120,7 +3282,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3134,7 +3296,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3148,7 +3310,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":[],"msgs":[]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3162,7 +3324,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":[]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3176,7 +3338,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3190,7 +3352,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3204,7 +3366,7 @@ func TestEd25519BatchVerify(t *testing.T) {
 				_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg==","uuNxLEzAYDbuJ+BiYN94pTqhD7UhvCJNbxAbnWz0B9DivkPXmqIULko0DddP2/tVXPtjJ90J20faiWCEC3QkDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","cGVhY2Ugb3V0"]}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 				require.Empty(t, err)
-				require.Equal(t,
+				requireEvents(t,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -3230,7 +3392,7 @@ func TestSecp256k1RecoverPubkey(t *testing.T) {
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":0,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -3243,7 +3405,7 @@ func TestSecp256k1RecoverPubkey(t *testing.T) {
 			_, _, _, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":1,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -3278,7 +3440,7 @@ func TestSecp256k1Sign(t *testing.T) {
 			_, _, _, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"secp256k1_verify":{"iterations":1,"pubkey":"ArQojoh5TVlSSNA1HFlH5HcQsv0jnrpeE7hgwR/N46nS","sig":"%s","msg_hash":"K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA="}}`, signature), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -3313,7 +3475,7 @@ func TestEd25519Sign(t *testing.T) {
 			_, _, _, events, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"ed25519_verify":{"iterations":1,"pubkey":"jh58UkC0FDsiupZBLdaqKUqYubJbk3LDaruZiJiy0Po=","sig":"%s","msg":"d2VuIG1vb24="}}`, signature), true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 
 			require.Empty(t, err)
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -3355,7 +3517,7 @@ type v1QueryResponse struct {
 }
 
 func TestV1EndpointsSanity(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -3375,7 +3537,7 @@ func TestV1EndpointsSanity(t *testing.T) {
 }
 
 func TestV1QueryWorksWithEnv(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
@@ -3391,7 +3553,7 @@ func TestV1QueryWorksWithEnv(t *testing.T) {
 }
 
 func TestV1ReplySanity(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -3435,8 +3597,47 @@ func TestV1ReplySanity(t *testing.T) {
 	require.Equal(t, uint32(1337), resp.Get.Count)
 }
 
+func TestInitCreateNewContract(t *testing.T) {
+	for _, testContract := range testContracts {
+		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
+
+			_, _, contractAddress, ev, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+			_, _, _, ev, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, testContract.IsCosmWasmV1, math.MaxUint64, 0)
+
+			require.Empty(t, err)
+
+			var newContractBech32 string
+			for _, v := range ev[1] {
+				if v.Key == "contract_address" {
+					newContractBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, newContractBech32)
+
+			newContractAddress, Aerr := sdk.AccAddressFromBech32(newContractBech32)
+			require.Empty(t, Aerr)
+			queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+			require.Empty(t, qErr)
+
+			var resp v1QueryResponse
+			e := json.Unmarshal([]byte(queryRes), &resp)
+			require.NoError(t, e)
+			require.Equal(t, uint32(10), resp.Get.Count)
+
+			queryRes, qErr = queryHelper(t, keeper, ctx, newContractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+			require.Empty(t, qErr)
+
+			e = json.Unmarshal([]byte(queryRes), &resp)
+			require.NoError(t, e)
+			require.Equal(t, uint32(150), resp.Get.Count)
+		})
+	}
+}
+
 func TestV1ReplyLoop(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -3539,7 +3740,7 @@ func TestBankMsgSend(t *testing.T) {
 							var contractAddress sdk.AccAddress
 
 							if callType == "init" {
-								_, _, _, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+								_, _, _, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
 							} else {
 								_, _, contractAddress, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, contract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
 
@@ -3557,6 +3758,302 @@ func TestBankMsgSend(t *testing.T) {
 							walletBCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletB)
 
 							require.Equal(t, test.balancesAfter, walletACoinsAfter.String()+" "+walletBCoinsAfter.String())
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestSendFunds(t *testing.T) {
+	for _, callTypes := range multisetsFrom([]string{"init", "exec", "user"}, 2) {
+		originType, destinationType := callTypes[0], callTypes[1]
+
+		t.Run(originType+"->"+destinationType, func(t *testing.T) {
+			alreadyTested := make(map[string]bool)
+			alreadyTested["useruser->useruser"] = true // we are only testing contracts here
+			for _, currentSubjects := range multisetsFrom(testContracts, 2) {
+				originVersion, destinationVersion := currentSubjects[0], currentSubjects[1]
+
+				// users don't have versions, so skip the repeating tests (user v1 = user v10)
+				if originType == "user" {
+					originVersion.CosmWasmVersion = "user"
+				}
+				if destinationType == "user" {
+					destinationVersion.CosmWasmVersion = "user"
+				}
+				testTitle := originType + originVersion.CosmWasmVersion + "->" + destinationType + destinationVersion.CosmWasmVersion
+				if _, value := alreadyTested[testTitle]; value {
+					continue
+				}
+				alreadyTested[testTitle] = true
+
+				t.Run(testTitle, func(t *testing.T) {
+					for _, test := range []struct {
+						description              string
+						coinsToSend              string
+						isSuccess                bool
+						errorMsg                 string
+						balancesBefore           string
+						balancesAfter            string
+						destinationBalancesAfter string
+					}{
+						{
+							description:              "one, has all",
+							coinsToSend:              `20one`,
+							isSuccess:                true,
+							balancesBefore:           "200000denom,5000one",
+							balancesAfter:            "200000denom,4980one",
+							destinationBalancesAfter: "20one",
+						},
+						{
+							description:              "one, missing",
+							coinsToSend:              `20one`,
+							isSuccess:                false,
+							errorMsg:                 "0one is smaller than 20one: insufficient funds",
+							balancesBefore:           "5000another",
+							balancesAfter:            "5000another",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "one, not enough",
+							coinsToSend:              `20one`,
+							isSuccess:                false,
+							errorMsg:                 "19one is smaller than 20one: insufficient funds",
+							balancesBefore:           "5000another,19one",
+							balancesAfter:            "5000another,19one",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "zero",
+							coinsToSend:              ``,
+							isSuccess:                true,
+							balancesBefore:           "5000assaf,200000denom",
+							balancesAfter:            "5000assaf,200000denom",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "multi-coin, has all",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                true,
+							balancesBefore:           "5000assaf,200000denom",
+							balancesAfter:            "4870assaf,199985denom",
+							destinationBalancesAfter: "130assaf,15denom",
+						},
+						{
+							description:              "multi-coin, missing one",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "0assaf is smaller than 130assaf: insufficient funds",
+							balancesBefore:           "200000denom",
+							balancesAfter:            "200000denom",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "multi-coin, not enough of one of them",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "10denom is smaller than 15denom: insufficient funds",
+							balancesBefore:           "5000assaf,10denom",
+							balancesAfter:            "5000assaf,10denom",
+							destinationBalancesAfter: "",
+						},
+						{
+							description:              "multi-coin, not enough of all of them",
+							coinsToSend:              `130assaf,15denom`,
+							isSuccess:                false,
+							errorMsg:                 "12assaf is smaller than 130assaf: insufficient funds",
+							balancesBefore:           "12assaf,10denom",
+							balancesAfter:            "12assaf,10denom",
+							destinationBalancesAfter: "",
+						},
+					} {
+						t.Run(test.description, func(t *testing.T) {
+							ctx, keeper, helperWallet, helperPrivKey, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
+
+							fundingWallet, fundingWalletPrivKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
+							receivingWallet, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins())
+
+							// verify that the account was funded correctly
+							fundingWalletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, fundingWallet)
+							require.Equal(t, test.balancesBefore, fundingWalletCoinsBefore.String())
+
+							var originCodeId uint64
+							if originType != "user" {
+								originCodeId, _ = uploadCode(ctx, t, keeper, originVersion.WasmFilePath, helperWallet)
+							}
+
+							var destinationCodeId uint64
+							var destinationHash string
+							var destinationAddr sdk.AccAddress
+
+							// prepare receiving contract
+							if destinationType != "user" {
+								destinationCodeId, destinationHash = uploadCode(ctx, t, keeper, destinationVersion.WasmFilePath, helperWallet)
+
+								if destinationType == "exec" {
+									_, _, destinationAddr, _, _ = initHelperImpl(t, keeper, ctx, destinationCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins())
+								}
+							}
+
+							var err cosmwasm.StdError
+							var originAddress sdk.AccAddress
+							var msg string
+
+							inputCoins := CoinsToInput(stringToCoins(test.coinsToSend))
+							if destinationType == "user" {
+								msg = fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, receivingWallet.String(), inputCoins)
+								destinationAddr = receivingWallet
+							} else if destinationType == "init" {
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_init_callback":{"code_id":%d,"coins":%s,"code_hash":"%s"}}`, destinationCodeId, inputCoins, destinationHash)
+								// destination address will only be known after the contract is init
+							} else {
+								msg = fmt.Sprintf(`{"send_multiple_funds_to_exec_callback":{"to":"%s","coins":%s,"code_hash":"%s"}}`, destinationAddr, inputCoins, destinationHash)
+							}
+
+							var wasmEvents []ContractEvent
+							if originType == "init" {
+								_, _, originAddress, wasmEvents, err = initHelperImpl(t, keeper, ctx, originCodeId, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, defaultGasForTests, -1, stringToCoins(test.balancesBefore))
+							} else if originType == "exec" {
+								_, _, originAddress, _, _ = initHelper(t, keeper, ctx, originCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests)
+
+								_, _, _, wasmEvents, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.balancesBefore))
+							} else {
+								// user sends directly to contract
+								originAddress = fundingWallet
+								wasmCount := int64(-1)
+								if !test.isSuccess {
+									wasmCount = 0
+								}
+								if destinationType == "exec" {
+									_, _, _, _, _, err = execHelperMultipleCoinsImpl(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, `{"no_data":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend), wasmCount)
+								} else {
+									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, destinationCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, wasmCount, stringToCoins(test.coinsToSend))
+								}
+							}
+
+							if !test.isSuccess {
+								require.NotEmpty(t, err)
+
+								expectedErrorMsg := test.errorMsg
+								if originType != "user" {
+									expectedErrorMsg = "dispatch: submessages: " + expectedErrorMsg
+								}
+								expectedErrorMsg = "encrypted: " + expectedErrorMsg
+								require.Equal(t, expectedErrorMsg, err.Error())
+							} else {
+								require.Empty(t, err)
+
+								originCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, originAddress)
+								require.Equal(t, test.balancesAfter, originCoinsAfter.String())
+
+								if destinationType == "init" && originType != "user" {
+									var newContractBech32 string
+									for _, v := range wasmEvents[1] {
+										if v.Key == "contract_address" {
+											newContractBech32 = v.Value
+											break
+										}
+									}
+									require.NotEmpty(t, newContractBech32)
+
+									destinationAddr, _ = sdk.AccAddressFromBech32(newContractBech32)
+								}
+
+								destinationCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, destinationAddr)
+								require.Equal(t, test.destinationBalancesAfter, destinationCoinsAfter.String())
+							}
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestWasmMsgStructure(t *testing.T) {
+	for _, from := range testContracts {
+		t.Run(fmt.Sprintf("from %s", from.CosmWasmVersion), func(t *testing.T) {
+			for _, to := range testContracts {
+				t.Run(fmt.Sprintf("to %s", to.CosmWasmVersion), func(t *testing.T) {
+					for _, firstCallType := range []string{"init", "exec"} {
+						t.Run(fmt.Sprintf("first call %s", firstCallType), func(t *testing.T) {
+							for _, secondCallType := range []string{"init", "exec"} {
+								t.Run(fmt.Sprintf("second call %s", secondCallType), func(t *testing.T) {
+									for _, test := range []struct {
+										description      string
+										msg              string
+										isSuccess        bool
+										isErrorEncrypted bool
+										expectedError    string
+									}{
+										{
+											description:      "Send invalid input",
+											msg:              `{\"blabla\":{}}`,
+											isSuccess:        false,
+											isErrorEncrypted: true,
+											expectedError:    "unknown variant",
+										},
+										{
+											description:      "Success",
+											msg:              `{\"wasm_msg\":{\"ty\": \"success\"}}`,
+											isSuccess:        true,
+											isErrorEncrypted: true,
+											expectedError:    "",
+										},
+										{
+											description:      "StdError",
+											msg:              `{\"wasm_msg\":{\"ty\": \"err\"}}`,
+											isSuccess:        false,
+											isErrorEncrypted: true,
+											expectedError:    "custom error",
+										},
+										{
+											description:      "Panic",
+											msg:              `{\"wasm_msg\":{\"ty\": \"panic\"}}`,
+											isSuccess:        false,
+											isErrorEncrypted: false,
+											expectedError:    "panicked",
+										},
+									} {
+										t.Run(test.description, func(t *testing.T) {
+											ctx, keeper, fromCodeID, _, walletA, privKeyA, _, _ := setupTest(t, from.WasmFilePath, sdk.NewCoins())
+
+											wasmCode, err := os.ReadFile(to.WasmFilePath)
+											require.NoError(t, err)
+
+											toCodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+											codeInfo, err := keeper.GetCodeInfo(ctx, toCodeID)
+											require.NoError(t, err)
+											toCodeHash := hex.EncodeToString(codeInfo.CodeHash)
+											require.NoError(t, err)
+
+											toAddress := sdk.AccAddress{}
+											if secondCallType != "init" {
+												_, _, toAddress, _, err = initHelper(t, keeper, ctx, toCodeID, walletA, privKeyA, `{"nop":{}}`, true, to.IsCosmWasmV1, defaultGasForTests)
+												require.Empty(t, err)
+											}
+
+											fromAddress := sdk.AccAddress{}
+											if firstCallType == "init" {
+												_, _, _, _, err = initHelper(t, keeper, ctx, fromCodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_%s":{"code_id": %d, "addr": "%s", "code_hash": "%s", "label": "%s", "msg": "%s"}}`, secondCallType, toCodeID, toAddress, toCodeHash, "blabla", test.msg), test.isErrorEncrypted, true, defaultGasForTests)
+											} else if firstCallType == "exec" {
+												_, _, fromAddress, _, err = initHelper(t, keeper, ctx, fromCodeID, walletA, privKeyA, `{"nop":{}}`, true, from.IsCosmWasmV1, defaultGasForTests)
+												require.Empty(t, err)
+												_, _, _, _, _, err = execHelper(t, keeper, ctx, fromAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_%s":{"code_id": %d, "addr": "%s", "code_hash": "%s", "label": "%s", "msg": "%s"}}`, secondCallType, toCodeID, toAddress, toCodeHash, "blabla", test.msg), test.isErrorEncrypted, true, math.MaxUint64, 0)
+											}
+
+											if test.isSuccess {
+												require.Empty(t, err)
+											} else {
+												require.NotEmpty(t, err)
+												require.Contains(t, fmt.Sprintf("%+v", err), test.expectedError)
+											}
+										})
+									}
+								})
+							}
 						})
 					}
 				})
@@ -3583,7 +4080,7 @@ func TestBankMsgBurn(t *testing.T) {
 					},
 				} {
 					t.Run(test.description, func(t *testing.T) {
-						ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+						ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 						var err cosmwasm.StdError
 						var contractAddress sdk.AccAddress
@@ -3636,8 +4133,31 @@ func TestCosmosMsgCustom(t *testing.T) {
 	}
 }
 
+func TestV1SendsFundsWithReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, true, defaultGasForTests, 200)
+	require.Empty(t, err)
+
+	_, _, _, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"send_funds_with_reply":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+}
+
+func TestV1SendsFundsWithErrorWithReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+
+	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"send_funds_with_error_with_reply":{}}`, false, true, math.MaxUint64, 0)
+
+	require.NotEmpty(t, err)
+	require.Contains(t, fmt.Sprintf("%+v", err), "an sdk error occoured while sending a sub-message")
+}
+
 func TestV1ReplyOnMultipleSubmessages(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -3648,7 +4168,7 @@ func TestV1ReplyOnMultipleSubmessages(t *testing.T) {
 }
 
 func TestV1MultipleSubmessagesNoReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
@@ -3656,18 +4176,28 @@ func TestV1MultipleSubmessagesNoReply(t *testing.T) {
 
 	require.Empty(t, err)
 	require.Equal(t, uint32(10), binary.BigEndian.Uint32(data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(16), resp.Get.Count)
 }
 
 func TestV1InitV010ContractWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10":{"counter":80, "code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -3688,15 +4218,17 @@ func TestV1InitV010ContractWithReply(t *testing.T) {
 }
 
 func TestV1ExecuteV010ContractWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -3712,15 +4244,17 @@ func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 }
 
 func TestV1InitV010ContractNoReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_no_reply":{"counter":180, "code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -3728,7 +4262,17 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 	_, _, _, ev, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, true, true, math.MaxUint64, 0)
 
 	require.Empty(t, err)
-	accAddress, err := sdk.AccAddressFromBech32(ev[1][0].Value)
+
+	var newContractBech32 string
+	for _, v := range ev[1] {
+		if v.Key == "contract_address" {
+			newContractBech32 = v.Value
+			break
+		}
+	}
+	require.NotEmpty(t, newContractBech32)
+
+	accAddress, err := sdk.AccAddressFromBech32(newContractBech32)
 	require.Empty(t, err)
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, accAddress, `{"get_count_from_v1":{}}`, true, false, math.MaxUint64)
@@ -3741,15 +4285,17 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 }
 
 func TestV1ExecuteV010ContractNoReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -3770,15 +4316,17 @@ func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 }
 
 func TestV1QueryV010Contract(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -3794,15 +4342,17 @@ func TestV1QueryV010Contract(t *testing.T) {
 }
 
 func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_with_error":{"code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -3813,15 +4363,17 @@ func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 }
 
 func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -3836,15 +4388,17 @@ func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 }
 
 func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_no_reply_with_error":{"code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
@@ -3856,15 +4410,17 @@ func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 }
 
 func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -3880,15 +4436,17 @@ func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 }
 
 func TestV1QueryV010ContractWithError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -3904,9 +4462,9 @@ func TestV1QueryV010ContractWithError(t *testing.T) {
 }
 
 func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3919,7 +4477,15 @@ func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 	require.Equal(t, queryRes, "10")
 
 	require.Empty(t, err)
-	accAddress, err := sdk.AccAddressFromBech32(initEvents[1][0].Value)
+	var newContractBech32 string
+	for _, v := range initEvents[1] {
+		if v.Key == "contract_address" {
+			newContractBech32 = v.Value
+			break
+		}
+	}
+	require.NotEmpty(t, newContractBech32)
+	accAddress, err := sdk.AccAddressFromBech32(newContractBech32)
 	require.Empty(t, err)
 
 	queryRes, qErr = queryHelper(t, keeper, ctx, accAddress, `{"get_contract_version":{}}`, true, false, math.MaxUint64)
@@ -3929,9 +4495,9 @@ func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 }
 
 func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3949,7 +4515,15 @@ func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	require.Empty(t, execErr)
 	require.Empty(t, execData)
 
-	accAddress, err := sdk.AccAddressFromBech32(execEvents[1][0].Value)
+	var newContractBech32 string
+	for _, v := range execEvents[1] {
+		if v.Key == "contract_address" {
+			newContractBech32 = v.Value
+			break
+		}
+	}
+	require.NotEmpty(t, newContractBech32)
+	accAddress, err := sdk.AccAddressFromBech32(newContractBech32)
 	require.Empty(t, err)
 
 	queryRes, qErr = queryHelper(t, keeper, ctx, accAddress, `{"get_contract_version":{}}`, true, false, math.MaxUint64)
@@ -3959,9 +4533,9 @@ func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 }
 
 func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -3983,9 +4557,9 @@ func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
 }
 
 func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4008,9 +4582,9 @@ func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
 }
 
 func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4019,7 +4593,7 @@ func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	_, _, v010ContractAddress, events, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"receive_external_query_v1\":{\"num\":1}}`), true, true, defaultGasForTests)
 	require.Empty(t, err)
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v010ContractAddress.String()},
@@ -4031,9 +4605,9 @@ func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 }
 
 func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4044,7 +4618,7 @@ func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 
 	_, _, _, events, _, err := execHelper(t, keeper, ctx, v010ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"receive_external_query_v1\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v010ContractAddress.String()},
@@ -4056,9 +4630,9 @@ func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 }
 
 func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4069,9 +4643,9 @@ func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
 }
 
 func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4089,9 +4663,9 @@ func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
 }
 
 func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4104,9 +4678,9 @@ func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
 }
 
 func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4120,9 +4694,9 @@ func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
 }
 
 func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4134,9 +4708,9 @@ func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
 }
 
 func TestV010QueryV1ContractFromExecuteWithErrResponse(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -4157,7 +4731,7 @@ func TestSendEncryptedAttributesFromInitWithoutSubmessageWithoutReply(t *testing
 			_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_attributes":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4179,7 +4753,7 @@ func TestSendEncryptedAttributesFromInitWithSubmessageWithoutReply(t *testing.T)
 			_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":0}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4199,12 +4773,12 @@ func TestSendEncryptedAttributesFromInitWithSubmessageWithoutReply(t *testing.T)
 }
 
 func TestV1SendsEncryptedAttributesFromInitWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":2200}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -4236,7 +4810,7 @@ func TestSendEncryptedAttributesFromExecuteWithoutSubmessageWithoutReply(t *test
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4260,7 +4834,7 @@ func TestSendEncryptedAttributesFromExecuteWithSubmessageWithoutReply(t *testing
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":0}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4280,14 +4854,14 @@ func TestSendEncryptedAttributesFromExecuteWithSubmessageWithoutReply(t *testing
 }
 
 func TestV1SendsEncryptedAttributesFromExecuteWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":2200}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -4317,7 +4891,7 @@ func TestSendPlaintextFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 			_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4339,7 +4913,7 @@ func TestSendPlaintextAttributesFromInitWithSubmessageWithoutReply(t *testing.T)
 			_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":0}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4359,12 +4933,12 @@ func TestSendPlaintextAttributesFromInitWithSubmessageWithoutReply(t *testing.T)
 }
 
 func TestV1SendsPlaintextAttributesFromInitWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, true)
 	require.Empty(t, err)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -4396,7 +4970,7 @@ func TestSendPlaintextAttributesFromExecuteWithoutSubmessageWithoutReply(t *test
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4420,7 +4994,7 @@ func TestSendPlaintextAttributesFromExecuteWithSubmessageWithoutReply(t *testing
 			_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":0}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireEvents(t,
 				[]ContractEvent{
 					{
 						{Key: "contract_address", Value: contractAddress.String()},
@@ -4440,14 +5014,14 @@ func TestSendPlaintextAttributesFromExecuteWithSubmessageWithoutReply(t *testing
 }
 
 func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, 0, true)
 	require.Empty(t, err)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -4470,7 +5044,7 @@ func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithReply(t *testing
 }
 
 func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_events":{}}`, true, true, defaultGasForTests)
 
@@ -4486,7 +5060,7 @@ func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -4503,7 +5077,7 @@ func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -4521,7 +5095,7 @@ func TestV1SendsEncryptedEventsFromInitWithoutSubmessageWithoutReply(t *testing.
 }
 
 func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_events_with_submessage":{"id":0}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4539,7 +5113,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -4556,7 +5130,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -4573,7 +5147,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🤯"},
@@ -4590,7 +5164,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😅"},
@@ -4610,7 +5184,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithoutReply(t *testing.T) 
 }
 
 func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_events_with_submessage":{"id":2400}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4630,7 +5204,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -4647,7 +5221,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -4664,7 +5238,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🤯"},
@@ -4681,7 +5255,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😅"},
@@ -4698,7 +5272,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "😗"},
@@ -4715,7 +5289,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😉"},
@@ -4737,7 +5311,7 @@ func TestV1SendsEncryptedEventsFromInitWithSubmessageWithReply(t *testing.T) {
 }
 
 func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4755,7 +5329,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -4772,7 +5346,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -4790,7 +5364,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReply(t *testi
 }
 
 func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4810,7 +5384,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -4827,7 +5401,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -4844,7 +5418,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🤯"},
@@ -4861,7 +5435,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😅"},
@@ -4881,7 +5455,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReply(t *testing.
 }
 
 func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -4903,7 +5477,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -4920,7 +5494,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "🐙"},
@@ -4937,7 +5511,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🤯"},
@@ -4954,7 +5528,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😅"},
@@ -4971,7 +5545,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "😗"},
@@ -4988,7 +5562,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr3", Value: "😉"},
@@ -5010,7 +5584,7 @@ func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReply(t *testing.T) 
 }
 
 func TestV1SendsMixedLogsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, logs, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_mixed_attributes_and_events":{}}`, true, true, defaultGasForTests, true)
 
@@ -5025,7 +5599,7 @@ func TestV1SendsMixedLogsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, false)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5040,7 +5614,7 @@ func TestV1SendsMixedLogsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 
 	require.True(t, hadCyber1)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5053,7 +5627,7 @@ func TestV1SendsMixedLogsFromInitWithoutSubmessageWithoutReply(t *testing.T) {
 }
 
 func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, logs, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_mixed_attributes_and_events_with_submessage":{"id":0}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5069,7 +5643,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5086,7 +5660,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5102,7 +5676,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *te
 	require.True(t, hadCyber1)
 	require.True(t, hadCyber2)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5120,7 +5694,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithoutReply(t *te
 }
 
 func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	nonce, ctx, contractAddress, logs, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"add_mixed_attributes_and_events_with_submessage":{"id":2500}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5137,7 +5711,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5154,7 +5728,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5171,7 +5745,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr9", Value: "🤯"},
@@ -5188,7 +5762,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 	require.True(t, hadCyber2)
 	require.True(t, hadCyber3)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5211,7 +5785,7 @@ func TestV1SendsMixedAttributesAndEventsFromInitWithSubmessageWithReply(t *testi
 }
 
 func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5228,7 +5802,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReply
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, false)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5243,7 +5817,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReply
 
 	require.True(t, hadCyber1)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5256,7 +5830,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReply
 }
 
 func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5274,7 +5848,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5291,7 +5865,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t 
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5307,7 +5881,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t 
 	require.True(t, hadCyber1)
 	require.True(t, hadCyber2)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5325,7 +5899,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReply(t 
 }
 
 func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -5344,7 +5918,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5361,7 +5935,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5378,7 +5952,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: contractAddress.String()},
 					{Key: "attr9", Value: "🤯"},
@@ -5395,7 +5969,7 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 	require.True(t, hadCyber2)
 	require.True(t, hadCyber3)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: contractAddress.String()},
@@ -5418,15 +5992,17 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReply(t *te
 }
 
 func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
@@ -5445,7 +6021,7 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: v1ContractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5460,7 +6036,7 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 
 	require.True(t, hadCyber1)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v1ContractAddress.String()},
@@ -5478,15 +6054,17 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 }
 
 func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	v010CodeHash := hex.EncodeToString(keeper.GetCodeInfo(ctx, v010CodeID).CodeHash)
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
 	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
@@ -5506,7 +6084,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: v1ContractAddress.String()},
 					{Key: "attr1", Value: "🦄"},
@@ -5523,7 +6101,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: v1ContractAddress.String()},
 					{Key: "attr9", Value: "🤯"},
@@ -5539,7 +6117,7 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 	require.True(t, hadCyber1)
 	require.True(t, hadCyber3)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v1ContractAddress.String()},
@@ -5562,9 +6140,9 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 }
 
 func TestV010SendsLogsMixedWithV1(t *testing.T) {
-	ctx, keeper, codeID, v1CodeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, v1CodeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
-	wasmCode, err := ioutil.ReadFile("./testdata/test-contract/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/test-contract/contract.wasm")
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -5587,7 +6165,7 @@ func TestV010SendsLogsMixedWithV1(t *testing.T) {
 			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
 			require.Empty(t, err)
 
-			require.Equal(t,
+			requireLogAttributes(t,
 				[]v010cosmwasm.LogAttribute{
 					{Key: "contract_address", Value: v1ContractAddress.String()},
 					{Key: "attr5", Value: "🐙"},
@@ -5602,7 +6180,7 @@ func TestV010SendsLogsMixedWithV1(t *testing.T) {
 
 	require.True(t, hadCyber2)
 
-	require.Equal(t,
+	requireEvents(t,
 		[]ContractEvent{
 			{
 				{Key: "contract_address", Value: v010ContractAddress.String()},
@@ -5620,7 +6198,7 @@ func TestV010SendsLogsMixedWithV1(t *testing.T) {
 }
 
 func TestSubmessageGasExceedingMessageGas(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	defer func() {
 		r := recover()
@@ -5632,7 +6210,7 @@ func TestSubmessageGasExceedingMessageGas(t *testing.T) {
 }
 
 func TestReplyGasExceedingMessageGas(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 
 	defer func() {
 		r := recover()

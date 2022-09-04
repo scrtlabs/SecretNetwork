@@ -72,6 +72,12 @@ type HandleType int
 const (
 	HandleTypeExecute HandleType = iota
 	HandleTypeReply
+	HandleTypeIbcChannelOpen
+	HandleTypeIbcChannelConnect
+	HandleTypeIbcChannelClose
+	HandleTypeIbcPacketReceive
+	HandleTypeIbcPacketAck
+	HandleTypeIbcPacketTimeout
 )
 
 type CosmosMsgVersion int

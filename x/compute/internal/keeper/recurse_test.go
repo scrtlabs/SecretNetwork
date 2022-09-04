@@ -3,7 +3,7 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,7 +66,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	creator, creatorPriv := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// store the code
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
@@ -155,7 +155,10 @@ func TestGasCostOnQuery(t *testing.T) {
 			recurse := tc.msg
 			recurse.Contract = contractAddr
 
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
+
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
 
 			data, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 			require.Empty(t, qErr)
@@ -169,7 +172,7 @@ func TestGasCostOnQuery(t *testing.T) {
 
 			// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
 			var resp recurseResponse
-			err := json.Unmarshal([]byte(data), &resp)
+			err = json.Unmarshal([]byte(data), &resp)
 			require.NoError(t, err)
 			if recurse.Work == 0 {
 				assert.Equal(t, len(resp.Hashed), len(creator.String()))
@@ -233,14 +236,18 @@ func TestGasOnExternalQuery(t *testing.T) {
 
 			recurse := tc.msg
 			recurse.Contract = contractAddr
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
+
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
 
 			secretMsg := types.SecretMsg{
-				CodeHash: []byte(hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))),
+				CodeHash: []byte(hex.EncodeToString(codeHash)),
 				Msg:      msg,
 			}
 
-			msg, err := wasmCtx.Encrypt(secretMsg.Serialize())
+			msg, err = wasmCtx.Encrypt(secretMsg.Serialize())
 			require.NoError(t, err)
 
 			// do the query
@@ -306,14 +313,14 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			expectOOM:                 false,
 			expectRecursionLimit:      false,
 		},
-		"recursion 9, lots of work": {
+		"recursion 11, lots of work": {
 			gasLimit: 4_000_000,
 			msg: Recurse{
-				Depth: 9,
+				Depth: 11,
 				Work:  2000,
 			},
-			expectQueriesFromContract: 9,
-			expectedGas:               GasWork2k + 9*(GasWork2k+GasReturnHashed),
+			expectQueriesFromContract: 11,
+			expectedGas:               GasWork2k + 11*(GasWork2k+GasReturnHashed),
 			expectOutOfGas:            false,
 			expectOOM:                 false,
 			expectRecursionLimit:      true,
@@ -349,7 +356,11 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			// prepare the query
 			recurse := tc.msg
 			recurse.Contract = contractAddr
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
+
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
 
 			// if we expect out of gas, make sure this panics
 			if tc.expectOutOfGas {
