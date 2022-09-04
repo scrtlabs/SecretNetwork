@@ -366,6 +366,31 @@ describe("BankMsg", () => {
   });
 });
 
+describe("CustomMsg", () => {
+  test.skip("v1", async () => {
+    // TODO
+  });
+
+  test.only("v0.10", async () => {
+    const tx = await accounts.a.tx.compute.executeContract(
+      {
+        sender: accounts.a.address,
+        contractAddress: v010Address,
+        codeHash: v010CodeHash,
+        msg: {
+          custom_msg: {},
+        },
+      },
+      { gasLimit: 250_000 }
+    );
+    if (tx.code !== 10) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(10 /* WASM ErrInvalidMsg */);
+    expect(tx.rawLog).toContain("invalid CosmosMsg from the contract");
+  });
+});
+
 describe("StakingMsg", () => {
   describe("Delegate", () => {
     describe("v1", () => {
