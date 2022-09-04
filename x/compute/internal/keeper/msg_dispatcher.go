@@ -157,20 +157,20 @@ func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
 }
 
 // Issue #759 - we don't return error string for worries of non-determinism
-func redactError(err error) (error, bool) {
+func redactError(err error) (bool, error) {
 	// Do not redact encrypted wasm contract errors
 	if strings.HasPrefix(err.Error(), "encrypted:") {
 		// remove encrypted sign
 		e := strings.ReplaceAll(err.Error(), "encrypted: ", "")
 		e = strings.ReplaceAll(e, ": execute contract failed", "")
 		e = strings.ReplaceAll(e, ": instantiate contract failed", "")
-		return fmt.Errorf("%s", e), false
+		return false, fmt.Errorf("%s", e)
 	}
 
 	// Do not redact system errors
 	// SystemErrors must be created in x/wasm and we can ensure determinism
 	if wasmTypes.ToSystemError(err) != nil {
-		return err, false
+		return false, err
 	}
 
 	// FIXME: do we want to hardcode some constant string mappings here as well?
@@ -179,7 +179,7 @@ func redactError(err error) (error, bool) {
 	// sdk/5 is insufficient funds (on bank send)
 	// (we can theoretically redact less in the future, but this is a first step to safety)
 	codespace, code, _ := sdkerrors.ABCIInfo(err, false)
-	return fmt.Errorf("codespace: %s, code: %d. For more info please use the following link: https://github.com/scrtlabs/cosmos-sdk/blob/HEAD/types/errors/errors.go", codespace, code), true
+	return true, fmt.Errorf("codespace: %s, code: %d. For more info please use the following link: https://github.com/scrtlabs/cosmos-sdk/blob/HEAD/types/errors/errors.go", codespace, code)
 }
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
@@ -265,7 +265,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		} else {
 			// Issue #759 - we don't return error string for worries of non-determinism
 			moduleLogger(ctx).Info("Redacting submessage error", "cause", err)
-			redactedErr, isSdkError = redactError(err)
+			isSdkError, redactedErr = redactError(err)
 			result = v1wasmTypes.SubMsgResult{
 				Err: redactedErr.Error(),
 			}

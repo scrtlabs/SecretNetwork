@@ -30,6 +30,9 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 	))
 
 	codeID, err := m.keeper.Create(ctx, msg.Sender, msg.WASMByteCode, msg.Source, msg.Builder)
+	if err != nil {
+		return nil, err
+	}
 
 	ctx.EventManager().EmitEvents(sdk.Events{
 		sdk.NewEvent(
@@ -40,7 +43,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 
 	return &types.MsgStoreCodeResponse{
 		CodeID: codeID,
-	}, err
+	}, nil
 }
 
 func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInstantiateContract) (*types.MsgInstantiateContractResponse, error) {
@@ -53,14 +56,16 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 	))
 
 	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	if err != nil {
+		return nil, err
+	}
 
-	// we always return data (internally used in reply)
 	// note: even if contractAddr == nil then contractAddr.String() is ok
 	// \o/🤷🤷‍♂️🤷‍♀️🤦🤦‍♂️🤦‍♀️
 	return &types.MsgInstantiateContractResponse{
 		Address: contractAddr.String(),
 		Data:    data,
-	}, err
+	}, nil
 }
 
 func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
@@ -73,9 +78,11 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	))
 
 	data, err := m.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig)
+	if err != nil {
+		return nil, err
+	}
 
-	// we always return data (internally used in reply)
 	return &types.MsgExecuteContractResponse{
 		Data: data.Data,
-	}, err
+	}, nil
 }

@@ -300,6 +300,8 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
       - name: Build LocalSecret
         run: |
           echo not_a_key | tee {api_key,spid}.txt
@@ -312,7 +314,9 @@ jobs:
           cd integration-tests
           yarn
           docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
+          # docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml logs -f &
           yarn test
+          make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
           git clone --depth 1 https://github.com/scrtlabs/secret.js
