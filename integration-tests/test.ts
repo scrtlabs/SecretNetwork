@@ -620,6 +620,93 @@ describe("StakingMsg", () => {
       });
     });
   });
+
+  describe("Withdraw", () => {
+    describe("v1", () => {
+      test.skip("success", async () => {
+        // TODO
+      });
+      test.skip("error", async () => {
+        // TODO
+      });
+    });
+
+    describe("v0.10", () => {
+      test("success", async () => {
+        const { validators } = await readonly.query.staking.validators({});
+        const validator = validators[0].operatorAddress;
+
+        const tx = await accounts.a.tx.broadcast(
+          [
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v010Address,
+              codeHash: v010CodeHash,
+              msg: {
+                staking_msg_delegate: {
+                  validator: validator,
+                  amount: { amount: "1", denom: "uscrt" },
+                },
+              },
+              sentFunds: [{ amount: "1", denom: "uscrt" }],
+            }),
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v010Address,
+              codeHash: v010CodeHash,
+              msg: {
+                staking_msg_withdraw: {
+                  validator: validator,
+                  recipient: accounts.a.address,
+                },
+              },
+              sentFunds: [{ amount: "1", denom: "uscrt" }],
+            }),
+          ],
+          { gasLimit: 250_000 }
+        );
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[1].events.find(
+          (x) => x.type === "withdraw_rewards"
+        );
+        expect(attributes).toContainEqual({
+          key: "validator",
+          value: validator,
+        });
+      });
+
+      test("error", async () => {
+        const { validators } = await readonly.query.staking.validators({});
+        const validator = validators[0].operatorAddress;
+
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              staking_msg_redelegate: {
+                src_validator: validator,
+                dst_validator: validator + "garbage",
+                amount: { amount: "1", denom: "uscrt" },
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
+          },
+          { gasLimit: 250_000 }
+        );
+
+        expect(tx.code).toBe(TxResultCode.ErrInvalidAddress);
+        expect(tx.rawLog).toContain(
+          `${validator + "garbage"}: invalid address`
+        );
+      });
+    });
+  });
 });
 
 describe("StargateMsg", () => {
