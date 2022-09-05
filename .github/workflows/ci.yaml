@@ -317,16 +317,13 @@ jobs:
           tags: rust-go-base-image
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Inspect
-        run: |
-          docker image ls
-          docker image inspect rust-go-base-image
       - name: Build LocalSecret Release
         uses: docker/build-push-action@v3
         with:
           file: deployment/dockerfiles/release.Dockerfile
           context: .
           load: true
+          pull: true
           tags: build-release
           build-args: |
             SECRET_NODE_TYPE=bootstrap
