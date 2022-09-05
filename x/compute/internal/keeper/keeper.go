@@ -262,7 +262,7 @@ func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1w
 		ReplyOn:  v1wasmTypes.ReplyNever,
 	}
 
-	if msg.Bank != nil {
+	if msg.Bank != nil { //nolint:gocritic
 		if msg.Bank.Send.FromAddress != contractAddress {
 			return v1wasmTypes.SubMsg{}, fmt.Errorf("contract doesn't have permission to send funds from another account (using BankMsg)")
 		}
