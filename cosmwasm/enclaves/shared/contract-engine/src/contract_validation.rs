@@ -366,7 +366,7 @@ fn get_signer_and_messages(
 
             // Always starts with '\x19Ethereum Signed Message:\n\d+{'
             // So we need to find the first occurance of '{' and go from there until the end
-            let start_index = match sign_bytes_as_string.find("{") {
+            let start_index = match sign_bytes_as_string.find('{') {
                 Some(start_index) => start_index,
                 None => {
                     warn!(
