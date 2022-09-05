@@ -376,7 +376,7 @@ fn get_signer_and_messages(
                     return Err(EnclaveError::FailedTxVerification);
                 }
             };
-            let sign_doc_str = &sign_bytes_as_string[start_index..sign_bytes_as_string.len()];
+            let sign_doc_str = &sign_bytes_as_string[start_index..];
 
             let sign_doc: StdSignDoc = serde_json::from_str(sign_doc_str).map_err(|err| {
                 warn!(
