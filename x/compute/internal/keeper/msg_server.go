@@ -49,16 +49,17 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInstantiateContract) (*types.MsgInstantiateContractResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		sdk.EventTypeMessage,
-		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
-	))
-
 	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
 		return nil, err
 	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddr.String()),
+	))
 
 	// note: even if contractAddr == nil then contractAddr.String() is ok
 	// \o/🤷🤷‍♂️🤷‍♀️🤦🤦‍♂️🤦‍♀️
@@ -75,6 +76,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.Contract.String()),
 	))
 
 	data, err := m.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig)
