@@ -485,7 +485,6 @@ dependencies = [
  "pwasm-utils",
  "rand_chacha",
  "rand_core",
- "regex",
  "secp256k1",
  "serde 1.0.118",
  "serde_json 1.0.60",
@@ -951,19 +950,6 @@ dependencies = [
  "redox_syscall",
  "thiserror",
 ]
-
-[[package]]
-name = "regex"
-version = "1.3.1"
-source = "git+https://github.com/mesalock-linux/regex-sgx#76aef86f9836532d17764523d0fa23bb7d2e31cf"
-dependencies = [
- "regex-syntax",
-]
-
-[[package]]
-name = "regex-syntax"
-version = "0.6.12"
-source = "git+https://github.com/mesalock-linux/regex-sgx#76aef86f9836532d17764523d0fa23bb7d2e31cf"
 
 [[package]]
 name = "remove_dir_all"

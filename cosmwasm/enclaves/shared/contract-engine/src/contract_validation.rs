@@ -357,14 +357,6 @@ fn get_signer_and_messages(
                 EnclaveError::FailedTxVerification
             })?;
 
-            let eth_signature_prefix_regex =
-                regex::Regex::new(r"^\x19Ethereum Signed Message:\n\d+").map_err(|err| {
-                    error!(
-                        "failed to compile SIGN_MODE_EIP_191 prefix regex: {:?}",
-                        err
-                    );
-                    EnclaveError::FailedTxVerification
-                })?;
             let sign_bytes_as_string = String::from_utf8_lossy(&sign_info.sign_bytes.0).to_string();
 
             trace!(
@@ -372,13 +364,23 @@ fn get_signer_and_messages(
                 sign_bytes_as_string
             );
 
-            let sign_doc_str = eth_signature_prefix_regex
-                .replace(&sign_bytes_as_string, "")
-                .to_string();
+            // Always starts with '\x19Ethereum Signed Message:\n\d+{'
+            // So we need to find the first occurance of '{' and go from there until the end
+            let start_index = match sign_bytes_as_string.find("{") {
+                Some(start_index) => start_index,
+                None => {
+                    warn!(
+                        "SIGN_MODE_EIP_191 failed to find first occurance of '{{' in '{}'",
+                        sign_bytes_as_string
+                    );
+                    return Err(EnclaveError::FailedTxVerification);
+                }
+            };
+            let sign_doc_str = &sign_bytes_as_string[start_index..sign_bytes_as_string.len()];
 
-            let sign_doc: StdSignDoc = serde_json::from_str(&sign_doc_str).map_err(|err| {
+            let sign_doc: StdSignDoc = serde_json::from_str(sign_doc_str).map_err(|err| {
                 warn!(
-                    "failure to parse SIGN_MODE_EIP_191 StdSignDoc from '{}': {:?}",
+                    "failed to parse SIGN_MODE_EIP_191 StdSignDoc as JSON from '{}': {:?}",
                     sign_doc_str, err
                 );
                 EnclaveError::FailedTxVerification
