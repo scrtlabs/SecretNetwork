@@ -556,8 +556,6 @@ describe("Wasm", () => {
           { gasLimit: 250_000 }
         );
 
-        console.log(tx.rawLog);
-
         if (tx.code !== 2) {
           console.error(tx.rawLog);
         }
@@ -580,12 +578,64 @@ describe("Wasm", () => {
     });
 
     describe("v0.10", () => {
-      test.skip("success", async () => {
-        // TODO
+      test("success", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              wasm_msg_execute: {
+                contract_addr: v010Address,
+                callback_code_hash: v010CodeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ echo: {} }))),
+                send: [],
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[0].events.find(
+          (e) => e.type === "wasm"
+        );
+        expect(attributes.length).toBe(2);
+        expect(attributes[0].key).toBe("contract_address");
+        expect(attributes[0].value).toBe(v010Address);
+        expect(attributes[1].key).toBe("contract_address");
+        expect(attributes[1].value).toBe(v010Address);
       });
 
-      test.skip("error", async () => {
-        // TODO
+      test("error", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              wasm_msg_execute: {
+                contract_addr: v010Address,
+                callback_code_hash: v010CodeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
+                send: [],
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== 3) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(3 /* WASM ErrExecuteFailed */);
+
+        expect(tx.rawLog).toContain("encrypted:");
+        expect(tx.rawLog).toContain("execute contract failed");
       });
     });
   });
