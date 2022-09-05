@@ -16,7 +16,13 @@ import {
   QueryBalanceResponse,
 } from "secretjs//dist/protobuf_stuff/cosmos/bank/v1beta1/query";
 import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
-import { ibcDenom, sleep, waitForBlocks, waitForIBC } from "./utils";
+import {
+  ibcDenom,
+  sleep,
+  waitForBlocks,
+  waitForIBCChannel,
+  waitForIBCConnection,
+} from "./utils";
 
 // @ts-ignore
 // accounts on secretdev-1
@@ -111,8 +117,7 @@ beforeAll(async () => {
     grpcWebUrl: "http://localhost:9391",
   });
 
-  console.log("Waiting for LocalSecret to start...");
-  await waitForBlocks();
+  await waitForBlocks("secretdev-1");
 
   const v1Wasm = fs.readFileSync(
     `${__dirname}/contract-v1/contract.wasm`
@@ -241,60 +246,94 @@ describe("BankMsg", () => {
       ]);
     });
 
-    test("v0.10", async () => {
-      const tx = await accounts.a.tx.compute.executeContract(
-        {
-          sender: accounts.a.address,
-          contractAddress: v010Address,
-          codeHash: v010CodeHash,
-          msg: {
-            bank_msg_send: {
-              to_address: accounts.b.address,
-              amount: [{ amount: "1", denom: "uscrt" }],
+    describe("v0.10", () => {
+      test("success", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              bank_msg_send: {
+                to_address: accounts.b.address,
+                amount: [{ amount: "1", denom: "uscrt" }],
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
+          },
+          { gasLimit: 250_000 }
+        );
+        if (tx.code !== 0) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+        expect(
+          tx.arrayLog.filter((x) => x.type === "coin_spent")
+        ).toStrictEqual([
+          {
+            key: "spender",
+            msg: 0,
+            type: "coin_spent",
+            value: accounts.a.address,
+          },
+          { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
+          {
+            key: "spender",
+            msg: 0,
+            type: "coin_spent",
+            value: v010Address,
+          },
+          { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
+        ]);
+        expect(
+          tx.arrayLog.filter((x) => x.type === "coin_received")
+        ).toStrictEqual([
+          {
+            key: "receiver",
+            msg: 0,
+            type: "coin_received",
+            value: v010Address,
+          },
+          { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
+          {
+            key: "receiver",
+            msg: 0,
+            type: "coin_received",
+            value: accounts.b.address,
+          },
+          { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
+        ]);
+      });
+
+      test("error", async () => {
+        const { balance } = await readonly.query.bank.balance({
+          address: v010Address,
+          denom: "uscrt",
+        });
+        const contractBalance = Number(balance?.amount) ?? 0;
+
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              bank_msg_send: {
+                to_address: accounts.b.address,
+                amount: [
+                  { amount: String(contractBalance + 1), denom: "uscrt" },
+                ],
+              },
             },
           },
-          sentFunds: [{ amount: "1", denom: "uscrt" }],
-        },
-        { gasLimit: 250_000 }
-      );
-      if (tx.code !== 0) {
-        console.error(tx.rawLog);
-      }
-      expect(tx.code).toBe(TxResultCode.Success);
-      expect(tx.arrayLog.filter((x) => x.type === "coin_spent")).toStrictEqual([
-        {
-          key: "spender",
-          msg: 0,
-          type: "coin_spent",
-          value: accounts.a.address,
-        },
-        { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-        {
-          key: "spender",
-          msg: 0,
-          type: "coin_spent",
-          value: v010Address,
-        },
-        { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
-      ]);
-      expect(
-        tx.arrayLog.filter((x) => x.type === "coin_received")
-      ).toStrictEqual([
-        {
-          key: "receiver",
-          msg: 0,
-          type: "coin_received",
-          value: v010Address,
-        },
-        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-        {
-          key: "receiver",
-          msg: 0,
-          type: "coin_received",
-          value: accounts.b.address,
-        },
-        { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
-      ]);
+          { gasLimit: 250_000 }
+        );
+
+        expect(tx.code).toBe(TxResultCode.ErrInsufficientFunds);
+        expect(tx.rawLog).toContain(
+          `${contractBalance}uscrt is smaller than ${contractBalance + 1}uscrt`
+        );
+      });
     });
   });
 });
@@ -345,7 +384,7 @@ describe("StakingMsg", () => {
         });
       });
 
-      test.skip("error", async () => {
+      test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
@@ -499,8 +538,19 @@ describe("BankQuery", () => {
 describe("IBC", () => {
   beforeAll(async () => {
     console.log("Waiting for IBC to set up...");
-    await waitForIBC("secretdev-1", "http://localhost:9091");
-    await waitForIBC("secretdev-2", "http://localhost:9391");
+    await waitForIBCConnection("secretdev-1", "http://localhost:9091");
+    await waitForIBCConnection("secretdev-2", "http://localhost:9391");
+
+    await waitForIBCChannel(
+      "secretdev-1",
+      "http://localhost:9091",
+      "channel-0"
+    );
+    await waitForIBCChannel(
+      "secretdev-2",
+      "http://localhost:9391",
+      "channel-0"
+    );
   }, 180_000 /* 3 minutes */);
 
   test("transfer sanity", async () => {
@@ -537,8 +587,7 @@ describe("IBC", () => {
 
     expect(result.code).toBe(TxResultCode.Success);
 
-    // TODO check ack/timeout on secretdev-1 might be cleaner
-
+    // checking ack/timeout on secretdev-1 might be cleaner
     while (true) {
       try {
         const { balance: balanceAfter } = await readonly2.query.bank.balance({
