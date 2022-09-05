@@ -1,12 +1,6 @@
-use cosmwasm_std::{
-    entry_point, from_slice, to_binary, DepsMut, Env, Ibc3ChannelOpenResponse, IbcBasicResponse,
-    IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcMsg, IbcPacketAckMsg,
-    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult, WasmMsg,
-};
+use cosmwasm_std::{entry_point, to_binary, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcMsg, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult, Ibc3ChannelOpenResponse};
 
-use crate::error::ContractError;
 use crate::msg::PacketMsg;
-use crate::state::{AccountData, IbcQueryResponse, ACCOUNTS, LATEST_QUERIES};
 
 /// packets live one hour
 pub const PACKET_LIFETIME: u64 = 60 * 60;
@@ -16,12 +10,14 @@ pub fn ibc_channel_open(
     _deps: DepsMut,
     _env: Env,
     msg: IbcChannelOpenMsg,
-) -> StdResult<()> {
+) -> StdResult<Option<Ibc3ChannelOpenResponse>> {
     let channel = msg.channel();
     // todo maybe save this to state to check
     let _counter_port_id = channel.counterparty_endpoint.port_id.clone();
 
-    Ok(())
+    Ok(Some(Ibc3ChannelOpenResponse {
+        version: "test".to_string(),
+    }))
 }
 
 #[entry_point]
