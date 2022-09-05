@@ -307,9 +307,9 @@ jobs:
         with:
           file: deployment/dockerfiles/base.Dockerfile
           context: .
-          build-args:
-            - FEATURES=debug-print
-            - SGX_MODE=SW
+          build-args: |
+            FEATURES=debug-print
+            SGX_MODE=SW
           load: true
           tags: rust-go-base-image
           cache-from: type=gha
