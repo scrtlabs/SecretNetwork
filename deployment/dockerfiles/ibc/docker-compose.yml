@@ -10,7 +10,8 @@ services:
       - "9090:9090"
       - "9091:9091"
       - "1317:1317"
-
+      # faucet
+      - "5000:5000"
   localsecret-2:
     image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
     # ports are only here in case interaction
@@ -21,6 +22,8 @@ services:
       - "9391:9091"
       - "9390:9090"
       - "3317:1317"
+      # faucet
+      - "5300:5000"
     environment:
       CHAINID: "secretdev-2"
 
