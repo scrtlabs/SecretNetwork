@@ -628,7 +628,7 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         const { attributes } = tx.jsonLog[0].events.find(
-          (x) => x.type === "delegate"
+          (e) => e.type === "delegate"
         );
         expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
         expect(attributes).toContainEqual({
@@ -715,7 +715,7 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         const { attributes } = tx.jsonLog[1].events.find(
-          (x) => x.type === "unbond"
+          (e) => e.type === "unbond"
         );
         expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
         expect(attributes).toContainEqual({
@@ -804,7 +804,7 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         const { attributes } = tx.jsonLog[1].events.find(
-          (x) => x.type === "redelegate"
+          (e) => e.type === "redelegate"
         );
         expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
         expect(attributes).toContainEqual({
@@ -896,7 +896,7 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         const { attributes } = tx.jsonLog[1].events.find(
-          (x) => x.type === "withdraw_rewards"
+          (e) => e.type === "withdraw_rewards"
         );
         expect(attributes).toContainEqual({
           key: "validator",
