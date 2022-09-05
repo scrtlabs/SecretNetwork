@@ -3,11 +3,13 @@ use serde::{Deserialize, Serialize};
 pub use super::addresses::Addr;
 pub use super::coins::Coin;
 pub use super::timestamp::Timestamp;
+pub use cw_types_v010::types::TransactionInfo;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Env {
     pub block: BlockInfo,
     pub contract: ContractInfo,
+    pub transaction: Option<TransactionInfo>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

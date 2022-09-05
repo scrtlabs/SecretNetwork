@@ -368,6 +368,63 @@ describe("BankMsg", () => {
   });
 });
 
+describe("Env", () => {
+  describe("TransactionInfo", () => {
+    describe("TxCount", () => {
+      test("execute", async () => {
+        const tx = await accounts.a.tx.broadcast(
+          [
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v1Address,
+              codeHash: v1CodeHash,
+              msg: {
+                get_tx_id: {},
+              },
+              sentFunds: [],
+            }),
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v1Address,
+              codeHash: v1CodeHash,
+              msg: {
+                get_tx_id: {},
+              },
+              sentFunds: [],
+            }),
+            new MsgExecuteContract({
+              sender: accounts.a.address,
+              contractAddress: v1Address,
+              codeHash: v1CodeHash,
+              msg: {
+                get_tx_id: {},
+              },
+              sentFunds: [],
+            }),
+          ],
+          { gasLimit: 2_000_000 }
+        );
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        for (let i = 0; i < 3; i++) {
+          const { attributes } = tx.jsonLog[0].events.find(
+            (x) => x.type === "wasm-count-" + i
+          );
+
+          expect(attributes.length).toBe(2);
+
+          const { value } = attributes.find((x) => x.key === "count-val");
+
+          expect(value).toBe(i.toString());
+        }
+      });
+    });
+  });
+});
+
 describe("CustomMsg", () => {
   test.skip("v1", async () => {
     // TODO

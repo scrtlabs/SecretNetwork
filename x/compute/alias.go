@@ -32,6 +32,7 @@ const (
 	QueryContractAddress          = keeper.QueryContractAddress
 	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
 	DefaultConfigTemplate         = types.DefaultConfigTemplate
+
 	/*
 		QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
 		QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw
@@ -81,6 +82,7 @@ var (
 	PrepareExecSignedTx       = keeper.PrepareExecSignedTx
 	NewWasmSnapshotter        = keeper.NewWasmSnapshotter
 	ContractFromPortID        = keeper.ContractFromPortID
+	NewCountTXDecorator       = keeper.NewCountTXDecorator
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc

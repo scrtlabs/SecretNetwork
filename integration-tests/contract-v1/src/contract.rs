@@ -2,7 +2,7 @@ use cosmwasm_std::{
     entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse,
     AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse,
     ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps,
-    DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse,
+    DepsMut, DistributionMsg, Empty, Env, Event, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse,
     MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError,
     StdResult, ValidatorResponse, WasmMsg, WasmQuery,
 };
@@ -19,7 +19,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResul
     return handle_msg(deps, env, info, msg);
 }
 
-fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdResult<Response> {
+fn handle_msg(_deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResult<Response> {
     match msg {
         Msg::Nop {} => {
             return Ok(Response::new());
@@ -141,11 +141,20 @@ fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdRes
                 })),
             );
         }
+        Msg::GetTxId {} => match env.transaction {
+            None => Err(StdError::generic_err("Transaction info wasn't set")),
+            Some(t) => {
+                return Ok(Response::new().add_event(
+                    Event::new(format!("count-{:?}", t.index))
+                        .add_attribute_plaintext("count-val", t.index.to_string()),
+                ))
+            }
+        },
     }
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Stargate { path, data } => {
             return Ok(to_binary(
@@ -242,5 +251,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 &QueryRequest::Wasm(WasmQuery::ContractInfo { contract_addr }),
             )?)?);
         }
+        QueryMsg::GetTxId {} => match env.transaction {
+            None => Err(StdError::generic_err("Transaction info wasn't set")),
+            Some(t) => return Ok(to_binary(&t.index)?),
+        },
     }
 }
