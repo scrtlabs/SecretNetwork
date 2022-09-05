@@ -97,6 +97,8 @@ const (
 	flagQueryGasLimit = "query_gas_limit"
 )
 
+const contractPath = "testdata"
+
 var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
 
 type MockIBCTransferKeeper struct {
