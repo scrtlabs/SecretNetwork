@@ -295,17 +295,111 @@ jobs:
           xgo || true # check installation
       - name: Build MacOS CLI
         run: make build_macos_arm64_cli
-
-  Integration-Tests:
+  Build-LocalSecret:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: satackey/action-docker-layer-caching@v0.0.11
-        continue-on-error: true
-      - name: Build LocalSecret
+      - name: Setup Fake API keys
         run: |
           echo not_a_key | tee {api_key,spid}.txt
-          DOCKER_TAG=v0.0.0 make build-localsecret
+      - name: Build LocalSecret Base
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/base.Dockerfile
+          context: .
+          build-args:
+            - FEATURES=debug-print
+            - SGX_MODE=SW
+          load: true
+          tags: rust-go-base-image
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build LocalSecret Release
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/release.Dockerfile
+          context: .
+          load: true
+          tags: build-release
+          build-args:
+            - SECRET_NODE_TYPE=bootstrap
+            - CHAIN_ID=secretdev-1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build LocalSecret Final Dev Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/dev-image.Dockerfile
+          context: .
+          load: true
+          tags: ghcr.io/scrtlabs/localsecret:v0.0.0
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  Build-Hermes:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Fake API keys
+        run: |
+          echo not_a_key | tee {api_key,spid}.txt
+      - name: Build LocalSecret Final Dev Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/ibc/hermes.Dockerfile
+          context: deployment/dockerfiles/ibc
+          load: true
+          tags: hermes:v0.0.0
+          build-args:
+            - SECRET_NODE_TYPE=bootstrap
+            - CHAIN_ID=secretdev-1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  Integration-Tests:
+    runs-on: ubuntu-20.04
+    needs: [Build-LocalSecret, Build-Hermes]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Fake API keys
+        run: |
+          echo not_a_key | tee {api_key,spid}.txt
+      - name: Build LocalSecret Base
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/base.Dockerfile
+          context: .
+          build-args:
+           - FEATURES=debug-print
+           - SGX_MODE=SW
+          load: true
+          tags: rust-go-base-image
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build LocalSecret Release
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/release.Dockerfile
+          context: .
+          load: true
+          tags: build-release
+          build-args:
+            - SECRET_NODE_TYPE=bootstrap
+            - CHAIN_ID=secretdev-1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build LocalSecret Final Dev Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/dev-image.Dockerfile
+          context: .
+          load: true
+          tags: ghcr.io/scrtlabs/localsecret:v0.0.0
+          build-args:
+            - SECRET_NODE_TYPE=bootstrap
+            - CHAIN_ID=secretdev-1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Build Hermes
         run: |
           DOCKER_TAG=v0.0.0 make build-ibc-hermes
