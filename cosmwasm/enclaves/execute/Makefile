@@ -96,7 +96,7 @@ Rust_Crate_Source := $(shell find . ../shared -type f | grep -vP '(\.so|\.o|\.a)
 Rust_Target_Path := $(CURDIR)/../xargo
 
 ifeq ($(SGX_MODE), SW)
-	Rust_Flags := "-Z force-unstable-if-unmarked -C target-feature=+aes,+ssse3"
+	Rust_Flags := "-Z force-unstable-if-unmarked"
 else
 	Rust_Flags := "-Z force-unstable-if-unmarked -C target-cpu=skylake"
 endif

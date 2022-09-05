@@ -411,7 +411,7 @@ pub fn encrypt_output(
     // Therefore if reply_recipient_contract_hash is not "None" we append it to any encrypted data besided submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
-    trace!(
+    info!(
         "Output before encryption: {:?} {:?} {:?}",
         String::from_utf8_lossy(&output),
         secret_msg.nonce,
