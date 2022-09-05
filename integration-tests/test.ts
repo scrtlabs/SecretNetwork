@@ -9,9 +9,9 @@ import {
   SecretNetworkClient,
   toBase64,
   toHex,
+  toUtf8,
   Tx,
   TxResultCode,
-  VoteOption,
   Wallet,
 } from "secretjs";
 import {
@@ -168,14 +168,14 @@ beforeAll(async () => {
         codeId: v1CodeID,
         codeHash: v1CodeHash,
         initMsg: { nop: {} },
-        label: `v1-${Math.random()}`,
+        label: `v1-${Date.now()}`,
       }),
       new MsgInstantiateContract({
         sender: accounts.a.address,
         codeId: v010CodeID,
         codeHash: v010CodeHash,
         initMsg: { echo: {} },
-        label: `v010-${Math.random()}`,
+        label: `v010-${Date.now()}`,
       }),
     ],
     { gasLimit: 200_000 }
@@ -487,6 +487,106 @@ describe("GovMsgVote", () => {
 
       expect(tx.code).toBe(2 /* Gov ErrUnknownProposal */);
       expect(tx.rawLog).toContain(`${proposalId + 1e6}: unknown proposal`);
+    });
+  });
+});
+
+describe("Wasm", () => {
+  describe("MsgInstantiateContract", () => {
+    describe("v1", () => {
+      test.skip("success", async () => {
+        // TODO
+      });
+      test.skip("error", async () => {
+        // TODO
+      });
+    });
+
+    describe("v0.10", () => {
+      test("success", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              wasm_msg_instantiate: {
+                code_id: v010CodeID,
+                callback_code_hash: v010CodeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ echo: {} }))),
+                send: [],
+                label: `v010-${Date.now()}`,
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[0].events.find(
+          (e) => e.type === "wasm"
+        );
+        expect(attributes.length).toBe(2);
+        expect(attributes[0].key).toBe("contract_address");
+        expect(attributes[0].value).toBe(v010Address);
+        expect(attributes[1].key).toBe("contract_address");
+        expect(attributes[1].value).not.toBe(v010Address);
+      });
+
+      test("error", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              wasm_msg_instantiate: {
+                code_id: v010CodeID,
+                callback_code_hash: v010CodeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
+                send: [],
+                label: `v010-${Date.now()}`,
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        console.log(tx.rawLog);
+
+        if (tx.code !== 2) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(2 /* WASM ErrInstantiateFailed */);
+
+        expect(tx.rawLog).toContain("encrypted:");
+        expect(tx.rawLog).toContain("instantiate contract failed");
+      });
+    });
+  });
+
+  describe("MsgExecuteContract", () => {
+    describe("v1", () => {
+      test.skip("success", async () => {
+        // TODO
+      });
+      test.skip("error", async () => {
+        // TODO
+      });
+    });
+
+    describe("v0.10", () => {
+      test.skip("success", async () => {
+        // TODO
+      });
+
+      test.skip("error", async () => {
+        // TODO
+      });
     });
   });
 });
