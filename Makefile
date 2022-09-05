@@ -353,16 +353,15 @@ build-test-contract:
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/v1-sanity-contract
 	$(MAKE) -C ./x/compute/internal/keeper/testdata/ibc
 
-
 prep-go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 
 go-tests: build-test-contract
-	# empty BUILD_PROFILE means debug mode which compiles faster
-	SGX_MODE=SW $(MAKE) build-linux
+	SGX_MODE=SW $(MAKE) build-linux-with-query
 	cp ./cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./cosmwasm/enclaves/query/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)

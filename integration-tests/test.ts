@@ -371,7 +371,7 @@ describe("CustomMsg", () => {
     // TODO
   });
 
-  test.only("v0.10", async () => {
+  test("v0.10", async () => {
     const tx = await accounts.a.tx.compute.executeContract(
       {
         sender: accounts.a.address,

@@ -187,15 +187,15 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(tempDir) })
 
-	//keyContract := sdk.NewKVStoreKey(wasmtypes.StoreKey)
-	//keyAcc := sdk.NewKVStoreKey(authtypes.StoreKey)
-	//keyStaking := sdk.NewKVStoreKey(stakingtypes.StoreKey)
-	//keyDistro := sdk.NewKVStoreKey(distrtypes.StoreKey)
-	//mintStore := sdk.NewKVStoreKey(minttypes.StoreKey)
-	//keyParams := sdk.NewKVStoreKey(paramstypes.StoreKey)
-	//tkeyParams := sdk.NewTransientStoreKey(paramstypes.TStoreKey)
-	//keyGov := sdk.NewKVStoreKey(govtypes.StoreKey)
-	//keyBank := sdk.NewKVStoreKey(banktypes.StoreKey)
+	// keyContract := sdk.NewKVStoreKey(wasmtypes.StoreKey)
+	// keyAcc := sdk.NewKVStoreKey(authtypes.StoreKey)
+	// keyStaking := sdk.NewKVStoreKey(stakingtypes.StoreKey)
+	// keyDistro := sdk.NewKVStoreKey(distrtypes.StoreKey)
+	// mintStore := sdk.NewKVStoreKey(minttypes.StoreKey)
+	// keyParams := sdk.NewKVStoreKey(paramstypes.StoreKey)
+	// tkeyParams := sdk.NewTransientStoreKey(paramstypes.TStoreKey)
+	// keyGov := sdk.NewKVStoreKey(govtypes.StoreKey)
+	// keyBank := sdk.NewKVStoreKey(banktypes.StoreKey)
 
 	keys := sdk.NewKVStoreKeys(
 		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,

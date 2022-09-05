@@ -3,16 +3,14 @@ Rust_Crate_Source := $(shell find -type f | grep -P '(\.rs|\.toml|\.lock)$$' | g
 .PHONY: all
 all: contract.wasm contract_with_floats.wasm too-high-initial-memory.wasm static-too-high-initial-memory.wasm
 
-.PHONY: add-wasm
-add-wasm:
+contract.wasm: $(Rust_Crate_Source)
 	rustup target add wasm32-unknown-unknown
-
-contract.wasm: add-wasm $(Rust_Crate_Source)
 	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
 	cp ./target/wasm32-unknown-unknown/release/test_contract.wasm ./contract.wasm
 
 # Compile with floats
-contract_with_floats.wasm: add-wasm $(Rust_Crate_Source)
+contract_with_floats.wasm: $(Rust_Crate_Source)
+	rustup target add wasm32-unknown-unknown
 	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features with_floats
 	cp ./target/wasm32-unknown-unknown/release/test_contract.wasm ./contract_with_floats.wasm
 
