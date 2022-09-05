@@ -1,0 +1,21 @@
+image: ghcr.io/scrtlabs/secretnetwork-dev:latest
+
+tasks:
+  - name: set up permissions
+    command: |
+      sudo chown gitpod:gitpod /go -R
+      sudo chown gitpod:gitpod /usr/local/cargo -R
+      export SCRT_ENCLAVE_DIR=/workspace/SecretNetwork/go-cosmwasm/
+
+vscode:
+  extensions:
+    - rust-lang.rust
+    - vadimcn.vscode-lldb
+    - serayuzgur.crates
+    - bungcip.better-toml
+    - golang.Go
+
+jetbrains:
+  goland:
+    prebuilds:
+      version: stable

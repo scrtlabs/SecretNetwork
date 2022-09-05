@@ -85,7 +85,7 @@ pub fn validate_contract_key(
     let enclave_key = KEY_MANAGER
         .get_consensus_state_ikm()
         .map_err(|_err| {
-            warn!("Error extracting consensus_state_key");
+            error!("Error extracting consensus_state_key");
             false
         })
         .unwrap();
@@ -247,7 +247,7 @@ pub fn verify_params(
     contract_address: &HumanAddr,
     msg: &SecretMessage,
 ) -> Result<(), EnclaveError> {
-    info!("Verifying message signatures for: {:?}", sig_info);
+    debug!("Verifying message signatures for: {:?}", sig_info);
 
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
     if let Some(callback_sig) = &sig_info.callback_sig {
@@ -450,7 +450,7 @@ fn verify_message_params(
     signer_public_key: &CosmosPubKey,
     sent_msg: &SecretMessage,
 ) -> bool {
-    info!("Verifying sender..");
+    debug!("Verifying sender..");
 
     // let msg_sender = match CanonicalAddr::from_human(&env.message.sender) {
     //     Ok(msg_sender) => msg_sender,
@@ -473,7 +473,7 @@ fn verify_message_params(
     // since it didn't find a matching signed message
     let msg = get_verified_msg(messages, sender, sent_msg);
     if msg.is_none() {
-        warn!("Message verification failed!");
+        debug!("Message verification failed!");
         trace!(
             "Message sent to contract {:?} by {:?} does not match any signed messages {:?}",
             sent_msg.to_vec(),

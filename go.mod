@@ -55,7 +55,7 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/iavl v0.17.3 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.11.1 // indirect
-	github.com/cosmos/ledger-go v0.9.2 // indirect
+	github.com/cosmos/ledger-go v0.9.3 // indirect
 	github.com/danieljoos/wincred v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
@@ -129,7 +129,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.4-secret.10
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.4-secret.11
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
