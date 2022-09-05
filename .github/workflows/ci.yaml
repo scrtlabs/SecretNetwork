@@ -295,16 +295,12 @@ jobs:
           xgo || true # check installation
       - name: Build MacOS CLI
         run: make build_macos_arm64_cli
+
   Build-LocalSecret:
     runs-on: ubuntu-20.04
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-        with:
-          driver: docker-container
-          driver-opts: |
-            image=moby/buildkit:master
-            network=host
+        uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v2
       - name: Setup Fake API keys
         run: |
@@ -347,12 +343,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-        with:
-          driver: docker-container
-          driver-opts: |
-            image=moby/buildkit:master
-            network=host
+        uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v2
       - name: Setup Fake API keys
         run: |
