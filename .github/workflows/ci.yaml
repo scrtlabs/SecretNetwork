@@ -321,9 +321,9 @@ jobs:
           context: .
           load: true
           tags: build-release
-          build-args:
-            - SECRET_NODE_TYPE=bootstrap
-            - CHAIN_ID=secretdev-1
+          build-args: |
+            SECRET_NODE_TYPE=bootstrap
+            CHAIN_ID=secretdev-1
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build LocalSecret Final Dev Image
@@ -350,9 +350,9 @@ jobs:
           context: deployment/dockerfiles/ibc
           load: true
           tags: hermes:v0.0.0
-          build-args:
-            - SECRET_NODE_TYPE=bootstrap
-            - CHAIN_ID=secretdev-1
+          build-args: |
+            SECRET_NODE_TYPE=bootstrap
+            CHAIN_ID=secretdev-1
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -369,9 +369,9 @@ jobs:
         with:
           file: deployment/dockerfiles/base.Dockerfile
           context: .
-          build-args:
-           - FEATURES=debug-print
-           - SGX_MODE=SW
+          build-args: |
+           FEATURES=debug-print
+           SGX_MODE=SW
           load: true
           tags: rust-go-base-image
           cache-from: type=gha
@@ -383,9 +383,9 @@ jobs:
           context: .
           load: true
           tags: build-release
-          build-args:
-            - SECRET_NODE_TYPE=bootstrap
-            - CHAIN_ID=secretdev-1
+          build-args: |
+            SECRET_NODE_TYPE=bootstrap
+            CHAIN_ID=secretdev-1
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build LocalSecret Final Dev Image
@@ -395,9 +395,9 @@ jobs:
           context: .
           load: true
           tags: ghcr.io/scrtlabs/localsecret:v0.0.0
-          build-args:
-            - SECRET_NODE_TYPE=bootstrap
-            - CHAIN_ID=secretdev-1
+          build-args: |
+            SECRET_NODE_TYPE=bootstrap
+            CHAIN_ID=secretdev-1
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build Hermes
