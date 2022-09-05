@@ -166,7 +166,7 @@ func (k Keeper) OnCloseChannel(
 
 	err = k.parseThenHandleIBCBasicContractResponse(ctx, contractAddress, msgBz, res)
 	if err != nil {
-		sdkerrors.Wrap(err, "ibc-close-channel")
+		return sdkerrors.Wrap(err, "ibc-close-channel")
 	}
 	return nil
 }

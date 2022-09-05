@@ -696,7 +696,7 @@ func fundAccounts(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Ke
 	am.SetAccount(ctx, baseAcct)
 }
 
-var keyCounter uint64 = 0
+var keyCounter uint64
 
 // we need to make this deterministic (same every test run), as encoded address size and thus gas cost,
 // depends on the actual bytes (due to ugly CanonicalAddress encoding)
