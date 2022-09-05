@@ -30,10 +30,6 @@ func TestUncompress(t *testing.T) {
 			src:       wasmRaw,
 			expResult: wasmRaw,
 		},
-		"handle wasm compressed": {
-			src:       wasmGzipped,
-			expResult: wasmRaw,
-		},
 		"handle nil slice": {
 			src:       nil,
 			expResult: nil,
