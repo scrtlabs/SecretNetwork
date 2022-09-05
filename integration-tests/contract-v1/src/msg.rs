@@ -110,3 +110,9 @@ pub enum QueryMsg {
         contract_addr: String,
     },
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PacketMsg {
+    Test {},
+}
