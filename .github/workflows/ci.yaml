@@ -231,7 +231,6 @@ jobs:
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
           cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
           mv ./go-cosmwasm/api/testdata/hackatom.wasm ./x/compute/internal/keeper/testdata/contract.wasm
-          mv ./go-cosmwasm/api/testdata/contract.wasm.gzip ./x/compute/internal/keeper/testdata/contract.wasm.gzip
           find "$(pwd)" -name \*.wasm
       - name: Test x/registration
         run: |
