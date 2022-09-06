@@ -19,7 +19,7 @@ use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
 use crate::db::{remove_encrypted_key, write_encrypted_key};
 use crate::errors::WasmEngineError;
-use crate::gas::WasmCosts;
+use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::traits::WasmiApi;
@@ -344,6 +344,8 @@ impl WasmiApi for ContractInstance {
             String::from_utf8_lossy(&state_key_name)
         );
 
+        self.use_gas_externally(OCALL_BASE_GAS)?;
+
         // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
         // This returns the value from Tendermint
         let (value, gas_used) =
@@ -471,6 +473,8 @@ impl WasmiApi for ContractInstance {
             String::from_utf8_lossy(&state_key_name),
             String::from_utf8_lossy(&value),
         );
+
+        self.use_gas_externally(OCALL_BASE_GAS)?;
 
         let used_gas =
             write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
@@ -662,6 +666,8 @@ impl WasmiApi for ContractInstance {
             "query_chain() was called from WASM code with {:?}",
             String::from_utf8_lossy(&query_buffer)
         );
+
+        self.use_gas_externally(OCALL_BASE_GAS)?;
 
         // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
         // Returns the value from x/compute

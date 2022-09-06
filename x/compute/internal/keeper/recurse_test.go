@@ -130,7 +130,7 @@ func TestGasCostOnQuery(t *testing.T) {
 			expectedGas: 2*GasWork50 + GasReturnHashed,
 		},
 		"recursion 4, some work": {
-			gasLimit: 400_000,
+			gasLimit: 600_000,
 			msg: Recurse{
 				Depth: 4,
 				Work:  50,
@@ -203,7 +203,7 @@ func TestGasOnExternalQuery(t *testing.T) {
 		},
 		"recursion 4, plenty gas": {
 			// this uses 244708 gas
-			gasLimit: 400_000,
+			gasLimit: 600_000,
 			msg: Recurse{
 				Depth: 4,
 				Work:  50,
