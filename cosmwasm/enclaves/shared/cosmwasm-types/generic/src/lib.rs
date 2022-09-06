@@ -29,15 +29,13 @@ pub type BaseCanoncalAddr = v010types::CanonicalAddr;
 pub struct BaseEnv(pub V010Env);
 
 impl BaseEnv {
-
     pub fn get_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
-
         let contract_key = if let Some(b64_key) = &self.0.contract_key {
             base64::decode(b64_key).map_err(|err| {
                 warn!(
-                "got an error while trying to decode contract key {:?}: {}",
-                b64_key, err
-            );
+                    "got an error while trying to decode contract key {:?}: {}",
+                    b64_key, err
+                );
                 EnclaveError::FailedContractAuthentication
             })?
         } else {
@@ -90,6 +88,7 @@ impl BaseEnv {
                     address: v1types::Addr::unchecked(self.0.contract.address.0),
                     code_hash: self.0.contract_code_hash,
                 },
+                transaction: self.0.transaction,
             },
             msg_info: v1types::MessageInfo {
                 sender: v1types::Addr::unchecked(self.0.message.sender.0),

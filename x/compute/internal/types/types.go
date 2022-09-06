@@ -145,6 +145,10 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 		Key:       wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
 		Recursive: false,
 	}
+
+	if txCounter, ok := TXCounter(ctx); ok {
+		env.Transaction = &wasmTypes.TransactionInfo{Index: txCounter}
+	}
 	return env
 }
 

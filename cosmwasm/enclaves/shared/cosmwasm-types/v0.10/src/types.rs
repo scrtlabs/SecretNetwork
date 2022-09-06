@@ -100,6 +100,19 @@ pub struct Env {
     pub contract_key: Option<String>,
     #[serde(default)]
     pub contract_code_hash: String,
+    #[serde(default)]
+    pub transaction: Option<TransactionInfo>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct TransactionInfo {
+    /// The position of this transaction in the block. The first
+    /// transaction has index 0.
+    ///
+    /// This allows you to get a unique transaction indentifier in this chain
+    /// using the pair (`env.block.height`, `env.transaction.index`).
+    ///
+    pub index: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]

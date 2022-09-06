@@ -596,17 +596,22 @@ func NewSecretNetworkApp(
 	app.MountTransientStores(tKeys)
 	app.MountMemoryStores(memKeys)
 
-	anteOptions := ante.HandlerOptions{
-		AccountKeeper:   app.accountKeeper,
-		BankKeeper:      app.bankKeeper,
-		FeegrantKeeper:  app.feeGrantKeeper,
-		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
-		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+	anteOptions := HandlerOptions{
+		HandlerOptions: ante.HandlerOptions{
+			AccountKeeper:   app.accountKeeper,
+			BankKeeper:      app.bankKeeper,
+			FeegrantKeeper:  app.feeGrantKeeper,
+			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
+			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+		},
+		IBCKeeper:         app.ibcKeeper,
+		WasmConfig:        computeConfig,
+		TXCounterStoreKey: keys[compute.StoreKey],
 	}
 
-	anteHandler, err := ante.NewAnteHandler(anteOptions)
+	anteHandler, err := NewAnteHandler(anteOptions)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to create AnteHandler: %s", err))
 	}
 
 	// The AnteHandler handles signature verification and transaction pre-processing

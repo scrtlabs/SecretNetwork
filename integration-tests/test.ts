@@ -19,6 +19,7 @@ import {
   QueryBalanceResponse,
 } from "secretjs//dist/protobuf_stuff/cosmos/bank/v1beta1/query";
 import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
+import { AminoWallet } from "secretjs/dist/wallet_amino";
 import {
   ibcDenom,
   sleep,
@@ -27,24 +28,24 @@ import {
   waitForIBCConnection,
 } from "./utils";
 
+type Account = {
+  address: string;
+  mnemonic: string;
+  walletAmino: AminoWallet;
+  walletProto: Wallet;
+  secretjs: SecretNetworkClient;
+};
+
+const accountsCount = 30;
+
 // @ts-ignore
 // accounts on secretdev-1
-const accounts: {
-  a: SecretNetworkClient;
-  b: SecretNetworkClient;
-  c: SecretNetworkClient;
-  // avoid using account d which is used by the ibc relayer
-} = {};
+const accounts: Account[] = new Array(accountsCount);
 let readonly: SecretNetworkClient;
 
 // @ts-ignore
 // accounts on secretdev-2
-const accounts2: {
-  a: SecretNetworkClient;
-  b: SecretNetworkClient;
-  c: SecretNetworkClient;
-  // avoid using account d which is used by the ibc relayer
-} = {};
+const accounts2: Account[] = new Array(3);
 let readonly2: SecretNetworkClient;
 
 let v1CodeID: number;
@@ -56,63 +57,108 @@ let v010Address: string;
 let v010CodeHash: string;
 
 beforeAll(async () => {
-  const walletA = new Wallet(
-    "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
-  );
+  const mnemonics = [
+    "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar",
+    "jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow",
+    "chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge",
+  ];
 
-  const walletB = new Wallet(
-    "jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
-  );
+  // Create clients for all of the existing wallets in secretdev-1
+  for (let i = 0; i < mnemonics.length; i++) {
+    const mnemonic = mnemonics[i];
+    const walletAmino = new AminoWallet(mnemonic);
+    accounts[i] = {
+      address: walletAmino.address,
+      mnemonic: mnemonic,
+      walletAmino,
+      walletProto: new Wallet(mnemonic),
+      secretjs: await SecretNetworkClient.create({
+        grpcWebUrl: "http://localhost:9091",
+        wallet: walletAmino,
+        walletAddress: walletAmino.address,
+        chainId: "secretdev-1",
+      }),
+    };
+  }
 
-  const walletC = new Wallet(
-    "chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge"
-  );
+  // Create clients for all of the existing wallets in secretdev-2
+  for (let i = 0; i < mnemonics.length; i++) {
+    const mnemonic = mnemonics[i];
+    const walletAmino = new AminoWallet(mnemonic);
+    accounts2[i] = {
+      address: walletAmino.address,
+      mnemonic: mnemonic,
+      walletAmino,
+      walletProto: new Wallet(mnemonic),
+      secretjs: await SecretNetworkClient.create({
+        grpcWebUrl: "http://localhost:9391",
+        wallet: walletAmino,
+        walletAddress: walletAmino.address,
+        chainId: "secretdev-2",
+      }),
+    };
+  }
 
-  accounts.a = await SecretNetworkClient.create({
-    chainId: "secretdev-1",
-    grpcWebUrl: "http://localhost:9091",
-    wallet: walletA,
-    walletAddress: walletA.address,
-  });
+  // Create temporary wallets to fit all other usages (See TXCount test)
+  for (let i = mnemonics.length; i < accountsCount; i++) {
+    const wallet = new AminoWallet();
+    const [{ address }] = await wallet.getAccounts();
+    const walletProto = new Wallet(wallet.mnemonic);
 
-  accounts.b = await SecretNetworkClient.create({
-    chainId: "secretdev-1",
-    grpcWebUrl: "http://localhost:9091",
-    wallet: walletB,
-    walletAddress: walletB.address,
-  });
+    accounts[i] = {
+      address: address,
+      mnemonic: wallet.mnemonic,
+      walletAmino: wallet,
+      walletProto: walletProto,
+      secretjs: await SecretNetworkClient.create({
+        grpcWebUrl: "http://localhost:9091",
+        chainId: "secretdev-1",
+        wallet: wallet,
+        walletAddress: address,
+      }),
+    };
+  }
 
-  accounts.c = await SecretNetworkClient.create({
-    chainId: "secretdev-1",
-    grpcWebUrl: "http://localhost:9091",
-    wallet: walletC,
-    walletAddress: walletC.address,
-  });
+  // Send 100k SCRT from account 0 to each of accounts 1-itrations
+
+  const { secretjs } = accounts[0];
+
+  let t: Tx;
+  try {
+    t = await secretjs.tx.bank.multiSend(
+      {
+        inputs: [
+          {
+            address: secretjs.address,
+            coins: [
+              {
+                denom: "uscrt",
+                amount: String(100_000 * 1e6 * (accountsCount - 1)),
+              },
+            ],
+          },
+        ],
+        outputs: accounts.slice(1).map(({ address }) => ({
+          address,
+          coins: [{ denom: "uscrt", amount: String(100_000 * 1e6) }],
+        })),
+      },
+      {
+        gasLimit: 200_000,
+      }
+    );
+  } catch (e) {
+    throw new Error(`Failed to multisend: ${e.stack}`);
+  }
+
+  if (t.code !== 0) {
+    console.error(`failed to multisend coins`);
+    throw new Error("Failed to multisend coins to initial accounts");
+  }
 
   readonly = await SecretNetworkClient.create({
     chainId: "secretdev-1",
     grpcWebUrl: "http://localhost:9091",
-  });
-
-  accounts2.a = await SecretNetworkClient.create({
-    chainId: "secretdev-2",
-    grpcWebUrl: "http://localhost:9391",
-    wallet: walletA,
-    walletAddress: walletA.address,
-  });
-
-  accounts2.b = await SecretNetworkClient.create({
-    chainId: "secretdev-2",
-    grpcWebUrl: "http://localhost:9391",
-    wallet: walletB,
-    walletAddress: walletB.address,
-  });
-
-  accounts2.c = await SecretNetworkClient.create({
-    chainId: "secretdev-2",
-    grpcWebUrl: "http://localhost:9391",
-    wallet: walletC,
-    walletAddress: walletC.address,
   });
 
   readonly2 = await SecretNetworkClient.create({
@@ -134,16 +180,16 @@ beforeAll(async () => {
 
   console.log("Uploading contracts...");
   let tx: Tx;
-  tx = await accounts.a.tx.broadcast(
+  tx = await accounts[0].secretjs.tx.broadcast(
     [
       new MsgStoreCode({
-        sender: accounts.a.address,
+        sender: accounts[0].address,
         wasmByteCode: v1Wasm,
         source: "",
         builder: "",
       }),
       new MsgStoreCode({
-        sender: accounts.a.address,
+        sender: accounts[0].address,
         wasmByteCode: v010Wasm,
         source: "",
         builder: "",
@@ -161,17 +207,17 @@ beforeAll(async () => {
     tx.arrayLog.reverse().find((x) => x.key === "code_id").value
   );
 
-  tx = await accounts.a.tx.broadcast(
+  tx = await accounts[0].secretjs.tx.broadcast(
     [
       new MsgInstantiateContract({
-        sender: accounts.a.address,
+        sender: accounts[0].address,
         codeId: v1CodeID,
         codeHash: v1CodeHash,
         initMsg: { nop: {} },
         label: `v1-${Date.now()}`,
       }),
       new MsgInstantiateContract({
-        sender: accounts.a.address,
+        sender: accounts[0].address,
         codeId: v010CodeID,
         codeHash: v010CodeHash,
         initMsg: { echo: {} },
@@ -193,9 +239,9 @@ beforeAll(async () => {
   // create a second validator for MsgRedelegate tests
   const { validators } = await readonly.query.staking.validators({});
   if (validators.length === 1) {
-    tx = await accounts.b.tx.staking.createValidator(
+    tx = await accounts[1].secretjs.tx.staking.createValidator(
       {
-        selfDelegatorAddress: accounts.b.address,
+        selfDelegatorAddress: accounts[1].address,
         commission: {
           maxChangeRate: 0.01,
           maxRate: 0.1,
@@ -221,14 +267,14 @@ beforeAll(async () => {
 describe("BankMsg", () => {
   describe("Send", () => {
     test("v1", async () => {
-      const tx = await accounts.a.tx.compute.executeContract(
+      const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
-          sender: accounts.a.address,
+          sender: accounts[0].address,
           contractAddress: v1Address,
           codeHash: v1CodeHash,
           msg: {
             bank_msg_send: {
-              to_address: accounts.b.address,
+              to_address: accounts[1].address,
               amount: [{ amount: "1", denom: "uscrt" }],
             },
           },
@@ -245,7 +291,7 @@ describe("BankMsg", () => {
           key: "spender",
           msg: 0,
           type: "coin_spent",
-          value: accounts.a.address,
+          value: accounts[0].address,
         },
         { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
         {
@@ -270,7 +316,7 @@ describe("BankMsg", () => {
           key: "receiver",
           msg: 0,
           type: "coin_received",
-          value: accounts.b.address,
+          value: accounts[1].address,
         },
         { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
       ]);
@@ -278,14 +324,14 @@ describe("BankMsg", () => {
 
     describe("v0.10", () => {
       test("success", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
               bank_msg_send: {
-                to_address: accounts.b.address,
+                to_address: accounts[1].address,
                 amount: [{ amount: "1", denom: "uscrt" }],
               },
             },
@@ -304,7 +350,7 @@ describe("BankMsg", () => {
             key: "spender",
             msg: 0,
             type: "coin_spent",
-            value: accounts.a.address,
+            value: accounts[0].address,
           },
           { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
           {
@@ -329,7 +375,7 @@ describe("BankMsg", () => {
             key: "receiver",
             msg: 0,
             type: "coin_received",
-            value: accounts.b.address,
+            value: accounts[1].address,
           },
           { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
         ]);
@@ -342,14 +388,14 @@ describe("BankMsg", () => {
         });
         const contractBalance = Number(balance?.amount) ?? 0;
 
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
               bank_msg_send: {
-                to_address: accounts.b.address,
+                to_address: accounts[1].address,
                 amount: [
                   { amount: String(contractBalance + 1), denom: "uscrt" },
                 ],
@@ -368,15 +414,76 @@ describe("BankMsg", () => {
   });
 });
 
+describe("Env", () => {
+  describe("TransactionInfo", () => {
+    describe("TxCount", () => {
+      test("execute", async () => {
+        jest.setTimeout(10 * 60 * 1_000);
+        let txProm: Promise<Tx>[] = new Array(2);
+        let success: boolean;
+        let shouldBreak: boolean = false;
+        for (let j = 0; j < 20 && !shouldBreak; j += 2) {
+          for (let i = 0; i < 2; i++) {
+            let walletID = j + i + 3;
+            success = true;
+
+            txProm[i] = accounts[walletID].secretjs.tx.compute.executeContract(
+              {
+                sender: accounts[walletID].address,
+                contractAddress: v1Address,
+                codeHash: v1CodeHash,
+                msg: {
+                  get_tx_id: {},
+                },
+                sentFunds: [],
+              },
+              { gasLimit: 250_000 }
+            );
+          }
+
+          let txs = await Promise.all(txProm);
+
+          for (let i = 0; i < 2; i++) {
+            if (txs[i].code !== TxResultCode.Success) {
+              console.error(txs[i].rawLog);
+            }
+
+            expect(txs[i].code).toBe(TxResultCode.Success);
+
+            const { attributes } = txs[i].jsonLog[0].events.find(
+              (x) => x.type === "wasm-count"
+            );
+
+            expect(attributes.length).toBe(2);
+
+            const { value } = attributes.find((x) => x.key === "count-val");
+
+            if (value !== i.toString()) {
+              success = false;
+              break;
+            }
+          }
+
+          if (success) {
+            break;
+          }
+        }
+
+        expect(success).toBe(true);
+      });
+    });
+  });
+});
+
 describe("CustomMsg", () => {
   test.skip("v1", async () => {
     // TODO
   });
 
   test("v0.10", async () => {
-    const tx = await accounts.a.tx.compute.executeContract(
+    const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
-        sender: accounts.a.address,
+        sender: accounts[0].address,
         contractAddress: v010Address,
         codeHash: v010CodeHash,
         msg: {
@@ -397,10 +504,10 @@ describe("GovMsgVote", () => {
   let proposalId: number;
 
   beforeAll(async () => {
-    let tx = await accounts.a.tx.gov.submitProposal(
+    let tx = await accounts[0].secretjs.tx.gov.submitProposal(
       {
         type: ProposalType.TextProposal,
-        proposer: accounts.a.address,
+        proposer: accounts[0].address,
         // on localsecret min deposit is 10 SCRT
         initialDeposit: [{ amount: String(10_000_000), denom: "uscrt" }],
         content: {
@@ -437,9 +544,9 @@ describe("GovMsgVote", () => {
 
   describe("v0.10", () => {
     test("success", async () => {
-      const tx = await accounts.a.tx.compute.executeContract(
+      const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
-          sender: accounts.a.address,
+          sender: accounts[0].address,
           contractAddress: v010Address,
           codeHash: v010CodeHash,
           msg: {
@@ -470,9 +577,9 @@ describe("GovMsgVote", () => {
     });
 
     test("error", async () => {
-      const tx = await accounts.a.tx.compute.executeContract(
+      const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
-          sender: accounts.a.address,
+          sender: accounts[0].address,
           contractAddress: v010Address,
           codeHash: v010CodeHash,
           msg: {
@@ -504,9 +611,9 @@ describe("Wasm", () => {
 
     describe("v0.10", () => {
       test("success", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -538,9 +645,9 @@ describe("Wasm", () => {
       });
 
       test("error", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -579,9 +686,9 @@ describe("Wasm", () => {
 
     describe("v0.10", () => {
       test("success", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -612,9 +719,9 @@ describe("Wasm", () => {
       });
 
       test("error", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -657,9 +764,9 @@ describe("StakingMsg", () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -691,9 +798,9 @@ describe("StakingMsg", () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -730,10 +837,10 @@ describe("StakingMsg", () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
-        const tx = await accounts.a.tx.broadcast(
+        const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
-              sender: accounts.a.address,
+              sender: accounts[0].address,
               contractAddress: v010Address,
               codeHash: v010CodeHash,
               msg: {
@@ -745,7 +852,7 @@ describe("StakingMsg", () => {
               sentFunds: [{ amount: "1", denom: "uscrt" }],
             }),
             new MsgExecuteContract({
-              sender: accounts.a.address,
+              sender: accounts[0].address,
               contractAddress: v010Address,
               codeHash: v010CodeHash,
               msg: {
@@ -778,9 +885,9 @@ describe("StakingMsg", () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -818,10 +925,10 @@ describe("StakingMsg", () => {
         const validatorA = validators[0].operatorAddress;
         const validatorB = validators[1].operatorAddress;
 
-        const tx = await accounts.a.tx.broadcast(
+        const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
-              sender: accounts.a.address,
+              sender: accounts[0].address,
               contractAddress: v010Address,
               codeHash: v010CodeHash,
               msg: {
@@ -833,7 +940,7 @@ describe("StakingMsg", () => {
               sentFunds: [{ amount: "1", denom: "uscrt" }],
             }),
             new MsgExecuteContract({
-              sender: accounts.a.address,
+              sender: accounts[0].address,
               contractAddress: v010Address,
               codeHash: v010CodeHash,
               msg: {
@@ -871,9 +978,9 @@ describe("StakingMsg", () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -911,10 +1018,10 @@ describe("StakingMsg", () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
-        const tx = await accounts.a.tx.broadcast(
+        const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
-              sender: accounts.a.address,
+              sender: accounts[0].address,
               contractAddress: v010Address,
               codeHash: v010CodeHash,
               msg: {
@@ -926,13 +1033,13 @@ describe("StakingMsg", () => {
               sentFunds: [{ amount: "1", denom: "uscrt" }],
             }),
             new MsgExecuteContract({
-              sender: accounts.a.address,
+              sender: accounts[0].address,
               contractAddress: v010Address,
               codeHash: v010CodeHash,
               msg: {
                 staking_msg_withdraw: {
                   validator: validator,
-                  recipient: accounts.a.address,
+                  recipient: accounts[0].address,
                 },
               },
               sentFunds: [{ amount: "1", denom: "uscrt" }],
@@ -958,9 +1065,9 @@ describe("StakingMsg", () => {
         const { validators } = await readonly.query.staking.validators({});
         const validator = validators[0].operatorAddress;
 
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -986,9 +1093,9 @@ describe("StakingMsg", () => {
 
 describe("StargateMsg", () => {
   test("v1", async () => {
-    const tx = await accounts.a.tx.compute.executeContract(
+    const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
-        sender: accounts.a.address,
+        sender: accounts[0].address,
         contractAddress: v1Address,
         codeHash: v1CodeHash,
         msg: {
@@ -997,7 +1104,7 @@ describe("StargateMsg", () => {
             value: toBase64(
               MsgSend.encode({
                 fromAddress: v1Address,
-                toAddress: accounts.b.address,
+                toAddress: accounts[1].address,
                 amount: [{ amount: "1", denom: "uscrt" }],
               }).finish()
             ),
@@ -1016,7 +1123,7 @@ describe("StargateMsg", () => {
         key: "spender",
         msg: 0,
         type: "coin_spent",
-        value: accounts.a.address,
+        value: accounts[0].address,
       },
       { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
       {
@@ -1040,7 +1147,7 @@ describe("StargateMsg", () => {
           key: "receiver",
           msg: 0,
           type: "coin_received",
-          value: accounts.b.address,
+          value: accounts[1].address,
         },
         { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
       ]
@@ -1058,7 +1165,7 @@ describe("StargateQuery", () => {
           path: "/cosmos.bank.v1beta1.Query/Balance",
           data: toBase64(
             QueryBalanceRequest.encode({
-              address: accounts.a.address,
+              address: accounts[0].address,
               denom: "uscrt",
             }).finish()
           ),
@@ -1080,7 +1187,7 @@ describe("BankQuery", () => {
         codeHash: v1CodeHash,
         query: {
           bank_balance: {
-            address: accounts.a.address,
+            address: accounts[0].address,
             denom: "uscrt",
           },
         },
@@ -1095,7 +1202,7 @@ describe("BankQuery", () => {
         codeHash: v010CodeHash,
         query: {
           bank_balance: {
-            address: accounts.a.address,
+            address: accounts[0].address,
             denom: "uscrt",
           },
         },
@@ -1135,14 +1242,14 @@ describe("IBC", () => {
       "uscrt"
     );
     const { balance: balanceBefore } = await readonly2.query.bank.balance({
-      address: accounts2.a.address,
+      address: accounts2[0].address,
       denom,
     });
     const amountBefore = Number(balanceBefore?.amount ?? "0");
 
-    const result = await accounts.a.tx.ibc.transfer({
-      receiver: accounts.a.address,
-      sender: accounts.a.address,
+    const result = await accounts[0].secretjs.tx.ibc.transfer({
+      receiver: accounts[0].address,
+      sender: accounts[0].address,
       sourceChannel: "channel-0",
       sourcePort: "transfer",
       token: {
@@ -1162,7 +1269,7 @@ describe("IBC", () => {
     while (true) {
       try {
         const { balance: balanceAfter } = await readonly2.query.bank.balance({
-          address: accounts2.a.address,
+          address: accounts2[0].address,
           denom,
         });
         const amountAfter = Number(balanceAfter?.amount ?? "0");
