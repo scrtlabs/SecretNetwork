@@ -5,9 +5,11 @@ import {
   MsgExecuteContract,
   MsgInstantiateContract,
   MsgStoreCode,
+  ProposalType,
   SecretNetworkClient,
   toBase64,
   toHex,
+  toUtf8,
   Tx,
   TxResultCode,
   Wallet,
@@ -166,14 +168,14 @@ beforeAll(async () => {
         codeId: v1CodeID,
         codeHash: v1CodeHash,
         initMsg: { nop: {} },
-        label: `v1-${Math.random()}`,
+        label: `v1-${Date.now()}`,
       }),
       new MsgInstantiateContract({
         sender: accounts.a.address,
         codeId: v010CodeID,
         codeHash: v010CodeHash,
         initMsg: { echo: {} },
-        label: `v010-${Math.random()}`,
+        label: `v010-${Date.now()}`,
       }),
     ],
     { gasLimit: 200_000 }
@@ -391,6 +393,254 @@ describe("CustomMsg", () => {
   });
 });
 
+describe("GovMsgVote", () => {
+  let proposalId: number;
+
+  beforeAll(async () => {
+    let tx = await accounts.a.tx.gov.submitProposal(
+      {
+        type: ProposalType.TextProposal,
+        proposer: accounts.a.address,
+        // on localsecret min deposit is 10 SCRT
+        initialDeposit: [{ amount: String(10_000_000), denom: "uscrt" }],
+        content: {
+          title: "Hi",
+          description: "Hello",
+        },
+      },
+      {
+        broadcastCheckIntervalMs: 100,
+        gasLimit: 5_000_000,
+      }
+    );
+    if (tx.code !== TxResultCode.Success) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(TxResultCode.Success);
+
+    proposalId = Number(
+      tx.jsonLog?.[0].events
+        .find((e) => e.type === "submit_proposal")
+        ?.attributes.find((a) => a.key === "proposal_id")?.value
+    );
+    expect(proposalId).toBeGreaterThanOrEqual(1);
+  });
+
+  describe("v1", () => {
+    test.skip("success", async () => {
+      // TODO
+    });
+    test.skip("error", async () => {
+      // TODO
+    });
+  });
+
+  describe("v0.10", () => {
+    test("success", async () => {
+      const tx = await accounts.a.tx.compute.executeContract(
+        {
+          sender: accounts.a.address,
+          contractAddress: v010Address,
+          codeHash: v010CodeHash,
+          msg: {
+            gov_msg_vote: {
+              proposal: proposalId,
+              vote_option: "Yes",
+            },
+          },
+        },
+        { gasLimit: 250_000 }
+      );
+      if (tx.code !== TxResultCode.Success) {
+        console.error(tx.rawLog);
+      }
+      expect(tx.code).toBe(TxResultCode.Success);
+
+      const { attributes } = tx.jsonLog[0].events.find(
+        (x) => x.type === "proposal_vote"
+      );
+      expect(attributes).toContainEqual({
+        key: "proposal_id",
+        value: String(proposalId),
+      });
+      expect(attributes).toContainEqual({
+        key: "option",
+        value: '{"option":1,"weight":"1.000000000000000000"}',
+      });
+    });
+
+    test("error", async () => {
+      const tx = await accounts.a.tx.compute.executeContract(
+        {
+          sender: accounts.a.address,
+          contractAddress: v010Address,
+          codeHash: v010CodeHash,
+          msg: {
+            gov_msg_vote: {
+              proposal: proposalId + 1e6,
+              vote_option: "Yes",
+            },
+          },
+        },
+        { gasLimit: 250_000 }
+      );
+
+      expect(tx.code).toBe(2 /* Gov ErrUnknownProposal */);
+      expect(tx.rawLog).toContain(`${proposalId + 1e6}: unknown proposal`);
+    });
+  });
+});
+
+describe("Wasm", () => {
+  describe("MsgInstantiateContract", () => {
+    describe("v1", () => {
+      test.skip("success", async () => {
+        // TODO
+      });
+      test.skip("error", async () => {
+        // TODO
+      });
+    });
+
+    describe("v0.10", () => {
+      test("success", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              wasm_msg_instantiate: {
+                code_id: v010CodeID,
+                callback_code_hash: v010CodeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ echo: {} }))),
+                send: [],
+                label: `v010-${Date.now()}`,
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[0].events.find(
+          (e) => e.type === "wasm"
+        );
+        expect(attributes.length).toBe(2);
+        expect(attributes[0].key).toBe("contract_address");
+        expect(attributes[0].value).toBe(v010Address);
+        expect(attributes[1].key).toBe("contract_address");
+        expect(attributes[1].value).not.toBe(v010Address);
+      });
+
+      test("error", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              wasm_msg_instantiate: {
+                code_id: v010CodeID,
+                callback_code_hash: v010CodeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
+                send: [],
+                label: `v010-${Date.now()}`,
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== 2) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(2 /* WASM ErrInstantiateFailed */);
+
+        expect(tx.rawLog).toContain("encrypted:");
+        expect(tx.rawLog).toContain("instantiate contract failed");
+      });
+    });
+  });
+
+  describe("MsgExecuteContract", () => {
+    describe("v1", () => {
+      test.skip("success", async () => {
+        // TODO
+      });
+      test.skip("error", async () => {
+        // TODO
+      });
+    });
+
+    describe("v0.10", () => {
+      test("success", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              wasm_msg_execute: {
+                contract_addr: v010Address,
+                callback_code_hash: v010CodeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ echo: {} }))),
+                send: [],
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[0].events.find(
+          (e) => e.type === "wasm"
+        );
+        expect(attributes.length).toBe(2);
+        expect(attributes[0].key).toBe("contract_address");
+        expect(attributes[0].value).toBe(v010Address);
+        expect(attributes[1].key).toBe("contract_address");
+        expect(attributes[1].value).toBe(v010Address);
+      });
+
+      test("error", async () => {
+        const tx = await accounts.a.tx.compute.executeContract(
+          {
+            sender: accounts.a.address,
+            contractAddress: v010Address,
+            codeHash: v010CodeHash,
+            msg: {
+              wasm_msg_execute: {
+                contract_addr: v010Address,
+                callback_code_hash: v010CodeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
+                send: [],
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== 3) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(3 /* WASM ErrExecuteFailed */);
+
+        expect(tx.rawLog).toContain("encrypted:");
+        expect(tx.rawLog).toContain("execute contract failed");
+      });
+    });
+  });
+});
+
 describe("StakingMsg", () => {
   describe("Delegate", () => {
     describe("v1", () => {
@@ -428,7 +678,7 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         const { attributes } = tx.jsonLog[0].events.find(
-          (x) => x.type === "delegate"
+          (e) => e.type === "delegate"
         );
         expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
         expect(attributes).toContainEqual({
@@ -515,7 +765,7 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         const { attributes } = tx.jsonLog[1].events.find(
-          (x) => x.type === "unbond"
+          (e) => e.type === "unbond"
         );
         expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
         expect(attributes).toContainEqual({
@@ -604,7 +854,7 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         const { attributes } = tx.jsonLog[1].events.find(
-          (x) => x.type === "redelegate"
+          (e) => e.type === "redelegate"
         );
         expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
         expect(attributes).toContainEqual({
@@ -696,7 +946,7 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         const { attributes } = tx.jsonLog[1].events.find(
-          (x) => x.type === "withdraw_rewards"
+          (e) => e.type === "withdraw_rewards"
         );
         expect(attributes).toContainEqual({
           key: "validator",
