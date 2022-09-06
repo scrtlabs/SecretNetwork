@@ -11,8 +11,6 @@ import (
 	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
 
-	store "github.com/cosmos/cosmos-sdk/store/types"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
@@ -176,7 +174,7 @@ type SecretNetworkApp struct {
 	paramsKeeper     paramskeeper.Keeper
 	evidenceKeeper   evidencekeeper.Keeper
 	feeGrantKeeper   feegrantkeeper.Keeper
-	ComputeKeeper    compute.Keeper
+	computeKeeper    compute.Keeper
 	regKeeper        reg.Keeper
 	ibcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	transferKeeper   ibctransferkeeper.Keeper
@@ -425,7 +423,7 @@ func NewSecretNetworkApp(
 	// if we want to allow any custom callbacks
 	supportedFeatures := "staking,stargate,ibc3"
 
-	app.ComputeKeeper = compute.NewKeeper(
+	app.computeKeeper = compute.NewKeeper(
 		appCodec,
 		*legacyAmino,
 		keys[compute.StoreKey],
@@ -469,7 +467,7 @@ func NewSecretNetworkApp(
 		staking.NewAppModule(appCodec, app.stakingKeeper, app.accountKeeper, app.bankKeeper),
 		upgrade.NewAppModule(app.upgradeKeeper),
 		evidence.NewAppModule(app.evidenceKeeper),
-		compute.NewAppModule(app.ComputeKeeper),
+		compute.NewAppModule(app.computeKeeper),
 		params.NewAppModule(app.paramsKeeper),
 		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 		reg.NewAppModule(app.regKeeper),
@@ -571,30 +569,8 @@ func NewSecretNetworkApp(
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 	app.mm.RegisterServices(app.configurator)
 
+	// setupUpgradeHandlers() shoulbe be called after app.mm is configured
 	app.setupUpgradeHandlers(&icaModule)
-
-	// add test gRPC service for testing gRPC queries in isolation
-	// testdata.RegisterTestServiceServer(app.GRPCQueryRouter(), testdata.QueryImpl{}) // TODO: this is testdata !!!
-
-	// create the simulation manager and define the order of the modules for deterministic simulations
-	//
-	// NOTE: This is not required for apps that don't use the simulator for fuzz testing
-	// transactions.
-	// app.sm = module.NewSimulationManager(
-	//	auth.NewAppModule(appCodec, app.accountKeeper, authsims.RandomGenesisAccounts),
-	//	bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
-	//	capability.NewAppModule(appCodec, *app.capabilityKeeper),
-	//	gov.NewAppModule(appCodec, app.govKeeper, app.accountKeeper, app.bankKeeper),
-	//	mint.NewAppModule(appCodec, app.mintKeeper, app.accountKeeper),
-	//	staking.NewAppModule(appCodec, app.stakingKeeper, app.accountKeeper, app.bankKeeper),
-	//	distr.NewAppModule(appCodec, app.distrKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
-	//	slashing.NewAppModule(appCodec, app.slashingKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
-	//	params.NewAppModule(app.paramsKeeper),
-	//	//compute.NewAppModule(app.ComputeKeeper),
-	//	evidence.NewAppModule(app.evidenceKeeper),
-	//)
-
-	// app.sm.RegisterStoreDecoders()
 
 	// initialize stores
 	app.MountKVStores(keys)
@@ -623,7 +599,7 @@ func NewSecretNetworkApp(
 
 	if manager := app.SnapshotManager(); manager != nil {
 		err := manager.RegisterExtensions(
-			compute.NewWasmSnapshotter(app.CommitMultiStore(), &app.ComputeKeeper),
+			compute.NewWasmSnapshotter(app.CommitMultiStore(), &app.computeKeeper),
 		)
 		if err != nil {
 			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
@@ -776,16 +752,6 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 		if upgradeInfo.Name == upgradeDetails.UpgradeName {
 			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
 		}
-	}
-
-	if upgradeInfo.Name == v1_3.UpgradeName && !app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
-		// @Frey do we do this for Cosmwasm?
-		storeUpgrades := store.StoreUpgrades{
-			Added: []string{icahosttypes.StoreKey},
-		}
-
-		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
 }
 
