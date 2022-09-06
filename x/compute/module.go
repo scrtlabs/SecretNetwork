@@ -111,7 +111,6 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 	if err := configurator.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
 		panic(fmt.Sprintf("failed to migrate x/bank from version 1 to 2: %v", err))
 	}
-
 }
 
 func (am AppModule) LegacyQuerierHandler(amino *codec.LegacyAmino) sdk.Querier {

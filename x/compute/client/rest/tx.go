@@ -32,7 +32,7 @@ type storeCodeReq struct {
 type instantiateContractReq struct {
 	BaseReq rest.BaseReq `json:"base_req" yaml:"base_req"`
 	Deposit sdk.Coins    `json:"deposit" yaml:"deposit"`
-	InitMsg []byte `json:"init_msg" yaml:"init_msg"`
+	InitMsg []byte       `json:"init_msg" yaml:"init_msg"`
 }
 
 type executeContractReq struct {

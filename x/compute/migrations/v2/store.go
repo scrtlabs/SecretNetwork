@@ -15,8 +15,6 @@ func migrateSomething(store sdk.KVStore, cdc codec.BinaryCodec) error {
 
 // MigrateStore performs in-place store migrations from v1 to v2. The
 // migration includes:
-//
-//
 func MigrateStore(ctx sdk.Context, storeKey storetypes.StoreKey, cdc codec.BinaryCodec) error {
 	store := ctx.KVStore(storeKey)
 

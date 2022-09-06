@@ -2,12 +2,13 @@ package app
 
 import (
 	"fmt"
-	"github.com/enigmampc/SecretNetwork/app/upgrades"
-	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/enigmampc/SecretNetwork/app/upgrades"
+	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
 
 	store "github.com/cosmos/cosmos-sdk/store/types"
 
