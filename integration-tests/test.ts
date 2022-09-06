@@ -47,13 +47,26 @@ const accounts2: {
 } = {};
 let readonly2: SecretNetworkClient;
 
-let v1CodeID: number;
-let v1Address: string;
-let v1CodeHash: string;
+class Contract {
+    address: string;
+    codeId: number;
+    ibcPortId: string;
+    codeHash: string;
+}
 
-let v010CodeID: number;
-let v010Address: string;
-let v010CodeHash: string;
+const contracts = {
+  "secretdev-1": {
+    v1: new Contract,
+    v010: new Contract,
+  },
+  "secretdev-2": {
+    v1: new Contract,
+    v010: new Contract,
+  }
+}
+
+contracts["secretdev-1"].v1.address = "yes";
+console.log("contracts", contracts);
 
 beforeAll(async () => {
   const walletA = new Wallet(
@@ -125,12 +138,12 @@ beforeAll(async () => {
   const v1Wasm = fs.readFileSync(
     `${__dirname}/contract-v1/contract.wasm`
   ) as Uint8Array;
-  v1CodeHash = toHex(sha256(v1Wasm));
+  contracts["secretdev-1"].v1.codeHash = toHex(sha256(v1Wasm));
 
   const v010Wasm = fs.readFileSync(
     `${__dirname}/contract-v0.10/contract.wasm`
   ) as Uint8Array;
-  v010CodeHash = toHex(sha256(v010Wasm));
+  contracts["secretdev-1"].v010.codeHash = toHex(sha256(v010Wasm));
 
   console.log("Uploading contracts...");
   let tx: Tx;
@@ -156,8 +169,8 @@ beforeAll(async () => {
   }
   expect(tx.code).toBe(TxResultCode.Success);
 
-  v1CodeID = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
-  v010CodeID = Number(
+  contracts["secretdev-1"].v1.codeId = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
+  contracts["secretdev-1"].v010.codeId = Number(
     tx.arrayLog.reverse().find((x) => x.key === "code_id").value
   );
 
@@ -165,15 +178,15 @@ beforeAll(async () => {
     [
       new MsgInstantiateContract({
         sender: accounts.a.address,
-        codeId: v1CodeID,
-        codeHash: v1CodeHash,
+        codeId: contracts["secretdev-1"].v1.codeId,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
         initMsg: { nop: {} },
         label: `v1-${Date.now()}`,
       }),
       new MsgInstantiateContract({
         sender: accounts.a.address,
-        codeId: v010CodeID,
-        codeHash: v010CodeHash,
+        codeId: contracts["secretdev-1"].v010.codeId,
+        codeHash: contracts["secretdev-1"].v010.codeHash,
         initMsg: { echo: {} },
         label: `v010-${Date.now()}`,
       }),
@@ -185,10 +198,17 @@ beforeAll(async () => {
   }
   expect(tx.code).toBe(TxResultCode.Success);
 
-  v1Address = tx.arrayLog.find((x) => x.key === "contract_address").value;
-  v010Address = tx.arrayLog
+  contracts["secretdev-1"].v1.address = tx.arrayLog.find((x) => x.key === "contract_address").value;
+  contracts["secretdev-1"].v010.address = tx.arrayLog
     .reverse()
     .find((x) => x.key === "contract_address").value;
+
+  // get contract's ibc_port_id
+  // const info = (await readonly.query.compute.contractInfo(contracts["secretdev-1"].v1.address)).ContractInfo;
+  // console.log("info", info);
+  // console.log("info.ibcPortId", info.ibcPortId);
+  // temp guessing:
+  contracts["secretdev-1"].v1.ibcPortId = "wasm" + contracts["secretdev-1"].v1.address;
 
   // create a second validator for MsgRedelegate tests
   const { validators } = await readonly.query.staking.validators({});
@@ -224,8 +244,8 @@ describe("BankMsg", () => {
       const tx = await accounts.a.tx.compute.executeContract(
         {
           sender: accounts.a.address,
-          contractAddress: v1Address,
-          codeHash: v1CodeHash,
+          contractAddress: contracts["secretdev-1"].v1.address,
+          codeHash: contracts["secretdev-1"].v1.codeHash,
           msg: {
             bank_msg_send: {
               to_address: accounts.b.address,
@@ -252,7 +272,7 @@ describe("BankMsg", () => {
           key: "spender",
           msg: 0,
           type: "coin_spent",
-          value: v1Address,
+          value: contracts["secretdev-1"].v1.address,
         },
         { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
       ]);
@@ -263,7 +283,7 @@ describe("BankMsg", () => {
           key: "receiver",
           msg: 0,
           type: "coin_received",
-          value: v1Address,
+          value: contracts["secretdev-1"].v1.address,
         },
         { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
         {
@@ -281,8 +301,8 @@ describe("BankMsg", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               bank_msg_send: {
                 to_address: accounts.b.address,
@@ -311,7 +331,7 @@ describe("BankMsg", () => {
             key: "spender",
             msg: 0,
             type: "coin_spent",
-            value: v010Address,
+            value: contracts["secretdev-1"].v010.address,
           },
           { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
         ]);
@@ -322,7 +342,7 @@ describe("BankMsg", () => {
             key: "receiver",
             msg: 0,
             type: "coin_received",
-            value: v010Address,
+            value: contracts["secretdev-1"].v010.address,
           },
           { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
           {
@@ -337,7 +357,7 @@ describe("BankMsg", () => {
 
       test("error", async () => {
         const { balance } = await readonly.query.bank.balance({
-          address: v010Address,
+          address: contracts["secretdev-1"].v010.address,
           denom: "uscrt",
         });
         const contractBalance = Number(balance?.amount) ?? 0;
@@ -345,8 +365,8 @@ describe("BankMsg", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               bank_msg_send: {
                 to_address: accounts.b.address,
@@ -377,8 +397,8 @@ describe("CustomMsg", () => {
     const tx = await accounts.a.tx.compute.executeContract(
       {
         sender: accounts.a.address,
-        contractAddress: v010Address,
-        codeHash: v010CodeHash,
+        contractAddress: contracts["secretdev-1"].v010.address,
+        codeHash: contracts["secretdev-1"].v010.codeHash,
         msg: {
           custom_msg: {},
         },
@@ -660,8 +680,8 @@ describe("StakingMsg", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_delegate: {
                 validator,
@@ -694,8 +714,8 @@ describe("StakingMsg", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_delegate: {
                 validator: validator + "garbage",
@@ -734,8 +754,8 @@ describe("StakingMsg", () => {
           [
             new MsgExecuteContract({
               sender: accounts.a.address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator,
@@ -746,8 +766,8 @@ describe("StakingMsg", () => {
             }),
             new MsgExecuteContract({
               sender: accounts.a.address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_undelegate: {
                   validator,
@@ -781,8 +801,8 @@ describe("StakingMsg", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_undelegate: {
                 validator: validator + "garbage",
@@ -822,8 +842,8 @@ describe("StakingMsg", () => {
           [
             new MsgExecuteContract({
               sender: accounts.a.address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validatorA,
@@ -834,8 +854,8 @@ describe("StakingMsg", () => {
             }),
             new MsgExecuteContract({
               sender: accounts.a.address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_redelegate: {
                   src_validator: validatorA,
@@ -874,8 +894,8 @@ describe("StakingMsg", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_redelegate: {
                 src_validator: validator,
@@ -915,8 +935,8 @@ describe("StakingMsg", () => {
           [
             new MsgExecuteContract({
               sender: accounts.a.address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validator,
@@ -927,8 +947,8 @@ describe("StakingMsg", () => {
             }),
             new MsgExecuteContract({
               sender: accounts.a.address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_withdraw: {
                   validator: validator,
@@ -961,8 +981,8 @@ describe("StakingMsg", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_redelegate: {
                 src_validator: validator,
@@ -989,14 +1009,14 @@ describe("StargateMsg", () => {
     const tx = await accounts.a.tx.compute.executeContract(
       {
         sender: accounts.a.address,
-        contractAddress: v1Address,
-        codeHash: v1CodeHash,
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
         msg: {
           stargate_msg: {
             type_url: "/cosmos.bank.v1beta1.MsgSend",
             value: toBase64(
               MsgSend.encode({
-                fromAddress: v1Address,
+                fromAddress: contracts["secretdev-1"].v1.address,
                 toAddress: accounts.b.address,
                 amount: [{ amount: "1", denom: "uscrt" }],
               }).finish()
@@ -1023,7 +1043,7 @@ describe("StargateMsg", () => {
         key: "spender",
         msg: 0,
         type: "coin_spent",
-        value: v1Address,
+        value: contracts["secretdev-1"].v1.address,
       },
       { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
     ]);
@@ -1033,7 +1053,7 @@ describe("StargateMsg", () => {
           key: "receiver",
           msg: 0,
           type: "coin_received",
-          value: v1Address,
+          value: contracts["secretdev-1"].v1.address,
         },
         { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
         {
@@ -1051,8 +1071,8 @@ describe("StargateMsg", () => {
 describe("StargateQuery", () => {
   test("v1", async () => {
     const result: any = await readonly.query.compute.queryContract({
-      contractAddress: v1Address,
-      codeHash: v1CodeHash,
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
       query: {
         stargate: {
           path: "/cosmos.bank.v1beta1.Query/Balance",
@@ -1076,8 +1096,8 @@ describe("BankQuery", () => {
   describe("Balance", () => {
     test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: v1Address,
-        codeHash: v1CodeHash,
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
         query: {
           bank_balance: {
             address: accounts.a.address,
@@ -1091,8 +1111,8 @@ describe("BankQuery", () => {
 
     test("v0.10", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: v010Address,
-        codeHash: v010CodeHash,
+        contractAddress: contracts["secretdev-1"].v010.address,
+        codeHash: contracts["secretdev-1"].v010.codeHash,
         query: {
           bank_balance: {
             address: accounts.a.address,
