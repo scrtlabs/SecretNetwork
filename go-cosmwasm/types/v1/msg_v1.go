@@ -146,7 +146,7 @@ func (v VoteOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
-func (s *VoteOption) UnmarshalJSON(b []byte) error {
+func (v *VoteOption) UnmarshalJSON(b []byte) error {
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *VoteOption) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid vote option '%s'", j)
 	}
-	*s = voteOption
+	*v = voteOption
 	return nil
 }
 
