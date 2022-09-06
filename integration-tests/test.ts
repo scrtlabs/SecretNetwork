@@ -12,7 +12,7 @@ import {
   toUtf8,
   Tx,
   TxResultCode,
-  Wallet,
+  Wallet
 } from "secretjs";
 import {
   QueryBalanceRequest,
@@ -22,13 +22,32 @@ import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
 import {
   ibcDenom,
   sleep,
+  storeContracts,
   waitForBlocks,
   waitForIBCChannel,
   waitForIBCConnection,
+  Contract, instantiateContracts,
 } from "./utils";
 
+const contracts = {
+  "secretdev-1": {
+    v1: new Contract("v1"),
+    v010: new Contract("v010"),
+  },
+  "secretdev-2": {
+    v1: new Contract("v1"),
+    v010: new Contract("v010"),
+  }
+}
+
+// let accounts;
+// let accounts2;
+// let readonly;
+
+let v1Wasm: Uint8Array;
+let v010Wasm: Uint8Array;
+
 // @ts-ignore
-// accounts on secretdev-1
 const accounts: {
   a: SecretNetworkClient;
   b: SecretNetworkClient;
@@ -46,27 +65,6 @@ const accounts2: {
   // avoid using account d which is used by the ibc relayer
 } = {};
 let readonly2: SecretNetworkClient;
-
-class Contract {
-    address: string;
-    codeId: number;
-    ibcPortId: string;
-    codeHash: string;
-}
-
-const contracts = {
-  "secretdev-1": {
-    v1: new Contract,
-    v010: new Contract,
-  },
-  "secretdev-2": {
-    v1: new Contract,
-    v010: new Contract,
-  }
-}
-
-contracts["secretdev-1"].v1.address = "yes";
-console.log("contracts", contracts);
 
 beforeAll(async () => {
   const walletA = new Wallet(
@@ -132,76 +130,33 @@ beforeAll(async () => {
     chainId: "secretdev-2",
     grpcWebUrl: "http://localhost:9391",
   });
-
   await waitForBlocks("secretdev-1");
 
-  const v1Wasm = fs.readFileSync(
+  v1Wasm = fs.readFileSync(
     `${__dirname}/contract-v1/contract.wasm`
   ) as Uint8Array;
   contracts["secretdev-1"].v1.codeHash = toHex(sha256(v1Wasm));
+  contracts["secretdev-2"].v1.codeHash = contracts["secretdev-1"].v1.codeHash;
 
-  const v010Wasm = fs.readFileSync(
+  v010Wasm = fs.readFileSync(
     `${__dirname}/contract-v0.10/contract.wasm`
   ) as Uint8Array;
   contracts["secretdev-1"].v010.codeHash = toHex(sha256(v010Wasm));
+  contracts["secretdev-2"].v010.codeHash = contracts["secretdev-1"].v010.codeHash;
+  console.log("v1codehash", contracts["secretdev-1"].v1.codeHash);
+  console.log("v010codeHash", contracts["secretdev-1"].v010.codeHash);
 
-  console.log("Uploading contracts...");
-  let tx: Tx;
-  tx = await accounts.a.tx.broadcast(
-    [
-      new MsgStoreCode({
-        sender: accounts.a.address,
-        wasmByteCode: v1Wasm,
-        source: "",
-        builder: "",
-      }),
-      new MsgStoreCode({
-        sender: accounts.a.address,
-        wasmByteCode: v010Wasm,
-        source: "",
-        builder: "",
-      }),
-    ],
-    { gasLimit: 5_000_000 }
-  );
-  if (tx.code !== TxResultCode.Success) {
-    console.error(tx.rawLog);
-  }
-  expect(tx.code).toBe(TxResultCode.Success);
+  console.log("Uploading contracts on chain 1...");
+  let tx: Tx = await storeContracts(accounts.a, [v1Wasm, v010Wasm]);
+  contracts["secretdev-1"].v1.codeId = Number(tx.arrayLog.find(x => x.key === "code_id").value);
+  contracts["secretdev-1"].v010.codeId = Number(tx.arrayLog.reverse().find(x => x.key === "code_id").value);
+  console.log("v1codeid", contracts["secretdev-1"].v1.codeId);
+  console.log("v010codeid", contracts["secretdev-1"].v010.codeId);
 
-  contracts["secretdev-1"].v1.codeId = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
-  contracts["secretdev-1"].v010.codeId = Number(
-    tx.arrayLog.reverse().find((x) => x.key === "code_id").value
-  );
-
-  tx = await accounts.a.tx.broadcast(
-    [
-      new MsgInstantiateContract({
-        sender: accounts.a.address,
-        codeId: contracts["secretdev-1"].v1.codeId,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
-        initMsg: { nop: {} },
-        label: `v1-${Date.now()}`,
-      }),
-      new MsgInstantiateContract({
-        sender: accounts.a.address,
-        codeId: contracts["secretdev-1"].v010.codeId,
-        codeHash: contracts["secretdev-1"].v010.codeHash,
-        initMsg: { echo: {} },
-        label: `v010-${Date.now()}`,
-      }),
-    ],
-    { gasLimit: 200_000 }
-  );
-  if (tx.code !== TxResultCode.Success) {
-    console.error(tx.rawLog);
-  }
-  expect(tx.code).toBe(TxResultCode.Success);
-
-  contracts["secretdev-1"].v1.address = tx.arrayLog.find((x) => x.key === "contract_address").value;
-  contracts["secretdev-1"].v010.address = tx.arrayLog
-    .reverse()
-    .find((x) => x.key === "contract_address").value;
+  console.log("Instantiating contracts on chain 1...");
+  tx = await instantiateContracts(accounts.a, [contracts["secretdev-1"].v1, contracts["secretdev-1"].v010]);
+  contracts["secretdev-1"].v1.address = tx.arrayLog.find(x => x.key === "contract_address").value;
+  contracts["secretdev-1"].v010.address = tx.arrayLog.reverse().find(x => x.key === "contract_address").value;
 
   // get contract's ibc_port_id
   // const info = (await readonly.query.compute.contractInfo(contracts["secretdev-1"].v1.address)).ContractInfo;
@@ -460,8 +415,8 @@ describe("GovMsgVote", () => {
       const tx = await accounts.a.tx.compute.executeContract(
         {
           sender: accounts.a.address,
-          contractAddress: v010Address,
-          codeHash: v010CodeHash,
+          contractAddress: contracts["secretdev-1"].v010.address,
+          codeHash: contracts["secretdev-1"].v010.codeHash,
           msg: {
             gov_msg_vote: {
               proposal: proposalId,
@@ -493,8 +448,8 @@ describe("GovMsgVote", () => {
       const tx = await accounts.a.tx.compute.executeContract(
         {
           sender: accounts.a.address,
-          contractAddress: v010Address,
-          codeHash: v010CodeHash,
+          contractAddress: contracts["secretdev-1"].v010.address,
+          codeHash: contracts["secretdev-1"].v010.codeHash,
           msg: {
             gov_msg_vote: {
               proposal: proposalId + 1e6,
@@ -527,12 +482,12 @@ describe("Wasm", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_instantiate: {
-                code_id: v010CodeID,
-                callback_code_hash: v010CodeHash,
+                code_id: contracts["secretdev-1"].v010.codeId,
+                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
                 msg: toBase64(toUtf8(JSON.stringify({ echo: {} }))),
                 send: [],
                 label: `v010-${Date.now()}`,
@@ -552,21 +507,21 @@ describe("Wasm", () => {
         );
         expect(attributes.length).toBe(2);
         expect(attributes[0].key).toBe("contract_address");
-        expect(attributes[0].value).toBe(v010Address);
+        expect(attributes[0].value).toBe(contracts["secretdev-1"].v010.address);
         expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).not.toBe(v010Address);
+        expect(attributes[1].value).not.toBe(contracts["secretdev-1"].v010.address);
       });
 
       test("error", async () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_instantiate: {
-                code_id: v010CodeID,
-                callback_code_hash: v010CodeHash,
+                code_id: contracts["secretdev-1"].v010.codeId,
+                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
                 msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
                 send: [],
                 label: `v010-${Date.now()}`,
@@ -602,12 +557,12 @@ describe("Wasm", () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_execute: {
-                contract_addr: v010Address,
-                callback_code_hash: v010CodeHash,
+                contract_addr: contracts["secretdev-1"].v010.address,
+                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
                 msg: toBase64(toUtf8(JSON.stringify({ echo: {} }))),
                 send: [],
               },
@@ -626,21 +581,21 @@ describe("Wasm", () => {
         );
         expect(attributes.length).toBe(2);
         expect(attributes[0].key).toBe("contract_address");
-        expect(attributes[0].value).toBe(v010Address);
+        expect(attributes[0].value).toBe(contracts["secretdev-1"].v010.address);
         expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).toBe(v010Address);
+        expect(attributes[1].value).toBe(contracts["secretdev-1"].v010.address);
       });
 
       test("error", async () => {
         const tx = await accounts.a.tx.compute.executeContract(
           {
             sender: accounts.a.address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_execute: {
-                contract_addr: v010Address,
-                callback_code_hash: v010CodeHash,
+                contract_addr: contracts["secretdev-1"].v010.address,
+                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
                 msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
                 send: [],
               },
@@ -1128,6 +1083,17 @@ describe("BankQuery", () => {
 
 describe("IBC", () => {
   beforeAll(async () => {
+    console.log("Uploading contracts on chain 2...");
+    let tx: Tx = await storeContracts(accounts2.a, [v1Wasm, v010Wasm]);
+    contracts["secretdev-2"].v1.codeId = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
+    contracts["secretdev-2"].v010.codeId = Number(tx.arrayLog.reverse().find((x) => x.key === "code_id").value);
+
+    console.log("Instantiating contracts on chain 2...");
+    tx = await instantiateContracts(accounts2.a, [contracts["secretdev-2"].v1, contracts["secretdev-2"].v010]);
+    contracts["secretdev-2"].v1.address = tx.arrayLog.find((x) => x.key === "contract_address").value;
+    contracts["secretdev-2"].v010.address = tx.arrayLog.reverse().find((x) => x.key === "contract_address").value;
+    contracts["secretdev-2"].v1.ibcPortId = "wasm" + contracts["secretdev-2"].v1.address;
+
     console.log("Waiting for IBC to set up...");
     await waitForIBCConnection("secretdev-1", "http://localhost:9091");
     await waitForIBCConnection("secretdev-2", "http://localhost:9391");
