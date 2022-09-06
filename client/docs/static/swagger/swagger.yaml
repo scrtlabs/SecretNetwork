@@ -35089,7 +35089,6 @@ paths:
                       contract
                   code_hash:
                     type: string
-                    format: byte
                   source:
                     type: string
                   builder:
@@ -35306,7 +35305,6 @@ paths:
             properties:
               code_hash:
                 type: string
-                format: byte
         default:
           description: An unexpected error response.
           schema:
@@ -35516,7 +35514,6 @@ paths:
             properties:
               code_hash:
                 type: string
-                format: byte
         default:
           description: An unexpected error response.
           schema:
@@ -35739,7 +35736,6 @@ paths:
                         contract
                     code_hash:
                       type: string
-                      format: byte
                     source:
                       type: string
                     builder:
@@ -68046,7 +68042,6 @@ definitions:
         title: creator is the bech32 human readable address of the contract
       code_hash:
         type: string
-        format: byte
       source:
         type: string
       builder:
@@ -68125,7 +68120,6 @@ definitions:
     properties:
       code_hash:
         type: string
-        format: byte
   secret.compute.v1beta1.QueryCodeResponse:
     type: object
     properties:
@@ -68140,7 +68134,6 @@ definitions:
             title: creator is the bech32 human readable address of the contract
           code_hash:
             type: string
-            format: byte
           source:
             type: string
           builder:
@@ -68164,7 +68157,6 @@ definitions:
               title: creator is the bech32 human readable address of the contract
             code_hash:
               type: string
-              format: byte
             source:
               type: string
             builder:

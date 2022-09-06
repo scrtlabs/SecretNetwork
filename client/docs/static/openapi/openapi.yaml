@@ -32004,7 +32004,6 @@ paths:
                         title: creator is the bech32 human readable address of the contract
                       code_hash:
                         type: string
-                        format: byte
                       source:
                         type: string
                       builder:
@@ -32202,7 +32201,6 @@ paths:
                 properties:
                   code_hash:
                     type: string
-                    format: byte
         default:
           description: An unexpected error response.
           content:
@@ -32393,7 +32391,6 @@ paths:
                 properties:
                   code_hash:
                     type: string
-                    format: byte
         default:
           description: An unexpected error response.
           content:
@@ -32595,7 +32592,6 @@ paths:
                           title: creator is the bech32 human readable address of the contract
                         code_hash:
                           type: string
-                          format: byte
                         source:
                           type: string
                         builder:
@@ -62935,7 +62931,6 @@ components:
           title: creator is the bech32 human readable address of the contract
         code_hash:
           type: string
-          format: byte
         source:
           type: string
         builder:
@@ -63011,7 +63006,6 @@ components:
       properties:
         code_hash:
           type: string
-          format: byte
     secret.compute.v1beta1.QueryCodeResponse:
       type: object
       properties:
@@ -63026,7 +63020,6 @@ components:
               title: creator is the bech32 human readable address of the contract
             code_hash:
               type: string
-              format: byte
             source:
               type: string
             builder:
@@ -63050,7 +63043,6 @@ components:
                 title: creator is the bech32 human readable address of the contract
               code_hash:
                 type: string
-                format: byte
               source:
                 type: string
               builder:
