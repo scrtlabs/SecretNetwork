@@ -1,6 +1,7 @@
-use cosmwasm_std::{entry_point, to_binary, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcMsg, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult, Ibc3ChannelOpenResponse};
+use cosmwasm_std::{entry_point, to_binary, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcMsg, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult, Ibc3ChannelOpenResponse, from_slice};
 
 use crate::msg::PacketMsg;
+use crate::state::{channel_store};
 
 /// packets live one hour
 pub const PACKET_LIFETIME: u64 = 60 * 60;
@@ -22,12 +23,15 @@ pub fn ibc_channel_open(
 
 #[entry_point]
 pub fn ibc_channel_connect(
-    _deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     msg: IbcChannelConnectMsg,
 ) -> StdResult<IbcBasicResponse> {
     let channel = msg.channel();
     let channel_id = &channel.endpoint.channel_id;
+
+    // save channel to state
+    channel_store(deps.storage).save(channel_id)?;
 
     // construct a packet to send
     let packet = PacketMsg::Test {};
@@ -62,10 +66,17 @@ pub fn ibc_channel_close(
 pub fn ibc_packet_receive(
     _deps: DepsMut,
     _env: Env,
-    _packet: IbcPacketReceiveMsg,
+    packet: IbcPacketReceiveMsg,
 ) -> StdResult<IbcReceiveResponse> {
-    Ok(IbcReceiveResponse::new()
-        .set_ack(b"{}")
+    let msg: PacketMsg = from_slice(&packet.packet.data)?;
+
+    let mut response = IbcReceiveResponse::new();
+    response = match msg {
+        PacketMsg::Test { } => response.set_ack(b"test"),
+        PacketMsg::Message { value} => response.set_ack(value.as_bytes()),
+    };
+
+    Ok(response
         .add_attribute("action", "ibc_packet_ack"))
 }
 

@@ -163,7 +163,7 @@ beforeAll(async () => {
   // console.log("info", info);
   // console.log("info.ibcPortId", info.ibcPortId);
   // temp guessing:
-  contracts["secretdev-1"].v1.ibcPortId = "wasm" + contracts["secretdev-1"].v1.address;
+  contracts["secretdev-1"].v1.ibcPortId = "wasm." + contracts["secretdev-1"].v1.address;
 
   // create a second validator for MsgRedelegate tests
   const { validators } = await readonly.query.staking.validators({});
@@ -1092,7 +1092,7 @@ describe("IBC", () => {
     tx = await instantiateContracts(accounts2.a, [contracts["secretdev-2"].v1, contracts["secretdev-2"].v010]);
     contracts["secretdev-2"].v1.address = tx.arrayLog.find((x) => x.key === "contract_address").value;
     contracts["secretdev-2"].v010.address = tx.arrayLog.reverse().find((x) => x.key === "contract_address").value;
-    contracts["secretdev-2"].v1.ibcPortId = "wasm" + contracts["secretdev-2"].v1.address;
+    contracts["secretdev-2"].v1.ibcPortId = "wasm." + contracts["secretdev-2"].v1.address;
 
     console.log("Waiting for IBC to set up...");
     await waitForIBCConnection("secretdev-1", "http://localhost:9091");
@@ -1108,6 +1108,8 @@ describe("IBC", () => {
       "http://localhost:9391",
       "channel-0"
     );
+
+
   }, 180_000 /* 3 minutes */);
 
   test("transfer sanity", async () => {
@@ -1163,4 +1165,22 @@ describe("IBC", () => {
     }
     expect(true).toBe(true);
   }, 30_000 /* 30 seconds */);
+
+  test.only("contracts sanity", async () => {
+    const { execSync } = require('child_process');
+    // function execute(command, callback) {
+    //     exec(command, function(error, stdout, stderr){ callback(stdout); });
+    // }
+
+    const command = "docker exec ibc-relayer-1 hermes create channel " +
+      "--a-chain secretdev-1 " +
+      `--a-port ${contracts["secretdev-1"].v1.ibcPortId} ` +
+      `--b-port ${contracts["secretdev-2"].v1.ibcPortId} ` +
+      "--a-connection connection-0";
+
+    console.log("calling docker exec on relayer with command", command);
+    let result = execSync(command);
+    console.log("finished executing command, result:", result.toString());
+
+  }, 40_000 /* 30 seconds */);
 });

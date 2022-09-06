@@ -6,8 +6,10 @@ use cosmwasm_std::{
     MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError,
     StdResult, ValidatorResponse, WasmMsg, WasmQuery,
 };
+use crate::ibc::PACKET_LIFETIME;
 
-use crate::msg::{Msg, QueryMsg};
+use crate::msg::{Msg, PacketMsg, QueryMsg};
+use crate::state::{channel_store_read};
 
 #[entry_point]
 pub fn instantiate(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResult<Response> {
@@ -19,7 +21,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResul
     return handle_msg(deps, env, info, msg);
 }
 
-fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdResult<Response> {
+fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResult<Response> {
     match msg {
         Msg::Nop {} => {
             return Ok(Response::new());
@@ -27,6 +29,16 @@ fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdRes
         Msg::BankMsgSend { to_address, amount } => {
             return Ok(
                 Response::new().add_message(CosmosMsg::Bank(BankMsg::Send { to_address, amount }))
+            );
+        }
+        Msg::SendIbcPacket { message } => {
+            let packet = PacketMsg::Message { value: message };
+            return Ok(
+                Response::new().add_message(CosmosMsg::Ibc(IbcMsg::SendPacket {
+                    channel_id: channel_store_read(deps.storage).load()?,
+                    data: to_binary(&packet)?,
+                    timeout: env.block.time.plus_seconds(PACKET_LIFETIME).into(),
+                }))
             );
         }
         Msg::StargateMsg { type_url, value } => {
