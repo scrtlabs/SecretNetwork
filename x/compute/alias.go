@@ -80,6 +80,7 @@ var (
 	PrepareInitSignedTx       = keeper.PrepareInitSignedTx
 	PrepareExecSignedTx       = keeper.PrepareExecSignedTx
 	NewWasmSnapshotter        = keeper.NewWasmSnapshotter
+	ContractFromPortID        = keeper.ContractFromPortID
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc

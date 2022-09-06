@@ -372,18 +372,6 @@ func NewSecretNetworkApp(
 		app.accountKeeper, app.bankKeeper, scopedTransferKeeper,
 	)
 
-	// Create static IBC router, add ibc-tranfer module route, then set and seal it
-	ibcRouter := porttypes.NewRouter()
-	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transfer.NewIBCModule(app.transferKeeper))
-	ibcRouter.
-		AddRoute(icacontrollertypes.SubModuleName, icaControllerIBCModule).
-		AddRoute(icahosttypes.SubModuleName, icaHostIBCModule).
-		AddRoute(icaauthtypes.ModuleName, icaControllerIBCModule)
-
-	// Setting Router will finalize all routes by sealing router
-	// No more routes can be added
-	app.ibcKeeper.SetRouter(ibcRouter)
-
 	// Create evidence keeper with router
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec, keys[evidencetypes.StoreKey], &app.stakingKeeper, app.slashingKeeper,
@@ -443,6 +431,18 @@ func NewSecretNetworkApp(
 		nil,
 		nil,
 	)
+
+	// Create static IBC router, add ibc-tranfer module route, then set and seal it
+	ibcRouter := porttypes.NewRouter()
+	ibcRouter.AddRoute(compute.ModuleName, compute.NewIBCHandler(app.computeKeeper, app.ibcKeeper.ChannelKeeper)).
+		AddRoute(ibctransfertypes.ModuleName, transfer.NewIBCModule(app.transferKeeper)).
+		AddRoute(icacontrollertypes.SubModuleName, icaControllerIBCModule).
+		AddRoute(icahosttypes.SubModuleName, icaHostIBCModule).
+		AddRoute(icaauthtypes.ModuleName, icaControllerIBCModule)
+
+	// Setting Router will finalize all routes by sealing router
+	// No more routes can be added
+	app.ibcKeeper.SetRouter(ibcRouter)
 
 	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
 	// we prefer to be more strict in what arguments the modules expect.
