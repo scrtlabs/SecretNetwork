@@ -86,7 +86,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
-			bz, err = queryContractHashByAddress(ctx, addr, keeper)
+			bz, err = queryCodeHashByAddress(ctx, addr, keeper)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
@@ -95,7 +95,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			if err != nil {
 				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
 			}
-			bz, err = queryContractHashByCodeID(ctx, codeID, keeper)
+			bz, err = queryCodeHashByCodeID(ctx, codeID, keeper)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}

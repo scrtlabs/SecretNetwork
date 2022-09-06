@@ -46,8 +46,8 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdQuery(),
 		GetQueryDecryptTxCmd(),
 		GetCmdQueryLabel(),
-		GetCmdCodeHashByContract(),
-		GetCmdCodeHashByCodeId(cdc),
+		GetCmdCodeHashByContractAddress(),
+		GetCmdCodeHashByCodeID(),
 		CmdDecryptText(),
 	)
 	return queryCmd
@@ -121,7 +121,7 @@ func GetCmdQueryLabel() *cobra.Command {
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdCodeHashByContract() *cobra.Command {
+func GetCmdCodeHashByContractAddress() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "contract-hash [address]",
 		Short: "Return the code hash of a contract",

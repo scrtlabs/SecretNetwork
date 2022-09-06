@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/hex"
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -130,29 +131,33 @@ func (q GrpcQuerier) CodeHashByContractAddress(c context.Context, req *types.Que
 
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 
-	response, err := queryContractHashByAddress(ctx, contractAddress, q.keeper)
+	codeHashBz, err := queryCodeHashByAddress(ctx, contractAddress, q.keeper)
 	switch {
 	case err != nil:
 		return nil, err
-	case response == nil:
+	case codeHashBz == nil:
 		return nil, types.ErrNotFound
 	}
 
-	return &types.QueryCodeHashResponse{CodeHash: response}, nil
+	return &types.QueryCodeHashResponse{
+		CodeHash: hex.EncodeToString(codeHashBz),
+	}, nil
 }
 
 func (q GrpcQuerier) CodeHashByCodeID(c context.Context, req *types.QueryByCodeIDRequest) (*types.QueryCodeHashResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 
-	response, err := queryContractHashByCodeID(ctx, req.CodeId, q.keeper)
+	codeHashBz, err := queryCodeHashByCodeID(ctx, req.CodeId, q.keeper)
 	switch {
 	case err != nil:
 		return nil, err
-	case response == nil:
+	case codeHashBz == nil:
 		return nil, types.ErrNotFound
 	}
 
-	return &types.QueryCodeHashResponse{CodeHash: response}, nil
+	return &types.QueryCodeHashResponse{
+		CodeHash: hex.EncodeToString(codeHashBz),
+	}, nil
 }
 
 func (q GrpcQuerier) LabelByAddress(c context.Context, req *types.QueryByContractAddressRequest) (*types.QueryContractLabelResponse, error) {
@@ -250,7 +255,7 @@ func queryCode(ctx sdk.Context, codeId uint64, keeper Keeper) (*types.QueryCodeR
 	info := types.CodeInfoResponse{
 		CodeId:   codeId,
 		Creator:  codeInfo.Creator.String(),
-		CodeHash: codeInfo.CodeHash,
+		CodeHash: hex.EncodeToString(codeInfo.CodeHash),
 		Source:   codeInfo.Source,
 		Builder:  codeInfo.Builder,
 	}
@@ -272,7 +277,7 @@ func queryCodeList(ctx sdk.Context, keeper Keeper) ([]types.CodeInfoResponse, er
 		info = append(info, types.CodeInfoResponse{
 			CodeId:   codeId,
 			Creator:  res.Creator.String(),
-			CodeHash: res.CodeHash,
+			CodeHash: hex.EncodeToString(res.CodeHash),
 			Source:   res.Source,
 			Builder:  res.Builder,
 		})
@@ -290,16 +295,16 @@ func queryContractAddress(ctx sdk.Context, label string, keeper Keeper) (sdk.Acc
 	return res, nil
 }
 
-func queryContractHashByAddress(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) ([]byte, error) {
+func queryCodeHashByAddress(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) ([]byte, error) {
 	res := keeper.GetContractInfo(ctx, address)
 	if res == nil {
 		return nil, nil
 	}
 
-	return queryContractHashByCodeID(ctx, res.CodeID, keeper)
+	return queryCodeHashByCodeID(ctx, res.CodeID, keeper)
 }
 
-func queryContractHashByCodeID(ctx sdk.Context, codeID uint64, keeper Keeper) ([]byte, error) {
+func queryCodeHashByCodeID(ctx sdk.Context, codeID uint64, keeper Keeper) ([]byte, error) {
 	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
 	if err != nil {
 		return nil, err
