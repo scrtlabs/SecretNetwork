@@ -82,18 +82,6 @@ func (c *ContractInfo) ValidateBasic() error {
 	return nil
 }
 
-/*
-// ResetFromGenesis resets contracts timestamp and history.
-func (c *ContractInfo) ResetFromGenesis(ctx sdk.Context) ContractCodeHistoryEntry {
-	c.Created = NewAbsoluteTxPosition(ctx)
-	return ContractCodeHistoryEntry{
-		Operation: GenesisContractCodeHistoryType,
-		CodeID:    c.CodeID,
-		Updated:   c.Created,
-	}
-}
-*/
-
 // LessThan can be used to sort
 func (a *AbsoluteTxPosition) LessThan(b *AbsoluteTxPosition) bool {
 	if a == nil {

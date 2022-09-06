@@ -264,16 +264,6 @@ type ContractInfoQuery struct {
 	ContractAddr string `json:"contract_addr"`
 }
 
-type ContractInfoResponse struct {
-	CodeID  uint64 `json:"code_id"`
-	Creator string `json:"creator"`
-	// Set to the admin who can migrate contract, if any
-	Admin  string `json:"admin,omitempty"`
-	Pinned bool   `json:"pinned"`
-	// Set if the contract is IBC enabled
-	IBCPort string `json:"ibc_port,omitempty"`
-}
-
 type DistQuery struct {
 	Rewards *RewardsQuery `json:"rewards,omitempty"`
 }
