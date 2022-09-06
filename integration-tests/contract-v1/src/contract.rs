@@ -145,7 +145,7 @@ fn handle_msg(_deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResu
             None => Err(StdError::generic_err("Transaction info wasn't set")),
             Some(t) => {
                 return Ok(Response::new().add_event(
-                    Event::new(format!("count-{:?}", t.index))
+                    Event::new("count".to_string())
                         .add_attribute_plaintext("count-val", t.index.to_string()),
                 ))
             }
