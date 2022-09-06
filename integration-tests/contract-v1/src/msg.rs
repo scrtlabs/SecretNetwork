@@ -112,6 +112,8 @@ pub enum QueryMsg {
     WasmContractInfo {
         contract_addr: String,
     },
+    LastIbcReceive {},
+    LastIbcAck {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

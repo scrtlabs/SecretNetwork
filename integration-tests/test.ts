@@ -1,10 +1,9 @@
 import { sha256 } from "@noble/hashes/sha256";
+import { execSync } from "child_process";
 import * as fs from "fs";
 import {
   fromBase64,
   MsgExecuteContract,
-  MsgInstantiateContract,
-  MsgStoreCode,
   ProposalType,
   SecretNetworkClient,
   toBase64,
@@ -1167,11 +1166,6 @@ describe("IBC", () => {
   }, 30_000 /* 30 seconds */);
 
   test.only("contracts sanity", async () => {
-    const { execSync } = require('child_process');
-    // function execute(command, callback) {
-    //     exec(command, function(error, stdout, stderr){ callback(stdout); });
-    // }
-
     const command = "docker exec ibc-relayer-1 hermes create channel " +
       "--a-chain secretdev-1 " +
       `--a-port ${contracts["secretdev-1"].v1.ibcPortId} ` +
@@ -1201,7 +1195,34 @@ describe("IBC", () => {
     expect(tx.code).toBe(TxResultCode.Success);
     console.log("tx after triggering ibc send endpoint", JSON.stringify(cleanBytes(tx), null, 2));
 
-    contracts["secretdev-1"].v1.codeId = Number(tx.arrayLog.find(x => x.key === "packet_data").value);
+    expect(
+      tx.arrayLog.find(x => x.key === "packet_data").value
+    ).toBe(
+      "{\"message\":{\"value\":\"ahello from test\"}}"
+    );
+
+    console.log("sleeping");
+    await sleep(10 * 1000);
+    console.log("sleeping end");
+    let queryResult: any = await accounts.a.query.compute.queryContract({
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
+      query: {
+        last_ibc_ack: {}
+      },
+    });
+
+    console.log("queryResult1", queryResult);
+
+    queryResult = await accounts2.a.query.compute.queryContract({
+      contractAddress: contracts["secretdev-2"].v1.address,
+      codeHash: contracts["secretdev-2"].v1.codeHash,
+      query: {
+        last_ibc_receive: {}
+      },
+    });
+
+    console.log("queryResult2", queryResult);
 
   }, 80_000 /* 80 seconds */);
 });
