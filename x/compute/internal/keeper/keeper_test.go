@@ -84,7 +84,7 @@ func TestCreate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
-	storedCode, err := keeper.GetByteCode(ctx, contractID)
+	storedCode, err := keeper.GetWasm(ctx, contractID)
 	require.NoError(t, err)
 	require.Equal(t, wasmCode, storedCode)
 }
@@ -116,10 +116,10 @@ func TestCreateDuplicate(t *testing.T) {
 	require.Equal(t, uint64(2), duplicateID)
 
 	// and verify both content is proper
-	storedCode, err := keeper.GetByteCode(ctx, contractID)
+	storedCode, err := keeper.GetWasm(ctx, contractID)
 	require.NoError(t, err)
 	require.Equal(t, wasmCode, storedCode)
-	storedCode, err = keeper.GetByteCode(ctx, duplicateID)
+	storedCode, err = keeper.GetWasm(ctx, duplicateID)
 	require.NoError(t, err)
 	require.Equal(t, wasmCode, storedCode)
 }
@@ -156,7 +156,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	require.Equal(t, uint64(1), contractID)
 
 	// and verify content
-	code, err := keeper.GetByteCode(ctx, contractID)
+	code, err := keeper.GetWasm(ctx, contractID)
 	require.NoError(t, err)
 	require.Equal(t, code, wasmCode)
 }
@@ -206,7 +206,7 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
-	storedCode, err := keeper.GetByteCode(ctx, contractID)
+	storedCode, err := keeper.GetWasm(ctx, contractID)
 	require.NoError(t, err)
 	rawCode, err := os.ReadFile("./testdata/contract.wasm")
 	require.NoError(t, err)

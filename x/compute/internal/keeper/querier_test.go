@@ -363,7 +363,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	for i, contract := range contracts {
 		require.Equal(t, fmt.Sprintf("contract %d", i), contract.Label)
-		require.NotEmpty(t, contract.Address)
+		require.NotEmpty(t, contract.ContractAddress)
 		// ensure these are not shown
 		// assert.Nil(t, contract.InitMsg)
 		assert.Nil(t, contract.Created)

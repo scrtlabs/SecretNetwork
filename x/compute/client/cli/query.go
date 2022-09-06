@@ -47,8 +47,8 @@ func GetQueryCmd() *cobra.Command {
 		GetQueryDecryptTxCmd(),
 		GetCmdQueryLabel(),
 		GetCmdCodeHashByContract(),
+		GetCmdCodeHashByCodeId(cdc),
 		CmdDecryptText(),
-		// GetCmdGetContractHistory(cdc),
 	)
 	return queryCmd
 }
@@ -149,6 +149,39 @@ func GetCmdCodeHashByContract() *cobra.Command {
 	return cmd
 }
 
+// GetCmdCodeHashByID return the code hash of a contract by ID
+func GetCmdCodeHashByCodeID() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "contract-hash-by-id [code_id]",
+		Short: "Return the code hash of a contract represented by ID",
+		Long:  "Return the code hash of a contract represented by ID",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHashByCodeID, args[0])
+			res, _, err := clientCtx.Query(route)
+			if err != nil {
+				return fmt.Errorf("error querying contract hash by id: %s", err)
+			}
+
+			if len(res) == 0 {
+				return fmt.Errorf("contract with id %s not found", args[0])
+			}
+
+			addr := hex.EncodeToString(res)
+			fmt.Printf("0x%s\n", addr)
+			return nil
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
 // GetCmdListContractByCode lists all wasm code uploaded for given code id
 func GetCmdListContractByCode() *cobra.Command {
 	cmd := &cobra.Command{
@@ -213,12 +246,12 @@ func GetCmdQueryCode() *cobra.Command {
 				return err
 			}
 
-			if len(code.Data) == 0 {
+			if len(code.Wasm) == 0 {
 				return fmt.Errorf("contract not found")
 			}
 
 			fmt.Printf("Downloading wasm code to %s\n", args[1])
-			return os.WriteFile(args[1], code.Data, 0o600)
+			return os.WriteFile(args[1], code.Wasm, 0o600)
 		},
 	}
 
@@ -597,38 +630,6 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 	fmt.Println(string(decodedResp))
 	return nil
 }
-
-/*
-// GetCmdGetContractHistory prints the code history for a given contract
-func GetCmdGetContractHistory() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "contract-history [bech32_address]",
-		Short: "Prints out the code history for a contract given its address",
-		Long:  "Prints out the code history for a contract given its address",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
-			if err != nil {
-				return err
-			}
-
-			addr, err := sdk.AccAddressFromBech32(args[0])
-			if err != nil {
-				return err
-			}
-
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHistory, addr.String())
-			res, _, err := clientCtx.Query(route)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(res))
-			return nil
-		},
-	}
-}
-*/
 
 type argumentDecoder struct {
 	// dec is the default decoder

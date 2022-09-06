@@ -388,7 +388,7 @@ func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 		return nil, err
 	}
 
-	return []byte(hex.EncodeToString(codeResp.DataHash)), nil
+	return []byte(hex.EncodeToString(codeResp.CodeHash)), nil
 }
 
 func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddress) ([]byte, error) {
