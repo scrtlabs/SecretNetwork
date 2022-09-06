@@ -272,7 +272,7 @@ func queryCodeHashHandlerFn(cliCtx client.Context) http.HandlerFunc {
 		}
 
 		cliCtx = cliCtx.WithHeight(height)
-		rest.PostProcessResponse(w, cliCtx, hex.EncodeToString(codeResp.DataHash))
+		rest.PostProcessResponse(w, cliCtx, codeResp.CodeHash)
 	}
 }
 

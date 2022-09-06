@@ -13,25 +13,18 @@ import (
 )
 
 const (
-	QueryListContractByCode = "list-contracts-by-code"
-	QueryGetContract        = "contract-info"
-	QueryGetContractState   = "contract-state"
-	QueryGetCode            = "code"
-	QueryListCode           = "list-code"
-	QueryContractAddress    = "label"
-	QueryContractKey        = "contract-key"
-	QueryContractHash       = "contract-hash"
+	QueryListContractByCode   = "list-contracts-by-code"
+	QueryGetContract          = "contract-info"
+	QueryGetContractState     = "contract-state"
+	QueryGetCode              = "code"
+	QueryListCode             = "list-code"
+	QueryContractAddress      = "label"
+	QueryContractKey          = "contract-key"
+	QueryContractHash         = "contract-hash"
+	QueryContractHashByCodeID = "contract-hash-by-id"
 )
 
 const QueryMethodContractStateSmart = "smart"
-
-/*
-const (
-	QueryMethodContractStateSmart = "smart"
-	QueryMethodContractStateAll   = "all"
-	QueryMethodContractStateRaw   = "raw"
-)
-*/
 
 // NewLegacyQuerier creates a new querier
 func NewLegacyQuerier(keeper Keeper) sdk.Querier {
@@ -76,14 +69,6 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			}
 		case QueryListCode:
 			rsp, err = queryCodeList(ctx, keeper)
-		/*
-			case QueryContractHistory:
-				contractAddr, err := sdk.AccAddressFromBech32(path[1])
-				if err != nil {
-					return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
-				}
-				rsp, err = queryContractHistory(ctx, contractAddr, keeper)
-		*/
 		case QueryContractAddress:
 			bz, err = queryContractAddress(ctx, path[1], keeper)
 			// return rsp, nil
@@ -101,7 +86,16 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
-			bz, err = queryContractHash(ctx, addr, keeper)
+			bz, err = queryCodeHashByAddress(ctx, addr, keeper)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
+			}
+		case QueryContractHashByCodeID:
+			codeID, err := strconv.ParseUint(path[1], 10, 64)
+			if err != nil {
+				return nil, sdkerrors.Wrapf(types.ErrInvalid, "code id: %s", err.Error())
+			}
+			bz, err = queryCodeHashByCodeID(ctx, codeID, keeper)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, err.Error())
 			}
@@ -120,8 +114,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			return nil, nil
 		}
 
-		// bz, err = keeper.legacyAmino.MarshalJSON(rsp)
-		bz, err = json.MarshalIndent(rsp, "", "  ")
+		bz, err = json.MarshalIndent(rsp, "", "    ")
 		if err != nil {
 			return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
 		}
@@ -139,4 +132,13 @@ func queryContractState(ctx sdk.Context, bech, queryMethod string, data []byte, 
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(keeper.queryGasLimit))
 	// this returns raw bytes (must be base64-encoded)
 	return keeper.QuerySmart(ctx, contractAddr, data, false)
+}
+
+func queryContractKey(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) ([]byte, error) {
+	res := keeper.GetContractKey(ctx, address)
+	if res == nil {
+		return nil, nil
+	}
+
+	return res, nil
 }

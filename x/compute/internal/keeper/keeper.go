@@ -808,7 +808,7 @@ func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo
 	}
 }
 
-func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
+func (k Keeper) GetWasm(ctx sdk.Context, codeID uint64) ([]byte, error) {
 	store := ctx.KVStore(k.storeKey)
 	var codeInfo types.CodeInfo
 	codeInfoBz := store.Get(types.GetCodeKey(codeID))
