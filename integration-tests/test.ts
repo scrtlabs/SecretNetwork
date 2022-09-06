@@ -504,10 +504,10 @@ describe("GovMsgVote", () => {
   let proposalId: number;
 
   beforeAll(async () => {
-    let tx = await accounts.a.tx.gov.submitProposal(
+    let tx = await accounts[0].secretjs.tx.gov.submitProposal(
       {
         type: ProposalType.TextProposal,
-        proposer: accounts.a.address,
+        proposer: accounts[0].address,
         // on localsecret min deposit is 10 SCRT
         initialDeposit: [{ amount: String(10_000_000), denom: "uscrt" }],
         content: {
@@ -544,9 +544,9 @@ describe("GovMsgVote", () => {
 
   describe("v0.10", () => {
     test("success", async () => {
-      const tx = await accounts.a.tx.compute.executeContract(
+      const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
-          sender: accounts.a.address,
+          sender: accounts[0].address,
           contractAddress: v010Address,
           codeHash: v010CodeHash,
           msg: {
@@ -577,9 +577,9 @@ describe("GovMsgVote", () => {
     });
 
     test("error", async () => {
-      const tx = await accounts.a.tx.compute.executeContract(
+      const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
-          sender: accounts.a.address,
+          sender: accounts[0].address,
           contractAddress: v010Address,
           codeHash: v010CodeHash,
           msg: {
@@ -611,9 +611,9 @@ describe("Wasm", () => {
 
     describe("v0.10", () => {
       test("success", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -645,9 +645,9 @@ describe("Wasm", () => {
       });
 
       test("error", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -686,9 +686,9 @@ describe("Wasm", () => {
 
     describe("v0.10", () => {
       test("success", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
@@ -719,9 +719,9 @@ describe("Wasm", () => {
       });
 
       test("error", async () => {
-        const tx = await accounts.a.tx.compute.executeContract(
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
-            sender: accounts.a.address,
+            sender: accounts[0].address,
             contractAddress: v010Address,
             codeHash: v010CodeHash,
             msg: {
