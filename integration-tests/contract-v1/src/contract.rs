@@ -1,11 +1,4 @@
-use cosmwasm_std::{
-    entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse,
-    AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse,
-    ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps,
-    DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse,
-    MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError,
-    StdResult, ValidatorResponse, WasmMsg, WasmQuery,
-};
+use cosmwasm_std::{entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse, AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse, ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps, DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse, MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError, StdResult, ValidatorResponse, WasmMsg, WasmQuery, IbcPacket, IbcEndpoint};
 use crate::ibc::PACKET_LIFETIME;
 
 use crate::msg::{Msg, PacketMsg, QueryMsg};
@@ -32,13 +25,14 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
             );
         }
         Msg::SendIbcPacket { message } => {
-            let packet = PacketMsg::Message { value: message };
+            let packet = PacketMsg::Message { value: "a".to_owned() + &message };
+
             return Ok(
-                Response::new().add_message(CosmosMsg::Ibc(IbcMsg::SendPacket {
+                Response::new().add_message(IbcMsg::SendPacket {
                     channel_id: channel_store_read(deps.storage).load()?,
                     data: to_binary(&packet)?,
                     timeout: env.block.time.plus_seconds(PACKET_LIFETIME).into(),
-                }))
+                })
             );
         }
         Msg::StargateMsg { type_url, value } => {

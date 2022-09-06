@@ -26,7 +26,7 @@ import {
   waitForBlocks,
   waitForIBCChannel,
   waitForIBCConnection,
-  Contract, instantiateContracts,
+  Contract, instantiateContracts, cleanBytes,
 } from "./utils";
 
 const contracts = {
@@ -1182,5 +1182,26 @@ describe("IBC", () => {
     let result = execSync(command);
     console.log("finished executing command, result:", result.toString());
 
-  }, 40_000 /* 30 seconds */);
+    const tx = await accounts.a.tx.compute.executeContract(
+      {
+        sender: accounts.a.address,
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        msg: {
+          send_ibc_packet: {
+            message: "hello from test"
+          },
+        },
+      },
+      { gasLimit: 250_000 }
+    );
+    if (tx.code !== TxResultCode.Success) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(TxResultCode.Success);
+    console.log("tx after triggering ibc send endpoint", JSON.stringify(cleanBytes(tx), null, 2));
+
+    contracts["secretdev-1"].v1.codeId = Number(tx.arrayLog.find(x => x.key === "packet_data").value);
+
+  }, 80_000 /* 80 seconds */);
 });

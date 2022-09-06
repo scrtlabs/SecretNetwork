@@ -1,4 +1,5 @@
-use cosmwasm_std::{entry_point, to_binary, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcMsg, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult, Ibc3ChannelOpenResponse, from_slice};
+use cosmwasm_std::{entry_point, to_binary, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcMsg, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult, Ibc3ChannelOpenResponse, from_binary};
+use serde_json_wasm::from_slice;
 
 use crate::msg::PacketMsg;
 use crate::state::{channel_store};
@@ -34,15 +35,15 @@ pub fn ibc_channel_connect(
     channel_store(deps.storage).save(channel_id)?;
 
     // construct a packet to send
-    let packet = PacketMsg::Test {};
-    let msg = IbcMsg::SendPacket {
-        channel_id: channel_id.clone(),
-        data: to_binary(&packet)?,
-        timeout: env.block.time.plus_seconds(PACKET_LIFETIME).into(),
-    };
+    // let packet = PacketMsg::Test {};
+    // let msg = IbcMsg::SendPacket {
+    //     channel_id: channel_id.clone(),
+    //     data: to_binary(&packet)?,
+    //     timeout: env.block.time.plus_seconds(PACKET_LIFETIME).into(),
+    // };
 
     Ok(IbcBasicResponse::new()
-        .add_message(msg)
+        // .add_message(msg)
         .add_attribute("action", "ibc_connect")
         .add_attribute("channel_id", channel_id))
 }
@@ -68,16 +69,17 @@ pub fn ibc_packet_receive(
     _env: Env,
     packet: IbcPacketReceiveMsg,
 ) -> StdResult<IbcReceiveResponse> {
-    let msg: PacketMsg = from_slice(&packet.packet.data)?;
+    let msg: PacketMsg = from_binary(&packet.packet.data)?;
 
     let mut response = IbcReceiveResponse::new();
     response = match msg {
         PacketMsg::Test { } => response.set_ack(b"test"),
-        PacketMsg::Message { value} => response.set_ack(value.as_bytes()),
+        PacketMsg::Message { value} => response
+            .set_ack(("recv".to_string() + &value).as_bytes())
+            .add_attribute("acknowledging", value),
     };
 
-    Ok(response
-        .add_attribute("action", "ibc_packet_ack"))
+    Ok(response.add_attribute("action", "ibc_packet_ack"))
 }
 
 #[entry_point]
@@ -88,13 +90,12 @@ pub fn ibc_packet_ack(
 ) -> StdResult<IbcBasicResponse> {
     // which local channel was this packet send from
     let caller = msg.original_packet.src.channel_id.clone();
+    let ack_data: String = from_binary(&msg.acknowledgement.data)?;
 
-    // we need to parse the ack based on our request
-    // let original_packet: PacketMsg = from_slice(&msg.original_packet.data)?;
-    // let res: StdAck = from_slice(&msg.acknowledgement.data)?;
-
-    Ok(IbcBasicResponse::new().
-        add_attribute("caller", caller))
+    Ok(IbcBasicResponse::new()
+        .add_attribute("caller", caller)
+        .add_attribute("data", ack_data + "end")
+    )
 }
 
 #[entry_point]
