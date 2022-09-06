@@ -12,15 +12,13 @@ import (
 	"github.com/enigmampc/SecretNetwork/app/upgrades"
 )
 
+const UpgradeName = "v1.3"
+
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          UpgradeName,
 	CreateUpgradeHandler: CreateUpgradeHandler,
-	StoreUpgrades: store.StoreUpgrades{
-		Added: []string{icahosttypes.StoreKey},
-	},
+	StoreUpgrades:        store.StoreUpgrades{Added: []string{icahosttypes.StoreKey}},
 }
-
-const UpgradeName = "v1.3"
 
 func CreateUpgradeHandler(mm *module.Manager, configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {

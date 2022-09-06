@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/enigmampc/SecretNetwork/app/upgrades"
+	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
 
 	store "github.com/cosmos/cosmos-sdk/store/types"
@@ -40,7 +41,6 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
 	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
 	icaauthtypes "github.com/enigmampc/SecretNetwork/x/mauth/types"
 
@@ -751,8 +751,6 @@ func (app *SecretNetworkApp) BlockedAddrs() map[string]bool {
 }
 
 func (app *SecretNetworkApp) setupUpgradeHandlers(icamodule *ica.AppModule) {
-	// this configures a no-op upgrade handler for the v4 upgrade,
-	// which improves the lockup module's store management.
 	for _, upgradeDetails := range Upgrades {
 		app.upgradeKeeper.SetUpgradeHandler(
 			upgradeDetails.UpgradeName,
@@ -762,10 +760,6 @@ func (app *SecretNetworkApp) setupUpgradeHandlers(icamodule *ica.AppModule) {
 			),
 		)
 	}
-	//
-	//app.upgradeKeeper.SetUpgradeHandler(
-	//	v1_3.UpgradeName, v1_3.CreateUpgradeHandler(
-	//		app.mm, icamodule, app.configurator))
 }
 
 func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
