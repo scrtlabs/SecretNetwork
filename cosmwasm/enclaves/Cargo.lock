@@ -1384,8 +1384,8 @@ dependencies = [
  "digest 0.8.1",
  "keccak",
  "opaque-debug 0.2.3",
- ]
- 
+]
+
 [[package]]
 name = "simple_logger"
 version = "2.3.0"
