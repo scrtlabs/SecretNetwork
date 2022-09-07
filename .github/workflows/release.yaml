@@ -129,6 +129,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build CLI
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.19 # The Go version to download (if necessary) and use.
         shell: bash
         run: |
           make build_cli
@@ -138,18 +141,18 @@ jobs:
           name: secretcli-${{runner.os}}
           path: secretcli-${{runner.os}}
 
-  x-build-cli:
+  MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
-          go install github.com/crazy-max/xgo@latest
+          go install github.com/crazy-max/xgo@v0.17.0
           xgo || true # check installation
-      - name: Build CLI
+      - name: Build MacOS CLI
         shell: bash
         run: |
           make build_macos_arm64_cli
