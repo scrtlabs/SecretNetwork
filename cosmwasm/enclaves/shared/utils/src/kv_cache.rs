@@ -32,6 +32,7 @@ impl KvCache {
         self.1.insert(k.to_vec(), v.to_vec())
     }
     pub fn read(&self, k: &[u8]) -> Option<Vec<u8>> {
+        // first to to read from the writeable cache - this will be more updated
         let x = self.0.get(k);
         if x.is_some() {
             trace!("************ Cache hit ***********");
@@ -39,6 +40,7 @@ impl KvCache {
             return Some(x.unwrap().clone());
         }
 
+        // if no hit in the writeable cache, try the readable one
         let x = self.1.get(k);
         if x.is_some() {
             trace!("************ Cache hit from RO cache ***********");
