@@ -3628,7 +3628,7 @@ func verifyGetEnvFromContract(t *testing.T, ctx sdk.Context, resp v1GetEnvRespon
 }
 
 func TestV1EnvParamsFromQuery(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
@@ -3643,7 +3643,7 @@ func TestV1EnvParamsFromQuery(t *testing.T) {
 }
 
 func TestV1EnvParamsFromExec(t *testing.T) {
-	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
@@ -3659,7 +3659,7 @@ func TestV1EnvParamsFromExec(t *testing.T) {
 
 func TestV1MessageInfoFromExec(t *testing.T) {
 	coins := sdk.NewCoins()
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/contract.wasm", coins)
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", coins)
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
 
 	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_msg_info":{}}`, true, true, math.MaxUint64, 0)
