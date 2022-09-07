@@ -1303,7 +1303,7 @@ describe("IBC", () => {
     expect(true).toBe(true);
   }, 30_000 /* 30 seconds */);
 
-  test.skip("contracts sanity", async () => {
+  test("contracts sanity", async () => {
     const command =
       "docker exec ibc-relayer-1 hermes " +
       "--config /home/hermes-user/.hermes/alternative-config.toml " +
