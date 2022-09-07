@@ -1,10 +1,10 @@
 import { sha256 } from "@noble/hashes/sha256";
+import { execSync } from "child_process";
 import * as fs from "fs";
 import {
   fromBase64,
+  fromUtf8,
   MsgExecuteContract,
-  MsgInstantiateContract,
-  MsgStoreCode,
   ProposalType,
   SecretNetworkClient,
   toBase64,
@@ -23,9 +23,13 @@ import { AminoWallet } from "secretjs/dist/wallet_amino";
 import {
   ibcDenom,
   sleep,
+  storeContracts,
   waitForBlocks,
   waitForIBCChannel,
   waitForIBCConnection,
+  Contract,
+  instantiateContracts,
+  cleanBytes,
 } from "./utils";
 
 type Account = {
@@ -41,6 +45,24 @@ const accountsCount = 30;
 // @ts-ignore
 // accounts on secretdev-1
 const accounts: Account[] = new Array(accountsCount);
+const contracts = {
+  "secretdev-1": {
+    v1: new Contract("v1"),
+    v010: new Contract("v010"),
+  },
+  "secretdev-2": {
+    v1: new Contract("v1"),
+    v010: new Contract("v010"),
+  },
+};
+
+// let accounts;
+// let accounts2;
+// let readonly;
+
+let v1Wasm: Uint8Array;
+let v010Wasm: Uint8Array;
+
 let readonly: SecretNetworkClient;
 
 // @ts-ignore
@@ -48,19 +70,10 @@ let readonly: SecretNetworkClient;
 const accounts2: Account[] = new Array(3);
 let readonly2: SecretNetworkClient;
 
-let v1CodeID: number;
-let v1Address: string;
-let v1CodeHash: string;
-
-let v010CodeID: number;
-let v010Address: string;
-let v010CodeHash: string;
-
 beforeAll(async () => {
   const mnemonics = [
     "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar",
     "jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow",
-    "chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge",
   ];
 
   // Create clients for all of the existing wallets in secretdev-1
@@ -165,76 +178,53 @@ beforeAll(async () => {
     chainId: "secretdev-2",
     grpcWebUrl: "http://localhost:9391",
   });
-
   await waitForBlocks("secretdev-1");
 
-  const v1Wasm = fs.readFileSync(
+  v1Wasm = fs.readFileSync(
     `${__dirname}/contract-v1/contract.wasm`
   ) as Uint8Array;
-  v1CodeHash = toHex(sha256(v1Wasm));
+  contracts["secretdev-1"].v1.codeHash = toHex(sha256(v1Wasm));
+  contracts["secretdev-2"].v1.codeHash = contracts["secretdev-1"].v1.codeHash;
 
-  const v010Wasm = fs.readFileSync(
+  v010Wasm = fs.readFileSync(
     `${__dirname}/contract-v0.10/contract.wasm`
   ) as Uint8Array;
-  v010CodeHash = toHex(sha256(v010Wasm));
+  contracts["secretdev-1"].v010.codeHash = toHex(sha256(v010Wasm));
+  contracts["secretdev-2"].v010.codeHash =
+    contracts["secretdev-1"].v010.codeHash;
+  console.log("v1codehash", contracts["secretdev-1"].v1.codeHash);
+  console.log("v010codeHash", contracts["secretdev-1"].v010.codeHash);
 
-  console.log("Uploading contracts...");
-  let tx: Tx;
-  tx = await accounts[0].secretjs.tx.broadcast(
-    [
-      new MsgStoreCode({
-        sender: accounts[0].address,
-        wasmByteCode: v1Wasm,
-        source: "",
-        builder: "",
-      }),
-      new MsgStoreCode({
-        sender: accounts[0].address,
-        wasmByteCode: v010Wasm,
-        source: "",
-        builder: "",
-      }),
-    ],
-    { gasLimit: 5_000_000 }
+  console.log("Uploading contracts on chain 1...");
+  let tx: Tx = await storeContracts(accounts[0].secretjs, [v1Wasm, v010Wasm]);
+  contracts["secretdev-1"].v1.codeId = Number(
+    tx.arrayLog.find((x) => x.key === "code_id").value
   );
-  if (tx.code !== TxResultCode.Success) {
-    console.error(tx.rawLog);
-  }
-  expect(tx.code).toBe(TxResultCode.Success);
-
-  v1CodeID = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
-  v010CodeID = Number(
+  contracts["secretdev-1"].v010.codeId = Number(
     tx.arrayLog.reverse().find((x) => x.key === "code_id").value
   );
+  console.log("v1codeid", contracts["secretdev-1"].v1.codeId);
+  console.log("v010codeid", contracts["secretdev-1"].v010.codeId);
 
-  tx = await accounts[0].secretjs.tx.broadcast(
-    [
-      new MsgInstantiateContract({
-        sender: accounts[0].address,
-        codeId: v1CodeID,
-        codeHash: v1CodeHash,
-        initMsg: { nop: {} },
-        label: `v1-${Date.now()}`,
-      }),
-      new MsgInstantiateContract({
-        sender: accounts[0].address,
-        codeId: v010CodeID,
-        codeHash: v010CodeHash,
-        initMsg: { echo: {} },
-        label: `v010-${Date.now()}`,
-      }),
-    ],
-    { gasLimit: 200_000 }
-  );
-  if (tx.code !== TxResultCode.Success) {
-    console.error(tx.rawLog);
-  }
-  expect(tx.code).toBe(TxResultCode.Success);
-
-  v1Address = tx.arrayLog.find((x) => x.key === "contract_address").value;
-  v010Address = tx.arrayLog
+  console.log("Instantiating contracts on chain 1...");
+  tx = await instantiateContracts(accounts[0].secretjs, [
+    contracts["secretdev-1"].v1,
+    contracts["secretdev-1"].v010,
+  ]);
+  contracts["secretdev-1"].v1.address = tx.arrayLog.find(
+    (x) => x.key === "contract_address"
+  ).value;
+  contracts["secretdev-1"].v010.address = tx.arrayLog
     .reverse()
     .find((x) => x.key === "contract_address").value;
+
+  // get contract's ibc_port_id
+  // const info = (await readonly.query.compute.contractInfo(contracts["secretdev-1"].v1.address)).ContractInfo;
+  // console.log("info", info);
+  // console.log("info.ibcPortId", info.ibcPortId);
+  // temp guessing:
+  contracts["secretdev-1"].v1.ibcPortId =
+    "wasm." + contracts["secretdev-1"].v1.address;
 
   // create a second validator for MsgRedelegate tests
   const { validators } = await readonly.query.staking.validators({});
@@ -270,8 +260,8 @@ describe("BankMsg", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: v1Address,
-          codeHash: v1CodeHash,
+          contractAddress: contracts["secretdev-1"].v1.address,
+          codeHash: contracts["secretdev-1"].v1.codeHash,
           msg: {
             bank_msg_send: {
               to_address: accounts[1].address,
@@ -298,7 +288,7 @@ describe("BankMsg", () => {
           key: "spender",
           msg: 0,
           type: "coin_spent",
-          value: v1Address,
+          value: contracts["secretdev-1"].v1.address,
         },
         { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
       ]);
@@ -309,7 +299,7 @@ describe("BankMsg", () => {
           key: "receiver",
           msg: 0,
           type: "coin_received",
-          value: v1Address,
+          value: contracts["secretdev-1"].v1.address,
         },
         { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
         {
@@ -327,8 +317,8 @@ describe("BankMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               bank_msg_send: {
                 to_address: accounts[1].address,
@@ -357,7 +347,7 @@ describe("BankMsg", () => {
             key: "spender",
             msg: 0,
             type: "coin_spent",
-            value: v010Address,
+            value: contracts["secretdev-1"].v010.address,
           },
           { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
         ]);
@@ -368,7 +358,7 @@ describe("BankMsg", () => {
             key: "receiver",
             msg: 0,
             type: "coin_received",
-            value: v010Address,
+            value: contracts["secretdev-1"].v010.address,
           },
           { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
           {
@@ -383,7 +373,7 @@ describe("BankMsg", () => {
 
       test("error", async () => {
         const { balance } = await readonly.query.bank.balance({
-          address: v010Address,
+          address: contracts["secretdev-1"].v010.address,
           denom: "uscrt",
         });
         const contractBalance = Number(balance?.amount) ?? 0;
@@ -391,8 +381,8 @@ describe("BankMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               bank_msg_send: {
                 to_address: accounts[1].address,
@@ -430,8 +420,8 @@ describe("Env", () => {
             txProm[i] = accounts[walletID].secretjs.tx.compute.executeContract(
               {
                 sender: accounts[walletID].address,
-                contractAddress: v1Address,
-                codeHash: v1CodeHash,
+                contractAddress: contracts["secretdev-1"].v1.address,
+                codeHash: contracts["secretdev-1"].v1.codeHash,
                 msg: {
                   get_tx_id: {},
                 },
@@ -484,8 +474,8 @@ describe("CustomMsg", () => {
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
         sender: accounts[0].address,
-        contractAddress: v010Address,
-        codeHash: v010CodeHash,
+        contractAddress: contracts["secretdev-1"].v010.address,
+        codeHash: contracts["secretdev-1"].v010.codeHash,
         msg: {
           custom_msg: {},
         },
@@ -547,8 +537,8 @@ describe("GovMsgVote", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: v010Address,
-          codeHash: v010CodeHash,
+          contractAddress: contracts["secretdev-1"].v010.address,
+          codeHash: contracts["secretdev-1"].v010.codeHash,
           msg: {
             gov_msg_vote: {
               proposal: proposalId,
@@ -580,8 +570,8 @@ describe("GovMsgVote", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: v010Address,
-          codeHash: v010CodeHash,
+          contractAddress: contracts["secretdev-1"].v010.address,
+          codeHash: contracts["secretdev-1"].v010.codeHash,
           msg: {
             gov_msg_vote: {
               proposal: proposalId + 1e6,
@@ -614,12 +604,12 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_instantiate: {
-                code_id: v010CodeID,
-                callback_code_hash: v010CodeHash,
+                code_id: contracts["secretdev-1"].v010.codeId,
+                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
                 msg: toBase64(toUtf8(JSON.stringify({ echo: {} }))),
                 send: [],
                 label: `v010-${Date.now()}`,
@@ -639,21 +629,23 @@ describe("Wasm", () => {
         );
         expect(attributes.length).toBe(2);
         expect(attributes[0].key).toBe("contract_address");
-        expect(attributes[0].value).toBe(v010Address);
+        expect(attributes[0].value).toBe(contracts["secretdev-1"].v010.address);
         expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).not.toBe(v010Address);
+        expect(attributes[1].value).not.toBe(
+          contracts["secretdev-1"].v010.address
+        );
       });
 
       test("error", async () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_instantiate: {
-                code_id: v010CodeID,
-                callback_code_hash: v010CodeHash,
+                code_id: contracts["secretdev-1"].v010.codeId,
+                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
                 msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
                 send: [],
                 label: `v010-${Date.now()}`,
@@ -689,12 +681,12 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_execute: {
-                contract_addr: v010Address,
-                callback_code_hash: v010CodeHash,
+                contract_addr: contracts["secretdev-1"].v010.address,
+                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
                 msg: toBase64(toUtf8(JSON.stringify({ echo: {} }))),
                 send: [],
               },
@@ -713,21 +705,21 @@ describe("Wasm", () => {
         );
         expect(attributes.length).toBe(2);
         expect(attributes[0].key).toBe("contract_address");
-        expect(attributes[0].value).toBe(v010Address);
+        expect(attributes[0].value).toBe(contracts["secretdev-1"].v010.address);
         expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).toBe(v010Address);
+        expect(attributes[1].value).toBe(contracts["secretdev-1"].v010.address);
       });
 
       test("error", async () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_execute: {
-                contract_addr: v010Address,
-                callback_code_hash: v010CodeHash,
+                contract_addr: contracts["secretdev-1"].v010.address,
+                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
                 msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
                 send: [],
               },
@@ -767,8 +759,8 @@ describe("StakingMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_delegate: {
                 validator,
@@ -801,8 +793,8 @@ describe("StakingMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_delegate: {
                 validator: validator + "garbage",
@@ -841,8 +833,8 @@ describe("StakingMsg", () => {
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator,
@@ -853,8 +845,8 @@ describe("StakingMsg", () => {
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_undelegate: {
                   validator,
@@ -888,8 +880,8 @@ describe("StakingMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_undelegate: {
                 validator: validator + "garbage",
@@ -929,8 +921,8 @@ describe("StakingMsg", () => {
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validatorA,
@@ -941,8 +933,8 @@ describe("StakingMsg", () => {
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_redelegate: {
                   src_validator: validatorA,
@@ -981,8 +973,8 @@ describe("StakingMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_redelegate: {
                 src_validator: validator,
@@ -1022,8 +1014,8 @@ describe("StakingMsg", () => {
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validator,
@@ -1034,8 +1026,8 @@ describe("StakingMsg", () => {
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: v010Address,
-              codeHash: v010CodeHash,
+              contractAddress: contracts["secretdev-1"].v010.address,
+              codeHash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_withdraw: {
                   validator: validator,
@@ -1068,8 +1060,8 @@ describe("StakingMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: v010Address,
-            codeHash: v010CodeHash,
+            contractAddress: contracts["secretdev-1"].v010.address,
+            codeHash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_redelegate: {
                 src_validator: validator,
@@ -1096,14 +1088,14 @@ describe("StargateMsg", () => {
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
         sender: accounts[0].address,
-        contractAddress: v1Address,
-        codeHash: v1CodeHash,
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
         msg: {
           stargate_msg: {
             type_url: "/cosmos.bank.v1beta1.MsgSend",
             value: toBase64(
               MsgSend.encode({
-                fromAddress: v1Address,
+                fromAddress: contracts["secretdev-1"].v1.address,
                 toAddress: accounts[1].address,
                 amount: [{ amount: "1", denom: "uscrt" }],
               }).finish()
@@ -1130,7 +1122,7 @@ describe("StargateMsg", () => {
         key: "spender",
         msg: 0,
         type: "coin_spent",
-        value: v1Address,
+        value: contracts["secretdev-1"].v1.address,
       },
       { key: "amount", msg: 0, type: "coin_spent", value: "1uscrt" },
     ]);
@@ -1140,7 +1132,7 @@ describe("StargateMsg", () => {
           key: "receiver",
           msg: 0,
           type: "coin_received",
-          value: v1Address,
+          value: contracts["secretdev-1"].v1.address,
         },
         { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
         {
@@ -1158,8 +1150,8 @@ describe("StargateMsg", () => {
 describe("StargateQuery", () => {
   test("v1", async () => {
     const result: any = await readonly.query.compute.queryContract({
-      contractAddress: v1Address,
-      codeHash: v1CodeHash,
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
       query: {
         stargate: {
           path: "/cosmos.bank.v1beta1.Query/Balance",
@@ -1183,8 +1175,8 @@ describe("BankQuery", () => {
   describe("Balance", () => {
     test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: v1Address,
-        codeHash: v1CodeHash,
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
         query: {
           bank_balance: {
             address: accounts[0].address,
@@ -1198,8 +1190,8 @@ describe("BankQuery", () => {
 
     test("v0.10", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: v010Address,
-        codeHash: v010CodeHash,
+        contractAddress: contracts["secretdev-1"].v010.address,
+        codeHash: contracts["secretdev-1"].v010.codeHash,
         query: {
           bank_balance: {
             address: accounts[0].address,
@@ -1215,6 +1207,32 @@ describe("BankQuery", () => {
 
 describe("IBC", () => {
   beforeAll(async () => {
+    console.log("Uploading contracts on chain 2...");
+    let tx: Tx = await storeContracts(accounts2[0].secretjs, [
+      v1Wasm,
+      v010Wasm,
+    ]);
+    contracts["secretdev-2"].v1.codeId = Number(
+      tx.arrayLog.find((x) => x.key === "code_id").value
+    );
+    contracts["secretdev-2"].v010.codeId = Number(
+      tx.arrayLog.reverse().find((x) => x.key === "code_id").value
+    );
+
+    console.log("Instantiating contracts on chain 2...");
+    tx = await instantiateContracts(accounts2[0].secretjs, [
+      contracts["secretdev-2"].v1,
+      contracts["secretdev-2"].v010,
+    ]);
+    contracts["secretdev-2"].v1.address = tx.arrayLog.find(
+      (x) => x.key === "contract_address"
+    ).value;
+    contracts["secretdev-2"].v010.address = tx.arrayLog
+      .reverse()
+      .find((x) => x.key === "contract_address").value;
+    contracts["secretdev-2"].v1.ibcPortId =
+      "wasm." + contracts["secretdev-2"].v1.address;
+
     console.log("Waiting for IBC to set up...");
     await waitForIBCConnection("secretdev-1", "http://localhost:9091");
     await waitForIBCConnection("secretdev-2", "http://localhost:9391");
@@ -1284,4 +1302,133 @@ describe("IBC", () => {
     }
     expect(true).toBe(true);
   }, 30_000 /* 30 seconds */);
+
+  test("contracts sanity", async () => {
+    const command =
+      "docker exec ibc-relayer-1 hermes " +
+      "--config /home/hermes-user/.hermes/alternative-config.toml " +
+      "create channel " +
+      "--a-chain secretdev-1 " +
+      `--a-port ${contracts["secretdev-1"].v1.ibcPortId} ` +
+      `--b-port ${contracts["secretdev-2"].v1.ibcPortId} ` +
+      "--a-connection connection-0";
+
+    console.log("calling docker exec on relayer with command", command);
+    let result = execSync(command);
+    console.log("finished executing command, result:", result.toString());
+
+    let trimmedResult = result.toString().replace(/\s/g, "");
+
+    let myRegexp = /ChannelId\("(channel-\d+)"/g;
+    let channelId = myRegexp.exec(trimmedResult)[1];
+    console.log("channelId", channelId);
+
+    await waitForIBCChannel("secretdev-1", "http://localhost:9091", channelId);
+
+    await waitForIBCChannel("secretdev-2", "http://localhost:9391", channelId);
+
+    const tx = await accounts[0].secretjs.tx.compute.executeContract(
+      {
+        sender: accounts[0].address,
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        msg: {
+          send_ibc_packet: {
+            message: "hello from test",
+          },
+        },
+      },
+      { gasLimit: 250_000 }
+    );
+    console.log("tx", tx);
+    if (tx.code !== TxResultCode.Success) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(TxResultCode.Success);
+    console.log(
+      "tx after triggering ibc send endpoint",
+      JSON.stringify(cleanBytes(tx), null, 2)
+    );
+
+    expect(tx.arrayLog.find((x) => x.key === "packet_data").value).toBe(
+      `{"message":{"value":"${channelId}hello from test"}}`
+    );
+
+    const packetSendCommand =
+      "docker exec ibc-relayer-1 hermes " +
+      "--config /home/hermes-user/.hermes/alternative-config.toml " +
+      "tx packet-recv --dst-chain secretdev-2 --src-chain secretdev-1 " +
+      `--src-port ${contracts["secretdev-1"].v1.ibcPortId} ` +
+      `--src-channel ${channelId}`;
+
+    console.log(
+      "calling docker exec on relayer with command",
+      packetSendCommand
+    );
+    let packetSendResult = execSync(packetSendCommand);
+    console.log(
+      "finished executing command, result:",
+      packetSendResult.toString()
+    );
+
+    const packetAckCommand =
+      "docker exec ibc-relayer-1 hermes " +
+      "--config /home/hermes-user/.hermes/alternative-config.toml " +
+      "tx packet-ack --dst-chain secretdev-1 --src-chain secretdev-2 " +
+      `--src-port ${contracts["secretdev-1"].v1.ibcPortId} ` +
+      `--src-channel ${channelId}`;
+
+    console.log(
+      "calling docker exec on relayer with command",
+      packetAckCommand
+    );
+    let packetAckResult = execSync(packetAckCommand);
+    console.log(
+      "finished executing command, result:",
+      packetAckResult.toString()
+    );
+
+    let queryResult: any =
+      await accounts[0].secretjs.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          last_ibc_ack: {},
+        },
+      });
+
+    let ack = fromUtf8(fromBase64(queryResult));
+
+    expect(ack).toBe(`recv${channelId}hello from test`);
+
+    queryResult = await accounts2[0].secretjs.query.compute.queryContract({
+      contractAddress: contracts["secretdev-2"].v1.address,
+      codeHash: contracts["secretdev-2"].v1.codeHash,
+      query: {
+        last_ibc_ack: {},
+      },
+    });
+
+    expect(queryResult).toBe(`no ack yet`);
+
+    queryResult = await accounts[0].secretjs.query.compute.queryContract({
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
+      query: {
+        last_ibc_receive: {},
+      },
+    });
+
+    expect(queryResult).toBe(`no receive yet`);
+
+    queryResult = await accounts2[0].secretjs.query.compute.queryContract({
+      contractAddress: contracts["secretdev-2"].v1.address,
+      codeHash: contracts["secretdev-2"].v1.codeHash,
+      query: {
+        last_ibc_receive: {},
+      },
+    });
+
+    expect(queryResult).toBe(`${channelId}hello from test`);
+  }, 80_000 /* 80 seconds */);
 });
