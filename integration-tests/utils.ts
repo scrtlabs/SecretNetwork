@@ -1,4 +1,4 @@
-import {sha256} from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha256";
 import {
   SecretNetworkClient,
   toHex,
@@ -7,10 +7,10 @@ import {
   MsgStoreCode,
   MsgInstantiateContract,
   Tx,
-  TxResultCode
+  TxResultCode,
 } from "secretjs";
-import {State as ConnectionState} from "secretjs/dist/protobuf_stuff/ibc/core/connection/v1/connection";
-import {State as ChannelState} from "secretjs/dist/protobuf_stuff/ibc/core/channel/v1/channel";
+import { State as ConnectionState } from "secretjs/dist/protobuf_stuff/ibc/core/connection/v1/connection";
+import { State as ChannelState } from "secretjs/dist/protobuf_stuff/ibc/core/channel/v1/channel";
 
 export class Contract {
   address: string;
@@ -100,7 +100,7 @@ export async function waitForBlocks(chainId: string) {
   console.log(`Waiting for blocks on ${chainId}...`);
   while (true) {
     try {
-      const {block} = await secretjs.query.tendermint.getLatestBlock({});
+      const { block } = await secretjs.query.tendermint.getLatestBlock({});
 
       if (Number(block?.header?.height) >= 1) {
         console.log(`Current block on ${chainId}: ${block!.header!.height}`);
@@ -125,7 +125,7 @@ export async function waitForIBCConnection(
   console.log("Waiting for open connections on", chainId + "...");
   while (true) {
     try {
-      const {connections} = await secretjs.query.ibc_connection.connections(
+      const { connections } = await secretjs.query.ibc_connection.connections(
         {}
       );
 
@@ -156,7 +156,7 @@ export async function waitForIBCChannel(
   console.log(`Waiting for ${channelId} on ${chainId}...`);
   outter: while (true) {
     try {
-      const {channels} = await secretjs.query.ibc_channel.channels({});
+      const { channels } = await secretjs.query.ibc_channel.channels({});
 
       for (const c of channels) {
         if (c.channelId === channelId && c.state == ChannelState.STATE_OPEN) {
@@ -171,16 +171,25 @@ export async function waitForIBCChannel(
   }
 }
 
-export async function storeContracts(account: SecretNetworkClient, wasms: Uint8Array[]) {
+export async function storeContracts(
+  account: SecretNetworkClient,
+  wasms: Uint8Array[]
+) {
   const tx: Tx = await account.tx.broadcast(
-    wasms.map(wasm =>
+    [
       new MsgStoreCode({
         sender: account.address,
-        wasmByteCode: wasm,
+        wasmByteCode: wasms[0],
         source: "",
         builder: "",
       }),
-    ),
+      new MsgStoreCode({
+        sender: account.address,
+        wasmByteCode: wasms[1],
+        source: "",
+        builder: "",
+      }),
+    ],
     { gasLimit: 5_000_000 }
   );
 
@@ -192,18 +201,28 @@ export async function storeContracts(account: SecretNetworkClient, wasms: Uint8A
   return tx;
 }
 
-export async function instantiateContracts(account: SecretNetworkClient, contracts: Contract[]) {
+export async function instantiateContracts(
+  account: SecretNetworkClient,
+  contracts: Contract[]
+) {
   const tx: Tx = await account.tx.broadcast(
-    contracts.map(contract =>
+    [
       new MsgInstantiateContract({
         sender: account.address,
-        codeId: contract.codeId,
-        codeHash: contract.codeHash,
-        initMsg: {nop: {}},
-        label: `${contract.version}-${Math.random()}`,
+        codeId: contracts[0].codeId,
+        codeHash: contracts[0].codeHash,
+        initMsg: { nop: {} },
+        label: `v1-${Date.now()}`,
       }),
-    ),
-    {gasLimit: 200_000}
+      new MsgInstantiateContract({
+        sender: account.address,
+        codeId: contracts[1].codeId,
+        codeHash: contracts[1].codeHash,
+        initMsg: { nop: {} },
+        label: `v010-${Date.now()}`,
+      }),
+    ],
+    { gasLimit: 200_000 }
   );
   if (tx.code !== TxResultCode.Success) {
     console.error(tx.rawLog);
