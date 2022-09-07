@@ -200,7 +200,7 @@ beforeAll(async () => {
     tx.arrayLog.reverse().find((x) => x.key === "code_id").value
   );
 
-  console.log("Instantiating contracts on chain 1...");
+  console.log("Instantiating contracts on secretdev-1...");
   tx = await instantiateContracts(accounts[0].secretjs, [
     contracts["secretdev-1"].v1,
     contracts["secretdev-1"].v010,
