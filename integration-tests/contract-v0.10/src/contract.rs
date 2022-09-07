@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Msg {
+    Nop {},
     Echo {
         log: Option<Vec<LogAttribute>>,
         data: Option<Binary>,
@@ -84,6 +85,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: Msg,
 ) -> HandleResult {
     match msg {
+        Msg::Nop { } => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: None,
+        }),
         Msg::Echo { log, data } => Ok(HandleResponse {
             messages: vec![],
             log: log.unwrap_or(vec![]),

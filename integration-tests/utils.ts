@@ -1,7 +1,28 @@
-import { sha256 } from "@noble/hashes/sha256";
-import { SecretNetworkClient, toHex, toUtf8 } from "secretjs";
-import { State as ConnectionState } from "secretjs/dist/protobuf_stuff/ibc/core/connection/v1/connection";
-import { State as ChannelState } from "secretjs/dist/protobuf_stuff/ibc/core/channel/v1/channel";
+import {sha256} from "@noble/hashes/sha256";
+import {
+  SecretNetworkClient,
+  toHex,
+  toUtf8,
+  Wallet,
+  MsgStoreCode,
+  MsgInstantiateContract,
+  Tx,
+  TxResultCode
+} from "secretjs";
+import {State as ConnectionState} from "secretjs/dist/protobuf_stuff/ibc/core/connection/v1/connection";
+import {State as ChannelState} from "secretjs/dist/protobuf_stuff/ibc/core/channel/v1/channel";
+
+export class Contract {
+  address: string;
+  codeId: number;
+  ibcPortId: string;
+  codeHash: string;
+  version: string;
+
+  constructor(version) {
+    this.version = version;
+  }
+}
 
 interface BytesObj {
   [key: string]: number;
@@ -69,6 +90,7 @@ export const ibcDenom = (
 export async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
 export async function waitForBlocks(chainId: string) {
   const secretjs = await SecretNetworkClient.create({
     grpcWebUrl: "http://localhost:9091",
@@ -78,7 +100,7 @@ export async function waitForBlocks(chainId: string) {
   console.log(`Waiting for blocks on ${chainId}...`);
   while (true) {
     try {
-      const { block } = await secretjs.query.tendermint.getLatestBlock({});
+      const {block} = await secretjs.query.tendermint.getLatestBlock({});
 
       if (Number(block?.header?.height) >= 1) {
         console.log(`Current block on ${chainId}: ${block!.header!.height}`);
@@ -103,7 +125,7 @@ export async function waitForIBCConnection(
   console.log("Waiting for open connections on", chainId + "...");
   while (true) {
     try {
-      const { connections } = await secretjs.query.ibc_connection.connections(
+      const {connections} = await secretjs.query.ibc_connection.connections(
         {}
       );
 
@@ -134,7 +156,7 @@ export async function waitForIBCChannel(
   console.log(`Waiting for ${channelId} on ${chainId}...`);
   outter: while (true) {
     try {
-      const { channels } = await secretjs.query.ibc_channel.channels({});
+      const {channels} = await secretjs.query.ibc_channel.channels({});
 
       for (const c of channels) {
         if (c.channelId === channelId && c.state == ChannelState.STATE_OPEN) {
@@ -147,4 +169,46 @@ export async function waitForIBCChannel(
     }
     await sleep(100);
   }
+}
+
+export async function storeContracts(account: SecretNetworkClient, wasms: Uint8Array[]) {
+  const tx: Tx = await account.tx.broadcast(
+    wasms.map(wasm =>
+      new MsgStoreCode({
+        sender: account.address,
+        wasmByteCode: wasm,
+        source: "",
+        builder: "",
+      }),
+    ),
+    { gasLimit: 5_000_000 }
+  );
+
+  if (tx.code !== TxResultCode.Success) {
+    console.error(tx.rawLog);
+  }
+  expect(tx.code).toBe(TxResultCode.Success);
+
+  return tx;
+}
+
+export async function instantiateContracts(account: SecretNetworkClient, contracts: Contract[]) {
+  const tx: Tx = await account.tx.broadcast(
+    contracts.map(contract =>
+      new MsgInstantiateContract({
+        sender: account.address,
+        codeId: contract.codeId,
+        codeHash: contract.codeHash,
+        initMsg: {nop: {}},
+        label: `${contract.version}-${Math.random()}`,
+      }),
+    ),
+    {gasLimit: 200_000}
+  );
+  if (tx.code !== TxResultCode.Success) {
+    console.error(tx.rawLog);
+  }
+  expect(tx.code).toBe(TxResultCode.Success);
+
+  return tx;
 }

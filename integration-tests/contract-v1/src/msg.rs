@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum Msg {
     Nop {},
+    SendIbcPacket {
+        message: String,
+    },
     BankMsgSend {
         to_address: String,
         amount: Vec<Coin>,
@@ -111,4 +114,14 @@ pub enum QueryMsg {
         contract_addr: String,
     },
     GetTxId {},
+    LastIbcReceive {},
+    LastIbcAck {},
+    LastIbcTimeout {},
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PacketMsg {
+    Test {},
+    Message { value: String },
 }
