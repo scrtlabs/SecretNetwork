@@ -222,7 +222,7 @@ export async function instantiateContracts(
         label: `v010-${Date.now()}`,
       }),
     ],
-    { gasLimit: 200_000 }
+    { gasLimit: 300_000 }
   );
   if (tx.code !== TxResultCode.Success) {
     console.error(tx.rawLog);

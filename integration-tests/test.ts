@@ -184,47 +184,37 @@ beforeAll(async () => {
     `${__dirname}/contract-v1/contract.wasm`
   ) as Uint8Array;
   contracts["secretdev-1"].v1.codeHash = toHex(sha256(v1Wasm));
-  contracts["secretdev-2"].v1.codeHash = contracts["secretdev-1"].v1.codeHash;
 
   v010Wasm = fs.readFileSync(
     `${__dirname}/contract-v0.10/contract.wasm`
   ) as Uint8Array;
   contracts["secretdev-1"].v010.codeHash = toHex(sha256(v010Wasm));
-  contracts["secretdev-2"].v010.codeHash =
-    contracts["secretdev-1"].v010.codeHash;
-  console.log("v1codehash", contracts["secretdev-1"].v1.codeHash);
-  console.log("v010codeHash", contracts["secretdev-1"].v010.codeHash);
 
-  console.log("Uploading contracts on chain 1...");
+  console.log("Storing contracts on secretdev-1...");
   let tx: Tx = await storeContracts(accounts[0].secretjs, [v1Wasm, v010Wasm]);
+
   contracts["secretdev-1"].v1.codeId = Number(
     tx.arrayLog.find((x) => x.key === "code_id").value
   );
   contracts["secretdev-1"].v010.codeId = Number(
     tx.arrayLog.reverse().find((x) => x.key === "code_id").value
   );
-  console.log("v1codeid", contracts["secretdev-1"].v1.codeId);
-  console.log("v010codeid", contracts["secretdev-1"].v010.codeId);
 
   console.log("Instantiating contracts on chain 1...");
   tx = await instantiateContracts(accounts[0].secretjs, [
     contracts["secretdev-1"].v1,
     contracts["secretdev-1"].v010,
   ]);
+
   contracts["secretdev-1"].v1.address = tx.arrayLog.find(
     (x) => x.key === "contract_address"
   ).value;
+  contracts["secretdev-1"].v1.ibcPortId =
+    "wasm." + contracts["secretdev-1"].v1.address;
+
   contracts["secretdev-1"].v010.address = tx.arrayLog
     .reverse()
     .find((x) => x.key === "contract_address").value;
-
-  // get contract's ibc_port_id
-  // const info = (await readonly.query.compute.contractInfo(contracts["secretdev-1"].v1.address)).ContractInfo;
-  // console.log("info", info);
-  // console.log("info.ibcPortId", info.ibcPortId);
-  // temp guessing:
-  contracts["secretdev-1"].v1.ibcPortId =
-    "wasm." + contracts["secretdev-1"].v1.address;
 
   // create a second validator for MsgRedelegate tests
   const { validators } = await readonly.query.staking.validators({});
@@ -945,7 +935,7 @@ describe("StakingMsg", () => {
               sentFunds: [{ amount: "1", denom: "uscrt" }],
             }),
           ],
-          { gasLimit: 250_000 }
+          { gasLimit: 350_000 }
         );
         if (tx.code !== TxResultCode.Success) {
           console.error(tx.rawLog);
@@ -1207,11 +1197,13 @@ describe("BankQuery", () => {
 
 describe("IBC", () => {
   beforeAll(async () => {
-    console.log("Uploading contracts on chain 2...");
+    console.log("Storing contracts on secretdev-2...");
+
     let tx: Tx = await storeContracts(accounts2[0].secretjs, [
       v1Wasm,
       v010Wasm,
     ]);
+
     contracts["secretdev-2"].v1.codeId = Number(
       tx.arrayLog.find((x) => x.key === "code_id").value
     );
@@ -1219,19 +1211,26 @@ describe("IBC", () => {
       tx.arrayLog.reverse().find((x) => x.key === "code_id").value
     );
 
-    console.log("Instantiating contracts on chain 2...");
+    contracts["secretdev-2"].v1.codeHash = contracts["secretdev-1"].v1.codeHash;
+    contracts["secretdev-2"].v010.codeHash =
+      contracts["secretdev-1"].v010.codeHash;
+
+    console.log("Instantiating contracts on secretdev-2...");
+
     tx = await instantiateContracts(accounts2[0].secretjs, [
       contracts["secretdev-2"].v1,
       contracts["secretdev-2"].v010,
     ]);
+
     contracts["secretdev-2"].v1.address = tx.arrayLog.find(
       (x) => x.key === "contract_address"
     ).value;
+    contracts["secretdev-2"].v1.ibcPortId =
+      "wasm." + contracts["secretdev-2"].v1.address;
+
     contracts["secretdev-2"].v010.address = tx.arrayLog
       .reverse()
       .find((x) => x.key === "contract_address").value;
-    contracts["secretdev-2"].v1.ibcPortId =
-      "wasm." + contracts["secretdev-2"].v1.address;
 
     console.log("Waiting for IBC to set up...");
     await waitForIBCConnection("secretdev-1", "http://localhost:9091");
