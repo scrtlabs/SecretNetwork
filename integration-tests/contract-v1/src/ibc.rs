@@ -89,7 +89,7 @@ pub fn ibc_packet_ack(
 ) -> StdResult<IbcBasicResponse> {
     // which local channel was this packet send from
     let caller = msg.original_packet.src.channel_id.clone();
-    ack_store(deps.storage).save(&msg.acknowledgement.data)?;
+    ack_store(deps.storage).save(&msg.acknowledgement.data.to_base64())?;
 
     Ok(IbcBasicResponse::new().add_attribute("caller", caller))
 }

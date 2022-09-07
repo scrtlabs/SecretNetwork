@@ -17,7 +17,7 @@ use crate::state::{
 #[entry_point]
 pub fn instantiate(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResult<Response> {
     channel_store(deps.storage).save(&"no channel yet".to_string())?;
-    ack_store(deps.storage).save(&Binary::from(vec![].as_slice()))?;
+    ack_store(deps.storage).save(&"no ack yet".to_string())?;
     receive_store(deps.storage).save(&"no receive yet".to_string())?;
     timeout_store(deps.storage).save(&"no timeout yet".to_string())?;
 
@@ -278,7 +278,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             Some(t) => return Ok(to_binary(&t.index)?),
         },
         QueryMsg::LastIbcReceive {} => Ok(to_binary(&receive_store_read(deps.storage).load()?)?),
-        QueryMsg::LastIbcAck {} => Ok(ack_store_read(deps.storage).load()?),
+        QueryMsg::LastIbcAck {} => Ok(to_binary(&ack_store_read(deps.storage).load()?)?),
         QueryMsg::LastIbcTimeout {} => Ok(to_binary(&timeout_store_read(deps.storage).load()?)?),
     }
 }

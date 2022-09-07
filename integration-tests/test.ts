@@ -3,6 +3,7 @@ import { execSync } from "child_process";
 import * as fs from "fs";
 import {
   fromBase64,
+  fromUtf8,
   MsgExecuteContract,
   ProposalType,
   SecretNetworkClient,
@@ -1302,7 +1303,7 @@ describe("IBC", () => {
     expect(true).toBe(true);
   }, 30_000 /* 30 seconds */);
 
-  test.only("contracts sanity", async () => {
+  test.skip("contracts sanity", async () => {
     const command =
       "docker exec ibc-relayer-1 hermes " +
       "--config /home/hermes-user/.hermes/alternative-config.toml " +
@@ -1396,7 +1397,9 @@ describe("IBC", () => {
         },
       });
 
-    console.log("queryResult1", queryResult); // should be ack
+    let ack = fromUtf8(fromBase64(queryResult));
+
+    expect(ack).toBe(`recv${channelId}hello from test`);
 
     queryResult = await accounts2[0].secretjs.query.compute.queryContract({
       contractAddress: contracts["secretdev-2"].v1.address,
@@ -1406,7 +1409,7 @@ describe("IBC", () => {
       },
     });
 
-    console.log("queryResult2", queryResult); // should be none
+    expect(queryResult).toBe(`no ack yet`);
 
     queryResult = await accounts[0].secretjs.query.compute.queryContract({
       contractAddress: contracts["secretdev-1"].v1.address,
@@ -1416,7 +1419,7 @@ describe("IBC", () => {
       },
     });
 
-    console.log("queryResult3", queryResult); // should be none
+    expect(queryResult).toBe(`no receive yet`);
 
     queryResult = await accounts2[0].secretjs.query.compute.queryContract({
       contractAddress: contracts["secretdev-2"].v1.address,
@@ -1426,26 +1429,6 @@ describe("IBC", () => {
       },
     });
 
-    console.log("queryResult4", queryResult); // should be receive
-
-    queryResult = await accounts[0].secretjs.query.compute.queryContract({
-      contractAddress: contracts["secretdev-1"].v1.address,
-      codeHash: contracts["secretdev-1"].v1.codeHash,
-      query: {
-        last_ibc_timeout: {},
-      },
-    });
-
-    console.log("queryResult5", queryResult); // should be none
-
-    queryResult = await accounts2[0].secretjs.query.compute.queryContract({
-      contractAddress: contracts["secretdev-2"].v1.address,
-      codeHash: contracts["secretdev-2"].v1.codeHash,
-      query: {
-        last_ibc_timeout: {},
-      },
-    });
-
-    console.log("queryResult6", queryResult); // should be receive
+    expect(queryResult).toBe(`${channelId}hello from test`);
   }, 80_000 /* 80 seconds */);
 });
