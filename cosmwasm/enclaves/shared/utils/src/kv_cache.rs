@@ -21,13 +21,13 @@ impl KvCache {
     }
 
     pub fn write(&mut self, k: &[u8], v: &[u8]) -> Option<Vec<u8>> {
-        trace!("************ Cache insert ***********");
+        //trace!("************ Cache insert ***********");
 
         self.0.insert(k.to_vec(), v.to_vec())
     }
 
     pub fn write_cache_only(&mut self, k: &[u8], v: &[u8]) -> Option<Vec<u8>> {
-        trace!("************ Cache insert ***********");
+        //trace!("************ Cache insert ***********");
 
         self.1.insert(k.to_vec(), v.to_vec())
     }
@@ -35,7 +35,7 @@ impl KvCache {
         // first to to read from the writeable cache - this will be more updated
         let x = self.0.get(k);
         if x.is_some() {
-            trace!("************ Cache hit ***********");
+            // trace!("************ Cache hit ***********");
 
             return Some(x.unwrap().clone());
         }
@@ -43,12 +43,12 @@ impl KvCache {
         // if no hit in the writeable cache, try the readable one
         let x = self.1.get(k);
         if x.is_some() {
-            trace!("************ Cache hit from RO cache ***********");
+            // trace!("************ Cache hit from RO cache ***********");
 
             return Some(x.unwrap().clone());
         }
 
-        trace!("************ Cache miss ***********");
+        // trace!("************ Cache miss ***********");
 
         return None;
     }

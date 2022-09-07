@@ -18,7 +18,7 @@ use enclave_utils::kv_cache::KvCache;
 use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
-use crate::db::{encrypt_key, remove_encrypted_key, write_encrypted_key, write_multiple_db};
+use crate::db::{encrypt_key, remove_encrypted_key, write_encrypted_key, write_multiple_keys};
 use crate::errors::WasmEngineError;
 use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
@@ -555,7 +555,7 @@ impl WasmiApi for ContractInstance {
             // )?
             .collect();
 
-        let used_gas = write_multiple_db(&self.context, keys).map_err(|err| {
+        let used_gas = write_multiple_keys(&self.context, keys).map_err(|err| {
             debug!(
                 "write_db() error while trying to write the value to state: {:?}",
                 err

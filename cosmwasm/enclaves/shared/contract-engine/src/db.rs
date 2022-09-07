@@ -15,7 +15,7 @@ use super::contract_validation::ContractKey;
 use super::errors::WasmEngineError;
 
 #[cfg(not(feature = "query-only"))]
-pub fn write_multiple_db(
+pub fn write_multiple_keys(
     context: &Ctx,
     keys: Vec<(Vec<u8>, Vec<u8>)>,
 ) -> Result<u64, WasmEngineError> {
