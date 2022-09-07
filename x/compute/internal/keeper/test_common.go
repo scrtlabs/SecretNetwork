@@ -97,6 +97,7 @@ const (
 	flagQueryGasLimit = "query_gas_limit"
 )
 
+var outOfGasError = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
 var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
 
 type MockIBCTransferKeeper struct {

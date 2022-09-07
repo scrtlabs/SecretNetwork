@@ -279,9 +279,10 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
 
+	// gas can change +- 10% before we start failing, though maybe for consensus we should check a constant amount
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Greater(t, gasAfter-gasBefore, uint64(10000))
-	require.Less(t, gasAfter-gasBefore, uint64(90000))
+	require.Greater(t, gasAfter-gasBefore, uint64(100_000))
+	require.Less(t, gasAfter-gasBefore, uint64(110_000))
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, contractAddr)
@@ -500,8 +501,8 @@ func TestExecute(t *testing.T) {
 
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
-	require.Greater(t, gasAfter-gasBefore, uint64(10000))
-	require.Less(t, gasAfter-gasBefore, uint64(90000))
+	require.Greater(t, gasAfter-gasBefore, uint64(100_000))
+	require.Less(t, gasAfter-gasBefore, uint64(110_000))
 
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
@@ -827,14 +828,6 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-	// ensure we get an out of gas panic
-	defer func() {
-		r := recover()
-		require.NotNil(t, r)
-		_, ok := r.(sdk.ErrorOutOfGas)
-		require.True(t, ok, "%+v", r)
-	}()
-
 	codeHash, err := keeper.GetContractHash(ctx, addr)
 	require.NoError(t, err)
 
@@ -865,8 +858,13 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	ctx = ctx.WithTxBytes(txBytes)
 
 	// this should throw out of gas exception (panic)
+	start := time.Now()
 	_, err = keeper.Execute(ctx, addr, fred, msgBz, nil, nil)
-	require.True(t, false, "We must panic before this line")
+	diff := time.Since(start)
+
+	t.Logf("Duration till out of gas: %+v (%d gas)\n", diff, gasLimit)
+
+	require.Equal(t, err.Error(), outOfGasError.Error())
 }
 
 func prettyEvents(t *testing.T, events sdk.Events) string {
