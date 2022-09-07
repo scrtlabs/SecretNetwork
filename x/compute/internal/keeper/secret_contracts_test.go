@@ -294,7 +294,7 @@ func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool, 
 	return innerErr
 }
 
-const defaultGasForTests uint64 = 100_000
+const defaultGasForTests uint64 = 500_000
 
 // wrap the default gas meter with a counter of wasm calls
 // in order to verify that every wasm call consumes gas
@@ -1636,7 +1636,7 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 				require.True(t, ok, "%+v", r)
 			}()
 
-			_, _, _, _, _, _ = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, _, _, _, _ = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, testContract.IsCosmWasmV1, 200_000, 0)
 
 			// this should fail with out of gas because 1GiB will ask for
 			// 134,217,728 gas units (8192 per page times 16,384 pages)
@@ -1866,7 +1866,7 @@ func TestQueryRecursionLimitEnforcedInQueries(t *testing.T) {
 			_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 2*defaultGasForTests)
+			data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 10*defaultGasForTests)
 
 			require.NotEmpty(t, data)
 			require.Equal(t, data, "\"Recursion limit was correctly enforced\"")
@@ -1884,7 +1884,7 @@ func TestQueryRecursionLimitEnforcedInHandles(t *testing.T) {
 			_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			_, _, data, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 2*defaultGasForTests, 0)
+			_, _, data, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 10*defaultGasForTests, 0)
 
 			require.NotEmpty(t, data)
 			require.Equal(t, string(data), "\"Recursion limit was correctly enforced\"")
@@ -1904,7 +1904,7 @@ func TestQueryRecursionLimitEnforcedInInits(t *testing.T) {
 			require.Empty(t, err)
 
 			// Initialize the contract that will be running the test
-			_, _, addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 2*defaultGasForTests)
+			_, _, addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, testContract.IsCosmWasmV1, 10*defaultGasForTests)
 			require.Empty(t, err)
 
 			require.Nil(t, err.GenericErr)

@@ -37,7 +37,7 @@ websocket_addr = 'ws://localsecret-1:26657/websocket'
 
 rpc_timeout = '10s'
 account_prefix = 'secret'
-key_name = 'localsecret-key'
+key_name = 'local1-alt'
 store_prefix = 'ibc'
 default_gas = 50000
 max_gas = 2000000
@@ -51,12 +51,12 @@ trusting_period = '79s'
 trust_threshold = { numerator = '1', denominator = '3' }
 address_type = { derivation = 'cosmos' }
 
-#[chains.packet_filter]
-#policy = 'allow'
-#list = [
-#    ['wasm.*', '*'],
-#    ['transfer', '*']
-#]
+[chains.packet_filter]
+policy = 'allow'
+list = [
+    ['wasm.*', '*'],
+    ['transfer', '*']
+]
 
 [[chains]]
 id = 'secretdev-2'
@@ -66,7 +66,7 @@ websocket_addr = 'ws://localsecret-2:26657/websocket'
 
 rpc_timeout = '10s'
 account_prefix = 'secret'
-key_name = 'localsecret2-key'
+key_name = 'local2-alt'
 store_prefix = 'ibc'
 default_gas = 50000
 max_gas = 2000000
@@ -80,9 +80,9 @@ trusting_period = '79s'
 trust_threshold = { numerator = '1', denominator = '3' }
 address_type = { derivation = 'cosmos' }
 
-#[chains.packet_filter]
-#policy = 'allow'
-#list = [
-#    ['wasm.*', '*'],
-#    ['transfer', '*']
-#]
+[chains.packet_filter]
+policy = 'allow'
+list = [
+    ['wasm.*', '*'],
+    ['transfer', '*']
+]

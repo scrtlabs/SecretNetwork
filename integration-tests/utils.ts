@@ -1,7 +1,28 @@
 import { sha256 } from "@noble/hashes/sha256";
-import { SecretNetworkClient, toHex, toUtf8 } from "secretjs";
+import {
+  SecretNetworkClient,
+  toHex,
+  toUtf8,
+  Wallet,
+  MsgStoreCode,
+  MsgInstantiateContract,
+  Tx,
+  TxResultCode,
+} from "secretjs";
 import { State as ConnectionState } from "secretjs/dist/protobuf_stuff/ibc/core/connection/v1/connection";
 import { State as ChannelState } from "secretjs/dist/protobuf_stuff/ibc/core/channel/v1/channel";
+
+export class Contract {
+  address: string;
+  codeId: number;
+  ibcPortId: string;
+  codeHash: string;
+  version: string;
+
+  constructor(version) {
+    this.version = version;
+  }
+}
 
 interface BytesObj {
   [key: string]: number;
@@ -69,6 +90,7 @@ export const ibcDenom = (
 export async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
 export async function waitForBlocks(chainId: string) {
   const secretjs = await SecretNetworkClient.create({
     grpcWebUrl: "http://localhost:9091",
@@ -147,4 +169,65 @@ export async function waitForIBCChannel(
     }
     await sleep(100);
   }
+}
+
+export async function storeContracts(
+  account: SecretNetworkClient,
+  wasms: Uint8Array[]
+) {
+  const tx: Tx = await account.tx.broadcast(
+    [
+      new MsgStoreCode({
+        sender: account.address,
+        wasmByteCode: wasms[0],
+        source: "",
+        builder: "",
+      }),
+      new MsgStoreCode({
+        sender: account.address,
+        wasmByteCode: wasms[1],
+        source: "",
+        builder: "",
+      }),
+    ],
+    { gasLimit: 5_000_000 }
+  );
+
+  if (tx.code !== TxResultCode.Success) {
+    console.error(tx.rawLog);
+  }
+  expect(tx.code).toBe(TxResultCode.Success);
+
+  return tx;
+}
+
+export async function instantiateContracts(
+  account: SecretNetworkClient,
+  contracts: Contract[]
+) {
+  const tx: Tx = await account.tx.broadcast(
+    [
+      new MsgInstantiateContract({
+        sender: account.address,
+        codeId: contracts[0].codeId,
+        codeHash: contracts[0].codeHash,
+        initMsg: { nop: {} },
+        label: `v1-${Date.now()}`,
+      }),
+      new MsgInstantiateContract({
+        sender: account.address,
+        codeId: contracts[1].codeId,
+        codeHash: contracts[1].codeHash,
+        initMsg: { nop: {} },
+        label: `v010-${Date.now()}`,
+      }),
+    ],
+    { gasLimit: 300_000 }
+  );
+  if (tx.code !== TxResultCode.Success) {
+    console.error(tx.rawLog);
+  }
+  expect(tx.code).toBe(TxResultCode.Success);
+
+  return tx;
 }

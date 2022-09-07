@@ -99,6 +99,7 @@ const (
 
 const contractPath = "testdata"
 
+var outOfGasError = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
 var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
 
 type MockIBCTransferKeeper struct {

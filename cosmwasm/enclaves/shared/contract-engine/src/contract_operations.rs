@@ -183,6 +183,8 @@ pub fn handle(
     // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
+    trace!("Handle type is {:?}", parsed_handle_type);
+
     let ParsedMessage {
         should_validate_sig_info,
         was_msg_encrypted,
