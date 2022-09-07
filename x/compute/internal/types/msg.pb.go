@@ -26,6 +26,7 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type MsgStoreCode struct {
+	// sender is the canonical address of the sender
 	Sender github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
 	// WASMByteCode can be raw or gzip compressed
 	WASMByteCode []byte `protobuf:"bytes,2,opt,name=wasm_byte_code,json=wasmByteCode,proto3" json:"wasm_byte_code,omitempty"`
@@ -69,15 +70,15 @@ func (m *MsgStoreCode) XXX_DiscardUnknown() {
 var xxx_messageInfo_MsgStoreCode proto.InternalMessageInfo
 
 type MsgInstantiateContract struct {
-	Sender github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
-	// Admin is an optional address that can execute migrations
-	//  bytes admin = 2 [(gogoproto.casttype) = "github.com/cosmos/cosmos-sdk/types.AccAddress"];
-	CallbackCodeHash string                                   `protobuf:"bytes,2,opt,name=callback_code_hash,json=callbackCodeHash,proto3" json:"callback_code_hash,omitempty"`
-	CodeID           uint64                                   `protobuf:"varint,3,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
-	Label            string                                   `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
-	InitMsg          []byte                                   `protobuf:"bytes,5,opt,name=init_msg,json=initMsg,proto3" json:"init_msg,omitempty"`
-	InitFunds        github_com_cosmos_cosmos_sdk_types.Coins `protobuf:"bytes,6,rep,name=init_funds,json=initFunds,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"init_funds"`
-	CallbackSig      []byte                                   `protobuf:"bytes,7,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
+	// sender is the canonical address of the sender
+	Sender           github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
+	CallbackCodeHash string                                        `protobuf:"bytes,2,opt,name=callback_code_hash,json=callbackCodeHash,proto3" json:"callback_code_hash,omitempty"`
+	CodeID           uint64                                        `protobuf:"varint,3,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
+	Label            string                                        `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	InitMsg          []byte                                        `protobuf:"bytes,5,opt,name=init_msg,json=initMsg,proto3" json:"init_msg,omitempty"`
+	InitFunds        github_com_cosmos_cosmos_sdk_types.Coins      `protobuf:"bytes,6,rep,name=init_funds,json=initFunds,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"init_funds"`
+	// used internally for encryption, should always be empty in a signed transaction
+	CallbackSig []byte `protobuf:"bytes,7,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
 }
 
 func (m *MsgInstantiateContract) Reset()         { *m = MsgInstantiateContract{} }
@@ -114,12 +115,15 @@ func (m *MsgInstantiateContract) XXX_DiscardUnknown() {
 var xxx_messageInfo_MsgInstantiateContract proto.InternalMessageInfo
 
 type MsgExecuteContract struct {
-	Sender           github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
+	// sender is the canonical address of the sender
+	Sender github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
+	// contract is the canonical address of the contract
 	Contract         github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,2,opt,name=contract,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"contract,omitempty"`
 	Msg              []byte                                        `protobuf:"bytes,3,opt,name=msg,proto3" json:"msg,omitempty"`
 	CallbackCodeHash string                                        `protobuf:"bytes,4,opt,name=callback_code_hash,json=callbackCodeHash,proto3" json:"callback_code_hash,omitempty"`
 	SentFunds        github_com_cosmos_cosmos_sdk_types.Coins      `protobuf:"bytes,5,rep,name=sent_funds,json=sentFunds,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"sent_funds"`
-	CallbackSig      []byte                                        `protobuf:"bytes,6,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
+	// used internally for encryption, should always be empty in a signed transaction
+	CallbackSig []byte `protobuf:"bytes,6,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
 }
 
 func (m *MsgExecuteContract) Reset()         { *m = MsgExecuteContract{} }

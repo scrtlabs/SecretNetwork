@@ -616,8 +616,8 @@ impl WasmiApi for ContractInstance {
             self.gas_left(),
         )?;
 
-        trace!(
-            "query_chain() got answer from outside with gas {} and result {:?}",
+        info!(
+            "query_chain() got answer from chain. Gas used: {}. Result: {:?}",
             gas_used,
             String::from_utf8_lossy(&answer)
         );

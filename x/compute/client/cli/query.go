@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strconv"
+	"strings"
 
 	"github.com/gogo/protobuf/proto"
 
@@ -47,6 +48,7 @@ func GetQueryCmd() *cobra.Command {
 		GetQueryDecryptTxCmd(),
 		GetCmdQueryLabel(),
 		GetCmdCodeHashByContract(),
+		GetCmdCodeHashByID(),
 		CmdDecryptText(),
 		// GetCmdGetContractHistory(cdc),
 	)
@@ -96,7 +98,11 @@ func GetCmdQueryLabel() *cobra.Command {
 			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, args[0])
 			res, _, err := clientCtx.Query(route)
 			if err != nil {
-				if err == sdkErrors.ErrUnknownAddress {
+				// In a case when the label will not be found err will be of type ErrUnknownAddress.
+				// But will include a lot of prior wrapping information for example:
+				// Error: error querying: rpc error: code = Unknown desc = l: unknown address
+				// In order to identify the error correctly we need to find the desc of ErrUnknownAddress in err
+				if strings.Contains(err.Error(), sdkErrors.ErrUnknownAddress.Error()) {
 					fmt.Printf("Label is available and not in use\n")
 					return nil
 				}
@@ -120,7 +126,7 @@ func GetCmdQueryLabel() *cobra.Command {
 	return cmd
 }
 
-// GetCmdListCode lists all wasm code uploaded
+// GetCmdCodeHashByContract return the code hash of a contract by address
 func GetCmdCodeHashByContract() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "contract-hash [address]",
@@ -139,8 +145,45 @@ func GetCmdCodeHashByContract() *cobra.Command {
 				return fmt.Errorf("error querying contract hash: %s", err)
 			}
 
+			if len(res) == 0 {
+				return fmt.Errorf("contract with address %s not found", args[0])
+			}
+
+			codeHash := hex.EncodeToString(res)
+			fmt.Printf("0x%s\n", codeHash)
+			return nil
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// GetCmdCodeHashByID return the code hash of a contract by ID
+func GetCmdCodeHashByID() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "contract-hash-by-id [code_id]",
+		Short: "Return the code hash of a contract represented by ID",
+		Long:  "Return the code hash of a contract represented by ID",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHashByID, args[0])
+			res, _, err := clientCtx.Query(route)
+			if err != nil {
+				return fmt.Errorf("error querying contract hash by id: %s", err)
+			}
+
+			if len(res) == 0 {
+				return fmt.Errorf("contract with id %s not found", args[0])
+			}
+
 			addr := hex.EncodeToString(res)
-			fmt.Printf("0x%s", addr)
+			fmt.Printf("0x%s\n", addr)
 			return nil
 		},
 	}
@@ -172,6 +215,11 @@ func GetCmdListContractByCode() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			if len(res) == 0 {
+				return fmt.Errorf("can not find contract with code id %d", codeID)
+			}
+
 			fmt.Println(string(res))
 			return nil
 		},

@@ -254,7 +254,7 @@ jobs:
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
-  XBuild-CLI:
+  MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -263,12 +263,10 @@ jobs:
           go-version: "^1.18" # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
-          go install github.com/crazy-max/xgo@latest
+          go install github.com/crazy-max/xgo@v0.17.0
           xgo || true # check installation
       - name: Build MacOS CLI
-        run: make build_macos_cli
-      - name: Build Windows CLI
-        run: make build_windows_cli
+        run: make build_macos_arm64_cli
 
   Integration-Tests:
     runs-on: ubuntu-20.04
@@ -280,7 +278,7 @@ jobs:
           DOCKER_TAG=v0.0.0 make build-localsecret
       - name: Run secret.js tests
         run: |
-          git clone --depth 1 https://github.com/scrtlabs/secret.js
+          git clone --depth 1 --branch lior-fix-based-on-rpc-2 https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*

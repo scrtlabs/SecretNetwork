@@ -1,16 +1,129 @@
-![Secret Network](logo.png)
+![Secret Network](sn-logo.png)
 
-<p align="center">
-Secret Network secures the decentralized web
-</p>
-
-Want to build a better internet? Solve for privacy.
-
-Secret Network is a blockchain-based, open-source protocol that lets anyone perform computations on encrypted data, bringing privacy to smart contracts and public blockchains. Our mission: improve the adoption and usability of decentralized technologies, for the benefit of all.
-
-Mainnet is out! Get the latest release at [https://github.com/scrtlabs/SecretNetwork/releases/latest](https://github.com/scrtlabs/SecretNetwork/releases/latest).
-
+<div align="center">
+  
+[![version](https://img.shields.io/badge/version-1.3.1-blue)](https://github.com/scrtlabs/SecretNetwork/releases/tag/v1.3.1)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+<a href="https://twitter.com/intent/follow?screen_name=SecretNetwork">
+<img src="https://img.shields.io/twitter/follow/SecretNetwork?style=social&logo=twitter"
+alt="Follow"></a>
+
+ </div>
+
+Secret Network offers scalable permissionless smart contracts with a private by default design— bringing novel use cases to blockchain not feasible on public systems. Secret Network enables users to take back ownership over their private (financial) information and for them to share this information with whom they trust. Secret Network was the first protocol to provide private smart contracts on mainnet, live since September 2020. Secret Network is Built with the Cosmos Software Development Kit (SDK) bringing Interoperable privacy to the entire Cosmos ecosystem. Secret Network uses a combination of the Intel SGX (Software Guard Extension) Trusted Execution Environment technology, several encryption schemes and key management to bring privacy by default to blockchain users. Secret Contracts are an implementation of the Rust based smart contract compiling toolkit CosmWasm, adding private metadata possibilities. Secret Network is powered by the Native public coin SCRT which is used for fees, Proof Of Stake security and Governance. With more than 20+ Dapps, 100+ full time builders and a strong grassroots community Secret Network aims to bring privacy to the masses.
+
+
+# Setting up Environment
+
+## Prebuilt Environment
+
+### Gitpod
+
+Click the button below to start a new development environment:
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/scrtlabs/SecretNetwork)
+
+### VSCode Docker Environment
+
+1. Install <vs code remote> extension
+
+2. Clone this repository into a new dev container
+
+### Docker Dev Environments
+
+1. From Docker Desktop, create a new Dev Environment from the prebuilt image - `ghcr.io/scrtlabs/secretnetwork-dev:latest`
+2. Connect with VSCode, or use the container directly
+3. Make sure the code is updated by using `get fetch` and `git pull`
+
+## Manual Set up
+
+### Install prerequisite packages
+
+```
+apt-get install -y --no-install-recommends g++ libtool autoconf clang
+```
+
+### Clone Repo
+
+Clone this repo to your favorite working directory
+
+### Install Rust
+
+Install rust from [https://rustup.rs/](https://rustup.rs/). 
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+Then, add the rust-src component. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - 
+```
+rustup component add rust-src
+```
+
+To run tests you'll need to add the wasm32 target - 
+```
+rustup target add wasm32-unknown-unknown
+```
+
+### Install Go (v1.18+)
+
+Install go from [https://go.dev/doc/install](https://go.dev/doc/install)
+
+#### Install gobindata
+
+```
+sudo apt install go-bindata
+```
+
+### Install SGX
+
+To compile the code and run tests, you'll need to install the SGX SDK and PSW. To run in simulation (or software) modes of SGX you do _not_ need to install the SGX driver. 
+For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script in the following way:
+
+```bash
+chmod +x ./scripts/install-sgx.sh
+sudo ./scripts/install-sgx.sh true true true false
+```
+
+Note: If you are using WSL you'll need to use the 5.15 kernel which you can find how to do [here](https://github.com/scrtlabs/SecretNetwork/blob/master/docs/SGX%20on%20WSL%20(SW).md), otherwise you'll have to run anything SGX related only in docker
+  
+### Install Xargo
+
+We need a very specific version of xargo for everything to compile happily together
+
+```
+cargo install xargo --version 0.3.25
+```
+
+# Build from Source
+
+Use `make build-linux` to build the entire codebase. This will build both the Rust (enclave & contract engine) and the Go (blockchain) code.
+
+To build just the rust code, you can use `make _build-linux`, while to build just the Go code, there is the aptly named `make build_local_no_rust`.
+
+
+Tip:
+```text
+For a production build the enclave must be copied from the most recent release. 
+
+This is due to non-reproducible builds, and the fact that enclaves must be signed with a specific key to be accepted on mainnet. 
+
+Still, the non-enclave code can be modified and ran on mainnet as long as there are no consensus-breaking changes
+```
+
+# Running Something
+
+## Run tests
+
+To build run all tests, use `make go-tests`
+
+## Start local network
+
+Run `./scripts/start-node.sh`
+
+# Documentation
+
+For the latest documentation, check out [https://docs.scrt.network](https://docs.scrt.network)
 
 # Community
 
@@ -22,31 +135,6 @@ Mainnet is out! Get the latest release at [https://github.com/scrtlabs/SecretNet
 - Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
 - Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
 - Community Secret Nodes Telegram: [https://t.me/secretnodes](https://t.me/secretnodes)
-
-# Block Explorers
-
-Secret Network is secured by the SCRT coin (Secret), which is used for fees, staking, and governance. Transactions, validators, governance proposals, and more can be viewed using the following Secret Network block explorers:
-
-- [secretnodes](https://secretnodes.com)
-- [Mintscan](https://mintscan.io/secret)
-
-# Wallets
-
-- [Ledger Nano S and Ledger Nano X](docs/ledger-nano-s.md)
-- [Keplr](https://wallet.keplr.app)
-- [Math Wallet](https://mathwallet.org/secretnetwork-wallet/)
-- [Citadel.one](https://app.citadel.one)
-
-# Implementation Discussions
-
-- [An Update on the Encryption Protocol](https://forum.scrt.network/t/an-update-on-the-encryption-protocol/1641)
-- [Hard Forks and Network Upgrades](https://forum.scrt.network/t/hard-forks-and-network-upgrades/1670)
-- [Don’t trust, verify (an untrusted host)](https://forum.scrt.network/t/dont-trust-verify-an-untrusted-host/1669)
-- [Secret Contracts on Secret Network](https://forum.scrt.network/t/secret-contracts-on-enigma-blockchain/1284)
-- [Network key management/agreement](https://forum.scrt.network/t/network-key-management-agreement/1324)
-- [Input/Output/State Encryption/Decryption protocol](https://forum.scrt.network/t/input-output-state-encryption-decryption-protocol/1325)
-- [Why the Cosmos move doesn’t mean we’re leaving Ethereum](https://forum.scrt.network/t/why-the-cosmos-move-doesnt-mean-were-leaving-ethereum/1301)
-- [(Dev discussion/Issue) WASM implementation](https://forum.scrt.network/t/dev-discussion-issue-wasm-implementation/1303)
 
 # License
 

@@ -19,6 +19,9 @@ then
   cp ~/node_key.json ~/.secretd/config/node_key.json
 
   perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
+
+  perl -i -pe 's/"1814400s"/"80s"/g' ~/.secretd/config/genesis.json
+
   secretcli keys add a
   secretcli keys add b
   secretcli keys add c

@@ -468,7 +468,7 @@ update-swagger-openapi-docs: statik proto-swagger-openapi-gen
 # proto-check-breaking:
 #	@buf check breaking --against-input '.git#branch=master'
 
-protoVer=v0.7
+protoVer=v0.2
 
 proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
 
