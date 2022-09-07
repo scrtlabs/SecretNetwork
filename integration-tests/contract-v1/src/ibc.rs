@@ -1,7 +1,7 @@
 use cosmwasm_std::{entry_point, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult, Ibc3ChannelOpenResponse, from_binary};
 
 use crate::msg::PacketMsg;
-use crate::state::{ack_store, channel_store, receive_store};
+use crate::state::{ack_store, channel_store, receive_store, timeout_store};
 
 /// packets live one hour
 pub const PACKET_LIFETIME: u64 = 60 * 60;
@@ -95,11 +95,13 @@ pub fn ibc_packet_ack(
 }
 
 #[entry_point]
-/// we just ignore these now.
 pub fn ibc_packet_timeout(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _msg: IbcPacketTimeoutMsg,
+    msg: IbcPacketTimeoutMsg,
 ) -> StdResult<IbcBasicResponse> {
+    let timeout_data: String = from_binary(&msg.packet.data)?;
+    timeout_store(deps.storage).save(&timeout_data)?;
+
     Ok(IbcBasicResponse::new().add_attribute("action", "ibc_packet_timeout"))
 }

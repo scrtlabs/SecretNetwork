@@ -114,6 +114,7 @@ pub enum QueryMsg {
     },
     LastIbcReceive {},
     LastIbcAck {},
+    LastIbcTimeout {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

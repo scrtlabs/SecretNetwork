@@ -1107,8 +1107,6 @@ describe("IBC", () => {
       "http://localhost:9391",
       "channel-0"
     );
-
-
   }, 180_000 /* 3 minutes */);
 
   test("transfer sanity", async () => {
@@ -1176,6 +1174,24 @@ describe("IBC", () => {
     let result = execSync(command);
     console.log("finished executing command, result:", result.toString());
 
+    let trimmedResult = result.toString().replace(/\s/g, "");
+
+    let myRegexp = /ChannelId\("(channel-\d+)"/g;
+    let channelId = myRegexp.exec(trimmedResult)[1];
+    console.log("channelId", channelId);
+
+    await waitForIBCChannel(
+      "secretdev-1",
+      "http://localhost:9091",
+      channelId ,
+    );
+
+    await waitForIBCChannel(
+      "secretdev-2",
+      "http://localhost:9391",
+      channelId ,
+    );
+
     const tx = await accounts.a.tx.compute.executeContract(
       {
         sender: accounts.a.address,
@@ -1189,6 +1205,7 @@ describe("IBC", () => {
       },
       { gasLimit: 250_000 }
     );
+    console.log("tx", tx);
     if (tx.code !== TxResultCode.Success) {
       console.error(tx.rawLog);
     }
@@ -1198,31 +1215,75 @@ describe("IBC", () => {
     expect(
       tx.arrayLog.find(x => x.key === "packet_data").value
     ).toBe(
-      "{\"message\":{\"value\":\"ahello from test\"}}"
+      `{"message":{"value":"${channelId}hello from test"}}`
     );
 
-    console.log("sleeping");
-    await sleep(10 * 1000);
-    console.log("sleeping end");
-    let queryResult: any = await accounts.a.query.compute.queryContract({
-      contractAddress: contracts["secretdev-1"].v1.address,
-      codeHash: contracts["secretdev-1"].v1.codeHash,
-      query: {
-        last_ibc_ack: {}
-      },
-    });
+    // console.log("sleeping");
+    // await sleep(10 * 1000);
+    // console.log("sleeping end");
 
-    console.log("queryResult1", queryResult);
+    while(true) {
+      let queryResult: any = await accounts.a.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          last_ibc_ack: {}
+        },
+      });
 
-    queryResult = await accounts2.a.query.compute.queryContract({
-      contractAddress: contracts["secretdev-2"].v1.address,
-      codeHash: contracts["secretdev-2"].v1.codeHash,
-      query: {
-        last_ibc_receive: {}
-      },
-    });
+      console.log("queryResult1", queryResult); // should be ack
 
-    console.log("queryResult2", queryResult);
+      queryResult = await accounts2.a.query.compute.queryContract({
+        contractAddress: contracts["secretdev-2"].v1.address,
+        codeHash: contracts["secretdev-2"].v1.codeHash,
+        query: {
+          last_ibc_ack: {}
+        },
+      });
 
+      console.log("queryResult2", queryResult); // should be none
+
+      queryResult = await accounts.a.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          last_ibc_receive: {}
+        },
+      });
+
+      console.log("queryResult3", queryResult); // should be none
+
+      queryResult = await accounts2.a.query.compute.queryContract({
+        contractAddress: contracts["secretdev-2"].v1.address,
+        codeHash: contracts["secretdev-2"].v1.codeHash,
+        query: {
+          last_ibc_receive: {}
+        },
+      });
+
+      console.log("queryResult4", queryResult); // should be receive
+
+      queryResult = await accounts.a.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          last_ibc_timeout: {}
+        },
+      });
+
+      console.log("queryResult5", queryResult); // should be none
+
+      queryResult = await accounts2.a.query.compute.queryContract({
+        contractAddress: contracts["secretdev-2"].v1.address,
+        codeHash: contracts["secretdev-2"].v1.codeHash,
+        query: {
+          last_ibc_timeout: {}
+        },
+      });
+
+      console.log("queryResult6", queryResult); // should be receive
+
+      await sleep(400);
+    }
   }, 80_000 /* 80 seconds */);
 });

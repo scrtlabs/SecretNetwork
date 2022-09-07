@@ -1,11 +1,16 @@
-use cosmwasm_std::{entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse, AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse, ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps, DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse, MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError, StdResult, ValidatorResponse, WasmMsg, WasmQuery};
+use cosmwasm_std::{entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse, AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse, ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps, DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse, MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError, StdResult, ValidatorResponse, WasmMsg, WasmQuery, IbcTimeout};
 use crate::ibc::PACKET_LIFETIME;
 
 use crate::msg::{Msg, PacketMsg, QueryMsg};
-use crate::state::{ack_store_read, channel_store_read, receive_store_read};
+use crate::state::{ack_store, ack_store_read, channel_store, channel_store_read, receive_store, receive_store_read, timeout_store, timeout_store_read};
 
 #[entry_point]
 pub fn instantiate(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResult<Response> {
+    channel_store(deps.storage).save(&"no channel yet".to_string())?;
+    ack_store(deps.storage).save(&"no ack yet".to_string())?;
+    receive_store(deps.storage).save(&"no receive yet".to_string())?;
+    timeout_store(deps.storage).save(&"no timeout yet".to_string())?;
+
     return handle_msg(deps, env, info, msg);
 }
 
@@ -25,13 +30,16 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
             );
         }
         Msg::SendIbcPacket { message } => {
-            let packet = PacketMsg::Message { value: "a".to_owned() + &message };
+            let channel_id = channel_store_read(deps.storage).load()?;
+            let packet = PacketMsg::Message { value: channel_id + &message };
 
             return Ok(
                 Response::new().add_message(IbcMsg::SendPacket {
                     channel_id: channel_store_read(deps.storage).load()?,
                     data: to_binary(&packet)?,
-                    timeout: env.block.time.plus_seconds(PACKET_LIFETIME).into(),
+                    timeout: IbcTimeout::with_timestamp(
+                        env.block.time.plus_seconds(PACKET_LIFETIME)
+                    ),
                 })
             );
         }
@@ -253,6 +261,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         ),
         QueryMsg::LastIbcAck {} => Ok(
             to_binary(&ack_store_read(deps.storage).load()?)?
+        ),
+        QueryMsg::LastIbcTimeout {} => Ok(
+            to_binary(&timeout_store_read(deps.storage).load()?)?
         ),
     }
 }

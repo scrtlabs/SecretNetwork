@@ -12,6 +12,8 @@ services:
       - "1317:1317"
       # faucet
       - "5000:5000"
+    environment:
+      LOG_LEVEL: "TRACE"
   localsecret-2:
     image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
     # ports are only here in case interaction
@@ -26,6 +28,7 @@ services:
       - "5300:5000"
     environment:
       CHAINID: "secretdev-2"
+      LOG_LEVEL: "TRACE"
 
   relayer:
     image: "hermes:v0.0.0"

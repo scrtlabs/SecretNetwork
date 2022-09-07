@@ -6,6 +6,7 @@ use cosmwasm_storage::{
 pub const CHANNEL_KEY: &[u8] = b"channel";
 pub const ACK_KEY: &[u8] = b"ack";
 pub const RECEIVE_KEY: &[u8] = b"receive";
+pub const TIMEOUT_KEY: &[u8] = b"timeout";
 
 pub fn channel_store(storage: &mut dyn Storage) -> Singleton<String> {
     singleton(storage, CHANNEL_KEY)
@@ -29,4 +30,12 @@ pub fn receive_store(storage: &mut dyn Storage) -> Singleton<String> {
 
 pub fn receive_store_read(storage: &dyn Storage) -> ReadonlySingleton<String> {
     singleton_read(storage, RECEIVE_KEY)
+}
+
+pub fn timeout_store(storage: &mut dyn Storage) -> Singleton<String> {
+    singleton(storage, TIMEOUT_KEY)
+}
+
+pub fn timeout_store_read(storage: &dyn Storage) -> ReadonlySingleton<String> {
+    singleton_read(storage, TIMEOUT_KEY)
 }
