@@ -13,11 +13,12 @@ use cw_types_generic::CosmWasmApiVersion;
 use cw_types_v010::consts::BECH32_PREFIX_ACC_ADDR;
 
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
+use enclave_utils::kv_cache::KvCache;
 
 use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, write_encrypted_key};
+use crate::db::{encrypt_key, remove_encrypted_key, write_encrypted_key, write_multiple_db};
 use crate::errors::WasmEngineError;
 use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
@@ -62,6 +63,7 @@ const MAX_LOG_LENGTH: usize = 8192;
 pub struct ContractInstance {
     pub context: Ctx,
     pub memory: MemoryRef,
+    pub kv_cache: KvCache,
     pub gas_limit: u64,
     /// Gas used by wasmi
     pub gas_used: u64,
@@ -105,9 +107,12 @@ impl ContractInstance {
             return Err(EnclaveError::InvalidWasm);
         };
 
+        let kv_cache = KvCache::new();
+
         Ok(Self {
             context,
             memory,
+            kv_cache,
             gas_limit,
             gas_used: 0,
             gas_used_externally: 0,
@@ -346,10 +351,35 @@ impl WasmiApi for ContractInstance {
 
         self.use_gas_externally(OCALL_BASE_GAS)?;
 
-        // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
-        // This returns the value from Tendermint
-        let (value, gas_used) =
-            read_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
+        let value = self.kv_cache.read(&state_key_name);
+
+        // *********************************
+        // if value is in the cache
+        // *********************************
+        if value.is_some() {
+            let unwrapped = value.unwrap();
+            let ptr_to_region_in_wasm_vm = self.write_to_memory(&unwrapped).map_err(|err| {
+                debug!(
+                    "read_db() error while trying to allocate {} bytes for the value",
+                    unwrapped.len(),
+                );
+                err
+            })?;
+
+            // Return pointer to the allocated buffer with the value written to it
+            // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L80
+            return Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)));
+        }
+
+        // *********************************
+        // if value isn't in the cache
+        // *********************************
+        let (value, gas_used) = read_encrypted_key(
+            &state_key_name,
+            &self.context,
+            &self.contract_key,
+            &mut self.kv_cache,
+        )?;
         self.use_gas_externally(gas_used)?;
 
         let value = match value {
@@ -476,19 +506,65 @@ impl WasmiApi for ContractInstance {
 
         self.use_gas_externally(OCALL_BASE_GAS)?;
 
-        let used_gas =
-            write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
-                .map_err(|err| {
-                    debug!(
-                        "write_db() error while trying to write the value to state: {:?}",
-                        err
-                    );
-                    err
-                })?;
-        self.use_gas_externally(used_gas)?;
+        self.kv_cache.write(&state_key_name, &value);
+
+        // let used_gas =
+        //     write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
+        //         .map_err(|err| {
+        //             debug!(
+        //                 "write_db() error while trying to write the value to state: {:?}",
+        //                 err
+        //             );
+        //             err
+        //         })?;
+        // self.use_gas_externally(used_gas)?;
 
         // return value from here is never read
         // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L95
+        Ok(None)
+    }
+
+    #[cfg(feature = "query-only")]
+    fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
+        Ok(None)
+    }
+
+    #[cfg(not(feature = "query-only"))]
+    fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
+        let mut keys: Vec<(Vec<u8>, Vec<u8>)> = self
+            .kv_cache
+            .flush()
+            .into_iter()
+            .map(|(k, v)| {
+                let (enc_key, _, enc_v) =
+                    encrypt_key(&k, &v, &self.context, &self.contract_key).unwrap();
+
+                (enc_key.to_vec(), enc_v)
+            })
+            // todo: fix
+            // .map_err(|_|
+            //     {
+            //         debug!(
+            //         "addr_validate() error while trying to parse human address from bytes to string: {:?}",
+            //         err
+            //     );
+            //         return Ok(Some(RuntimeValue::I32(
+            //             self.write_to_memory(b"Input is not valid UTF-8")? as i32,
+            //         )));
+            //     }
+            // )?
+            .collect();
+
+        let used_gas = write_multiple_db(&self.context, keys).map_err(|err| {
+            debug!(
+                "write_db() error while trying to write the value to state: {:?}",
+                err
+            );
+            err
+        })?;
+
+        self.use_gas_externally(used_gas)?;
+
         Ok(None)
     }
 

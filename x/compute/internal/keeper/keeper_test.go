@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -862,7 +863,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	_, err = keeper.Execute(ctx, addr, fred, msgBz, nil, nil)
 	diff := time.Since(start)
 
-	t.Logf("Duration till out of gas: %+v (%d gas)\n", diff, gasLimit)
+	log.Printf("Duration till out of gas: %+v (%d gas)\n", diff, gasLimit)
 
 	require.Equal(t, err.Error(), outOfGasError.Error())
 }

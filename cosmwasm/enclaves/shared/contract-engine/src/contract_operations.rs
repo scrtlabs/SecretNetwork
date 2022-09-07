@@ -12,6 +12,7 @@ use log::*;
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
+use crate::wasm::traits::WasmiApi;
 
 use super::contract_validation::{
     generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -113,6 +114,13 @@ pub fn init(
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
         let vec_ptr = engine.init(env_ptr, msg_info_ptr, msg_ptr)?;
+
+        // write all db keys to chain
+        engine
+            .contract_instance
+            .flush_cache()
+            .map_err(|_| EnclaveError::FailedFunctionCall)?;
+
         let output = engine.extract_vector(vec_ptr)?;
         let output = encrypt_output(
             output,
@@ -257,6 +265,12 @@ pub fn handle(
     // so we can `.map_err()` in one place for all of them
     let output = coalesce!(EnclaveError, {
         let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr, parsed_handle_type.clone())?;
+
+        // write all db keys to chain
+        engine
+            .contract_instance
+            .flush_cache()
+            .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
         let mut output = engine.extract_vector(vec_ptr)?;
 
