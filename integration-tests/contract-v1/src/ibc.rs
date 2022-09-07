@@ -1,4 +1,8 @@
-use cosmwasm_std::{entry_point, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult, Ibc3ChannelOpenResponse, from_binary};
+use cosmwasm_std::{
+    entry_point, from_binary, DepsMut, Env, Ibc3ChannelOpenResponse, IbcBasicResponse,
+    IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcPacketAckMsg,
+    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult,
+};
 
 use crate::msg::PacketMsg;
 use crate::state::{ack_store, channel_store, receive_store, timeout_store};
@@ -65,13 +69,13 @@ pub fn ibc_packet_receive(
     let mut response = IbcReceiveResponse::new();
 
     response = match msg {
-        PacketMsg::Test { } => response.set_ack(b"test"),
-        PacketMsg::Message { value} => {
+        PacketMsg::Test {} => response.set_ack(b"test"),
+        PacketMsg::Message { value } => {
             receive_store(deps.storage).save(&value)?;
             response
                 .set_ack(("recv".to_string() + &value).as_bytes())
                 .add_attribute("acknowledging", value)
-        },
+        }
     };
 
     Ok(response.add_attribute("action", "ibc_packet_ack"))
@@ -85,13 +89,9 @@ pub fn ibc_packet_ack(
 ) -> StdResult<IbcBasicResponse> {
     // which local channel was this packet send from
     let caller = msg.original_packet.src.channel_id.clone();
-    let ack_data: String = from_binary(&msg.acknowledgement.data)?;
-    ack_store(deps.storage).save(&ack_data)?;
+    ack_store(deps.storage).save(&msg.acknowledgement.data)?;
 
-    Ok(IbcBasicResponse::new()
-        .add_attribute("caller", caller)
-        .add_attribute("data", ack_data + "end")
-    )
+    Ok(IbcBasicResponse::new().add_attribute("caller", caller))
 }
 
 #[entry_point]

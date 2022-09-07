@@ -11,7 +11,7 @@ import {
   toUtf8,
   Tx,
   TxResultCode,
-  Wallet
+  Wallet,
 } from "secretjs";
 import {
   QueryBalanceRequest,
@@ -25,7 +25,9 @@ import {
   waitForBlocks,
   waitForIBCChannel,
   waitForIBCConnection,
-  Contract, instantiateContracts, cleanBytes,
+  Contract,
+  instantiateContracts,
+  cleanBytes,
 } from "./utils";
 
 const contracts = {
@@ -36,8 +38,8 @@ const contracts = {
   "secretdev-2": {
     v1: new Contract("v1"),
     v010: new Contract("v010"),
-  }
-}
+  },
+};
 
 // let accounts;
 // let accounts2;
@@ -141,28 +143,41 @@ beforeAll(async () => {
     `${__dirname}/contract-v0.10/contract.wasm`
   ) as Uint8Array;
   contracts["secretdev-1"].v010.codeHash = toHex(sha256(v010Wasm));
-  contracts["secretdev-2"].v010.codeHash = contracts["secretdev-1"].v010.codeHash;
+  contracts["secretdev-2"].v010.codeHash =
+    contracts["secretdev-1"].v010.codeHash;
   console.log("v1codehash", contracts["secretdev-1"].v1.codeHash);
   console.log("v010codeHash", contracts["secretdev-1"].v010.codeHash);
 
   console.log("Uploading contracts on chain 1...");
   let tx: Tx = await storeContracts(accounts.a, [v1Wasm, v010Wasm]);
-  contracts["secretdev-1"].v1.codeId = Number(tx.arrayLog.find(x => x.key === "code_id").value);
-  contracts["secretdev-1"].v010.codeId = Number(tx.arrayLog.reverse().find(x => x.key === "code_id").value);
+  contracts["secretdev-1"].v1.codeId = Number(
+    tx.arrayLog.find((x) => x.key === "code_id").value
+  );
+  contracts["secretdev-1"].v010.codeId = Number(
+    tx.arrayLog.reverse().find((x) => x.key === "code_id").value
+  );
   console.log("v1codeid", contracts["secretdev-1"].v1.codeId);
   console.log("v010codeid", contracts["secretdev-1"].v010.codeId);
 
   console.log("Instantiating contracts on chain 1...");
-  tx = await instantiateContracts(accounts.a, [contracts["secretdev-1"].v1, contracts["secretdev-1"].v010]);
-  contracts["secretdev-1"].v1.address = tx.arrayLog.find(x => x.key === "contract_address").value;
-  contracts["secretdev-1"].v010.address = tx.arrayLog.reverse().find(x => x.key === "contract_address").value;
+  tx = await instantiateContracts(accounts.a, [
+    contracts["secretdev-1"].v1,
+    contracts["secretdev-1"].v010,
+  ]);
+  contracts["secretdev-1"].v1.address = tx.arrayLog.find(
+    (x) => x.key === "contract_address"
+  ).value;
+  contracts["secretdev-1"].v010.address = tx.arrayLog
+    .reverse()
+    .find((x) => x.key === "contract_address").value;
 
   // get contract's ibc_port_id
   // const info = (await readonly.query.compute.contractInfo(contracts["secretdev-1"].v1.address)).ContractInfo;
   // console.log("info", info);
   // console.log("info.ibcPortId", info.ibcPortId);
   // temp guessing:
-  contracts["secretdev-1"].v1.ibcPortId = "wasm." + contracts["secretdev-1"].v1.address;
+  contracts["secretdev-1"].v1.ibcPortId =
+    "wasm." + contracts["secretdev-1"].v1.address;
 
   // create a second validator for MsgRedelegate tests
   const { validators } = await readonly.query.staking.validators({});
@@ -508,7 +523,9 @@ describe("Wasm", () => {
         expect(attributes[0].key).toBe("contract_address");
         expect(attributes[0].value).toBe(contracts["secretdev-1"].v010.address);
         expect(attributes[1].key).toBe("contract_address");
-        expect(attributes[1].value).not.toBe(contracts["secretdev-1"].v010.address);
+        expect(attributes[1].value).not.toBe(
+          contracts["secretdev-1"].v010.address
+        );
       });
 
       test("error", async () => {
@@ -1084,14 +1101,26 @@ describe("IBC", () => {
   beforeAll(async () => {
     console.log("Uploading contracts on chain 2...");
     let tx: Tx = await storeContracts(accounts2.a, [v1Wasm, v010Wasm]);
-    contracts["secretdev-2"].v1.codeId = Number(tx.arrayLog.find((x) => x.key === "code_id").value);
-    contracts["secretdev-2"].v010.codeId = Number(tx.arrayLog.reverse().find((x) => x.key === "code_id").value);
+    contracts["secretdev-2"].v1.codeId = Number(
+      tx.arrayLog.find((x) => x.key === "code_id").value
+    );
+    contracts["secretdev-2"].v010.codeId = Number(
+      tx.arrayLog.reverse().find((x) => x.key === "code_id").value
+    );
 
     console.log("Instantiating contracts on chain 2...");
-    tx = await instantiateContracts(accounts2.a, [contracts["secretdev-2"].v1, contracts["secretdev-2"].v010]);
-    contracts["secretdev-2"].v1.address = tx.arrayLog.find((x) => x.key === "contract_address").value;
-    contracts["secretdev-2"].v010.address = tx.arrayLog.reverse().find((x) => x.key === "contract_address").value;
-    contracts["secretdev-2"].v1.ibcPortId = "wasm." + contracts["secretdev-2"].v1.address;
+    tx = await instantiateContracts(accounts2.a, [
+      contracts["secretdev-2"].v1,
+      contracts["secretdev-2"].v010,
+    ]);
+    contracts["secretdev-2"].v1.address = tx.arrayLog.find(
+      (x) => x.key === "contract_address"
+    ).value;
+    contracts["secretdev-2"].v010.address = tx.arrayLog
+      .reverse()
+      .find((x) => x.key === "contract_address").value;
+    contracts["secretdev-2"].v1.ibcPortId =
+      "wasm." + contracts["secretdev-2"].v1.address;
 
     console.log("Waiting for IBC to set up...");
     await waitForIBCConnection("secretdev-1", "http://localhost:9091");
@@ -1164,7 +1193,8 @@ describe("IBC", () => {
   }, 30_000 /* 30 seconds */);
 
   test.only("contracts sanity", async () => {
-    const command = "docker exec ibc-relayer-1 hermes " +
+    const command =
+      "docker exec ibc-relayer-1 hermes " +
       "--config /home/hermes-user/.hermes/alternative-config.toml " +
       "create channel " +
       "--a-chain secretdev-1 " +
@@ -1182,17 +1212,9 @@ describe("IBC", () => {
     let channelId = myRegexp.exec(trimmedResult)[1];
     console.log("channelId", channelId);
 
-    await waitForIBCChannel(
-      "secretdev-1",
-      "http://localhost:9091",
-      channelId ,
-    );
+    await waitForIBCChannel("secretdev-1", "http://localhost:9091", channelId);
 
-    await waitForIBCChannel(
-      "secretdev-2",
-      "http://localhost:9391",
-      channelId ,
-    );
+    await waitForIBCChannel("secretdev-2", "http://localhost:9391", channelId);
 
     const tx = await accounts.a.tx.compute.executeContract(
       {
@@ -1201,7 +1223,7 @@ describe("IBC", () => {
         codeHash: contracts["secretdev-1"].v1.codeHash,
         msg: {
           send_ibc_packet: {
-            message: "hello from test"
+            message: "hello from test",
           },
         },
       },
@@ -1212,80 +1234,107 @@ describe("IBC", () => {
       console.error(tx.rawLog);
     }
     expect(tx.code).toBe(TxResultCode.Success);
-    console.log("tx after triggering ibc send endpoint", JSON.stringify(cleanBytes(tx), null, 2));
+    console.log(
+      "tx after triggering ibc send endpoint",
+      JSON.stringify(cleanBytes(tx), null, 2)
+    );
 
-    expect(
-      tx.arrayLog.find(x => x.key === "packet_data").value
-    ).toBe(
+    expect(tx.arrayLog.find((x) => x.key === "packet_data").value).toBe(
       `{"message":{"value":"${channelId}hello from test"}}`
     );
 
-    // console.log("sleeping");
-    // await sleep(10 * 1000);
-    // console.log("sleeping end");
+    const packetSendCommand =
+      "docker exec ibc-relayer-1 hermes " +
+      "--config /home/hermes-user/.hermes/alternative-config.toml " +
+      "tx packet-recv --dst-chain secretdev-2 --src-chain secretdev-1 " +
+      `--src-port ${contracts["secretdev-1"].v1.ibcPortId} ` +
+      `--src-channel ${channelId}`;
 
-    while(true) {
-      let queryResult: any = await accounts.a.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
-        query: {
-          last_ibc_ack: {}
-        },
-      });
+    console.log(
+      "calling docker exec on relayer with command",
+      packetSendCommand
+    );
+    let packetSendResult = execSync(packetSendCommand);
+    console.log(
+      "finished executing command, result:",
+      packetSendResult.toString()
+    );
 
-      console.log("queryResult1", queryResult); // should be ack
+    const packetAckCommand =
+      "docker exec ibc-relayer-1 hermes " +
+      "--config /home/hermes-user/.hermes/alternative-config.toml " +
+      "tx packet-ack --dst-chain secretdev-1 --src-chain secretdev-2 " +
+      `--src-port ${contracts["secretdev-1"].v1.ibcPortId} ` +
+      `--src-channel ${channelId}`;
 
-      queryResult = await accounts2.a.query.compute.queryContract({
-        contractAddress: contracts["secretdev-2"].v1.address,
-        codeHash: contracts["secretdev-2"].v1.codeHash,
-        query: {
-          last_ibc_ack: {}
-        },
-      });
+    console.log(
+      "calling docker exec on relayer with command",
+      packetAckCommand
+    );
+    let packetAckResult = execSync(packetAckCommand);
+    console.log(
+      "finished executing command, result:",
+      packetAckResult.toString()
+    );
 
-      console.log("queryResult2", queryResult); // should be none
+    let queryResult: any = await accounts.a.query.compute.queryContract({
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
+      query: {
+        last_ibc_ack: {},
+      },
+    });
 
-      queryResult = await accounts.a.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
-        query: {
-          last_ibc_receive: {}
-        },
-      });
+    console.log("queryResult1", queryResult); // should be ack
 
-      console.log("queryResult3", queryResult); // should be none
+    queryResult = await accounts2.a.query.compute.queryContract({
+      contractAddress: contracts["secretdev-2"].v1.address,
+      codeHash: contracts["secretdev-2"].v1.codeHash,
+      query: {
+        last_ibc_ack: {},
+      },
+    });
 
-      queryResult = await accounts2.a.query.compute.queryContract({
-        contractAddress: contracts["secretdev-2"].v1.address,
-        codeHash: contracts["secretdev-2"].v1.codeHash,
-        query: {
-          last_ibc_receive: {}
-        },
-      });
+    console.log("queryResult2", queryResult); // should be none
 
-      console.log("queryResult4", queryResult); // should be receive
+    queryResult = await accounts.a.query.compute.queryContract({
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
+      query: {
+        last_ibc_receive: {},
+      },
+    });
 
-      queryResult = await accounts.a.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
-        query: {
-          last_ibc_timeout: {}
-        },
-      });
+    console.log("queryResult3", queryResult); // should be none
 
-      console.log("queryResult5", queryResult); // should be none
+    queryResult = await accounts2.a.query.compute.queryContract({
+      contractAddress: contracts["secretdev-2"].v1.address,
+      codeHash: contracts["secretdev-2"].v1.codeHash,
+      query: {
+        last_ibc_receive: {},
+      },
+    });
 
-      queryResult = await accounts2.a.query.compute.queryContract({
-        contractAddress: contracts["secretdev-2"].v1.address,
-        codeHash: contracts["secretdev-2"].v1.codeHash,
-        query: {
-          last_ibc_timeout: {}
-        },
-      });
+    console.log("queryResult4", queryResult); // should be receive
 
-      console.log("queryResult6", queryResult); // should be receive
+    queryResult = await accounts.a.query.compute.queryContract({
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
+      query: {
+        last_ibc_timeout: {},
+      },
+    });
 
-      await sleep(400);
-    }
+    console.log("queryResult5", queryResult); // should be none
+
+    queryResult = await accounts2.a.query.compute.queryContract({
+      contractAddress: contracts["secretdev-2"].v1.address,
+      codeHash: contracts["secretdev-2"].v1.codeHash,
+      query: {
+        last_ibc_timeout: {},
+      },
+    });
+
+    console.log("queryResult6", queryResult); // should be receive
   }, 80_000 /* 80 seconds */);
 });
