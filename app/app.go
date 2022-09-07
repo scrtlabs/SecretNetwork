@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	store "github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/enigmampc/SecretNetwork/app/upgrades"
+	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
+	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -37,7 +39,6 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
 	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
 	icaauthtypes "github.com/enigmampc/SecretNetwork/x/mauth/types"
 
@@ -136,6 +137,8 @@ var (
 	allowedReceivingModAcc = map[string]bool{
 		distrtypes.ModuleName: true,
 	}
+
+	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade}
 )
 
 // Verify app interface at compile time
@@ -566,30 +569,8 @@ func NewSecretNetworkApp(
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 	app.mm.RegisterServices(app.configurator)
 
+	// setupUpgradeHandlers() shoulbe be called after app.mm is configured
 	app.setupUpgradeHandlers(&icaModule)
-
-	// add test gRPC service for testing gRPC queries in isolation
-	// testdata.RegisterTestServiceServer(app.GRPCQueryRouter(), testdata.QueryImpl{}) // TODO: this is testdata !!!
-
-	// create the simulation manager and define the order of the modules for deterministic simulations
-	//
-	// NOTE: This is not required for apps that don't use the simulator for fuzz testing
-	// transactions.
-	// app.sm = module.NewSimulationManager(
-	//	auth.NewAppModule(appCodec, app.accountKeeper, authsims.RandomGenesisAccounts),
-	//	bank.NewAppModule(appCodec, app.bankKeeper, app.accountKeeper),
-	//	capability.NewAppModule(appCodec, *app.capabilityKeeper),
-	//	gov.NewAppModule(appCodec, app.govKeeper, app.accountKeeper, app.bankKeeper),
-	//	mint.NewAppModule(appCodec, app.mintKeeper, app.accountKeeper),
-	//	staking.NewAppModule(appCodec, app.stakingKeeper, app.accountKeeper, app.bankKeeper),
-	//	distr.NewAppModule(appCodec, app.distrKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
-	//	slashing.NewAppModule(appCodec, app.slashingKeeper, app.accountKeeper, app.bankKeeper, app.stakingKeeper),
-	//	params.NewAppModule(app.paramsKeeper),
-	//	//compute.NewAppModule(app.computeKeeper),
-	//	evidence.NewAppModule(app.evidenceKeeper),
-	//)
-
-	// app.sm.RegisterStoreDecoders()
 
 	// initialize stores
 	app.MountKVStores(keys)
@@ -751,11 +732,15 @@ func (app *SecretNetworkApp) BlockedAddrs() map[string]bool {
 }
 
 func (app *SecretNetworkApp) setupUpgradeHandlers(icamodule *ica.AppModule) {
-	// this configures a no-op upgrade handler for the v4 upgrade,
-	// which improves the lockup module's store management.
-	app.upgradeKeeper.SetUpgradeHandler(
-		v1_3.UpgradeName, v1_3.CreateUpgradeHandler(
-			app.mm, icamodule, app.configurator))
+	for _, upgradeDetails := range Upgrades {
+		app.upgradeKeeper.SetUpgradeHandler(
+			upgradeDetails.UpgradeName,
+			upgradeDetails.CreateUpgradeHandler(
+				app.mm,
+				app.configurator,
+			),
+		)
+	}
 }
 
 func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
@@ -764,14 +749,14 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 		panic(fmt.Sprintf("Failed to read upgrade info from disk %s", err))
 	}
 
-	if upgradeInfo.Name == v1_3.UpgradeName && !app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
-		// @Frey do we do this for Cosmwasm?
-		storeUpgrades := store.StoreUpgrades{
-			Added: []string{icahosttypes.StoreKey},
-		}
+	if app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+		return
+	}
 
-		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	for _, upgradeDetails := range Upgrades {
+		if upgradeInfo.Name == upgradeDetails.UpgradeName {
+			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
+		}
 	}
 }
 

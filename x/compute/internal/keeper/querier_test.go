@@ -330,8 +330,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		require.NoError(t, err)
 
 		instantiateMsg := types.MsgInstantiateContract{
-			Sender: creator,
-			// Admin:     nil,
+			Sender:    creator,
 			CodeID:    codeID,
 			Label:     fmt.Sprintf("contract %d", i),
 			InitMsg:   initMsgBz,
@@ -369,106 +368,3 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		assert.Nil(t, contract.Created)
 	}
 }
-
-/*
-func TestQueryContractHistory(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	keeper := keepers.WasmKeeper
-
-	var (
-		otherAddr sdk.AccAddress = bytes.Repeat([]byte{0x2}, sdk.AddrLen)
-	)
-
-	specs := map[string]struct {
-		srcQueryAddr sdk.AccAddress
-		srcHistory   []types.ContractCodeHistoryEntry
-		expContent   []types.ContractCodeHistoryEntry
-	}{
-		"response with internal fields cleared": {
-			srcHistory: []types.ContractCodeHistoryEntry{{
-				Operation: types.GenesisContractCodeHistoryType,
-				CodeID:    1,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"init message"`),
-			}},
-			expContent: []types.ContractCodeHistoryEntry{{
-				Operation: types.GenesisContractCodeHistoryType,
-				CodeID:    1,
-				Msg:       []byte(`"init message"`),
-			}},
-		},
-		"response with multiple entries": {
-			srcHistory: []types.ContractCodeHistoryEntry{{
-				Operation: types.InitContractCodeHistoryType,
-				CodeID:    1,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"init message"`),
-			}, {
-				Operation: types.MigrateContractCodeHistoryType,
-				CodeID:    2,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"migrate message 1"`),
-			}, {
-				Operation: types.MigrateContractCodeHistoryType,
-				CodeID:    3,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"migrate message 2"`),
-			}},
-			expContent: []types.ContractCodeHistoryEntry{{
-				Operation: types.InitContractCodeHistoryType,
-				CodeID:    1,
-				Msg:       []byte(`"init message"`),
-			}, {
-				Operation: types.MigrateContractCodeHistoryType,
-				CodeID:    2,
-				Msg:       []byte(`"migrate message 1"`),
-			}, {
-				Operation: types.MigrateContractCodeHistoryType,
-				CodeID:    3,
-				Msg:       []byte(`"migrate message 2"`),
-			}},
-		},
-		"unknown contract address": {
-			srcQueryAddr: otherAddr,
-			srcHistory: []types.ContractCodeHistoryEntry{{
-				Operation: types.GenesisContractCodeHistoryType,
-				CodeID:    1,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"init message"`),
-			}},
-			expContent: nil,
-		},
-	}
-	for msg, spec := range specs {
-		t.Run(msg, func(t *testing.T) {
-			_, _, myContractAddr := keyPubAddr()
-			keeper.appendToContractHistory(ctx, myContractAddr, spec.srcHistory...)
-			q := NewQuerier(keeper)
-			queryContractAddr := spec.srcQueryAddr
-			if queryContractAddr == nil {
-				queryContractAddr = myContractAddr
-			}
-
-			// when
-			query := []string{QueryContractHistory, queryContractAddr.String()}
-			data := abci.RequestQuery{}
-			resData, err := q(ctx, query, data)
-
-			// then
-			require.NoError(t, err)
-			if spec.expContent == nil {
-				require.Nil(t, resData)
-				return
-			}
-			var got []types.ContractCodeHistoryEntry
-			err = json.Unmarshal(resData, &got)
-			require.NoError(t, err)
-
-			assert.Equal(t, spec.expContent, got)
-		})
-	}
-}
-*/

@@ -131,7 +131,4 @@ type (
 	QueryHandler            = keeper.QueryHandler
 	CustomQuerier           = keeper.CustomQuerier
 	QueryPlugins            = keeper.QueryPlugins
-	// MsgMigrateContract      = types.MsgMigrateContract
-	// MsgUpdateAdmin          = types.MsgUpdateAdmin
-	// MsgClearAdmin           = types.MsgClearAdmin
 )
