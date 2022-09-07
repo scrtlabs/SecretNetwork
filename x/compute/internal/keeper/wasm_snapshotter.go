@@ -102,7 +102,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 		seen[hexHash] = true
 
 		// load code and abort on error
-		wasmBytes, err := ws.keeper.GetByteCode(ctx, id)
+		wasmBytes, err := ws.keeper.GetWasm(ctx, id)
 		if err != nil {
 			rerr = err
 			return true

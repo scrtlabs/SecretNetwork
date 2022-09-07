@@ -7,7 +7,6 @@ use enclave_ffi_types::RuntimeConfiguration;
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
-#[allow(clippy::mutex_atomic)]
 lazy_static! {
     /// This variable indicates if the enclave configuration has already been set
     static ref SGX_ENCLAVE_CONFIGURED: Mutex<bool> = Mutex::new(false);

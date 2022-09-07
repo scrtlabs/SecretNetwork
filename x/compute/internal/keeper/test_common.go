@@ -515,7 +515,7 @@ func TestHandler(k Keeper) sdk.Handler {
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, msg.Sender /* msg.Admin, */, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
 		result := sdk.Result{}
 		result.Data = data
@@ -698,7 +698,7 @@ func fundAccounts(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Ke
 	am.SetAccount(ctx, baseAcct)
 }
 
-var keyCounter uint64 = 0
+var keyCounter uint64
 
 // we need to make this deterministic (same every test run), as encoded address size and thus gas cost,
 // depends on the actual bytes (due to ugly CanonicalAddress encoding)

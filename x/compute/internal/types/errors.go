@@ -69,6 +69,9 @@ var (
 
 	// ErrInvalidEvent error if an attribute/event from the contract is invalid
 	ErrInvalidEvent = sdkErrors.Register(DefaultCodespace, 21, "invalid event")
+
+	// ErrMaxIBCChannels error for maximum number of ibc channels reached
+	ErrMaxIBCChannels = sdkErrors.Register(DefaultCodespace, 22, "max transfer channels")
 )
 
 func IsEncryptedErrorCode(code uint32) bool {

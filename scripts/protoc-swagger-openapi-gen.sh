@@ -39,7 +39,7 @@ perl -i -pe 's/"(Query|Service)"/"gRPC Gateway API"/' $(find ./tmp-swagger-gen -
   find ../../tmp-swagger-gen -name 'query.swagger.json' -o -name 'fixed-service.swagger.json' | 
     sort |
     awk '{print "{\"url\":\""$1"\",\"operationIds\":{\"rename\":{\"Params\":\""$1"Params\",\"DelegatorValidators\":\""$1"DelegatorValidators\",\"UpgradedConsensusState\":\""$1"UpgradedConsensusState\"}}}"}' |
-    jq -s '{swagger:"2.0","info":{"title":"Secret Network","description":"A REST interface for queries and transactions","version":"'"$(git describe --tags $(git rev-list --tags --max-count=1) | perl -pe 's/-(beta|alpha).*//')"'"},apis:.} | .apis += [{"url":"./swagger_legacy.yaml","dereference":{"circular":"ignore"}}]' > ./config.json
+    jq -s '{swagger:"2.0","info":{"title":"Secret Network","description":"A REST interface for queries and transactions","version":"'"${CHAIN_VERSION}"'"},apis:.} | .apis += [{"url":"./swagger_legacy.yaml","dereference":{"circular":"ignore"}}]' > ./config.json
 
   # Derive openapi & swagger from config.json
   yarn install

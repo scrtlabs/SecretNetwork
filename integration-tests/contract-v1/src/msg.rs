@@ -65,6 +65,7 @@ pub enum Msg {
         msg: Binary,
         funds: Vec<Coin>,
     },
+    GetTxId {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -109,4 +110,5 @@ pub enum QueryMsg {
     WasmContractInfo {
         contract_addr: String,
     },
+    GetTxId {},
 }

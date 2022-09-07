@@ -318,7 +318,7 @@ fn get_signer_and_messages(
 
             Ok((sender_public_key.clone(), sign_doc.body.messages))
         }
-        SIGN_MODE_LEGACY_AMINO_JSON | SIGN_MODE_EIP_191 => {
+        SIGN_MODE_LEGACY_AMINO_JSON => {
             use protobuf::well_known_types::Any as AnyProto;
             use protobuf::Message;
 
@@ -336,6 +336,55 @@ fn get_signer_and_messages(
                     warn!("failure to parse StdSignDoc: {:?}", err);
                     EnclaveError::FailedTxVerification
                 })?;
+            let messages: Result<Vec<CosmWasmMsg>, _> = sign_doc
+                .msgs
+                .iter()
+                .map(|x| x.clone().into_cosmwasm_msg())
+                .collect();
+            Ok((public_key, messages?))
+        }
+        SIGN_MODE_EIP_191 => {
+            use protobuf::well_known_types::Any as AnyProto;
+            use protobuf::Message;
+
+            let any_pub_key =
+                AnyProto::parse_from_bytes(&sign_info.public_key.0).map_err(|err| {
+                    warn!("failed to parse public key as Any: {:?}", err);
+                    EnclaveError::FailedTxVerification
+                })?;
+            let public_key = CosmosPubKey::from_proto(&any_pub_key).map_err(|err| {
+                warn!("failure to parse pubkey: {:?}", err);
+                EnclaveError::FailedTxVerification
+            })?;
+
+            let sign_bytes_as_string = String::from_utf8_lossy(&sign_info.sign_bytes.0).to_string();
+
+            trace!(
+                "SIGN_MODE_EIP_191 sign_bytes_as_string: {:?}",
+                sign_bytes_as_string
+            );
+
+            // Always starts with '\x19Ethereum Signed Message:\n\d+{'
+            // So we need to find the first occurance of '{' and go from there until the end
+            let start_index = match sign_bytes_as_string.find('{') {
+                Some(start_index) => start_index,
+                None => {
+                    warn!(
+                        "SIGN_MODE_EIP_191 failed to find first occurance of '{{' in '{}'",
+                        sign_bytes_as_string
+                    );
+                    return Err(EnclaveError::FailedTxVerification);
+                }
+            };
+            let sign_doc_str = &sign_bytes_as_string[start_index..];
+
+            let sign_doc: StdSignDoc = serde_json::from_str(sign_doc_str).map_err(|err| {
+                warn!(
+                    "failed to parse SIGN_MODE_EIP_191 StdSignDoc as JSON from '{}': {:?}",
+                    sign_doc_str, err
+                );
+                EnclaveError::FailedTxVerification
+            })?;
             let messages: Result<Vec<CosmWasmMsg>, _> = sign_doc
                 .msgs
                 .iter()

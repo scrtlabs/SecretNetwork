@@ -439,7 +439,7 @@ aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
 
 ###############################################################################
-###                                Swagger                                  ###
+###                         Swagger & Protobuf                              ###
 ###############################################################################
 
 # Install the runsim binary with a temporary workaround of entering an outside
@@ -460,22 +460,12 @@ update-swagger-openapi-docs: statik proto-swagger-openapi-gen
         echo "\033[92mSwagger docs are in sync\033[0m";\
     fi
 
-.PHONY: update-swagger-openapi-docs statik
+# Example `CHAIN_VERSION=v1.4 make proto-swagger-openapi-gen`
+proto-swagger-openapi-gen:
+	@./scripts/protoc-swagger-openapi-gen.sh
 
-###############################################################################
-###                                Protobuf                                 ###
-###############################################################################
+.PHONY: update-swagger-openapi-docs statik proto-swagger-openapi-gen
 
-## proto-all: proto-gen proto-lint proto-check-breaking
-
-# proto-gen:
-#	@./scripts/protocgen.sh
-
-# proto-lint:
-#	@buf check lint --error-format=json
-
-# proto-check-breaking:
-#	@buf check breaking --against-input '.git#branch=master'
 
 protoVer=v0.2
 
@@ -485,10 +475,7 @@ proto-gen:
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 
-proto-swagger-openapi-gen:
-	@./scripts/protoc-swagger-openapi-gen.sh
-
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
 
-.PHONY: proto-all proto-gen proto-swagger-openapi-gen proto-format proto-lint proto-check-breaking
+.PHONY: proto-all proto-gen proto-format proto-lint proto-check-breaking
