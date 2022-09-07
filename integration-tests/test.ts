@@ -1312,15 +1312,13 @@ describe("IBC", () => {
       `--b-port ${contracts["secretdev-2"].v1.ibcPortId} ` +
       "--a-connection connection-0";
 
-    console.log("calling docker exec on relayer with command", command);
-    let result = execSync(command);
-    console.log("finished executing command, result:", result.toString());
+    console.log("calling relayer with command:", command);
+    const result = execSync(command);
 
-    let trimmedResult = result.toString().replace(/\s/g, "");
+    const trimmedResult = result.toString().replace(/\s/g, "");
 
-    let myRegexp = /ChannelId\("(channel-\d+)"/g;
-    let channelId = myRegexp.exec(trimmedResult)[1];
-    console.log("channelId", channelId);
+    const myRegexp = /ChannelId\("(channel-\d+)"/g;
+    const channelId = myRegexp.exec(trimmedResult)[1];
 
     await waitForIBCChannel("secretdev-1", "http://localhost:9091", channelId);
 
@@ -1381,7 +1379,7 @@ describe("IBC", () => {
       "calling docker exec on relayer with command",
       packetAckCommand
     );
-    let packetAckResult = execSync(packetAckCommand);
+    const packetAckResult = execSync(packetAckCommand);
     console.log(
       "finished executing command, result:",
       packetAckResult.toString()
@@ -1396,7 +1394,7 @@ describe("IBC", () => {
         },
       });
 
-    let ack = fromUtf8(fromBase64(queryResult));
+    const ack = fromUtf8(fromBase64(queryResult));
 
     expect(ack).toBe(`recv${channelId}hello from test`);
 
