@@ -1164,7 +1164,9 @@ describe("IBC", () => {
   }, 30_000 /* 30 seconds */);
 
   test.only("contracts sanity", async () => {
-    const command = "docker exec ibc-relayer-1 hermes create channel " +
+    const command = "docker exec ibc-relayer-1 hermes " +
+      "--config /home/hermes-user/.hermes/alternative-config.toml " +
+      "create channel " +
       "--a-chain secretdev-1 " +
       `--a-port ${contracts["secretdev-1"].v1.ibcPortId} ` +
       `--b-port ${contracts["secretdev-2"].v1.ibcPortId} ` +
