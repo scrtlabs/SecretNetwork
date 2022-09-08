@@ -6221,3 +6221,21 @@ func TestReplyGasExceedingMessageGas(t *testing.T) {
 	}()
 	_, _, _, _, _ = initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"measure_gas_for_submessage":{"id":2600}}`, false, true, defaultGasForTests)
 }
+
+func TestAddrValidateFunction(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
+
+	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, v1ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"validate_address":{"addr":"%s"}}`, v1ContractAddress), true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	resp, aErr := sdk.AccAddressFromBech32(string(data))
+	require.Empty(t, aErr)
+
+	require.Equal(t, resp, v1ContractAddress)
+
+	_, _, data, _, _, err = execHelper(t, keeper, ctx, v1ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"validate_address":{"addr":"secret18vd8fpwxzck93qlwghaj6arh4p7c5nyf7hmag8"}}`), true, true, defaultGasForTests, 0)
+	require.Equal(t, string(data), "\"Apple\"")
+}

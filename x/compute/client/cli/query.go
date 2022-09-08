@@ -33,6 +33,7 @@ import (
 func GetQueryCmd() *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
+		Aliases:                    []string{"wasm"},
 		Short:                      "Querying commands for the compute module",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
@@ -428,9 +429,31 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					return fmt.Errorf("error while trying to parse data as protobuf: %w: %s", err, dataOutputHexB64)
 				}
 
-				for i, data := range txData.Data {
-					if len(data.Data) != 0 {
-						dataPlaintextB64Bz, err := wasmCtx.Decrypt(data.Data, nonces[i])
+				for i, msgData := range txData.Data {
+					if len(msgData.Data) != 0 {
+						var dataField []byte
+						switch {
+						case msgData.MsgType == "/secret.compute.v1beta1.MsgInstantiateContract":
+							var msgResponse types.MsgInstantiateContractResponse
+							err := proto.Unmarshal(msgData.Data, &msgResponse)
+							if err != nil {
+								continue
+							}
+
+							dataField = msgResponse.Data
+						case msgData.MsgType == "/secret.compute.v1beta1.MsgExecuteContract":
+							var msgResponse types.MsgExecuteContractResponse
+							err := proto.Unmarshal(msgData.Data, &msgResponse)
+							if err != nil {
+								continue
+							}
+
+							dataField = msgResponse.Data
+						default:
+							continue
+						}
+
+						dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataField, nonces[i])
 						if err != nil {
 							continue
 						}
@@ -481,7 +504,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 									}
 									for _, nonce := range nonces {
 										valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
-										if err == nil {
+										if err != nil {
 											continue
 										}
 										a.Value = string(valuePlaintext)
@@ -510,10 +533,16 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				answers.PlaintextError = result.RawLog
 			}
 
-			return clientCtx.PrintObjectLegacy(&answers)
+			jsonBz, err := json.MarshalIndent(answers, "", "    ")
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintString(string(jsonBz))
 		},
 	}
 
+	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -596,7 +625,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 	if err != nil {
 		return err
 	}
-	nonce, _, _, _ := parseEncryptedBlob(queryData) // Ignoring error since we just encrypted it
+	nonce, _, _, _ := parseEncryptedBlob(queryData) //nolint:dogsled // Ignoring error since we just encrypted it
 
 	res, _, err := cliCtx.QueryWithData(route, queryData)
 	if err != nil {

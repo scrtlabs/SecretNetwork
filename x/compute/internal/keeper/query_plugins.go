@@ -229,9 +229,13 @@ var stargateQueryAllowlist = map[string]bool{
 	"/ibc.applications.transfer.v1.Query/Params":      true,
 	"/ibc.applications.transfer.v1.Query/DenomHash":   true,
 
-	"/secret.compute.v1beta1.Query/ContractInfo":    true,
-	"/secret.compute.v1beta1.Query/ContractsByCode": true,
-	"/secret.compute.v1beta1.Query/Codes":           true,
+	"/secret.compute.v1beta1.Query/ContractInfo":              true,
+	"/secret.compute.v1beta1.Query/ContractsByCodeID":         true,
+	"/secret.compute.v1beta1.Query/Codes":                     true,
+	"/secret.compute.v1beta1.Query/CodeHashByContractAddress": true,
+	"/secret.compute.v1beta1.Query/CodeHashByCodeID":          true,
+	"/secret.compute.v1beta1.Query/LabelByAddress":            true,
+	"/secret.compute.v1beta1.Query/AddressByLabel":            true,
 }
 
 func StargateQuerier(queryRouter GRPCQueryRouter) func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error) {
