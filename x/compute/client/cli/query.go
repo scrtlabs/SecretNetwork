@@ -428,9 +428,31 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					return fmt.Errorf("error while trying to parse data as protobuf: %w: %s", err, dataOutputHexB64)
 				}
 
-				for i, data := range txData.Data {
-					if len(data.Data) != 0 {
-						dataPlaintextB64Bz, err := wasmCtx.Decrypt(data.Data, nonces[i])
+				for i, msgData := range txData.Data {
+					if len(msgData.Data) != 0 {
+						var dataField []byte
+						switch {
+						case msgData.MsgType == "/secret.compute.v1beta1.MsgInstantiateContract":
+							var msgResponse types.MsgInstantiateContractResponse
+							err := proto.Unmarshal(msgData.Data, &msgResponse)
+							if err != nil {
+								continue
+							}
+
+							dataField = msgResponse.Data
+						case msgData.MsgType == "/secret.compute.v1beta1.MsgExecuteContract":
+							var msgResponse types.MsgExecuteContractResponse
+							err := proto.Unmarshal(msgData.Data, &msgResponse)
+							if err != nil {
+								continue
+							}
+
+							dataField = msgResponse.Data
+						default:
+							continue
+						}
+
+						dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataField, nonces[i])
 						if err != nil {
 							continue
 						}
@@ -510,7 +532,12 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				answers.PlaintextError = result.RawLog
 			}
 
-			return clientCtx.PrintObjectLegacy(&answers)
+			jsonBz, err := json.MarshalIndent(answers, "", "    ")
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintString(string(jsonBz))
 		},
 	}
 
