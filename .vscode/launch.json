@@ -29,7 +29,6 @@
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/secretd",
       "cwd": "${workspaceFolder}",
-      "env": { "SGX_MODE": "SW", "RUST_BACKTRACE": "1" },
       "args": [
         "q",
         "compute",
