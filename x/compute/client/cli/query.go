@@ -481,7 +481,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 									}
 									for _, nonce := range nonces {
 										valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
-										if err == nil {
+										if err != nil {
 											continue
 										}
 										a.Value = string(valuePlaintext)
