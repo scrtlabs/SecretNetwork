@@ -1,4 +1,3 @@
-use log::trace;
 // use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -31,26 +30,18 @@ impl KvCache {
 
         self.1.insert(k.to_vec(), v.to_vec())
     }
-    pub fn read(&self, k: &[u8]) -> Option<Vec<u8>> {
+    pub fn read(&self, key: &[u8]) -> Option<Vec<u8>> {
         // first to to read from the writeable cache - this will be more updated
-        let x = self.0.get(k);
-        if x.is_some() {
-            // trace!("************ Cache hit ***********");
-
-            return Some(x.unwrap().clone());
+        if let Some(value) = self.0.get(key) {
+            Some(value.clone())
         }
-
         // if no hit in the writeable cache, try the readable one
-        let x = self.1.get(k);
-        if x.is_some() {
-            // trace!("************ Cache hit from RO cache ***********");
-
-            return Some(x.unwrap().clone());
+        else if let Some(value) = self.1.get(key) {
+            Some(value.clone())
+        } else {
+            // trace!("************ Cache miss ***********");
+            None
         }
-
-        // trace!("************ Cache miss ***********");
-
-        return None;
     }
 
     pub fn flush(&mut self) -> Vec<(Vec<u8>, Vec<u8>)> {
@@ -66,10 +57,16 @@ impl KvCache {
         //
         // MultiKv { keys, values }
 
-        let items: Vec<(Vec<u8>, Vec<u8>)> = self.0.drain_filter(|_k, _v| true == true).collect();
+        let items: Vec<(Vec<u8>, Vec<u8>)> = self.0.drain_filter(|_k, _v| true).collect();
 
         self.1.clear();
 
         items
+    }
+}
+
+impl Default for KvCache {
+    fn default() -> Self {
+        Self::new()
     }
 }

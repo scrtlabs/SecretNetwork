@@ -18,7 +18,9 @@ use enclave_utils::kv_cache::KvCache;
 use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
-use crate::db::{encrypt_key, remove_encrypted_key, write_encrypted_key, write_multiple_keys};
+use crate::db::{
+    encrypt_key, remove_encrypted_key, /* write_encrypted_key, */ write_multiple_keys,
+};
 use crate::errors::WasmEngineError;
 use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
@@ -356,8 +358,7 @@ impl WasmiApi for ContractInstance {
         // *********************************
         // if value is in the cache
         // *********************************
-        if value.is_some() {
-            let unwrapped = value.unwrap();
+        if let Some(unwrapped) = value {
             let ptr_to_region_in_wasm_vm = self.write_to_memory(&unwrapped).map_err(|err| {
                 debug!(
                     "read_db() error while trying to allocate {} bytes for the value",
@@ -531,7 +532,7 @@ impl WasmiApi for ContractInstance {
 
     #[cfg(not(feature = "query-only"))]
     fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
-        let mut keys: Vec<(Vec<u8>, Vec<u8>)> = self
+        let keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .kv_cache
             .flush()
             .into_iter()
