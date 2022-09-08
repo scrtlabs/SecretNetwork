@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -97,7 +98,27 @@ const (
 	flagQueryGasLimit = "query_gas_limit"
 )
 
+const hackAtomContract = "hackatom.wasm"
+const v010Contract = "contract.wasm"
+const v1Contract = "v1-contract.wasm"
+const plaintextLogsContract = "plaintext_logs.wasm"
+const ibcContract = "ibc.wasm"
+const v010WithFloats = "contract_with_floats.wasm"
+const tooHighMemoryContract = "too-high-initial-memory.wasm"
+const staticTooHighMemoryContract = "static-too-high-initial-memory.wasm"
+
 const contractPath = "testdata"
+
+var TestContractPaths = map[string]string{
+	hackAtomContract:            filepath.Join(".", contractPath, hackAtomContract),
+	v010Contract:                filepath.Join(".", contractPath, v010Contract),
+	v1Contract:                  filepath.Join(".", contractPath, v1Contract),
+	plaintextLogsContract:       filepath.Join(".", contractPath, plaintextLogsContract),
+	ibcContract:                 filepath.Join(".", contractPath, ibcContract),
+	v010WithFloats:              filepath.Join(".", contractPath, v010WithFloats),
+	tooHighMemoryContract:       filepath.Join(".", contractPath, tooHighMemoryContract),
+	staticTooHighMemoryContract: filepath.Join(".", contractPath, staticTooHighMemoryContract),
+}
 
 var outOfGasError = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
 var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}

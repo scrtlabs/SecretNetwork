@@ -34,7 +34,7 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 sha2 = "0.9.1"
 
 [dev-dependencies]
-cosmwasm-schema = { path = "../../../packages/schema" }
+cosmwasm-schema = "0.10.0"
 cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 cosmwasm-vm = { path = "../../../packages/sgx-vm", package = "cosmwasm-sgx-vm", default-features = false }
 

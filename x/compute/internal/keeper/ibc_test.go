@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
 	"testing"
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -321,7 +320,7 @@ func ibcPacketTimeoutHelper(
 }
 
 func TestIBCChannelOpen(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -345,7 +344,7 @@ func TestIBCChannelOpen(t *testing.T) {
 }
 
 func TestIBCChannelOpenTry(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -369,7 +368,7 @@ func TestIBCChannelOpenTry(t *testing.T) {
 }
 
 func TestIBCChannelConnect(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -493,7 +492,7 @@ func TestIBCChannelConnect(t *testing.T) {
 }
 
 func TestIBCChannelConnectOpenAck(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -516,7 +515,7 @@ func TestIBCChannelConnectOpenAck(t *testing.T) {
 }
 
 func TestIBCChannelClose(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
 	require.Empty(t, err)
@@ -640,7 +639,7 @@ func TestIBCChannelClose(t *testing.T) {
 }
 
 func TestIBCChannelCloseInit(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -663,7 +662,7 @@ func TestIBCChannelCloseInit(t *testing.T) {
 }
 
 func TestIBCPacketReceive(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -800,9 +799,9 @@ type ContractInfo struct {
 }
 
 func TestIBCPacketReceiveCallsV010Contract(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	wasmCode, err := os.ReadFile(filepath.Join(".", contractPath, "contract.wasm"))
+	wasmCode, err := os.ReadFile(TestContractPaths[v010Contract])
 	require.NoError(t, err)
 
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
@@ -857,7 +856,7 @@ func TestIBCPacketReceiveCallsV010Contract(t *testing.T) {
 }
 
 func TestIBCPacketAck(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
 	require.Empty(t, err)
@@ -982,7 +981,7 @@ func TestIBCPacketAck(t *testing.T) {
 }
 
 func TestIBCPacketTimeout(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, filepath.Join(".", contractPath, "ibc.wasm"), sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
 	require.Empty(t, err)

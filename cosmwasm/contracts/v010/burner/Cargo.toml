@@ -44,7 +44,7 @@ snafu = { version = "0.6.3" }
 cosmwasm-vm = { path = "../../../packages/sgx-vm", package = "cosmwasm-sgx-vm", default-features = false, features = [
   "iterator"
 ] }
-cosmwasm-schema = { path = "../../../packages/schema" }
+cosmwasm-schema = "0.10.0"
 
 [workspace]
 members = []
