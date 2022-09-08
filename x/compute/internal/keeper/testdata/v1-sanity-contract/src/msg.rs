@@ -310,6 +310,9 @@ pub enum ExecuteMsg {
         to: String,
         code_hash: String,
     },
+    ValidateAddress {
+        addr: String,
+    },
     Sleep {
         ms: u64,
     },

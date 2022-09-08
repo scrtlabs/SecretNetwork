@@ -1164,6 +1164,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 funds: coins,
             })),
         ),
+        ExecuteMsg::ValidateAddress { addr } => match deps.api.addr_validate(addr.as_str()) {
+            Ok(a) => Ok(Response::new().set_data(a.as_bytes())),
+            Err(_) => Ok(Response::new().set_data(to_binary("Apple")?)),
+        },
     }
 }
 
