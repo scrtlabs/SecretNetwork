@@ -16,17 +16,17 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -66,17 +66,17 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -220,17 +220,17 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
