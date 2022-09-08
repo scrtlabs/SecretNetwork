@@ -514,6 +514,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 		},
 	}
 
+	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
 
