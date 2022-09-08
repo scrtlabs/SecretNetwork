@@ -74,7 +74,7 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=query-node, make build-testnet
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
@@ -106,7 +106,7 @@ jobs:
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=query-node, make build-mainnet-upgrade
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
@@ -133,7 +133,7 @@ jobs:
         run: |
           make build_cli
           cp "secretcli" "secretcli-$RUNNER_OS"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretcli-${{runner.os}}
           path: secretcli-${{runner.os}}
@@ -154,7 +154,7 @@ jobs:
         run: |
           make build_macos_arm64_cli
           cp "secretcli-macos-arm64" "secretcli-MacOS-arm64"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretcli-MacOS-arm64
           path: secretcli-MacOS-arm64
