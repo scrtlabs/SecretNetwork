@@ -33,6 +33,7 @@ import (
 func GetQueryCmd() *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
+		Aliases:                    []string{"wasm"},
 		Short:                      "Querying commands for the compute module",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
