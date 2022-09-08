@@ -730,7 +730,7 @@ impl WasmiApi for ContractInstance {
         }
 
         // Turn Vec<u8> to str
-        let human_addr_str = match std::str::from_utf8(&human) {
+        let source_human_address = match std::str::from_utf8(&human) {
             Err(err) => {
                 debug!(
                     "addr_validate() error while trying to parse human address from bytes to string: {:?}",
@@ -743,18 +743,39 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let (_, _) = match bech32::decode(&human_addr_str) {
+        let canonical_address = match bech32::decode(&source_human_address) {
             Err(err) => {
                 debug!(
                     "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
-                    human_addr_str, err
+                    source_human_address, err
                 );
                 return Ok(Some(RuntimeValue::I32(
                     self.write_to_memory(err.to_string().as_bytes())? as i32,
                 )));
             }
-            Ok(x) => x,
+            Ok((_prefix, canonical_address)) => canonical_address,
         };
+
+        let normalized_human_address = match bech32::encode(
+            BECH32_PREFIX_ACC_ADDR, // like we do in human_address()
+            canonical_address.clone(),
+        ) {
+            Err(err) => {
+                // Assaf: IMO This can never fail. From looking at bech32::encode, it only fails
+                // because input prefix issues. For us the prefix is always "secert" which is valid.
+                debug!("addr_validate() error while trying to encode canonical address {:?} to human: {:?}",  &canonical_address, err);
+                return Ok(Some(RuntimeValue::I32(
+                    self.write_to_memory(err.to_string().as_bytes())? as i32,
+                )));
+            }
+            Ok(normalized_human_address) => normalized_human_address,
+        };
+
+        if source_human_address != normalized_human_address {
+            return Ok(Some(RuntimeValue::I32(
+                self.write_to_memory(b"Address is not normalized")? as i32,
+            )));
+        }
 
         // return 0 == ok
         // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L164
