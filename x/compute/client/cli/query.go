@@ -596,7 +596,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 	if err != nil {
 		return err
 	}
-	nonce, _, _, _ := parseEncryptedBlob(queryData) // Ignoring error since we just encrypted it
+	nonce, _, _, _ := parseEncryptedBlob(queryData) //nolint:dogsled // Ignoring error since we just encrypted it
 
 	res, _, err := cliCtx.QueryWithData(route, queryData)
 	if err != nil {
