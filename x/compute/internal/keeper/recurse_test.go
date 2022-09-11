@@ -66,7 +66,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	creator, creatorPriv := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// store the code
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
@@ -330,7 +330,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 		// however, if we don't charge the cpu gas before sub-dispatching, we can recurse over 20 times
 		// TODO: figure out how to asset how deep it went
 		"deep recursion, should die on 5th level": {
-			gasLimit: 1_200_000,
+			gasLimit: 1_400_000,
 			msg: Recurse{
 				Depth: 50,
 				Work:  2000,

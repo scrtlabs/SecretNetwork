@@ -133,15 +133,15 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: contract.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm
       - uses: actions/upload-artifact@v2
         with:
           name: v1-contract.wasm
-          path: ./x/compute/internal/keeper/testdata/v1-sanity-contract/v1-contract.wasm
+          path: cosmwasm/contracts/v1/compute-tests/test-compute-contract/v1-contract.wasm
       - uses: actions/upload-artifact@v2
         with:
           name: ibc.wasm
-          path: ./x/compute/internal/keeper/testdata/ibc/ibc.wasm
+          path: cosmwasm/contracts/v1/compute-tests/ibc-test-contract/ibc.wasm
       - uses: actions/upload-artifact@v2
         with:
           name: enclave
@@ -153,15 +153,15 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: contract_with_floats.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract_with_floats.wasm
       - uses: actions/upload-artifact@v2
         with:
           name: too-high-initial-memory.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/too-high-initial-memory.wasm
       - uses: actions/upload-artifact@v2
         with:
           name: static-too-high-initial-memory.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/static-too-high-initial-memory.wasm
 
   Go-Tests:
     runs-on: ubuntu-20.04
@@ -191,11 +191,11 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: v1-contract.wasm
-          path: ./x/compute/internal/keeper/testdata/v1-sanity-contract
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v2
         with:
           name: ibc.wasm
-          path: ./x/compute/internal/keeper/testdata/ibc
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v2
         with:
           name: contract_with_floats.wasm
@@ -210,10 +210,10 @@ jobs:
           find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-          cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
-          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
-          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
-          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+          cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
+          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
+          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
+          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
           find "$(pwd)" -name \*.wasm
       - name: Test x/registration
         run: |

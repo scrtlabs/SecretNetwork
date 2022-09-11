@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,10 +16,10 @@ import (
 )
 
 func TestUncompress(t *testing.T) {
-	wasmRaw, err := os.ReadFile("./testdata/contract.wasm")
+	wasmRaw, err := os.ReadFile(filepath.Join(".", contractPath, "test_gzip_contract_raw.wasm"))
 	require.NoError(t, err)
 
-	wasmGzipped, err := os.ReadFile("./testdata/contract.wasm.gzip")
+	wasmGzipped, err := os.ReadFile(filepath.Join(".", contractPath, "test_gzip_contract.wasm.gz"))
 	require.NoError(t, err)
 
 	specs := map[string]struct {
