@@ -10,6 +10,7 @@ import (
 	"github.com/enigmampc/SecretNetwork/app/upgrades"
 	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
+	v1_4_fix "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4-fix"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -138,7 +139,7 @@ var (
 		distrtypes.ModuleName: true,
 	}
 
-	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade}
+	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade, v1_4_fix.Upgrade}
 )
 
 // Verify app interface at compile time
