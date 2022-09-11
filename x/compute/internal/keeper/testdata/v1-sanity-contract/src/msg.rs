@@ -397,6 +397,7 @@ pub enum ExecuteMsg {
         amount: Vec<Coin>,
     },
     CosmosMsgCustom {},
+    GetEnv {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

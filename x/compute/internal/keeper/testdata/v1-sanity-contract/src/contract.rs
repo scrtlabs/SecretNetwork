@@ -1168,6 +1168,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             Ok(a) => Ok(Response::new().set_data(a.as_bytes())),
             Err(_) => Ok(Response::new().set_data(to_binary("Apple")?)),
         },
+        ExecuteMsg::GetEnv {} => Ok(Response::new()
+            .add_attribute("env", serde_json_wasm::to_string(&env).unwrap())
+            .add_attribute("info", serde_json_wasm::to_string(&info).unwrap())),
     }
 }
 

@@ -318,6 +318,7 @@ pub enum HandleMsg {
     },
     CosmosMsgCustom {},
     InitNewContract {},
+    GetEnv {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -546,7 +547,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             messages: vec![CosmosMsg::Custom(Empty {})],
             log: vec![],
         }),
-        InitMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(InitResponse {
+        InitMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(InitResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to,
                 msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
@@ -555,16 +560,20 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             })],
             log: vec![],
         }),
-        InitMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(InitResponse {
+        InitMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(InitResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
                 msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
                 callback_code_hash: code_hash,
                 send: coins,
-                label: "test".to_string()
+                label: "test".to_string(),
             })],
             log: vec![],
-        })
+        }),
     }
 }
 
@@ -1243,7 +1252,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
-        HandleMsg::SendMultipleFundsToExecCallback { coins, to, code_hash } => Ok(HandleResponse {
+        HandleMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: to,
                 msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
@@ -1253,17 +1266,26 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
-        HandleMsg::SendMultipleFundsToInitCallback { coins, code_id, code_hash } => Ok(HandleResponse {
+        HandleMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(HandleResponse {
             messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
                 msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
                 callback_code_hash: code_hash,
                 send: coins,
-                label: "test".to_string()
+                label: "test".to_string(),
             })],
             log: vec![],
             data: None,
-        })
+        }),
+        HandleMsg::GetEnv {} => Ok(HandleResponse {
+            log: vec![log("env", serde_json_wasm::to_string(&env).unwrap())],
+            data: None,
+            messages: vec![],
+        }),
     }
 }
 
