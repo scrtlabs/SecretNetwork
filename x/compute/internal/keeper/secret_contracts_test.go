@@ -6223,7 +6223,7 @@ func TestReplyGasExceedingMessageGas(t *testing.T) {
 }
 
 func TestAddrValidateFunction(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, "./testdata/v1-sanity-contract/v1-contract.wasm", sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
