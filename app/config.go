@@ -50,6 +50,7 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute"
 	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
 	"github.com/enigmampc/SecretNetwork/x/registration"
+	"github.com/enigmampc/SecretNetwork/x/usc"
 )
 
 var mbasics = module.NewBasicManager(
@@ -103,6 +104,7 @@ func customModuleBasics() []module.AppModuleBasic {
 		compute.AppModuleBasic{},
 		registration.AppModuleBasic{},
 		icaauth.AppModuleBasic{},
+		usc.AppModuleBasic{},
 	}
 }
 

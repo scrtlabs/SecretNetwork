@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"github.com/enigmampc/SecretNetwork/x/usc"
+	usctypes "github.com/enigmampc/SecretNetwork/x/usc/types"
 	"io"
 	"net/http"
 	"os"
@@ -100,6 +102,8 @@ import (
 	reg "github.com/enigmampc/SecretNetwork/x/registration"
 	"github.com/spf13/cast"
 
+	usckeeper "github.com/enigmampc/SecretNetwork/x/usc/keeper"
+
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -132,6 +136,8 @@ var (
 		govtypes.ModuleName:            {authtypes.Burner},
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 		icatypes.ModuleName:            nil,
+		usctypes.ActivePoolName:        {authtypes.Minter},
+		usctypes.RedeemingPoolName:     {authtypes.Burner},
 	}
 
 	// Module accounts that are allowed to receive tokens
@@ -188,6 +194,8 @@ type SecretNetworkApp struct {
 	ICAControllerKeeper icacontrollerkeeper.Keeper
 	ICAHostKeeper       icahostkeeper.Keeper
 	ICAAuthKeeper       icaauthkeeper.Keeper
+
+	USCKeeper usckeeper.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -267,7 +275,7 @@ func NewSecretNetworkApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, compute.StoreKey,
-		reg.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey,
+		reg.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey, usctypes.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -406,6 +414,14 @@ func NewSecretNetworkApp(
 		govRouter,
 	)
 
+	app.USCKeeper = usckeeper.NewKeeper(
+		appCodec,
+		keys[usctypes.StoreKey],
+		app.accountKeeper,
+		app.bankKeeper,
+		app.getSubspace(usctypes.ModuleName),
+	)
+
 	computeDir := filepath.Join(homePath, ".compute")
 
 	// The last arguments can contain custom message handlers, and custom query handlers,
@@ -476,6 +492,7 @@ func NewSecretNetworkApp(
 		transfer.NewAppModule(app.transferKeeper),
 		icaModule,
 		icaAuthModule,
+		usc.NewAppModule(appCodec, app.USCKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -504,6 +521,7 @@ func NewSecretNetworkApp(
 		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
+		usctypes.ModuleName,
 	)
 
 	// NOTE: Capability module must occur first so that it can initialize any capabilities
@@ -531,6 +549,7 @@ func NewSecretNetworkApp(
 		icaauthtypes.ModuleName,
 		compute.ModuleName,
 		reg.ModuleName,
+		usctypes.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -549,6 +568,7 @@ func NewSecretNetworkApp(
 		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
+		usctypes.ModuleName,
 
 		icatypes.ModuleName,
 		icaauthtypes.ModuleName,
@@ -785,6 +805,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
+	paramsKeeper.Subspace(usctypes.ModuleName)
 
 	return paramsKeeper
 }

@@ -473,7 +473,7 @@ proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	$(DOCKER) run --rm -v /mnt/c/Users/Itzik/GolandProjects/SecretNetwork:/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
