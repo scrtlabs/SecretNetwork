@@ -71,7 +71,36 @@ impl BaseEnv {
     }
 
     fn into_v010(self) -> CwEnv {
-        CwEnv::V010Env { env: self.0 }
+        // Assaf: contract_key is irrelevant inside the contract,
+        // but existing v0.10 contracts might expect it to be populated :facepalm:,
+        // therefore we are going to leave it populated :shrug:.
+
+        // in secretd v1.3 the timestamp passed from Go was unix time in seconds
+        // from secretd v1.4 the timestamp passed from Go is unix time in nanoseconds
+        // v0.10 time is seconds since unix epoch
+        // v1 time is nanoseconds since unix epoch
+        // so we need to convert it from nanoseconds to seconds
+
+        CwEnv::V010Env {
+            env: V010Env {
+                block: v010types::BlockInfo {
+                    height: self.0.block.height,
+                    // v0.10 env.block.time is seconds since unix epoch
+                    time: v1types::Timestamp::from_nanos(self.0.block.time).seconds(),
+                    chain_id: self.0.block.chain_id,
+                },
+                message: v010types::MessageInfo {
+                    sender: self.0.message.sender,
+                    sent_funds: self.0.message.sent_funds,
+                },
+                contract: v010types::ContractInfo {
+                    address: self.0.contract.address,
+                },
+                contract_key: self.0.contract_key,
+                contract_code_hash: self.0.contract_code_hash,
+                transaction: None,
+            },
+        }
     }
 
     /// This is the conversion function from the base to the new env. We assume that if there are
@@ -81,8 +110,9 @@ impl BaseEnv {
             env: V1Env {
                 block: v1types::BlockInfo {
                     height: self.0.block.height,
+                    // v1 env.block.time is nanoseconds since unix epoch
                     time: v1types::Timestamp::from_nanos(self.0.block.time),
-                    chain_id: self.0.block.chain_id.clone(),
+                    chain_id: self.0.block.chain_id,
                 },
                 contract: v1types::ContractInfo {
                     address: v1types::Addr::unchecked(self.0.contract.address.0),

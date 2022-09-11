@@ -98,6 +98,7 @@ pub enum InstantiateMsg {
         to: String,
         code_hash: String,
     },
+    GetEnv {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -397,6 +398,7 @@ pub enum ExecuteMsg {
         amount: Vec<Coin>,
     },
     CosmosMsgCustom {},
+    GetEnv {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -436,6 +438,7 @@ pub enum QueryMsg {
         msg: String,
     },
     GetContractVersion {},
+    GetEnv {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
