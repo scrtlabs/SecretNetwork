@@ -5,6 +5,7 @@ import {
   fromBase64,
   fromUtf8,
   MsgExecuteContract,
+  MsgInstantiateContract,
   ProposalType,
   SecretNetworkClient,
   toBase64,
@@ -31,6 +32,11 @@ import {
   instantiateContracts,
   cleanBytes,
 } from "./utils";
+
+import {
+  MsgInstantiateContractResponse,
+  MsgExecuteContractResponse,
+} from "secretjs/dist/protobuf_stuff/secret/compute/v1beta1/msg";
 
 type Account = {
   address: string;
@@ -453,6 +459,48 @@ describe("Env", () => {
       });
     });
   });
+});
+
+describe("Init", () => {
+  test.only("v1", async () => {
+    const tx = await accounts[0].secretjs.tx.compute.instantiateContract(
+      {
+        sender: accounts[0].address,
+        codeId: contracts["secretdev-1"].v1.codeId,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        initMsg: { nop: {} },
+        label: `v1-1-${Date.now()}`,
+      },
+      { gasLimit: 300_000 }
+    );
+
+    const logAddr = tx.arrayLog.find((x) => x.key === "contract_address").value;
+
+    const resp = MsgInstantiateContractResponse.decode(tx.data[0]);
+    console.log(JSON.stringify(resp));
+    expect(logAddr).toBe(resp.address);
+  });
+
+  test("v0.10", async () => {});
+});
+
+describe("Execute", () => {
+  test("v1", async () => {
+    const tx = await accounts[0].secretjs.tx.compute.executeContract(
+      {
+        sender: accounts[0].address,
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        msg: { nop: {} },
+      },
+      { gasLimit: 300_000 }
+    );
+
+    const resp = MsgExecuteContractResponse.decode(tx.data[0]);
+    console.log(JSON.stringify(resp));
+  });
+
+  test("v0.10", async () => {});
 });
 
 describe("CustomMsg", () => {

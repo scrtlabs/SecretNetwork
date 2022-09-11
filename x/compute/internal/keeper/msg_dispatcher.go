@@ -232,12 +232,12 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		} // on failure, revert state from sandbox, and ignore events (just skip doing the above)
 
 		// we only callback if requested. Short-circuit here the cases we don't want to
-		if (msg.ReplyOn == v1wasmTypes.ReplySuccess || msg.ReplyOn == v1wasmTypes.ReplyNever) && err != nil {
+		if err != nil && (msg.ReplyOn == v1wasmTypes.ReplySuccess || msg.ReplyOn == v1wasmTypes.ReplyNever) {
 			// Note: this also handles the case of v0.10 submessage for which the execution failed
 			return nil, err
 		}
 
-		if msg.ReplyOn == v1wasmTypes.ReplyNever || (msg.ReplyOn == v1wasmTypes.ReplyError && err == nil) {
+		if msg.ReplyOn == v1wasmTypes.ReplyNever || (err == nil && msg.ReplyOn == v1wasmTypes.ReplyError) {
 			continue
 		}
 
