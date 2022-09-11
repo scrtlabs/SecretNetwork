@@ -462,7 +462,7 @@ describe("Env", () => {
 });
 
 describe("Init", () => {
-  test.only("v1", async () => {
+  test("v1", async () => {
     const tx = await accounts[0].secretjs.tx.compute.instantiateContract(
       {
         sender: accounts[0].address,
@@ -477,8 +477,8 @@ describe("Init", () => {
     const logAddr = tx.arrayLog.find((x) => x.key === "contract_address").value;
 
     const resp = MsgInstantiateContractResponse.decode(tx.data[0]);
-    console.log(JSON.stringify(resp));
-    expect(logAddr).toBe(resp.address);
+    expect(resp.address).toBe(logAddr);
+    expect(resp.data[0]).toBe(137);
   });
 
   test("v0.10", async () => {});
@@ -497,7 +497,7 @@ describe("Execute", () => {
     );
 
     const resp = MsgExecuteContractResponse.decode(tx.data[0]);
-    console.log(JSON.stringify(resp));
+    expect(resp.data[0]).toBe(137);
   });
 
   test("v0.10", async () => {});
