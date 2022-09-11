@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -77,7 +78,7 @@ func TestCreate(t *testing.T) {
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -102,7 +103,7 @@ func TestCreateDuplicate(t *testing.T) {
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	// create one copy
@@ -140,7 +141,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	// create this once in simulation mode
@@ -199,18 +200,28 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm.gzip")
+	wasmCode, err := os.ReadFile(filepath.Join(".", contractPath, "test_gzip_contract.wasm.gz"))
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), contractID)
 	// and verify content
+
 	storedCode, err := keeper.GetWasm(ctx, contractID)
+	h := sha1.New()
+	h.Write(storedCode)
+	hashStoredCode := h.Sum(nil)
+
 	require.NoError(t, err)
-	rawCode, err := os.ReadFile("./testdata/contract.wasm")
+	rawCode, err := os.ReadFile(filepath.Join(".", contractPath, "test_gzip_contract_raw.wasm"))
+
+	h = sha1.New()
+	h.Write(rawCode)
+	hashRawCode := h.Sum(nil)
+
 	require.NoError(t, err)
-	require.Equal(t, rawCode, storedCode)
+	require.Equal(t, hashRawCode, hashStoredCode)
 }
 
 func TestInstantiate(t *testing.T) {
@@ -226,7 +237,7 @@ func TestInstantiate(t *testing.T) {
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/contracts/hackatom/src/contract.rs", "")
@@ -318,7 +329,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.NewCoins())
+			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, TestContractPaths[hackAtomContract], sdk.NewCoins())
 
 			deposit := 100
 			var funds int64 = 0
@@ -411,7 +422,7 @@ func TestExecute(t *testing.T) {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	fred, privFred := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -551,7 +562,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.NewCoins())
+			ctx, keeper, codeID, _, _, _, _, _ := setupTest(t, TestContractPaths[hackAtomContract], sdk.NewCoins())
 
 			deposit := int64(100)
 			var funds int64 = 0
@@ -641,7 +652,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -696,7 +707,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -808,7 +819,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")

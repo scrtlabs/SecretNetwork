@@ -34,7 +34,7 @@ func TestQueryContractLabel(t *testing.T) {
 	creator, privCreator := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -138,7 +138,7 @@ func TestQueryContractState(t *testing.T) {
 	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -282,7 +282,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
