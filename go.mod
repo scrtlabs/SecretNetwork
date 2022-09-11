@@ -13,7 +13,7 @@ require (
 	github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
 	github.com/pkg/errors v0.9.1
 	github.com/rakyll/statik v0.1.7
-	github.com/rs/zerolog v1.26.0
+	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cast v1.4.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
@@ -32,6 +32,7 @@ require github.com/cosmos/gorocksdb v1.2.0 // indirect
 require (
 	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
