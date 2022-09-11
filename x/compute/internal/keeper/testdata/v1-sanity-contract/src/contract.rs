@@ -17,7 +17,7 @@ use crate::state::{count, count_read, expiration, expiration_read};
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     match msg {
@@ -321,6 +321,9 @@ pub fn instantiate(
                 funds: coins,
             })),
         ),
+        InstantiateMsg::GetEnv {} => Ok(Response::new()
+            .add_attribute("env", serde_json_wasm::to_string(&env).unwrap())
+            .add_attribute("info", serde_json_wasm::to_string(&info).unwrap())),
     }
 }
 
@@ -1740,6 +1743,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let answer: u8 = 1;
             return Ok(to_binary(&answer)?);
         }
+        QueryMsg::GetEnv {} => Ok(Binary::from(
+            serde_json_wasm::to_string(&env)
+                .unwrap()
+                .as_bytes()
+                .to_vec(),
+        )),
     }
 }
 

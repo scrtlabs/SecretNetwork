@@ -98,6 +98,7 @@ pub enum InstantiateMsg {
         to: String,
         code_hash: String,
     },
+    GetEnv {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -437,6 +438,7 @@ pub enum QueryMsg {
         msg: String,
     },
     GetContractVersion {},
+    GetEnv {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

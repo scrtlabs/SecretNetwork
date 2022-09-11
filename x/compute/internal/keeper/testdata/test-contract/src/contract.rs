@@ -103,6 +103,7 @@ pub enum InitMsg {
         to: HumanAddr,
         code_hash: String,
     },
+    GetEnv {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -573,6 +574,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 label: "test".to_string(),
             })],
             log: vec![],
+        }),
+        InitMsg::GetEnv {} => Ok(InitResponse {
+            log: vec![log("env", serde_json_wasm::to_string(&env).unwrap())],
+            messages: vec![],
         }),
     }
 }

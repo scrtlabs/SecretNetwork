@@ -6245,11 +6245,64 @@ func TestEnv(t *testing.T) {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
-			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
+			_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
 			require.Empty(t, initErr)
 
-			_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 1)
+			expectedV1Env := fmt.Sprintf(
+				`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+				ctx.BlockHeight(),
+				// env.block.time is nanoseconds since unix epoch
+				ctx.BlockTime().UnixNano(),
+				ctx.ChainID(),
+				contractAddress.String(),
+				calcCodeHash(testContract.WasmFilePath),
+			)
+			expectedV1MsgInfo := fmt.Sprintf(
+				`{"sender":"%s","funds":[{"denom":"denom","amount":"1"}]}`,
+				walletA.String(),
+			)
 
+			if testContract.IsCosmWasmV1 {
+				requireEvents(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{
+								Key:   "env",
+								Value: expectedV1Env,
+							},
+							{
+								Key:   "info",
+								Value: expectedV1MsgInfo,
+							},
+						},
+					},
+					initEvents,
+				)
+			} else {
+				requireEvents(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{
+								Key: "env",
+								Value: fmt.Sprintf(
+									`{"block":{"height":%d,"time":%d,"chain_id":"%s"},"message":{"sender":"%s","sent_funds":[{"denom":"denom","amount":"1"}]},"contract":{"address":"%s"},"contract_key":"","contract_code_hash":"%s"}`,
+									ctx.BlockHeight(),
+									// env.block.time is seconds since unix epoch
+									ctx.BlockTime().Unix(),
+									ctx.ChainID(),
+									walletA.String(),
+									contractAddress.String(),
+									calcCodeHash(testContract.WasmFilePath),
+								),
+							},
+						},
+					},
+					initEvents,
+				)
+			}
+			_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 1)
 			require.Empty(t, execErr)
 
 			if testContract.IsCosmWasmV1 {
@@ -6258,23 +6311,12 @@ func TestEnv(t *testing.T) {
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
 							{
-								Key: "env",
-								Value: fmt.Sprintf(
-									`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
-									ctx.BlockHeight(),
-									// env.block.time is nanoseconds since unix epoch
-									ctx.BlockTime().UnixNano(),
-									ctx.ChainID(),
-									contractAddress.String(),
-									calcCodeHash(testContract.WasmFilePath),
-								),
+								Key:   "env",
+								Value: expectedV1Env,
 							},
 							{
-								Key: "info",
-								Value: fmt.Sprintf(
-									`{"sender":"%s","funds":[{"denom":"denom","amount":"1"}]}`,
-									walletA.String(),
-								),
+								Key:   "info",
+								Value: expectedV1MsgInfo,
 							},
 						},
 					},
@@ -6303,6 +6345,16 @@ func TestEnv(t *testing.T) {
 					},
 					execEvents,
 				)
+			}
+
+			if testContract.IsCosmWasmV1 {
+				// only env (no msg info) in v1 query
+				queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get_env":{}}`, true, false, math.MaxUint64)
+				require.Empty(t, qErr)
+
+				require.Equal(t, queryRes, expectedV1Env)
+			} else {
+				// no env or msg info in v0.10 query
 			}
 		})
 	}
