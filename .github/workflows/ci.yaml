@@ -165,22 +165,22 @@ jobs:
           wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: libgo_cosmwasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: enclave
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: contract.wasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: contract_with_floats.wasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: too-high-initial-memory.wasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: static-too-high-initial-memory.wasm
       - name: Setup Files
