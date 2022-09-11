@@ -37,7 +37,7 @@ base64 = "0.11.0"
 serde-json-wasm = { version = "0.2.1" }
 schemars = "0.7"
 serde = { version = "1.0.117", default-features = false, features = ["derive", "alloc"] }
-snafu = { version = "0.6.6" }
+snafu = { version = "0.7.1" }
 
 [dev-dependencies]
 cosmwasm-schema = { path = "../schema" }
