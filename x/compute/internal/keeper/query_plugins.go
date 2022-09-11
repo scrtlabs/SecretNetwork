@@ -153,51 +153,32 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 //   - /secret.intertx.*
 //   - /cosmos.evidence.*
 //   - /cosmos.upgrade.*
+//   - All "get all" queries - only O(1) queries should be served
 //
 // we reserve the right to add/remove queries in future chain upgrades
 //
 // used this to find all query paths:
 // find -name query.proto | sort | xargs grep -Poin 'package [a-z0-9.]+;|rpc [a-zA-Z]+\('
 var stargateQueryAllowlist = map[string]bool{
-	"/cosmos.auth.v1beta1.Query/Account":  true,
-	"/cosmos.auth.v1beta1.Query/Accounts": true,
-	"/cosmos.auth.v1beta1.Query/Params":   true,
+	"/cosmos.auth.v1beta1.Query/Account": true,
+	"/cosmos.auth.v1beta1.Query/Params":  true,
 
-	"/cosmos.authz.v1beta1.Query/Grants":        true,
-	"/cosmos.authz.v1beta1.Query/GranterGrants": true,
-	"/cosmos.authz.v1beta1.Query/GranteeGrants": true,
+	"/cosmos.bank.v1beta1.Query/Balance":       true,
+	"/cosmos.bank.v1beta1.Query/DenomMetadata": true,
+	"/cosmos.bank.v1beta1.Query/SupplyOf":      true,
+	"/cosmos.bank.v1beta1.Query/Params":        true,
 
-	"/cosmos.bank.v1beta1.Query/Balance":           true,
-	"/cosmos.bank.v1beta1.Query/AllBalances":       true,
-	"/cosmos.bank.v1beta1.Query/SpendableBalances": true,
-	"/cosmos.bank.v1beta1.Query/TotalSupply":       true,
-	"/cosmos.bank.v1beta1.Query/SupplyOf":          true,
-	"/cosmos.bank.v1beta1.Query/Params":            true,
-	"/cosmos.bank.v1beta1.Query/DenomMetadata":     true,
-	"/cosmos.bank.v1beta1.Query/DenomsMetadata":    true,
+	"/cosmos.distribution.v1beta1.Query/Params":                   true,
+	"/cosmos.distribution.v1beta1.Query/DelegatorWithdrawAddress": true,
+	"/cosmos.distribution.v1beta1.Query/FoundationTax":            true,
+	"/cosmos.distribution.v1beta1.Query/ValidatorCommission":      true,
 
-	"/cosmos.distribution.v1beta1.Query/Params":                      true,
-	"/cosmos.distribution.v1beta1.Query/ValidatorOutstandingRewards": true,
-	"/cosmos.distribution.v1beta1.Query/ValidatorCommission":         true,
-	"/cosmos.distribution.v1beta1.Query/ValidatorSlashes":            true,
-	"/cosmos.distribution.v1beta1.Query/DelegationRewards":           true,
-	"/cosmos.distribution.v1beta1.Query/DelegationTotalRewards":      true,
-	"/cosmos.distribution.v1beta1.Query/DelegatorValidators":         true,
-	"/cosmos.distribution.v1beta1.Query/DelegatorWithdrawAddress":    true,
-	"/cosmos.distribution.v1beta1.Query/CommunityPool":               true,
-	"/cosmos.distribution.v1beta1.Query/FoundationTax":               true,
+	"/cosmos.feegrant.v1beta1.Query/Allowance": true,
 
-	"/cosmos.feegrant.v1beta1.Query/Allowance":  true,
-	"/cosmos.feegrant.v1beta1.Query/Allowances": true,
-
-	"/cosmos.gov.v1beta1.Query/Proposal":    true,
-	"/cosmos.gov.v1beta1.Query/Proposals":   true,
-	"/cosmos.gov.v1beta1.Query/Vote":        true,
-	"/cosmos.gov.v1beta1.Query/Votes":       true,
-	"/cosmos.gov.v1beta1.Query/Params":      true,
-	"/cosmos.gov.v1beta1.Query/Deposit":     true,
-	"/cosmos.gov.v1beta1.Query/Deposits":    true,
-	"/cosmos.gov.v1beta1.Query/TallyResult": true,
+	"/cosmos.gov.v1beta1.Query/Deposit":  true,
+	"/cosmos.gov.v1beta1.Query/Params":   true,
+	"/cosmos.gov.v1beta1.Query/Proposal": true,
+	"/cosmos.gov.v1beta1.Query/Vote":     true,
 
 	"/cosmos.mint.v1beta1.Query/Params":           true,
 	"/cosmos.mint.v1beta1.Query/Inflation":        true,
@@ -205,33 +186,19 @@ var stargateQueryAllowlist = map[string]bool{
 
 	"/cosmos.params.v1beta1.Query/Params": true,
 
-	"/cosmos.slashing.v1beta1.Query/Params":       true,
-	"/cosmos.slashing.v1beta1.Query/SigningInfo":  true,
-	"/cosmos.slashing.v1beta1.Query/SigningInfos": true,
+	"/cosmos.slashing.v1beta1.Query/Params":      true,
+	"/cosmos.slashing.v1beta1.Query/SigningInfo": true,
 
-	"/cosmos.staking.v1beta1.Query/Validators":                    true,
-	"/cosmos.staking.v1beta1.Query/Validator":                     true,
-	"/cosmos.staking.v1beta1.Query/ValidatorDelegations":          true,
-	"/cosmos.staking.v1beta1.Query/ValidatorUnbondingDelegations": true,
-	"/cosmos.staking.v1beta1.Query/Delegation":                    true,
-	"/cosmos.staking.v1beta1.Query/UnbondingDelegation":           true,
-	"/cosmos.staking.v1beta1.Query/DelegatorDelegations":          true,
-	"/cosmos.staking.v1beta1.Query/DelegatorUnbondingDelegations": true,
-	"/cosmos.staking.v1beta1.Query/Redelegations":                 true,
-	"/cosmos.staking.v1beta1.Query/DelegatorValidators":           true,
-	"/cosmos.staking.v1beta1.Query/DelegatorValidator":            true,
-	"/cosmos.staking.v1beta1.Query/HistoricalInfo":                true,
-	"/cosmos.staking.v1beta1.Query/Pool":                          true,
-	"/cosmos.staking.v1beta1.Query/Params":                        true,
+	"/cosmos.staking.v1beta1.Query/Validator":           true,
+	"/cosmos.staking.v1beta1.Query/Delegation":          true,
+	"/cosmos.staking.v1beta1.Query/UnbondingDelegation": true,
+	"/cosmos.staking.v1beta1.Query/Params":              true,
 
-	"/ibc.applications.transfer.v1.Query/DenomTrace":  true,
-	"/ibc.applications.transfer.v1.Query/DenomTraces": true,
-	"/ibc.applications.transfer.v1.Query/Params":      true,
-	"/ibc.applications.transfer.v1.Query/DenomHash":   true,
+	"/ibc.applications.transfer.v1.Query/DenomHash":  true,
+	"/ibc.applications.transfer.v1.Query/DenomTrace": true,
+	"/ibc.applications.transfer.v1.Query/Params":     true,
 
 	"/secret.compute.v1beta1.Query/ContractInfo":              true,
-	"/secret.compute.v1beta1.Query/ContractsByCodeID":         true,
-	"/secret.compute.v1beta1.Query/Codes":                     true,
 	"/secret.compute.v1beta1.Query/CodeHashByContractAddress": true,
 	"/secret.compute.v1beta1.Query/CodeHashByCodeID":          true,
 	"/secret.compute.v1beta1.Query/LabelByAddress":            true,
