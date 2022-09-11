@@ -186,8 +186,6 @@ func (w *Wasmer) Instantiate(
 				if err != nil {
 					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
 				}
-			} else {
-				respV010orV1.V010.Ok.Data = nil
 			}
 
 			return respV010orV1.V010.Ok, key, gasUsed, nil
@@ -210,8 +208,6 @@ func (w *Wasmer) Instantiate(
 				if err != nil {
 					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
 				}
-			} else {
-				respV010orV1.V1.Ok.Data = nil
 			}
 
 			return respV010orV1.V1.Ok, key, gasUsed, nil
