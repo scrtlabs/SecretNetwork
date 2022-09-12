@@ -313,6 +313,9 @@ func CmdDecryptText() *cobra.Command {
 			}
 
 			nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(dataCipherBz)
+			if err != nil {
+				return fmt.Errorf("error while parse encrypted blob: %w", err)
+			}
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
