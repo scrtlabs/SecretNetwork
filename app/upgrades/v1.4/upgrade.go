@@ -15,7 +15,7 @@ const UpgradeName = "v1.4"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          UpgradeName,
 	CreateUpgradeHandler: CreateUpgradeHandler,
-	StoreUpgrades:        store.StoreUpgrades{},
+	StoreUpgrades:        store.StoreUpgrades{Added: []string{usctypes.StoreKey}},
 }
 
 func CreateUpgradeHandler(mm *module.Manager, configurator module.Configurator,

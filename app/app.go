@@ -13,7 +13,6 @@ import (
 	"github.com/enigmampc/SecretNetwork/app/upgrades"
 	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
-	v1_4_fix "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4-fix"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -146,7 +145,7 @@ var (
 		distrtypes.ModuleName: true,
 	}
 
-	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade, v1_4_fix.Upgrade}
+	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade}
 )
 
 // Verify app interface at compile time
@@ -272,11 +271,25 @@ func NewSecretNetworkApp(
 	// bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
 
 	keys := sdk.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
-		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
-		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
-		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, compute.StoreKey,
-		reg.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey, usctypes.StoreKey,
+		authtypes.StoreKey,
+		banktypes.StoreKey,
+		stakingtypes.StoreKey,
+		minttypes.StoreKey,
+		distrtypes.StoreKey,
+		slashingtypes.StoreKey,
+		govtypes.StoreKey,
+		paramstypes.StoreKey,
+		ibchost.StoreKey,
+		upgradetypes.StoreKey,
+		evidencetypes.StoreKey,
+		ibctransfertypes.StoreKey,
+		capabilitytypes.StoreKey,
+		compute.StoreKey,
+		reg.StoreKey,
+		feegrant.StoreKey,
+		authzkeeper.StoreKey,
+		icahosttypes.StoreKey,
+		usctypes.StoreKey,
 	)
 
 	tKeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -777,7 +790,11 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 
 	for _, upgradeDetails := range Upgrades {
 		if upgradeInfo.Name == upgradeDetails.UpgradeName {
-			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
+			app.SetStoreLoader(
+				upgradetypes.UpgradeStoreLoader(
+					upgradeInfo.Height, &upgradeDetails.StoreUpgrades,
+				),
+			)
 		}
 	}
 }
