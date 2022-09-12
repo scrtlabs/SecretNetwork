@@ -67,7 +67,7 @@ enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
 sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
 log = "0.4.8"
-base64 = "0.12.0"
+base64 = "0.13.0"
 parking_lot = "0.11"
 num_cpus = "1.13.1"
 
