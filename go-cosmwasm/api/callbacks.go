@@ -122,9 +122,10 @@ type DBState struct {
 }
 
 // use this to create C.DB in two steps, so the pointer lives as long as the calling stack
-//   state := buildDBState(kv, counter)
-//   db := buildDB(&state, &gasMeter)
-//   // then pass db into some FFI function
+//
+//	state := buildDBState(kv, counter)
+//	db := buildDB(&state, &gasMeter)
+//	// then pass db into some FFI function
 func buildDBState(kv KVStore, counter uint64) DBState {
 	return DBState{
 		Store:           kv,

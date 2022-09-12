@@ -1,6 +1,6 @@
 [package]
 name = "secret-enclave"
-version = "1.2.4"
+version = "1.4.0"
 authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
@@ -59,7 +59,8 @@ itertools = { version = "0.8", default-features = false, features = [] }
 bit-vec = { version = "0.6", default-features = false }
 lazy_static = "1.4"
 hex = "0.4.2"
-log = "0.4.8"
+log = "0.4.17"
+simple_logger = { version = "2.3.0", default-features = false, features = ["stderr"] }
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"

@@ -2,10 +2,13 @@ package keeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
+	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
@@ -22,9 +25,14 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
+type GRPCQueryRouter interface {
+	Route(path string) baseapp.GRPCQueryHandler
+}
+
 type QueryHandler struct {
 	Ctx     sdk.Context
 	Plugins QueryPlugins
+	Caller  sdk.AccAddress
 }
 
 var _ wasmTypes.Querier = QueryHandler{}
@@ -61,6 +69,12 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]
 	if request.Gov != nil {
 		return q.Plugins.Gov(q.Ctx, request.Gov)
 	}
+	if request.IBC != nil {
+		return q.Plugins.IBC(q.Ctx, q.Caller, request.IBC)
+	}
+	if request.Stargate != nil {
+		return q.Plugins.Stargate(q.Ctx, request.Stargate)
+	}
 	return nil, wasmTypes.Unknown{}
 }
 
@@ -71,24 +85,28 @@ func (q QueryHandler) GasConsumed() uint64 {
 type CustomQuerier func(ctx sdk.Context, request json.RawMessage) ([]byte, error)
 
 type QueryPlugins struct {
-	Bank    func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error)
-	Custom  CustomQuerier
-	Staking func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
-	Wasm    func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
-	Dist    func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
-	Mint    func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
-	Gov     func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
+	Bank     func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error)
+	Custom   CustomQuerier
+	Staking  func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
+	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	Dist     func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
+	Mint     func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
+	Gov      func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
+	IBC      func(ctx sdk.Context, caller sdk.AccAddress, request *wasmTypes.IBCQuery) ([]byte, error)
+	Stargate func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error)
 }
 
-func DefaultQueryPlugins(gov govkeeper.Keeper, dist distrkeeper.Keeper, mint mintkeeper.Keeper, bank bankkeeper.Keeper, staking stakingkeeper.Keeper, wasm *Keeper) QueryPlugins {
+func DefaultQueryPlugins(gov govkeeper.Keeper, dist distrkeeper.Keeper, mint mintkeeper.Keeper, bank bankkeeper.Keeper, staking stakingkeeper.Keeper, stargateQueryRouter GRPCQueryRouter, wasm *Keeper, channelKeeper types.ChannelKeeper) QueryPlugins {
 	return QueryPlugins{
-		Bank:    BankQuerier(bank),
-		Custom:  NoCustomQuerier,
-		Staking: StakingQuerier(staking, dist),
-		Wasm:    WasmQuerier(wasm),
-		Dist:    DistQuerier(dist),
-		Mint:    MintQuerier(mint),
-		Gov:     GovQuerier(gov),
+		Bank:     BankQuerier(bank),
+		Custom:   NoCustomQuerier,
+		Staking:  StakingQuerier(staking, dist),
+		Wasm:     WasmQuerier(wasm),
+		Dist:     DistQuerier(dist),
+		Mint:     MintQuerier(mint),
+		Gov:      GovQuerier(gov),
+		Stargate: StargateQuerier(stargateQueryRouter),
+		IBC:      IBCQuerier(wasm, channelKeeper),
 	}
 }
 
@@ -118,7 +136,95 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 	if o.Gov != nil {
 		e.Gov = o.Gov
 	}
+	if o.IBC != nil {
+		e.IBC = o.IBC
+	}
+	if o.Stargate != nil {
+		e.Stargate = o.Stargate
+	}
 	return e
+}
+
+// Assaf: stargateQueryAllowlist is a list of all safe and efficient queries
+//
+// excluded from this list (should be safe, but needs a clear use case):
+//   - /secret.registration.*
+//   - /ibc.core.*
+//   - /secret.intertx.*
+//   - /cosmos.evidence.*
+//   - /cosmos.upgrade.*
+//   - All "get all" queries - only O(1) queries should be served
+//
+// we reserve the right to add/remove queries in future chain upgrades
+//
+// used this to find all query paths:
+// find -name query.proto | sort | xargs grep -Poin 'package [a-z0-9.]+;|rpc [a-zA-Z]+\('
+var stargateQueryAllowlist = map[string]bool{
+	"/cosmos.auth.v1beta1.Query/Account": true,
+	"/cosmos.auth.v1beta1.Query/Params":  true,
+
+	"/cosmos.bank.v1beta1.Query/Balance":       true,
+	"/cosmos.bank.v1beta1.Query/DenomMetadata": true,
+	"/cosmos.bank.v1beta1.Query/SupplyOf":      true,
+	"/cosmos.bank.v1beta1.Query/Params":        true,
+
+	"/cosmos.distribution.v1beta1.Query/Params":                   true,
+	"/cosmos.distribution.v1beta1.Query/DelegatorWithdrawAddress": true,
+	"/cosmos.distribution.v1beta1.Query/FoundationTax":            true,
+	"/cosmos.distribution.v1beta1.Query/ValidatorCommission":      true,
+
+	"/cosmos.feegrant.v1beta1.Query/Allowance": true,
+
+	"/cosmos.gov.v1beta1.Query/Deposit":  true,
+	"/cosmos.gov.v1beta1.Query/Params":   true,
+	"/cosmos.gov.v1beta1.Query/Proposal": true,
+	"/cosmos.gov.v1beta1.Query/Vote":     true,
+
+	"/cosmos.mint.v1beta1.Query/Params":           true,
+	"/cosmos.mint.v1beta1.Query/Inflation":        true,
+	"/cosmos.mint.v1beta1.Query/AnnualProvisions": true,
+
+	"/cosmos.params.v1beta1.Query/Params": true,
+
+	"/cosmos.slashing.v1beta1.Query/Params":      true,
+	"/cosmos.slashing.v1beta1.Query/SigningInfo": true,
+
+	"/cosmos.staking.v1beta1.Query/Validator":           true,
+	"/cosmos.staking.v1beta1.Query/Delegation":          true,
+	"/cosmos.staking.v1beta1.Query/UnbondingDelegation": true,
+	"/cosmos.staking.v1beta1.Query/Params":              true,
+
+	"/ibc.applications.transfer.v1.Query/DenomHash":  true,
+	"/ibc.applications.transfer.v1.Query/DenomTrace": true,
+	"/ibc.applications.transfer.v1.Query/Params":     true,
+
+	"/secret.compute.v1beta1.Query/ContractInfo":              true,
+	"/secret.compute.v1beta1.Query/CodeHashByContractAddress": true,
+	"/secret.compute.v1beta1.Query/CodeHashByCodeID":          true,
+	"/secret.compute.v1beta1.Query/LabelByAddress":            true,
+	"/secret.compute.v1beta1.Query/AddressByLabel":            true,
+}
+
+func StargateQuerier(queryRouter GRPCQueryRouter) func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error) {
+	return func(ctx sdk.Context, msg *wasmTypes.StargateQuery) ([]byte, error) {
+		if !stargateQueryAllowlist[msg.Path] {
+			return nil, wasmTypes.UnsupportedRequest{Kind: fmt.Sprintf("query path '%s' is not allowed from the contract", msg.Path)}
+		}
+
+		route := queryRouter.Route(msg.Path)
+		if route == nil {
+			return nil, wasmTypes.UnsupportedRequest{Kind: fmt.Sprintf("No route to query path '%s'", msg.Path)}
+		}
+		req := abci.RequestQuery{
+			Data: msg.Data,
+			Path: msg.Path,
+		}
+		res, err := route(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return res.Value, nil
+	}
 }
 
 func GovQuerier(keeper govkeeper.Keeper) func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {
@@ -146,6 +252,77 @@ func GovQuerier(keeper govkeeper.Keeper) func(ctx sdk.Context, request *wasmType
 			return json.Marshal(wasmTypes.ProposalsResponse{Proposals: activeProps})
 		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown GovQuery variant"}
+	}
+}
+
+func IBCQuerier(wasm *Keeper, channelKeeper types.ChannelKeeper) func(ctx sdk.Context, caller sdk.AccAddress, request *wasmTypes.IBCQuery) ([]byte, error) {
+	return func(ctx sdk.Context, caller sdk.AccAddress, request *wasmTypes.IBCQuery) ([]byte, error) {
+		if request.PortID != nil {
+			contractInfo := wasm.GetContractInfo(ctx, caller)
+			res := wasmTypes.PortIDResponse{
+				PortID: contractInfo.IBCPortID,
+			}
+			return json.Marshal(res)
+		}
+		if request.ListChannels != nil {
+			portID := request.ListChannels.PortID
+			channels := make(wasmTypes.IBCChannels, 0)
+			channelKeeper.IterateChannels(ctx, func(ch channeltypes.IdentifiedChannel) bool {
+				// it must match the port and be in open state
+				if (portID == "" || portID == ch.PortId) && ch.State == channeltypes.OPEN {
+					newChan := wasmTypes.IBCChannel{
+						Endpoint: wasmTypes.IBCEndpoint{
+							PortID:    ch.PortId,
+							ChannelID: ch.ChannelId,
+						},
+						CounterpartyEndpoint: wasmTypes.IBCEndpoint{
+							PortID:    ch.Counterparty.PortId,
+							ChannelID: ch.Counterparty.ChannelId,
+						},
+						Order:        ch.Ordering.String(),
+						Version:      ch.Version,
+						ConnectionID: ch.ConnectionHops[0],
+					}
+					channels = append(channels, newChan)
+				}
+				return false
+			})
+			res := wasmTypes.ListChannelsResponse{
+				Channels: channels,
+			}
+			return json.Marshal(res)
+		}
+		if request.Channel != nil {
+			channelID := request.Channel.ChannelID
+			portID := request.Channel.PortID
+			if portID == "" {
+				contractInfo := wasm.GetContractInfo(ctx, caller)
+				portID = contractInfo.IBCPortID
+			}
+			got, found := channelKeeper.GetChannel(ctx, portID, channelID)
+			var channel *wasmTypes.IBCChannel
+			// it must be in open state
+			if found && got.State == channeltypes.OPEN {
+				channel = &wasmTypes.IBCChannel{
+					Endpoint: wasmTypes.IBCEndpoint{
+						PortID:    portID,
+						ChannelID: channelID,
+					},
+					CounterpartyEndpoint: wasmTypes.IBCEndpoint{
+						PortID:    got.Counterparty.PortId,
+						ChannelID: got.Counterparty.ChannelId,
+					},
+					Order:        got.Ordering.String(),
+					Version:      got.Version,
+					ConnectionID: got.ConnectionHops[0],
+				}
+			}
+			res := wasmTypes.ChannelResponse{
+				Channel: channel,
+			}
+			return json.Marshal(res)
+		}
+		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown IBCQuery variant"}
 	}
 }
 
@@ -189,9 +366,9 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 			req := abci.RequestQuery{
 				Data: jsonParams,
 			}
-			//keeper.DelegationTotalRewards(ctx, distrtypes.QueryDelegationTotalRewardsRequest{
+			// keeper.DelegationTotalRewards(ctx, distrtypes.QueryDelegationTotalRewardsRequest{
 			//	DelegatorAddress: request.Rewards.Delegator,
-			//})
+			// })
 			route := []string{distrtypes.QueryDelegatorTotalRewards}
 
 			query, err := distrkeeper.NewQuerier(keeper, codec.NewLegacyAmino() /* TODO: Is there a way to get an existing Amino codec? */)(ctx, route, req)
@@ -351,6 +528,40 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 
 			return json.Marshal(res)
 
+		}
+		if request.Validator != nil {
+			valAddr, err := sdk.ValAddressFromBech32(request.Validator.Address)
+			if err != nil {
+				return nil, err
+			}
+			v, found := keeper.GetValidator(ctx, valAddr)
+			res := wasmTypes.ValidatorResponse{}
+			if found {
+				res.Validator = &wasmTypes.Validator{
+					Address:       v.OperatorAddress,
+					Commission:    v.Commission.Rate.String(),
+					MaxCommission: v.Commission.MaxRate.String(),
+					MaxChangeRate: v.Commission.MaxChangeRate.String(),
+				}
+			}
+			return json.Marshal(res)
+		}
+		if request.AllValidators != nil {
+			validators := keeper.GetBondedValidatorsByPower(ctx)
+			// validators := keeper.GetAllValidators(ctx)
+			wasmVals := make([]wasmTypes.Validator, len(validators))
+			for i, v := range validators {
+				wasmVals[i] = wasmTypes.Validator{
+					Address:       v.OperatorAddress,
+					Commission:    v.Commission.Rate.String(),
+					MaxCommission: v.Commission.MaxRate.String(),
+					MaxChangeRate: v.Commission.MaxChangeRate.String(),
+				}
+			}
+			res := wasmTypes.AllValidatorsResponse{
+				Validators: wasmVals,
+			}
+			return json.Marshal(res)
 		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown Staking variant"}
 	}

@@ -1,6 +1,6 @@
 [package]
 name = "cosmos_proto"
-version = "1.2.4"
+version = "1.4.0"
 authors = ["bob"]
 edition = "2018"
 

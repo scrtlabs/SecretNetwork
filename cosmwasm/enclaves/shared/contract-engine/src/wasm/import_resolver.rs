@@ -29,41 +29,72 @@ impl ModuleImportResolver for WasmiImportResolver {
         _signature: &Signature,
     ) -> Result<FuncRef, InterpreterError> {
         let func_ref = match func_name {
-            // fn read_db(key: *const c_void, value: *mut c_void) -> i32;
+            // fn db_read(key: u32) -> u32;
+            // v0.10 + v1
             "db_read" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
-                HostFunctions::ReadDbIndex.into(),
+                HostFunctions::DbReadIndex.into(),
             ),
-            // fn write_db(key: *const c_void, value: *mut c_void);
+            // fn db_write(key: u32, value: u32);
+            // v0.10 + v1
             "db_write" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32, ValueType::I32][..], None),
-                HostFunctions::WriteDbIndex.into(),
+                HostFunctions::DbWriteIndex.into(),
             ),
-            // fn db_remove(key: *const c_void, value: *mut c_void) -> i32;
+            // fn db_remove(key: u32);
+            // v0.10 + v1
             "db_remove" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], None),
-                HostFunctions::RemoveDbIndex.into(),
+                HostFunctions::DbRemoveIndex.into(),
             ),
-            // fn canonicalize_address(human: *const c_void, canonical: *mut c_void) -> i32;
-            "canonicalize_address" => FuncInstance::alloc_host(
-                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
-                HostFunctions::CanonicalizeAddressIndex.into(),
-            ),
-            // fn humanize_address(canonical: *const c_void, human: *mut c_void) -> i32;
-            "humanize_address" => FuncInstance::alloc_host(
-                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
-                HostFunctions::HumanizeAddressIndex.into(),
-            ),
+            // fn query_chain(request: u32) -> u32;
+            // v0.10 + v1
             "query_chain" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
                 HostFunctions::QueryChainIndex.into(),
             ),
-            #[cfg(feature = "debug-print")]
+            // fn canonicalize_address(source: u32, destination: u32) -> u32;
+            // v0.10
+            "canonicalize_address" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                HostFunctions::CanonicalizeAddressIndex.into(),
+            ),
+            // fn humanize_address(source: u32, destination: u32) -> u32;
+            // v0.10
+            "humanize_address" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                HostFunctions::HumanizeAddressIndex.into(),
+            ),
+            // fn addr_canonicalize(source: u32, destination: u32) -> u32;
+            // v1
+            "addr_canonicalize" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                HostFunctions::AddrCanonicalizeIndex.into(),
+            ),
+            // fn addr_humanize(source: u32, destination: u32) -> u32;
+            // v1
+            "addr_humanize" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32, ValueType::I32][..], Some(ValueType::I32)),
+                HostFunctions::AddrHumanizeIndex.into(),
+            ),
+            // fn addr_validate(source_ptr: u32) -> u32;
+            // v1
+            "addr_validate" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
+                HostFunctions::AddrValidateIndex.into(),
+            ),
+            // fn debug(source_ptr: u32);
+            // v1
+            "debug" => FuncInstance::alloc_host(
+                Signature::new(&[ValueType::I32][..], None),
+                HostFunctions::DebugPrintIndex.into(),
+            ),
             "debug_print" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], None),
                 HostFunctions::DebugPrintIndex.into(),
             ),
             // fn gas(amount: i32);
+            // internal
             "gas" => FuncInstance::alloc_host(
                 Signature::new(&[ValueType::I32][..], None),
                 HostFunctions::GasIndex.into(),

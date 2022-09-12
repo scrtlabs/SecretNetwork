@@ -6,13 +6,11 @@ package types
 import (
 	bytes "bytes"
 	context "context"
-	encoding_json "encoding/json"
 	fmt "fmt"
 	types "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/gogo/protobuf/gogoproto"
 	grpc1 "github.com/gogo/protobuf/grpc"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_tendermint_tendermint_libs_bytes "github.com/tendermint/tendermint/libs/bytes"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -34,24 +32,24 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type QuerySmartContractStateRequest struct {
-	// address is the canonical address of the contract
-	Address   string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
-	QueryData []byte `protobuf:"bytes,2,opt,name=query_data,json=queryData,proto3" json:"query_data,omitempty"`
+type QuerySecretContractRequest struct {
+	// address is the bech32 human readable address of the contract
+	ContractAddress string `protobuf:"bytes,1,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
+	Query           []byte `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
 }
 
-func (m *QuerySmartContractStateRequest) Reset()         { *m = QuerySmartContractStateRequest{} }
-func (m *QuerySmartContractStateRequest) String() string { return proto.CompactTextString(m) }
-func (*QuerySmartContractStateRequest) ProtoMessage()    {}
-func (*QuerySmartContractStateRequest) Descriptor() ([]byte, []int) {
+func (m *QuerySecretContractRequest) Reset()         { *m = QuerySecretContractRequest{} }
+func (m *QuerySecretContractRequest) String() string { return proto.CompactTextString(m) }
+func (*QuerySecretContractRequest) ProtoMessage()    {}
+func (*QuerySecretContractRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7735281c5fa969d4, []int{0}
 }
-func (m *QuerySmartContractStateRequest) XXX_Unmarshal(b []byte) error {
+func (m *QuerySecretContractRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QuerySmartContractStateRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QuerySecretContractRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QuerySmartContractStateRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QuerySecretContractRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -61,17 +59,17 @@ func (m *QuerySmartContractStateRequest) XXX_Marshal(b []byte, deterministic boo
 		return b[:n], nil
 	}
 }
-func (m *QuerySmartContractStateRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QuerySmartContractStateRequest.Merge(m, src)
+func (m *QuerySecretContractRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QuerySecretContractRequest.Merge(m, src)
 }
-func (m *QuerySmartContractStateRequest) XXX_Size() int {
+func (m *QuerySecretContractRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *QuerySmartContractStateRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_QuerySmartContractStateRequest.DiscardUnknown(m)
+func (m *QuerySecretContractRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QuerySecretContractRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QuerySmartContractStateRequest proto.InternalMessageInfo
+var xxx_messageInfo_QuerySecretContractRequest proto.InternalMessageInfo
 
 type QueryByLabelRequest struct {
 	Label string `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
@@ -110,23 +108,23 @@ func (m *QueryByLabelRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryByLabelRequest proto.InternalMessageInfo
 
-type QueryByAddressRequest struct {
-	// address is the canonical address of the contract
-	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+type QueryByContractAddressRequest struct {
+	// address is the bech32 human readable address of the contract
+	ContractAddress string `protobuf:"bytes,1,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
 }
 
-func (m *QueryByAddressRequest) Reset()         { *m = QueryByAddressRequest{} }
-func (m *QueryByAddressRequest) String() string { return proto.CompactTextString(m) }
-func (*QueryByAddressRequest) ProtoMessage()    {}
-func (*QueryByAddressRequest) Descriptor() ([]byte, []int) {
+func (m *QueryByContractAddressRequest) Reset()         { *m = QueryByContractAddressRequest{} }
+func (m *QueryByContractAddressRequest) String() string { return proto.CompactTextString(m) }
+func (*QueryByContractAddressRequest) ProtoMessage()    {}
+func (*QueryByContractAddressRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7735281c5fa969d4, []int{2}
 }
-func (m *QueryByAddressRequest) XXX_Unmarshal(b []byte) error {
+func (m *QueryByContractAddressRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QueryByAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryByContractAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QueryByAddressRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QueryByContractAddressRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -136,34 +134,34 @@ func (m *QueryByAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return b[:n], nil
 	}
 }
-func (m *QueryByAddressRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryByAddressRequest.Merge(m, src)
+func (m *QueryByContractAddressRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryByContractAddressRequest.Merge(m, src)
 }
-func (m *QueryByAddressRequest) XXX_Size() int {
+func (m *QueryByContractAddressRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *QueryByAddressRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryByAddressRequest.DiscardUnknown(m)
+func (m *QueryByContractAddressRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryByContractAddressRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QueryByAddressRequest proto.InternalMessageInfo
+var xxx_messageInfo_QueryByContractAddressRequest proto.InternalMessageInfo
 
-type QueryByIDRequest struct {
+type QueryByCodeIDRequest struct {
 	CodeId uint64 `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
 }
 
-func (m *QueryByIDRequest) Reset()         { *m = QueryByIDRequest{} }
-func (m *QueryByIDRequest) String() string { return proto.CompactTextString(m) }
-func (*QueryByIDRequest) ProtoMessage()    {}
-func (*QueryByIDRequest) Descriptor() ([]byte, []int) {
+func (m *QueryByCodeIDRequest) Reset()         { *m = QueryByCodeIDRequest{} }
+func (m *QueryByCodeIDRequest) String() string { return proto.CompactTextString(m) }
+func (*QueryByCodeIDRequest) ProtoMessage()    {}
+func (*QueryByCodeIDRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7735281c5fa969d4, []int{3}
 }
-func (m *QueryByIDRequest) XXX_Unmarshal(b []byte) error {
+func (m *QueryByCodeIDRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QueryByIDRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryByCodeIDRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QueryByIDRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QueryByCodeIDRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -173,34 +171,34 @@ func (m *QueryByIDRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *QueryByIDRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryByIDRequest.Merge(m, src)
+func (m *QueryByCodeIDRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryByCodeIDRequest.Merge(m, src)
 }
-func (m *QueryByIDRequest) XXX_Size() int {
+func (m *QueryByCodeIDRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *QueryByIDRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryByIDRequest.DiscardUnknown(m)
+func (m *QueryByCodeIDRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryByCodeIDRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QueryByIDRequest proto.InternalMessageInfo
+var xxx_messageInfo_QueryByCodeIDRequest proto.InternalMessageInfo
 
-type QuerySmartContractStateResponse struct {
+type QuerySecretContractResponse struct {
 	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
-func (m *QuerySmartContractStateResponse) Reset()         { *m = QuerySmartContractStateResponse{} }
-func (m *QuerySmartContractStateResponse) String() string { return proto.CompactTextString(m) }
-func (*QuerySmartContractStateResponse) ProtoMessage()    {}
-func (*QuerySmartContractStateResponse) Descriptor() ([]byte, []int) {
+func (m *QuerySecretContractResponse) Reset()         { *m = QuerySecretContractResponse{} }
+func (m *QuerySecretContractResponse) String() string { return proto.CompactTextString(m) }
+func (*QuerySecretContractResponse) ProtoMessage()    {}
+func (*QuerySecretContractResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7735281c5fa969d4, []int{4}
 }
-func (m *QuerySmartContractStateResponse) XXX_Unmarshal(b []byte) error {
+func (m *QuerySecretContractResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QuerySmartContractStateResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QuerySecretContractResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QuerySmartContractStateResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QuerySecretContractResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -210,23 +208,24 @@ func (m *QuerySmartContractStateResponse) XXX_Marshal(b []byte, deterministic bo
 		return b[:n], nil
 	}
 }
-func (m *QuerySmartContractStateResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QuerySmartContractStateResponse.Merge(m, src)
+func (m *QuerySecretContractResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QuerySecretContractResponse.Merge(m, src)
 }
-func (m *QuerySmartContractStateResponse) XXX_Size() int {
+func (m *QuerySecretContractResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *QuerySmartContractStateResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_QuerySmartContractStateResponse.DiscardUnknown(m)
+func (m *QuerySecretContractResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_QuerySecretContractResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QuerySmartContractStateResponse proto.InternalMessageInfo
+var xxx_messageInfo_QuerySecretContractResponse proto.InternalMessageInfo
 
-// QueryContractInfoResponse is the response type for the Query/ContractInfo RPC method
+// QueryContractInfoResponse is the response type for the Query/ContractInfo RPC
+// method
 type QueryContractInfoResponse struct {
-	// address is the canonical address of the contract
-	Address       string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
-	*ContractInfo `protobuf:"bytes,2,opt,name=ContractInfo,proto3,embedded=ContractInfo" json:""`
+	// contract_address is the bech32 human readable address of the contract
+	ContractAddress string `protobuf:"bytes,1,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
+	*ContractInfo   `protobuf:"bytes,2,opt,name=ContractInfo,proto3,embedded=ContractInfo" json:""`
 }
 
 func (m *QueryContractInfoResponse) Reset()         { *m = QueryContractInfoResponse{} }
@@ -262,11 +261,12 @@ func (m *QueryContractInfoResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryContractInfoResponse proto.InternalMessageInfo
 
-// ContractInfoWithAddress adds the address (key) to the ContractInfo representation
+// ContractInfoWithAddress adds the contract address to the ContractInfo
+// representation
 type ContractInfoWithAddress struct {
-	// address is the canonical address of the contract
-	Address       string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
-	*ContractInfo `protobuf:"bytes,2,opt,name=ContractInfo,proto3,embedded=ContractInfo" json:""`
+	// contract_address is the bech32 human readable address of the contract
+	ContractAddress string `protobuf:"bytes,1,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
+	*ContractInfo   `protobuf:"bytes,2,opt,name=ContractInfo,proto3,embedded=ContractInfo" json:""`
 }
 
 func (m *ContractInfoWithAddress) Reset()         { *m = ContractInfoWithAddress{} }
@@ -302,22 +302,22 @@ func (m *ContractInfoWithAddress) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ContractInfoWithAddress proto.InternalMessageInfo
 
-type QueryContractsByCodeResponse struct {
+type QueryContractsByCodeIDResponse struct {
 	ContractInfos []ContractInfoWithAddress `protobuf:"bytes,1,rep,name=contract_infos,json=contractInfos,proto3" json:"contract_infos"`
 }
 
-func (m *QueryContractsByCodeResponse) Reset()         { *m = QueryContractsByCodeResponse{} }
-func (m *QueryContractsByCodeResponse) String() string { return proto.CompactTextString(m) }
-func (*QueryContractsByCodeResponse) ProtoMessage()    {}
-func (*QueryContractsByCodeResponse) Descriptor() ([]byte, []int) {
+func (m *QueryContractsByCodeIDResponse) Reset()         { *m = QueryContractsByCodeIDResponse{} }
+func (m *QueryContractsByCodeIDResponse) String() string { return proto.CompactTextString(m) }
+func (*QueryContractsByCodeIDResponse) ProtoMessage()    {}
+func (*QueryContractsByCodeIDResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7735281c5fa969d4, []int{7}
 }
-func (m *QueryContractsByCodeResponse) XXX_Unmarshal(b []byte) error {
+func (m *QueryContractsByCodeIDResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QueryContractsByCodeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryContractsByCodeIDResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QueryContractsByCodeResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QueryContractsByCodeIDResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -327,24 +327,25 @@ func (m *QueryContractsByCodeResponse) XXX_Marshal(b []byte, deterministic bool)
 		return b[:n], nil
 	}
 }
-func (m *QueryContractsByCodeResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryContractsByCodeResponse.Merge(m, src)
+func (m *QueryContractsByCodeIDResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryContractsByCodeIDResponse.Merge(m, src)
 }
-func (m *QueryContractsByCodeResponse) XXX_Size() int {
+func (m *QueryContractsByCodeIDResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *QueryContractsByCodeResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryContractsByCodeResponse.DiscardUnknown(m)
+func (m *QueryContractsByCodeIDResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryContractsByCodeIDResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QueryContractsByCodeResponse proto.InternalMessageInfo
+var xxx_messageInfo_QueryContractsByCodeIDResponse proto.InternalMessageInfo
 
 type CodeInfoResponse struct {
-	CodeID   uint64                                               `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"id"`
-	Creator  string                                               `protobuf:"bytes,2,opt,name=creator,proto3" json:"creator,omitempty"`
-	DataHash github_com_tendermint_tendermint_libs_bytes.HexBytes `protobuf:"bytes,3,opt,name=data_hash,json=dataHash,proto3,casttype=github.com/tendermint/tendermint/libs/bytes.HexBytes" json:"data_hash,omitempty"`
-	Source   string                                               `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	Builder  string                                               `protobuf:"bytes,5,opt,name=builder,proto3" json:"builder,omitempty"`
+	CodeId uint64 `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
+	// creator is the bech32 human readable address of the contract
+	Creator  string `protobuf:"bytes,2,opt,name=creator,proto3" json:"creator,omitempty"`
+	CodeHash string `protobuf:"bytes,3,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
+	Source   string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
+	Builder  string `protobuf:"bytes,5,opt,name=builder,proto3" json:"builder,omitempty"`
 }
 
 func (m *CodeInfoResponse) Reset()         { *m = CodeInfoResponse{} }
@@ -382,7 +383,7 @@ var xxx_messageInfo_CodeInfoResponse proto.InternalMessageInfo
 
 type QueryCodeResponse struct {
 	*CodeInfoResponse `protobuf:"bytes,1,opt,name=code_info,json=codeInfo,proto3,embedded=code_info" json:""`
-	Data              []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data"`
+	Wasm              []byte `protobuf:"bytes,2,opt,name=wasm,proto3" json:"wasm,omitempty"`
 }
 
 func (m *QueryCodeResponse) Reset()         { *m = QueryCodeResponse{} }
@@ -456,8 +457,8 @@ func (m *QueryCodesResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_QueryCodesResponse proto.InternalMessageInfo
 
 type QueryContractAddressResponse struct {
-	// address is the canonical address of the contract
-	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	// address is the bech32 human readable address of the contract
+	ContractAddress string `protobuf:"bytes,1,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
 }
 
 func (m *QueryContractAddressResponse) Reset()         { *m = QueryContractAddressResponse{} }
@@ -530,22 +531,22 @@ func (m *QueryContractLabelResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryContractLabelResponse proto.InternalMessageInfo
 
-type QueryContractKeyResponse struct {
-	Key github_com_tendermint_tendermint_libs_bytes.HexBytes `protobuf:"bytes,1,opt,name=key,proto3,casttype=github.com/tendermint/tendermint/libs/bytes.HexBytes" json:"key,omitempty"`
+type QueryCodeHashResponse struct {
+	CodeHash string `protobuf:"bytes,1,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
 }
 
-func (m *QueryContractKeyResponse) Reset()         { *m = QueryContractKeyResponse{} }
-func (m *QueryContractKeyResponse) String() string { return proto.CompactTextString(m) }
-func (*QueryContractKeyResponse) ProtoMessage()    {}
-func (*QueryContractKeyResponse) Descriptor() ([]byte, []int) {
+func (m *QueryCodeHashResponse) Reset()         { *m = QueryCodeHashResponse{} }
+func (m *QueryCodeHashResponse) String() string { return proto.CompactTextString(m) }
+func (*QueryCodeHashResponse) ProtoMessage()    {}
+func (*QueryCodeHashResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_7735281c5fa969d4, []int{13}
 }
-func (m *QueryContractKeyResponse) XXX_Unmarshal(b []byte) error {
+func (m *QueryCodeHashResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *QueryContractKeyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *QueryCodeHashResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_QueryContractKeyResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_QueryCodeHashResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -555,71 +556,31 @@ func (m *QueryContractKeyResponse) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
-func (m *QueryContractKeyResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryContractKeyResponse.Merge(m, src)
+func (m *QueryCodeHashResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryCodeHashResponse.Merge(m, src)
 }
-func (m *QueryContractKeyResponse) XXX_Size() int {
+func (m *QueryCodeHashResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *QueryContractKeyResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryContractKeyResponse.DiscardUnknown(m)
+func (m *QueryCodeHashResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryCodeHashResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_QueryContractKeyResponse proto.InternalMessageInfo
-
-type QueryContractHashResponse struct {
-	CodeHash github_com_tendermint_tendermint_libs_bytes.HexBytes `protobuf:"bytes,1,opt,name=code_hash,json=codeHash,proto3,casttype=github.com/tendermint/tendermint/libs/bytes.HexBytes" json:"code_hash,omitempty"`
-}
-
-func (m *QueryContractHashResponse) Reset()         { *m = QueryContractHashResponse{} }
-func (m *QueryContractHashResponse) String() string { return proto.CompactTextString(m) }
-func (*QueryContractHashResponse) ProtoMessage()    {}
-func (*QueryContractHashResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{14}
-}
-func (m *QueryContractHashResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *QueryContractHashResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_QueryContractHashResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *QueryContractHashResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryContractHashResponse.Merge(m, src)
-}
-func (m *QueryContractHashResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *QueryContractHashResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryContractHashResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_QueryContractHashResponse proto.InternalMessageInfo
+var xxx_messageInfo_QueryCodeHashResponse proto.InternalMessageInfo
 
 // DecryptedAnswer is a struct that represents a decrypted tx-query
 type DecryptedAnswer struct {
-	Type               string                   `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Input              string                   `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
-	OutputData         string                   `protobuf:"bytes,3,opt,name=output_data,json=outputData,proto3" json:"output_data,omitempty"`
-	OutputDataAsString string                   `protobuf:"bytes,4,opt,name=output_data_as_string,json=outputDataAsString,proto3" json:"output_data_as_string,omitempty"`
-	OutputLogs         []types.StringEvent      `protobuf:"bytes,5,rep,name=output_logs,json=outputLogs,proto3" json:"output_logs"`
-	OutputError        encoding_json.RawMessage `protobuf:"bytes,6,opt,name=output_error,json=outputError,proto3,casttype=encoding/json.RawMessage" json:"output_error,omitempty"`
-	PlaintextError     string                   `protobuf:"bytes,7,opt,name=plaintext_error,json=plaintextError,proto3" json:"plaintext_error,omitempty"`
+	Type               string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Input              string `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
+	OutputData         string `protobuf:"bytes,3,opt,name=output_data,json=outputData,proto3" json:"output_data,omitempty"`
+	OutputDataAsString string `protobuf:"bytes,4,opt,name=output_data_as_string,json=outputDataAsString,proto3" json:"output_data_as_string,omitempty"`
 }
 
 func (m *DecryptedAnswer) Reset()         { *m = DecryptedAnswer{} }
 func (m *DecryptedAnswer) String() string { return proto.CompactTextString(m) }
 func (*DecryptedAnswer) ProtoMessage()    {}
 func (*DecryptedAnswer) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7735281c5fa969d4, []int{15}
+	return fileDescriptor_7735281c5fa969d4, []int{14}
 }
 func (m *DecryptedAnswer) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -648,23 +609,63 @@ func (m *DecryptedAnswer) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DecryptedAnswer proto.InternalMessageInfo
 
+type DecryptedAnswers struct {
+	Answers        []*DecryptedAnswer  `protobuf:"bytes,1,rep,name=answers,proto3" json:"answers,omitempty"`
+	OutputLogs     []types.StringEvent `protobuf:"bytes,2,rep,name=output_logs,json=outputLogs,proto3" json:"output_logs"`
+	OutputError    string              `protobuf:"bytes,3,opt,name=output_error,json=outputError,proto3" json:"output_error,omitempty"`
+	PlaintextError string              `protobuf:"bytes,4,opt,name=plaintext_error,json=plaintextError,proto3" json:"plaintext_error,omitempty"`
+}
+
+func (m *DecryptedAnswers) Reset()         { *m = DecryptedAnswers{} }
+func (m *DecryptedAnswers) String() string { return proto.CompactTextString(m) }
+func (*DecryptedAnswers) ProtoMessage()    {}
+func (*DecryptedAnswers) Descriptor() ([]byte, []int) {
+	return fileDescriptor_7735281c5fa969d4, []int{15}
+}
+func (m *DecryptedAnswers) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DecryptedAnswers) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DecryptedAnswers.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DecryptedAnswers) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DecryptedAnswers.Merge(m, src)
+}
+func (m *DecryptedAnswers) XXX_Size() int {
+	return m.Size()
+}
+func (m *DecryptedAnswers) XXX_DiscardUnknown() {
+	xxx_messageInfo_DecryptedAnswers.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DecryptedAnswers proto.InternalMessageInfo
+
 func init() {
-	proto.RegisterType((*QuerySmartContractStateRequest)(nil), "secret.compute.v1beta1.QuerySmartContractStateRequest")
+	proto.RegisterType((*QuerySecretContractRequest)(nil), "secret.compute.v1beta1.QuerySecretContractRequest")
 	proto.RegisterType((*QueryByLabelRequest)(nil), "secret.compute.v1beta1.QueryByLabelRequest")
-	proto.RegisterType((*QueryByAddressRequest)(nil), "secret.compute.v1beta1.QueryByAddressRequest")
-	proto.RegisterType((*QueryByIDRequest)(nil), "secret.compute.v1beta1.QueryByIDRequest")
-	proto.RegisterType((*QuerySmartContractStateResponse)(nil), "secret.compute.v1beta1.QuerySmartContractStateResponse")
+	proto.RegisterType((*QueryByContractAddressRequest)(nil), "secret.compute.v1beta1.QueryByContractAddressRequest")
+	proto.RegisterType((*QueryByCodeIDRequest)(nil), "secret.compute.v1beta1.QueryByCodeIDRequest")
+	proto.RegisterType((*QuerySecretContractResponse)(nil), "secret.compute.v1beta1.QuerySecretContractResponse")
 	proto.RegisterType((*QueryContractInfoResponse)(nil), "secret.compute.v1beta1.QueryContractInfoResponse")
 	proto.RegisterType((*ContractInfoWithAddress)(nil), "secret.compute.v1beta1.ContractInfoWithAddress")
-	proto.RegisterType((*QueryContractsByCodeResponse)(nil), "secret.compute.v1beta1.QueryContractsByCodeResponse")
+	proto.RegisterType((*QueryContractsByCodeIDResponse)(nil), "secret.compute.v1beta1.QueryContractsByCodeIDResponse")
 	proto.RegisterType((*CodeInfoResponse)(nil), "secret.compute.v1beta1.CodeInfoResponse")
 	proto.RegisterType((*QueryCodeResponse)(nil), "secret.compute.v1beta1.QueryCodeResponse")
 	proto.RegisterType((*QueryCodesResponse)(nil), "secret.compute.v1beta1.QueryCodesResponse")
 	proto.RegisterType((*QueryContractAddressResponse)(nil), "secret.compute.v1beta1.QueryContractAddressResponse")
 	proto.RegisterType((*QueryContractLabelResponse)(nil), "secret.compute.v1beta1.QueryContractLabelResponse")
-	proto.RegisterType((*QueryContractKeyResponse)(nil), "secret.compute.v1beta1.QueryContractKeyResponse")
-	proto.RegisterType((*QueryContractHashResponse)(nil), "secret.compute.v1beta1.QueryContractHashResponse")
+	proto.RegisterType((*QueryCodeHashResponse)(nil), "secret.compute.v1beta1.QueryCodeHashResponse")
 	proto.RegisterType((*DecryptedAnswer)(nil), "secret.compute.v1beta1.DecryptedAnswer")
+	proto.RegisterType((*DecryptedAnswers)(nil), "secret.compute.v1beta1.DecryptedAnswers")
 }
 
 func init() {
@@ -672,96 +673,89 @@ func init() {
 }
 
 var fileDescriptor_7735281c5fa969d4 = []byte{
-	// 1262 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x57, 0x4d, 0x6f, 0x1b, 0xc5,
-	0x1b, 0xf7, 0x26, 0xce, 0x8b, 0x27, 0xf9, 0x27, 0xf9, 0x0f, 0x4d, 0x62, 0x4c, 0x6a, 0x87, 0xe9,
-	0x4b, 0x9c, 0x44, 0xec, 0xd6, 0xa1, 0x40, 0x05, 0x07, 0x14, 0x37, 0x91, 0x1a, 0x48, 0x41, 0x38,
-	0xaa, 0x10, 0x08, 0x64, 0x8d, 0x77, 0x27, 0xce, 0x36, 0xf6, 0xce, 0x76, 0x67, 0xdc, 0xc4, 0x0a,
-	0xb9, 0x54, 0x48, 0x88, 0x1b, 0x12, 0x12, 0x17, 0x84, 0x04, 0x82, 0x4a, 0x7c, 0x04, 0x3e, 0x42,
-	0x2e, 0x48, 0x91, 0xb8, 0x70, 0xb2, 0x4a, 0xc2, 0x01, 0xe5, 0x23, 0xf4, 0x84, 0x66, 0x76, 0x76,
-	0xb3, 0x7e, 0xab, 0x1d, 0x2a, 0x38, 0x79, 0x9e, 0x9d, 0xe7, 0xe5, 0x37, 0xbf, 0xe7, 0x99, 0xe7,
-	0x19, 0x03, 0xc4, 0x88, 0xe9, 0x11, 0x6e, 0x98, 0xb4, 0xea, 0xd6, 0x38, 0x31, 0x1e, 0xe6, 0x4a,
-	0x84, 0xe3, 0x9c, 0xf1, 0xa0, 0x46, 0xbc, 0xba, 0xee, 0x7a, 0x94, 0x53, 0x38, 0xe3, 0xeb, 0xe8,
-	0x4a, 0x47, 0x57, 0x3a, 0xa9, 0x4b, 0x65, 0x5a, 0xa6, 0x52, 0xc5, 0x10, 0x2b, 0x5f, 0x3b, 0xd5,
-	0xcd, 0x23, 0xaf, 0xbb, 0x84, 0x29, 0x9d, 0x97, 0xca, 0x94, 0x96, 0x2b, 0xc4, 0x90, 0x52, 0xa9,
-	0xb6, 0x6d, 0x90, 0xaa, 0xcb, 0x55, 0xb8, 0xd4, 0x9c, 0xda, 0xc4, 0xae, 0x6d, 0x60, 0xc7, 0xa1,
-	0x1c, 0x73, 0x9b, 0x3a, 0x81, 0xe9, 0x15, 0x93, 0xb2, 0x2a, 0x65, 0x46, 0x09, 0x33, 0x62, 0xe0,
-	0x92, 0x69, 0x87, 0x01, 0x84, 0xe0, 0x2b, 0xa1, 0x8f, 0x40, 0xfa, 0x03, 0x71, 0x80, 0xad, 0x2a,
-	0xf6, 0xf8, 0x6d, 0xea, 0x70, 0x0f, 0x9b, 0x7c, 0x8b, 0x63, 0x4e, 0x0a, 0xe4, 0x41, 0x8d, 0x30,
-	0x0e, 0x93, 0x60, 0x04, 0x5b, 0x96, 0x47, 0x18, 0x4b, 0x6a, 0xf3, 0x5a, 0x36, 0x51, 0x08, 0x44,
-	0x78, 0x19, 0x00, 0x79, 0xf8, 0xa2, 0x85, 0x39, 0x4e, 0x0e, 0xcc, 0x6b, 0xd9, 0xf1, 0x42, 0x42,
-	0x7e, 0x59, 0xc3, 0x1c, 0xa3, 0x65, 0xf0, 0x82, 0x74, 0x9d, 0xaf, 0x6f, 0xe2, 0x12, 0xa9, 0x04,
-	0xfe, 0x2e, 0x81, 0xa1, 0x8a, 0x90, 0x95, 0x37, 0x5f, 0x40, 0x39, 0x30, 0xad, 0x94, 0x57, 0x7d,
-	0xef, 0x3d, 0xc3, 0xa3, 0x65, 0x30, 0xa5, 0x4c, 0x36, 0xd6, 0x02, 0xed, 0x59, 0x30, 0x62, 0x52,
-	0x8b, 0x14, 0x6d, 0x4b, 0x6a, 0xc7, 0x0b, 0xc3, 0x42, 0xdc, 0xb0, 0xd0, 0x6b, 0x20, 0xd3, 0xf5,
-	0x9c, 0xcc, 0xa5, 0x0e, 0x23, 0x10, 0x82, 0xb8, 0x3c, 0x88, 0x26, 0x0f, 0x22, 0xd7, 0xe8, 0x4b,
-	0x0d, 0xbc, 0x28, 0xed, 0x02, 0x93, 0x0d, 0x67, 0x9b, 0x86, 0x16, 0xdd, 0xa9, 0x29, 0x80, 0xf1,
-	0xa8, 0x85, 0x24, 0x67, 0x6c, 0xe5, 0xaa, 0xde, 0xb9, 0x3e, 0xf4, 0xa8, 0x6e, 0x7e, 0xf4, 0xb8,
-	0x91, 0xd1, 0xce, 0x1a, 0x99, 0x58, 0xa1, 0xc9, 0x07, 0xfa, 0x42, 0x03, 0xb3, 0xd1, 0x0f, 0x1f,
-	0xda, 0x7c, 0x47, 0x91, 0xf5, 0x1f, 0x23, 0xf9, 0x0c, 0xcc, 0x35, 0x91, 0xc2, 0xf2, 0xf5, 0xdb,
-	0xd4, 0x3a, 0x67, 0xf2, 0x13, 0x30, 0x61, 0xaa, 0xad, 0xa2, 0xed, 0x6c, 0x53, 0x01, 0x6a, 0x30,
-	0x3b, 0xb6, 0x62, 0xf4, 0x13, 0x35, 0x72, 0xac, 0x7c, 0xfc, 0x48, 0x04, 0xff, 0x9f, 0x19, 0xd9,
-	0x66, 0xe8, 0x89, 0x06, 0xa6, 0x44, 0xb8, 0xa6, 0x54, 0x2c, 0xb6, 0x24, 0x3e, 0x3f, 0x75, 0xd2,
-	0xc8, 0x0c, 0x4b, 0xb5, 0xb5, 0xb3, 0x46, 0x66, 0xc0, 0xb6, 0x82, 0x52, 0x10, 0x5c, 0x99, 0x1e,
-	0xc1, 0x9c, 0x7a, 0x92, 0x8c, 0x44, 0x21, 0x10, 0xe1, 0x3d, 0x90, 0x10, 0x59, 0x2f, 0xee, 0x60,
-	0xb6, 0x93, 0x1c, 0x14, 0x65, 0x90, 0xbf, 0xf5, 0xb4, 0x91, 0xb9, 0x59, 0xb6, 0xf9, 0x4e, 0xad,
-	0x24, 0x50, 0x1b, 0x9c, 0x38, 0x16, 0xf1, 0xaa, 0xb6, 0xc3, 0xa3, 0xcb, 0x8a, 0x5d, 0x62, 0x46,
-	0xa9, 0xce, 0x09, 0xd3, 0xef, 0x90, 0xfd, 0xbc, 0x58, 0x14, 0x46, 0x85, 0xab, 0x3b, 0x98, 0xed,
-	0xc0, 0x19, 0x30, 0xcc, 0x68, 0xcd, 0x33, 0x49, 0x32, 0x2e, 0xe3, 0x29, 0x49, 0x00, 0x29, 0xd5,
-	0xec, 0x8a, 0x45, 0xbc, 0xe4, 0x90, 0x0f, 0x44, 0x89, 0xe8, 0x91, 0x06, 0xfe, 0xaf, 0x18, 0x8e,
-	0xd0, 0xfa, 0x3e, 0x48, 0xf8, 0x67, 0x14, 0x79, 0xd4, 0x64, 0x1e, 0xb3, 0xdd, 0x19, 0x6d, 0x26,
-	0x28, 0x92, 0xcb, 0x51, 0x53, 0xed, 0xc1, 0x39, 0x55, 0xf1, 0xf2, 0xea, 0xe6, 0x47, 0xcf, 0x1a,
-	0x19, 0x29, 0xab, 0xda, 0x37, 0x01, 0x0c, 0x31, 0xb0, 0x10, 0xc4, 0x5d, 0x00, 0x42, 0x10, 0x41,
-	0x5e, 0xfb, 0x47, 0xe1, 0x27, 0x34, 0x11, 0x20, 0x60, 0xe8, 0x56, 0x4b, 0x29, 0x85, 0xb7, 0xbf,
-	0xd7, 0x15, 0x43, 0x2b, 0x20, 0xd5, 0x64, 0xa9, 0x9a, 0x8c, 0xb2, 0xeb, 0xdc, 0x65, 0xb6, 0x41,
-	0xb2, 0xc9, 0xe6, 0x5d, 0x52, 0x0f, 0x2d, 0xde, 0x01, 0x83, 0xbb, 0xa4, 0xee, 0xdf, 0xfe, 0xe7,
-	0x48, 0xbb, 0x70, 0x82, 0xbc, 0x96, 0xae, 0x21, 0xca, 0x20, 0x0c, 0x74, 0x4f, 0xa5, 0x51, 0x56,
-	0xd9, 0xf3, 0x86, 0x93, 0xc9, 0x14, 0xee, 0xd1, 0xaf, 0x03, 0x60, 0x72, 0x8d, 0x98, 0x5e, 0xdd,
-	0xe5, 0xc4, 0x5a, 0x75, 0xd8, 0x1e, 0xf1, 0x44, 0x4b, 0x13, 0xc3, 0x44, 0x91, 0x20, 0xd7, 0x82,
-	0x19, 0xdb, 0x71, 0x6b, 0x5c, 0x15, 0xbf, 0x2f, 0xc0, 0x0c, 0x18, 0xa3, 0x35, 0xee, 0xd6, 0xb8,
-	0xdf, 0xcc, 0x07, 0xe5, 0x1e, 0xf0, 0x3f, 0x89, 0x6e, 0x0e, 0x73, 0x60, 0x3a, 0xa2, 0x50, 0xc4,
-	0xac, 0xc8, 0xb8, 0x67, 0x3b, 0x65, 0x55, 0xd3, 0xf0, 0x5c, 0x75, 0x95, 0x6d, 0xc9, 0x1d, 0xb8,
-	0x19, 0xfa, 0xac, 0xd0, 0x32, 0x4b, 0x0e, 0xc9, 0x5a, 0xb9, 0xa6, 0xfb, 0x63, 0x49, 0x17, 0x63,
-	0x49, 0x97, 0x93, 0x28, 0xa8, 0x16, 0xdf, 0x6c, 0xfd, 0x21, 0x71, 0xb8, 0x2a, 0x14, 0x05, 0x60,
-	0x93, 0x96, 0x19, 0x7c, 0x1b, 0x8c, 0x2b, 0x6f, 0xc4, 0xf3, 0xa8, 0x97, 0x1c, 0x96, 0xcc, 0xcd,
-	0x3d, 0x6d, 0x64, 0x92, 0xc4, 0x31, 0xa9, 0x65, 0x3b, 0x65, 0xe3, 0x3e, 0xa3, 0x8e, 0x5e, 0xc0,
-	0x7b, 0x77, 0x09, 0x63, 0xb8, 0x4c, 0x0a, 0x2a, 0xfe, 0xba, 0x30, 0x80, 0x0b, 0x60, 0xd2, 0xad,
-	0x60, 0xdb, 0xe1, 0x64, 0x3f, 0xf0, 0x31, 0x22, 0xb1, 0x4f, 0x84, 0x9f, 0xa5, 0xe2, 0x9b, 0xf1,
-	0xbf, 0xbe, 0xcf, 0xc4, 0x56, 0x1e, 0x8f, 0x83, 0x21, 0x99, 0x44, 0xf8, 0x9d, 0xd6, 0xdc, 0x43,
-	0xe1, 0x2b, 0xdd, 0xea, 0xbd, 0xe3, 0x08, 0x4b, 0xe5, 0x9e, 0xa9, 0xde, 0x69, 0xb2, 0xa0, 0xe5,
-	0x47, 0xbf, 0xfd, 0xf9, 0xf5, 0xc0, 0x35, 0x78, 0xa5, 0xed, 0x71, 0x10, 0xf4, 0x42, 0xe3, 0x40,
-	0x5d, 0x84, 0x43, 0xf8, 0x93, 0x06, 0x26, 0x5b, 0x5a, 0x31, 0xcc, 0xf6, 0x80, 0x18, 0x8e, 0xcc,
-	0xd4, 0xcd, 0xbe, 0xd0, 0xb5, 0xb4, 0x78, 0x94, 0x93, 0x00, 0x97, 0xe1, 0x62, 0x07, 0x80, 0x16,
-	0x31, 0x0e, 0x54, 0x33, 0x3e, 0x0c, 0xf1, 0x32, 0xf8, 0x8b, 0x06, 0x60, 0xfb, 0xf8, 0x85, 0xaf,
-	0x3f, 0x33, 0x7e, 0xd7, 0x77, 0x49, 0xea, 0x8d, 0x0b, 0xdb, 0xf5, 0x01, 0xbd, 0x95, 0x5b, 0x83,
-	0x09, 0x3f, 0xf0, 0x73, 0x0d, 0xc4, 0x2f, 0x48, 0xeb, 0x62, 0x0f, 0x5a, 0x23, 0x5c, 0x2e, 0x48,
-	0x40, 0x2f, 0xc3, 0x4c, 0x0f, 0x2e, 0xe1, 0x7d, 0x30, 0x24, 0x9b, 0x31, 0x9c, 0xd1, 0xfd, 0x97,
-	0x9f, 0x1e, 0x3c, 0x0b, 0xf5, 0x75, 0xf1, 0x2c, 0x4c, 0x2d, 0xf5, 0x0c, 0x1a, 0x76, 0x56, 0x74,
-	0x59, 0x46, 0x9d, 0x85, 0xd3, 0x1d, 0xa3, 0xc2, 0x1f, 0x22, 0x45, 0x2f, 0xa7, 0xd8, 0xbf, 0x52,
-	0xf4, 0xd1, 0xc6, 0x88, 0x0c, 0x89, 0x68, 0x11, 0x2e, 0xb4, 0x21, 0x12, 0xad, 0xd2, 0x50, 0x39,
-	0x89, 0x14, 0xfe, 0xb7, 0xf2, 0x25, 0x70, 0xee, 0x49, 0xf0, 0x7f, 0x81, 0x14, 0xfd, 0x03, 0x88,
-	0x4b, 0x12, 0xe2, 0x55, 0x88, 0x3a, 0x43, 0xb4, 0xad, 0x48, 0xb6, 0xbe, 0xd1, 0xc0, 0x58, 0x64,
-	0xd0, 0x5c, 0x94, 0xc0, 0x1b, 0x7d, 0xa1, 0x8b, 0x4c, 0x30, 0x74, 0x5d, 0x82, 0x9b, 0x87, 0xe9,
-	0x36, 0x70, 0xbb, 0xa4, 0x1e, 0xa1, 0xed, 0xb1, 0x06, 0x26, 0xe4, 0xb4, 0x0c, 0x63, 0x5e, 0x14,
-	0xdb, 0x4a, 0x5f, 0xd8, 0x9a, 0x26, 0x32, 0xba, 0x21, 0xd1, 0x2d, 0xc1, 0x6c, 0x1b, 0x3a, 0x39,
-	0x9b, 0x3b, 0xa4, 0xf7, 0x47, 0x0d, 0x4c, 0x04, 0x2f, 0x41, 0xff, 0x3f, 0x04, 0x5c, 0xee, 0x81,
-	0x33, 0xfa, 0x4f, 0xa3, 0xcf, 0xce, 0xd6, 0xf2, 0xe2, 0x40, 0xba, 0xc4, 0x99, 0x85, 0xd7, 0xdb,
-	0x70, 0x06, 0x08, 0x7d, 0xbc, 0x07, 0xf2, 0xe7, 0x30, 0xff, 0xe9, 0xd1, 0x1f, 0xe9, 0xd8, 0xcf,
-	0x27, 0x69, 0xed, 0xe8, 0x24, 0xad, 0x1d, 0x9f, 0xa4, 0xb5, 0x27, 0x27, 0x69, 0xed, 0xab, 0xd3,
-	0x74, 0xec, 0xf8, 0x34, 0x1d, 0xfb, 0xfd, 0x34, 0x1d, 0xfb, 0xf8, 0xad, 0xc8, 0x64, 0x27, 0x8e,
-	0x5d, 0xae, 0xe2, 0xaa, 0x6b, 0x1a, 0x5b, 0x12, 0xdb, 0x7b, 0x84, 0xef, 0x51, 0x6f, 0xd7, 0xd8,
-	0x0f, 0xa3, 0x89, 0x49, 0xe4, 0x39, 0xb8, 0xe2, 0xff, 0x0d, 0x2c, 0x0d, 0xcb, 0x2b, 0xfe, 0xea,
-	0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0xb4, 0xd6, 0x28, 0x20, 0x7f, 0x0e, 0x00, 0x00,
+	// 1138 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x57, 0x3d, 0x6c, 0x1c, 0x45,
+	0x14, 0xbe, 0x71, 0xce, 0x76, 0xfc, 0x6c, 0x6c, 0x67, 0x70, 0x9c, 0xcb, 0x39, 0x9c, 0x93, 0x25,
+	0x60, 0x3b, 0x4e, 0x76, 0xb9, 0x4b, 0x42, 0x01, 0x95, 0x1d, 0x5b, 0xc2, 0xc8, 0x80, 0xb8, 0x14,
+	0x48, 0x88, 0xc8, 0x9a, 0xdb, 0x1d, 0x9f, 0x57, 0xb9, 0xdb, 0xd9, 0xec, 0xcc, 0xc5, 0xb6, 0x22,
+	0x53, 0x50, 0x51, 0x22, 0x01, 0x12, 0x42, 0x42, 0xa2, 0x02, 0x44, 0x81, 0x44, 0x47, 0x47, 0xeb,
+	0xd2, 0x12, 0x0d, 0x55, 0x04, 0x36, 0x05, 0xa2, 0xa7, 0x47, 0xf3, 0xb3, 0xeb, 0x5d, 0x7b, 0x7d,
+	0xf6, 0x85, 0x22, 0xdd, 0xce, 0xcc, 0xfb, 0xf9, 0xde, 0xf7, 0xe6, 0xbd, 0x37, 0x0b, 0x16, 0xa7,
+	0x6e, 0x44, 0x85, 0xe3, 0xb2, 0x76, 0xd8, 0x11, 0xd4, 0x79, 0x5c, 0x6d, 0x50, 0x41, 0xaa, 0xce,
+	0xa3, 0x0e, 0x8d, 0xb6, 0xed, 0x30, 0x62, 0x82, 0xe1, 0x49, 0x2d, 0x63, 0x1b, 0x19, 0xdb, 0xc8,
+	0x94, 0x27, 0x9a, 0xac, 0xc9, 0x94, 0x88, 0x23, 0xbf, 0xb4, 0x74, 0xf9, 0x24, 0x8b, 0x62, 0x3b,
+	0xa4, 0xdc, 0xc8, 0x4c, 0x35, 0x19, 0x6b, 0xb6, 0xa8, 0xa3, 0x56, 0x8d, 0xce, 0xba, 0x43, 0xdb,
+	0xa1, 0x30, 0xee, 0xca, 0x57, 0xcc, 0x21, 0x09, 0x7d, 0x87, 0x04, 0x01, 0x13, 0x44, 0xf8, 0x2c,
+	0x88, 0x55, 0x5f, 0x76, 0x19, 0x6f, 0x33, 0xee, 0x34, 0x08, 0xa7, 0x0e, 0x69, 0xb8, 0x7e, 0xe2,
+	0x40, 0x2e, 0xb4, 0x90, 0xf5, 0x00, 0xca, 0xef, 0xcb, 0x00, 0xee, 0x2b, 0x28, 0xf7, 0x58, 0x20,
+	0x22, 0xe2, 0x8a, 0x3a, 0x7d, 0xd4, 0xa1, 0x5c, 0xe0, 0x39, 0x18, 0x77, 0xcd, 0xd6, 0x1a, 0xf1,
+	0xbc, 0x88, 0x72, 0x5e, 0x42, 0x57, 0xd1, 0xec, 0x50, 0x7d, 0x2c, 0xde, 0x5f, 0xd0, 0xdb, 0x78,
+	0x02, 0xfa, 0x15, 0x13, 0xa5, 0xbe, 0xab, 0x68, 0x76, 0xa4, 0xae, 0x17, 0xd6, 0x3c, 0xbc, 0xa8,
+	0xcc, 0x2f, 0x6e, 0xaf, 0x92, 0x06, 0x6d, 0xc5, 0x76, 0x27, 0xa0, 0xbf, 0x25, 0xd7, 0xc6, 0x98,
+	0x5e, 0x58, 0x6f, 0xc3, 0x4b, 0x46, 0xf8, 0x5e, 0xd6, 0x78, 0xef, 0x70, 0x2c, 0x07, 0x26, 0x12,
+	0x5b, 0x1e, 0x5d, 0x59, 0x8a, 0x4d, 0x5c, 0x82, 0x41, 0x97, 0x79, 0x74, 0xcd, 0xf7, 0x94, 0x66,
+	0xb1, 0x3e, 0x20, 0x97, 0x2b, 0x9e, 0x55, 0x85, 0xa9, 0x5c, 0x22, 0x78, 0xc8, 0x02, 0x4e, 0x31,
+	0x86, 0xa2, 0x47, 0x04, 0x51, 0x4a, 0x23, 0x75, 0xf5, 0x6d, 0x7d, 0x8d, 0xe0, 0xb2, 0xd2, 0x89,
+	0xa5, 0x57, 0x82, 0x75, 0x96, 0x68, 0xf4, 0xc0, 0x5d, 0x1d, 0x46, 0xd2, 0x26, 0x14, 0x85, 0xc3,
+	0xb5, 0xeb, 0x76, 0xfe, 0x6d, 0xb2, 0xd3, 0xb2, 0x8b, 0xe7, 0xf7, 0x9e, 0x4e, 0xa3, 0x7f, 0x9e,
+	0x4e, 0x17, 0xea, 0x19, 0x1b, 0xd6, 0x57, 0x08, 0x2e, 0xa5, 0x37, 0x3e, 0xf0, 0xc5, 0x46, 0xec,
+	0xef, 0x39, 0x43, 0xfb, 0x18, 0x2a, 0x19, 0xda, 0xf8, 0x61, 0x92, 0x0c, 0x77, 0x1f, 0xc1, 0x68,
+	0x02, 0xd0, 0x0f, 0xd6, 0x99, 0x84, 0x77, 0x6e, 0x76, 0xb8, 0xe6, 0x9c, 0xc5, 0x6f, 0x2a, 0xd2,
+	0xc5, 0xe2, 0xae, 0x74, 0xff, 0x82, 0x9b, 0x3a, 0xe6, 0xd6, 0x17, 0x08, 0xc6, 0x95, 0xc3, 0x74,
+	0xba, 0x4e, 0xba, 0x18, 0xb8, 0x04, 0x83, 0x6e, 0x44, 0x89, 0x60, 0x91, 0x0a, 0x7e, 0xa8, 0x1e,
+	0x2f, 0xf1, 0x14, 0x0c, 0x29, 0x95, 0x0d, 0xc2, 0x37, 0x4a, 0xe7, 0xd4, 0xd9, 0x79, 0xb9, 0xf1,
+	0x16, 0xe1, 0x1b, 0x78, 0x12, 0x06, 0x38, 0xeb, 0x44, 0x2e, 0x2d, 0x15, 0xd5, 0x89, 0x59, 0x49,
+	0x73, 0x8d, 0x8e, 0xdf, 0xf2, 0x68, 0x54, 0xea, 0xd7, 0xe6, 0xcc, 0xd2, 0xda, 0x82, 0x0b, 0x86,
+	0x16, 0x8f, 0x26, 0xb0, 0xde, 0x33, 0x3e, 0x24, 0x0b, 0x0a, 0xd8, 0x70, 0x6d, 0xf6, 0x64, 0x12,
+	0xb2, 0x31, 0xa5, 0x12, 0xa0, 0x70, 0xc9, 0x33, 0x79, 0x91, 0x37, 0x09, 0x6f, 0x9b, 0x32, 0x55,
+	0xdf, 0x96, 0x0b, 0x38, 0xf1, 0xcc, 0x13, 0xd7, 0xef, 0x00, 0x24, 0xae, 0xe3, 0x04, 0x9c, 0xdd,
+	0xb7, 0x66, 0x7e, 0x28, 0xf6, 0xcb, 0xad, 0x15, 0xb8, 0x92, 0xc9, 0x7a, 0x52, 0xdb, 0x3d, 0xd7,
+	0x8b, 0x55, 0x33, 0x4d, 0x2b, 0x36, 0x65, 0x7a, 0x8b, 0x31, 0x94, 0xdf, 0x5c, 0xee, 0xc0, 0xc5,
+	0x24, 0x46, 0x99, 0xa0, 0x44, 0x3c, 0x93, 0x45, 0x94, 0xcd, 0xa2, 0xf5, 0x25, 0x82, 0xb1, 0x25,
+	0xea, 0x46, 0xdb, 0xa1, 0xa0, 0xde, 0x42, 0xc0, 0x37, 0x69, 0x24, 0x19, 0x94, 0x1d, 0xda, 0xc8,
+	0xaa, 0x6f, 0xe9, 0xd3, 0x0f, 0xc2, 0x8e, 0x30, 0x57, 0x44, 0x2f, 0xf0, 0x34, 0x0c, 0xb3, 0x8e,
+	0x08, 0x3b, 0x62, 0x4d, 0xf5, 0x0e, 0x7d, 0x45, 0x40, 0x6f, 0x2d, 0x11, 0x41, 0x70, 0x15, 0x2e,
+	0xa6, 0x04, 0xd6, 0x08, 0x5f, 0xe3, 0x22, 0xf2, 0x83, 0xa6, 0xb9, 0x33, 0xf8, 0x50, 0x74, 0x81,
+	0xdf, 0x57, 0x27, 0x6f, 0x14, 0xff, 0xfe, 0x76, 0xba, 0x60, 0xfd, 0x8b, 0x60, 0xfc, 0x08, 0x2e,
+	0x8e, 0x17, 0x60, 0x90, 0xe8, 0x4f, 0x93, 0xad, 0x99, 0x93, 0xb2, 0x75, 0x44, 0xb5, 0x1e, 0xeb,
+	0xe1, 0xd5, 0x04, 0x71, 0x8b, 0x35, 0x79, 0xa9, 0x4f, 0x99, 0x79, 0xc5, 0xd6, 0x93, 0xc4, 0x96,
+	0x93, 0xc4, 0x56, 0xc3, 0x23, 0x36, 0xa4, 0x41, 0x2d, 0x3f, 0xa6, 0x81, 0x30, 0x19, 0x37, 0xe1,
+	0xad, 0xb2, 0x26, 0xc7, 0xd7, 0x60, 0xc4, 0x58, 0xa3, 0x51, 0xc4, 0x22, 0x43, 0x80, 0xf1, 0xb0,
+	0x2c, 0xb7, 0xf0, 0x0c, 0x8c, 0x85, 0x2d, 0xe2, 0x07, 0x82, 0x6e, 0xc5, 0x52, 0x3a, 0xf6, 0xd1,
+	0x64, 0x5b, 0x09, 0xea, 0xb8, 0x6b, 0xbf, 0x0e, 0x43, 0xbf, 0x4a, 0x23, 0xfe, 0x11, 0x65, 0x3b,
+	0x13, 0xbe, 0x7b, 0x52, 0xb0, 0x5d, 0x67, 0x4a, 0xb9, 0xda, 0x55, 0x2d, 0xaf, 0xb3, 0x5b, 0xaf,
+	0x7d, 0xf2, 0xdb, 0x5f, 0x9f, 0xf7, 0xdd, 0xc0, 0xb3, 0xc7, 0x26, 0xb7, 0x2c, 0x15, 0xe7, 0xc9,
+	0xd1, 0x6b, 0xbc, 0x83, 0xbf, 0x47, 0x70, 0xe1, 0x58, 0xb7, 0xc3, 0x37, 0x4f, 0x45, 0x9c, 0x9a,
+	0x5c, 0xe5, 0xd7, 0xcf, 0x04, 0xf4, 0x58, 0x2f, 0xb5, 0x6e, 0x2a, 0xb4, 0xaf, 0xe2, 0xeb, 0xc7,
+	0xd0, 0xc6, 0x38, 0xb9, 0x84, 0xac, 0x5a, 0xdf, 0x0e, 0xfe, 0x19, 0x99, 0x89, 0x9d, 0x9d, 0x83,
+	0xb8, 0xd6, 0xd5, 0x7b, 0xee, 0xeb, 0xa1, 0x7c, 0xbb, 0x27, 0x1d, 0x03, 0xb7, 0xaa, 0xe0, 0xce,
+	0xe3, 0xb9, 0xfc, 0x87, 0x56, 0x1e, 0xbb, 0x9f, 0x22, 0x28, 0xca, 0xa0, 0x7b, 0x24, 0x74, 0xee,
+	0x14, 0x42, 0x0f, 0xbb, 0xb0, 0x35, 0xa3, 0x40, 0x5d, 0xc3, 0xd3, 0x39, 0x1c, 0x7a, 0x34, 0x45,
+	0xdf, 0x43, 0xe8, 0x57, 0x4d, 0x14, 0x4f, 0xda, 0xfa, 0x6d, 0x66, 0xc7, 0x0f, 0x37, 0x7b, 0x59,
+	0x3e, 0xdc, 0xca, 0x37, 0x4e, 0x75, 0x9a, 0x74, 0x44, 0xab, 0xa2, 0xbc, 0x96, 0xf0, 0x64, 0xae,
+	0x57, 0x8e, 0x7f, 0x41, 0x70, 0x39, 0x6e, 0x67, 0xc7, 0xee, 0xf7, 0xb3, 0xd6, 0xc3, 0xad, 0x53,
+	0x01, 0xa6, 0xbb, 0xa7, 0x75, 0x57, 0x61, 0x74, 0xf0, 0xad, 0x5c, 0x8c, 0xaa, 0xa9, 0xe6, 0xa5,
+	0xec, 0x1b, 0x33, 0x82, 0x63, 0xe8, 0xcf, 0x50, 0x0f, 0x3d, 0x02, 0xed, 0x56, 0x06, 0x29, 0xa0,
+	0x26, 0x8f, 0x3f, 0x21, 0x18, 0x55, 0x53, 0x65, 0x71, 0xfb, 0x7f, 0xf2, 0x59, 0x3b, 0x53, 0xd9,
+	0x66, 0x26, 0x58, 0x97, 0x1a, 0x50, 0xb3, 0x2c, 0x8f, 0xd0, 0xef, 0x10, 0x8c, 0xc6, 0x8f, 0x1e,
+	0xfd, 0xd6, 0xc6, 0xf3, 0xa7, 0x00, 0x4e, 0xbf, 0xc8, 0xcb, 0x77, 0xce, 0x04, 0xf3, 0xc8, 0xcc,
+	0xee, 0x02, 0xf4, 0x28, 0x42, 0xe7, 0x89, 0x82, 0xbe, 0xb3, 0xf8, 0x60, 0xf7, 0xcf, 0x4a, 0xe1,
+	0x87, 0xfd, 0x0a, 0xda, 0xdd, 0xaf, 0xa0, 0xbd, 0xfd, 0x0a, 0xfa, 0x63, 0xbf, 0x82, 0x3e, 0x3b,
+	0xa8, 0x14, 0xf6, 0x0e, 0x2a, 0x85, 0xdf, 0x0f, 0x2a, 0x85, 0x0f, 0xdf, 0x6c, 0xfa, 0x62, 0xa3,
+	0xd3, 0x90, 0x48, 0x1c, 0x1a, 0xf8, 0xcd, 0x36, 0x69, 0x87, 0xae, 0xa3, 0xdb, 0xc5, 0xbb, 0x54,
+	0x6c, 0xb2, 0xe8, 0xa1, 0xb3, 0x95, 0x38, 0x94, 0x33, 0x22, 0x0a, 0x48, 0x4b, 0xff, 0x35, 0x35,
+	0x06, 0x54, 0xbd, 0xdd, 0xfe, 0x2f, 0x00, 0x00, 0xff, 0xff, 0xb9, 0x18, 0x7c, 0x8c, 0xae, 0x0d,
+	0x00, 0x00,
 }
 
-func (this *QuerySmartContractStateRequest) Equal(that interface{}) bool {
+func (this *QuerySecretContractRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*QuerySmartContractStateRequest)
+	that1, ok := that.(*QuerySecretContractRequest)
 	if !ok {
-		that2, ok := that.(QuerySmartContractStateRequest)
+		that2, ok := that.(QuerySecretContractRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -773,10 +767,10 @@ func (this *QuerySmartContractStateRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Address != that1.Address {
+	if this.ContractAddress != that1.ContractAddress {
 		return false
 	}
-	if !bytes.Equal(this.QueryData, that1.QueryData) {
+	if !bytes.Equal(this.Query, that1.Query) {
 		return false
 	}
 	return true
@@ -805,14 +799,14 @@ func (this *QueryByLabelRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *QueryByAddressRequest) Equal(that interface{}) bool {
+func (this *QueryByContractAddressRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*QueryByAddressRequest)
+	that1, ok := that.(*QueryByContractAddressRequest)
 	if !ok {
-		that2, ok := that.(QueryByAddressRequest)
+		that2, ok := that.(QueryByContractAddressRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -824,19 +818,19 @@ func (this *QueryByAddressRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Address != that1.Address {
+	if this.ContractAddress != that1.ContractAddress {
 		return false
 	}
 	return true
 }
-func (this *QueryByIDRequest) Equal(that interface{}) bool {
+func (this *QueryByCodeIDRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*QueryByIDRequest)
+	that1, ok := that.(*QueryByCodeIDRequest)
 	if !ok {
-		that2, ok := that.(QueryByIDRequest)
+		that2, ok := that.(QueryByCodeIDRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -853,14 +847,14 @@ func (this *QueryByIDRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *QuerySmartContractStateResponse) Equal(that interface{}) bool {
+func (this *QuerySecretContractResponse) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*QuerySmartContractStateResponse)
+	that1, ok := that.(*QuerySecretContractResponse)
 	if !ok {
-		that2, ok := that.(QuerySmartContractStateResponse)
+		that2, ok := that.(QuerySecretContractResponse)
 		if ok {
 			that1 = &that2
 		} else {
@@ -896,7 +890,7 @@ func (this *QueryContractInfoResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Address != that1.Address {
+	if this.ContractAddress != that1.ContractAddress {
 		return false
 	}
 	if !this.ContractInfo.Equal(that1.ContractInfo) {
@@ -923,7 +917,7 @@ func (this *ContractInfoWithAddress) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Address != that1.Address {
+	if this.ContractAddress != that1.ContractAddress {
 		return false
 	}
 	if !this.ContractInfo.Equal(that1.ContractInfo) {
@@ -931,14 +925,14 @@ func (this *ContractInfoWithAddress) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *QueryContractsByCodeResponse) Equal(that interface{}) bool {
+func (this *QueryContractsByCodeIDResponse) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*QueryContractsByCodeResponse)
+	that1, ok := that.(*QueryContractsByCodeIDResponse)
 	if !ok {
-		that2, ok := that.(QueryContractsByCodeResponse)
+		that2, ok := that.(QueryContractsByCodeIDResponse)
 		if ok {
 			that1 = &that2
 		} else {
@@ -979,13 +973,13 @@ func (this *CodeInfoResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.CodeID != that1.CodeID {
+	if this.CodeId != that1.CodeId {
 		return false
 	}
 	if this.Creator != that1.Creator {
 		return false
 	}
-	if !bytes.Equal(this.DataHash, that1.DataHash) {
+	if this.CodeHash != that1.CodeHash {
 		return false
 	}
 	if this.Source != that1.Source {
@@ -1018,7 +1012,7 @@ func (this *QueryCodeResponse) Equal(that interface{}) bool {
 	if !this.CodeInfoResponse.Equal(that1.CodeInfoResponse) {
 		return false
 	}
-	if !bytes.Equal(this.Data, that1.Data) {
+	if !bytes.Equal(this.Wasm, that1.Wasm) {
 		return false
 	}
 	return true
@@ -1071,7 +1065,7 @@ func (this *QueryContractAddressResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Address != that1.Address {
+	if this.ContractAddress != that1.ContractAddress {
 		return false
 	}
 	return true
@@ -1100,14 +1094,14 @@ func (this *QueryContractLabelResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *QueryContractKeyResponse) Equal(that interface{}) bool {
+func (this *QueryCodeHashResponse) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*QueryContractKeyResponse)
+	that1, ok := that.(*QueryCodeHashResponse)
 	if !ok {
-		that2, ok := that.(QueryContractKeyResponse)
+		that2, ok := that.(QueryCodeHashResponse)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1119,31 +1113,7 @@ func (this *QueryContractKeyResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.Key, that1.Key) {
-		return false
-	}
-	return true
-}
-func (this *QueryContractHashResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*QueryContractHashResponse)
-	if !ok {
-		that2, ok := that.(QueryContractHashResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.CodeHash, that1.CodeHash) {
+	if this.CodeHash != that1.CodeHash {
 		return false
 	}
 	return true
@@ -1161,24 +1131,22 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryClient interface {
-	// Query contract
-	ContractInfo(ctx context.Context, in *QueryByAddressRequest, opts ...grpc.CallOption) (*QueryContractInfoResponse, error)
-	// Query contract
-	ContractsByCode(ctx context.Context, in *QueryByIDRequest, opts ...grpc.CallOption) (*QueryContractsByCodeResponse, error)
-	// Query contract
-	SmartContractState(ctx context.Context, in *QuerySmartContractStateRequest, opts ...grpc.CallOption) (*QuerySmartContractStateResponse, error)
-	// Query a specific contract code
-	Code(ctx context.Context, in *QueryByIDRequest, opts ...grpc.CallOption) (*QueryCodeResponse, error)
+	// Query contract info by address
+	ContractInfo(ctx context.Context, in *QueryByContractAddressRequest, opts ...grpc.CallOption) (*QueryContractInfoResponse, error)
+	// Query code info by id
+	ContractsByCodeID(ctx context.Context, in *QueryByCodeIDRequest, opts ...grpc.CallOption) (*QueryContractsByCodeIDResponse, error)
+	// Query secret contract
+	QuerySecretContract(ctx context.Context, in *QuerySecretContractRequest, opts ...grpc.CallOption) (*QuerySecretContractResponse, error)
+	// Query a specific contract code by id
+	Code(ctx context.Context, in *QueryByCodeIDRequest, opts ...grpc.CallOption) (*QueryCodeResponse, error)
 	// Query all contract codes on-chain
 	Codes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryCodesResponse, error)
-	// Query contract hash by address
-	ContractHash(ctx context.Context, in *QueryByAddressRequest, opts ...grpc.CallOption) (*QueryContractHashResponse, error)
-	// Query contract hash by code id
-	ContractHashByID(ctx context.Context, in *QueryByIDRequest, opts ...grpc.CallOption) (*QueryContractHashResponse, error)
-	// Query contract key by address
-	ContractKey(ctx context.Context, in *QueryByAddressRequest, opts ...grpc.CallOption) (*QueryContractKeyResponse, error)
+	// Query code hash by contract address
+	CodeHashByContractAddress(ctx context.Context, in *QueryByContractAddressRequest, opts ...grpc.CallOption) (*QueryCodeHashResponse, error)
+	// Query code hash by code id
+	CodeHashByCodeID(ctx context.Context, in *QueryByCodeIDRequest, opts ...grpc.CallOption) (*QueryCodeHashResponse, error)
 	// Query contract label by address
-	LabelByAddress(ctx context.Context, in *QueryByAddressRequest, opts ...grpc.CallOption) (*QueryContractLabelResponse, error)
+	LabelByAddress(ctx context.Context, in *QueryByContractAddressRequest, opts ...grpc.CallOption) (*QueryContractLabelResponse, error)
 	// Query contract address by label
 	AddressByLabel(ctx context.Context, in *QueryByLabelRequest, opts ...grpc.CallOption) (*QueryContractAddressResponse, error)
 }
@@ -1191,7 +1159,7 @@ func NewQueryClient(cc grpc1.ClientConn) QueryClient {
 	return &queryClient{cc}
 }
 
-func (c *queryClient) ContractInfo(ctx context.Context, in *QueryByAddressRequest, opts ...grpc.CallOption) (*QueryContractInfoResponse, error) {
+func (c *queryClient) ContractInfo(ctx context.Context, in *QueryByContractAddressRequest, opts ...grpc.CallOption) (*QueryContractInfoResponse, error) {
 	out := new(QueryContractInfoResponse)
 	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/ContractInfo", in, out, opts...)
 	if err != nil {
@@ -1200,25 +1168,25 @@ func (c *queryClient) ContractInfo(ctx context.Context, in *QueryByAddressReques
 	return out, nil
 }
 
-func (c *queryClient) ContractsByCode(ctx context.Context, in *QueryByIDRequest, opts ...grpc.CallOption) (*QueryContractsByCodeResponse, error) {
-	out := new(QueryContractsByCodeResponse)
-	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/ContractsByCode", in, out, opts...)
+func (c *queryClient) ContractsByCodeID(ctx context.Context, in *QueryByCodeIDRequest, opts ...grpc.CallOption) (*QueryContractsByCodeIDResponse, error) {
+	out := new(QueryContractsByCodeIDResponse)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/ContractsByCodeID", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) SmartContractState(ctx context.Context, in *QuerySmartContractStateRequest, opts ...grpc.CallOption) (*QuerySmartContractStateResponse, error) {
-	out := new(QuerySmartContractStateResponse)
-	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/SmartContractState", in, out, opts...)
+func (c *queryClient) QuerySecretContract(ctx context.Context, in *QuerySecretContractRequest, opts ...grpc.CallOption) (*QuerySecretContractResponse, error) {
+	out := new(QuerySecretContractResponse)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/QuerySecretContract", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) Code(ctx context.Context, in *QueryByIDRequest, opts ...grpc.CallOption) (*QueryCodeResponse, error) {
+func (c *queryClient) Code(ctx context.Context, in *QueryByCodeIDRequest, opts ...grpc.CallOption) (*QueryCodeResponse, error) {
 	out := new(QueryCodeResponse)
 	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/Code", in, out, opts...)
 	if err != nil {
@@ -1236,34 +1204,25 @@ func (c *queryClient) Codes(ctx context.Context, in *emptypb.Empty, opts ...grpc
 	return out, nil
 }
 
-func (c *queryClient) ContractHash(ctx context.Context, in *QueryByAddressRequest, opts ...grpc.CallOption) (*QueryContractHashResponse, error) {
-	out := new(QueryContractHashResponse)
-	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/ContractHash", in, out, opts...)
+func (c *queryClient) CodeHashByContractAddress(ctx context.Context, in *QueryByContractAddressRequest, opts ...grpc.CallOption) (*QueryCodeHashResponse, error) {
+	out := new(QueryCodeHashResponse)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/CodeHashByContractAddress", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) ContractHashByID(ctx context.Context, in *QueryByIDRequest, opts ...grpc.CallOption) (*QueryContractHashResponse, error) {
-	out := new(QueryContractHashResponse)
-	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/ContractHashByID", in, out, opts...)
+func (c *queryClient) CodeHashByCodeID(ctx context.Context, in *QueryByCodeIDRequest, opts ...grpc.CallOption) (*QueryCodeHashResponse, error) {
+	out := new(QueryCodeHashResponse)
+	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/CodeHashByCodeID", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) ContractKey(ctx context.Context, in *QueryByAddressRequest, opts ...grpc.CallOption) (*QueryContractKeyResponse, error) {
-	out := new(QueryContractKeyResponse)
-	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/ContractKey", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) LabelByAddress(ctx context.Context, in *QueryByAddressRequest, opts ...grpc.CallOption) (*QueryContractLabelResponse, error) {
+func (c *queryClient) LabelByAddress(ctx context.Context, in *QueryByContractAddressRequest, opts ...grpc.CallOption) (*QueryContractLabelResponse, error) {
 	out := new(QueryContractLabelResponse)
 	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/LabelByAddress", in, out, opts...)
 	if err != nil {
@@ -1283,24 +1242,22 @@ func (c *queryClient) AddressByLabel(ctx context.Context, in *QueryByLabelReques
 
 // QueryServer is the server API for Query service.
 type QueryServer interface {
-	// Query contract
-	ContractInfo(context.Context, *QueryByAddressRequest) (*QueryContractInfoResponse, error)
-	// Query contract
-	ContractsByCode(context.Context, *QueryByIDRequest) (*QueryContractsByCodeResponse, error)
-	// Query contract
-	SmartContractState(context.Context, *QuerySmartContractStateRequest) (*QuerySmartContractStateResponse, error)
-	// Query a specific contract code
-	Code(context.Context, *QueryByIDRequest) (*QueryCodeResponse, error)
+	// Query contract info by address
+	ContractInfo(context.Context, *QueryByContractAddressRequest) (*QueryContractInfoResponse, error)
+	// Query code info by id
+	ContractsByCodeID(context.Context, *QueryByCodeIDRequest) (*QueryContractsByCodeIDResponse, error)
+	// Query secret contract
+	QuerySecretContract(context.Context, *QuerySecretContractRequest) (*QuerySecretContractResponse, error)
+	// Query a specific contract code by id
+	Code(context.Context, *QueryByCodeIDRequest) (*QueryCodeResponse, error)
 	// Query all contract codes on-chain
 	Codes(context.Context, *emptypb.Empty) (*QueryCodesResponse, error)
-	// Query contract hash by address
-	ContractHash(context.Context, *QueryByAddressRequest) (*QueryContractHashResponse, error)
-	// Query contract hash by code id
-	ContractHashByID(context.Context, *QueryByIDRequest) (*QueryContractHashResponse, error)
-	// Query contract key by address
-	ContractKey(context.Context, *QueryByAddressRequest) (*QueryContractKeyResponse, error)
+	// Query code hash by contract address
+	CodeHashByContractAddress(context.Context, *QueryByContractAddressRequest) (*QueryCodeHashResponse, error)
+	// Query code hash by code id
+	CodeHashByCodeID(context.Context, *QueryByCodeIDRequest) (*QueryCodeHashResponse, error)
 	// Query contract label by address
-	LabelByAddress(context.Context, *QueryByAddressRequest) (*QueryContractLabelResponse, error)
+	LabelByAddress(context.Context, *QueryByContractAddressRequest) (*QueryContractLabelResponse, error)
 	// Query contract address by label
 	AddressByLabel(context.Context, *QueryByLabelRequest) (*QueryContractAddressResponse, error)
 }
@@ -1309,31 +1266,28 @@ type QueryServer interface {
 type UnimplementedQueryServer struct {
 }
 
-func (*UnimplementedQueryServer) ContractInfo(ctx context.Context, req *QueryByAddressRequest) (*QueryContractInfoResponse, error) {
+func (*UnimplementedQueryServer) ContractInfo(ctx context.Context, req *QueryByContractAddressRequest) (*QueryContractInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ContractInfo not implemented")
 }
-func (*UnimplementedQueryServer) ContractsByCode(ctx context.Context, req *QueryByIDRequest) (*QueryContractsByCodeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ContractsByCode not implemented")
+func (*UnimplementedQueryServer) ContractsByCodeID(ctx context.Context, req *QueryByCodeIDRequest) (*QueryContractsByCodeIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ContractsByCodeID not implemented")
 }
-func (*UnimplementedQueryServer) SmartContractState(ctx context.Context, req *QuerySmartContractStateRequest) (*QuerySmartContractStateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SmartContractState not implemented")
+func (*UnimplementedQueryServer) QuerySecretContract(ctx context.Context, req *QuerySecretContractRequest) (*QuerySecretContractResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QuerySecretContract not implemented")
 }
-func (*UnimplementedQueryServer) Code(ctx context.Context, req *QueryByIDRequest) (*QueryCodeResponse, error) {
+func (*UnimplementedQueryServer) Code(ctx context.Context, req *QueryByCodeIDRequest) (*QueryCodeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Code not implemented")
 }
 func (*UnimplementedQueryServer) Codes(ctx context.Context, req *emptypb.Empty) (*QueryCodesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Codes not implemented")
 }
-func (*UnimplementedQueryServer) ContractHash(ctx context.Context, req *QueryByAddressRequest) (*QueryContractHashResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ContractHash not implemented")
+func (*UnimplementedQueryServer) CodeHashByContractAddress(ctx context.Context, req *QueryByContractAddressRequest) (*QueryCodeHashResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CodeHashByContractAddress not implemented")
 }
-func (*UnimplementedQueryServer) ContractHashByID(ctx context.Context, req *QueryByIDRequest) (*QueryContractHashResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ContractHashByID not implemented")
+func (*UnimplementedQueryServer) CodeHashByCodeID(ctx context.Context, req *QueryByCodeIDRequest) (*QueryCodeHashResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CodeHashByCodeID not implemented")
 }
-func (*UnimplementedQueryServer) ContractKey(ctx context.Context, req *QueryByAddressRequest) (*QueryContractKeyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ContractKey not implemented")
-}
-func (*UnimplementedQueryServer) LabelByAddress(ctx context.Context, req *QueryByAddressRequest) (*QueryContractLabelResponse, error) {
+func (*UnimplementedQueryServer) LabelByAddress(ctx context.Context, req *QueryByContractAddressRequest) (*QueryContractLabelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LabelByAddress not implemented")
 }
 func (*UnimplementedQueryServer) AddressByLabel(ctx context.Context, req *QueryByLabelRequest) (*QueryContractAddressResponse, error) {
@@ -1345,7 +1299,7 @@ func RegisterQueryServer(s grpc1.Server, srv QueryServer) {
 }
 
 func _Query_ContractInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryByAddressRequest)
+	in := new(QueryByContractAddressRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1357,49 +1311,49 @@ func _Query_ContractInfo_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: "/secret.compute.v1beta1.Query/ContractInfo",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ContractInfo(ctx, req.(*QueryByAddressRequest))
+		return srv.(QueryServer).ContractInfo(ctx, req.(*QueryByContractAddressRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_ContractsByCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryByIDRequest)
+func _Query_ContractsByCodeID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryByCodeIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).ContractsByCode(ctx, in)
+		return srv.(QueryServer).ContractsByCodeID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/secret.compute.v1beta1.Query/ContractsByCode",
+		FullMethod: "/secret.compute.v1beta1.Query/ContractsByCodeID",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ContractsByCode(ctx, req.(*QueryByIDRequest))
+		return srv.(QueryServer).ContractsByCodeID(ctx, req.(*QueryByCodeIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_SmartContractState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QuerySmartContractStateRequest)
+func _Query_QuerySecretContract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySecretContractRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).SmartContractState(ctx, in)
+		return srv.(QueryServer).QuerySecretContract(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/secret.compute.v1beta1.Query/SmartContractState",
+		FullMethod: "/secret.compute.v1beta1.Query/QuerySecretContract",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).SmartContractState(ctx, req.(*QuerySmartContractStateRequest))
+		return srv.(QueryServer).QuerySecretContract(ctx, req.(*QuerySecretContractRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Query_Code_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryByIDRequest)
+	in := new(QueryByCodeIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1411,7 +1365,7 @@ func _Query_Code_Handler(srv interface{}, ctx context.Context, dec func(interfac
 		FullMethod: "/secret.compute.v1beta1.Query/Code",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).Code(ctx, req.(*QueryByIDRequest))
+		return srv.(QueryServer).Code(ctx, req.(*QueryByCodeIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1434,62 +1388,44 @@ func _Query_Codes_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_ContractHash_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryByAddressRequest)
+func _Query_CodeHashByContractAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryByContractAddressRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).ContractHash(ctx, in)
+		return srv.(QueryServer).CodeHashByContractAddress(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/secret.compute.v1beta1.Query/ContractHash",
+		FullMethod: "/secret.compute.v1beta1.Query/CodeHashByContractAddress",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ContractHash(ctx, req.(*QueryByAddressRequest))
+		return srv.(QueryServer).CodeHashByContractAddress(ctx, req.(*QueryByContractAddressRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_ContractHashByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryByIDRequest)
+func _Query_CodeHashByCodeID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryByCodeIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).ContractHashByID(ctx, in)
+		return srv.(QueryServer).CodeHashByCodeID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/secret.compute.v1beta1.Query/ContractHashByID",
+		FullMethod: "/secret.compute.v1beta1.Query/CodeHashByCodeID",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ContractHashByID(ctx, req.(*QueryByIDRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_ContractKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryByAddressRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).ContractKey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/secret.compute.v1beta1.Query/ContractKey",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ContractKey(ctx, req.(*QueryByAddressRequest))
+		return srv.(QueryServer).CodeHashByCodeID(ctx, req.(*QueryByCodeIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Query_LabelByAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryByAddressRequest)
+	in := new(QueryByContractAddressRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1501,7 +1437,7 @@ func _Query_LabelByAddress_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: "/secret.compute.v1beta1.Query/LabelByAddress",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).LabelByAddress(ctx, req.(*QueryByAddressRequest))
+		return srv.(QueryServer).LabelByAddress(ctx, req.(*QueryByContractAddressRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1533,12 +1469,12 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Query_ContractInfo_Handler,
 		},
 		{
-			MethodName: "ContractsByCode",
-			Handler:    _Query_ContractsByCode_Handler,
+			MethodName: "ContractsByCodeID",
+			Handler:    _Query_ContractsByCodeID_Handler,
 		},
 		{
-			MethodName: "SmartContractState",
-			Handler:    _Query_SmartContractState_Handler,
+			MethodName: "QuerySecretContract",
+			Handler:    _Query_QuerySecretContract_Handler,
 		},
 		{
 			MethodName: "Code",
@@ -1549,16 +1485,12 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Query_Codes_Handler,
 		},
 		{
-			MethodName: "ContractHash",
-			Handler:    _Query_ContractHash_Handler,
+			MethodName: "CodeHashByContractAddress",
+			Handler:    _Query_CodeHashByContractAddress_Handler,
 		},
 		{
-			MethodName: "ContractHashByID",
-			Handler:    _Query_ContractHashByID_Handler,
-		},
-		{
-			MethodName: "ContractKey",
-			Handler:    _Query_ContractKey_Handler,
+			MethodName: "CodeHashByCodeID",
+			Handler:    _Query_CodeHashByCodeID_Handler,
 		},
 		{
 			MethodName: "LabelByAddress",
@@ -1573,7 +1505,7 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 	Metadata: "secret/compute/v1beta1/query.proto",
 }
 
-func (m *QuerySmartContractStateRequest) Marshal() (dAtA []byte, err error) {
+func (m *QuerySecretContractRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1583,27 +1515,27 @@ func (m *QuerySmartContractStateRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *QuerySmartContractStateRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *QuerySecretContractRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QuerySmartContractStateRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QuerySecretContractRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.QueryData) > 0 {
-		i -= len(m.QueryData)
-		copy(dAtA[i:], m.QueryData)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.QueryData)))
+	if len(m.Query) > 0 {
+		i -= len(m.Query)
+		copy(dAtA[i:], m.Query)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Query)))
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Address) > 0 {
-		i -= len(m.Address)
-		copy(dAtA[i:], m.Address)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Address)))
+	if len(m.ContractAddress) > 0 {
+		i -= len(m.ContractAddress)
+		copy(dAtA[i:], m.ContractAddress)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.ContractAddress)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1640,7 +1572,7 @@ func (m *QueryByLabelRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *QueryByAddressRequest) Marshal() (dAtA []byte, err error) {
+func (m *QueryByContractAddressRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1650,27 +1582,27 @@ func (m *QueryByAddressRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *QueryByAddressRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *QueryByContractAddressRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QueryByAddressRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QueryByContractAddressRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.Address) > 0 {
-		i -= len(m.Address)
-		copy(dAtA[i:], m.Address)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Address)))
+	if len(m.ContractAddress) > 0 {
+		i -= len(m.ContractAddress)
+		copy(dAtA[i:], m.ContractAddress)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.ContractAddress)))
 		i--
 		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *QueryByIDRequest) Marshal() (dAtA []byte, err error) {
+func (m *QueryByCodeIDRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1680,12 +1612,12 @@ func (m *QueryByIDRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *QueryByIDRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *QueryByCodeIDRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QueryByIDRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QueryByCodeIDRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1698,7 +1630,7 @@ func (m *QueryByIDRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *QuerySmartContractStateResponse) Marshal() (dAtA []byte, err error) {
+func (m *QuerySecretContractResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1708,12 +1640,12 @@ func (m *QuerySmartContractStateResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *QuerySmartContractStateResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *QuerySecretContractResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QuerySmartContractStateResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QuerySecretContractResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1760,10 +1692,10 @@ func (m *QueryContractInfoResponse) MarshalToSizedBuffer(dAtA []byte) (int, erro
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Address) > 0 {
-		i -= len(m.Address)
-		copy(dAtA[i:], m.Address)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Address)))
+	if len(m.ContractAddress) > 0 {
+		i -= len(m.ContractAddress)
+		copy(dAtA[i:], m.ContractAddress)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.ContractAddress)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1802,17 +1734,17 @@ func (m *ContractInfoWithAddress) MarshalToSizedBuffer(dAtA []byte) (int, error)
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Address) > 0 {
-		i -= len(m.Address)
-		copy(dAtA[i:], m.Address)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Address)))
+	if len(m.ContractAddress) > 0 {
+		i -= len(m.ContractAddress)
+		copy(dAtA[i:], m.ContractAddress)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.ContractAddress)))
 		i--
 		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *QueryContractsByCodeResponse) Marshal() (dAtA []byte, err error) {
+func (m *QueryContractsByCodeIDResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1822,12 +1754,12 @@ func (m *QueryContractsByCodeResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *QueryContractsByCodeResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *QueryContractsByCodeIDResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QueryContractsByCodeResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QueryContractsByCodeIDResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1883,10 +1815,10 @@ func (m *CodeInfoResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x22
 	}
-	if len(m.DataHash) > 0 {
-		i -= len(m.DataHash)
-		copy(dAtA[i:], m.DataHash)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.DataHash)))
+	if len(m.CodeHash) > 0 {
+		i -= len(m.CodeHash)
+		copy(dAtA[i:], m.CodeHash)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.CodeHash)))
 		i--
 		dAtA[i] = 0x1a
 	}
@@ -1897,8 +1829,8 @@ func (m *CodeInfoResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.CodeID != 0 {
-		i = encodeVarintQuery(dAtA, i, uint64(m.CodeID))
+	if m.CodeId != 0 {
+		i = encodeVarintQuery(dAtA, i, uint64(m.CodeId))
 		i--
 		dAtA[i] = 0x8
 	}
@@ -1925,10 +1857,10 @@ func (m *QueryCodeResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.Data) > 0 {
-		i -= len(m.Data)
-		copy(dAtA[i:], m.Data)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Data)))
+	if len(m.Wasm) > 0 {
+		i -= len(m.Wasm)
+		copy(dAtA[i:], m.Wasm)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Wasm)))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -2004,10 +1936,10 @@ func (m *QueryContractAddressResponse) MarshalToSizedBuffer(dAtA []byte) (int, e
 	_ = i
 	var l int
 	_ = l
-	if len(m.Address) > 0 {
-		i -= len(m.Address)
-		copy(dAtA[i:], m.Address)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Address)))
+	if len(m.ContractAddress) > 0 {
+		i -= len(m.ContractAddress)
+		copy(dAtA[i:], m.ContractAddress)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.ContractAddress)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2044,7 +1976,7 @@ func (m *QueryContractLabelResponse) MarshalToSizedBuffer(dAtA []byte) (int, err
 	return len(dAtA) - i, nil
 }
 
-func (m *QueryContractKeyResponse) Marshal() (dAtA []byte, err error) {
+func (m *QueryCodeHashResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2054,42 +1986,12 @@ func (m *QueryContractKeyResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *QueryContractKeyResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *QueryCodeHashResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *QueryContractKeyResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Key) > 0 {
-		i -= len(m.Key)
-		copy(dAtA[i:], m.Key)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Key)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *QueryContractHashResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *QueryContractHashResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *QueryContractHashResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *QueryCodeHashResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2124,34 +2026,6 @@ func (m *DecryptedAnswer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.PlaintextError) > 0 {
-		i -= len(m.PlaintextError)
-		copy(dAtA[i:], m.PlaintextError)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.PlaintextError)))
-		i--
-		dAtA[i] = 0x3a
-	}
-	if len(m.OutputError) > 0 {
-		i -= len(m.OutputError)
-		copy(dAtA[i:], m.OutputError)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.OutputError)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if len(m.OutputLogs) > 0 {
-		for iNdEx := len(m.OutputLogs) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.OutputLogs[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintQuery(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x2a
-		}
-	}
 	if len(m.OutputDataAsString) > 0 {
 		i -= len(m.OutputDataAsString)
 		copy(dAtA[i:], m.OutputDataAsString)
@@ -2183,6 +2057,71 @@ func (m *DecryptedAnswer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *DecryptedAnswers) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DecryptedAnswers) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DecryptedAnswers) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.PlaintextError) > 0 {
+		i -= len(m.PlaintextError)
+		copy(dAtA[i:], m.PlaintextError)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.PlaintextError)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.OutputError) > 0 {
+		i -= len(m.OutputError)
+		copy(dAtA[i:], m.OutputError)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.OutputError)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.OutputLogs) > 0 {
+		for iNdEx := len(m.OutputLogs) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.OutputLogs[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintQuery(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Answers) > 0 {
+		for iNdEx := len(m.Answers) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Answers[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintQuery(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintQuery(dAtA []byte, offset int, v uint64) int {
 	offset -= sovQuery(v)
 	base := offset
@@ -2194,17 +2133,17 @@ func encodeVarintQuery(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *QuerySmartContractStateRequest) Size() (n int) {
+func (m *QuerySecretContractRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
+	l = len(m.ContractAddress)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
-	l = len(m.QueryData)
+	l = len(m.Query)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -2224,20 +2163,20 @@ func (m *QueryByLabelRequest) Size() (n int) {
 	return n
 }
 
-func (m *QueryByAddressRequest) Size() (n int) {
+func (m *QueryByContractAddressRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
+	l = len(m.ContractAddress)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
 	return n
 }
 
-func (m *QueryByIDRequest) Size() (n int) {
+func (m *QueryByCodeIDRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2249,7 +2188,7 @@ func (m *QueryByIDRequest) Size() (n int) {
 	return n
 }
 
-func (m *QuerySmartContractStateResponse) Size() (n int) {
+func (m *QuerySecretContractResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2268,7 +2207,7 @@ func (m *QueryContractInfoResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
+	l = len(m.ContractAddress)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -2285,7 +2224,7 @@ func (m *ContractInfoWithAddress) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
+	l = len(m.ContractAddress)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -2296,7 +2235,7 @@ func (m *ContractInfoWithAddress) Size() (n int) {
 	return n
 }
 
-func (m *QueryContractsByCodeResponse) Size() (n int) {
+func (m *QueryContractsByCodeIDResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2317,14 +2256,14 @@ func (m *CodeInfoResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.CodeID != 0 {
-		n += 1 + sovQuery(uint64(m.CodeID))
+	if m.CodeId != 0 {
+		n += 1 + sovQuery(uint64(m.CodeId))
 	}
 	l = len(m.Creator)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
-	l = len(m.DataHash)
+	l = len(m.CodeHash)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -2349,7 +2288,7 @@ func (m *QueryCodeResponse) Size() (n int) {
 		l = m.CodeInfoResponse.Size()
 		n += 1 + l + sovQuery(uint64(l))
 	}
-	l = len(m.Data)
+	l = len(m.Wasm)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -2377,7 +2316,7 @@ func (m *QueryContractAddressResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
+	l = len(m.ContractAddress)
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
@@ -2397,20 +2336,7 @@ func (m *QueryContractLabelResponse) Size() (n int) {
 	return n
 }
 
-func (m *QueryContractKeyResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Key)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	return n
-}
-
-func (m *QueryContractHashResponse) Size() (n int) {
+func (m *QueryCodeHashResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2445,6 +2371,21 @@ func (m *DecryptedAnswer) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovQuery(uint64(l))
 	}
+	return n
+}
+
+func (m *DecryptedAnswers) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Answers) > 0 {
+		for _, e := range m.Answers {
+			l = e.Size()
+			n += 1 + l + sovQuery(uint64(l))
+		}
+	}
 	if len(m.OutputLogs) > 0 {
 		for _, e := range m.OutputLogs {
 			l = e.Size()
@@ -2468,7 +2409,7 @@ func sovQuery(x uint64) (n int) {
 func sozQuery(x uint64) (n int) {
 	return sovQuery(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *QuerySmartContractStateRequest) Unmarshal(dAtA []byte) error {
+func (m *QuerySecretContractRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2491,15 +2432,15 @@ func (m *QuerySmartContractStateRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QuerySmartContractStateRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: QuerySecretContractRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QuerySmartContractStateRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QuerySecretContractRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ContractAddress", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -2527,11 +2468,11 @@ func (m *QuerySmartContractStateRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = string(dAtA[iNdEx:postIndex])
+			m.ContractAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field QueryData", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Query", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -2558,9 +2499,9 @@ func (m *QuerySmartContractStateRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.QueryData = append(m.QueryData[:0], dAtA[iNdEx:postIndex]...)
-			if m.QueryData == nil {
-				m.QueryData = []byte{}
+			m.Query = append(m.Query[:0], dAtA[iNdEx:postIndex]...)
+			if m.Query == nil {
+				m.Query = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -2666,7 +2607,7 @@ func (m *QueryByLabelRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *QueryByAddressRequest) Unmarshal(dAtA []byte) error {
+func (m *QueryByContractAddressRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2689,15 +2630,15 @@ func (m *QueryByAddressRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QueryByAddressRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: QueryByContractAddressRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryByAddressRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QueryByContractAddressRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ContractAddress", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -2725,7 +2666,7 @@ func (m *QueryByAddressRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = string(dAtA[iNdEx:postIndex])
+			m.ContractAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2748,7 +2689,7 @@ func (m *QueryByAddressRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *QueryByIDRequest) Unmarshal(dAtA []byte) error {
+func (m *QueryByCodeIDRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2771,10 +2712,10 @@ func (m *QueryByIDRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QueryByIDRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: QueryByCodeIDRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryByIDRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QueryByCodeIDRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2817,7 +2758,7 @@ func (m *QueryByIDRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *QuerySmartContractStateResponse) Unmarshal(dAtA []byte) error {
+func (m *QuerySecretContractResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2840,10 +2781,10 @@ func (m *QuerySmartContractStateResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QuerySmartContractStateResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: QuerySecretContractResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QuerySmartContractStateResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QuerySecretContractResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2932,7 +2873,7 @@ func (m *QueryContractInfoResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ContractAddress", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -2960,7 +2901,7 @@ func (m *QueryContractInfoResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = string(dAtA[iNdEx:postIndex])
+			m.ContractAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3050,7 +2991,7 @@ func (m *ContractInfoWithAddress) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ContractAddress", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -3078,7 +3019,7 @@ func (m *ContractInfoWithAddress) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = string(dAtA[iNdEx:postIndex])
+			m.ContractAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3137,7 +3078,7 @@ func (m *ContractInfoWithAddress) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *QueryContractsByCodeResponse) Unmarshal(dAtA []byte) error {
+func (m *QueryContractsByCodeIDResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3160,10 +3101,10 @@ func (m *QueryContractsByCodeResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QueryContractsByCodeResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: QueryContractsByCodeIDResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryContractsByCodeResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QueryContractsByCodeIDResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3252,9 +3193,9 @@ func (m *CodeInfoResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CodeID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeId", wireType)
 			}
-			m.CodeID = 0
+			m.CodeId = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowQuery
@@ -3264,7 +3205,7 @@ func (m *CodeInfoResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.CodeID |= uint64(b&0x7F) << shift
+				m.CodeId |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -3303,9 +3244,9 @@ func (m *CodeInfoResponse) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DataHash", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeHash", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowQuery
@@ -3315,25 +3256,23 @@ func (m *CodeInfoResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthQuery
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthQuery
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.DataHash = append(m.DataHash[:0], dAtA[iNdEx:postIndex]...)
-			if m.DataHash == nil {
-				m.DataHash = []byte{}
-			}
+			m.CodeHash = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -3487,7 +3426,7 @@ func (m *QueryCodeResponse) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Wasm", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -3514,9 +3453,9 @@ func (m *QueryCodeResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Data = append(m.Data[:0], dAtA[iNdEx:postIndex]...)
-			if m.Data == nil {
-				m.Data = []byte{}
+			m.Wasm = append(m.Wasm[:0], dAtA[iNdEx:postIndex]...)
+			if m.Wasm == nil {
+				m.Wasm = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -3655,7 +3594,7 @@ func (m *QueryContractAddressResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ContractAddress", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -3683,7 +3622,7 @@ func (m *QueryContractAddressResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = string(dAtA[iNdEx:postIndex])
+			m.ContractAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3788,7 +3727,7 @@ func (m *QueryContractLabelResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *QueryContractKeyResponse) Unmarshal(dAtA []byte) error {
+func (m *QueryCodeHashResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3811,101 +3750,17 @@ func (m *QueryContractKeyResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: QueryContractKeyResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: QueryCodeHashResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryContractKeyResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
-			if m.Key == nil {
-				m.Key = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipQuery(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *QueryContractHashResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowQuery
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: QueryContractHashResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryContractHashResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: QueryCodeHashResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CodeHash", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowQuery
@@ -3915,25 +3770,23 @@ func (m *QueryContractHashResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthQuery
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthQuery
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.CodeHash = append(m.CodeHash[:0], dAtA[iNdEx:postIndex]...)
-			if m.CodeHash == nil {
-				m.CodeHash = []byte{}
-			}
+			m.CodeHash = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -4113,7 +3966,91 @@ func (m *DecryptedAnswer) Unmarshal(dAtA []byte) error {
 			}
 			m.OutputDataAsString = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DecryptedAnswers) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DecryptedAnswers: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DecryptedAnswers: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Answers", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQuery
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Answers = append(m.Answers, &DecryptedAnswer{})
+			if err := m.Answers[len(m.Answers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OutputLogs", wireType)
 			}
@@ -4147,11 +4084,11 @@ func (m *DecryptedAnswer) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 6:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OutputError", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowQuery
@@ -4161,27 +4098,25 @@ func (m *DecryptedAnswer) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthQuery
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthQuery
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.OutputError = append(m.OutputError[:0], dAtA[iNdEx:postIndex]...)
-			if m.OutputError == nil {
-				m.OutputError = []byte{}
-			}
+			m.OutputError = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 7:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PlaintextError", wireType)
 			}

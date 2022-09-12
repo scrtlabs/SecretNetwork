@@ -1,5 +1,17 @@
 [workspace]
-members = ["ffi-types", "execute", "query", "shared/*"]
+members = [
+  "ffi-types",
+  "execute",
+  "query",
+  "shared/contract-engine",
+  "shared/cosmos-proto",
+  "shared/cosmos-types",
+  "shared/crypto",
+  "shared/utils",
+  "shared/cosmwasm-types/v1.0",
+  "shared/cosmwasm-types/v0.10",
+  "shared/cosmwasm-types/generic"
+]
 exclude = ["test"]
 
 [profile.release]
@@ -17,4 +29,4 @@ rpath = false
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [
   "mesalock_sgx"
 ] }
-zeroize = { rev = "b8488228e3fdacbfdb3ea8a6117919871637d111", git = "https://github.com/enigmampc/zeroize" }
+# zeroize = { rev = "2fdfbde87bd085c2f771c9e034fff136cc53fe31", git = "https://github.com/scrtlabs/zeroize" }

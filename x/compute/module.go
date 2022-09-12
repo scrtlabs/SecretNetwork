@@ -83,7 +83,7 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	types.RegisterInterfaces(registry)
 }
 
-//____________________________________________________________________________
+// ____________________________________________________________________________
 
 // AppModule implements an application module for the compute module.
 type AppModule struct {
@@ -103,7 +103,16 @@ func NewAppModule(keeper Keeper) AppModule {
 func (AppModule) ConsensusVersion() uint64 { return 1 }
 
 func (am AppModule) RegisterServices(configurator module.Configurator) {
+	types.RegisterMsgServer(configurator.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
+
+	// migrations go here (in the future when we have any)
+	// example:
+
+	// m := keeper.NewMigrator(am.keeper)
+	// if err := configurator.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
+	// 	panic(fmt.Sprintf("failed to migrate x/compute from version 1 to 2: %v", err))
+	// }
 }
 
 func (am AppModule) LegacyQuerierHandler(amino *codec.LegacyAmino) sdk.Querier {
@@ -150,7 +159,7 @@ func (AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.Validato
 	return []abci.ValidatorUpdate{}
 }
 
-//____________________________________________________________________________
+// ____________________________________________________________________________
 
 // AppModuleSimulation functions
 

@@ -6,11 +6,11 @@ use crate::types::CosmosPubKey;
 
 use enclave_crypto::traits::VerifyingKey;
 
-use cosmos_proto::crypto::multisig::multisig::MultiSignature;
+use cosmos_proto::{crypto::multisig::multisig::MultiSignature, tx::signing::SignMode};
 
 use super::traits::CosmosAminoPubkey;
 
-use enclave_cosmwasm_types::types::CanonicalAddr;
+use cw_types_v010::types::CanonicalAddr;
 use enclave_crypto::CryptoError;
 use protobuf::Message;
 
@@ -94,7 +94,12 @@ impl CosmosAminoPubkey for MultisigThresholdPubKey {
 }
 
 impl VerifyingKey for MultisigThresholdPubKey {
-    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+    fn verify_bytes(
+        &self,
+        bytes: &[u8],
+        sig: &[u8],
+        sign_mode: SignMode,
+    ) -> Result<(), CryptoError> {
         debug!("verifying multisig");
         trace!("Sign bytes are: {:?}", bytes);
         let signatures = decode_multisig_signature(sig)?;
@@ -122,7 +127,7 @@ impl VerifyingKey for MultisigThresholdPubKey {
             for (i, current_signer) in signers.iter().enumerate() {
                 trace!("Checking pubkey: {:?}", current_signer);
                 // This technically support that one of the multisig signers is a multisig itself
-                let result = current_signer.verify_bytes(bytes, current_sig);
+                let result = current_signer.verify_bytes(bytes, current_sig, sign_mode);
 
                 if result.is_ok() {
                     signer_pos = Some(i);

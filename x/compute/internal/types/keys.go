@@ -23,24 +23,16 @@ const (
 	RouterKey = ModuleName
 )
 
-const ( // event attributes
-	AttributeKeyContract = "contract_address"
-	AttributeKeyCodeID   = "code_id"
-	AttributeKeySigner   = "signer"
-)
-
-// nolint
 var (
-	CodeKeyPrefix       = []byte{0x01}
-	ContractKeyPrefix   = []byte{0x02}
-	ContractStorePrefix = []byte{0x03}
-	SequenceKeyPrefix   = []byte{0x04}
-	// ContractHistoryStorePrefix = []byte{0x05}
+	CodeKeyPrefix           = []byte{0x01}
+	ContractKeyPrefix       = []byte{0x02}
+	ContractStorePrefix     = []byte{0x03}
+	SequenceKeyPrefix       = []byte{0x04}
 	ContractEnclaveIdPrefix = []byte{0x06}
 	ContractLabelPrefix     = []byte{0x07}
-
-	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
-	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
+	TXCounterPrefix         = []byte{0x08}
+	KeyLastCodeID           = append(SequenceKeyPrefix, []byte("lastCodeId")...)
+	KeyLastInstanceID       = append(SequenceKeyPrefix, []byte("lastContractId")...)
 )
 
 // GetCodeKey constructs the key for retreiving the ID for the WASM code

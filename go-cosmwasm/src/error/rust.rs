@@ -141,6 +141,25 @@ where
     }
 }
 
+pub fn handle_c_error_default<T>(
+    result: Result<T, Error>,
+    errout: Option<&mut Buffer>,
+) -> T
+    where
+        T: Default,
+{
+    match result {
+        Ok(value) => {
+            clear_error();
+            value
+        }
+        Err(error) => {
+            set_error(error, errout);
+            Default::default()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

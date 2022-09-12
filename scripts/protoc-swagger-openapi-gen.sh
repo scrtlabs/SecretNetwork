@@ -24,17 +24,22 @@ for dir in $proto_dirs; do
   fi
 done
 
-# service.swagger.json doesn't work for some reasone
+# Fix circular definition in cosmos/tx/v1beta1/service.swagger.json
+jq 'del(.definitions["cosmos.tx.v1beta1.ModeInfo.Multi"].properties.mode_infos.items["$ref"])' ./tmp-swagger-gen/cosmos/tx/v1beta1/service.swagger.json > ./tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.json
+
+# Tag everything as "gRPC Gateway API"
+perl -i -pe 's/"(Query|Service)"/"gRPC Gateway API"/' $(find ./tmp-swagger-gen -name '*.swagger.json' -print0 | xargs -0)
+
 (
   cd ./client/docs
 
   # Generate config.json
   # There's some operationIds naming collision, for sake of automation we're
   # giving all of them a unique name
-  find ../../tmp-swagger-gen -name 'query.swagger.json' | 
+  find ../../tmp-swagger-gen -name 'query.swagger.json' -o -name 'fixed-service.swagger.json' | 
     sort |
     awk '{print "{\"url\":\""$1"\",\"operationIds\":{\"rename\":{\"Params\":\""$1"Params\",\"DelegatorValidators\":\""$1"DelegatorValidators\",\"UpgradedConsensusState\":\""$1"UpgradedConsensusState\"}}}"}' |
-    jq -s '{swagger:"2.0","info":{"title":"Secret Network - gRPC Gateway docs","description":"A REST interface for queries and transactions","version":"'"$(git describe --tags $(git rev-list --tags --max-count=1) | perl -pe 's/-(beta|alpha).*//')"'"},apis:.} | .apis += [{"url":"./swagger_legacy.yaml","dereference":{"circular":"ignore"}}]' > ./config.json
+    jq -s '{swagger:"2.0","info":{"title":"Secret Network","description":"A REST interface for queries and transactions","version":"'"${CHAIN_VERSION}"'"},apis:.} | .apis += [{"url":"./swagger_legacy.yaml","dereference":{"circular":"ignore"}}]' > ./config.json
 
   # Derive openapi & swagger from config.json
   yarn install
@@ -43,5 +48,5 @@ done
   yarn build
 )
 
-# clean swagger files
+# clean swagger tmp files
 rm -rf ./tmp-swagger-gen

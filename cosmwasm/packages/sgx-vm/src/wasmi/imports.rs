@@ -49,6 +49,7 @@ extern "C" {
         msg_len: usize,
         sig_info: *const u8,
         sig_info_len: usize,
+        handle_type: u8,
     ) -> sgx_status_t;
 }
 

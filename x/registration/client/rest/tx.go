@@ -14,24 +14,24 @@ func registerTxRoutes(cliCtx client.Context, r *mux.Router) {
 // limit max bytes read to prevent gzip bombs
 // const maxSize = 400 * 1024
 
-//type storeCodeReq struct {
+// type storeCodeReq struct {
 //	BaseReq   rest.BaseReq `json:"base_req" yaml:"base_req"`
 //	WasmBytes []byte       `json:"wasm_bytes"`
 //}
 //
-//type instantiateContractReq struct {
+// type instantiateContractReq struct {
 //	BaseReq rest.BaseReq `json:"base_req" yaml:"base_req"`
 //	Deposit sdk.Coins    `json:"deposit" yaml:"deposit"`
 //	InitMsg []byte       `json:"init_msg" yaml:"init_msg"`
 //}
 //
-//type executeContractReq struct {
+// type executeContractReq struct {
 //	BaseReq rest.BaseReq `json:"base_req" yaml:"base_req"`
 //	ExecMsg []byte       `json:"exec_msg" yaml:"exec_msg"`
 //	Amount  sdk.Coins    `json:"coins" yaml:"coins"`
 //}
 //
-//func storeCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+// func storeCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.Request) {
 //		var req storeCodeReq
 //		if !rest.ReadRESTReq(w, r, cliCtx.Codec, &req) {
@@ -83,7 +83,7 @@ func registerTxRoutes(cliCtx client.Context, r *mux.Router) {
 //	}
 //}
 //
-//func instantiateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+// func instantiateContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.Request) {
 //		var req instantiateContractReq
 //		if !rest.ReadRESTReq(w, r, cliCtx.Codec, &req) {
@@ -120,7 +120,7 @@ func registerTxRoutes(cliCtx client.Context, r *mux.Router) {
 //	}
 //}
 //
-//func executeContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
+// func executeContractHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.Request) {
 //		var req executeContractReq
 //		if !rest.ReadRESTReq(w, r, cliCtx.Codec, &req) {

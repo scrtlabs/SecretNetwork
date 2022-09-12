@@ -30,7 +30,10 @@ jobs:
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src clippy
+      - run: |
+          rustup component add rust-src clippy
+          cd cosmwasm/enclaves/execute/
+          rustup component add rust-src clippy
       - name: Install xargo
         run: |
           cargo --version
@@ -56,7 +59,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
         with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -80,7 +83,10 @@ jobs:
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src clippy
+      - run: |
+          rustup component add rust-src clippy
+          cd cosmwasm/enclaves/execute/
+          rustup component add rust-src clippy
       - name: Install xargo
         run: |
           cargo --version
@@ -127,7 +133,15 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: contract.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm
+      - uses: actions/upload-artifact@v3
+        with:
+          name: v1-contract.wasm
+          path: cosmwasm/contracts/v1/compute-tests/test-compute-contract/v1-contract.wasm
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ibc.wasm
+          path: cosmwasm/contracts/v1/compute-tests/ibc-test-contract/ibc.wasm
       - uses: actions/upload-artifact@v3
         with:
           name: enclave
@@ -139,15 +153,15 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: contract_with_floats.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract_with_floats.wasm
       - uses: actions/upload-artifact@v3
         with:
           name: too-high-initial-memory.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/too-high-initial-memory.wasm
       - uses: actions/upload-artifact@v3
         with:
           name: static-too-high-initial-memory.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/static-too-high-initial-memory.wasm
 
   Go-Tests:
     runs-on: ubuntu-20.04
@@ -156,7 +170,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
         with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -176,6 +190,14 @@ jobs:
           name: contract.wasm
       - uses: actions/download-artifact@v3
         with:
+          name: v1-contract.wasm
+          path: ./x/compute/internal/keeper/testdata/
+      - uses: actions/download-artifact@v3
+        with:
+          name: ibc.wasm
+          path: ./x/compute/internal/keeper/testdata/
+      - uses: actions/download-artifact@v3
+        with:
           name: contract_with_floats.wasm
       - uses: actions/download-artifact@v3
         with:
@@ -185,12 +207,14 @@ jobs:
           name: static-too-high-initial-memory.wasm
       - name: Setup Files
         run: |
+          find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-          cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
-          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
-          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
-          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+          cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
+          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
+          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
+          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
+          find "$(pwd)" -name \*.wasm
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -205,7 +229,7 @@ jobs:
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
           LOG_LEVEL=ERROR go test -v ./x/compute/client/...
-          LOG_LEVEL=ERROR go test -p 1 -timeout 20m -v ./x/compute/internal/...
+          LOG_LEVEL=ERROR go test -p 1 -timeout 90m -v ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-20.04
@@ -234,9 +258,13 @@ jobs:
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src clippy
+      - run: |
+          rustup component add rust-src clippy
+          cd cosmwasm/enclaves/execute/
+          rustup component add rust-src clippy
       - name: Install xargo
         run: |
+          cd cosmwasm/enclaves/execute/
           cargo --version
           rustc --version  
           cargo +stable install xargo --version 0.3.25
@@ -260,7 +288,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
         with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@v0.17.0
@@ -272,13 +300,24 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: Build docker testnet
+      - name: Build LocalSecret
         run: |
           echo not_a_key | tee {api_key,spid}.txt
           DOCKER_TAG=v0.0.0 make build-localsecret
+      - name: Build Hermes
+        run: |
+          DOCKER_TAG=v0.0.0 make build-ibc-hermes
+      - name: Run integration tests
+        run: |
+          cd integration-tests
+          yarn
+          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
+          # docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml logs -f &
+          yarn test
+          make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
-          git clone --depth 1 --branch lior-fix-based-on-rpc-2 https://github.com/scrtlabs/secret.js
+          git clone --depth 1 --branch cosmwasm-v1 https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*

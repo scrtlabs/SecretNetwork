@@ -164,7 +164,7 @@ pub unsafe extern "C" fn ecall_init(
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // https://github.com/scrtlabs/SecretNetwork/pull/517#discussion_r481924571
             // I believe that this error condition is currently unreachable.
             // I think we can safely remove it completely right now, and have
             // recursion_depth::increment() simply increment the counter with no further checks,
@@ -244,11 +244,12 @@ pub unsafe extern "C" fn ecall_handle(
     msg_len: usize,
     sig_info: *const u8,
     sig_info_len: usize,
+    handle_type: u8,
 ) -> HandleResult {
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // https://github.com/scrtlabs/SecretNetwork/pull/517#discussion_r481924571
             // I believe that this error condition is currently unreachable.
             // I think we can safely remove it completely right now, and have
             // recursion_depth::increment() simply increment the counter with no further checks,
@@ -285,6 +286,7 @@ pub unsafe extern "C" fn ecall_handle(
             env,
             msg,
             sig_info,
+            handle_type,
         );
         *used_gas = local_used_gas;
         result_handle_success_to_handleresult(result)
@@ -387,7 +389,7 @@ unsafe fn ecall_query_impl(
     let _recursion_guard = match recursion_depth::guard() {
         Ok(rg) => rg,
         Err(err) => {
-            // https://github.com/enigmampc/SecretNetwork/pull/517#discussion_r481924571
+            // https://github.com/scrtlabs/SecretNetwork/pull/517#discussion_r481924571
             // I believe that this error condition is currently unreachable.
             // I think we can safely remove it completely right now, and have
             // recursion_depth::increment() simply increment the counter with no further checks,

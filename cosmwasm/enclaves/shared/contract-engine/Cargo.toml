@@ -1,6 +1,6 @@
 [package]
 name = "enclave_contract_engine"
-version = "1.2.4"
+version = "1.4.0"
 authors = ["Cashmaney <itzik@enigma.co>"]
 edition = "2018"
 
@@ -23,7 +23,9 @@ enclave-ffi-types = { path = "../../ffi-types" }
 cosmos_proto = { path = "../cosmos-proto" }
 enclave_crypto = { path = "../crypto" }
 enclave_cosmos_types = { path = "../cosmos-types" }
-enclave_cosmwasm_types = { path = "../cosmwasm-types" }
+cw_types_v010 = { path = "../cosmwasm-types/v0.10" }
+cw_types_v1 = { path = "../cosmwasm-types/v1.0" }
+cw_types_generic = { path = "../cosmwasm-types/generic" }
 enclave_utils = { path = "../utils" }
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
