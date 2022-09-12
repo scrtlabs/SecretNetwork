@@ -57,10 +57,6 @@ func (k Keeper) RedeemingPool(ctx sdk.Context) sdk.Coins {
 
 // ConvertCollateralsToUSC converts collateral coins to USC coin in 1:1 relation.
 func (k Keeper) ConvertCollateralsToUSC(ctx sdk.Context, colCoins sdk.Coins) (uscCoin sdk.Coin, colUsedCoins sdk.Coins, retErr error) {
-	if !k.Enabled(ctx) {
-		return sdk.Coin{}, nil, sdkErrors.Wrapf(types.ErrUSCModuleDisabled, "module %s is currently disabled", types.ModuleName)
-	}
-
 	uscMeta, colMetas := k.USCMeta(ctx), k.CollateralMetasSet(ctx)
 
 	uscCoin = uscMeta.NewZeroCoin()
@@ -88,10 +84,6 @@ func (k Keeper) ConvertCollateralsToUSC(ctx sdk.Context, colCoins sdk.Coins) (us
 // ConvertUSCToCollaterals converts USC coin to collateral coins in 1:1 relation iterating module's Active pool from the highest supply to the lowest.
 // Returns converted USC (equals to input if there are no leftovers)  and collaterals coins.
 func (k Keeper) ConvertUSCToCollaterals(ctx sdk.Context, uscCoin sdk.Coin) (uscUsedCoin sdk.Coin, colCoins sdk.Coins, retErr error) {
-	if !k.Enabled(ctx) {
-		return sdk.Coin{}, nil, sdkErrors.Wrapf(types.ErrUSCModuleDisabled, "module %s is currently disabled", types.ModuleName)
-	}
-
 	uscMeta, colMetas := k.USCMeta(ctx), k.CollateralMetasSet(ctx)
 
 	// Check source denom

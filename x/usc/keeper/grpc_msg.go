@@ -24,10 +24,15 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 
 // MintUSC implements the types.MsgServer interface.
 func (k msgServer) MintUSC(goCtx context.Context, req *types.MsgMintUSC) (*types.MsgMintUSCResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if !k.Enabled(ctx) {
+		return nil, sdkErrors.Wrapf(types.ErrUSCModuleDisabled, "module %s is currently disabled", types.ModuleName)
+	}
+
 	if req == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "empty request")
 	}
-	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	accAddr, err := sdk.AccAddressFromBech32(req.Address)
 	if err != nil {
@@ -70,10 +75,15 @@ func (k msgServer) MintUSC(goCtx context.Context, req *types.MsgMintUSC) (*types
 
 // RedeemCollateral implements the types.MsgServer interface.
 func (k msgServer) RedeemCollateral(goCtx context.Context, req *types.MsgRedeemCollateral) (*types.MsgRedeemCollateralResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if !k.Enabled(ctx) {
+		return nil, sdkErrors.Wrapf(types.ErrUSCModuleDisabled, "module %s is currently disabled", types.ModuleName)
+	}
+
 	if req == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "empty request")
 	}
-	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	accAddr, err := sdk.AccAddressFromBech32(req.Address)
 	if err != nil {
