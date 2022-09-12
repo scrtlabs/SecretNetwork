@@ -2,12 +2,13 @@ package app
 
 import (
 	"fmt"
-	"github.com/enigmampc/SecretNetwork/x/usc"
-	usctypes "github.com/enigmampc/SecretNetwork/x/usc/types"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/enigmampc/SecretNetwork/x/usc"
+	usctypes "github.com/enigmampc/SecretNetwork/x/usc/types"
 
 	"github.com/enigmampc/SecretNetwork/app/upgrades"
 	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
@@ -195,7 +196,7 @@ type SecretNetworkApp struct {
 	ICAHostKeeper       icahostkeeper.Keeper
 	ICAAuthKeeper       icaauthkeeper.Keeper
 
-	USCKeeper usckeeper.Keeper
+	uscKeeper usckeeper.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -414,7 +415,7 @@ func NewSecretNetworkApp(
 		govRouter,
 	)
 
-	app.USCKeeper = usckeeper.NewKeeper(
+	app.uscKeeper = usckeeper.NewKeeper(
 		appCodec,
 		keys[usctypes.StoreKey],
 		app.accountKeeper,
@@ -492,7 +493,7 @@ func NewSecretNetworkApp(
 		transfer.NewAppModule(app.transferKeeper),
 		icaModule,
 		icaAuthModule,
-		usc.NewAppModule(appCodec, app.USCKeeper),
+		usc.NewAppModule(appCodec, app.uscKeeper),
 	)
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -591,7 +592,7 @@ func NewSecretNetworkApp(
 	app.mm.RegisterServices(app.configurator)
 
 	// setupUpgradeHandlers() shoulbe be called after app.mm is configured
-	app.setupUpgradeHandlers(&icaModule)
+	app.setupUpgradeHandlers()
 
 	// initialize stores
 	app.MountKVStores(keys)
@@ -752,7 +753,7 @@ func (app *SecretNetworkApp) BlockedAddrs() map[string]bool {
 	return blockedAddrs
 }
 
-func (app *SecretNetworkApp) setupUpgradeHandlers(icamodule *ica.AppModule) {
+func (app *SecretNetworkApp) setupUpgradeHandlers() {
 	for _, upgradeDetails := range Upgrades {
 		app.upgradeKeeper.SetUpgradeHandler(
 			upgradeDetails.UpgradeName,

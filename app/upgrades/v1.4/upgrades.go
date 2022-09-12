@@ -20,32 +20,28 @@ var Upgrade = upgrades.Upgrade{
 
 func CreateUpgradeHandler(mm *module.Manager, configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {
-	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
+	return func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
 		// We're not upgrading cosmos-sdk, Tendermint or ibc-go, so no ConsensusVersion changes
 		// Therefore mm.RunMigrations() should not find any module to upgrade
 
 		ctx.Logger().Info("Running module migrations for v1.4...")
 
-		for moduleName := range mm.Modules {
-			vm[moduleName] = mm.Modules[moduleName].ConsensusVersion()
-		}
+		fromVM[usctypes.ModuleName] = mm.Modules[usctypes.ModuleName].ConsensusVersion()
 
-		vm[usctypes.ModuleName] = mm.Modules[usctypes.ModuleName].ConsensusVersion()
-
-		// create ICS27 Controller submodule params
+		// create USC module params
 		uscParams := usctypes.DefaultParams()
 
-		ctx.Logger().Info("Starting to init usc module...")
+		ctx.Logger().Info("Initializing USC module...")
 
 		uscmoduleInstance, correctTypecast := mm.Modules[usctypes.ModuleName].(usc.AppModule)
 		if !correctTypecast {
-			panic("mm.Modules[icatypes.ModuleName] is not of type ica.AppModule")
+			panic("mm.Modules[usctypes.ModuleName] is not of type usc.AppModule")
 		}
 
 		uscmoduleInstance.InitModule(ctx, uscParams)
 
 		ctx.Logger().Info("Starting to run module migrations...")
 
-		return mm.RunMigrations(ctx, configurator, vm)
+		return mm.RunMigrations(ctx, configurator, fromVM)
 	}
 }
