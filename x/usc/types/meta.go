@@ -101,7 +101,7 @@ func (m TokenMeta) ConvertCoin2(coin sdk.Coin, dstMeta TokenMeta) (dstCoin sdk.C
 		srcCoin.Amount = srcCoin.Amount.MulRaw(10)
 	}
 
-	return
+	return dstCoin, srcCoin, retErr
 }
 
 // NormalizeCoin converts sdk.Coin to a smaller decimals unit.

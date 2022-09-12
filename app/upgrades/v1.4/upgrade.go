@@ -33,12 +33,12 @@ func CreateUpgradeHandler(mm *module.Manager, configurator module.Configurator,
 
 		ctx.Logger().Info("Initializing USC module...")
 
-		uscmoduleInstance, correctTypecast := mm.Modules[usctypes.ModuleName].(usc.AppModule)
+		uscModuleInstance, correctTypecast := mm.Modules[usctypes.ModuleName].(usc.AppModule)
 		if !correctTypecast {
 			panic("mm.Modules[usctypes.ModuleName] is not of type usc.AppModule")
 		}
 
-		uscmoduleInstance.InitModule(ctx, uscParams)
+		uscModuleInstance.InitModule(ctx, uscParams)
 
 		ctx.Logger().Info("Starting to run module migrations...")
 

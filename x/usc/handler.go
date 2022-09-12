@@ -13,10 +13,6 @@ func NewHandler(k keeper.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
-		if !k.Enabled(ctx) {
-			return nil, sdkErrors.Wrapf(sdkErrors.ErrUnauthorized, "Module %s is currently disabled", types.ModuleName)
-		}
-
 		switch msg := msg.(type) {
 		case *types.MsgMintUSC:
 			res, err := msgServer.MintUSC(sdk.WrapSDKContext(ctx), msg)
