@@ -25,9 +25,12 @@ docker stop localsecret
 docker start localsecret -a
 ```
 
-In a second terminal enter LocalSecret using `docker exec -it localsecret bash`, then:
+In a second terminal:
 
 ```bash
+#Enter LocalSecret using:
+docker exec -it localsecret bash
+
 # Init node & enclave
 secretd init --home val2 val2
 secretd init-enclave
@@ -46,7 +49,7 @@ perl -i -pe 's/:(\d+)/":".($1+10)/e' val2/config/app.toml
 perl -i -pe 's/:(\d+)/":".($1+10)/e' val2/config/config.toml
 
 # persistent_peers to the main node
-perl -i -pe "s/persistent_peers = \"\"/persistent_peers = \"$(secretcli status | jq -r .NodeInfo.id)\@127.0.0.1:26656\"/" val2/config/config.toml
+perl -i -pe "s/persistent_peers = \".+$/persistent_peers = \"$(secretcli status | jq -r .NodeInfo.id)\@127.0.0.1:26656\"/" val2/config/config.toml
 
 # Start val2 node
 secretd start --home val2
@@ -54,9 +57,12 @@ secretd start --home val2
 
 (Note: You can already start Step 3 now)
 
-In a third terminal enter LocalSecret using `docker exec -it localsecret bash`, then:
+In a third terminal:
 
 ```bash
+# Enter LocalSecret using:
+docker exec -it localsecret bash
+
 # Increase stake of main process to 1M
 # The double signing node can't be the most powerful otherwise weird stuff will happen
 # (The main node will apphash and so is one of the double signing nodes)
@@ -72,7 +78,7 @@ secretd tx staking create-validator \
   --commission-max-change-rate="0.01" \
   --min-self-delegation="1" \
   --moniker=val2 \
-  --from=b -y
+  --from=b -y -b block
 
 # Copy directory from val2 to val3, including priv_validator_key.json
 cp -r val{2,3}
@@ -91,11 +97,13 @@ perl -i -pe 's/:(\d+)/":".($1+10)/e' val3/config/config.toml
 # persistent_peers to the main node
 # both double sign nodes should point to the main node
 # otherwise (if e.g. main<-val2<-val3) they'll filter out each other's double signatures
-perl -i -pe "s/persistent_peers = \"\"/persistent_peers = \"$(secretcli status | jq -r .NodeInfo.id)\@127.0.0.1:26656\"/" val3/config/config.toml
+perl -i -pe "s/^persistent_peers = \".+$/persistent_peers = \"$(secretcli status | jq -r .NodeInfo.id)\@127.0.0.1:26656\"/" val3/config/config.toml
 
 # Start val3 node
-secretd start --home val2
+secretd start --home val3
 ```
+
+This should tombstone the second validator. On the first validator you should see `INF verified new evidence of byzantine behavior`.
 
 ## Step 3
 
@@ -156,6 +164,7 @@ Compile a v1.4 chain just to extract the binaries from it:
 in `app/upgrades/v1.4/cos_patch.go` use these (from val2):
 
 ```go
+// TESTNET!!!!
 var (
 	cosValidatorAddress = "secretvaloper1fc3fzy78ttp0lwuujw7e52rhspxn8uj5m98e7s"
 	cosConsensusAddress = "secretvalcons17x85qk0e2lancd9lk7gn62t0t503dxm4rd9pu5"
