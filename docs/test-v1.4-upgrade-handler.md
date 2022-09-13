@@ -36,8 +36,7 @@ secretd init --home val2 val2
 secretd init-enclave
 PUBLIC_KEY=$(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )
 echo "Public key: $(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )"
-secretd tx register auth /opt/secret/.sgx_secrets/attestation_cert.der -y --from a --gas-prices 0.25uscrt
-sleep 10
+secretd tx register auth /opt/secret/.sgx_secrets/attestation_cert.der -y --from a --gas-prices 0.25uscrt -b block
 SEED=$(secretd q register seed "$PUBLIC_KEY" 2> /dev/null | cut -c 3-)
 echo "SEED: $SEED"
 secretd q register secret-network-params 2> /dev/null
@@ -55,7 +54,13 @@ perl -i -pe "s/persistent_peers = \".+$/persistent_peers = \"$(secretcli status 
 secretd start --home val2
 ```
 
-(Note: You can already start Step 3 now)
+Note: You can already start Step 3 now
+
+Get `cosConsensusAddress` like this, and start Step 4:
+
+```bash
+docker exec localsecret bash -c 'secretcli tendermint show-address --home val2'
+```
 
 In a third terminal:
 
@@ -159,7 +164,7 @@ yarn test
 
 ## Step 3
 
-Compile a v1.4 chain just to extract the binaries from it:
+Compile a v1.4 chain just to extract the binaries from it.
 
 in `app/upgrades/v1.4/cos_patch.go` use these (from val2):
 
@@ -167,7 +172,7 @@ in `app/upgrades/v1.4/cos_patch.go` use these (from val2):
 // TESTNET!!!!
 var (
 	cosValidatorAddress = "secretvaloper1fc3fzy78ttp0lwuujw7e52rhspxn8uj5m98e7s"
-	cosConsensusAddress = "secretvalcons17x85qk0e2lancd9lk7gn62t0t503dxm4rd9pu5"
+	cosConsensusAddress = "TODO FILL IN!"
 )
 ```
 
@@ -236,8 +241,8 @@ docker exec localsecret bash -c $'perl -i -pe \'s;RUST_BACKTRACE=1 secretd start
 Propose a software upgrade on v1.3 chain.
 
 ```bash
-# 40 blocks (4 minutes) until upgrade block
-UPGRADE_BLOCK="$(docker exec localsecret bash -c 'secretcli status | jq "(.SyncInfo.latest_block_height | tonumber) + 40"')"
+# 30 blocks (3 minutes) until upgrade block
+UPGRADE_BLOCK="$(docker exec localsecret bash -c 'secretcli status | jq "(.SyncInfo.latest_block_height | tonumber) + 30"')"
 
 # Propose upgrade
 PROPOSAL_ID="$(docker exec localsecret bash -c "secretcli tx gov submit-proposal software-upgrade v1.4 --upgrade-height $UPGRADE_BLOCK --title 'Shockwave Delta Upgrade' --description YOLO --deposit 100000000uscrt --from a -y -b block | jq '.logs[0].events[] | select(.type == \"submit_proposal\") | .attributes[] | select(.key == \"proposal_id\") | .value | tonumber'")"
