@@ -476,7 +476,7 @@ describe("Env", () => {
 });
 
 describe("CustomMsg", () => {
-  test.only("v1", async () => {
+  test("v1", async () => {
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
         sender: accounts[0].address,
