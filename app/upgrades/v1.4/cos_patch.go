@@ -18,7 +18,7 @@ type CosMints struct {
 }
 
 var cosValidatorAddress = "secretvaloper1hscf4cjrhzsea5an5smt4z9aezhh4sf5jjrqka"
-var cosConsensusAddress = "secretvalcons1hscf4cjrhzsea5an5smt4z9aezhh4sf5xpsu6u"
+var cosConsensusAddress = "secretvalcons1rd5gs24he44ufnwawshu3u73lh33cx5z7npzre"
 
 func mintLostTokens(
 	ctx sdk.Context,
