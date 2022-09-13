@@ -40,13 +40,9 @@ pub enum Msg {
         proposal: u64,
         vote_option: VoteOption,
     },
-    DistributionMsgSetWithdrawAddress {
+    SetWithdrawAddress {
         address: String,
     },
-    DistributionMsgWithdrawDelegatorReward {
-        validator: String,
-    },
-
     IbcMsgTransfer {
         channel_id: String,
         to_address: String,

@@ -101,14 +101,9 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
                 vote: vote_option,
             })));
         }
-        Msg::DistributionMsgSetWithdrawAddress { address } => {
+        Msg::SetWithdrawAddress { address } => {
             return Ok(Response::new().add_message(CosmosMsg::Distribution(
                 DistributionMsg::SetWithdrawAddress { address },
-            )));
-        }
-        Msg::DistributionMsgWithdrawDelegatorReward { validator } => {
-            return Ok(Response::new().add_message(CosmosMsg::Distribution(
-                DistributionMsg::WithdrawDelegatorReward { validator },
             )));
         }
         Msg::IbcMsgTransfer {
