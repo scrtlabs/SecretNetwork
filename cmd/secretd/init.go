@@ -102,6 +102,8 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			config.StateSync.TrustPeriod = 112 * time.Hour
 			config.FastSync.Version = "v0"
 
+			config.LogLevel = "error"
+
 			// Get bip39 mnemonic
 			var mnemonic string
 			recover, _ := cmd.Flags().GetBool(FlagRecover)
