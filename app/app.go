@@ -214,6 +214,8 @@ func NewSecretNetworkApp(
 		bootstrap:         bootstrap,
 	}
 
+	app.AppKeepers.InitKeys()
+
 	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, maccPerms, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath)
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
 	app.setupUpgradeStoreLoaders()

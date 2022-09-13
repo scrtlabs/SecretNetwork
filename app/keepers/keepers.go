@@ -133,6 +133,12 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	homePath string,
 ) {
 
+	paramsKeeper := initParamsKeeper(appCodec, legacyAmino, ak.keys[paramstypes.StoreKey], ak.tKeys[paramstypes.TStoreKey])
+	ak.ParamsKeeper = &paramsKeeper
+
+	// set the BaseApp's parameter store
+	app.SetParamStore(ak.ParamsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
+
 	// add keepers
 	accountKeeper := authkeeper.NewAccountKeeper(
 		appCodec, ak.keys[authtypes.StoreKey], ak.GetSubspace(authtypes.ModuleName), authtypes.ProtoBaseAccount, maccPerms,
@@ -148,13 +154,6 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		appCodec, ak.keys[stakingtypes.StoreKey], ak.AccountKeeper, *ak.BankKeeper, ak.GetSubspace(stakingtypes.ModuleName),
 	)
 	ak.StakingKeeper = &stakingKeeper
-	// Register the staking hooks
-	// NOTE: StakingKeeper above is passed by reference, so that it will contain these hooks
-	ak.StakingKeeper.SetHooks(
-		stakingtypes.NewMultiStakingHooks(
-			ak.DistrKeeper.Hooks(),
-			ak.SlashingKeeper.Hooks()),
-	)
 
 	mintKeeper := mintkeeper.NewKeeper(
 		appCodec, ak.keys[minttypes.StoreKey], ak.GetSubspace(minttypes.ModuleName), ak.StakingKeeper,
@@ -187,11 +186,14 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	upgradeKeeper := upgradekeeper.NewKeeper(skipUpgradeHeights, ak.keys[upgradetypes.StoreKey], appCodec, homePath, app)
 	ak.UpgradeKeeper = &upgradeKeeper
 
-	paramsKeeper := initParamsKeeper(appCodec, legacyAmino, ak.keys[paramstypes.StoreKey], ak.tKeys[paramstypes.TStoreKey])
-	ak.ParamsKeeper = &paramsKeeper
+	// add capability keeper and ScopeToModule for ibc module
+	ak.CapabilityKeeper = capabilitykeeper.NewKeeper(appCodec, ak.keys[capabilitytypes.StoreKey], ak.memKeys[capabilitytypes.MemStoreKey])
+	ak.CreateScopedKeepers()
 
-	// set the BaseApp's parameter store
-	app.SetParamStore(ak.ParamsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
+	// Create IBC Keeper
+	ak.IbcKeeper = ibckeeper.NewKeeper(
+		appCodec, ak.keys[ibchost.StoreKey], ak.GetSubspace(ibchost.ModuleName), ak.StakingKeeper, ak.UpgradeKeeper, ak.ScopedIBCKeeper,
+	)
 
 	// Register the proposal types
 	govRouter := govtypes.NewRouter()
@@ -217,9 +219,14 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		appCodec, ak.keys[evidencetypes.StoreKey], ak.StakingKeeper, ak.SlashingKeeper,
 	)
 
-	// add capability keeper and ScopeToModule for ibc module
-	ak.CapabilityKeeper = capabilitykeeper.NewKeeper(appCodec, ak.keys[capabilitytypes.StoreKey], ak.memKeys[capabilitytypes.MemStoreKey])
-	ak.CreateScopedKeepers()
+	// Register the staking hooks
+	// NOTE: StakingKeeper above is passed by reference, so that it will contain these hooks
+	ak.StakingKeeper.SetHooks(
+		stakingtypes.NewMultiStakingHooks(
+			ak.DistrKeeper.Hooks(),
+			ak.SlashingKeeper.Hooks()),
+	)
+
 }
 
 func (ak *SecretAppKeepers) CreateScopedKeepers() {
@@ -253,11 +260,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	// The last arguments can contain custom message handlers, and custom query handlers,
 	// if we want to allow any custom callbacks
 	supportedFeatures := "staking,stargate,ibc3"
-
-	// Create IBC Keeper
-	ak.IbcKeeper = ibckeeper.NewKeeper(
-		appCodec, ak.keys[ibchost.StoreKey], ak.GetSubspace(ibchost.ModuleName), ak.StakingKeeper, ak.UpgradeKeeper, ak.ScopedIBCKeeper,
-	)
 
 	computeKeeper := compute.NewKeeper(
 		appCodec,
