@@ -78,7 +78,6 @@ import (
 	"github.com/rakyll/statik/fs"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmlog "github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
@@ -181,7 +180,7 @@ type WasmWrapper struct {
 
 // NewSecretNetworkApp is a constructor function for enigmaChainApp
 func NewSecretNetworkApp(
-	logger tmlog.Logger,
+	logger sdk.SdkLogger,
 	db dbm.DB,
 	traceStore io.Writer,
 	loadLatest bool,
@@ -203,6 +202,12 @@ func NewSecretNetworkApp(
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
 	// bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
+
+	logManager := sdk.NewLogLevelManager(logger.GetLevel())
+	logManager.RegisterLogLevel(banktypes.ModuleName, sdk.DebugLevel)
+	logManager.RegisterLogLevel(crisistypes.ModuleName, sdk.ErrorLevel)
+
+	bApp.SetLogLevelManager(logManager)
 
 	// Initialize our application with the store keys it requires
 	app := &SecretNetworkApp{

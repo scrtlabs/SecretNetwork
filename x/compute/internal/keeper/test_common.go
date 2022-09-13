@@ -24,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
@@ -253,7 +252,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		Height:  1234567,
 		Time:    time.Date(2020, time.April, 22, 12, 0, 0, 0, time.UTC),
 		ChainID: TestConfig.ChainID,
-	}, isCheckTx, log.NewNopLogger())
+	}, isCheckTx, sdk.NewDisabledLogger(), nil)
 	encodingConfig := MakeEncodingConfig()
 	paramsKeeper := paramskeeper.NewKeeper(
 		encodingConfig.Marshaler,

@@ -20,8 +20,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tendermint/tendermint/libs/log"
-
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -434,7 +432,7 @@ func queryHelperImpl(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
 	).WithGasMeter(gasMeter)
 
 	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
@@ -510,7 +508,7 @@ func execHelperMultipleCoinsImpl(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
 	).WithGasMeter(gasMeter)
 
 	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, coins)
@@ -577,7 +575,7 @@ func initHelperImpl(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
 	).WithGasMeter(gasMeter)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, sentFunds)
@@ -1266,7 +1264,7 @@ func TestInitNotEncryptedInputError(t *testing.T) {
 			//	ctx.MultiStore(),
 			//	ctx.BlockHeader(),
 			//	ctx.IsCheckTx(),
-			//	log.NewNopLogger(),
+			//	sdk.NewDisabledLogger(),
 			//).WithGasMeter(sdk.NewGasMeter(defaultGas))
 
 			initMsg := []byte(`{"nop":{}`)

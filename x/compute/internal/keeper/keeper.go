@@ -77,7 +77,7 @@ type Keeper struct {
 }
 
 func moduleLogger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+	return ctx.Logger().Level(ctx.GetLogLevel(types.ModuleName)).With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
 // MessageRouter ADR 031 request type routing

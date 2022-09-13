@@ -40,7 +40,6 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper/mock"
 	regtypes "github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 )
 
@@ -113,7 +112,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, bootstrap boo
 	err = ms.LoadLatestVersion()
 	require.Nil(t, err)
 
-	ctx := sdk.NewContext(ms, tmproto.Header{}, isCheckTx, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, tmproto.Header{}, isCheckTx, sdk.NewDisabledLogger(), nil)
 	cdc := MakeTestCodec()
 
 	// TODO: register more than bank.send

@@ -10,7 +10,6 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	protoio "github.com/gogo/protobuf/io"
-	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
@@ -87,7 +86,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 	}
 	// cacheMS := ws.cms.CacheMultiStore()
 
-	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
+	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, sdk.NewDisabledLogger(), nil)
 
 	seen := make(map[string]bool)
 

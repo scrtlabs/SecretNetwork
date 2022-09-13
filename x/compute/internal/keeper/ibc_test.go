@@ -16,7 +16,6 @@ import (
 	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 const defaultGasForIbcTests = 600_000
@@ -34,7 +33,8 @@ func ibcChannelConnectHelper(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
+		nil,
 	).WithGasMeter(gasMeter)
 
 	var ibcChannelConnectMsg v1types.IBCChannelConnectMsg
@@ -82,7 +82,8 @@ func ibcChannelOpenHelper(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
+		nil,
 	).WithGasMeter(gasMeter)
 
 	var ibcChannelOpenMsg v1types.IBCChannelOpenMsg
@@ -127,7 +128,8 @@ func ibcChannelCloseHelper(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
+		nil,
 	).WithGasMeter(gasMeter)
 
 	var ibcChannelCloseMsg v1types.IBCChannelCloseMsg
@@ -217,7 +219,8 @@ func ibcPacketReceiveHelper(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
+		nil,
 	).WithGasMeter(gasMeter)
 
 	ibcPacketReceiveMsg := v1types.IBCPacketReceiveMsg{
@@ -260,7 +263,8 @@ func ibcPacketAckHelper(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
+		nil,
 	).WithGasMeter(gasMeter)
 
 	ibcPacketAckMsg := v1types.IBCPacketAckMsg{
@@ -297,9 +301,9 @@ func ibcPacketTimeoutHelper(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
-		log.NewNopLogger(),
+		sdk.NewDisabledLogger(),
+		nil,
 	).WithGasMeter(gasMeter)
-
 	ibcPacketTimeoutMsg := v1types.IBCPacketTimeoutMsg{
 		Packet:  originalPacket,
 		Relayer: "relayer",
