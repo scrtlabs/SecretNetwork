@@ -12,6 +12,8 @@ docker run -it -p 9091:9091 --name localsecret ghcr.io/scrtlabs/localsecret:v1.3
 
 Create a second validator, then double sign, to simulate the CoS double sign.
 
+Note: You can already start steps 3 & 4 while you work on step 2.
+
 Allow multiple node on the same machine:
 
 ```bash
@@ -50,16 +52,21 @@ perl -i -pe 's/:(\d+)/":".($1+10)/e' val2/config/config.toml
 # persistent_peers to the main node
 perl -i -pe "s/persistent_peers = \".+$/persistent_peers = \"$(secretcli status | jq -r .NodeInfo.id)\@127.0.0.1:26656\"/" val2/config/config.toml
 
+# Use this priv_validator_key to always get
+echo '{
+  "address": "2B240B6C7D7322F88ED28E9C6A8314641F61B13C",
+  "pub_key": {
+    "type": "tendermint/PubKeyEd25519",
+    "value": "lXdL8mkXVSlaPiEErdED/DYoSxzeuyEAjcDKenTHBDg="
+  },
+  "priv_key": {
+    "type": "tendermint/PrivKeyEd25519",
+    "value": "V9B+ndNQ+nnw5wKHHWc4JV46kSvRfPalZHl1iCaV4BuVd0vyaRdVKVo+IQSt0QP8NihLHN67IQCNwMp6dMcEOA=="
+  }
+}' > val2/config/priv_validator_key.json
+
 # Start val2 node
 secretd start --home val2
-```
-
-Note: You can already start Step 3 now
-
-Get `cosConsensusAddress` like this, and start Step 4:
-
-```bash
-docker exec localsecret bash -c 'secretcli tendermint show-address --home val2'
 ```
 
 In a third terminal:
@@ -162,18 +169,23 @@ Then run the tests:
 yarn test
 ```
 
-## Step 3
+## Step 4
 
 Compile a v1.4 chain just to extract the binaries from it.
 
 in `app/upgrades/v1.4/cos_patch.go` use these (from val2):
 
-```go
-// TESTNET!!!!
-var (
-	cosValidatorAddress = "secretvaloper1fc3fzy78ttp0lwuujw7e52rhspxn8uj5m98e7s"
-	cosConsensusAddress = "TODO FILL IN!"
-)
+```diff
+- var (
+-	cosValidatorAddress = "secretvaloper1hscf4cjrhzsea5an5smt4z9aezhh4sf5jjrqka"
+-	cosConsensusAddress = "secretvalcons1rd5gs24he44ufnwawshu3u73lh33cx5z7npzre"
+- )
++ // TESTNET DONT COMMIT!!!!
++ var (
++	cosValidatorAddress = /* TESTNET DONT COMMIT!!!! */ "secretvaloper1fc3fzy78ttp0lwuujw7e52rhspxn8uj5m98e7s"
++	cosConsensusAddress = /* TESTNET DONT COMMIT!!!! */ "secretvalcons19vjqkmrawv303rkj36wx4qc5vs0krvfu7yaqmt"
++ )
++ // TESTNET DONT COMMIT!!!!
 ```
 
 Then compile:
@@ -188,7 +200,7 @@ The run:
 docker run -it --rm --name localsecret-1.4 ghcr.io/scrtlabs/localsecret:v0.0.0
 ```
 
-## Step 4
+## Step 5
 
 Copy binaries from v1.4 chain to v1.3 chain.
 
@@ -236,7 +248,7 @@ docker exec localsecret bash -c $'perl -i -pe \'s/^.*?secretcli.*$//\' bootstrap
 docker exec localsecret bash -c $'perl -i -pe \'s;RUST_BACKTRACE=1 secretd start;RUST_BACKTRACE=1 /tmp/upgrade-bin/secretd start;\' bootstrap_init.sh'
 ```
 
-## Step 5
+## Step 6
 
 Propose a software upgrade on v1.3 chain.
 
@@ -251,7 +263,7 @@ PROPOSAL_ID="$(docker exec localsecret bash -c "secretcli tx gov submit-proposal
 docker exec localsecret bash -c "secretcli tx gov vote $PROPOSAL_ID yes --from a -y -b block"
 ```
 
-# Step 6
+## Step 7
 
 Apply the upgrade.
 
@@ -264,11 +276,37 @@ docker start localsecret -a
 
 You should see `INF applying upgrade "v1.4" at height` in the logs, following by blocks continute to stream.
 
-# Step 7
+## Step 8
+
+Restart val2 and unjail.
+
+Restart and apply the upgrade:
+
+```bash
+docker exec -it localsecret bash -c '/tmp/upgrade-bin/secretd start --home val2'
+```
+
+Then in another terminal, unjail:
+
+```bash
+# Unjail
+secretcli tx slashing unjail --from b -y -b block
+
+# This should output "false":
+secretcli q staking validators | jq '.validators[] | select(.operator_address == "secretvaloper1fc3fzy78ttp0lwuujw7e52rhspxn8uj5m98e7s") | .jailed'
+
+# This should output "2":
+secretcli q block | jq '.block.last_commit.signatures | length'
+
+# This random account should now have 502uscrt delegated to val2:
+secretcli q staking delegations secret1hsjtghm83lt8p0ksmpf3ef9rlcfswksm0c87z5 | jq
+```
+
+## Step 9
 
 Test that old v0.10 contracts are still working (query + exec + init from stored code)
 
-# Step 8
+## Step 10
 
 Run the integration tests from the `SecretNetwork` repo, without IBC:
 
