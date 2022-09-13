@@ -28,7 +28,7 @@ func LetsGo(
 	mintKeeper mintkeeper.Keeper,
 ) {
 	var cosMints []CosMints
-	err := json.Unmarshal([]byte(ToMintJSON), &cosMints)
+	err := json.Unmarshal([]byte(recordsJsonString), &cosMints)
 	if err != nil {
 		panic(fmt.Sprintf("error reading COS JSON: %+v", err))
 	}

@@ -6,7 +6,7 @@ package chainofsecretsreverttombstone
 // Slash was 5%
 // Lost APR is 23% for 9 days
 
-var ToMintJSON = `[
+var recordsJsonString = `[
   {
     "address": "secret1qqq8g6cjht0qfemed6nmrgjp8gajhnw3panxcf",
     "amount": "1005671"
