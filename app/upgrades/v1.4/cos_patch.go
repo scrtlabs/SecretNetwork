@@ -42,7 +42,7 @@ func mintLostTokens(
 
 	cosValidator, found := stakingKeeper.GetValidator(ctx, cosValAddress)
 	if !found {
-		panic(fmt.Sprintf("cos validator not found"))
+		panic(fmt.Sprintf("cos validator '%s' not found", cosValAddress))
 	}
 
 	for _, mintRecord := range cosMints {
