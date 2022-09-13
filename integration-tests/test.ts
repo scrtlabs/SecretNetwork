@@ -5,7 +5,6 @@ import {
   fromBase64,
   fromUtf8,
   MsgExecuteContract,
-  MsgInstantiateContract,
   ProposalType,
   SecretNetworkClient,
   toBase64,
@@ -32,11 +31,6 @@ import {
   instantiateContracts,
   cleanBytes,
 } from "./utils";
-
-import {
-  MsgInstantiateContractResponse,
-  MsgExecuteContractResponse,
-} from "secretjs/dist/protobuf_stuff/secret/compute/v1beta1/msg";
 
 type Account = {
   address: string;
@@ -398,6 +392,26 @@ describe("BankMsg", () => {
       });
     });
   });
+
+  describe("Burn", () => {
+    test("always_fails", async () => {
+      const tx = await accounts[0].secretjs.tx.compute.executeContract(
+        {
+          sender: accounts[0].address,
+          contractAddress: contracts["secretdev-1"].v1.address,
+          codeHash: contracts["secretdev-1"].v1.codeHash,
+          msg: {
+            bank_msg_burn: {
+              amount: [{ amount: "100000000", denom: "uscrt" }],
+            },
+          },
+        },
+        { gasLimit: 250_000 }
+      );
+      expect(tx.code).toBe(TxResultCode.ErrInvalidCoins);
+      expect(tx.rawLog).toContain("Unknown variant of Bank");
+    });
+  });
 });
 
 describe("Env", () => {
@@ -459,48 +473,6 @@ describe("Env", () => {
       });
     });
   });
-});
-
-describe("Init", () => {
-  test("v1", async () => {
-    const tx = await accounts[0].secretjs.tx.compute.instantiateContract(
-      {
-        sender: accounts[0].address,
-        codeId: contracts["secretdev-1"].v1.codeId,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
-        initMsg: { nop: {} },
-        label: `v1-1-${Date.now()}`,
-      },
-      { gasLimit: 300_000 }
-    );
-
-    const logAddr = tx.arrayLog.find((x) => x.key === "contract_address").value;
-
-    const resp = MsgInstantiateContractResponse.decode(tx.data[0]);
-    expect(resp.address).toBe(logAddr);
-    expect(resp.data[0]).toBe(137);
-  });
-
-  test("v0.10", async () => {});
-});
-
-describe("Execute", () => {
-  test("v1", async () => {
-    const tx = await accounts[0].secretjs.tx.compute.executeContract(
-      {
-        sender: accounts[0].address,
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
-        msg: { nop: {} },
-      },
-      { gasLimit: 300_000 }
-    );
-
-    const resp = MsgExecuteContractResponse.decode(tx.data[0]);
-    expect(resp.data[0]).toBe(137);
-  });
-
-  test("v0.10", async () => {});
 });
 
 describe("CustomMsg", () => {
@@ -614,6 +586,61 @@ describe("GovMsgVote", () => {
             gov_msg_vote: {
               proposal: proposalId + 1e6,
               vote_option: "Yes",
+            },
+          },
+        },
+        { gasLimit: 250_000 }
+      );
+
+      expect(tx.code).toBe(2 /* Gov ErrUnknownProposal */);
+      expect(tx.rawLog).toContain(`${proposalId + 1e6}: unknown proposal`);
+    });
+  });
+
+  describe("v1", () => {
+    test.only("success", async () => {
+      const tx = await accounts[0].secretjs.tx.compute.executeContract(
+        {
+          sender: accounts[0].address,
+          contractAddress: contracts["secretdev-1"].v1.address,
+          codeHash: contracts["secretdev-1"].v1.codeHash,
+          msg: {
+            gov_msg_vote: {
+              proposal: proposalId,
+              vote_option: "yes",
+            },
+          },
+        },
+        { gasLimit: 250_000 }
+      );
+      if (tx.code !== TxResultCode.Success) {
+        console.error(tx.rawLog);
+      }
+      expect(tx.code).toBe(TxResultCode.Success);
+
+      const { attributes } = tx.jsonLog[0].events.find(
+        (x) => x.type === "proposal_vote"
+      );
+      expect(attributes).toContainEqual({
+        key: "proposal_id",
+        value: String(proposalId),
+      });
+      expect(attributes).toContainEqual({
+        key: "option",
+        value: '{"option":1,"weight":"1.000000000000000000"}',
+      });
+    });
+
+    test.only("error", async () => {
+      const tx = await accounts[0].secretjs.tx.compute.executeContract(
+        {
+          sender: accounts[0].address,
+          contractAddress: contracts["secretdev-1"].v1.address,
+          codeHash: contracts["secretdev-1"].v1.codeHash,
+          msg: {
+            gov_msg_vote: {
+              proposal: proposalId + 1e6,
+              vote_option: "yes",
             },
           },
         },

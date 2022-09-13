@@ -13,6 +13,9 @@ pub enum Msg {
         to_address: String,
         amount: Vec<Coin>,
     },
+    BankMsgBurn {
+        amount: Vec<Coin>,
+    },
     StargateMsg {
         type_url: String,
         value: Binary,
@@ -30,9 +33,9 @@ pub enum Msg {
         dst_validator: String,
         amount: Coin,
     },
-    GovVote {
-        proposal_id: u64,
-        vote: VoteOption,
+    GovMsgVote {
+        proposal: u64,
+        vote_option: VoteOption,
     },
     DistributionMsgSetWithdrawAddress {
         address: String,
