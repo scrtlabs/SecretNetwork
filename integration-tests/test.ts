@@ -647,7 +647,7 @@ describe("GovMsgVote", () => {
 describe("Wasm", () => {
   describe("MsgInstantiateContract", () => {
     describe("v1", () => {
-      test.only("success", async () => {
+      test("success", async () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
@@ -683,7 +683,7 @@ describe("Wasm", () => {
         );
       });
 
-      test.only("error", async () => {
+      test("error", async () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
@@ -781,11 +781,64 @@ describe("Wasm", () => {
 
   describe("MsgExecuteContract", () => {
     describe("v1", () => {
-      test.skip("success", async () => {
-        // TODO
+      test("success", async () => {
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
+          {
+            sender: accounts[0].address,
+            contractAddress: contracts["secretdev-1"].v1.address,
+            codeHash: contracts["secretdev-1"].v1.codeHash,
+            msg: {
+              wasm_msg_execute: {
+                contract_addr: contracts["secretdev-1"].v1.address,
+                code_hash: contracts["secretdev-1"].v1.codeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ nop: {} }))),
+                funds: [],
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[0].events.find(
+          (e) => e.type === "wasm"
+        );
+        expect(attributes.length).toBe(2);
+        expect(attributes[0].key).toBe("contract_address");
+        expect(attributes[0].value).toBe(contracts["secretdev-1"].v1.address);
+        expect(attributes[1].key).toBe("contract_address");
+        expect(attributes[1].value).toBe(contracts["secretdev-1"].v1.address);
       });
-      test.skip("error", async () => {
-        // TODO
+
+      test.only("error", async () => {
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
+          {
+            sender: accounts[0].address,
+            contractAddress: contracts["secretdev-1"].v1.address,
+            codeHash: contracts["secretdev-1"].v1.codeHash,
+            msg: {
+              wasm_msg_execute: {
+                contract_addr: contracts["secretdev-1"].v1.address,
+                code_hash: contracts["secretdev-1"].v1.codeHash,
+                msg: toBase64(toUtf8(JSON.stringify({ blabla: {} }))),
+                funds: [],
+              },
+            },
+          },
+          { gasLimit: 250_000 }
+        );
+
+        if (tx.code !== 3) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(3 /* WASM ErrExecuteFailed */);
+
+        expect(tx.rawLog).toContain("encrypted:");
+        expect(tx.rawLog).toContain("execute contract failed");
       });
     });
 
