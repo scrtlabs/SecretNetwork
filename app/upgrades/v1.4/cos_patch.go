@@ -92,11 +92,11 @@ func revertTombstone(ctx sdk.Context, slashingKeeper *slashingkeeper.Keeper) err
 		panic(fmt.Sprintf("consensus address is not valid bech32: %s", cosValAddress))
 	}
 
+	// Revert Tombstone info
 	slashingKeeper.RevertTombstone(ctx, cosConsAddress)
-	err = slashingKeeper.Unjail(ctx, cosValAddress, true)
-	if err != nil {
-		return err
-	}
+
+	// Set jail until=now, the validator then must unjail manually
+	slashingKeeper.JailUntil(ctx, cosConsAddress, ctx.BlockTime())
 
 	return nil
 }
