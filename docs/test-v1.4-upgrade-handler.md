@@ -52,7 +52,7 @@ perl -i -pe 's/:(\d+)/":".($1+10)/e' val2/config/config.toml
 # persistent_peers to the main node
 perl -i -pe "s/persistent_peers = \".+$/persistent_peers = \"$(secretcli status | jq -r .NodeInfo.id)\@127.0.0.1:26656\"/" val2/config/config.toml
 
-# Use this priv_validator_key to always get
+# Use this priv_validator_key to always get cosConsensusAddress = secretvalcons19vjqkmrawv303rkj36wx4qc5vs0krvfu7yaqmt
 echo '{
   "address": "2B240B6C7D7322F88ED28E9C6A8314641F61B13C",
   "pub_key": {
@@ -108,7 +108,7 @@ perl -i -pe 's/:(\d+)/":".($1+10)/e' val3/config/config.toml
 
 # persistent_peers to the main node
 # both double sign nodes should point to the main node
-# otherwise (if e.g. main<-val2<-val3) they'll filter out each other's double signatures
+# for example if main<-val2<-val3 then val2 will filter out double signs coming from val3
 perl -i -pe "s/^persistent_peers = \".+$/persistent_peers = \"$(secretcli status | jq -r .NodeInfo.id)\@127.0.0.1:26656\"/" val3/config/config.toml
 
 # Start val3 node
@@ -188,13 +188,13 @@ in `app/upgrades/v1.4/cos_patch.go` use these (from val2):
 + // TESTNET DONT COMMIT!!!!
 ```
 
-Then compile:
+Compile:
 
 ```bash
 DOCKER_TAG=v0.0.0 make build-localsecret
 ```
 
-The run:
+Run:
 
 ```bash
 docker run -it --rm --name localsecret-1.4 ghcr.io/scrtlabs/localsecret:v0.0.0
