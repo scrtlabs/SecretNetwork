@@ -3,6 +3,7 @@ package v1_4
 import (
 	"encoding/json"
 	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
@@ -17,8 +18,10 @@ type CosMints struct {
 	AmountUscrt string `json:"amount"`
 }
 
-var cosValidatorAddress = "secretvaloper1hscf4cjrhzsea5an5smt4z9aezhh4sf5jjrqka"
-var cosConsensusAddress = "secretvalcons1rd5gs24he44ufnwawshu3u73lh33cx5z7npzre"
+var (
+	cosValidatorAddress = "secretvaloper1hscf4cjrhzsea5an5smt4z9aezhh4sf5jjrqka"
+	cosConsensusAddress = "secretvalcons1rd5gs24he44ufnwawshu3u73lh33cx5z7npzre"
+)
 
 func mintLostTokens(
 	ctx sdk.Context,
@@ -79,7 +82,6 @@ func mintLostTokens(
 }
 
 func revertTombstone(ctx sdk.Context, slashingKeeper *slashingkeeper.Keeper) error {
-
 	cosValAddress, err := sdk.ValAddressFromBech32(cosValidatorAddress)
 	if err != nil {
 		panic(fmt.Sprintf("validator address is not valid bech32: %s", cosValAddress))
