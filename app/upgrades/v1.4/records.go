@@ -1,4 +1,4 @@
-package chainofsecretsreverttombstone
+package v1_4
 
 // curl -X GET "https://secret-4.api.trivium.network:1317/cosmos/staking/v1beta1/validators/secretvaloper1hscf4cjrhzsea5an5smt4z9aezhh4sf5jjrqka/delegations?pagination.limit=10500&pagination.count_total=true" -H  "x-cosmos-block-height: 5181125" > DAN.JSON
 // jq '.delegation_responses | map({address:.delegation.delegator_address,amount:((.balance.amount | tonumber)*0.05*((0.23/365)*9+1) | floor) | tostring})' DAN.JSON > to_mint.json

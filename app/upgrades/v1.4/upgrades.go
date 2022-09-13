@@ -24,11 +24,15 @@ func CreateUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		// We're not upgrading cosmos-sdk, Tendermint or ibc-go, so no ConsensusVersion changes
 		// Therefore mm.RunMigrations() should not find any module to upgrade
 
-		cosVal := sdk.ValAddress{}
-		cosCons := sdk.ConsAddress{}
-
 		ctx.Logger().Info("Running revert of tombstoning")
-		err := RevertCosTombstoning(ctx, cosVal, cosCons, keepers.SlashingKeeper)
+		err := RevertCosTombstoning(
+			ctx,
+			keepers.SlashingKeeper,
+			keepers.MintKeeper,
+			keepers.BankKeeper,
+			keepers.StakingKeeper,
+		)
+
 		if err != nil {
 			panic(fmt.Sprintf("failed to revert tombstoning: %s", err))
 		}
