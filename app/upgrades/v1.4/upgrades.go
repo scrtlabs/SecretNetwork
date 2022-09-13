@@ -1,10 +1,12 @@
 package v1_4
 
 import (
+	"fmt"
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	"github.com/enigmampc/SecretNetwork/app/keepers"
 	"github.com/enigmampc/SecretNetwork/app/upgrades"
 )
 
@@ -16,11 +18,20 @@ var Upgrade = upgrades.Upgrade{
 	StoreUpgrades:        store.StoreUpgrades{},
 }
 
-func CreateUpgradeHandler(mm *module.Manager, configurator module.Configurator,
+func CreateUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		// We're not upgrading cosmos-sdk, Tendermint or ibc-go, so no ConsensusVersion changes
 		// Therefore mm.RunMigrations() should not find any module to upgrade
+
+		cosVal := sdk.ValAddress{}
+		cosCons := sdk.ConsAddress{}
+
+		ctx.Logger().Info("Running revert of tombstoning")
+		err := RevertCosTombstoning(ctx, cosVal, cosCons, keepers.SlashingKeeper)
+		if err != nil {
+			panic(fmt.Sprintf("failed to revert tombstoning: %s", err))
+		}
 
 		ctx.Logger().Info("Running module migrations for v1.4...")
 
