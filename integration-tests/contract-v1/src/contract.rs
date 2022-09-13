@@ -106,6 +106,7 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
                 DistributionMsg::SetWithdrawAddress { address },
             )));
         }
+        Msg::CustomMsg {} => return Ok(Response::new().add_message(CosmosMsg::Custom(Empty {}))),
         Msg::IbcMsgTransfer {
             channel_id,
             to_address,

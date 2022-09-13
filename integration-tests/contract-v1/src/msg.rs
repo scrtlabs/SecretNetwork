@@ -43,6 +43,7 @@ pub enum Msg {
     SetWithdrawAddress {
         address: String,
     },
+    CustomMsg {},
     IbcMsgTransfer {
         channel_id: String,
         to_address: String,

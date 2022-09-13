@@ -476,8 +476,23 @@ describe("Env", () => {
 });
 
 describe("CustomMsg", () => {
-  test.skip("v1", async () => {
-    // TODO
+  test.only("v1", async () => {
+    const tx = await accounts[0].secretjs.tx.compute.executeContract(
+      {
+        sender: accounts[0].address,
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        msg: {
+          custom_msg: {},
+        },
+      },
+      { gasLimit: 250_000 }
+    );
+    if (tx.code !== 10) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(10 /* WASM ErrInvalidMsg */);
+    expect(tx.rawLog).toContain("invalid CosmosMsg from the contract");
   });
 
   test("v0.10", async () => {
@@ -814,7 +829,7 @@ describe("Wasm", () => {
         expect(attributes[1].value).toBe(contracts["secretdev-1"].v1.address);
       });
 
-      test.only("error", async () => {
+      test("error", async () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
