@@ -33,6 +33,9 @@ pub enum Msg {
         dst_validator: String,
         amount: Coin,
     },
+    StakingMsgWithdraw {
+        validator: String,
+    },
     GovMsgVote {
         proposal: u64,
         vote_option: VoteOption,

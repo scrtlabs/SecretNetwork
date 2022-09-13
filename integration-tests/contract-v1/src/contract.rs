@@ -86,6 +86,12 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
                 })),
             );
         }
+
+        Msg::StakingMsgWithdraw { validator } => {
+            return Ok(Response::new().add_message(CosmosMsg::Distribution(
+                DistributionMsg::WithdrawDelegatorReward { validator },
+            )));
+        }
         Msg::GovMsgVote {
             proposal,
             vote_option,
