@@ -533,15 +533,6 @@ describe("GovMsgVote", () => {
     expect(proposalId).toBeGreaterThanOrEqual(1);
   });
 
-  describe("v1", () => {
-    test.skip("success", async () => {
-      // TODO
-    });
-    test.skip("error", async () => {
-      // TODO
-    });
-  });
-
   describe("v0.10", () => {
     test("success", async () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
@@ -598,7 +589,7 @@ describe("GovMsgVote", () => {
   });
 
   describe("v1", () => {
-    test.only("success", async () => {
+    test("success", async () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
@@ -631,7 +622,7 @@ describe("GovMsgVote", () => {
       });
     });
 
-    test.only("error", async () => {
+    test("error", async () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
@@ -808,11 +799,64 @@ describe("Wasm", () => {
 describe("StakingMsg", () => {
   describe("Delegate", () => {
     describe("v1", () => {
-      test.skip("success", async () => {
-        // TODO
+      test("success", async () => {
+        const { validators } = await readonly.query.staking.validators({});
+        const validator = validators[0].operatorAddress;
+
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
+          {
+            sender: accounts[0].address,
+            contractAddress: contracts["secretdev-1"].v1.address,
+            codeHash: contracts["secretdev-1"].v1.codeHash,
+            msg: {
+              staking_msg_delegate: {
+                validator,
+                amount: { amount: "1", denom: "uscrt" },
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
+          },
+          { gasLimit: 250_000 }
+        );
+        if (tx.code !== TxResultCode.Success) {
+          console.error(tx.rawLog);
+        }
+        expect(tx.code).toBe(TxResultCode.Success);
+
+        const { attributes } = tx.jsonLog[0].events.find(
+          (e) => e.type === "delegate"
+        );
+        expect(attributes).toContainEqual({ key: "amount", value: "1uscrt" });
+        expect(attributes).toContainEqual({
+          key: "validator",
+          value: validator,
+        });
       });
-      test.skip("error", async () => {
-        // TODO
+
+      test("error", async () => {
+        const { validators } = await readonly.query.staking.validators({});
+        const validator = validators[0].operatorAddress;
+
+        const tx = await accounts[0].secretjs.tx.compute.executeContract(
+          {
+            sender: accounts[0].address,
+            contractAddress: contracts["secretdev-1"].v1.address,
+            codeHash: contracts["secretdev-1"].v1.codeHash,
+            msg: {
+              staking_msg_delegate: {
+                validator: validator + "garbage",
+                amount: { amount: "1", denom: "uscrt" },
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
+          },
+          { gasLimit: 250_000 }
+        );
+
+        expect(tx.code).toBe(TxResultCode.ErrInvalidAddress);
+        expect(tx.rawLog).toContain(
+          `${validator + "garbage"}: invalid address`
+        );
       });
     });
 
