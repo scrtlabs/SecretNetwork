@@ -7,7 +7,7 @@
   - WASM storage access 2k per access
 - Support MetaMask pretty signing
 - Ledger support for x/authz & x/feegrant
-- USC module (disabled - needs a param-change proposal to enable)
+- Revert Chain of Secrets tombstone state and restore slashed funds
 
 # 1.3.1
 
