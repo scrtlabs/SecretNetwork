@@ -9,6 +9,7 @@ import (
 	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
+	"github.com/enigmampc/SecretNetwork/app/keepers"
 	"github.com/enigmampc/SecretNetwork/app/upgrades"
 )
 
@@ -20,7 +21,7 @@ var Upgrade = upgrades.Upgrade{
 	StoreUpgrades:        store.StoreUpgrades{Added: []string{icahosttypes.StoreKey}},
 }
 
-func CreateUpgradeHandler(mm *module.Manager, configurator module.Configurator,
+func CreateUpgradeHandler(mm *module.Manager, _ *keepers.SecretAppKeepers, configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		// Assaf: Set version map for all modules because for some

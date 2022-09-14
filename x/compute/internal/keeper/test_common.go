@@ -98,14 +98,16 @@ const (
 	flagQueryGasLimit = "query_gas_limit"
 )
 
-const hackAtomContract = "hackatom.wasm"
-const v010Contract = "contract.wasm"
-const v1Contract = "v1-contract.wasm"
-const plaintextLogsContract = "plaintext_logs.wasm"
-const ibcContract = "ibc.wasm"
-const v010WithFloats = "contract_with_floats.wasm"
-const tooHighMemoryContract = "too-high-initial-memory.wasm"
-const staticTooHighMemoryContract = "static-too-high-initial-memory.wasm"
+const (
+	hackAtomContract            = "hackatom.wasm"
+	v010Contract                = "contract.wasm"
+	v1Contract                  = "v1-contract.wasm"
+	plaintextLogsContract       = "plaintext_logs.wasm"
+	ibcContract                 = "ibc.wasm"
+	v010WithFloats              = "contract_with_floats.wasm"
+	tooHighMemoryContract       = "too-high-initial-memory.wasm"
+	staticTooHighMemoryContract = "static-too-high-initial-memory.wasm"
+)
 
 const benchContract = "bench_contract.wasm"
 
@@ -123,8 +125,10 @@ var TestContractPaths = map[string]string{
 	benchContract:               filepath.Join(".", contractPath, benchContract),
 }
 
-var outOfGasError = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
-var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
+var (
+	outOfGasError                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
+	_             wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
+)
 
 type MockIBCTransferKeeper struct {
 	GetPortFn func(ctx sdk.Context) string
@@ -526,12 +530,10 @@ func TestHandler(k Keeper) sdk.Handler {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-		case *wasmtypes.MsgInstantiateContract:
+		case *wasmtypes.MsgInstantiateContract: //nolint
 			return handleInstantiate(ctx, k, msg)
-
 		case *wasmtypes.MsgExecuteContract:
 			return handleExecute(ctx, k, msg)
-
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)

@@ -123,7 +123,7 @@ pub fn parse_message(
                 let decrypted_msg = secret_msg.msg.clone();
 
                 Ok(ParsedMessage {
-                    should_validate_sig_info: false,
+                    should_validate_sig_info: true,
                     was_msg_encrypted: false,
                     should_encrypt_output: false,
                     secret_msg,
