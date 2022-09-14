@@ -39,6 +39,9 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
                 Response::new().add_message(CosmosMsg::Bank(BankMsg::Send { to_address, amount }))
             );
         }
+        Msg::BankMsgBurn { amount } => {
+            return Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Burn { amount })));
+        }
         Msg::SendIbcPacket { message } => {
             let channel_id = channel_store_read(deps.storage).load()?;
             let packet = PacketMsg::Message {
@@ -83,21 +86,27 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
                 })),
             );
         }
-        Msg::GovVote { proposal_id, vote } => {
-            return Ok(
-                Response::new().add_message(CosmosMsg::Gov(GovMsg::Vote { proposal_id, vote }))
-            );
-        }
-        Msg::DistributionMsgSetWithdrawAddress { address } => {
-            return Ok(Response::new().add_message(CosmosMsg::Distribution(
-                DistributionMsg::SetWithdrawAddress { address },
-            )));
-        }
-        Msg::DistributionMsgWithdrawDelegatorReward { validator } => {
+
+        Msg::StakingMsgWithdraw { validator } => {
             return Ok(Response::new().add_message(CosmosMsg::Distribution(
                 DistributionMsg::WithdrawDelegatorReward { validator },
             )));
         }
+        Msg::GovMsgVote {
+            proposal,
+            vote_option,
+        } => {
+            return Ok(Response::new().add_message(CosmosMsg::Gov(GovMsg::Vote {
+                proposal_id: proposal,
+                vote: vote_option,
+            })));
+        }
+        Msg::SetWithdrawAddress { address } => {
+            return Ok(Response::new().add_message(CosmosMsg::Distribution(
+                DistributionMsg::SetWithdrawAddress { address },
+            )));
+        }
+        Msg::CustomMsg {} => return Ok(Response::new().add_message(CosmosMsg::Custom(Empty {}))),
         Msg::IbcMsgTransfer {
             channel_id,
             to_address,
