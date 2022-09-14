@@ -18,7 +18,7 @@ GoResult cNext(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buff
 GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
 GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
 // imports (querier)
-GoResult cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
+GoResult cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, uint32_t query_depth, Buffer *result, Buffer *errOut);
 
 // Gateway functions (db)
 GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut) {

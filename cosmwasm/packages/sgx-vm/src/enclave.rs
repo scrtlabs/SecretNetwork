@@ -66,25 +66,25 @@ fn init_enclave(enclave_file: &str) -> SgxResult<SgxEnclave> {
 }
 
 static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
-#[cfg(feature = "query-node")]
-static QUERY_ENCLAVE_FILE: &str = "librust_cosmwasm_query_enclave.signed.so";
+// #[cfg(feature = "query-node")]
+// static QUERY_ENCLAVE_FILE: &str = "librust_cosmwasm_query_enclave.signed.so";
 /// This const determines how many seconds we wait when trying to get access to the enclave
 /// before giving up.
 const ENCLAVE_LOCK_TIMEOUT: u64 = 6 * 5;
-#[cfg(feature = "query-node")]
+// #[cfg(feature = "query-node")]
 const TCS_NUM: u8 = 8;
-#[cfg(not(feature = "query-node"))]
-const TCS_NUM: u8 = 1;
+// #[cfg(not(feature = "query-node"))]
+// const TCS_NUM: u8 = 1;
 lazy_static! {
     pub static ref ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(ENCLAVE_FILE, TCS_NUM);
 }
-#[cfg(feature = "query-node")]
-lazy_static! {
-    pub static ref QUERY_ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(
-        QUERY_ENCLAVE_FILE,
-        std::cmp::min(TCS_NUM, num_cpus::get() as u8)
-    );
-}
+// #[cfg(feature = "query-node")]
+// lazy_static! {
+//     pub static ref QUERY_ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(
+//         QUERY_ENCLAVE_FILE,
+//         std::cmp::min(TCS_NUM, num_cpus::get() as u8)
+//     );
+// }
 
 /// This struct manages the access to the enclave.
 ///
@@ -111,17 +111,10 @@ impl EnclaveDoorbell {
         }
     }
 
-    fn wait_for(&'static self, duration: Duration, recursive: bool) -> Option<EnclaveAccessToken> {
-        // eprintln!("Query Token creation. recursive: {}", recursive);
-        if !recursive {
+    fn wait_for(&'static self, duration: Duration, query_depth: u32) -> Option<EnclaveAccessToken> {
+        if query_depth == 1 {
             let mut count = self.count.lock();
-            // eprintln!(
-            //     "The current count of tasks is {}/{}, attempting to increase.",
-            //     TCS_NUM - *count,
-            //     TCS_NUM
-            // );
             if *count == 0 {
-                // eprintln!("Waiting for other tasks to complete");
                 // try to wait for other tasks to complete
                 let wait = self.condvar.wait_for(&mut count, duration);
                 // double check that the count is nonzero, so there's an available slot in the enclave.
@@ -129,14 +122,13 @@ impl EnclaveDoorbell {
                     return None;
                 }
             }
-            // eprintln!("Increasing available tasks");
             *count -= 1;
         }
-        Some(EnclaveAccessToken::new(self, recursive))
+        Some(EnclaveAccessToken::new(self, query_depth))
     }
 
-    pub fn get_access(&'static self, recursive: bool) -> Option<EnclaveAccessToken> {
-        self.wait_for(Duration::from_secs(ENCLAVE_LOCK_TIMEOUT), recursive)
+    pub fn get_access(&'static self, query_depth: u32) -> Option<EnclaveAccessToken> {
+        self.wait_for(Duration::from_secs(ENCLAVE_LOCK_TIMEOUT), query_depth)
     }
 }
 
@@ -144,16 +136,16 @@ impl EnclaveDoorbell {
 pub struct EnclaveAccessToken {
     doorbell: &'static EnclaveDoorbell,
     enclave: SgxResult<&'static SgxEnclave>,
-    recursive: bool,
+    query_depth: u32,
 }
 
 impl EnclaveAccessToken {
-    fn new(doorbell: &'static EnclaveDoorbell, recursive: bool) -> Self {
+    fn new(doorbell: &'static EnclaveDoorbell, query_depth: u32) -> Self {
         let enclave = doorbell.enclave.as_ref().map_err(|status| *status);
         Self {
             doorbell,
             enclave,
-            recursive,
+            query_depth,
         }
     }
 }
@@ -168,14 +160,8 @@ impl Deref for EnclaveAccessToken {
 
 impl Drop for EnclaveAccessToken {
     fn drop(&mut self) {
-        // eprintln!("Query Token destruction. recursive: {}", self.recursive);
-        if !self.recursive {
+        if self.query_depth == 1 {
             let mut count = self.doorbell.count.lock();
-            // eprintln!(
-            //     "The current count of tasks is {}/{}, attempting to decrease.",
-            //     TCS_NUM - *count,
-            //     TCS_NUM
-            // );
             *count += 1;
             drop(count);
             self.doorbell.condvar.notify_one();
