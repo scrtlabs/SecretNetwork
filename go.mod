@@ -36,7 +36,6 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
-	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
@@ -132,7 +131,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.9-0.20220913072753-73e4db8a6e05
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.4-secret.14
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
