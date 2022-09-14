@@ -341,18 +341,18 @@ func NewSecretNetworkApp(
 
 	// register all module routes and module queriers
 	app.mm.RegisterInvariants(app.AppKeepers.CrisisKeeper)
-	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
+	app.mm.RegisterRoutes(app.BaseApp.Router(), app.BaseApp.QueryRouter(), encodingConfig.Amino)
 
-	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.configurator = module.NewConfigurator(app.appCodec, app.BaseApp.MsgServiceRouter(), app.BaseApp.GRPCQueryRouter())
 	app.mm.RegisterServices(app.configurator)
 
 	// setupUpgradeHandlers() shoulbe be called after app.mm is configured
 	app.setupUpgradeHandlers()
 
 	// initialize stores
-	app.MountKVStores(app.AppKeepers.GetKeys())
-	app.MountTransientStores(app.AppKeepers.GetTransientStoreKeys())
-	app.MountMemoryStores(app.AppKeepers.GetMemoryStoreKeys())
+	app.BaseApp.MountKVStores(app.AppKeepers.GetKeys())
+	app.BaseApp.MountTransientStores(app.AppKeepers.GetTransientStoreKeys())
+	app.BaseApp.MountMemoryStores(app.AppKeepers.GetMemoryStoreKeys())
 
 	anteHandler, err := NewAnteHandler(HandlerOptions{
 		HandlerOptions: ante.HandlerOptions{
@@ -371,15 +371,15 @@ func NewSecretNetworkApp(
 	}
 
 	// The AnteHandler handles signature verification and transaction pre-processing
-	app.SetAnteHandler(anteHandler)
+	app.BaseApp.SetAnteHandler(anteHandler)
 	// The initChainer handles translating the genesis.json file into initial state for the network
-	app.SetInitChainer(app.InitChainer)
-	app.SetBeginBlocker(app.BeginBlocker)
-	app.SetEndBlocker(app.EndBlocker)
+	app.BaseApp.SetInitChainer(app.InitChainer)
+	app.BaseApp.SetBeginBlocker(app.BeginBlocker)
+	app.BaseApp.SetEndBlocker(app.EndBlocker)
 
-	if manager := app.SnapshotManager(); manager != nil {
+	if manager := app.BaseApp.SnapshotManager(); manager != nil {
 		err := manager.RegisterExtensions(
-			compute.NewWasmSnapshotter(app.CommitMultiStore(), app.AppKeepers.ComputeKeeper),
+			compute.NewWasmSnapshotter(app.BaseApp.CommitMultiStore(), app.AppKeepers.ComputeKeeper),
 		)
 		if err != nil {
 			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
@@ -388,7 +388,7 @@ func NewSecretNetworkApp(
 
 	// This seals the app
 	if loadLatest {
-		err := app.LoadLatestVersion()
+		err := app.BaseApp.LoadLatestVersion()
 		if err != nil {
 			tmos.Exit(err.Error())
 		}
@@ -424,7 +424,7 @@ func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req abci.RequestInitCh
 
 // LoadHeight loads a particular height
 func (app *SecretNetworkApp) LoadHeight(height int64) error {
-	return app.LoadVersion(height)
+	return app.BaseApp.LoadVersion(height)
 }
 
 // ModuleAccountAddrs returns all the app's module account addresses.
@@ -513,7 +513,7 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 
 	for _, upgradeDetails := range Upgrades {
 		if upgradeInfo.Name == upgradeDetails.UpgradeName {
-			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
+			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
 		}
 	}
 }
