@@ -140,20 +140,12 @@ func (e UnsupportedRequest) Error() string {
 }
 
 // Reply is encrypted only when it is a contract reply
-func isReplyEncrypted(msg v1wasmTypes.CosmosMsg, reply v1wasmTypes.Reply) bool {
-	if msg.Wasm == nil {
+func isReplyEncrypted(msg v1wasmTypes.SubMsg, reply v1wasmTypes.Reply) bool {
+	if msg.Msg.Wasm == nil {
 		return false
 	}
 
-	if msg.Wasm.Execute != nil {
-		return len(msg.Wasm.Execute.CallbackSignature) != 0
-	}
-
-	if msg.Wasm.Instantiate != nil {
-		return len(msg.Wasm.Instantiate.CallbackSignature) != 0
-	}
-
-	return true
+	return msg.WasMsgEncrypted
 }
 
 // Issue #759 - we don't return error string for worries of non-determinism
@@ -294,11 +286,11 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// In a case when the reply is encrypted but the sdk failed (Most likely, funds issue)
 		// we return a error
-		if isReplyEncrypted(msg.Msg, reply) && isSdkError {
+		if isReplyEncrypted(msg, reply) && isSdkError {
 			return nil, fmt.Errorf("an sdk error occoured while sending a sub-message: %s", redactedErr.Error())
 		}
 
-		if isReplyEncrypted(msg.Msg, reply) {
+		if isReplyEncrypted(msg, reply) {
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
 
 			if reply.Result.Ok != nil {
