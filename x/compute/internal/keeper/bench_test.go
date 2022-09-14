@@ -66,7 +66,7 @@ func (b *BenchTime) AppendTime(singleRunTime time.Duration) {
 }
 
 func (b *BenchTime) PrintReport() {
-	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n \t Results: \n\t Average: %s \n\t Min: %s \n\t Max: %s \n\t",
+	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Average: %s \n\t Min: %s \n\t Max: %s \n\t",
 		b.Name,
 		b.Case,
 		b.iterations,
