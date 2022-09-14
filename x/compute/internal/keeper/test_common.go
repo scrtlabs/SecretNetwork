@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -97,8 +98,37 @@ const (
 	flagQueryGasLimit = "query_gas_limit"
 )
 
-var outOfGasError = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
-var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
+const (
+	hackAtomContract            = "hackatom.wasm"
+	v010Contract                = "contract.wasm"
+	v1Contract                  = "v1-contract.wasm"
+	plaintextLogsContract       = "plaintext_logs.wasm"
+	ibcContract                 = "ibc.wasm"
+	v010WithFloats              = "contract_with_floats.wasm"
+	tooHighMemoryContract       = "too-high-initial-memory.wasm"
+	staticTooHighMemoryContract = "static-too-high-initial-memory.wasm"
+)
+
+const benchContract = "bench_contract.wasm"
+
+const contractPath = "testdata"
+
+var TestContractPaths = map[string]string{
+	hackAtomContract:            filepath.Join(".", contractPath, hackAtomContract),
+	v010Contract:                filepath.Join(".", contractPath, v010Contract),
+	v1Contract:                  filepath.Join(".", contractPath, v1Contract),
+	plaintextLogsContract:       filepath.Join(".", contractPath, plaintextLogsContract),
+	ibcContract:                 filepath.Join(".", contractPath, ibcContract),
+	v010WithFloats:              filepath.Join(".", contractPath, v010WithFloats),
+	tooHighMemoryContract:       filepath.Join(".", contractPath, tooHighMemoryContract),
+	staticTooHighMemoryContract: filepath.Join(".", contractPath, staticTooHighMemoryContract),
+	benchContract:               filepath.Join(".", contractPath, benchContract),
+}
+
+var (
+	outOfGasError                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
+	_             wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
+)
 
 type MockIBCTransferKeeper struct {
 	GetPortFn func(ctx sdk.Context) string
@@ -500,12 +530,10 @@ func TestHandler(k Keeper) sdk.Handler {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-		case *wasmtypes.MsgInstantiateContract:
+		case *wasmtypes.MsgInstantiateContract: //nolint
 			return handleInstantiate(ctx, k, msg)
-
 		case *wasmtypes.MsgExecuteContract:
 			return handleExecute(ctx, k, msg)
-
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)

@@ -1,14 +1,16 @@
 package utils
 
 import (
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func GetTestData() ([]byte, []byte, []byte, error) {
-	wasmCode, err := os.ReadFile("../../internal/keeper/testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(filepath.Join("../../internal/keeper", keeper.TestContractPaths["hackatom.wasm"]))
 	if err != nil {
 		return nil, nil, nil, err
 	}

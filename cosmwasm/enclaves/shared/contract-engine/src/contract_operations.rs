@@ -291,7 +291,8 @@ pub fn handle(
                 is_ibc_msg(parsed_handle_type.clone()),
             )?;
         } else {
-            let mut raw_output = manipulate_callback_sig_for_plaintext(output)?;
+            let mut raw_output =
+                manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
             set_all_logs_to_plaintext(&mut raw_output);
 
             let finalized_output =

@@ -156,6 +156,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 
 	ioPubkey, err := ra.UNSAFE_VerifyRaCert(masterIoKey.Key)
 	if err != nil {
+		println(masterIoKey.Key)
 		return nil, err
 	}
 

@@ -32,12 +32,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResul
 fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResult<Response> {
     match msg {
         Msg::Nop {} => {
-            return Ok(Response::new());
+            return Ok(Response::new().set_data(vec![137, 137].as_slice()));
         }
         Msg::BankMsgSend { to_address, amount } => {
             return Ok(
                 Response::new().add_message(CosmosMsg::Bank(BankMsg::Send { to_address, amount }))
             );
+        }
+        Msg::BankMsgBurn { amount } => {
+            return Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Burn { amount })));
         }
         Msg::SendIbcPacket { message } => {
             let channel_id = channel_store_read(deps.storage).load()?;
@@ -83,21 +86,27 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
                 })),
             );
         }
-        Msg::GovVote { proposal_id, vote } => {
-            return Ok(
-                Response::new().add_message(CosmosMsg::Gov(GovMsg::Vote { proposal_id, vote }))
-            );
-        }
-        Msg::DistributionMsgSetWithdrawAddress { address } => {
-            return Ok(Response::new().add_message(CosmosMsg::Distribution(
-                DistributionMsg::SetWithdrawAddress { address },
-            )));
-        }
-        Msg::DistributionMsgWithdrawDelegatorReward { validator } => {
+
+        Msg::StakingMsgWithdraw { validator } => {
             return Ok(Response::new().add_message(CosmosMsg::Distribution(
                 DistributionMsg::WithdrawDelegatorReward { validator },
             )));
         }
+        Msg::GovMsgVote {
+            proposal,
+            vote_option,
+        } => {
+            return Ok(Response::new().add_message(CosmosMsg::Gov(GovMsg::Vote {
+                proposal_id: proposal,
+                vote: vote_option,
+            })));
+        }
+        Msg::SetWithdrawAddress { address } => {
+            return Ok(Response::new().add_message(CosmosMsg::Distribution(
+                DistributionMsg::SetWithdrawAddress { address },
+            )));
+        }
+        Msg::CustomMsg {} => return Ok(Response::new().add_message(CosmosMsg::Custom(Empty {}))),
         Msg::IbcMsgTransfer {
             channel_id,
             to_address,

@@ -20,8 +20,7 @@ func NewHandler(k Keeper) sdk.Handler {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-
-		case *MsgStoreCode:
+		case *MsgStoreCode: //nolint
 			return handleStoreCode(ctx, k, msg)
 		case *MsgInstantiateContract:
 			return handleInstantiate(ctx, k, msg)

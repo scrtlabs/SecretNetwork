@@ -16,17 +16,17 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
@@ -69,17 +69,17 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -122,53 +122,53 @@ jobs:
         run: |
           make build-test-contract
           cp x/compute/internal/keeper/testdata/erc20.wasm .
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: erc20.wasm
           path: erc20.wasm
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretd
           path: secretd
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: contract.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
-      - uses: actions/upload-artifact@v2
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm
+      - uses: actions/upload-artifact@v3
         with:
           name: v1-contract.wasm
-          path: ./x/compute/internal/keeper/testdata/v1-sanity-contract/v1-contract.wasm
-      - uses: actions/upload-artifact@v2
+          path: cosmwasm/contracts/v1/compute-tests/test-compute-contract/v1-contract.wasm
+      - uses: actions/upload-artifact@v3
         with:
           name: ibc.wasm
-          path: ./x/compute/internal/keeper/testdata/ibc/ibc.wasm
-      - uses: actions/upload-artifact@v2
+          path: cosmwasm/contracts/v1/compute-tests/ibc-test-contract/ibc.wasm
+      - uses: actions/upload-artifact@v3
         with:
           name: enclave
           path: ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: libgo_cosmwasm
           path: ./go-cosmwasm/api/libgo_cosmwasm.so
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: contract_with_floats.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
-      - uses: actions/upload-artifact@v2
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract_with_floats.wasm
+      - uses: actions/upload-artifact@v3
         with:
           name: too-high-initial-memory.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
-      - uses: actions/upload-artifact@v2
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/too-high-initial-memory.wasm
+      - uses: actions/upload-artifact@v3
         with:
           name: static-too-high-initial-memory.wasm
-          path: ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/static-too-high-initial-memory.wasm
 
   Go-Tests:
     runs-on: ubuntu-20.04
     needs: Build
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
@@ -179,30 +179,30 @@ jobs:
           wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: libgo_cosmwasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: enclave
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: contract.wasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: v1-contract.wasm
-          path: ./x/compute/internal/keeper/testdata/v1-sanity-contract
-      - uses: actions/download-artifact@v2
+          path: ./x/compute/internal/keeper/testdata/
+      - uses: actions/download-artifact@v3
         with:
           name: ibc.wasm
-          path: ./x/compute/internal/keeper/testdata/ibc
-      - uses: actions/download-artifact@v2
+          path: ./x/compute/internal/keeper/testdata/
+      - uses: actions/download-artifact@v3
         with:
           name: contract_with_floats.wasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: too-high-initial-memory.wasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: static-too-high-initial-memory.wasm
       - name: Setup Files
@@ -210,10 +210,10 @@ jobs:
           find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-          cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
-          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
-          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
-          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/static-too-high-initial-memory.wasm
+          cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
+          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
+          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
+          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
           find "$(pwd)" -name \*.wasm
       - name: Test x/registration
         run: |
@@ -244,17 +244,17 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -286,7 +286,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
