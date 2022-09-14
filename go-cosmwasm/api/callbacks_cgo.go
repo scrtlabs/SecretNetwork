@@ -48,8 +48,8 @@ GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errO
 }
 
 // Gateway functions (querier)
-GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut) {
-    return cQueryExternal(ptr, gas_limit, used_gas, request, result, errOut);
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, uint32_t query_depth, Buffer *result, Buffer *errOut) {
+    return cQueryExternal(ptr, gas_limit, used_gas, request, query_depth, result, errOut);
 }
 */
 import "C"

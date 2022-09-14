@@ -92,8 +92,8 @@ lazy_static! {
 /// is not entered more than TCS_NUM times at once, except that entering it recursively from the
 /// same thread is always permitted.
 /// `EnclaveDoorbell` and `EnclaveAccessToken` help control this behavior.
-/// To ensure that goroutines don't change threads between recursive accesses to the enclave,
-/// we use `runtime.LockOSThread()` and `runtime.UnlockOSThread()` before leaving Go-land.
+/// The depth of calls, which determines whether or not they are recursive, is managed by the
+/// `query_depth` parameter that is threaded through the context of each call.
 pub struct EnclaveDoorbell {
     enclave: SgxResult<SgxEnclave>,
     condvar: Condvar,

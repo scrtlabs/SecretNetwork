@@ -62,7 +62,7 @@ all: build test
 build: build-rust build-go
 
 .PHONY: build-rust
-build-rust: build-enclave build-query-enclave
+build-rust: build-enclave
 	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features "$(FEATURES_U)"
 	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
