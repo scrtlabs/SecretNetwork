@@ -4,6 +4,7 @@ import (
 	"fmt"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/gonum/stat"
 	"github.com/stretchr/testify/require"
 	"math"
 	"os"
@@ -32,25 +33,30 @@ func buildBenchMessage(bench Bench) []byte {
 type BenchTime struct {
 	Name       string
 	Case       Bench
-	Avg        time.Duration
+	Mean       float64
 	iterations uint64
 	Min        time.Duration
 	Max        time.Duration
-	// StdEv int64
+	datapoints []float64
+	StdEv      float64
 }
 
 func NewBenchTimer(name string, bench Bench) BenchTime {
 	return BenchTime{
-		Name: name,
-		Case: bench,
-		Avg:  0,
-		Min:  math.MaxInt64,
-		Max:  0,
-		// StdEv: 0,
+		Name:       name,
+		Case:       bench,
+		Mean:       0,
+		Min:        math.MaxInt64,
+		Max:        0,
+		datapoints: []float64{},
+		StdEv:      0,
 	}
 }
 
 func (b *BenchTime) AppendTime(singleRunTime time.Duration) {
+	b.iterations += 1
+	b.datapoints = append(b.datapoints, float64(singleRunTime))
+
 	if singleRunTime > b.Max {
 		b.Max = singleRunTime
 	}
@@ -58,21 +64,27 @@ func (b *BenchTime) AppendTime(singleRunTime time.Duration) {
 		b.Min = singleRunTime
 	}
 
-	currentAvgSum := uint64(b.Avg) * b.iterations
-	newAvgSum := currentAvgSum + uint64(singleRunTime)
-	b.iterations += 1
+	//currentAvgSum := uint64(b.Mean) * b.iterations
+	//newAvgSum := currentAvgSum + uint64(singleRunTime)
 
-	b.Avg = time.Duration(newAvgSum / b.iterations)
+	//b.Mean = time.Duration(newAvgSum / b.iterations)
+	//
+	b.Mean, b.StdEv = stat.MeanStdDev(b.datapoints, nil)
 }
 
 func (b *BenchTime) PrintReport() {
-	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Average: %s \n\t Min: %s \n\t Max: %s \n\t",
+
+	stdevTime := time.Duration(math.Floor(b.StdEv))
+	stdevMean := time.Duration(math.Floor(b.Mean))
+
+	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Mean: %s \n\t Min: %s \n\t Max: %s \n\t StdDev: %s",
 		b.Name,
 		b.Case,
 		b.iterations,
-		b.Avg,
+		stdevMean,
 		b.Min,
-		b.Max)
+		b.Max,
+		stdevTime)
 
 	// todo: log this properly
 	println(s)
