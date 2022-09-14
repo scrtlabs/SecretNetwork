@@ -26,7 +26,7 @@ use crate::wasm::traits::WasmiApi;
 
 /// api_marker is based on this compatibility chart:
 /// https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/README.md#compatibility
-mod api_marker {
+pub mod api_marker {
     pub const V0_10: &str = "cosmwasm_vm_version_3";
     pub const V1: &str = "interface_version_8";
 }

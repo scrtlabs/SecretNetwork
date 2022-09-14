@@ -179,7 +179,7 @@ impl HandleType {
         }
     }
 
-    pub fn to_export_name(h: &HandleType) -> String {
+    pub fn get_export_name(h: &HandleType) -> String {
         match h {
             HandleType::HANDLE_TYPE_EXECUTE => "execute".to_string(),
             HandleType::HANDLE_TYPE_REPLY => "reply".to_string(),

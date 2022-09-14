@@ -98,12 +98,11 @@ pub fn init(
         secret_msg.user_public_key,
     )?;
 
-    let mut versioned_env =
-        base_env.into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
+    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
-    let result = engine.init(versioned_env, validated_msg);
+    let result = engine.init(&versioned_env, validated_msg);
     *used_gas = engine.gas_used();
     let output = result?;
 
@@ -231,11 +230,11 @@ pub fn handle(
 
     let mut versioned_env = base_env
         .clone()
-        .into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
+        .into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
-    let result = engine.handle(versioned_env, validated_msg);
+    let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
     *used_gas = engine.gas_used();
     let mut output = result?;
 
@@ -328,8 +327,11 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
-    //let vec_ptr = engine.query(env_ptr, msg_ptr)?;
-    let result = engine.query(validated_msg);
+    let mut versioned_env = base_env
+        .clone()
+        .into_versioned_env(&engine.get_api_version());
+
+    let result = engine.query(&versioned_env, validated_msg);
     *used_gas = engine.gas_used();
     let output = result?;
 

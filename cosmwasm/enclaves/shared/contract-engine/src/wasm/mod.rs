@@ -1,4 +1,4 @@
-mod contract;
+pub(crate) mod contract;
 mod engine;
 mod externals;
 mod import_resolver;

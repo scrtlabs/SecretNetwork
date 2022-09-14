@@ -59,6 +59,7 @@ impl Engine {
                     RuntimeValue::I32(msg_ptr as i32),
                 ],
             ),
+            _ => return Err(EnclaveError::InvalidWasm),
         };
 
         match self
@@ -191,6 +192,7 @@ impl Engine {
                     ],
                 ),
             },
+            _ => return Err(EnclaveError::InvalidWasm),
         };
 
         info!("Invoking {}() in wasm", func_name);
@@ -225,6 +227,7 @@ impl Engine {
                 RuntimeValue::I32(env_ptr as i32),
                 RuntimeValue::I32(msg_ptr as i32),
             ],
+            _ => return Err(EnclaveError::InvalidWasm),
         };
 
         match self

@@ -426,7 +426,7 @@ pub fn parse_message(
         | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
             trace!(
                 "parsing {} msg (Should always be plaintext): {:?}",
-                HandleType::to_export_name(&handle_type),
+                HandleType::get_export_name(&handle_type),
                 base64::encode(&message)
             );
 
