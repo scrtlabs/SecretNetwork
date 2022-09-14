@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -31,13 +31,13 @@ const (
 	flagProposalType           = "type"
 	flagIoMasterKey            = "enclave-key"
 	flagCodeHash               = "code-hash"
-	// flagAdmin                  = "admin"
 )
 
 // GetTxCmd returns the transaction commands for this module
 func GetTxCmd() *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        types.ModuleName,
+		Aliases:                    []string{"wasm"},
 		Short:                      "Compute transaction subcommands",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
@@ -47,10 +47,6 @@ func GetTxCmd() *cobra.Command {
 		StoreCodeCmd(),
 		InstantiateContractCmd(),
 		ExecuteContractCmd(),
-		// Currently not supporting these commands
-		// MigrateContractCmd(cdc),
-		// UpdateContractAdminCmd(cdc),
-		// ClearContractAdminCmd(cdc),
 	)
 	return txCmd
 }
@@ -59,7 +55,7 @@ func GetTxCmd() *cobra.Command {
 func StoreCodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "store [wasm file] --source [source] --builder [builder]",
-		Short: "Upload a wasm binary",
+		Short: "Upload a WASM binary",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -89,7 +85,7 @@ func StoreCodeCmd() *cobra.Command {
 }
 
 func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSet) (types.MsgStoreCode, error) {
-	wasm, err := ioutil.ReadFile(args[0])
+	wasm, err := os.ReadFile(args[0])
 	if err != nil {
 		return types.MsgStoreCode{}, err
 	}
@@ -104,20 +100,6 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 	} else if !wasmUtils.IsGzip(wasm) {
 		return types.MsgStoreCode{}, fmt.Errorf("invalid input file. Use wasm binary or gzip")
 	}
-
-	/*
-		var perm *types.AccessConfig
-		if onlyAddrStr := viper.GetString(flagInstantiateByAddress); onlyAddrStr != "" {
-			allowedAddr, err := sdk.AccAddressFromBech32(onlyAddrStr)
-			if err != nil {
-				return types.MsgStoreCode{}, sdkerrors.Wrap(err, flagInstantiateByAddress)
-			}
-			x := types.OnlyAddress.With(allowedAddr)
-			perm = &x
-		} else if everybody := viper.GetBool(flagInstantiateByEverybody); everybody {
-			perm = &types.AllowEverybody
-		}
-	*/
 
 	source, err := flags.GetString(flagSource)
 	if err != nil {
@@ -134,7 +116,6 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 		WASMByteCode: wasm,
 		Source:       source,
 		Builder:      builder,
-		// InstantiatePermission: perm,
 	}
 	return msg, nil
 }
@@ -142,9 +123,10 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.
 func InstantiateContractCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "instantiate [code_id_int64] [json_encoded_init_args] --label [text] " /* --admin [address,optional] */ + "--amount [coins,optional]",
-		Short: "Instantiate a wasm contract",
-		Args:  cobra.ExactArgs(2),
+		Use:     "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --amount [coins,optional]",
+		Short:   "Instantiate a wasm contract",
+		Aliases: []string{"init"},
+		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
@@ -167,7 +149,6 @@ func InstantiateContractCmd() *cobra.Command {
 		"io-master-cert.der file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
-	// cmd.Flags().String(flagAdmin, "", "Address of an admin")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -191,7 +172,10 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 
 	label, err := initFlags.GetString(flagLabel)
 	if label == "" {
-		return types.MsgInstantiateContract{}, fmt.Errorf("Label is required on all contracts")
+		return types.MsgInstantiateContract{}, fmt.Errorf("label is required on all contracts")
+	}
+	if err != nil {
+		return types.MsgInstantiateContract{}, err
 	}
 
 	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
@@ -220,6 +204,9 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		initMsg.Msg = []byte(args[1])
 
 		encryptedMsg, err = wasmCtx.OfflineEncrypt(initMsg.Serialize(), ioKeyPath)
+		if err != nil {
+			return types.MsgInstantiateContract{}, fmt.Errorf("ioKeyPath: %s", err)
+		}
 	} else {
 		// if we aren't creating an offline transaction we can validate the chosen label
 		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
@@ -258,9 +245,10 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 // ExecuteContractCmd will instantiate a contract from previously uploaded code.
 func ExecuteContractCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "execute [optional: contract_addr_bech32] [json_encoded_send_args]",
-		Short: "Execute a command on a wasm contract",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "execute [optional: contract_addr_bech32] [json_encoded_send_args]",
+		Short:   "Execute a command on a wasm contract",
+		Aliases: []string{"exec"},
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
@@ -272,8 +260,14 @@ func ExecuteContractCmd() *cobra.Command {
 			var ioKeyPath string
 
 			genOnly, err := cmd.Flags().GetBool(flags.FlagGenerateOnly)
+			if err != nil {
+				return err
+			}
 
 			amountStr, err := cmd.Flags().GetString(flagAmount)
+			if err != nil {
+				return err
+			}
 
 			if len(args) == 1 {
 
@@ -396,7 +390,7 @@ func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 		return nil, err
 	}
 
-	return []byte(hex.EncodeToString(codeResp.DataHash)), nil
+	return []byte(codeResp.CodeHash), nil
 }
 
 func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddress) ([]byte, error) {

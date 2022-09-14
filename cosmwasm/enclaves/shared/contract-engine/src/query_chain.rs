@@ -11,7 +11,7 @@ use super::errors::WasmEngineError;
 use crate::external::{ecalls, ocalls};
 use crate::types::{IoNonce, SecretMessage};
 
-use enclave_cosmwasm_types::{
+use cw_types_v010::{
     encoding::Binary,
     query::{QueryRequest, WasmQuery},
     std_error::{StdError, StdResult},

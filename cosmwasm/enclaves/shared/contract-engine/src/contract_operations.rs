@@ -1,21 +1,26 @@
+use cw_types_generic::{BaseAddr, BaseEnv};
+
+use cw_types_v010::encoding::Binary;
+use cw_types_v010::types::CanonicalAddr;
+
+use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
+use enclave_crypto::Ed25519PublicKey;
+use enclave_ffi_types::{Ctx, EnclaveError};
+use enclave_utils::coalesce;
 use log::*;
 
-use enclave_ffi_types::{Ctx, EnclaveError};
-
-use enclave_cosmos_types::types::{ContractCode, SigInfo};
-use enclave_cosmwasm_types::encoding::Binary;
-use enclave_cosmwasm_types::types::{CanonicalAddr, Env};
-use enclave_crypto::Ed25519PublicKey;
-use enclave_utils::coalesce;
-
+use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
+use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
 
 use super::contract_validation::{
-    extract_contract_key, generate_encryption_key, validate_contract_key, validate_msg,
-    verify_params, ContractKey,
+    generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
 };
 use super::gas::WasmCosts;
-use super::io::encrypt_output;
+use super::io::{
+    encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    set_all_logs_to_plaintext,
+};
 use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
 use super::wasm::{ContractInstance, ContractOperation, Engine};
@@ -44,54 +49,44 @@ pub fn init(
     msg: &[u8],         // probably function call and args
     sig_info: &[u8],    // info about signature verification
 ) -> Result<InitSuccess, EnclaveError> {
+    trace!("Starting init");
+
     let contract_code = ContractCode::new(contract);
+    let contract_hash = contract_code.hash();
 
-    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
-        warn!(
-            "got an error while trying to deserialize env input bytes into json {:?}: {}",
-            String::from_utf8_lossy(&env),
-            err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
-    parsed_env.contract_code_hash = hex::encode(contract_code.hash());
+    let base_env: BaseEnv = extract_base_env(env)?;
 
-    let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
-        warn!(
-            "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
-            parsed_env.contract.address, err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
+    let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
+
+    let canonical_contract_address = to_canonical(contract_address)?;
+
+    let canonical_sender_address = to_canonical(sender)?;
+
     let contract_key = generate_encryption_key(
-        &parsed_env,
-        contract_code.hash(),
-        &(canonical_contract_address.0).0,
+        &canonical_sender_address,
+        &block_height,
+        &contract_hash,
+        &canonical_contract_address,
     )?;
-    trace!("Init: Contract Key: {:?}", hex::encode(contract_key));
 
-    let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
-        warn!(
-            "got an error while trying to deserialize env input bytes into json {:?}: {}",
-            String::from_utf8_lossy(&sig_info),
-            err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
+    let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
-    trace!("Init input before decryption: {:?}", base64::encode(&msg));
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
+    verify_params(
+        &parsed_sig_info,
+        &sent_funds,
+        &canonical_sender_address,
+        &contract_address,
+        &secret_msg,
+    )?;
 
     let decrypted_msg = secret_msg.decrypt()?;
 
-    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
-
-    info!(
-        "Init input after decryption: {:?}",
-        String::from_utf8_lossy(&validated_msg)
-    );
+    let ValidatedMessage {
+        validated_msg,
+        reply_params,
+    } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
 
     let mut engine = start_engine(
         context,
@@ -103,15 +98,12 @@ pub fn init(
         secret_msg.user_public_key,
     )?;
 
-    let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
-        warn!(
-            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
-            parsed_env, err
-        );
-        EnclaveError::FailedToSerialize
-    })?;
+    let mut versioned_env =
+        base_env.into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
 
-    let result = engine.init(new_env, validated_msg);
+    versioned_env.set_contract_hash(&contract_hash);
+
+    let result = engine.init(versioned_env, validated_msg);
     *used_gas = engine.gas_used();
     let output = result?;
 
@@ -120,9 +112,13 @@ pub fn init(
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
     let output = encrypt_output(
         output,
-        secret_msg.nonce,
-        secret_msg.user_public_key,
+        &secret_msg,
         &canonical_contract_address,
+        versioned_env.get_contract_hash(),
+        reply_params,
+        &canonical_sender_address,
+        false,
+        false,
     )?;
 
     // todo: can move the key to somewhere in the output message if we want
@@ -133,6 +129,17 @@ pub fn init(
     })
 }
 
+fn to_canonical(contract_address: &BaseAddr) -> Result<CanonicalAddr, EnclaveError> {
+    CanonicalAddr::from_human(contract_address).map_err(|err| {
+        warn!(
+            "error while trying to deserialize address from bech32 string to bytes {:?}: {}",
+            contract_address, err
+        );
+        EnclaveError::FailedToDeserialize
+    })
+}
+
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub fn handle(
     context: Ctx,
     gas_limit: u64,
@@ -141,64 +148,77 @@ pub fn handle(
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
+    handle_type: u8,
 ) -> Result<HandleSuccess, EnclaveError> {
+    trace!("Starting handle");
+
     let contract_code = ContractCode::new(contract);
+    let contract_hash = contract_code.hash();
 
-    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
-        warn!(
-            "got an error while trying to deserialize env input bytes into json {:?}: {}",
-            env, err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
-    parsed_env.contract_code_hash = hex::encode(contract_code.hash());
+    let base_env: BaseEnv = extract_base_env(env)?;
 
-    let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
-        warn!(
-            "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
-            parsed_env.contract.address, err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
+    let (sender, contract_address, _, sent_funds) = base_env.get_verification_params();
 
-    let contract_key = extract_contract_key(&parsed_env)?;
+    let canonical_contract_address = to_canonical(contract_address)?;
 
-    if !validate_contract_key(&contract_key, &canonical_contract_address, &contract_code) {
-        warn!("got an error while trying to deserialize output bytes");
-        return Err(EnclaveError::FailedContractAuthentication);
+    let contract_key = base_env.get_contract_key()?;
+
+    validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
+
+    let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
+
+    // The flow of handle is now used for multiple messages (such ash Handle, Reply)
+    // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
+    let parsed_handle_type = HandleType::try_from(handle_type)?;
+
+    trace!("Handle type is {:?}", parsed_handle_type);
+
+    let ParsedMessage {
+        should_validate_sig_info,
+        was_msg_encrypted,
+        should_encrypt_output,
+        secret_msg,
+        decrypted_msg,
+        contract_hash_for_validation,
+    } = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
+
+    let canonical_sender_address = match to_canonical(sender) {
+        Ok(can) => can,
+        Err(_) => CanonicalAddr::from_vec(vec![]),
+    };
+
+    // There is no signature to verify when the input isn't signed.
+    // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
+    // All of these functions go through handle but the data isn't signed:
+    //  Reply (that is not WASM reply)
+    if should_validate_sig_info {
+        // Verify env parameters against the signed tx
+
+        verify_params(
+            &parsed_sig_info,
+            sent_funds,
+            &canonical_sender_address,
+            contract_address,
+            &secret_msg,
+        )?;
     }
 
-    trace!("handle parsed_env: {:?}", parsed_env);
+    let mut validated_msg = decrypted_msg.clone();
+    let mut reply_params: Option<ReplyParams> = None;
+    if was_msg_encrypted {
+        let x = validate_msg(
+            &decrypted_msg,
+            &contract_hash,
+            contract_hash_for_validation,
+            Some(parsed_handle_type.clone()),
+        )?;
+        validated_msg = x.validated_msg;
+        reply_params = x.reply_params;
+    }
 
-    let parsed_sig_info: SigInfo = serde_json::from_slice(sig_info).map_err(|err| {
-        warn!(
-            "got an error while trying to deserialize env input bytes into json {:?}: {}",
-            String::from_utf8_lossy(&sig_info),
-            err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
-
-    trace!("Handle input before decryption: {:?}", base64::encode(&msg));
-    let secret_msg = SecretMessage::from_slice(msg)?;
-
-    // Verify env parameters against the signed tx
-    verify_params(&parsed_sig_info, &parsed_env, &secret_msg)?;
-
-    let secret_msg = SecretMessage::from_slice(msg)?;
-    let decrypted_msg = secret_msg.decrypt()?;
-
-    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
-
-    trace!(
-        "Handle input afer decryption: {:?}",
-        String::from_utf8_lossy(&validated_msg)
-    );
-
-    trace!("Successfully authenticated the contract!");
-
-    trace!("Handle: Contract Key: {:?}", hex::encode(contract_key));
-
+    // Although the operation here is not always handle it is irrelevant in this case
+    // because it only helps to decide whether to check floating points or not
+    // In this case we want to do the same as in Handle both for Reply and for others so we can always pass "Handle".
     let mut engine = start_engine(
         context,
         gas_limit,
@@ -209,30 +229,64 @@ pub fn handle(
         secret_msg.user_public_key,
     )?;
 
-    let new_env = serde_json::to_vec(&parsed_env).map_err(|err| {
-        warn!(
-            "got an error while trying to serialize parsed_env into bytes {:?}: {}",
-            parsed_env, err
-        );
-        EnclaveError::FailedToSerialize
-    })?;
+    let mut versioned_env = base_env
+        .clone()
+        .into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
 
-    let result = engine.handle(new_env, validated_msg);
+    versioned_env.set_contract_hash(&contract_hash);
+
+    let result = engine.handle(versioned_env, validated_msg);
     *used_gas = engine.gas_used();
-    let output = result?;
+    let mut output = result?;
 
     debug!(
         "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
         secret_msg.nonce, secret_msg.user_public_key
     );
-    let output = encrypt_output(
-        output,
-        secret_msg.nonce,
-        secret_msg.user_public_key,
-        &canonical_contract_address,
-    )?;
+    if should_encrypt_output {
+        output = encrypt_output(
+            output,
+            &secret_msg,
+            &canonical_contract_address,
+            versioned_env.get_contract_hash(),
+            reply_params,
+            &canonical_sender_address,
+            false,
+            is_ibc_msg(parsed_handle_type.clone()),
+        )?;
+    } else {
+        let mut raw_output =
+            manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
+        set_all_logs_to_plaintext(&mut raw_output);
+
+        let finalized_output =
+            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false);
+        trace!(
+            "Wasm output for plaintext message is: {:?}",
+            finalized_output
+        );
+
+        output = serde_json::to_vec(&finalized_output).map_err(|err| {
+            debug!(
+                "got an error while trying to serialize output json into bytes {:?}: {}",
+                finalized_output, err
+            );
+            EnclaveError::FailedToSerialize
+        })?;
+    }
 
     Ok(HandleSuccess { output })
+}
+
+fn extract_sig_info(sig_info: &[u8]) -> Result<SigInfo, EnclaveError> {
+    serde_json::from_slice(sig_info).map_err(|err| {
+        warn!(
+            "handle got an error while trying to deserialize sig info input bytes into json {:?}: {}",
+            String::from_utf8_lossy(&sig_info),
+            err
+        );
+        EnclaveError::FailedToDeserialize
+    })
 }
 
 pub fn query(
@@ -243,45 +297,26 @@ pub fn query(
     env: &[u8],
     msg: &[u8],
 ) -> Result<QuerySuccess, EnclaveError> {
+    trace!("Entered query");
+
     let contract_code = ContractCode::new(contract);
+    let contract_hash = contract_code.hash();
 
-    let mut parsed_env: Env = serde_json::from_slice(env).map_err(|err| {
-        warn!(
-            "query got an error while trying to deserialize env input bytes into json {:?}: {}",
-            env, err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
-    parsed_env.contract_code_hash = hex::encode(contract_code.hash());
+    let base_env: BaseEnv = extract_base_env(env)?;
 
-    trace!("query env_v010: {:?}", parsed_env);
+    let (_, contract_address, _, _) = base_env.get_verification_params();
 
-    let canonical_contract_address = CanonicalAddr::from_human(&parsed_env.contract.address).map_err(|err| {
-        warn!(
-            "got an error while trying to deserialize parsed_env.contract.address from bech32 string to bytes {:?}: {}",
-            parsed_env.contract.address, err
-        );
-        EnclaveError::FailedToDeserialize
-    })?;
+    let canonical_contract_address = to_canonical(contract_address)?;
 
-    let contract_key = extract_contract_key(&parsed_env)?;
+    let contract_key = base_env.get_contract_key()?;
 
-    if !validate_contract_key(&contract_key, &canonical_contract_address, &contract_code) {
-        warn!("query got an error while trying to validate contract key");
-        return Err(EnclaveError::FailedContractAuthentication);
-    }
+    validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
 
-    trace!("successfully authenticated the contract!");
-    trace!("query contract key: {:?}", hex::encode(contract_key));
-
-    trace!("query input before decryption: {:?}", base64::encode(&msg));
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
-    trace!(
-        "query input afer decryption: {:?}",
-        String::from_utf8_lossy(&decrypted_msg)
-    );
-    let validated_msg = validate_msg(&decrypted_msg, contract_code.hash())?;
+
+    let ValidatedMessage { validated_msg, .. } =
+        validate_msg(&decrypted_msg, &contract_hash, None, None)?;
 
     let mut engine = start_engine(
         context,
@@ -293,15 +328,20 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
+    //let vec_ptr = engine.query(env_ptr, msg_ptr)?;
     let result = engine.query(validated_msg);
     *used_gas = engine.gas_used();
     let output = result?;
 
     let output = encrypt_output(
         output,
-        secret_msg.nonce,
-        secret_msg.user_public_key,
+        &secret_msg,
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
+        &"".to_string(), // Not used for queries (can't call a sub-message from a query),
+        None,            // Not used for queries (Query response is not replied to the caller),
+        &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
+        true,
+        false,
     )?;
 
     Ok(QuerySuccess { output })
@@ -352,7 +392,23 @@ fn _start_engine(
         operation,
         nonce,
         user_public_key,
-    );
+    )?;
 
     Ok(Engine::new(contract_instance, module))
+}
+
+fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
+    serde_json::from_slice(env)
+        .map_err(|err| {
+            warn!(
+                "error while deserializing env into json {:?}: {}",
+                String::from_utf8_lossy(&env),
+                err
+            );
+            EnclaveError::FailedToDeserialize
+        })
+        .map(|base_env| {
+            trace!("base env: {:?}", base_env);
+            base_env
+        })
 }

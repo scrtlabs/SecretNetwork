@@ -72,8 +72,8 @@ func queryMasterKey(ctx sdk.Context, keeper Keeper) (*types.GenesisState, error)
 		IoMasterCertificate:       ioKey,
 	}
 
-	//asBytes, err := keeper.cdc.Marshal(ioKey)
-	//if err != nil {
+	// asBytes, err := keeper.cdc.Marshal(ioKey)
+	// if err != nil {
 	//	return nil, err
 	//}
 

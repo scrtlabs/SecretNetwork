@@ -57,6 +57,21 @@ var (
 
 	// ErrSigFailed error for wasm code that has already been uploaded or failed
 	ErrSigFailed = sdkErrors.Register(DefaultCodespace, 16, "parse signature failed")
+
+	// ErrUnsupportedForContract error when a feature is used that is not supported for/ by this contract
+	ErrUnsupportedForContract = sdkErrors.Register(DefaultCodespace, 17, "unsupported for this contract")
+
+	// ErrUnknownMsg error by a message handler to show that it is not responsible for this message type
+	ErrUnknownMsg = sdkErrors.Register(DefaultCodespace, 18, "unknown message from the contract")
+
+	// ErrReplyFailed error for rust execution contract failure
+	ErrReplyFailed = sdkErrors.Register(DefaultCodespace, 19, "reply to contract failed")
+
+	// ErrInvalidEvent error if an attribute/event from the contract is invalid
+	ErrInvalidEvent = sdkErrors.Register(DefaultCodespace, 21, "invalid event")
+
+	// ErrMaxIBCChannels error for maximum number of ibc channels reached
+	ErrMaxIBCChannels = sdkErrors.Register(DefaultCodespace, 22, "max transfer channels")
 )
 
 func IsEncryptedErrorCode(code uint32) bool {

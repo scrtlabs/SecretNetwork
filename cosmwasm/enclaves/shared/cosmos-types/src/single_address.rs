@@ -2,7 +2,7 @@ use enclave_crypto::secp256k1::{Secp256k1PubKey, SECP256K1_PREFIX};
 use log::warn;
 
 use super::traits::CosmosAminoPubkey;
-use enclave_cosmwasm_types::types::CanonicalAddr;
+use cw_types_v010::types::CanonicalAddr;
 use enclave_crypto::hash::ripemd::ripemd160;
 use enclave_crypto::hash::sha::sha_256;
 

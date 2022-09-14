@@ -1,9 +1,9 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Secret Network - gRPC Gateway docs",
+    "title": "Secret Network",
     "description": "A REST interface for queries and transactions",
-    "version": "v1.3.1"
+    "version": "v1.4"
   },
   "apis": [
     {
@@ -123,6 +123,16 @@
           "Params": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonParams",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonUpgradedConsensusState"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonParams",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonUpgradedConsensusState"
         }
       }
     },

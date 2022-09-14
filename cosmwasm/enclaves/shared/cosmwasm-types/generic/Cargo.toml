@@ -1,0 +1,21 @@
+[package]
+name = "cw_types_generic"
+version = "0.1.0"
+authors = ["bob"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+  "derive"
+] }
+serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+enclave-ffi-types = { path = "../../../ffi-types" }
+
+cw_types_v010 = { path = "../v0.10" }
+cw_types_v1 = { path = "../v1.0" }
+
+log = "0.4.14"
+hex = "0.4.2"
+base64 = "0.13.0"

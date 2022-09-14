@@ -1,6 +1,7 @@
 use log::*;
 
 use enclave_ffi_types::EnclaveError;
+use proto::tx::signing::SignMode;
 use protobuf::Message;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +13,7 @@ use enclave_crypto::{
 
 use cosmos_proto as proto;
 
-use enclave_cosmwasm_types::{
+use cw_types_v010::{
     coins::Coin,
     encoding::Binary,
     math::Uint128,
@@ -120,10 +121,15 @@ impl CosmosAminoPubkey for CosmosPubKey {
 }
 
 impl VerifyingKey for CosmosPubKey {
-    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+    fn verify_bytes(
+        &self,
+        bytes: &[u8],
+        sig: &[u8],
+        sign_mode: SignMode,
+    ) -> Result<(), CryptoError> {
         match self {
-            CosmosPubKey::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig),
-            CosmosPubKey::Multisig(pubkey) => pubkey.verify_bytes(bytes, sig),
+            CosmosPubKey::Secp256k1(pubkey) => pubkey.verify_bytes(bytes, sig, sign_mode),
+            CosmosPubKey::Multisig(pubkey) => pubkey.verify_bytes(bytes, sig, sign_mode),
         }
     }
 }
@@ -139,6 +145,52 @@ pub enum SignModeDef {
     SIGN_MODE_DIRECT = 1,
     SIGN_MODE_TEXTUAL = 2,
     SIGN_MODE_LEGACY_AMINO_JSON = 127,
+    SIGN_MODE_EIP_191 = 191,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub enum HandleType {
+    HANDLE_TYPE_EXECUTE = 0,
+    HANDLE_TYPE_REPLY = 1,
+    HANDLE_TYPE_IBC_CHANNEL_OPEN = 2,
+    HANDLE_TYPE_IBC_CHANNEL_CONNECT = 3,
+    HANDLE_TYPE_IBC_CHANNEL_CLOSE = 4,
+    HANDLE_TYPE_IBC_PACKET_RECEIVE = 5,
+    HANDLE_TYPE_IBC_PACKET_ACK = 6,
+    HANDLE_TYPE_IBC_PACKET_TIMEOUT = 7,
+}
+
+impl HandleType {
+    pub fn try_from(value: u8) -> Result<Self, EnclaveError> {
+        match value {
+            0 => Ok(HandleType::HANDLE_TYPE_EXECUTE),
+            1 => Ok(HandleType::HANDLE_TYPE_REPLY),
+            2 => Ok(HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN),
+            3 => Ok(HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT),
+            4 => Ok(HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE),
+            5 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE),
+            6 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_ACK),
+            7 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT),
+            _ => {
+                error!("unrecognized handle type: {}", value);
+                Err(EnclaveError::FailedToDeserialize)
+            }
+        }
+    }
+
+    pub fn to_export_name(h: &HandleType) -> String {
+        match h {
+            HandleType::HANDLE_TYPE_EXECUTE => "execute".to_string(),
+            HandleType::HANDLE_TYPE_REPLY => "reply".to_string(),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => "ibc_channel_open".to_string(),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => "ibc_channel_connect".to_string(),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => "ibc_channel_close".to_string(),
+            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => "ibc_packet_receive".to_string(),
+            HandleType::HANDLE_TYPE_IBC_PACKET_ACK => "ibc_packet_ack".to_string(),
+            HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => "ibc_packet_timeout".to_string(),
+        }
+    }
 }
 
 // This is called `VerificationInfo` on the Go side

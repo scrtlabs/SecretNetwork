@@ -11,6 +11,10 @@ type QueryResponse struct {
 	Err *StdError `json:"Err,omitempty"`
 }
 
+type ContractQueryResponse struct {
+	Query *QueryResponse `json:"query,omitempty"`
+}
+
 //-------- Querier -----------
 
 type Querier interface {
@@ -60,13 +64,15 @@ func ToQuerierResult(response []byte, err error) QuerierResult {
 // QueryRequest is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type QueryRequest struct {
-	Bank    *BankQuery      `json:"bank,omitempty"`
-	Custom  json.RawMessage `json:"custom,omitempty"`
-	Staking *StakingQuery   `json:"staking,omitempty"`
-	Wasm    *WasmQuery      `json:"wasm,omitempty"`
-	Dist    *DistQuery      `json:"dist,omitempty"`
-	Mint    *MintQuery      `json:"mint,omitempty"`
-	Gov     *GovQuery       `json:"gov,omitempty"`
+	Bank     *BankQuery      `json:"bank,omitempty"`
+	Custom   json.RawMessage `json:"custom,omitempty"`
+	Staking  *StakingQuery   `json:"staking,omitempty"`
+	Wasm     *WasmQuery      `json:"wasm,omitempty"`
+	Dist     *DistQuery      `json:"dist,omitempty"`
+	Mint     *MintQuery      `json:"mint,omitempty"`
+	Gov      *GovQuery       `json:"gov,omitempty"`
+	IBC      *IBCQuery       `json:"ibc,omitempty"`
+	Stargate *StargateQuery  `json:"stargate,omitempty"`
 }
 
 type BankQuery struct {
@@ -97,8 +103,27 @@ type StakingQuery struct {
 	Validators           *ValidatorsQuery         `json:"validators,omitempty"`
 	AllDelegations       *AllDelegationsQuery     `json:"all_delegations,omitempty"`
 	Delegation           *DelegationQuery         `json:"delegation,omitempty"`
-	UnBondingDelegations *UnbondingDeletionsQuery `json:"unbonding_delegations, omitempty"`
+	UnBondingDelegations *UnbondingDeletionsQuery `json:"unbonding_delegations,omitempty"`
 	BondedDenom          *struct{}                `json:"bonded_denom,omitempty"`
+	AllValidators        *AllValidatorsQuery      `json:"all_validators,omitempty"`
+	Validator            *ValidatorQuery          `json:"validator,omitempty"`
+}
+
+type AllValidatorsQuery struct{}
+
+// AllValidatorsResponse is the expected response to AllValidatorsQuery
+type AllValidatorsResponse struct {
+	Validators Validators `json:"validators"`
+}
+
+type ValidatorQuery struct {
+	/// Address is the validator's address (e.g. cosmosvaloper1...)
+	Address string `json:"address"`
+}
+
+// ValidatorResponse is the expected response to ValidatorQuery
+type ValidatorResponse struct {
+	Validator *Validator `json:"validator"` // serializes to `null` when unset which matches Rust's Option::None serialization
 }
 
 type UnbondingDeletionsQuery struct {
@@ -127,7 +152,7 @@ func (v Validators) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (v *Validators) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == "null" { //nolint:goconst
 		return nil
 	}
 	var raw []Validator
@@ -215,20 +240,28 @@ type BondedDenomResponse struct {
 }
 
 type WasmQuery struct {
-	Smart *SmartQuery `json:"smart,omitempty"`
-	Raw   *RawQuery   `json:"raw,omitempty"`
+	Smart        *SmartQuery        `json:"smart,omitempty"`
+	Raw          *RawQuery          `json:"raw,omitempty"`
+	ContractInfo *ContractInfoQuery `json:"contract_info,omitempty"`
 }
 
-// SmartQuery respone is raw bytes ([]byte)
+// SmartQuery response is raw bytes ([]byte)
 type SmartQuery struct {
+	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
 	Msg          []byte `json:"msg"`
 }
 
 // RawQuery response is raw bytes ([]byte)
 type RawQuery struct {
+	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
 	Key          []byte `json:"key"`
+}
+
+type ContractInfoQuery struct {
+	// Bech32 encoded sdk.AccAddress of the contract
+	ContractAddr string `json:"contract_addr"`
 }
 
 type DistQuery struct {
@@ -238,6 +271,157 @@ type DistQuery struct {
 type GovQuery struct {
 	Proposals *ProposalsQuery `json:"proposals,omitempty"`
 }
+
+// StargateQuery is encoded the same way as abci_query, with path and protobuf encoded request data.
+// The format is defined in [ADR-21](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-021-protobuf-query-encoding.md).
+// The response is protobuf encoded data directly without a JSON response wrapper.
+// The caller is responsible for compiling the proper protobuf definitions for both requests and responses.
+type StargateQuery struct {
+	// this is the fully qualified service path used for routing,
+	// eg. custom/cosmos_sdk.x.bank.v1.Query/QueryBalance
+	Path string `json:"path"`
+	// this is the expected protobuf message type (not any), binary encoded
+	Data []byte `json:"data"`
+}
+
+// IBCQuery defines a query request from the contract into the chain.
+// This is the counterpart of [IbcQuery](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L61-L83).
+type IBCQuery struct {
+	PortID       *PortIDQuery       `json:"port_id,omitempty"`
+	ListChannels *ListChannelsQuery `json:"list_channels,omitempty"`
+	Channel      *ChannelQuery      `json:"channel,omitempty"`
+}
+
+type PortIDQuery struct{}
+
+type PortIDResponse struct {
+	PortID string `json:"port_id"`
+}
+
+// ListChannelsQuery is an IBCQuery that lists all channels that are bound to a given port.
+// If `PortID` is unset, this list all channels bound to the contract's port.
+// Returns a `ListChannelsResponse`.
+// This is the counterpart of [IbcQuery::ListChannels](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L70-L73).
+type ListChannelsQuery struct {
+	// optional argument
+	PortID string `json:"port_id,omitempty"`
+}
+
+type ListChannelsResponse struct {
+	Channels IBCChannels `json:"channels"`
+}
+
+type IBCEndpoint struct {
+	PortID    string `json:"port_id"`
+	ChannelID string `json:"channel_id"`
+}
+
+// TODO: test what the sdk Order.String() represents and how to parse back
+// Proto files: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80
+// Auto-gen code: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/x/ibc/core/04-channel/types/channel.pb.go#L70-L101
+type IBCOrder = string
+
+// These are the only two valid values for IbcOrder
+const Unordered = "ORDER_UNORDERED"
+const Ordered = "ORDER_ORDERED"
+
+type IBCChannel struct {
+	Endpoint             IBCEndpoint `json:"endpoint"`
+	CounterpartyEndpoint IBCEndpoint `json:"counterparty_endpoint"`
+	Order                IBCOrder    `json:"order"`
+	Version              string      `json:"version"`
+	ConnectionID         string      `json:"connection_id"`
+}
+
+type IBCOpenInit struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+func (m *IBCOpenInit) ToMsg() IBCChannelOpenMsg {
+	return IBCChannelOpenMsg{
+		OpenInit: m,
+	}
+}
+
+type IBCOpenTry struct {
+	Channel             IBCChannel `json:"channel"`
+	CounterpartyVersion string     `json:"counterparty_version"`
+}
+
+func (m *IBCOpenTry) ToMsg() IBCChannelOpenMsg {
+	return IBCChannelOpenMsg{
+		OpenTry: m,
+	}
+}
+
+type IBCChannelOpenMsg struct {
+	OpenInit *IBCOpenInit `json:"open_init,omitempty"`
+	OpenTry  *IBCOpenTry  `json:"open_try,omitempty"`
+}
+
+// IBCChannels must JSON encode empty array as [] (not null) for consistency with Rust parser
+type IBCChannels []IBCChannel
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (e IBCChannels) MarshalJSON() ([]byte, error) {
+	if len(e) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []IBCChannel = e
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (e *IBCChannels) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []IBCChannel
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*e = raw
+	return nil
+}
+
+// IBCEndpoints must JSON encode empty array as [] (not null) for consistency with Rust parser
+type IBCEndpoints []IBCEndpoint
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (e IBCEndpoints) MarshalJSON() ([]byte, error) {
+	if len(e) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []IBCEndpoint = e
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (e *IBCEndpoints) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []IBCEndpoint
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*e = raw
+	return nil
+}
+
+type ChannelQuery struct {
+	// optional argument
+	PortID    string `json:"port_id,omitempty"`
+	ChannelID string `json:"channel_id"`
+}
+
+type ChannelResponse struct {
+	// may be empty if there is no matching channel
+	Channel *IBCChannel `json:"channel,omitempty"`
+}
+
 type MintQuery struct {
 	Inflation   *MintingInflationQuery   `json:"inflation,omitempty"`
 	BondedRatio *MintingBondedRatioQuery `json:"bonded_ratio,omitempty"`

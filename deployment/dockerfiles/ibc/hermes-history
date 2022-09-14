@@ -1,0 +1,21 @@
+
+# add acconuts, these are already funded inside localsecret
+echo "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar" > 50s03.mnemonic
+hermes keys add --hd-path "m/44'/529'/0'/0/0" --mnemonic-file 50s03.mnemonic --chain secretdev-1
+hermes keys add --hd-path "m/44'/529'/0'/0/0" --mnemonic-file 50s03.mnemonic --chain secretdev-2
+
+# verify that the keys are funded
+hermes keys show
+hermes keys balance --chain secretdev-2
+hermes keys balance --chain secretdev-1
+
+hermes create channel --a-chain secretdev-1 --b-chain secretdev-2 --a-port transfer --b-port transfer --new-client-connection
+hermes start
+
+# test ibc transfer (assuming the channel created by hermes was channel-0):
+secretcli config node http://localhost:26657 #secretdev-1
+secretcli q bank balances <source-a>
+secretcli tx ibc-transfer transfer transfer channel-0 <dst-b> 1234uscrt --from <source-a-key>
+
+secretcli config node http://localhost:36657 #secretdev-2
+secretcli q bank balances <dst-b> # should have 1234 ibc denom

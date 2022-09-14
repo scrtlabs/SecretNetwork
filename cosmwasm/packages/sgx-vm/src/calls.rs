@@ -1,7 +1,7 @@
 // use serde::de::DeserializeOwned;
 // use std::fmt;
 
-// use cosmwasm_std::{Env, HandleResult, InitResult, MigrateResult, QueryResult};
+// use cosmwasm_std::{Env, HandleResult, InitResult, QueryResult};
 
 // use crate::errors::{VmError, VmResult};
 use crate::errors::VmResult;
@@ -16,7 +16,6 @@ use crate::traits::{Api, Querier, Storage};
 /*
 const MAX_LENGTH_INIT: usize = 100_000;
 const MAX_LENGTH_HANDLE: usize = 100_000;
-const MAX_LENGTH_MIGRATE: usize = 100_000;
 const MAX_LENGTH_QUERY: usize = 100_000;
 */
 
@@ -52,23 +51,6 @@ where
     let env = to_vec(env)?;
     let data = call_handle_raw(instance, &env, msg)?;
     let result: HandleResult<U> = from_slice(&data)?;
-    Ok(result)
-}
-
-pub fn call_migrate<S, A, Q, U>(
-    instance: &mut Instance<S, A, Q>,
-    env: &Env,
-    msg: &[u8],
-) -> VmResult<MigrateResult<U>>
-where
-    S: Storage + 'static,
-    A: Api + 'static,
-    Q: Querier + 'static,
-    U: DeserializeOwned + Clone + fmt::Debug + JsonSchema + PartialEq,
-{
-    let env = to_vec(env)?;
-    let data = call_migrate_raw(instance, &env, msg)?;
-    let result: MigrateResult<U> = from_slice(&data)?;
     Ok(result)
 }
 
@@ -112,26 +94,13 @@ pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'sta
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
+    handle_type: u8
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(false);
     /*
     call_raw(instance, "handle", &[env, msg], MAX_LENGTH_HANDLE)
     */
-    instance.call_handle(env, msg, sig_info)
-}
-
-/// Calls Wasm export "migrate" and returns raw data from the contract.
-/// The result is length limited to prevent abuse but otherwise unchecked.
-pub fn call_migrate_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(
-    instance: &mut Instance<S, A, Q>,
-    env: &[u8],
-    msg: &[u8],
-) -> VmResult<Vec<u8>> {
-    instance.set_storage_readonly(false);
-    /*
-    call_raw(instance, "migrate", &[env, msg], MAX_LENGTH_MIGRATE)
-    */
-    instance.call_migrate(env, msg)
+    instance.call_handle(env, msg, sig_info, handle_type)
 }
 
 /// Calls Wasm export "query" and returns raw data from the contract.
