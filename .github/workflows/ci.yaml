@@ -30,7 +30,10 @@ jobs:
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src clippy
+      - run: |
+          rustup component add rust-src clippy
+          cd cosmwasm/enclaves/execute/
+          rustup component add rust-src clippy
       - name: Install xargo
         run: |
           cargo --version
