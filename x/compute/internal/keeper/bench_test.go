@@ -39,6 +39,7 @@ type BenchTime struct {
 	Max        time.Duration
 	datapoints []float64
 	StdEv      float64
+	AvgGas     uint64
 }
 
 func NewBenchTimer(name string, bench Bench) BenchTime {
@@ -50,11 +51,22 @@ func NewBenchTimer(name string, bench Bench) BenchTime {
 		Max:        0,
 		datapoints: []float64{},
 		StdEv:      0,
+		AvgGas:     0,
 	}
 }
 
-func (b *BenchTime) AppendTime(singleRunTime time.Duration) {
+func (b *BenchTime) appendGas(gasUsed uint64) {
+	currentAvgGas := b.AvgGas * b.iterations
+	newAvgSum := currentAvgGas + gasUsed
+
+	b.AvgGas = newAvgSum / (b.iterations + 1)
+}
+
+func (b *BenchTime) AppendResult(singleRunTime time.Duration, gasUsed uint64) {
+
+	b.appendGas(gasUsed)
 	b.iterations += 1
+
 	b.datapoints = append(b.datapoints, float64(singleRunTime))
 
 	if singleRunTime > b.Max {
@@ -70,6 +82,7 @@ func (b *BenchTime) AppendTime(singleRunTime time.Duration) {
 	//b.Mean = time.Duration(newAvgSum / b.iterations)
 	//
 	b.Mean, b.StdEv = stat.MeanStdDev(b.datapoints, nil)
+
 }
 
 func (b *BenchTime) PrintReport() {
@@ -77,14 +90,17 @@ func (b *BenchTime) PrintReport() {
 	stdevTime := time.Duration(math.Floor(b.StdEv))
 	stdevMean := time.Duration(math.Floor(b.Mean))
 
-	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Mean: %s \n\t Min: %s \n\t Max: %s \n\t StdDev: %s",
+	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Mean: %s \n\t Min: %s \n\t Max: %s \n\t StdDev: %s \n\t Gas Used (average): %d \n\t Gas Value: %f [Kgas/ms]",
 		b.Name,
 		b.Case,
 		b.iterations,
 		stdevMean,
 		b.Min,
 		b.Max,
-		stdevTime)
+		stdevTime,
+		b.AvgGas,
+		float64(b.AvgGas)/b.Mean*1000,
+	)
 
 	// todo: log this properly
 	println(s)
@@ -165,7 +181,7 @@ func TestRunBenchmarks(t *testing.T) {
 			for i := uint64(1); i < tc.loops+1; i++ {
 				start := time.Now()
 				// call bench
-				_, _, qErr, _, _, _ := execHelper(
+				_, _, qErr, _, gasUsed, _ := execHelper(
 					t,
 					keeper,
 					ctx,
@@ -181,8 +197,8 @@ func TestRunBenchmarks(t *testing.T) {
 				)
 				elapsed := time.Since(start)
 				require.Empty(t, qErr)
-
-				timer.AppendTime(elapsed)
+				println("Gas used by execute: %d", gasUsed)
+				timer.AppendResult(elapsed, gasUsed)
 			}
 			timers[name] = timer
 		})
