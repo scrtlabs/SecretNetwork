@@ -333,6 +333,7 @@ pub fn finalize_raw_output(
 }
 
 pub fn manipulate_callback_sig_for_plaintext(
+    contract_addr: &CanonicalAddr,
     output: Vec<u8>,
 ) -> Result<RawWasmOutput, EnclaveError> {
     let mut raw_output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
@@ -346,9 +347,34 @@ pub fn manipulate_callback_sig_for_plaintext(
             for sub_msg in &mut ok.messages {
                 if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
                     match wasm_msg {
-                        cw_types_v1::results::WasmMsg::Execute { callback_sig, .. }
-                        | cw_types_v1::results::WasmMsg::Instantiate { callback_sig, .. } => {
-                            *callback_sig = Some(vec![])
+                        cw_types_v1::results::WasmMsg::Execute {
+                            callback_sig,
+                            msg,
+                            funds,
+                            ..
+                        }
+                        | cw_types_v1::results::WasmMsg::Instantiate {
+                            callback_sig,
+                            msg,
+                            funds,
+                            ..
+                        } => {
+                            let msg_to_sign = SecretMessage {
+                                nonce: [0; 32],
+                                user_public_key: [0; 32],
+                                msg: msg.as_slice().to_vec(),
+                            };
+                            *callback_sig = Some(create_callback_signature(
+                                contract_addr,
+                                &msg_to_sign,
+                                &funds
+                                    .iter()
+                                    .map(|coin| cw_types_v010::types::Coin {
+                                        denom: coin.denom.clone(),
+                                        amount: cw_types_v010::math::Uint128(coin.amount.u128()),
+                                    })
+                                    .collect::<Vec<cw_types_v010::types::Coin>>()[..],
+                            ));
                         }
                     }
                 }
@@ -358,9 +384,34 @@ pub fn manipulate_callback_sig_for_plaintext(
             for sub_msg in &mut ok.messages {
                 if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
                     match wasm_msg {
-                        cw_types_v1::results::WasmMsg::Execute { callback_sig, .. }
-                        | cw_types_v1::results::WasmMsg::Instantiate { callback_sig, .. } => {
-                            *callback_sig = Some(vec![])
+                        cw_types_v1::results::WasmMsg::Execute {
+                            callback_sig,
+                            msg,
+                            funds,
+                            ..
+                        }
+                        | cw_types_v1::results::WasmMsg::Instantiate {
+                            callback_sig,
+                            msg,
+                            funds,
+                            ..
+                        } => {
+                            let msg_to_sign = SecretMessage {
+                                nonce: [0; 32],
+                                user_public_key: [0; 32],
+                                msg: msg.as_slice().to_vec(),
+                            };
+                            *callback_sig = Some(create_callback_signature(
+                                contract_addr,
+                                &msg_to_sign,
+                                &funds
+                                    .iter()
+                                    .map(|coin| cw_types_v010::types::Coin {
+                                        denom: coin.denom.clone(),
+                                        amount: cw_types_v010::math::Uint128(coin.amount.u128()),
+                                    })
+                                    .collect::<Vec<cw_types_v010::types::Coin>>()[..],
+                            ));
                         }
                     }
                 }

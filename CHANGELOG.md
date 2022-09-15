@@ -1,5 +1,14 @@
 # CHANGELOG
 
+# 1.4.0
+- CosmWasm v1
+- Bump WASM gas cost:
+  - Base WASM invocation 10k -> 100k
+  - WASM storage access 2k per access
+- Support MetaMask pretty signing
+- Ledger support for x/authz & x/feegrant
+- Revert Chain of Secrets tombstone state and restore slashed funds
+
 # 1.3.1
 
 - Use all available cores to serve queries.
