@@ -79,6 +79,7 @@ impl Default for WasmCosts {
     }
 }
 
+#[allow(dead_code)]
 pub fn gas_rules(wasm_costs: &WasmCosts) -> rules::Set {
     rules::Set::new(wasm_costs.regular, {
         let mut vals = ::std::collections::BTreeMap::new();

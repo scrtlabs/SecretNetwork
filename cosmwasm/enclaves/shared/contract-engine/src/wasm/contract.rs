@@ -79,6 +79,7 @@ pub struct ContractInstance {
 
 impl ContractInstance {
     #[allow(clippy::too_many_arguments)]
+    #[allow(dead_code)]
     pub fn new(
         context: Ctx,
         module: ModuleRef,

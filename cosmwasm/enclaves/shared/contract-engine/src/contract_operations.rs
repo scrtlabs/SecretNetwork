@@ -6,7 +6,6 @@ use cw_types_v010::types::CanonicalAddr;
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
-use enclave_utils::coalesce;
 use log::*;
 
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
@@ -21,9 +20,10 @@ use super::io::{
     encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
     set_all_logs_to_plaintext,
 };
-use super::module_cache::create_module_instance;
+//use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
-use super::wasm::{ContractInstance, ContractOperation, Engine};
+use super::wasm::ContractOperation;
+// use super::wasm::{ContractInstance, Engine};
 
 /*
 Each contract is compiled with these functions already implemented in wasm:
@@ -251,7 +251,7 @@ pub fn handle(
             reply_params,
             &canonical_sender_address,
             false,
-            is_ibc_msg(parsed_handle_type.clone()),
+            is_ibc_msg(parsed_handle_type),
         )?;
     } else {
         let mut raw_output =
@@ -327,7 +327,7 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
-    let mut versioned_env = base_env
+    let versioned_env = base_env
         .clone()
         .into_versioned_env(&engine.get_api_version());
 
@@ -371,33 +371,33 @@ fn start_engine(
 }
 
 // TODO remove once the new engine works well
-fn _start_engine(
-    context: Ctx,
-    gas_limit: u64,
-    contract_code: ContractCode,
-    contract_key: &ContractKey,
-    operation: ContractOperation,
-    nonce: IoNonce,
-    user_public_key: Ed25519PublicKey,
-) -> Result<Engine, EnclaveError> {
-    let module = create_module_instance(contract_code, operation)?;
-
-    // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
-    let wasm_costs = WasmCosts::default();
-
-    let contract_instance = ContractInstance::new(
-        context,
-        module.clone(),
-        gas_limit,
-        wasm_costs,
-        *contract_key,
-        operation,
-        nonce,
-        user_public_key,
-    )?;
-
-    Ok(Engine::new(contract_instance, module))
-}
+// fn _start_engine(
+//     context: Ctx,
+//     gas_limit: u64,
+//     contract_code: ContractCode,
+//     contract_key: &ContractKey,
+//     operation: ContractOperation,
+//     nonce: IoNonce,
+//     user_public_key: Ed25519PublicKey,
+// ) -> Result<Engine, EnclaveError> {
+//     let module = create_module_instance(contract_code, operation)?;
+//
+//     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
+//     let wasm_costs = WasmCosts::default();
+//
+//     let contract_instance = ContractInstance::new(
+//         context,
+//         module.clone(),
+//         gas_limit,
+//         wasm_costs,
+//         *contract_key,
+//         operation,
+//         nonce,
+//         user_public_key,
+//     )?;
+//
+//     Ok(Engine::new(contract_instance, module))
+// }
 
 fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
     serde_json::from_slice(env)

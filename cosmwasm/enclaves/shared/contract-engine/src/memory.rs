@@ -4,6 +4,7 @@ use log::*;
 
 use enclave_ffi_types::EnclaveError;
 
+#[allow(dead_code)]
 pub fn validate_memory(p_modlue: &mut Module) -> Result<(), EnclaveError> {
     let memory_section = p_modlue
         .memory_section_mut()

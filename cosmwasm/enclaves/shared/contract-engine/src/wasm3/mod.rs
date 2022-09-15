@@ -23,9 +23,7 @@ use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::contract::api_marker;
 use crate::wasm::ContractOperation;
-use crate::wasm3::gas::{
-    get_exhausted_amount, get_remaining_gas, use_gas, EXPORT_GAS_LIMIT_EXHAUSTED,
-};
+use crate::wasm3::gas::{get_exhausted_amount, get_remaining_gas, use_gas};
 
 mod gas;
 mod validation;
@@ -173,6 +171,7 @@ pub struct Engine {
 }
 
 impl Engine {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         context: Ctx,
         gas_limit: u64,
@@ -299,7 +298,6 @@ impl Engine {
         link_fn(instance, "debug_print", host_debug_print)?;
 
         link_fn(instance, "debug", host_debug_print)?;
-        link_fn(instance, "gas", host_gas)?;
 
         link_fn(instance, "secp256k1_verify", host_secp256k1_verify)?;
         #[rustfmt::skip]
@@ -354,28 +352,24 @@ impl Engine {
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
-                    ({
-                        let (init, args) = (
-                            instance
-                                .find_function::<(u32, u32), u32>("init")
-                                .to_enclave_result()?,
-                            (env_ptr, msg_ptr),
-                        );
-                        init.call_with_context(context, args)
-                    })
+                    let (init, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("init")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    init.call_with_context(context, args)
                 }
                 CosmWasmApiVersion::V1 => {
-                    ({
-                        let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
+                    let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
 
-                        let (init, args) = (
-                            instance
-                                .find_function::<(u32, u32, u32), u32>("instantiate")
-                                .to_enclave_result()?,
-                            (env_ptr, msg_info_ptr, msg_ptr),
-                        );
-                        init.call_with_context(context, args)
-                    })
+                    let (init, args) = (
+                        instance
+                            .find_function::<(u32, u32, u32), u32>("instantiate")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_info_ptr, msg_ptr),
+                    );
+                    init.call_with_context(context, args)
                 }
                 CosmWasmApiVersion::Invalid => {
                     return Err(EnclaveError::InvalidWasm);
@@ -409,39 +403,35 @@ impl Engine {
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
-                    ({
+                    let (handle, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("handle")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    handle.call_with_context(context, args)
+                }
+                CosmWasmApiVersion::V1 => {
+                    let export_name = HandleType::get_export_name(&handle_type);
+
+                    if handle_type == &HandleType::HANDLE_TYPE_EXECUTE {
+                        let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
                         let (handle, args) = (
                             instance
-                                .find_function::<(u32, u32), u32>("handle")
+                                .find_function::<(u32, u32, u32), u32>(&export_name)
+                                .to_enclave_result()?,
+                            (env_ptr, msg_info_ptr, msg_ptr),
+                        );
+                        handle.call_with_context(context, args)
+                    } else {
+                        let (handle, args) = (
+                            instance
+                                .find_function::<(u32, u32), u32>(&export_name)
                                 .to_enclave_result()?,
                             (env_ptr, msg_ptr),
                         );
                         handle.call_with_context(context, args)
-                    })
-                }
-                CosmWasmApiVersion::V1 => {
-                    ({
-                        let export_name = HandleType::get_export_name(&handle_type);
-
-                        if handle_type == &HandleType::HANDLE_TYPE_EXECUTE {
-                            let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
-                            let (handle, args) = (
-                                instance
-                                    .find_function::<(u32, u32, u32), u32>(&export_name)
-                                    .to_enclave_result()?,
-                                (env_ptr, msg_info_ptr, msg_ptr),
-                            );
-                            handle.call_with_context(context, args)
-                        } else {
-                            let (handle, args) = (
-                                instance
-                                    .find_function::<(u32, u32), u32>(&export_name)
-                                    .to_enclave_result()?,
-                                (env_ptr, msg_ptr),
-                            );
-                            handle.call_with_context(context, args)
-                        }
-                    })
+                    }
                 }
                 CosmWasmApiVersion::Invalid => {
                     return Err(EnclaveError::InvalidWasm);
@@ -941,16 +931,6 @@ fn host_addr_validate(
     Ok(0)
 }
 
-fn host_gas(
-    context: &mut Context,
-    instance: &wasm3::Instance<Context>,
-    gas_amount: i32,
-) -> WasmEngineResult<()> {
-    use_gas(instance, gas_amount as u64)?;
-
-    Ok(())
-}
-
 fn host_humanize_address(
     context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -1327,6 +1307,9 @@ fn host_ed25519_batch_verify(
     let pubkeys_len = pubkeys_data.len();
 
     let lengths = (messages_len, signatures_len, pubkeys_len);
+
+    //todo: fix this
+    #[allow(clippy::type_complexity)]
     let (messages, signatures, pubkeys): (Vec<&[u8]>, Vec<&[u8]>, Vec<&[u8]>) = match lengths {
         (ml, sl, pl) if ml == sl && sl == pl => {
             let messages = messages_data.iter().map(Vec::as_slice).collect();
