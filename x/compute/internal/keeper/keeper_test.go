@@ -868,14 +868,22 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	// this should throw out of gas exception (panic)
 	start := time.Now()
+
+	// ensure we get an out of gas panic
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		_, ok := r.(sdk.ErrorOutOfGas)
+		require.True(t, ok, "%+v", r)
+
+		diff := time.Since(start)
+		t.Logf("Duration till out of gas: %+v (%d gas)\n", diff, gasLimit)
+	}()
+
+	// this should throw out of gas exception (panic)
 	_, err = keeper.Execute(ctx, addr, fred, msgBz, nil, nil)
-	diff := time.Since(start)
-
-	t.Logf("Duration till out of gas: %+v (%d gas)\n", diff, gasLimit)
-
-	require.Equal(t, err.Error(), outOfGasError.Error())
+	require.True(t, false, "We must panic before this line")
 }
 
 func prettyEvents(t *testing.T, events sdk.Events) string {
