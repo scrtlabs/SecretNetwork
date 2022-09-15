@@ -12,7 +12,7 @@ use enclave_ffi_types::{
     RuntimeConfiguration,
 };
 
-use enclave_utils::{oom_handler, recursion_depth, validate_const_ptr, validate_mut_ptr};
+use enclave_utils::{oom_handler, validate_const_ptr, validate_mut_ptr};
 
 use crate::external::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
