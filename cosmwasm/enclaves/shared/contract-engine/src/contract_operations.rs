@@ -403,6 +403,7 @@ pub fn query(
     Ok(QuerySuccess { output })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn start_engine(
     context: Ctx,
     gas_limit: u64,
