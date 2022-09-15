@@ -88,7 +88,7 @@ func (b *BenchTime) PrintReport() {
 	stdevTime := time.Duration(math.Floor(b.StdEv))
 	stdevMean := time.Duration(math.Floor(b.Mean))
 
-	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Mean: %s \n\t Min: %s \n\t Max: %s \n\t StdDev: %s \n\t Gas Used (average): %d \n\t Gas Value: %f",
+	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Mean: %s \n\t Min: %s \n\t Max: %s \n\t StdDev: %s \n\t Gas Used (average): %d \n\t Gas Value: %f [Kgas/ms]",
 		b.Name,
 		b.Case,
 		b.iterations,
@@ -97,7 +97,7 @@ func (b *BenchTime) PrintReport() {
 		b.Max,
 		stdevTime,
 		b.AvgGas,
-		float64(b.AvgGas)/b.Mean,
+		float64(b.AvgGas)/b.Mean*1000,
 	)
 
 	// todo: log this properly
