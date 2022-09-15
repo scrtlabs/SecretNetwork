@@ -59,11 +59,14 @@ func (b *BenchTime) appendGas(gasUsed uint64) {
 	currentAvgGas := b.AvgGas * b.iterations
 	newAvgSum := currentAvgGas + gasUsed
 
-	b.AvgGas = newAvgSum / b.iterations
+	b.AvgGas = newAvgSum / (b.iterations + 1)
 }
 
 func (b *BenchTime) AppendResult(singleRunTime time.Duration, gasUsed uint64) {
+
+	b.appendGas(gasUsed)
 	b.iterations += 1
+
 	b.datapoints = append(b.datapoints, float64(singleRunTime))
 
 	if singleRunTime > b.Max {
@@ -80,7 +83,6 @@ func (b *BenchTime) AppendResult(singleRunTime time.Duration, gasUsed uint64) {
 	//
 	b.Mean, b.StdEv = stat.MeanStdDev(b.datapoints, nil)
 
-	b.appendGas(gasUsed)
 }
 
 func (b *BenchTime) PrintReport() {
@@ -195,7 +197,7 @@ func TestRunBenchmarks(t *testing.T) {
 				)
 				elapsed := time.Since(start)
 				require.Empty(t, qErr)
-
+				println("Gas used by execute: %d", gasUsed)
 				timer.AppendResult(elapsed, gasUsed)
 			}
 			timers[name] = timer
