@@ -163,7 +163,7 @@ fn query_chain(
             enclave_buffer.as_mut_ptr(),
             query.as_ptr(),
             query.len(),
-            query_depth,
+            query_depth + 1,
         );
 
         trace!("ocall_query_chain returned with gas {}", gas_used);

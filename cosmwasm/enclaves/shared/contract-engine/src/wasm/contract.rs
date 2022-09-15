@@ -677,7 +677,7 @@ impl WasmiApi for ContractInstance {
         let mut gas_used: u64 = 0;
         let answer = encrypt_and_query_chain(
             &query_buffer,
-            self.query_depth + 1,
+            self.query_depth,
             &self.context,
             self.user_nonce,
             self.user_public_key,
