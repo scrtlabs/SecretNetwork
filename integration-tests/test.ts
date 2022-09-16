@@ -925,28 +925,11 @@ describe("StakingMsg", () => {
   describe("Delegate", () => {
     describe("v1", () => {
       test("success", async () => {
-        const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
-
-        const tx = await accounts[0].secretjs.tx.compute.executeContract(
-          {
-            sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
-            msg: {
-              staking_msg_delegate: {
-                validator,
-                amount: { amount: "1", denom: "uscrt" },
-              },
-            },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
-          },
-          { gasLimit: 250_000 }
+        const [delegationStatus, tx, validator] = await delegate_for_test(
+          accounts[0],
+          contracts["secretdev-1"].v1
         );
-        if (tx.code !== TxResultCode.Success) {
-          console.error(tx.rawLog);
-        }
-        expect(tx.code).toBe(TxResultCode.Success);
+        expect(delegationStatus).toBeTruthy();
 
         const { attributes } = tx.jsonLog[0].events.find(
           (e) => e.type === "delegate"
@@ -987,28 +970,11 @@ describe("StakingMsg", () => {
 
     describe("v0.10", () => {
       test("success", async () => {
-        const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
-
-        const tx = await accounts[0].secretjs.tx.compute.executeContract(
-          {
-            sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
-            msg: {
-              staking_msg_delegate: {
-                validator,
-                amount: { amount: "1", denom: "uscrt" },
-              },
-            },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
-          },
-          { gasLimit: 250_000 }
+        const [delegationStatus, tx, validator] = await delegate_for_test(
+          accounts[0],
+          contracts["secretdev-1"].v010
         );
-        if (tx.code !== TxResultCode.Success) {
-          console.error(tx.rawLog);
-        }
-        expect(tx.code).toBe(TxResultCode.Success);
+        expect(delegationStatus).toBeTruthy();
 
         const { attributes } = tx.jsonLog[0].events.find(
           (e) => e.type === "delegate"
@@ -1683,6 +1649,212 @@ describe("BankQuery", () => {
       expect(Number(result?.amount?.amount)).toBeGreaterThanOrEqual(1);
     });
   });
+
+  describe("AllBalances", () => {
+    test("v1", async () => {
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          bank_all_balances: {
+            address: accounts[0].address,
+          },
+        },
+      });
+
+      expect(result?.amount?.length).toBe(1);
+      expect(result?.amount[0]?.denom).toBe("uscrt");
+      expect(Number(result?.amount[0]?.amount)).toBeGreaterThanOrEqual(1);
+    });
+  });
+});
+
+async function delegate_for_test(
+  account: Account,
+  contract: Contract
+): Promise<[boolean, Tx, string]> {
+  const { validators } = await readonly.query.staking.validators({});
+  const validator = validators[0].operatorAddress;
+
+  const tx = await account.secretjs.tx.compute.executeContract(
+    {
+      sender: account.address,
+      contractAddress: contract.address,
+      codeHash: contract.codeHash,
+      msg: {
+        staking_msg_delegate: {
+          validator,
+          amount: { amount: "1", denom: "uscrt" },
+        },
+      },
+      sentFunds: [{ amount: "1", denom: "uscrt" }],
+    },
+    { gasLimit: 250_000 }
+  );
+  if (tx.code !== TxResultCode.Success) {
+    console.error(tx.rawLog);
+  }
+
+  return [tx.code === TxResultCode.Success, tx, validator];
+}
+
+async function undelegate_for_test(
+  account: Account,
+  contract: Contract,
+  validator: string
+): Promise<boolean> {
+  const tx = await account.secretjs.tx.compute.executeContract(
+    {
+      sender: account.address,
+      contractAddress: contract.address,
+      codeHash: contract.codeHash,
+      msg: {
+        staking_msg_undelegate: {
+          validator,
+          amount: { amount: "1", denom: "uscrt" },
+        },
+      },
+      sentFunds: [{ amount: "1", denom: "uscrt" }],
+    },
+    { gasLimit: 250_000 }
+  );
+  if (tx.code !== TxResultCode.Success) {
+    console.error(tx.rawLog);
+  }
+
+  return tx.code === TxResultCode.Success;
+}
+
+describe("StakingQuery", () => {
+  describe("BondedDemon", () => {
+    test("v1", async () => {
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          staking_bonded_denom: {
+            address: accounts[0].address,
+            denom: "uscrt",
+          },
+        },
+      });
+      expect(result?.denom).toBe("uscrt");
+    });
+  });
+
+  describe("AllDelegations", () => {
+    test("v1", async () => {
+      const [delegationStatus, _, validator] = await delegate_for_test(
+        accounts[1],
+        contracts["secretdev-1"].v1
+      );
+      expect(delegationStatus).toBeTruthy();
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          staking_all_delegations: {
+            delegator: accounts[1].address,
+          },
+        },
+      });
+
+      expect(result?.delegations?.length).toBe(1);
+      expect(result?.delegations[0]?.delegator).toBe(accounts[1].address);
+      expect(result?.delegations[0]?.validator).toBe(validator);
+      expect(result?.delegations[0]?.amount?.denom).toBe("uscrt");
+      expect(Number(result?.delegations[0]?.amount?.amount)).toBe(1);
+
+      expect(
+        await undelegate_for_test(
+          accounts[1],
+          contracts["secretdev-1"].v1,
+          validator
+        )
+      ).toBeTruthy();
+    });
+  });
+
+  describe("Delegation", () => {
+    test("v1", async () => {
+      const [delegationStatus, _, validator] = await delegate_for_test(
+        accounts[1],
+        contracts["secretdev-1"].v1
+      );
+      expect(delegationStatus).toBeTruthy();
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          staking_delegation: {
+            delegator: accounts[1].address,
+            validator: validator,
+          },
+        },
+      });
+
+      expect(result?.delegation?.delegator).toBe(accounts[1].address);
+      expect(result?.delegation?.validator).toBe(validator);
+      expect(result?.delegation?.amount?.denom).toBe("uscrt");
+      expect(Number(result?.delegation?.amount?.amount)).toBe(1);
+
+      expect(
+        await undelegate_for_test(
+          accounts[1],
+          contracts["secretdev-1"].v1,
+          validator
+        )
+      ).toBeTruthy();
+    });
+  });
+
+  describe("AllValidators", () => {
+    test("v1", async () => {
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          staking_all_validators: {},
+        },
+      });
+
+      expect(result?.validators?.length).toBe(1);
+    });
+  });
+
+  describe("Validator", () => {
+    test("v1", async () => {
+      const { validators } = await readonly.query.staking.validators({});
+      const validator = validators[0].operatorAddress;
+
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          staking_validator: { address: validator },
+        },
+      });
+
+      expect(result?.validator?.address).toBe(validator);
+    });
+  });
+});
+
+describe("IBCQuery", () => {
+  describe("PortID", () => {
+    test("v1", async () => {
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          ibc_port_id: {},
+        },
+      });
+      expect(result?.port_id).toBe(
+        "wasm." + contracts["secretdev-1"].v1.address
+      );
+    });
+  });
 });
 
 describe("IBC", () => {
@@ -1792,7 +1964,7 @@ describe("IBC", () => {
     expect(true).toBe(true);
   }, 30_000 /* 30 seconds */);
 
-  test("contracts sanity", async () => {
+  test.only("contracts sanity", async () => {
     const command =
       "docker exec ibc-relayer-1 hermes " +
       "--config /home/hermes-user/.hermes/alternative-config.toml " +
@@ -1813,6 +1985,21 @@ describe("IBC", () => {
     await waitForIBCChannel("secretdev-1", "http://localhost:9091", channelId);
 
     await waitForIBCChannel("secretdev-2", "http://localhost:9391", channelId);
+
+    const res: any = await readonly.query.compute.queryContract({
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
+      query: {
+        ibc_list_channels: {
+          port_id: "wasm." + contracts["secretdev-1"].v1.address,
+        },
+      },
+    });
+    expect(res?.channels?.length).toBe(1);
+    expect(res?.channels[0]?.endpoint?.port_id).toBe(
+      "wasm." + contracts["secretdev-1"].v1.address
+    );
+    expect(res?.channels[0]?.endpoint?.channel_id).toBe(channelId);
 
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
