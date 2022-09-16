@@ -359,6 +359,8 @@ build-test-contract:
 	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/ibc-test-contract
 	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/bench-contract
+	cp $(TEST_CONTRACT_V1_PATH)/bench-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 
 prep-go-tests: build-test-contract
 	# empty BUILD_PROFILE means debug mode which compiles faster

@@ -21,7 +21,8 @@ debug-print = ["enclave_contract_engine/debug-print"]
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
-    "backtrace"
+    "backtrace",
+  "untrusted_time"
 ] }
 sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
@@ -29,7 +30,7 @@ sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://g
 enclave_contract_engine = { path = "../shared/contract-engine", features = ["query-only"] }
 enclave_utils = { path = "../shared/utils", features = ["query-only"] }
 
-log = "0.4.17"
+log = "0.4.14"
 simple_logger = { version = "2.3.0", default-features = false, features = ["stderr"] }
 ctor = "0.1.13"
 

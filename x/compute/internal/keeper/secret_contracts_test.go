@@ -6353,7 +6353,7 @@ func TestEnv(t *testing.T) {
 				queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get_env":{}}`, true, false, math.MaxUint64)
 				require.Empty(t, qErr)
 
-				require.Equal(t, queryRes, expectedV1Env)
+				require.Equal(t, expectedV1Env, queryRes)
 			} else {
 				// no env or msg info in v0.10 query
 			}

@@ -2414,26 +2414,26 @@ fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -
 fn test_canonicalize_address_errors(deps: DepsMut) -> StdResult<Response> {
     match deps.api.addr_canonicalize("") {
         Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("addr_canonicalize errored: Input is empty") {
-                return Err(StdError::generic_err(
-                    "empty address should have failed with 'addr_canonicalize errored: Input is empty'",
-                ));
+            if !msg.to_lowercase().contains("input is empty") {
+                return Err(StdError::generic_err(format!(
+                    "empty address should have failed with 'addr_canonicalize errored: Input is empty; got {:?}'",
+                msg)));
             }
             // all is good, continue
         }
         _ => {
             return Err(StdError::generic_err(
-                "empty address should have failed with 'addr_canonicalize errored: Input is empty'",
+                "empty address should have failed, but returned success'",
             ))
         }
     }
 
     match deps.api.addr_canonicalize("   ") {
         Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("addr_canonicalize errored: invalid length") {
-                return Err(StdError::generic_err(
-                    "empty trimmed address should have failed with 'addr_canonicalize errored: invalid length'",
-                ));
+            if !msg.to_lowercase().contains("input is empty") {
+                return Err(StdError::generic_err(format!(
+                    "empty trimmed address should have failed with 'addr_canonicalize errored: Input is empty; got {:?}'",
+                    msg)));
             }
             // all is good, continue
         }

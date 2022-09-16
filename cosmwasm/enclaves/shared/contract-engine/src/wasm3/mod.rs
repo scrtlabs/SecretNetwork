@@ -25,11 +25,22 @@ use crate::wasm::contract::api_marker;
 use crate::wasm::ContractOperation;
 use crate::wasm3::gas::{get_exhausted_amount, get_remaining_gas, use_gas};
 
+use std::sync::SgxRwLock;
+
 mod gas;
 mod validation;
+use lazy_static::lazy_static;
+use std::time::{Duration, Instant};
 
 type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
+
+use std::collections::HashMap;
+
+lazy_static! {
+    static ref W3_MODULE_CACHE: SgxRwLock<HashMap<[u8; 32], (Vec<u8>, CosmWasmApiVersion)>> =
+        SgxRwLock::new(HashMap::new());
+}
 
 macro_rules! debug_err {
     ($message: literal) => {
@@ -182,48 +193,85 @@ impl Engine {
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Engine, EnclaveError> {
-        let mut module = walrus::ModuleConfig::new()
-            .generate_producers_section(false)
-            .parse(contract_code.code())
-            .map_err(|_| EnclaveError::InvalidWasm)?;
+        let found = W3_MODULE_CACHE
+            .read()
+            .unwrap()
+            .contains_key(&contract_code.hash());
 
-        for import in module.imports.iter() {
-            eprintln!("import {:?}", import)
-        }
-        for export in module.exports.iter() {
-            eprintln!("export {:?}", export)
-        }
+        let (code, cosmwasm_api_version) = if !found {
+            let mut start = Instant::now();
+            let mut module = walrus::ModuleConfig::new()
+                .generate_producers_section(false)
+                .parse(contract_code.code())
+                .map_err(|_| EnclaveError::InvalidWasm)?;
+            let mut duration = start.elapsed();
+            println!(
+                "Time elapsed in walrus::ModuleConfig::new() is: {:?}",
+                duration
+            );
+            // for import in module.imports.iter() {
+            //     eprintln!("import {:?}", import)
+            // }
+            // for export in module.exports.iter() {
+            //     eprintln!("export {:?}", export)
+            // }
 
-        let cosmwasm_api_version = if let Some(export) = module
-            .exports
-            .iter()
-            .find(|&exp| exp.name == api_marker::V0_10 || exp.name == api_marker::V1)
-        {
-            if export.name == api_marker::V0_10 {
-                CosmWasmApiVersion::V010
-            } else if export.name == api_marker::V1 {
-                CosmWasmApiVersion::V1
+            let cosmwasm_api_version = if let Some(export) = module
+                .exports
+                .iter()
+                .find(|&exp| exp.name == api_marker::V0_10 || exp.name == api_marker::V1)
+            {
+                if export.name == api_marker::V0_10 {
+                    CosmWasmApiVersion::V010
+                } else if export.name == api_marker::V1 {
+                    CosmWasmApiVersion::V1
+                } else {
+                    error!("Invalid cosmwasm api version");
+                    return Err(EnclaveError::InvalidWasm);
+                }
             } else {
-                error!("Invalid cosmwasm api version");
+                error!("Invalid cosmwasm api version2");
                 return Err(EnclaveError::InvalidWasm);
+            };
+
+            let mut start = Instant::now();
+            validation::validate_memory(&mut module)?;
+            let mut duration = start.elapsed();
+            println!("Time elapsed in validate_memory is: {:?}", duration);
+
+            if let ContractOperation::Init = operation {
+                if module.has_floats() {
+                    debug!("contract was found to contain floating point operations");
+                    return Err(EnclaveError::WasmModuleWithFP);
+                }
             }
+
+            let mut start = Instant::now();
+            gas::add_metering(&mut module, &gas_costs);
+            let mut duration = start.elapsed();
+            println!("Time elapsed in add_metering() is: {:?}", duration);
+
+            let mut start = Instant::now();
+            let code = module.emit_wasm();
+            let mut duration = start.elapsed();
+            println!("Time elapsed in module.emit_wasm() is: {:?}", duration);
+
+            let mut write_cache = W3_MODULE_CACHE.write().unwrap();
+
+            write_cache.insert(
+                contract_code.hash(),
+                (code.clone(), cosmwasm_api_version.clone()),
+            );
+
+            (code, cosmwasm_api_version)
         } else {
-            error!("Invalid cosmwasm api version2");
-            return Err(EnclaveError::InvalidWasm);
+            W3_MODULE_CACHE
+                .read()
+                .unwrap()
+                .get(&contract_code.hash())
+                .unwrap()
+                .clone()
         };
-
-        validation::validate_memory(&mut module)?;
-
-        if let ContractOperation::Init = operation {
-            if module.has_floats() {
-                debug!("contract was found to contain floating point operations");
-                return Err(EnclaveError::WasmModuleWithFP);
-            }
-        }
-
-        gas::add_metering(&mut module, &gas_costs);
-
-        let code = module.emit_wasm();
 
         let context = Context {
             context,
@@ -237,7 +285,11 @@ impl Engine {
         };
 
         debug!("setting up runtime");
+        let mut start = Instant::now();
+
         let environment = wasm3::Environment::new().to_enclave_result()?;
+        let mut duration = start.elapsed();
+        println!("Time elapsed in Environment::new() is: {:?}", duration);
         debug!("initialized environment");
 
         Ok(Self {
@@ -254,28 +306,49 @@ impl Engine {
     where
         F: FnOnce(&mut wasm3::Instance<Context>, &mut Context) -> Result<Vec<u8>, EnclaveError>,
     {
+        let mut start = Instant::now();
         let runtime = self
             .environment
             .new_runtime::<Context>(1024 * 60, Some(192 /* 12 MiB */))
             .to_enclave_result()?;
+        let mut duration = start.elapsed();
+        println!("Time elapsed in environment.new_runtime is: {:?}", duration);
         debug!("initialized runtime");
 
+        let mut start = Instant::now();
         let module = self
             .environment
             .parse_module(&self.code)
             .to_enclave_result()?;
+        let mut duration = start.elapsed();
+        println!(
+            "Time elapsed in environment.parse_module is: {:?}",
+            duration
+        );
         debug!("parsed module");
 
+        let mut start = Instant::now();
         let mut instance = runtime.load_module(module).to_enclave_result()?;
+        let mut duration = start.elapsed();
+        println!("Time elapsed in runtime.load_module is: {:?}", duration);
         debug!("created instance");
 
+        let mut start = Instant::now();
         gas::set_gas_limit(&instance, self.gas_limit)?;
+        let mut duration = start.elapsed();
+        println!("Time elapsed in set_gas_limit is: {:?}", duration);
         debug!("set gas limit");
 
+        let mut start = Instant::now();
         Self::link_host_functions(&mut instance).to_enclave_result()?;
+        let mut duration = start.elapsed();
+        println!("Time elapsed in link_host_functions is: {:?}", duration);
         debug!("linked functions");
 
+        let mut start = Instant::now();
         let result = func(&mut instance, &mut self.context);
+        let mut duration = start.elapsed();
+        println!("Instance: elapsed time for running func is: {:?}", duration);
         debug!("function returned {:?}", result);
 
         self.used_gas =
@@ -347,8 +420,18 @@ impl Engine {
 
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
+            let mut start = Instant::now();
             let env_ptr = write_to_memory(instance, &env_bytes)?;
+            let mut duration = start.elapsed();
+            println!(
+                "Time elapsed in env_bytes write_to_memory is: {:?}",
+                duration
+            );
+
+            let mut start = Instant::now();
             let msg_ptr = write_to_memory(instance, &msg)?;
+            let mut duration = start.elapsed();
+            println!("Time elapsed in msg write_to_memory is: {:?}", duration);
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -369,16 +452,25 @@ impl Engine {
                             .to_enclave_result()?,
                         (env_ptr, msg_info_ptr, msg_ptr),
                     );
-                    init.call_with_context(context, args)
+                    let mut start = Instant::now();
+                    let res = init.call_with_context(context, args);
+                    let mut duration = start.elapsed();
+                    println!("Time elapsed in call_with_context is: {:?}", duration);
+                    res
                 }
                 CosmWasmApiVersion::Invalid => {
                     return Err(EnclaveError::InvalidWasm);
                 }
             };
-
+            let mut start = Instant::now();
             let output_ptr = check_execution_result(instance, context, result)?;
+            let mut duration = start.elapsed();
+            println!("Time elapsed in check_execution_result is: {:?}", duration);
 
+            let mut start = Instant::now();
             let output = read_from_memory(instance, output_ptr)?;
+            let mut duration = start.elapsed();
+            println!("Time elapsed in read_from_memory is: {:?}", duration);
 
             Ok(output)
         })
@@ -824,7 +916,7 @@ fn host_canonicalize_address(
             .map_err(debug_err!("failed to write error message to contract"));
     }
 
-    debug!("canonicalize_address was called with {:?}", human_addr_str);
+    //debug!("canonicalize_address was called with {:?}", human_addr_str);
 
     let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
         Ok(ret) => ret,
