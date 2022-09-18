@@ -17,7 +17,7 @@ import (
 
 const (
 	defaultLRUCacheSize        = uint64(0)
-	defaultEnclaveLRUCacheSize = uint8(0) // can safely go up to 15
+	defaultEnclaveLRUCacheSize = uint8(15)
 	defaultQueryGasLimit       = uint64(10_000_000)
 )
 
