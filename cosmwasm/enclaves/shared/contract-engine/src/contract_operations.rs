@@ -55,21 +55,21 @@ pub fn init(
 ) -> Result<InitSuccess, EnclaveError> {
     trace!("Starting init");
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in ContractCode::new is: {:?}", duration);
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in extract_base_env is: {:?}", duration);
     let query_depth = extract_query_depth(env)?;
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in get_verification_paramsis: {:?}", duration);
 
     let canonical_contract_address = to_canonical(contract_address)?;
@@ -87,7 +87,7 @@ pub fn init(
 
     let secret_msg = SecretMessage::from_slice(msg)?;
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     verify_params(
         &parsed_sig_info,
         &sent_funds,
@@ -95,23 +95,23 @@ pub fn init(
         &contract_address,
         &secret_msg,
     )?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in verify_params: {:?}", duration);
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let decrypted_msg = secret_msg.decrypt()?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in decrypt: {:?}", duration);
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let ValidatedMessage {
         validated_msg,
         reply_params,
     } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in validate_msg: {:?}", duration);
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let mut engine = start_engine(
         context,
         gas_limit,
@@ -122,16 +122,16 @@ pub fn init(
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in start_engine: {:?}", duration);
 
     let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let result = engine.init(&versioned_env, validated_msg);
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in engine.init: {:?}", duration);
 
     *used_gas = engine.gas_used();
@@ -144,7 +144,7 @@ pub fn init(
     // TODO: copy cosmwasm's structures to enclave
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
-    let mut start = Instant::now();
+    let start = Instant::now();
     let output = encrypt_output(
         output,
         &secret_msg,
@@ -155,7 +155,7 @@ pub fn init(
         false,
         false,
     )?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!("Time elapsed in encrypt_output: {:?}", duration);
 
     // todo: can move the key to somewhere in the output message if we want
@@ -415,9 +415,9 @@ fn start_engine(
         contract_code,
         *contract_key,
         operation,
-        query_depth,
         nonce,
         user_public_key,
+        query_depth,
     )
 }
 

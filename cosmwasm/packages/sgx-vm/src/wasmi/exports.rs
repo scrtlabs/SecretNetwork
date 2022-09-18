@@ -1,5 +1,4 @@
 use std::ffi::c_void;
-use std::ops::Index;
 
 use sgx_types::SgxResult;
 

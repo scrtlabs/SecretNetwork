@@ -101,7 +101,7 @@ pub struct Context {
     gas_costs: WasmCosts,
     #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
-
+    query_depth: u32,
     contract_key: ContractKey,
     user_nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
@@ -196,6 +196,7 @@ impl Engine {
         operation: ContractOperation,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
+        query_depth: u32,
     ) -> Result<Engine, EnclaveError> {
         let found = W3_MODULE_CACHE
             .read()
@@ -203,12 +204,12 @@ impl Engine {
             .contains_key(&contract_code.hash());
 
         let (code, cosmwasm_api_version) = if !found {
-            let mut start = Instant::now();
+            let start = Instant::now();
             let mut module = walrus::ModuleConfig::new()
                 .generate_producers_section(false)
                 .parse(contract_code.code())
                 .map_err(|_| EnclaveError::InvalidWasm)?;
-            let mut duration = start.elapsed();
+            let duration = start.elapsed();
             println!(
                 "Time elapsed in walrus::ModuleConfig::new() is: {:?}",
                 duration
@@ -238,9 +239,9 @@ impl Engine {
                 return Err(EnclaveError::InvalidWasm);
             };
 
-            let mut start = Instant::now();
+            let start = Instant::now();
             validation::validate_memory(&mut module)?;
-            let mut duration = start.elapsed();
+            let duration = start.elapsed();
             println!("Time elapsed in validate_memory is: {:?}", duration);
 
             if let ContractOperation::Init = operation {
@@ -250,14 +251,14 @@ impl Engine {
                 }
             }
 
-            let mut start = Instant::now();
+            let start = Instant::now();
             gas::add_metering(&mut module, &gas_costs);
-            let mut duration = start.elapsed();
+            let duration = start.elapsed();
             println!("Time elapsed in add_metering() is: {:?}", duration);
 
-            let mut start = Instant::now();
+            let start = Instant::now();
             let code = module.emit_wasm();
-            let mut duration = start.elapsed();
+            let duration = start.elapsed();
             println!("Time elapsed in module.emit_wasm() is: {:?}", duration);
 
             let mut write_cache = W3_MODULE_CACHE.write().unwrap();
@@ -281,6 +282,7 @@ impl Engine {
 
         let context = Context {
             context,
+            query_depth,
             gas_limit,
             gas_costs,
             operation,
@@ -292,10 +294,10 @@ impl Engine {
         };
 
         debug!("setting up runtime");
-        let mut start = Instant::now();
+        let start = Instant::now();
 
         let environment = wasm3::Environment::new().to_enclave_result()?;
-        let mut duration = start.elapsed();
+        let duration = start.elapsed();
         println!("Time elapsed in Environment::new() is: {:?}", duration);
         debug!("initialized environment");
 
@@ -313,48 +315,48 @@ impl Engine {
     where
         F: FnOnce(&mut wasm3::Instance<Context>, &mut Context) -> Result<Vec<u8>, EnclaveError>,
     {
-        let mut start = Instant::now();
+        let start = Instant::now();
         let runtime = self
             .environment
             .new_runtime::<Context>(1024 * 60, Some(192 /* 12 MiB */))
             .to_enclave_result()?;
-        let mut duration = start.elapsed();
+        let duration = start.elapsed();
         println!("Time elapsed in environment.new_runtime is: {:?}", duration);
         debug!("initialized runtime");
 
-        let mut start = Instant::now();
+        let start = Instant::now();
         let module = self
             .environment
             .parse_module(&self.code)
             .to_enclave_result()?;
-        let mut duration = start.elapsed();
+        let duration = start.elapsed();
         println!(
             "Time elapsed in environment.parse_module is: {:?}",
             duration
         );
         debug!("parsed module");
 
-        let mut start = Instant::now();
+        let start = Instant::now();
         let mut instance = runtime.load_module(module).to_enclave_result()?;
-        let mut duration = start.elapsed();
+        let duration = start.elapsed();
         println!("Time elapsed in runtime.load_module is: {:?}", duration);
         debug!("created instance");
 
-        let mut start = Instant::now();
+        let start = Instant::now();
         gas::set_gas_limit(&instance, self.gas_limit)?;
-        let mut duration = start.elapsed();
+        let duration = start.elapsed();
         println!("Time elapsed in set_gas_limit is: {:?}", duration);
         debug!("set gas limit");
 
-        let mut start = Instant::now();
+        let start = Instant::now();
         Self::link_host_functions(&mut instance).to_enclave_result()?;
-        let mut duration = start.elapsed();
+        let duration = start.elapsed();
         println!("Time elapsed in link_host_functions is: {:?}", duration);
         debug!("linked functions");
 
-        let mut start = Instant::now();
+        let start = Instant::now();
         let result = func(&mut instance, &mut self.context);
-        let mut duration = start.elapsed();
+        let duration = start.elapsed();
         println!("Instance: elapsed time for running func is: {:?}", duration);
         debug!("function returned {:?}", result);
 
@@ -427,17 +429,17 @@ impl Engine {
 
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
-            let mut start = Instant::now();
+            let start = Instant::now();
             let env_ptr = write_to_memory(instance, &env_bytes)?;
-            let mut duration = start.elapsed();
+            let duration = start.elapsed();
             println!(
                 "Time elapsed in env_bytes write_to_memory is: {:?}",
                 duration
             );
 
-            let mut start = Instant::now();
+            let start = Instant::now();
             let msg_ptr = write_to_memory(instance, &msg)?;
-            let mut duration = start.elapsed();
+            let duration = start.elapsed();
             println!("Time elapsed in msg write_to_memory is: {:?}", duration);
 
             let result = match api_version {
@@ -459,9 +461,9 @@ impl Engine {
                             .to_enclave_result()?,
                         (env_ptr, msg_info_ptr, msg_ptr),
                     );
-                    let mut start = Instant::now();
+                    let start = Instant::now();
                     let res = init.call_with_context(context, args);
-                    let mut duration = start.elapsed();
+                    let duration = start.elapsed();
                     println!("Time elapsed in call_with_context is: {:?}", duration);
                     res
                 }
@@ -469,14 +471,14 @@ impl Engine {
                     return Err(EnclaveError::InvalidWasm);
                 }
             };
-            let mut start = Instant::now();
+            let start = Instant::now();
             let output_ptr = check_execution_result(instance, context, result)?;
-            let mut duration = start.elapsed();
+            let duration = start.elapsed();
             println!("Time elapsed in check_execution_result is: {:?}", duration);
 
-            let mut start = Instant::now();
+            let start = Instant::now();
             let output = read_from_memory(instance, output_ptr)?;
-            let mut duration = start.elapsed();
+            let duration = start.elapsed();
             println!("Time elapsed in read_from_memory is: {:?}", duration);
 
             Ok(output)
@@ -763,19 +765,19 @@ fn read_from_memory<C>(
     instance: &wasm3::Instance<C>,
     region_ptr: u32,
 ) -> WasmEngineResult<Vec<u8>> {
-    let mut start = Instant::now();
+    let start = Instant::now();
     let runtime = instance.runtime();
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!(
         "read_from_memory: Time elapsed in instance.runtime(): {:?}",
         duration
     );
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let res = runtime.try_with_memory_or(WasmEngineError::MemoryReadError, |memory| {
         CWMemory::new(memory).extract_vector(region_ptr)
     })?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!(
         "read_from_memory: Time elapsed in runtime.try_with_memory_or(): {:?}",
         duration
@@ -795,22 +797,22 @@ fn decode_sections_from_memory<C>(
 }
 
 fn write_to_memory<C>(instance: &wasm3::Instance<C>, buffer: &[u8]) -> WasmEngineResult<u32> {
-    let mut start = Instant::now();
+    let start = Instant::now();
     let region_ptr = (|| {
         let alloc_fn = instance.find_function::<u32, u32>("allocate")?;
         alloc_fn.call(buffer.len() as u32)
     })()
     .map_err(debug_err!(err => "failed to allocate {} bytes in contract: {err}", buffer.len()))
     .map_err(|_| WasmEngineError::MemoryAllocationError)?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!(
         "write_to_memory: Time elapsed in allocate function call: {:?}",
         duration
     );
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let res = write_to_allocated_memory(instance, region_ptr, buffer);
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!(
         "write_to_memory: Time elapsed in write_to_allocated_memory: {:?}",
         duration
@@ -952,14 +954,14 @@ fn host_write_db(
 
     use_gas(instance, WRITE_BASE_GAS)?;
 
-    let mut start = Instant::now();
+    let start = Instant::now();
     let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
     )?;
     let value = read_from_memory(instance, value_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
     )?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     println!(
         "host_write_db: Time elapsed in read_from_memory x2: {:?}",
         duration
@@ -1189,6 +1191,7 @@ fn host_query_chain(
     let mut used_gas: u64 = 0;
     let answer = encrypt_and_query_chain(
         &query_buffer,
+        context.query_depth,
         &context.context,
         context.user_nonce,
         context.user_public_key,

@@ -16,9 +16,9 @@ use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_utils::kv_cache::KvCache;
 
 use crate::contract_validation::ContractKey;
-use crate::db::read_encrypted_key;
+use crate::db::{encrypt_key, read_encrypted_key};
 // #[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, /* write_encrypted_key, */, write_multiple_keys};
+use crate::db::{remove_encrypted_key, /* write_encrypted_key, */ write_multiple_keys};
 use crate::errors::WasmEngineError;
 use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
@@ -522,12 +522,12 @@ impl WasmiApi for ContractInstance {
         Ok(None)
     }
 
-    #[cfg(feature = "query-only")]
-    fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
-        Ok(None)
-    }
+    // #[cfg(feature = "query-only")]
+    // fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
+    //     Ok(None)
+    // }
 
-    #[cfg(not(feature = "query-only"))]
+    //#[cfg(not(feature = "query-only"))]
     fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
         let keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .kv_cache
