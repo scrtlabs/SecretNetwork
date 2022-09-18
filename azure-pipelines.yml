@@ -29,7 +29,7 @@ steps:
       arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
   - task: Docker@2
-    displayName: "Build base image"
+    displayName: "Compile and build"
     inputs:
       command: build
       repository: rust-go-base-image
@@ -38,7 +38,7 @@ steps:
       arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/base.Dockerfile
   - task: Docker@2
-    displayName: "Build release image"
+    displayName: "Build release container"
     inputs:
       command: build
       repository: build-release
@@ -56,7 +56,7 @@ steps:
       arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/go-tests.Dockerfile
   - task: Docker@2
-    displayName: "Build node"
+    displayName: "Build node from release"
     inputs:
       command: build
       repository: ci-enigma-sgx-node
@@ -65,7 +65,7 @@ steps:
       arguments: --build-arg SECRET_LOCAL_NODE_TYPE=NODE --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/local-node.Dockerfile
   - task: Docker@2
-    displayName: "Build bootstrap"
+    displayName: "Build bootstrap from release"
     inputs:
       command: build
       buildContext: .
@@ -75,7 +75,10 @@ steps:
       Dockerfile: deployment/dockerfiles/local-node.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
-    displayName: "Run system tests"
+    displayName: "Run system tests (go tests)"
+
+  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
+    displayName: "Run benchmarks"
 
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
     displayName: "Run integration tests"

@@ -22,7 +22,9 @@ RUN make build-test-contract
 # RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/librust_cosmwasm_enclave.signed.so
 
 COPY deployment/ci/go-tests.sh .
+COPY deployment/ci/go-tests-bench.sh .
 
 RUN chmod +x go-tests.sh
+RUN chmod +x go-tests-bench.sh
 
 ENTRYPOINT ["/bin/bash", "go-tests.sh"]

@@ -134,7 +134,6 @@ pub fn init(
     let output = result?;
 
     engine
-        .contract_instance
         .flush_cache()
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
@@ -274,7 +273,6 @@ pub fn handle(
     let mut output = result?;
 
     engine
-        .contract_instance
         .flush_cache()
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
 

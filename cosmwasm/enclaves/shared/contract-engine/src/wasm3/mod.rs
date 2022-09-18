@@ -14,11 +14,14 @@ use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
+#[cfg(not(feature = "query-only"))]
+use crate::db::encrypt_key;
+
 use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, write_encrypted_key};
+use crate::db::{remove_encrypted_key, write_encrypted_key, write_multiple_keys};
 use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngineResult};
-use crate::gas::WasmCosts;
+use crate::gas::{WasmCosts, OCALL_BASE_GAS, READ_BASE_GAS, WRITE_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::contract::api_marker;
@@ -35,6 +38,7 @@ use std::time::{Duration, Instant};
 type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
 
+use enclave_utils::kv_cache::KvCache;
 use std::collections::HashMap;
 
 lazy_static! {
@@ -101,7 +105,7 @@ pub struct Context {
     contract_key: ContractKey,
     user_nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
-
+    kv_cache: KvCache,
     last_error: Option<WasmEngineError>,
 }
 
@@ -273,6 +277,8 @@ impl Engine {
                 .clone()
         };
 
+        let kv_cache = KvCache::new();
+
         let context = Context {
             context,
             gas_limit,
@@ -281,6 +287,7 @@ impl Engine {
             contract_key,
             user_nonce,
             user_public_key,
+            kv_cache,
             last_error: None,
         };
 
@@ -586,6 +593,55 @@ impl Engine {
             Ok(output)
         })
     }
+
+    #[cfg(feature = "query-only")]
+    pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
+        Ok(())
+    }
+
+    #[cfg(not(feature = "query-only"))]
+    pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
+        let keys: Vec<(Vec<u8>, Vec<u8>)> = self
+            .context
+            .kv_cache
+            .flush()
+            .into_iter()
+            .map(|(k, v)| {
+                let (enc_key, _, enc_v) =
+                    encrypt_key(&k, &v, &self.context.context, &self.context.contract_key).unwrap();
+
+                (enc_key.to_vec(), enc_v)
+            })
+            // todo: fix
+            // .map_err(|_|
+            //     {
+            //         debug!(
+            //         "addr_validate() error while trying to parse human address from bytes to string: {:?}",
+            //         err
+            //     );
+            //         return Ok(Some(RuntimeValue::I32(
+            //             self.write_to_memory(b"Input is not valid UTF-8")? as i32,
+            //         )));
+            //     }
+            // )?
+            .collect();
+
+        let used_gas = write_multiple_keys(&self.context.context, keys).map_err(|err| {
+            debug!(
+                "write_db() error while trying to write the value to state: {:?}",
+                err
+            );
+
+            EnclaveError::from(err)
+        })?;
+
+        self.with_instance(|instance, context| {
+            use_gas(instance, used_gas)?;
+            Ok(vec![])
+        })?;
+
+        Ok(())
+    }
 }
 
 struct CWMemory<'m> {
@@ -707,10 +763,25 @@ fn read_from_memory<C>(
     instance: &wasm3::Instance<C>,
     region_ptr: u32,
 ) -> WasmEngineResult<Vec<u8>> {
+    let mut start = Instant::now();
     let runtime = instance.runtime();
-    runtime.try_with_memory_or(WasmEngineError::MemoryReadError, |memory| {
+    let mut duration = start.elapsed();
+    println!(
+        "read_from_memory: Time elapsed in instance.runtime(): {:?}",
+        duration
+    );
+
+    let mut start = Instant::now();
+    let res = runtime.try_with_memory_or(WasmEngineError::MemoryReadError, |memory| {
         CWMemory::new(memory).extract_vector(region_ptr)
-    })?
+    })?;
+    let mut duration = start.elapsed();
+    println!(
+        "read_from_memory: Time elapsed in runtime.try_with_memory_or(): {:?}",
+        duration
+    );
+
+    res
 }
 
 fn decode_sections_from_memory<C>(
@@ -724,14 +795,28 @@ fn decode_sections_from_memory<C>(
 }
 
 fn write_to_memory<C>(instance: &wasm3::Instance<C>, buffer: &[u8]) -> WasmEngineResult<u32> {
+    let mut start = Instant::now();
     let region_ptr = (|| {
         let alloc_fn = instance.find_function::<u32, u32>("allocate")?;
         alloc_fn.call(buffer.len() as u32)
     })()
     .map_err(debug_err!(err => "failed to allocate {} bytes in contract: {err}", buffer.len()))
     .map_err(|_| WasmEngineError::MemoryAllocationError)?;
+    let mut duration = start.elapsed();
+    println!(
+        "write_to_memory: Time elapsed in allocate function call: {:?}",
+        duration
+    );
 
-    write_to_allocated_memory(instance, region_ptr, buffer)
+    let mut start = Instant::now();
+    let res = write_to_allocated_memory(instance, region_ptr, buffer);
+    let mut duration = start.elapsed();
+    println!(
+        "write_to_memory: Time elapsed in write_to_allocated_memory: {:?}",
+        duration
+    );
+
+    res
 }
 
 fn write_to_allocated_memory<C>(
@@ -781,15 +866,38 @@ fn host_read_db(
     instance: &wasm3::Instance<Context>,
     state_key_region_ptr: i32,
 ) -> WasmEngineResult<i32> {
+    // todo: time this
+    use_gas(instance, READ_BASE_GAS)?;
+
     let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_read failed to extract vector from state_key_region_ptr: {err}"),
     )?;
 
     debug!("db_read reading key {}", show_bytes(&state_key_name));
 
-    let (value, used_gas) =
-        read_encrypted_key(&state_key_name, &context.context, &context.contract_key)
-            .map_err(debug_err!("db_read failed to read key from storage"))?;
+    let value = context.kv_cache.read(&state_key_name);
+
+    if let Some(unwrapped) = value {
+        debug!("Got value from cache");
+        let ptr_to_region_in_wasm_vm = write_to_memory(instance, &unwrapped).map_err(|err| {
+            debug!(
+                "read_db() error while trying to allocate {} bytes for the value",
+                unwrapped.len(),
+            );
+            err
+        })?;
+
+        return Ok(ptr_to_region_in_wasm_vm as i32);
+    }
+
+    debug!("Missed value in cache");
+    let (value, used_gas) = read_encrypted_key(
+        &state_key_name,
+        &context.context,
+        &context.contract_key,
+        &mut context.kv_cache,
+    )
+    .map_err(debug_err!("db_read failed to read key from storage"))?;
     use_gas(instance, used_gas)?;
 
     debug!(
@@ -842,12 +950,20 @@ fn host_write_db(
         return Err(WasmEngineError::UnauthorizedWrite);
     }
 
+    use_gas(instance, WRITE_BASE_GAS)?;
+
+    let mut start = Instant::now();
     let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
     )?;
     let value = read_from_memory(instance, value_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
     )?;
+    let mut duration = start.elapsed();
+    println!(
+        "host_write_db: Time elapsed in read_from_memory x2: {:?}",
+        duration
+    );
 
     debug!(
         "db_write writing key: {}, value: {}",
@@ -855,14 +971,16 @@ fn host_write_db(
         show_bytes(&value)
     );
 
-    let used_gas = write_encrypted_key(
-        &state_key_name,
-        &value,
-        &context.context,
-        &context.contract_key,
-    )
-    .map_err(debug_err!("db_write failed to write key to storage",))?;
-    use_gas(instance, used_gas)?;
+    context.kv_cache.write(&state_key_name, &value);
+
+    // let used_gas = write_encrypted_key(
+    //     &state_key_name,
+    //     &value,
+    //     &context.context,
+    //     &context.contract_key,
+    // )
+    // .map_err(debug_err!("db_write failed to write key to storage",))?;
+    // use_gas(instance, used_gas)?;
 
     Ok(())
 }
