@@ -37,7 +37,7 @@ type QueryHandler struct {
 
 var _ wasmTypes.Querier = QueryHandler{}
 
-func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]byte, error) {
+func (q QueryHandler) Query(request wasmTypes.QueryRequest, queryDepth uint32, gasLimit uint64) ([]byte, error) {
 	// set a limit for a subctx
 	sdkGas := gasLimit / types.GasMultiplier
 	subctx := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas))
@@ -58,7 +58,7 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]
 		return q.Plugins.Staking(subctx, request.Staking)
 	}
 	if request.Wasm != nil {
-		return q.Plugins.Wasm(subctx, request.Wasm)
+		return q.Plugins.Wasm(subctx, request.Wasm, queryDepth)
 	}
 	if request.Dist != nil {
 		return q.Plugins.Dist(q.Ctx, request.Dist)
@@ -88,7 +88,7 @@ type QueryPlugins struct {
 	Bank     func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error)
 	Custom   CustomQuerier
 	Staking  func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
-	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error)
 	Dist     func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
 	Mint     func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
 	Gov      func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
@@ -696,14 +696,14 @@ func getAccumulatedRewards(ctx sdk.Context, distKeeper distrkeeper.Keeper, deleg
 	return rewards, nil
 }
 
-func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
-	return func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
+func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
 		if request.Smart != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Smart.ContractAddr)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Smart.ContractAddr)
 			}
-			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, false)
+			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, queryDepth, false)
 		}
 		if request.Raw != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Raw.ContractAddr)

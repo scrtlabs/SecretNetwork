@@ -11,7 +11,7 @@ pub fn run_tests() -> SgxResult<u32> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
-        .get_access(false) // This can never be recursive
+        .get_access(1) // This can never be recursive
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
     let enclave = (*enclave_access_token)?;
 

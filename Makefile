@@ -196,7 +196,7 @@ deb-no-compile:
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
@@ -369,7 +369,7 @@ prep-go-tests: build-test-contract
 go-tests: build-test-contract
 	SGX_MODE=SW $(MAKE) build-linux-with-query
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
+	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
