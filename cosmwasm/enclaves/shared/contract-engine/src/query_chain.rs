@@ -53,7 +53,8 @@ pub fn encrypt_and_query_chain(
 
     // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
     // This returns the answer from x/compute
-    let (result, query_used_gas) = query_chain(context, &encrypted_query, query_depth, gas_limit);
+    let (result, query_used_gas) =
+        query_chain(context, &encrypted_query, query_depth + 1, gas_limit);
     *gas_used = query_used_gas;
     let encrypted_answer_as_vec = result?;
 
@@ -163,7 +164,7 @@ fn query_chain(
             enclave_buffer.as_mut_ptr(),
             query.as_ptr(),
             query.len(),
-            query_depth + 1,
+            query_depth,
         );
 
         trace!("ocall_query_chain returned with gas {}", gas_used);
