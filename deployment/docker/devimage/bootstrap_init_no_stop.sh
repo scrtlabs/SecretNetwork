@@ -42,11 +42,7 @@ then
   secretd add-genesis-account "$(secretd keys show -a c)" 1000000000000000000uscrt
   secretd add-genesis-account "$(secretd keys show -a d)" 1000000000000000000uscrt
 
-
   secretd gentx a 1000000uscrt --chain-id "$chain_id"
-  secretd gentx b 1000000uscrt --chain-id "$chain_id"
-  secretd gentx c 1000000uscrt --chain-id "$chain_id"
-  secretd gentx d 1000000uscrt --chain-id "$chain_id"
 
   secretd collect-gentxs
   secretd validate-genesis

@@ -12,7 +12,7 @@ type Env struct {
 	Message     MessageInfo      `json:"message"`
 	Contract    ContractInfo     `json:"contract"`
 	Key         ContractKey      `json:"contract_key"`
-	Recursive   bool             `json:"recursive"`
+	QueryDepth  uint32           `json:"query_depth"`
 	Transaction *TransactionInfo `json:"transaction,omitempty"`
 }
 

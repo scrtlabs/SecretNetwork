@@ -48,7 +48,7 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/relea
 
 COPY --from=build-env-rust /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so
 COPY --from=build-env-rust /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so
-COPY --from=build-env-rust /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so
+#COPY --from=build-env-rust /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so
 
 COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
 COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
