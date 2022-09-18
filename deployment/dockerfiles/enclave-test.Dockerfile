@@ -3,7 +3,7 @@ FROM baiduxlab/sgx-rust:2004-1.1.3
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
-    clang \
+    clang && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/root/.cargo/bin:$PATH"
