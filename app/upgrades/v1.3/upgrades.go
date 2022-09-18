@@ -1,6 +1,7 @@
 package v1_3
 
 import (
+	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
@@ -8,23 +9,31 @@ import (
 	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
+	"github.com/enigmampc/SecretNetwork/app/keepers"
+	"github.com/enigmampc/SecretNetwork/app/upgrades"
 )
 
 const UpgradeName = "v1.3"
 
-func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, configurator module.Configurator,
+var Upgrade = upgrades.Upgrade{
+	UpgradeName:          UpgradeName,
+	CreateUpgradeHandler: CreateUpgradeHandler,
+	StoreUpgrades:        store.StoreUpgrades{Added: []string{icahosttypes.StoreKey}},
+}
+
+func CreateUpgradeHandler(mm *module.Manager, _ *keepers.SecretAppKeepers, configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		// Assaf: Set version map for all modules because for some
 		// reason it's not already set in upgradekeepr.
 		// We upgrade from cosmos-sdk v0.44.5 to v0.45.4 and ibc-go v1.1.5 to v3.0.0
 		// There were no ConsensusVersion changes between these versions
-		// so we should be safe to use the curent ConsensusVersion() for each moudle
+		// so we should be safe to use the current ConsensusVersion() for each moudle
 		for moduleName := range mm.Modules {
 			vm[moduleName] = mm.Modules[moduleName].ConsensusVersion()
 		}
 
-		vm[icatypes.ModuleName] = icamodule.ConsensusVersion()
+		vm[icatypes.ModuleName] = mm.Modules[icatypes.ModuleName].ConsensusVersion()
 
 		// create ICS27 Controller submodule params
 		controllerParams := icacontrollertypes.Params{
@@ -60,7 +69,15 @@ func CreateUpgradeHandler(mm *module.Manager, icamodule *icamodule.AppModule, co
 		ctx.Logger().Info("Starting to init interchainaccount module...")
 
 		// initialize ICS27 module
-		icamodule.InitModule(ctx, controllerParams, hostParams)
+		// icamodule.InitModule(ctx, controllerParams, hostParams)
+
+		// initialize ICS27 module
+		icamoduleInstance, correctTypecast := mm.Modules[icatypes.ModuleName].(icamodule.AppModule)
+		if !correctTypecast {
+			panic("mm.Modules[icatypes.ModuleName] is not of type ica.AppModule")
+		}
+
+		icamoduleInstance.InitModule(ctx, controllerParams, hostParams)
 
 		ctx.Logger().Info("Starting to run module migrations...")
 

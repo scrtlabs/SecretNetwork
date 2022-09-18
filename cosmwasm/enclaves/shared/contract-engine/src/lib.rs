@@ -4,6 +4,7 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate core;
 extern crate sgx_types;
 
 mod contract_operations;
@@ -14,6 +15,7 @@ pub mod external;
 mod gas;
 mod io;
 mod memory;
+mod message;
 pub(crate) mod module_cache;
 mod query_chain;
 pub(crate) mod types;

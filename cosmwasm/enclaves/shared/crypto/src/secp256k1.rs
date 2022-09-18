@@ -2,8 +2,10 @@ use log::*;
 
 use crate::traits::VerifyingKey;
 use crate::CryptoError;
+use cosmos_proto::tx::signing::SignMode;
 use secp256k1::Secp256k1;
 use sha2::{Digest as Sha2Digest, Sha256};
+use sha3::Keccak256;
 
 pub const SECP256K1_PREFIX: [u8; 4] = [235, 90, 233, 135];
 
@@ -17,9 +19,18 @@ impl Secp256k1PubKey {
 }
 
 impl VerifyingKey for Secp256k1PubKey {
-    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+    fn verify_bytes(
+        &self,
+        bytes: &[u8],
+        sig: &[u8],
+        sign_mode: SignMode,
+    ) -> Result<(), CryptoError> {
         // Signing ref: https://docs.cosmos.network/master/spec/_ics/ics-030-signed-messages.html#preliminary
-        let sign_bytes_hash = Sha256::digest(bytes);
+        let sign_bytes_hash = if sign_mode == SignMode::SIGN_MODE_EIP_191 {
+            Keccak256::digest(bytes)
+        } else {
+            Sha256::digest(bytes)
+        };
         let msg = secp256k1::Message::from_slice(sign_bytes_hash.as_slice()).map_err(|err| {
             warn!("Failed to create a secp256k1 message from tx: {:?}", err);
             CryptoError::VerificationError

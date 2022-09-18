@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InitMsg",
+  "type": "object",
+  "required": [
+    "arbiter",
+    "recipient"
+  ],
+  "properties": {
+    "arbiter": {
+      "$ref": "#/definitions/HumanAddr"
+    },
+    "end_height": {
+      "description": "When end height set and block height exceeds this value, the escrow is expired. Once an escrow is expired, it can be returned to the original funder (via \"refund\").",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "end_time": {
+      "description": "When end time (in seconds since epoch 00:00:00 UTC on 1 January 1970) is set and block time exceeds this value, the escrow is expired. Once an escrow is expired, it can be returned to the original funder (via \"refund\").",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "recipient": {
+      "$ref": "#/definitions/HumanAddr"
+    }
+  },
+  "definitions": {
+    "HumanAddr": {
+      "type": "string"
+    }
+  }
+}

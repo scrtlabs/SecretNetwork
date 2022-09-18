@@ -2,18 +2,22 @@ package types
 
 import (
 	"encoding/base64"
+	fmt "fmt"
+	"strings"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	wasmTypesV010 "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+	wasmTypesV1 "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/spf13/cast"
 )
 
 const (
 	defaultLRUCacheSize        = uint64(0)
-	defaultEnclaveLRUCacheSize = uint8(0) // can safely go up to 15
+	defaultEnclaveLRUCacheSize = uint8(15)
 	defaultQueryGasLimit       = uint64(10_000_000)
 )
 
@@ -40,16 +44,12 @@ func (c CodeInfo) ValidateBasic() error {
 	if err := validateBuilder(c.Builder); err != nil {
 		return sdkerrors.Wrap(err, "builder")
 	}
-	/*
-		if err := c.InstantiateConfig.ValidateBasic(); err != nil {
-			return sdkerrors.Wrap(err, "instantiate config")
-		}
-	*/
+
 	return nil
 }
 
 // NewCodeInfo fills a new Contract struct
-func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder string /* , instantiatePermission AccessConfig */) CodeInfo {
+func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder string) CodeInfo {
 	return CodeInfo{
 		CodeHash: codeHash,
 		Creator:  creator,
@@ -59,32 +59,11 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 	}
 }
 
-/*
-type ContractCodeHistoryOperationType string
-
-const (
-	InitContractCodeHistoryType    ContractCodeHistoryOperationType = "Init"
-	MigrateContractCodeHistoryType ContractCodeHistoryOperationType = "Migrate"
-	GenesisContractCodeHistoryType ContractCodeHistoryOperationType = "Genesis"
-)
-
-var AllCodeHistoryTypes = []ContractCodeHistoryOperationType{InitContractCodeHistoryType, MigrateContractCodeHistoryType}
-
-// ContractCodeHistoryEntry stores code updates to a contract.
-type ContractCodeHistoryEntry struct {
-	Operation ContractCodeHistoryOperationType `json:"operation"`
-	CodeID    uint64                           `json:"code_id"`
-	Updated   *AbsoluteTxPosition              `json:"updated,omitempty"`
-	Msg       json.RawMessage                  `json:"msg,omitempty"`
-}
-*/
-
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(codeID uint64, creator /* , admin */ sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
+func NewContractInfo(codeID uint64, creator sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
 	return ContractInfo{
 		CodeID:  codeID,
 		Creator: creator,
-		// Admin:   admin,
 		Label:   label,
 		Created: createdAt,
 	}
@@ -97,50 +76,11 @@ func (c *ContractInfo) ValidateBasic() error {
 	if err := sdk.VerifyAddressFormat(c.Creator); err != nil {
 		return sdkerrors.Wrap(err, "creator")
 	}
-	/*
-		if c.Admin != nil {
-			if err := sdk.VerifyAddressFormat(c.Admin); err != nil {
-				return sdkerrors.Wrap(err, "admin")
-			}
-		}
-	*/
 	if err := validateLabel(c.Label); err != nil {
 		return sdkerrors.Wrap(err, "label")
 	}
 	return nil
 }
-
-/*
-func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
-	return ContractCodeHistoryEntry{
-		Operation: InitContractCodeHistoryType,
-		CodeID:    c.CodeID,
-		Updated:   c.Created,
-		Msg:       initMsg,
-	}
-}
-
-func (c *ContractInfo) AddMigration(ctx sdk.Context, codeID uint64, msg []byte) ContractCodeHistoryEntry {
-	h := ContractCodeHistoryEntry{
-		Operation: MigrateContractCodeHistoryType,
-		CodeID:    codeID,
-		Updated:   NewAbsoluteTxPosition(ctx),
-		Msg:       msg,
-	}
-	c.CodeID = codeID
-	return h
-}
-
-// ResetFromGenesis resets contracts timestamp and history.
-func (c *ContractInfo) ResetFromGenesis(ctx sdk.Context) ContractCodeHistoryEntry {
-	c.Created = NewAbsoluteTxPosition(ctx)
-	return ContractCodeHistoryEntry{
-		Operation: GenesisContractCodeHistoryType,
-		CodeID:    c.CodeID,
-		Updated:   c.Created,
-	}
-}
-*/
 
 // LessThan can be used to sort
 func (a *AbsoluteTxPosition) LessThan(b *AbsoluteTxPosition) bool {
@@ -173,13 +113,14 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
 	}
-	if ctx.BlockTime().Unix() < 0 {
-		panic("Block (unix) time must never be negative ")
+	nano := ctx.BlockTime().UnixNano()
+	if nano < 1 {
+		panic("Block (unix) time must never be empty or negative ")
 	}
 	env := wasmTypes.Env{
 		Block: wasmTypes.BlockInfo{
 			Height:  uint64(ctx.BlockHeight()),
-			Time:    uint64(ctx.BlockTime().Unix()),
+			Time:    uint64(nano),
 			ChainID: ctx.ChainID(),
 		},
 		Message: wasmTypes.MessageInfo{
@@ -191,6 +132,10 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 		},
 		Key:       wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
 		Recursive: false,
+	}
+
+	if txCounter, ok := TXCounter(ctx); ok {
+		env.Transaction = &wasmTypes.TransactionInfo{Index: txCounter}
 	}
 	return env
 }
@@ -207,13 +152,8 @@ func NewWasmCoins(cosmosCoins sdk.Coins) (wasmCoins []wasmTypes.Coin) {
 	return wasmCoins
 }
 
-const (
-	CustomEventType          = "wasm"
-	AttributeKeyContractAddr = "contract_address"
-)
-
 // ParseEvents converts wasm LogAttributes into an sdk.Events (with 0 or 1 elements)
-func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk.Events {
+func ContractLogsToSdkEvents(logs []wasmTypesV010.LogAttribute, contractAddr sdk.AccAddress) sdk.Events {
 	// we always tag with the contract address issuing this event
 	attrs := []sdk.Attribute{sdk.NewAttribute(AttributeKeyContractAddr, contractAddr.String())}
 	// append attributes from wasm to the sdk.Event
@@ -224,8 +164,52 @@ func ParseEvents(logs []wasmTypes.LogAttribute, contractAddr sdk.AccAddress) sdk
 			attrs = append(attrs, attr)
 		}
 	}
-	// each wasm invokation always returns one sdk.Event
+
+	// each wasm invocation always returns one sdk.Event
 	return sdk.Events{sdk.NewEvent(CustomEventType, attrs...)}
+}
+
+const eventTypeMinLength = 2
+
+// NewCustomEvents converts wasm events from a contract response to sdk type events
+func NewCustomEvents(evts wasmTypesV1.Events, contractAddr sdk.AccAddress) (sdk.Events, error) {
+	events := make(sdk.Events, 0, len(evts))
+	for _, e := range evts {
+		typ := strings.TrimSpace(e.Type)
+		if len(typ) <= eventTypeMinLength {
+			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Event type too short: '%s'", typ))
+		}
+		attributes, err := contractSDKEventAttributes(e.Attributes, contractAddr)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, sdk.NewEvent(fmt.Sprintf("%s%s", CustomContractEventPrefix, typ), attributes...))
+	}
+	return events, nil
+}
+
+// convert and add contract address issuing this event
+func contractSDKEventAttributes(customAttributes []wasmTypesV010.LogAttribute, contractAddr sdk.AccAddress) ([]sdk.Attribute, error) {
+	attrs := []sdk.Attribute{sdk.NewAttribute(AttributeKeyContractAddr, contractAddr.String())}
+	// append attributes from wasm to the sdk.Event
+	for _, l := range customAttributes {
+		// ensure key and value are non-empty (and trim what is there)
+		key := strings.TrimSpace(l.Key)
+		if len(key) == 0 {
+			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Empty attribute key. Value: %s", l.Value))
+		}
+		value := strings.TrimSpace(l.Value)
+		// TODO: check if this is legal in the SDK - if it is, we can remove this check
+		if len(value) == 0 {
+			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Empty attribute value. Key: %s", key))
+		}
+		// and reserve all _* keys for our use (not contract)
+		if strings.HasPrefix(key, AttributeReservedPrefix) {
+			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Attribute key starts with reserved prefix %s: '%s'", AttributeReservedPrefix, key))
+		}
+		attrs = append(attrs, sdk.NewAttribute(key, value))
+	}
+	return attrs, nil
 }
 
 // WasmConfig is the extra config required for wasm

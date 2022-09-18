@@ -23,7 +23,7 @@ var dbCounterMutex sync.Mutex
 func startContract() uint64 {
 	dbCounterMutex.Lock()
 	defer dbCounterMutex.Unlock()
-	dbCounter += 1
+	dbCounter++
 	return dbCounter
 }
 
@@ -54,7 +54,7 @@ func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
 	iteratorStackMutex.Lock()
 	defer iteratorStackMutex.Unlock()
 
-	frame := append(iteratorStack[dbCounter], it)
+	frame := append(iteratorStack[dbCounter], it) //nolint:gocritic
 	iteratorStack[dbCounter] = frame
 	return uint64(len(frame))
 }

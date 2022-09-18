@@ -53,7 +53,7 @@ pub fn read_encrypted_key(
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let scrambled_field_name = field_name_digest(key, contract_key);
 
-    info!(
+    trace!(
         "Reading from scrambled field name: {:?}",
         scrambled_field_name
     );
@@ -82,7 +82,7 @@ pub fn remove_encrypted_key(
 ) -> Result<u64, WasmEngineError> {
     let scrambled_field_name = field_name_digest(key, contract_key);
 
-    info!("Removing scrambled field name: {:?}", scrambled_field_name);
+    trace!("Removing scrambled field name: {:?}", scrambled_field_name);
 
     // Call remove_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
     // fn remove_db(context: Ctx, key: &[u8]) {

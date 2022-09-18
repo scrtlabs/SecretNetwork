@@ -25,16 +25,6 @@ func TestContractInfoValidateBasic(t *testing.T) {
 			srcMutator: func(c *ContractInfo) { c.Creator = make([]byte, 1000) },
 			expError:   true,
 		},
-		/*
-			"admin empty": {
-				srcMutator: func(c *ContractInfo) { c.Admin = nil },
-				expError:   false,
-			},
-			"admin not an address": {
-				srcMutator: func(c *ContractInfo) { c.Admin = make([]byte, sdk.AddrLen-1) },
-				expError:   true,
-			},
-		*/
 		"label empty": {
 			srcMutator: func(c *ContractInfo) { c.Label = "" },
 			expError:   true,

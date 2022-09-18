@@ -140,6 +140,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveError {
     wasmi_error
         .try_into_host_error()
@@ -157,6 +158,7 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
         })
 }
 
+#[allow(dead_code)]
 fn trap_kind_to_enclave_error(kind: TrapKind) -> EnclaveError {
     match kind {
         TrapKind::Unreachable => EnclaveError::ContractPanicUnreachable,

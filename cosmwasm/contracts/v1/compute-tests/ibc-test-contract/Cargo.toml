@@ -1,0 +1,44 @@
+[package]
+name = "ibc"
+version = "0.0.1"
+authors = ["Enigma <info@enigma.co>"]
+edition = "2018"
+description = "A Test contract intended to use in system tests for the Secret Netowrk"
+license = "MIT"
+exclude = [
+  # Those files are cosmwasm-opt artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "ibc.wasm",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[features]
+default = []
+backtraces = ["cosmwasm-std/backtraces"]
+with_floats = []
+stargate = []
+ibc3 = ["stargate"]
+
+[dependencies]
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", features=["stargate", "ibc3"] }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+schemars = "0.8.1"
+serde = { version = "1.0.114", default-features = false, features = [
+  "derive",
+  "alloc"
+] }
+serde-json-wasm = "0.2.1"
+secp256k1 = "0.20.3"

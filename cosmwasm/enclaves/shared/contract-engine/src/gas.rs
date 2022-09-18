@@ -1,5 +1,7 @@
 pub use pwasm_utils::{inject_gas_counter, rules};
 
+pub const OCALL_BASE_GAS: u64 = 2_000_000;
+
 /// Wasm cost table
 pub struct WasmCosts {
     /// Default opcode cost
@@ -30,6 +32,8 @@ pub struct WasmCosts {
     pub external_humanize_address: u32,
     /// Cost invoking canonicalize_address from WASM
     pub external_canonicalize_address: u32,
+    /// Cost invoking addr_validate from WASM
+    pub external_addr_validate: u32,
     /// Cost invoking secp256k1_verify from WASM
     pub external_secp256k1_verify: u32,
     /// Cost invoking secp256k1_recover_pubkey from WASM
@@ -63,6 +67,7 @@ impl Default for WasmCosts {
             opcodes_div: 8,
             external_humanize_address: 8192,
             external_canonicalize_address: 8192,
+            external_addr_validate: 8192,
             external_secp256k1_verify: 98304,
             external_secp256k1_recover_pubkey: 98304,
             external_ed25519_verify: 73728,
@@ -74,6 +79,7 @@ impl Default for WasmCosts {
     }
 }
 
+#[allow(dead_code)]
 pub fn gas_rules(wasm_costs: &WasmCosts) -> rules::Set {
     rules::Set::new(wasm_costs.regular, {
         let mut vals = ::std::collections::BTreeMap::new();

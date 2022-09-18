@@ -15,7 +15,8 @@ use enclave_crypto::HASH_SIZE;
 
 use super::gas::{gas_rules, WasmCosts};
 use super::memory::validate_memory;
-use super::wasm::{create_builder, ContractOperation, WasmiImportResolver};
+use super::wasm::create_builder;
+use super::wasm::{ContractOperation, WasmiImportResolver};
 
 lazy_static! {
     static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =
@@ -27,6 +28,7 @@ pub fn configure_module_cache(cap: usize) {
     MODULE_CACHE.write().unwrap().resize(cap)
 }
 
+#[allow(dead_code)]
 pub fn create_module_instance(
     contract_code: ContractCode,
     operation: ContractOperation,
@@ -88,6 +90,7 @@ pub fn create_module_instance(
 // The compilation steps in this section are very expensive, and generate a
 // static object that can be reused without leaking memories between contracts.
 // This is why we separate the compilation step and cache its result in memory.
+#[allow(dead_code)]
 fn compile_module(
     code: &[u8],
     operation: ContractOperation,
@@ -135,6 +138,7 @@ fn compile_module(
     Ok(module)
 }
 
+#[allow(dead_code)]
 fn create_instance(module: &wasmi::Module) -> Result<ModuleRef, EnclaveError> {
     // Create new imports resolver.
     // These are the signatures of rust functions available to invoke from wasm code.

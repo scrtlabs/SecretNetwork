@@ -5,7 +5,7 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -17,7 +17,9 @@ import (
 )
 
 func TestNewQuerier(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
 	nodeIdInvalid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -26,7 +28,7 @@ func TestNewQuerier(t *testing.T) {
 
 	querier := NewLegacyQuerier(keeper) // TODO: Should test NewQuerier() as well
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{
@@ -97,5 +99,6 @@ func TestNewQuerier(t *testing.T) {
 	keeper.setMasterCertificate(ctx, types.MasterCertificate{Bytes: regInfo.Certificate}, types.MasterIoKeyId)
 
 	binResult, err := querier(ctx, []string{QueryMasterCertificate}, abci.RequestQuery{Data: []byte("")})
+	require.NoError(t, err)
 	require.Equal(t, string(binResult), string(expectedSecretParams))
 }

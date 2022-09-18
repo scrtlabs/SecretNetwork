@@ -9,5 +9,4 @@ import (
 func RegisterRoutes(cliCtx client.Context, r *mux.Router) {
 	registerQueryRoutes(cliCtx, r)
 	registerTxRoutes(cliCtx, r)
-	// registerNewTxRoutes(cliCtx, r)
 }

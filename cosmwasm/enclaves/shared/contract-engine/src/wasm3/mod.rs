@@ -3,12 +3,13 @@ use std::convert::{TryFrom, TryInto};
 use log::*;
 
 use bech32::{FromBase32, ToBase32};
+use cw_types_generic::{CosmWasmApiVersion, CwEnv};
 use rand_chacha::ChaChaRng;
 use rand_core::SeedableRng;
 use wasm3::{Instance, Memory, Trap};
 
-use enclave_cosmos_types::types::ContractCode;
-use enclave_cosmwasm_types::consts::BECH32_PREFIX_ACC_ADDR;
+use cw_types_v010::consts::BECH32_PREFIX_ACC_ADDR;
+use enclave_cosmos_types::types::{ContractCode, HandleType};
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
@@ -20,6 +21,7 @@ use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngine
 use crate::gas::WasmCosts;
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
+use crate::wasm::contract::api_marker;
 use crate::wasm::ContractOperation;
 use crate::wasm3::gas::{get_exhausted_amount, get_remaining_gas, use_gas};
 
@@ -165,9 +167,11 @@ pub struct Engine {
     used_gas: u64,
     environment: wasm3::Environment,
     code: Vec<u8>,
+    api_version: CosmWasmApiVersion,
 }
 
 impl Engine {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         context: Ctx,
         gas_limit: u64,
@@ -186,6 +190,27 @@ impl Engine {
         for import in module.imports.iter() {
             eprintln!("import {:?}", import)
         }
+        for export in module.exports.iter() {
+            eprintln!("export {:?}", export)
+        }
+
+        let cosmwasm_api_version = if let Some(export) = module
+            .exports
+            .iter()
+            .find(|&exp| exp.name == api_marker::V0_10 || exp.name == api_marker::V1)
+        {
+            if export.name == api_marker::V0_10 {
+                CosmWasmApiVersion::V010
+            } else if export.name == api_marker::V1 {
+                CosmWasmApiVersion::V1
+            } else {
+                error!("Invalid cosmwasm api version");
+                return Err(EnclaveError::InvalidWasm);
+            }
+        } else {
+            error!("Invalid cosmwasm api version2");
+            return Err(EnclaveError::InvalidWasm);
+        };
 
         validation::validate_memory(&mut module)?;
 
@@ -221,6 +246,7 @@ impl Engine {
             used_gas: 0,
             environment,
             code,
+            api_version: cosmwasm_api_version,
         })
     }
 
@@ -265,7 +291,14 @@ impl Engine {
         link_fn(instance, "canonicalize_address", host_canonicalize_address)?;
         link_fn(instance, "humanize_address", host_humanize_address)?;
         link_fn(instance, "query_chain", host_query_chain)?;
+
+        link_fn(instance, "addr_canonicalize", host_canonicalize_address)?;
+        link_fn(instance, "addr_humanize", host_humanize_address)?;
+        link_fn(instance, "addr_validate", host_addr_validate)?;
         link_fn(instance, "debug_print", host_debug_print)?;
+
+        link_fn(instance, "debug", host_debug_print)?;
+
         link_fn(instance, "secp256k1_verify", host_secp256k1_verify)?;
         #[rustfmt::skip]
         link_fn(instance, "secp256k1_recover_pubkey", host_secp256k1_recover_pubkey)?;
@@ -273,6 +306,26 @@ impl Engine {
         link_fn(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
         link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
+
+        //    DbReadIndex = 0,
+        //     DbWriteIndex = 1,
+        //     DbRemoveIndex = 2,
+        //     CanonicalizeAddressIndex = 3,
+        //     HumanizeAddressIndex = 4,
+        //     GasIndex = 5,
+        //     QueryChainIndex = 6,
+        //     AddrValidateIndex = 7,
+        //     AddrCanonicalizeIndex = 8,
+        //     AddrHumanizeIndex = 9,
+        //     Secp256k1VerifyIndex = 10,
+        //     Secp256k1RecoverPubkeyIndex = 11,
+        //     Ed25519VerifyIndex = 12,
+        //     Ed25519BatchVerifyIndex = 13,
+        //     Secp256k1SignIndex = 14,
+        //     Ed25519SignIndex = 15,
+        //     DebugIndex = 16,
+        //     DebugPrintIndex = 254,
+        //     Unknown,
 
         Ok(())
     }
@@ -282,17 +335,47 @@ impl Engine {
         self.used_gas
     }
 
-    pub fn init(&mut self, env: Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+    pub fn get_api_version(&self) -> CosmWasmApiVersion {
+        self.api_version
+    }
+
+    pub fn init(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+        let api_version = self.get_api_version();
+
         self.with_instance(|instance, context| {
-            debug!("starting init");
-            let env_ptr = write_to_memory(instance, &env)?;
+            debug!("starting init, api version: {:?}", api_version);
+
+            let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
+
+            let env_ptr = write_to_memory(instance, &env_bytes)?;
             let msg_ptr = write_to_memory(instance, &msg)?;
 
-            let init = instance
-                .find_function::<(u32, u32), u32>("init")
-                .to_enclave_result()?;
+            let result = match api_version {
+                CosmWasmApiVersion::V010 => {
+                    let (init, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("init")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    init.call_with_context(context, args)
+                }
+                CosmWasmApiVersion::V1 => {
+                    let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
 
-            let result = init.call_with_context(context, (env_ptr, msg_ptr));
+                    let (init, args) = (
+                        instance
+                            .find_function::<(u32, u32, u32), u32>("instantiate")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_info_ptr, msg_ptr),
+                    );
+                    init.call_with_context(context, args)
+                }
+                CosmWasmApiVersion::Invalid => {
+                    return Err(EnclaveError::InvalidWasm);
+                }
+            };
+
             let output_ptr = check_execution_result(instance, context, result)?;
 
             let output = read_from_memory(instance, output_ptr)?;
@@ -301,21 +384,62 @@ impl Engine {
         })
     }
 
-    pub fn handle(&mut self, env: Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+    pub fn handle(
+        &mut self,
+        env: &CwEnv,
+        msg: Vec<u8>,
+        handle_type: &HandleType,
+    ) -> Result<Vec<u8>, EnclaveError> {
+        let api_version = self.get_api_version();
+
         self.with_instance(|instance, context| {
             debug!("starting handle");
-            let env_ptr = write_to_memory(instance, &env)?;
+            let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
+
+            let env_ptr = write_to_memory(instance, &env_bytes)?;
             debug!("handle written env");
             let msg_ptr = write_to_memory(instance, &msg)?;
             debug!("handle written msg");
 
-            let handle = instance
-                .find_function::<(u32, u32), u32>("handle")
-                .map_err(debug_err!(err => "couldn't find handle: {err:?}"))
-                .to_enclave_result()?;
+            let result = match api_version {
+                CosmWasmApiVersion::V010 => {
+                    let (handle, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("handle")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    handle.call_with_context(context, args)
+                }
+                CosmWasmApiVersion::V1 => {
+                    let export_name = HandleType::get_export_name(&handle_type);
+
+                    if handle_type == &HandleType::HANDLE_TYPE_EXECUTE {
+                        let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
+                        let (handle, args) = (
+                            instance
+                                .find_function::<(u32, u32, u32), u32>(&export_name)
+                                .to_enclave_result()?,
+                            (env_ptr, msg_info_ptr, msg_ptr),
+                        );
+                        handle.call_with_context(context, args)
+                    } else {
+                        let (handle, args) = (
+                            instance
+                                .find_function::<(u32, u32), u32>(&export_name)
+                                .to_enclave_result()?,
+                            (env_ptr, msg_ptr),
+                        );
+                        handle.call_with_context(context, args)
+                    }
+                }
+                CosmWasmApiVersion::Invalid => {
+                    return Err(EnclaveError::InvalidWasm);
+                }
+            };
+
             debug!("found handle");
 
-            let result = handle.call_with_context(context, (env_ptr, msg_ptr));
             let output_ptr = check_execution_result(instance, context, result)?;
             debug!("called handle");
 
@@ -326,16 +450,43 @@ impl Engine {
         })
     }
 
-    pub fn query(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+    pub fn query(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+        let api_version = self.get_api_version();
+
         self.with_instance(|instance, context| {
-            debug!("starting query");
             let msg_ptr = write_to_memory(instance, &msg)?;
 
-            let query = instance
-                .find_function::<u32, u32>("query")
-                .to_enclave_result()?;
+            let result = match api_version {
+                CosmWasmApiVersion::V010 => {
+                    let (query, args) = (
+                        instance
+                            .find_function::<u32, u32>("query")
+                            .to_enclave_result()?,
+                        (msg_ptr),
+                    );
 
-            let result = query.call_with_context(context, msg_ptr);
+                    query.call_with_context(context, args)
+                }
+
+                CosmWasmApiVersion::V1 => {
+                    let (env_bytes, _) = env.get_wasm_ptrs()?;
+                    let env_ptr = write_to_memory(instance, &env_bytes)?;
+                    let (query, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("query")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+
+                    query.call_with_context(context, args)
+                }
+                CosmWasmApiVersion::Invalid => {
+                    return Err(EnclaveError::InvalidWasm);
+                }
+            };
+
+            debug!("starting query");
+
             let output_ptr = check_execution_result(instance, context, result)?;
 
             let output = read_from_memory(instance, output_ptr)?;
@@ -716,6 +867,70 @@ fn host_canonicalize_address(
     Ok(0)
 }
 
+fn host_addr_validate(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+    (addr_to_validate,): (i32,),
+) -> WasmEngineResult<i32> {
+    let used_gas = context.gas_costs.external_addr_validate as u64;
+    use_gas(instance, used_gas)?;
+
+    let human = read_from_memory(instance, addr_to_validate as u32)
+        .map_err(debug_err!(err => "humanize_address failed to extract vector from canonical_region_ptr: {err}"))?;
+    use_gas(instance, used_gas)?;
+
+    trace!(
+        "addr_validate() was called from WASM code with {:?}",
+        String::from_utf8_lossy(&human)
+    );
+
+    if human.is_empty() {
+        return write_to_memory(instance, b"Input is empty").map(|n| n as i32);
+    }
+
+    // Turn Vec<u8> to str
+    let source_human_address = match std::str::from_utf8(&human) {
+        Err(err) => {
+            debug!(
+                    "addr_validate() error while trying to parse human address from bytes to string: {:?}",
+                    err
+                );
+            return write_to_memory(instance, b"Input is not valid UTF-8").map(|n| n as i32);
+        }
+        Ok(x) => x,
+    };
+
+    let canonical_address = match bech32::decode(&source_human_address) {
+        Err(err) => {
+            debug!(
+                "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
+                source_human_address, err
+            );
+            return write_to_memory(instance, err.to_string().as_bytes()).map(|n| n as i32);
+        }
+        Ok((_prefix, canonical_address)) => canonical_address,
+    };
+
+    let normalized_human_address = match bech32::encode(
+        BECH32_PREFIX_ACC_ADDR, // like we do in human_address()
+        canonical_address.clone(),
+    ) {
+        Err(err) => {
+            // Assaf: IMO This can never fail. From looking at bech32::encode, it only fails
+            // because input prefix issues. For us the prefix is always "secert" which is valid.
+            debug!("addr_validate() error while trying to encode canonical address {:?} to human: {:?}",  &canonical_address, err);
+            return write_to_memory(instance, err.to_string().as_bytes()).map(|n| n as i32);
+        }
+        Ok(normalized_human_address) => normalized_human_address,
+    };
+
+    if source_human_address != normalized_human_address {
+        return write_to_memory(instance, b"Address is not normalized").map(|n| n as i32);
+    }
+
+    Ok(0)
+}
+
 fn host_humanize_address(
     context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -1092,6 +1307,9 @@ fn host_ed25519_batch_verify(
     let pubkeys_len = pubkeys_data.len();
 
     let lengths = (messages_len, signatures_len, pubkeys_len);
+
+    //todo: fix this
+    #[allow(clippy::type_complexity)]
     let (messages, signatures, pubkeys): (Vec<&[u8]>, Vec<&[u8]>, Vec<&[u8]>) = match lengths {
         (ml, sl, pl) if ml == sl && sl == pl => {
             let messages = messages_data.iter().map(Vec::as_slice).collect();

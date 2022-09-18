@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "combine": "swagger-combine ./config.json -o static/swagger/swagger.yaml -f yaml --continueOnConflictingPaths --includeDefinitions",
-    "convert": "mkdir -p static/openapi && swagger2openapi static/swagger/swagger.yaml --outfile static/openapi/openapi.yaml --yaml",
+    "convert": "mkdir -p static/openapi && swagger2openapi --patch static/swagger/swagger.yaml --outfile static/openapi/openapi.yaml --yaml",
     "build": "redoc-cli build static/openapi/openapi.yaml --output ./static/openapi/index.html"
   },
   "dependencies": {

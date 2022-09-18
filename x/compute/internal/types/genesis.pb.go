@@ -149,7 +149,6 @@ func (m *Code) GetCodeBytes() []byte {
 
 // Contract struct encompasses ContractAddress, ContractInfo, and ContractState
 type Contract struct {
-	// contract_address is the canonical address of the contract
 	ContractAddress    github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=contract_address,json=contractAddress,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"contract_address,omitempty"`
 	ContractInfo       ContractInfo                                  `protobuf:"bytes,2,opt,name=contract_info,json=contractInfo,proto3" json:"contract_info"`
 	ContractState      []Model                                       `protobuf:"bytes,3,rep,name=contract_state,json=contractState,proto3" json:"contract_state"`

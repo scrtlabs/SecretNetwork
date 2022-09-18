@@ -9,7 +9,6 @@ import (
 )
 
 // InitGenesis sets supply information for genesis.
-//
 func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	if data.IoMasterCertificate != nil && data.NodeExchMasterCertificate != nil {
 		// keeper.setMasterPublicKey(ctx, data.MasterPublic)

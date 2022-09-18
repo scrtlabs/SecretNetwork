@@ -1,0 +1,34 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "cosmwasm/Cargo.toml",
+    "cosmwasm/enclaves/Cargo.toml",
+    "cosmwasm/contracts/v1/compute-tests/test-compute-contract/Cargo.toml",
+    "cosmwasm/contracts/v1/compute-tests/ibc-test-contract/Cargo.toml",
+    "cosmwasm/contracts/v010/compute-tests/test-compute-contract/Cargo.toml",
+    "integration-tests/contract-v1/Cargo.toml",
+    "integration-tests/contract-v0.10/Cargo.toml",
+    "go-cosmwasm/Cargo.toml"
+  ],
+  "rust-analyzer.diagnostics.experimental.enable": true,
+  "rust-analyzer.rustfmt.rangeFormatting.enable": true,
+  "rust-analyzer.diagnostics.disabled": ["unresolved-macro-call"],
+  "[rust]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+
+  "go.testEnvVars": {
+    "SGX_MODE": "SW",
+    "RUST_BACKTRACE": "1"
+  },
+  "go.useLanguageServer": true,
+  "go.lintTool": "golangci-lint",
+  "go.lintOnSave": "workspace",
+  "gopls": {
+    "formatting.gofumpt": true
+  },
+  "[go]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "golang.go"
+  }
+}

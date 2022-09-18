@@ -21,7 +21,7 @@ pub extern "C" fn free_rust(buf: Buffer) {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(C)]
 pub struct Buffer {
     pub ptr: *mut u8,

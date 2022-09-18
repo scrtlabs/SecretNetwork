@@ -10,27 +10,22 @@ import (
 	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 )
 
-// NewHandler returns a handler for "bank" type messages.
+// NewHandler returns a handler for "compute" type messages.
+// We still need this legacy handler to pass reply info in the data field
+// as the new grpc handler truncates the data field if there's an error
+// this handler is only used here: https://github.com/scrtlabs/SecretNetwork/blob/d8492253/x/compute/internal/keeper/handler_plugin.go#L574-L582
+// As a reference point see the x/bank legacy msg handler which just wraps the new grpc handler https://github.com/scrtlabs/cosmos-sdk/blob/67c2d41286/x/bank/handler.go#L10-L30
 func NewHandler(k Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-
-		case *MsgStoreCode:
+		case *MsgStoreCode: //nolint
 			return handleStoreCode(ctx, k, msg)
 		case *MsgInstantiateContract:
 			return handleInstantiate(ctx, k, msg)
 		case *MsgExecuteContract:
 			return handleExecute(ctx, k, msg)
-			/*
-				case MsgMigrateContract:
-					return handleMigration(ctx, k, &msg)
-				case MsgUpdateAdmin:
-					return handleUpdateContractAdmin(ctx, k, &msg)
-				case MsgClearAdmin:
-					return handleClearContractAdmin(ctx, k, &msg)
-			*/
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
@@ -78,9 +73,11 @@ func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result,
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
-		return nil, err
+		result := sdk.Result{}
+		result.Data = data
+		return &result, err
 	}
 
 	events := filteredMessageEvents(ctx.EventManager())
@@ -89,13 +86,21 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
 		sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", msg.CodeID)),
-		sdk.NewAttribute(types.AttributeKeyContract, contractAddr.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddr.String()),
 	)}
 	events = append(events, custom.ToABCIEvents()...)
 
 	// TODO Assaf:
 	// also need to parse here output events and pass them to Tendermint
 	// but k.Instantiate() doesn't return any output data right now, just contractAddr
+
+	// Only for reply
+	if data != nil {
+		return &sdk.Result{
+			Data:   data,
+			Events: events,
+		}, nil
+	}
 
 	return &sdk.Result{
 		Data:   contractAddr,
@@ -113,7 +118,7 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 		msg.CallbackSig,
 	)
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
 	events := filteredMessageEvents(ctx.EventManager())
@@ -121,7 +126,7 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
 		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
-		sdk.NewAttribute(types.AttributeKeyContract, msg.Contract.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.Contract.String()),
 	)}
 	events = append(events, custom.ToABCIEvents()...)
 
@@ -129,54 +134,3 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 
 	return res, nil
 }
-
-/*
-func handleMigration(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.Result, error) {
-	res, err := k.Migrate(ctx, msg.Contract, msg.Sender, msg.CodeID, msg.MigrateMsg) // for MsgMigrateContract, there is only one signer which is msg.Sender (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L228-L230)
-	if err != nil {
-		return nil, err
-	}
-
-	events := filteredMessageEvents(ctx.EventManager())
-	ourEvent := sdk.NewEvent(
-		sdk.EventTypeMessage,
-		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
-		sdk.NewAttribute(types.AttributeKeyContract, msg.Contract.String()),
-	)
-	res.Events = append(events, ourEvent)
-	return res, nil
-}
-
-func handleUpdateContractAdmin(ctx sdk.Context, k Keeper, msg *MsgUpdateAdmin) (*sdk.Result, error) {
-	if err := k.UpdateContractAdmin(ctx, msg.Contract, msg.Sender, msg.NewAdmin); err != nil {
-		return nil, err
-	}
-	events := ctx.EventManager().Events()
-	ourEvent := sdk.NewEvent(
-		sdk.EventTypeMessage,
-		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
-		sdk.NewAttribute(types.AttributeKeyContract, msg.Contract.String()),
-	)
-	return &sdk.Result{
-		Events: append(events, ourEvent),
-	}, nil
-}
-
-func handleClearContractAdmin(ctx sdk.Context, k Keeper, msg *MsgClearAdmin) (*sdk.Result, error) {
-	if err := k.ClearContractAdmin(ctx, msg.Contract, msg.Sender); err != nil {
-		return nil, err
-	}
-	events := ctx.EventManager().Events()
-	ourEvent := sdk.NewEvent(
-		sdk.EventTypeMessage,
-		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
-		sdk.NewAttribute(types.AttributeKeyContract, msg.Contract.String()),
-	)
-	return &sdk.Result{
-		Events: append(events, ourEvent),
-	}, nil
-}
-*/

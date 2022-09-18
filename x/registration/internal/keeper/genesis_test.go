@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
@@ -10,10 +10,12 @@ import (
 )
 
 func TestInitGenesisNoMaster(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 	//
-	//cert, err := ioutil.ReadFile("../../testdata/attestation_cert")
+	//cert, err := os.ReadFile("../../testdata/attestation_cert")
 	//require.NoError(t, err)
 
 	data := types.GenesisState{
@@ -26,10 +28,12 @@ func TestInitGenesisNoMaster(t *testing.T) {
 }
 
 func TestInitGenesis(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	data := types.GenesisState{
@@ -42,10 +46,12 @@ func TestInitGenesis(t *testing.T) {
 }
 
 func TestExportGenesis(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	data := types.GenesisState{
