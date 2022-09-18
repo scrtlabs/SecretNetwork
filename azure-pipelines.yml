@@ -17,6 +17,18 @@ workspace:
   clean: all # what to clean up before the job runs
 
 steps:
+  - task: Cache@2
+    displayName: Cache task
+    inputs:
+      key: 'docker | "$(Agent.OS)" | cache'
+      path: $(Pipeline.Workspace)/docker
+      cacheHitVar: CACHE_RESTORED                #Variable to set to 'true' when the cache is restored
+    
+  - script: |
+      docker load -i $(Pipeline.Workspace)/docker/cache.tar
+    displayName: Docker restore
+    condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
+    
   - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
     displayName: "Save api keys"
   - task: Docker@2
@@ -73,6 +85,12 @@ steps:
       tags: latest
       arguments: --build-arg SECRET_LOCAL_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/local-node.Dockerfile
+
+  - script: |
+      mkdir -p $(Pipeline.Workspace)/docker
+      docker save -o $(Pipeline.Workspace)/docker/cache.tar $(repository):$(tag)
+    displayName: Docker save
+    condition: and(not(canceled()), or(failed(), ne(variables.CACHE_RESTORED, 'true')))
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
     displayName: "Run system tests (go tests)"
