@@ -1857,6 +1857,52 @@ describe("IBCQuery", () => {
   });
 });
 
+describe("WasmQuery", () => {
+  describe("Smart", () => {
+    test("v1", async () => {
+      const b64encode = (str: string): string =>
+        Buffer.from(str, "binary").toString("base64");
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          wasm_smart: {
+            contract_addr: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
+            msg: b64encode(
+              JSON.stringify({
+                bank_balance: {
+                  address: accounts[0].address,
+                  denom: "uscrt",
+                },
+              })
+            ),
+          },
+        },
+      });
+
+      expect(result?.amount?.denom).toBe("uscrt");
+      expect(Number(result?.amount?.amount)).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe("ContractInfo", () => {
+    test.only("v1", async () => {
+      const result: any = await readonly.query.compute.queryContract({
+        contractAddress: contracts["secretdev-1"].v1.address,
+        codeHash: contracts["secretdev-1"].v1.codeHash,
+        query: {
+          wasm_contract_info: {
+            contract_addr: contracts["secretdev-1"].v010.address,
+          },
+        },
+      });
+
+      console.error(result);
+    });
+  });
+});
+
 describe("IBC", () => {
   beforeAll(async () => {
     console.log("Storing contracts on secretdev-2...");
@@ -1964,7 +2010,7 @@ describe("IBC", () => {
     expect(true).toBe(true);
   }, 30_000 /* 30 seconds */);
 
-  test.only("contracts sanity", async () => {
+  test("contracts sanity", async () => {
     const command =
       "docker exec ibc-relayer-1 hermes " +
       "--config /home/hermes-user/.hermes/alternative-config.toml " +
@@ -2000,6 +2046,21 @@ describe("IBC", () => {
       "wasm." + contracts["secretdev-1"].v1.address
     );
     expect(res?.channels[0]?.endpoint?.channel_id).toBe(channelId);
+
+    const res2: any = await readonly.query.compute.queryContract({
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
+      query: {
+        ibc_channel: {
+          port_id: "wasm." + contracts["secretdev-1"].v1.address,
+          channel_id: channelId,
+        },
+      },
+    });
+    expect(res2?.channel?.endpoint?.port_id).toBe(
+      "wasm." + contracts["secretdev-1"].v1.address
+    );
+    expect(res2?.channel?.endpoint?.channel_id).toBe(channelId);
 
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
