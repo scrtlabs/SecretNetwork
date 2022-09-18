@@ -15,11 +15,11 @@ pub extern "C" fn ocall_allocate(buffer: *const u8, length: usize) -> UserSpaceB
     ocall_allocate_impl(buffer, length)
 }
 
-#[cfg(feature = "query-node")]
-#[no_mangle]
-pub extern "C" fn ocall_allocate_qe(buffer: *const u8, length: usize) -> UserSpaceBuffer {
-    ocall_allocate_impl(buffer, length)
-}
+// #[cfg(feature = "query-node")]
+// #[no_mangle]
+// pub extern "C" fn ocall_allocate_qe(buffer: *const u8, length: usize) -> UserSpaceBuffer {
+//     ocall_allocate_impl(buffer, length)
+// }
 
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 fn ocall_allocate_impl(buffer: *const u8, length: usize) -> UserSpaceBuffer {
@@ -61,26 +61,26 @@ pub extern "C" fn ocall_read_db(
     )
 }
 
-#[cfg(feature = "query-node")]
-#[no_mangle]
-pub extern "C" fn ocall_read_db_qe(
-    context: Ctx,
-    vm_error: *mut UntrustedVmError,
-    gas_used: *mut u64,
-    value: *mut EnclaveBuffer,
-    key: *const u8,
-    key_len: usize,
-) -> OcallReturn {
-    ocall_read_db_concrete(
-        super::allocate_enclave_buffer_qe,
-        context,
-        vm_error,
-        gas_used,
-        value,
-        key,
-        key_len,
-    )
-}
+// #[cfg(feature = "query-node")]
+// #[no_mangle]
+// pub extern "C" fn ocall_read_db_qe(
+//     context: Ctx,
+//     vm_error: *mut UntrustedVmError,
+//     gas_used: *mut u64,
+//     value: *mut EnclaveBuffer,
+//     key: *const u8,
+//     key_len: usize,
+// ) -> OcallReturn {
+//     ocall_read_db_concrete(
+//         super::allocate_enclave_buffer_qe,
+//         context,
+//         vm_error,
+//         gas_used,
+//         value,
+//         key,
+//         key_len,
+//     )
+// }
 
 /// Read a key from the contracts key-value store.
 fn ocall_read_db_concrete(
@@ -134,6 +134,7 @@ pub extern "C" fn ocall_query_chain(
     value: *mut EnclaveBuffer,
     query: *const u8,
     query_len: usize,
+    query_depth: u32,
 ) -> OcallReturn {
     ocall_query_chain_concrete(
         super::allocate_enclave_buffer,
@@ -144,31 +145,32 @@ pub extern "C" fn ocall_query_chain(
         value,
         query,
         query_len,
+        query_depth,
     )
 }
 
-#[cfg(feature = "query-node")]
-#[no_mangle]
-pub extern "C" fn ocall_query_chain_qe(
-    context: Ctx,
-    vm_error: *mut UntrustedVmError,
-    gas_used: *mut u64,
-    gas_limit: u64,
-    value: *mut EnclaveBuffer,
-    query: *const u8,
-    query_len: usize,
-) -> OcallReturn {
-    ocall_query_chain_concrete(
-        super::allocate_enclave_buffer_qe,
-        context,
-        vm_error,
-        gas_used,
-        gas_limit,
-        value,
-        query,
-        query_len,
-    )
-}
+// #[cfg(feature = "query-node")]
+// #[no_mangle]
+// pub extern "C" fn ocall_query_chain_qe(
+//     context: Ctx,
+//     vm_error: *mut UntrustedVmError,
+//     gas_used: *mut u64,
+//     gas_limit: u64,
+//     value: *mut EnclaveBuffer,
+//     query: *const u8,
+//     query_len: usize,
+// ) -> OcallReturn {
+//     ocall_query_chain_concrete(
+//         super::allocate_enclave_buffer_qe,
+//         context,
+//         vm_error,
+//         gas_used,
+//         gas_limit,
+//         value,
+//         query,
+//         query_len,
+//     )
+// }
 
 /// Read a key from the contracts key-value store.
 #[allow(clippy::too_many_arguments)]
@@ -181,12 +183,13 @@ fn ocall_query_chain_concrete(
     value: *mut EnclaveBuffer,
     query: *const u8,
     query_len: usize,
+    query_depth: u32,
 ) -> OcallReturn {
     let query = unsafe { std::slice::from_raw_parts(query, query_len) };
 
     let implementation = unsafe { get_implementations_from_context(&context).query_chain };
 
-    std::panic::catch_unwind(|| implementation(context, query, gas_limit))
+    std::panic::catch_unwind(|| implementation(context, query, query_depth, gas_limit))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
         .map(|answer| -> Result<EnclaveBuffer, OcallReturn> {
@@ -370,6 +373,7 @@ struct ExportImplementations {
     query_chain: fn(
         context: Ctx,
         query: &[u8],
+        query_depth: u32,
         gas_limit: u64,
     ) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>,
     remove_db: fn(context: Ctx, key: &[u8]) -> VmResult<u64>,
@@ -437,6 +441,7 @@ where
 fn ocall_query_chain_impl<S, Q>(
     mut context: Ctx,
     query: &[u8],
+    query_depth: u32,
     gas_limit: u64,
 ) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>
 where
@@ -444,7 +449,7 @@ where
     Q: Querier,
 {
     with_querier_from_context::<S, Q, _, _>(&mut context, |querier: &mut Q| {
-        let (ffi_result, gas_info) = querier.query_raw(query, gas_limit);
+        let (ffi_result, gas_info) = querier.query_raw(query, query_depth, gas_limit);
         ffi_result
             .map(|system_result| (system_result, gas_info.externally_used))
             .map_err(Into::into)

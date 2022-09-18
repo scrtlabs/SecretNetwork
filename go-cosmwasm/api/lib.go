@@ -161,10 +161,10 @@ func Instantiate(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// This is done in order to ensure that goroutines don't
-	// swap threads between recursive calls to the enclave.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
 
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -207,10 +207,10 @@ func Handle(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// This is done in order to ensure that goroutines don't
-	// swap threads between recursive calls to the enclave.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
 
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, u8(handleType))
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -249,10 +249,10 @@ func Query(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// This is done in order to ensure that goroutines don't
-	// swap threads between recursive calls to the enclave.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
 
 	res, err := C.query(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {

@@ -17,10 +17,8 @@ use enclave_utils::kv_cache::KvCache;
 
 use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
-#[cfg(not(feature = "query-only"))]
-use crate::db::{
-    encrypt_key, remove_encrypted_key, /* write_encrypted_key, */ write_multiple_keys,
-};
+// #[cfg(not(feature = "query-only"))]
+use crate::db::{remove_encrypted_key, /* write_encrypted_key, */, write_multiple_keys};
 use crate::errors::WasmEngineError;
 use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
@@ -74,8 +72,9 @@ pub struct ContractInstance {
     pub gas_costs: WasmCosts,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
-    #[cfg_attr(feature = "query-only", allow(unused))]
+    // #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
+    query_depth: u32,
     pub user_nonce: IoNonce,
     pub user_public_key: Ed25519PublicKey,
     pub cosmwasm_api_version: CosmWasmApiVersion,
@@ -91,6 +90,7 @@ impl ContractInstance {
         gas_costs: WasmCosts,
         contract_key: ContractKey,
         operation: ContractOperation,
+        query_depth: u32,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Self, EnclaveError> {
@@ -123,6 +123,7 @@ impl ContractInstance {
             contract_key,
             module,
             operation,
+            query_depth,
             user_nonce,
             user_public_key,
             cosmwasm_api_version,
@@ -406,17 +407,17 @@ impl WasmiApi for ContractInstance {
         Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
-    /// Remove a key from the contract's storage
-    /// v0.10 + v1
-    ///
-    /// Args:
-    /// 1. "key" to delete from Tendermint (buffer of bytes)
-    /// key is a pointer to a region "struct" of "pointer" and "length"
-    /// A Region looks like { ptr: u32, len: u32 }
-    #[cfg(feature = "query-only")]
-    fn remove_db(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        Err(WasmEngineError::UnauthorizedWrite.into())
-    }
+    // /// Remove a key from the contract's storage
+    // /// v0.10 + v1
+    // ///
+    // /// Args:
+    // /// 1. "key" to delete from Tendermint (buffer of bytes)
+    // /// key is a pointer to a region "struct" of "pointer" and "length"
+    // /// A Region looks like { ptr: u32, len: u32 }
+    // #[cfg(feature = "query-only")]
+    // fn remove_db(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    //     Err(WasmEngineError::UnauthorizedWrite.into())
+    // }
 
     /// Remove a key from the contract's storage
     /// v0.10 + v1
@@ -425,7 +426,7 @@ impl WasmiApi for ContractInstance {
     /// 1. "key" to delete from Tendermint (buffer of bytes)
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    #[cfg(not(feature = "query-only"))]
+    // #[cfg(not(feature = "query-only"))]
     fn remove_db(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         if self.operation.is_query() {
             return Err(WasmEngineError::UnauthorizedWrite.into());
@@ -453,22 +454,22 @@ impl WasmiApi for ContractInstance {
         Ok(None)
     }
 
-    /// Write (key,value) into the contract's storage
-    /// v0.10 + v1
-    ///
-    /// Args:
-    /// 1. "key" to write to Tendermint (buffer of bytes)
-    /// 2. "value" to write to Tendermint (buffer of bytes)
-    /// Both of them are pointers to a region "struct" of "pointer" and "length"
-    /// Lets say Region looks like { ptr: u32, len: u32 }
-    #[cfg(feature = "query-only")]
-    fn write_db(
-        &mut self,
-        _state_key_ptr_ptr: i32,
-        _value_ptr_ptr: i32,
-    ) -> Result<Option<RuntimeValue>, Trap> {
-        Err(WasmEngineError::UnauthorizedWrite.into())
-    }
+    // /// Write (key,value) into the contract's storage
+    // /// v0.10 + v1
+    // ///
+    // /// Args:
+    // /// 1. "key" to write to Tendermint (buffer of bytes)
+    // /// 2. "value" to write to Tendermint (buffer of bytes)
+    // /// Both of them are pointers to a region "struct" of "pointer" and "length"
+    // /// Lets say Region looks like { ptr: u32, len: u32 }
+    // #[cfg(feature = "query-only")]
+    // fn write_db(
+    //     &mut self,
+    //     _state_key_ptr_ptr: i32,
+    //     _value_ptr_ptr: i32,
+    // ) -> Result<Option<RuntimeValue>, Trap> {
+    //     Err(WasmEngineError::UnauthorizedWrite.into())
+    // }
 
     /// Write (key,value) into the contract's storage
     /// v0.10 + v1
@@ -478,7 +479,7 @@ impl WasmiApi for ContractInstance {
     /// 2. "value" to write to Tendermint (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// Lets say Region looks like { ptr: u32, len: u32 }
-    #[cfg(not(feature = "query-only"))]
+    // #[cfg(not(feature = "query-only"))]
     fn write_db(
         &mut self,
         state_key_ptr: i32,
@@ -747,6 +748,7 @@ impl WasmiApi for ContractInstance {
         let mut gas_used_by_query: u64 = 0;
         let answer = encrypt_and_query_chain(
             &query_buffer,
+            self.query_depth,
             &self.context,
             self.user_nonce,
             self.user_public_key,
