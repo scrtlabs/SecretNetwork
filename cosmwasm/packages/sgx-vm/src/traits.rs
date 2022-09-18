@@ -120,6 +120,7 @@ pub trait Querier {
     fn query_raw(
         &self,
         request: &[u8],
+        query_depth: u32,
         gas_limit: u64,
     ) -> FfiResult<SystemResult<StdResult<Binary>>>;
 }
