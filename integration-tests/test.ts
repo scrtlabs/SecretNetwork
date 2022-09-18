@@ -1887,7 +1887,7 @@ describe("WasmQuery", () => {
   });
 
   describe("ContractInfo", () => {
-    test.only("v1", async () => {
+    test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
         contractAddress: contracts["secretdev-1"].v1.address,
         codeHash: contracts["secretdev-1"].v1.codeHash,
@@ -1898,7 +1898,10 @@ describe("WasmQuery", () => {
         },
       });
 
-      console.error(result);
+      expect(result?.code_id).toBe(contracts["secretdev-1"].v010.codeId);
+      expect(result?.creator).toBe(accounts[0].address);
+      expect(result?.pinned).toBe(false);
+      expect(result?.ibc_port).toBe(null);
     });
   });
 });
