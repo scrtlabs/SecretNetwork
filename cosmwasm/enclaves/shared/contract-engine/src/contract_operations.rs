@@ -59,18 +59,18 @@ pub fn init(
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();
     let duration = start.elapsed();
-    println!("Time elapsed in ContractCode::new is: {:?}", duration);
+    trace!("Time elapsed in ContractCode::new is: {:?}", duration);
 
     let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
     let duration = start.elapsed();
-    println!("Time elapsed in extract_base_env is: {:?}", duration);
+    trace!("Time elapsed in extract_base_env is: {:?}", duration);
     let query_depth = extract_query_depth(env)?;
 
     let start = Instant::now();
     let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
     let duration = start.elapsed();
-    println!("Time elapsed in get_verification_paramsis: {:?}", duration);
+    trace!("Time elapsed in get_verification_paramsis: {:?}", duration);
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
@@ -96,12 +96,12 @@ pub fn init(
         &secret_msg,
     )?;
     let duration = start.elapsed();
-    println!("Time elapsed in verify_params: {:?}", duration);
+    trace!("Time elapsed in verify_params: {:?}", duration);
 
     let start = Instant::now();
     let decrypted_msg = secret_msg.decrypt()?;
     let duration = start.elapsed();
-    println!("Time elapsed in decrypt: {:?}", duration);
+    trace!("Time elapsed in decrypt: {:?}", duration);
 
     let start = Instant::now();
     let ValidatedMessage {
@@ -109,7 +109,7 @@ pub fn init(
         reply_params,
     } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
     let duration = start.elapsed();
-    println!("Time elapsed in validate_msg: {:?}", duration);
+    trace!("Time elapsed in validate_msg: {:?}", duration);
 
     let start = Instant::now();
     let mut engine = start_engine(
@@ -123,7 +123,7 @@ pub fn init(
         secret_msg.user_public_key,
     )?;
     let duration = start.elapsed();
-    println!("Time elapsed in start_engine: {:?}", duration);
+    trace!("Time elapsed in start_engine: {:?}", duration);
 
     let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
 
@@ -132,7 +132,7 @@ pub fn init(
     let start = Instant::now();
     let result = engine.init(&versioned_env, validated_msg);
     let duration = start.elapsed();
-    println!("Time elapsed in engine.init: {:?}", duration);
+    trace!("Time elapsed in engine.init: {:?}", duration);
 
     *used_gas = engine.gas_used();
     let output = result?;
@@ -156,7 +156,7 @@ pub fn init(
         false,
     )?;
     let duration = start.elapsed();
-    println!("Time elapsed in encrypt_output: {:?}", duration);
+    trace!("Time elapsed in encrypt_output: {:?}", duration);
 
     // todo: can move the key to somewhere in the output message if we want
 

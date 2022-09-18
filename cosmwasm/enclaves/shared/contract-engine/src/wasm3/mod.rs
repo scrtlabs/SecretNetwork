@@ -210,7 +210,7 @@ impl Engine {
                 .parse(contract_code.code())
                 .map_err(|_| EnclaveError::InvalidWasm)?;
             let duration = start.elapsed();
-            println!(
+            trace!(
                 "Time elapsed in walrus::ModuleConfig::new() is: {:?}",
                 duration
             );
@@ -242,7 +242,7 @@ impl Engine {
             let start = Instant::now();
             validation::validate_memory(&mut module)?;
             let duration = start.elapsed();
-            println!("Time elapsed in validate_memory is: {:?}", duration);
+            trace!("Time elapsed in validate_memory is: {:?}", duration);
 
             if let ContractOperation::Init = operation {
                 if module.has_floats() {
@@ -254,12 +254,12 @@ impl Engine {
             let start = Instant::now();
             gas::add_metering(&mut module, &gas_costs);
             let duration = start.elapsed();
-            println!("Time elapsed in add_metering() is: {:?}", duration);
+            trace!("Time elapsed in add_metering() is: {:?}", duration);
 
             let start = Instant::now();
             let code = module.emit_wasm();
             let duration = start.elapsed();
-            println!("Time elapsed in module.emit_wasm() is: {:?}", duration);
+            trace!("Time elapsed in module.emit_wasm() is: {:?}", duration);
 
             let mut write_cache = W3_MODULE_CACHE.write().unwrap();
 
@@ -298,7 +298,7 @@ impl Engine {
 
         let environment = wasm3::Environment::new().to_enclave_result()?;
         let duration = start.elapsed();
-        println!("Time elapsed in Environment::new() is: {:?}", duration);
+        trace!("Time elapsed in Environment::new() is: {:?}", duration);
         debug!("initialized environment");
 
         Ok(Self {
@@ -321,7 +321,7 @@ impl Engine {
             .new_runtime::<Context>(1024 * 60, Some(192 /* 12 MiB */))
             .to_enclave_result()?;
         let duration = start.elapsed();
-        println!("Time elapsed in environment.new_runtime is: {:?}", duration);
+        trace!("Time elapsed in environment.new_runtime is: {:?}", duration);
         debug!("initialized runtime");
 
         let start = Instant::now();
@@ -330,7 +330,7 @@ impl Engine {
             .parse_module(&self.code)
             .to_enclave_result()?;
         let duration = start.elapsed();
-        println!(
+        trace!(
             "Time elapsed in environment.parse_module is: {:?}",
             duration
         );
@@ -339,25 +339,25 @@ impl Engine {
         let start = Instant::now();
         let mut instance = runtime.load_module(module).to_enclave_result()?;
         let duration = start.elapsed();
-        println!("Time elapsed in runtime.load_module is: {:?}", duration);
+        trace!("Time elapsed in runtime.load_module is: {:?}", duration);
         debug!("created instance");
 
         let start = Instant::now();
         gas::set_gas_limit(&instance, self.gas_limit)?;
         let duration = start.elapsed();
-        println!("Time elapsed in set_gas_limit is: {:?}", duration);
+        trace!("Time elapsed in set_gas_limit is: {:?}", duration);
         debug!("set gas limit");
 
         let start = Instant::now();
         Self::link_host_functions(&mut instance).to_enclave_result()?;
         let duration = start.elapsed();
-        println!("Time elapsed in link_host_functions is: {:?}", duration);
+        trace!("Time elapsed in link_host_functions is: {:?}", duration);
         debug!("linked functions");
 
         let start = Instant::now();
         let result = func(&mut instance, &mut self.context);
         let duration = start.elapsed();
-        println!("Instance: elapsed time for running func is: {:?}", duration);
+        trace!("Instance: elapsed time for running func is: {:?}", duration);
         debug!("function returned {:?}", result);
 
         self.used_gas =
@@ -432,7 +432,7 @@ impl Engine {
             let start = Instant::now();
             let env_ptr = write_to_memory(instance, &env_bytes)?;
             let duration = start.elapsed();
-            println!(
+            trace!(
                 "Time elapsed in env_bytes write_to_memory is: {:?}",
                 duration
             );
@@ -440,7 +440,7 @@ impl Engine {
             let start = Instant::now();
             let msg_ptr = write_to_memory(instance, &msg)?;
             let duration = start.elapsed();
-            println!("Time elapsed in msg write_to_memory is: {:?}", duration);
+            trace!("Time elapsed in msg write_to_memory is: {:?}", duration);
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -464,7 +464,7 @@ impl Engine {
                     let start = Instant::now();
                     let res = init.call_with_context(context, args);
                     let duration = start.elapsed();
-                    println!("Time elapsed in call_with_context is: {:?}", duration);
+                    trace!("Time elapsed in call_with_context is: {:?}", duration);
                     res
                 }
                 CosmWasmApiVersion::Invalid => {
@@ -474,12 +474,12 @@ impl Engine {
             let start = Instant::now();
             let output_ptr = check_execution_result(instance, context, result)?;
             let duration = start.elapsed();
-            println!("Time elapsed in check_execution_result is: {:?}", duration);
+            trace!("Time elapsed in check_execution_result is: {:?}", duration);
 
             let start = Instant::now();
             let output = read_from_memory(instance, output_ptr)?;
             let duration = start.elapsed();
-            println!("Time elapsed in read_from_memory is: {:?}", duration);
+            trace!("Time elapsed in read_from_memory is: {:?}", duration);
 
             Ok(output)
         })
@@ -497,10 +497,10 @@ impl Engine {
             debug!("starting handle");
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
-            let env_ptr = write_to_memory(instance, &env_bytes)?;
-            debug!("handle written env");
             let msg_ptr = write_to_memory(instance, &msg)?;
             debug!("handle written msg");
+            let env_ptr = write_to_memory(instance, &env_bytes)?;
+            debug!("handle written env");
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -768,7 +768,7 @@ fn read_from_memory<C>(
     let start = Instant::now();
     let runtime = instance.runtime();
     let duration = start.elapsed();
-    println!(
+    trace!(
         "read_from_memory: Time elapsed in instance.runtime(): {:?}",
         duration
     );
@@ -778,7 +778,7 @@ fn read_from_memory<C>(
         CWMemory::new(memory).extract_vector(region_ptr)
     })?;
     let duration = start.elapsed();
-    println!(
+    trace!(
         "read_from_memory: Time elapsed in runtime.try_with_memory_or(): {:?}",
         duration
     );
@@ -805,7 +805,7 @@ fn write_to_memory<C>(instance: &wasm3::Instance<C>, buffer: &[u8]) -> WasmEngin
     .map_err(debug_err!(err => "failed to allocate {} bytes in contract: {err}", buffer.len()))
     .map_err(|_| WasmEngineError::MemoryAllocationError)?;
     let duration = start.elapsed();
-    println!(
+    trace!(
         "write_to_memory: Time elapsed in allocate function call: {:?}",
         duration
     );
@@ -813,7 +813,7 @@ fn write_to_memory<C>(instance: &wasm3::Instance<C>, buffer: &[u8]) -> WasmEngin
     let start = Instant::now();
     let res = write_to_allocated_memory(instance, region_ptr, buffer);
     let duration = start.elapsed();
-    println!(
+    trace!(
         "write_to_memory: Time elapsed in write_to_allocated_memory: {:?}",
         duration
     );
@@ -962,7 +962,7 @@ fn host_write_db(
         debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
     )?;
     let duration = start.elapsed();
-    println!(
+    trace!(
         "host_write_db: Time elapsed in read_from_memory x2: {:?}",
         duration
     );

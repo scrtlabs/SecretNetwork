@@ -256,7 +256,7 @@ pub fn verify_params(
         return verify_callback_sig(callback_sig.as_slice(), sender, msg, sent_funds);
     }
     let duration = start.elapsed();
-    println!(
+    trace!(
         "verify_params: Time elapsed in verify_callback_sig: {:?}",
         duration
     );
@@ -269,7 +269,7 @@ pub fn verify_params(
     let start = Instant::now();
     let (sender_public_key, messages) = get_signer_and_messages(sig_info, sender)?;
     let duration = start.elapsed();
-    println!(
+    trace!(
         "verify_params: Time elapsed in get_signer_and_messages: {:?}",
         duration
     );
@@ -293,7 +293,7 @@ pub fn verify_params(
             EnclaveError::FailedTxVerification
         })?;
     let duration = start.elapsed();
-    println!(
+    trace!(
         "verify_params: Time elapsed in verify_bytes: {:?}",
         duration
     );
@@ -311,7 +311,7 @@ pub fn verify_params(
         return Ok(());
     }
     let duration = start.elapsed();
-    println!(
+    trace!(
         "verify_params: Time elapsed in verify_message_params: {:?}",
         duration
     );

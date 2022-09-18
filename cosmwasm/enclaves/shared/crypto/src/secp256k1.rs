@@ -40,7 +40,7 @@ impl VerifyingKey for Secp256k1PubKey {
             Sha256::digest(bytes)
         };
         let duration = start.elapsed();
-        println!(
+        trace!(
             "verify_bytes: Time elapsed in Sha256::digest: {:?}",
             duration
         );
@@ -52,7 +52,7 @@ impl VerifyingKey for Secp256k1PubKey {
             CryptoError::VerificationError
         })?;
         let duration = start.elapsed();
-        println!(
+        trace!(
             "verify_bytes: Time elapsed in Message::from_slice: {:?}",
             duration
         );
@@ -61,7 +61,7 @@ impl VerifyingKey for Secp256k1PubKey {
 
         let verifier = Secp256k1::verification_only();
         let duration = start.elapsed();
-        println!(
+        trace!(
             "verify_bytes: Time elapsed in Secp256k1::verification_only: {:?}",
             duration
         );
@@ -73,7 +73,7 @@ impl VerifyingKey for Secp256k1PubKey {
             CryptoError::VerificationError
         })?;
         let duration = start.elapsed();
-        println!(
+        trace!(
             "verify_bytes: Time elapsed in Signature::from_compact: {:?}",
             duration
         );
@@ -85,7 +85,7 @@ impl VerifyingKey for Secp256k1PubKey {
                 CryptoError::VerificationError
             })?;
         let duration = start.elapsed();
-        println!(
+        trace!(
             "verify_bytes: Time elapsed in PublicKey from_slice: {:?}",
             duration
         );
@@ -101,7 +101,7 @@ impl VerifyingKey for Secp256k1PubKey {
                 CryptoError::VerificationError
             })?;
         let duration = start.elapsed();
-        println!("verify_bytes: Time elapsed in verify_ecdsa: {:?}", duration);
+        trace!("verify_bytes: Time elapsed in verify_ecdsa: {:?}", duration);
         trace!("successfully verified this signature: {:?}", sig);
         Ok(())
     }
