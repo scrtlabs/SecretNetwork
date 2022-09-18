@@ -1,4 +1,4 @@
-FROM ghcr.io/scrtlabs/localsecret:v1.4.0-cw-v1-beta.2
+FROM ghcr.io/scrtlabs/localsecret:v1.4.0-beta.11
 
 ### Install Sudo ###
 
@@ -10,7 +10,7 @@ RUN apt-get update && \
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.62.0
+    RUST_VERSION=1.63.0
 ENV dpkgArch=amd64
 ENV rustArch='x86_64-unknown-linux-gnu'
 ENV rustupSha256='3dc5ef50861ee18657f9db2eeb7392f9c2a6c95c90ab41e45ab4ca71476b4338'
@@ -44,6 +44,8 @@ ARG USER_GID=$USER_UID
 
 ENV USER_HOME=/home/${USERNAME}
 
+RUN apt-get install -yq clang binaryen
+
 ### Setup Rust and More common packages ###
 
 COPY .devcontainer/library-scripts/*.sh .devcontainer/library-scripts/*.env /tmp/library-scripts/
@@ -68,5 +70,7 @@ RUN mkdir -p $HOME/config/
 
 COPY deployment/docker/devimage/bootstrap_init_no_stop.sh bootstrap_init.sh
 COPY deployment/docker/devimage/faucet/faucet_server.js .
+
+RUN sudo npm cache clean -f && sudo npm install -g n && sudo n 14.19
 
 CMD ["./bootstrap_init.sh"]
