@@ -714,6 +714,25 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			// TODO: do we want to change the return value?
 			return json.Marshal(models)
 		}
+		if request.ContractInfo != nil {
+			addr, err := sdk.AccAddressFromBech32(request.ContractInfo.ContractAddr)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.ContractInfo.ContractAddr)
+			}
+			info := wasm.GetContractInfo(ctx, addr)
+			if info == nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.ContractInfo.ContractAddr)
+			}
+
+			res := wasmTypes.ContractInfoResponse{
+				CodeID:  info.CodeID,
+				Creator: info.Creator.String(),
+				Admin:   "", // In secret we don't have an admin
+				Pinned:  false,
+				IBCPort: info.IBCPortID,
+			}
+			return json.Marshal(res)
+		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown WasmQuery variant"}
 	}
 }
