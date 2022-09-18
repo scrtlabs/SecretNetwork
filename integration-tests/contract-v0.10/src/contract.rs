@@ -85,7 +85,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: Msg,
 ) -> HandleResult {
     match msg {
-        Msg::Nop { } => Ok(HandleResponse {
+        Msg::Nop {} => Ok(HandleResponse {
             messages: vec![],
             log: vec![],
             data: None,
