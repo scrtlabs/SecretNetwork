@@ -12,6 +12,7 @@ use std::time::Instant;
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
+use crate::wasm::traits::WasmiApi;
 
 use super::contract_validation::{
     generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -131,6 +132,11 @@ pub fn init(
 
     *used_gas = engine.gas_used();
     let output = result?;
+
+    engine
+        .contract_instance
+        .flush_cache()
+        .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
     // TODO: copy cosmwasm's structures to enclave
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
@@ -266,6 +272,11 @@ pub fn handle(
     let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
     *used_gas = engine.gas_used();
     let mut output = result?;
+
+    engine
+        .contract_instance
+        .flush_cache()
+        .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
     debug!(
         "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",

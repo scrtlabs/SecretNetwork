@@ -1,4 +1,5 @@
 #![feature(stmt_expr_attributes)]
+#![feature(vec_into_raw_parts)]
 
 // Trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
 #[cfg(not(target_env = "sgx"))]

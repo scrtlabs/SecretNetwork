@@ -135,6 +135,14 @@ enclave {
             uintptr_t key_len
         );
 
+        OcallReturn ocall_multiple_write_db(
+            Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
+            [in, count=keys_len] const uint8_t* keys,
+            uintptr_t keys_len
+        );
+
         OcallReturn ocall_write_db(
             Ctx context,
             [out] UntrustedVmError* vm_error,
