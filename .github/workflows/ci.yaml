@@ -186,9 +186,9 @@ jobs:
       - name: Load images
         run: |
           docker load --input /tmp/localsecret.tar
-          docker run -v $PWD:/opt/mount --rm --entrypoint cp localsecret:v0.0.0 /usr/local/bin/secretd /opt/mount/secretd
-          docker run -v $PWD:/opt/mount --rm --entrypoint cp localsecret:v0.0.0 /usr/lib/libgo_cosmwasm.so /opt/mount/libgo_cosmwasm.so
-          docker run -v $PWD:/opt/mount --rm --entrypoint cp localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/local/bin/secretd /opt/mount/secretd
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/libgo_cosmwasm.so /opt/mount/libgo_cosmwasm.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
       
 
       - uses: actions/download-artifact@v3
@@ -321,9 +321,6 @@ jobs:
         with:
           driver-opts: network=host
       - uses: actions/checkout@v2
-      - name: Setup Fake API keys
-        run: |
-          echo not_a_key | tee {api_key,spid}.txt
       - name: Build LocalSecret Base
         uses: docker/build-push-action@v3
         with:
