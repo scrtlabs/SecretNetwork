@@ -97,13 +97,13 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production
 
-RUN ${SPID} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/spid.txt
-RUN ${SPID} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/spid.txt
-RUN ${SPID} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/spid.txt
+RUN echo ${SPID} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/spid.txt
+RUN echo ${SPID} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/spid.txt
+RUN echo ${SPID} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/spid.txt
 
-RUN ${API_KEY} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
-RUN ${API_KEY} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
-RUN ${API_KEY} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
+RUN echo ${API_KEY} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
+RUN echo ${API_KEY} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
+RUN echo ${API_KEY} >> /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
 
 RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
