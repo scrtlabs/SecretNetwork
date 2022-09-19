@@ -30,6 +30,7 @@ pub fn encrypt_and_query_chain(
     if let Some(answer) = check_recursion_limit(query_depth) {
         return serialize_error_response(&answer);
     }
+    let new_query_depth = query_depth + 1;
 
     let mut query_struct: QueryRequest = match serde_json::from_slice(query) {
         Ok(query_struct) => query_struct,
@@ -54,7 +55,7 @@ pub fn encrypt_and_query_chain(
     // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
     // This returns the answer from x/compute
     let (result, query_used_gas) =
-        query_chain(context, &encrypted_query, query_depth + 1, gas_limit);
+        query_chain(context, &encrypted_query, new_query_depth, gas_limit);
     *gas_used = query_used_gas;
     let encrypted_answer_as_vec = result?;
 
