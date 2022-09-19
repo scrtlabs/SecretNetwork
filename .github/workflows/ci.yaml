@@ -2,14 +2,8 @@ name: Tests
 
 on: [push]
 
+
 jobs:
-
-  services:
-    registry:
-      image: registry:2
-      ports:
-        - 5000:5000
-
   Enclave-Unit-Tests:
     runs-on: ubuntu-20.04
     steps:
@@ -305,6 +299,11 @@ jobs:
 
   Build-LocalSecret:
     runs-on: ubuntu-20.04
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -342,7 +341,7 @@ jobs:
         with:
           file: deployment/dockerfiles/dev-image.Dockerfile
           context: .
-          pull: true
+          load: true
           tags: ghcr.io/scrtlabs/localsecret:v0.0.0
           build-args: |
             SCRT_BASE_IMAGE=localhost:5000/release:latest
@@ -379,42 +378,6 @@ jobs:
       - name: Setup Fake API keys
         run: |
           echo not_a_key | tee {api_key,spid}.txt
-      - name: Build LocalSecret Base
-        uses: docker/build-push-action@v3
-        with:
-          file: deployment/dockerfiles/base.Dockerfile
-          context: .
-          build-args: |
-           FEATURES=debug-print
-           SGX_MODE=SW
-          load: true
-          tags: rust-go-base-image
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Build LocalSecret Release
-        uses: docker/build-push-action@v3
-        with:
-          file: deployment/dockerfiles/release.Dockerfile
-          context: .
-          load: true
-          tags: build-release
-          build-args: |
-            SECRET_NODE_TYPE=bootstrap
-            CHAIN_ID=secretdev-1
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Build LocalSecret Final Dev Image
-        uses: docker/build-push-action@v3
-        with:
-          file: deployment/dockerfiles/dev-image.Dockerfile
-          context: .
-          load: true
-          tags: ghcr.io/scrtlabs/localsecret:v0.0.0
-          build-args: |
-            SECRET_NODE_TYPE=bootstrap
-            CHAIN_ID=secretdev-1
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
       - name: Build Hermes
         run: |
           DOCKER_TAG=v0.0.0 make build-ibc-hermes
