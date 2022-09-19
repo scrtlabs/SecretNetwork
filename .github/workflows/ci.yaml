@@ -2,7 +2,6 @@ name: Tests
 
 on: [push]
 
-
 jobs:
   Enclave-Unit-Tests:
     runs-on: ubuntu-20.04
