@@ -191,7 +191,7 @@ pub fn validate_basic_msg(
     let mut validated_msg: Vec<u8>;
     let mut reply_params: Option<Vec<ReplyParams>> = None;
 
-    match data_for_validation.clone() {
+    match data_for_validation {
         Some(c) => {
             received_contract_hash.copy_from_slice(&c.as_slice()[0..HEX_ENCODED_HASH_SIZE]);
             let mut partial_msg = c[HEX_ENCODED_HASH_SIZE..].to_vec();

@@ -135,8 +135,8 @@ pub fn parse_message(
         },
         HandleType::HANDLE_TYPE_REPLY => {
             let orig_secret_msg = SecretMessage::from_slice(message)?;
-            let mut parsed_reply: Reply = serde_json::from_slice(&orig_secret_msg.msg.clone())
-                .map_err(|err| {
+            let mut parsed_reply: Reply =
+                serde_json::from_slice(&orig_secret_msg.msg).map_err(|err| {
                     warn!(
                     "reply got an error while trying to deserialize reply bytes into json {:?}: {}",
                     String::from_utf8_lossy(&orig_secret_msg.msg.clone()),

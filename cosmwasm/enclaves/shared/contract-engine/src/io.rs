@@ -167,10 +167,10 @@ fn encrypt_preserialized_string(
             let mut ser = vec![];
             ser.extend_from_slice(&v[0].recipient_contract_hash);
             if should_append_all_reply_params {
-                for i in 1..v.len() {
+                for item in v.iter().skip(1) {
                     ser.extend_from_slice(cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES);
-                    ser.extend_from_slice(&v[i].sub_msg_id.to_be_bytes());
-                    ser.extend_from_slice(v[i].recipient_contract_hash.as_slice());
+                    ser.extend_from_slice(&item.sub_msg_id.to_be_bytes());
+                    ser.extend_from_slice(item.recipient_contract_hash.as_slice());
                 }
             }
             ser.extend_from_slice(val.as_bytes());
@@ -746,7 +746,7 @@ pub fn encrypt_output(
                     let tmp_secret_msg = SecretMessage {
                         nonce: secret_msg.nonce,
                         user_public_key: secret_msg.user_public_key,
-                        msg: reply_as_vec.clone(),
+                        msg: reply_as_vec,
                     };
 
                     Some(Binary::from(
@@ -859,6 +859,7 @@ fn encrypt_v010_wasm_msg(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn encrypt_v1_wasm_msg(
     wasm_msg: &mut cw_types_v1::results::WasmMsg,
     reply_on: &ReplyOn,
