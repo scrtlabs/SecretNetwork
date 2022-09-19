@@ -72,7 +72,7 @@ jobs:
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=query-node, make build-testnet
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} make build-testnet
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
         with:
@@ -104,7 +104,7 @@ jobs:
           echo $API_KEY_MAINNET > api_key.txt
       - name: Build
         run: |
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=query-node, make build-mainnet-upgrade
+          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=production, make build-mainnet-upgrade
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
         with:

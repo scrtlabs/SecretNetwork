@@ -1,3 +1,4 @@
+sgx_sk.pem
 *.a
 *.deb
 Enclave_t.c
