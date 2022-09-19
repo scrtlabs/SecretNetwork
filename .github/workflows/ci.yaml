@@ -54,71 +54,69 @@ jobs:
           RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
           make clean-enclave
 
-  Build:
+  Build-Contracts:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
-      - name: Install Intel's SGX SDK
-        run: |
-          mkdir -p "$HOME/.sgxsdk"
-          cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
-          chmod +x "$SDK_BIN"
-          echo yes | ./"$SDK_BIN"
-      - name: Cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache xargo sysroot
-        uses: actions/cache@v1
-        with:
-          path: ~/.xargo
-          key: ${{ runner.os }}-xargo-sysroot
-      - name: Cache build artifacts
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/sccache
-          key: ${{ runner.os }}-sccache
-      - run: |
-          rustup component add rust-src clippy
-          cd cosmwasm/enclaves/execute/
-          rustup component add rust-src clippy
-      - name: Install xargo
-        run: |
-          cargo --version
-          rustc --version  
-          cargo +stable install xargo --version 0.3.25
-          xargo --version
+#      - uses: actions/setup-go@v2
+#        with:
+#          go-version: 1.19 # The Go version to download (if necessary) and use.
+#      - name: Install Intel's SGX SDK
+#        run: |
+#          mkdir -p "$HOME/.sgxsdk"
+#          cd "$HOME/.sgxsdk"
+#          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
+#          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+#          chmod +x "$SDK_BIN"
+#          echo yes | ./"$SDK_BIN"
+#      - name: Cache cargo registry
+#        uses: actions/cache@v1
+#        with:
+#          path: ~/.cargo/registry
+#          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+#      - name: Cache xargo sysroot
+#        uses: actions/cache@v1
+#        with:
+#          path: ~/.xargo
+#          key: ${{ runner.os }}-xargo-sysroot
+#      - name: Cache build artifacts
+#        uses: actions/cache@v1
+#        with:
+#          path: ~/.cache/sccache
+#          key: ${{ runner.os }}-sccache
+#      - run: |
+#          rustup component add rust-src clippy
+#          cd cosmwasm/enclaves/execute/
+#          rustup component add rust-src clippy
+#      - name: Install xargo
+#        run: |
+#          cargo --version
+#          rustc --version
+#          cargo +stable install xargo --version 0.3.25
+#          xargo --version
       - name: Download sccache
         run: |
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
-      - name: Create fake api keys
-        run: |
-          mkdir -p ias_keys/sw_dummy
-          mkdir -p ias_keys/develop
-          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
-          echo "not_a_key" > ias_keys/develop/spid.txt
-          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-          echo "not_a_key" > ias_keys/develop/api_key.txt
+#      - name: Create fake api keys
+#        run: |
+#          mkdir -p ias_keys/sw_dummy
+#          mkdir -p ias_keys/develop
+#          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
+#          echo "not_a_key" > ias_keys/develop/spid.txt
+#          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
+#          echo "not_a_key" > ias_keys/develop/api_key.txt
       - name: Install Requirements
         run: |
           rustup target add wasm32-unknown-unknown
-          go install github.com/jteeuwen/go-bindata/go-bindata@latest
-          go-bindata -version # check installation
           chmod +x ./scripts/install-wasm-tools.sh
           ./scripts/install-wasm-tools.sh
-      - name: Build Executable
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
-          SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
+#      - name: Build Executable
+#        run: |
+#          source "$HOME/.sgxsdk/sgxsdk/environment"
+#          make vendor
+#          SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
       - name: Build Contracts
         run: |
           make build-test-contract
@@ -127,10 +125,10 @@ jobs:
         with:
           name: erc20.wasm
           path: erc20.wasm
-      - uses: actions/upload-artifact@v2
-        with:
-          name: secretd
-          path: secretd
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          name: secretd
+#          path: secretd
       - uses: actions/upload-artifact@v2
         with:
           name: contract.wasm
@@ -143,14 +141,14 @@ jobs:
         with:
           name: ibc.wasm
           path: ./x/compute/internal/keeper/testdata/ibc/ibc.wasm
-      - uses: actions/upload-artifact@v2
-        with:
-          name: enclave
-          path: ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-      - uses: actions/upload-artifact@v2
-        with:
-          name: libgo_cosmwasm
-          path: ./go-cosmwasm/api/libgo_cosmwasm.so
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          name: enclave
+#          path: ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          name: libgo_cosmwasm
+#          path: ./go-cosmwasm/api/libgo_cosmwasm.so
       - uses: actions/upload-artifact@v2
         with:
           name: contract_with_floats.wasm
@@ -166,7 +164,7 @@ jobs:
 
   Go-Tests:
     runs-on: ubuntu-20.04
-    needs: Build
+    needs: [Build-Contracts, Build-LocalSecret]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -180,20 +178,33 @@ jobs:
           wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
-      - uses: actions/download-artifact@v2
+      - name: Download LocalSecret
+        uses: actions/download-artifact@v3
+        with:
+          name: localsecret
+          path: /tmp
+      - name: Load images
+        run: |
+          docker load --input /tmp/localsecret.tar
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp localsecret:v0.0.0 /usr/local/bin/secretd /opt/mount/secretd
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp localsecret:v0.0.0 /usr/lib/libgo_cosmwasm.so /opt/mount/libgo_cosmwasm.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
+      
+
+      - uses: actions/download-artifact@v3
         with:
           name: libgo_cosmwasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: enclave
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: contract.wasm
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: v1-contract.wasm
           path: ./x/compute/internal/keeper/testdata/v1-sanity-contract
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: ibc.wasm
           path: ./x/compute/internal/keeper/testdata/ibc
@@ -406,9 +417,6 @@ jobs:
       - name: Setup Fake API keys
         run: |
           echo not_a_key | tee {api_key,spid}.txt
-      - name: Build Hermes
-        run: |
-          DOCKER_TAG=v0.0.0 make build-ibc-hermes
       - name: Run integration tests
         run: |
           cd integration-tests
