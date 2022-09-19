@@ -109,9 +109,10 @@ pub fn validate_contract_key(
 
 pub struct ValidatedMessage {
     pub validated_msg: Vec<u8>,
-    pub reply_params: Option<ReplyParams>,
+    pub reply_params: Option<Vec<ReplyParams>>,
 }
 
+#[derive(Debug)]
 pub struct ReplyParams {
     pub recipient_contract_hash: Vec<u8>,
     pub sub_msg_id: u64,
@@ -121,14 +122,14 @@ pub struct ReplyParams {
 pub fn validate_msg(
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
-    contract_hash_for_validation: Option<Vec<u8>>,
+    data_for_validation: Option<Vec<u8>>,
     handle_type: Option<HandleType>,
 ) -> Result<ValidatedMessage, EnclaveError> {
     match handle_type {
-        None => validate_basic_msg(msg, contract_hash, contract_hash_for_validation),
+        None => validate_basic_msg(msg, contract_hash, data_for_validation),
         Some(h) => match is_ibc_msg(h.clone()) {
-            false => validate_basic_msg(msg, contract_hash, contract_hash_for_validation),
-            true => validate_ibc_msg(msg, contract_hash, contract_hash_for_validation, h),
+            false => validate_basic_msg(msg, contract_hash, data_for_validation),
+            true => validate_ibc_msg(msg, contract_hash, data_for_validation, h),
         },
     }
 }
@@ -136,7 +137,7 @@ pub fn validate_msg(
 pub fn validate_ibc_msg(
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
-    contract_hash_for_validation: Option<Vec<u8>>,
+    data_for_validation: Option<Vec<u8>>,
     handle_type: HandleType,
 ) -> Result<ValidatedMessage, EnclaveError> {
     match handle_type {
@@ -154,7 +155,7 @@ pub fn validate_ibc_msg(
             let validated_msg = validate_basic_msg(
                 parsed_ibc_packet.packet.data.as_slice(),
                 contract_hash,
-                contract_hash_for_validation,
+                data_for_validation,
             )?;
             parsed_ibc_packet.packet.data = validated_msg.validated_msg.as_slice().into();
 
@@ -179,18 +180,50 @@ pub fn validate_ibc_msg(
 pub fn validate_basic_msg(
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
-    contract_hash_for_validation: Option<Vec<u8>>,
+    data_for_validation: Option<Vec<u8>>,
 ) -> Result<ValidatedMessage, EnclaveError> {
-    if contract_hash_for_validation.is_none() && msg.len() < HEX_ENCODED_HASH_SIZE {
+    if data_for_validation.is_none() && msg.len() < HEX_ENCODED_HASH_SIZE {
         warn!("Malformed message - expected contract code hash to be prepended to the msg");
         return Err(EnclaveError::ValidationFailure);
     }
 
     let mut received_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
     let mut validated_msg: Vec<u8>;
-    match contract_hash_for_validation {
+    let mut reply_params: Option<Vec<ReplyParams>> = None;
+
+    match data_for_validation.clone() {
         Some(c) => {
             received_contract_hash.copy_from_slice(&c.as_slice()[0..HEX_ENCODED_HASH_SIZE]);
+            let mut partial_msg = c[HEX_ENCODED_HASH_SIZE..].to_vec();
+            while partial_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
+                && partial_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())]
+                    == *REPLY_ENCRYPTION_MAGIC_BYTES
+            {
+                if reply_params.is_none() {
+                    reply_params = Some(vec![]);
+                }
+
+                partial_msg = partial_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
+
+                let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
+                sub_msg_deserialized.copy_from_slice(&partial_msg[..SIZE_OF_U64]);
+
+                let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_deserialized);
+                partial_msg = partial_msg[SIZE_OF_U64..].to_vec();
+
+                let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
+                    [0u8; HEX_ENCODED_HASH_SIZE];
+                reply_recipient_contract_hash
+                    .copy_from_slice(&partial_msg[0..HEX_ENCODED_HASH_SIZE]);
+
+                reply_params.as_mut().unwrap().push(ReplyParams {
+                    recipient_contract_hash: reply_recipient_contract_hash.to_vec(),
+                    sub_msg_id,
+                });
+
+                partial_msg = partial_msg[HEX_ENCODED_HASH_SIZE..].to_vec();
+            }
+
             validated_msg = msg.to_vec();
         }
         None => {
@@ -210,9 +243,13 @@ pub fn validate_basic_msg(
         return Err(EnclaveError::ValidationFailure);
     }
 
-    if validated_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
+    while validated_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
         && validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == *REPLY_ENCRYPTION_MAGIC_BYTES
     {
+        if reply_params.is_none() {
+            reply_params = Some(vec![]);
+        }
+
         validated_msg = validated_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
 
         let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
@@ -224,18 +261,18 @@ pub fn validate_basic_msg(
         let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
             [0u8; HEX_ENCODED_HASH_SIZE];
         reply_recipient_contract_hash.copy_from_slice(&validated_msg[0..HEX_ENCODED_HASH_SIZE]);
-        return Ok(ValidatedMessage {
-            validated_msg: validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
-            reply_params: Some(ReplyParams {
-                recipient_contract_hash: reply_recipient_contract_hash.to_vec(),
-                sub_msg_id,
-            }),
+
+        reply_params.as_mut().unwrap().push(ReplyParams {
+            recipient_contract_hash: reply_recipient_contract_hash.to_vec(),
+            sub_msg_id,
         });
+
+        validated_msg = validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec();
     }
 
     Ok(ValidatedMessage {
         validated_msg,
-        reply_params: None,
+        reply_params,
     })
 }
 
