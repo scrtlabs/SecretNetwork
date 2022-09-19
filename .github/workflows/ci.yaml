@@ -2,7 +2,6 @@ name: Tests
 
 on: [push]
 
-
 jobs:
   Enclave-Unit-Tests:
     runs-on: ubuntu-20.04
@@ -334,9 +333,6 @@ jobs:
         run: |
           docker load --input /tmp/localsecret.tar
           docker load --input /tmp/hermes.tar
-      - name: Setup Fake API keys
-        run: |
-          echo not_a_key | tee {api_key,spid}.txt
       - name: Run integration tests
         run: |
           cd integration-tests
