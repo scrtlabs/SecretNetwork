@@ -102,6 +102,8 @@ const (
 	hackAtomContract            = "hackatom.wasm"
 	v010Contract                = "contract.wasm"
 	v1Contract                  = "v1-contract.wasm"
+	v1Contract2                 = "v1-contract-2.wasm"
+	v1Contract3                 = "v1-contract-3.wasm"
 	plaintextLogsContract       = "plaintext_logs.wasm"
 	ibcContract                 = "ibc.wasm"
 	v010WithFloats              = "contract_with_floats.wasm"
@@ -115,6 +117,8 @@ var TestContractPaths = map[string]string{
 	hackAtomContract:            filepath.Join(".", contractPath, hackAtomContract),
 	v010Contract:                filepath.Join(".", contractPath, v010Contract),
 	v1Contract:                  filepath.Join(".", contractPath, v1Contract),
+	v1Contract2:                 filepath.Join(".", contractPath, v1Contract2),
+	v1Contract3:                 filepath.Join(".", contractPath, v1Contract3),
 	plaintextLogsContract:       filepath.Join(".", contractPath, plaintextLogsContract),
 	ibcContract:                 filepath.Join(".", contractPath, ibcContract),
 	v010WithFloats:              filepath.Join(".", contractPath, v010WithFloats),

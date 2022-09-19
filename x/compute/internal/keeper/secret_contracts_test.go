@@ -4245,6 +4245,43 @@ func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 	require.Equal(t, uint32(20), binary.BigEndian.Uint32(data))
 }
 
+func TestV1ExecuteChainOf3Reply(t *testing.T) {
+	ctx, keeper, codeID1, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	wasmCode2, err := os.ReadFile(TestContractPaths[v1Contract2])
+	require.NoError(t, err)
+
+	codeID2, err := keeper.Create(ctx, walletA, wasmCode2, "", "")
+	require.NoError(t, err)
+
+	codeInfo2, err := keeper.GetCodeInfo(ctx, codeID2)
+	require.NoError(t, err)
+	codeHash2 := hex.EncodeToString(codeInfo2.CodeHash)
+
+	wasmCode3, err := os.ReadFile(TestContractPaths[v1Contract3])
+	require.NoError(t, err)
+
+	codeID3, err := keeper.Create(ctx, walletA, wasmCode3, "", "")
+	require.NoError(t, err)
+
+	codeInfo3, err := keeper.GetCodeInfo(ctx, codeID3)
+	require.NoError(t, err)
+	codeHash3 := hex.EncodeToString(codeInfo3.CodeHash)
+
+	_, _, contractAddress1, _, err := initHelper(t, keeper, ctx, codeID1, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	_, _, contractAddress2, _, err := initHelper(t, keeper, ctx, codeID2, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	require.Empty(t, err)
+	_, _, contractAddress3, _, err := initHelper(t, keeper, ctx, codeID3, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	require.Empty(t, err)
+
+	msg := fmt.Sprintf(`{"exec_chain_of3":{"address2":"%s", "code_hash2":"%s", "address3":"%s", "code_hash3":"%s"}}`, contractAddress2, codeHash2, contractAddress3, codeHash3)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress1, walletA, privKeyA, msg, true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+	require.Equal(t, "\"4444\"", string(data))
+}
+
 func TestV1InitV010ContractNoReply(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 

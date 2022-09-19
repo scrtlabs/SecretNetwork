@@ -1239,7 +1239,7 @@ pub fn increment(env: Env, deps: DepsMut, c: u64) -> StdResult<Response> {
             msg: CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.into_string(),
                 code_hash: env.contract.code_hash,
-                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                msg: Binary::from("{\"increment\":{\"addition\":6}}".as_bytes().to_vec()),
                 funds: vec![],
             }),
             gas_limit: Some(10000000_u64),

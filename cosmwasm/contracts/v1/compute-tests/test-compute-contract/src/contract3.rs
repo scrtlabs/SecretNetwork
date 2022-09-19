@@ -583,7 +583,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             address3,
             code_hash3,
         } => {
-            let msg = "{\"exec_chain_of2\":{\"address3\":\"".to_string()
+            let msg = "{\"exec_chain_of_3\":{\"address3\":\"".to_string()
                 + address3.as_str()
                 + "\", \"code_hash3\":\"".to_string().as_str()
                 + code_hash3.as_str()
@@ -1239,7 +1239,7 @@ pub fn increment(env: Env, deps: DepsMut, c: u64) -> StdResult<Response> {
             msg: CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.into_string(),
                 code_hash: env.contract.code_hash,
-                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                msg: Binary::from("{\"increment\":{\"addition\":7}}".as_bytes().to_vec()),
                 funds: vec![],
             }),
             gas_limit: Some(10000000_u64),
