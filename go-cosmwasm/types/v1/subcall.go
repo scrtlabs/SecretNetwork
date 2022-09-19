@@ -74,9 +74,10 @@ type SubMsg struct {
 }
 
 type Reply struct {
-	ID              []byte       `json:"id"`
-	Result          SubMsgResult `json:"result"`
-	WasMsgEncrypted bool         `json:"was_msg_encrypted"`
+	ID                  []byte       `json:"id"`
+	Result              SubMsgResult `json:"result"`
+	WasOrigMsgEncrypted bool         `json:"was_orig_msg_encrypted"`
+	IsEncrypted         bool         `json:"is_encrypted"`
 }
 
 // SubcallResult is the raw response we return from the sdk -> reply after executing a SubMsg.

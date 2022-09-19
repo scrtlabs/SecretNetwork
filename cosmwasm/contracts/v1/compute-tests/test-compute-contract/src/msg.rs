@@ -159,6 +159,17 @@ pub enum ExecuteMsg {
     MultipleSubMessagesNoReplyWithPanic {},
     MultipleSubMessagesWithReplyWithError {},
     MultipleSubMessagesWithReplyWithPanic {},
+    ExecChainOf3 {
+        address2: String,
+        code_hash2: String,
+        address3: String,
+        code_hash3: String,
+    },
+    ExecChainOf2 {
+        address3: String,
+        code_hash3: String,
+    },
+    ExecChain {},
     InitV10 {
         code_id: u64,
         code_hash: String,

@@ -196,8 +196,8 @@ pub fn handle(
         should_encrypt_output,
         secret_msg,
         decrypted_msg,
-        contract_hash_for_validation,
-    } = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
+        data_for_validation,
+    } = parse_message(msg, &parsed_handle_type)?;
 
     let canonical_sender_address = match to_canonical(sender) {
         Ok(can) => can,
@@ -221,12 +221,12 @@ pub fn handle(
     }
 
     let mut validated_msg = decrypted_msg.clone();
-    let mut reply_params: Option<ReplyParams> = None;
+    let mut reply_params: Option<Vec<ReplyParams>> = None;
     if was_msg_encrypted {
         let x = validate_msg(
             &decrypted_msg,
             &contract_hash,
-            contract_hash_for_validation,
+            data_for_validation,
             Some(parsed_handle_type.clone()),
         )?;
         validated_msg = x.validated_msg;
