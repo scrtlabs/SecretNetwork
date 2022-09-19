@@ -213,9 +213,9 @@ jobs:
       - name: Setup Files
         run: |
           find "$(pwd)" -name \*.wasm
-          cp /opt/mount/secretd /usr/bin/secretd
-          cp /opt/mount/libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
-          cp /opt/mount/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
+          cp secretd /usr/bin/secretd
+          cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
+          cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
           cp contract.wasm ./x/compute/internal/keeper/testdata/test-contract/contract.wasm
           cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/test-contract/too-high-initial-memory.wasm
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/test-contract/contract_with_floats.wasm
