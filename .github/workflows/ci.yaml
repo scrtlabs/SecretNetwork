@@ -3,6 +3,13 @@ name: Tests
 on: [push]
 
 jobs:
+
+  services:
+    registry:
+      image: registry:2
+      ports:
+        - 5000:5000
+
   Enclave-Unit-Tests:
     runs-on: ubuntu-20.04
     steps:
@@ -313,8 +320,8 @@ jobs:
           build-args: |
             FEATURES=debug-print
             SGX_MODE=SW
-          load: true
-          tags: rust-go-base-image
+          push: true
+          tags: localhost:5000/scrt-enclave-secretd:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build LocalSecret Release
@@ -322,12 +329,12 @@ jobs:
         with:
           file: deployment/dockerfiles/release.Dockerfile
           context: .
-          load: true
-          pull: true
-          tags: build-release
+          push: true
+          tags: localhost:5000/release:latest
           build-args: |
             SECRET_NODE_TYPE=bootstrap
             CHAIN_ID=secretdev-1
+            SCRT_BIN_IMAGE=localhost:5000/scrt-enclave-secretd:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build LocalSecret Final Dev Image
@@ -335,8 +342,10 @@ jobs:
         with:
           file: deployment/dockerfiles/dev-image.Dockerfile
           context: .
-          load: true
+          pull: true
           tags: ghcr.io/scrtlabs/localsecret:v0.0.0
+          build-args: |
+            SCRT_BASE_IMAGE=localhost:5000/release:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

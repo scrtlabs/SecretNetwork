@@ -1,4 +1,5 @@
-FROM baiduxlab/sgx-rust:2004-1.1.3 AS build-env-rust-go
+ARG SCRT_BASE_IMAGE=baiduxlab/sgx-rust:2004-1.1.3
+FROM $SCRT_BASE_IMAGE AS compile-enclave
 
 ENV PATH="/root/.cargo/bin:$PATH"
 
