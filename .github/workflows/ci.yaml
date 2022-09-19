@@ -349,6 +349,12 @@ jobs:
             SCRT_BASE_IMAGE=localhost:5000/release:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/localsecret.tar
+      - name: Upload Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: localsecret
+          path: /tmp/localsecret.tar
 
   Build-Hermes:
     runs-on: ubuntu-20.04
@@ -371,12 +377,32 @@ jobs:
             CHAIN_ID=secretdev-1
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/hermes.tar
+      - name: Upload Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: hermes
+          path: /tmp/hermes.tar
 
   Integration-Tests:
     runs-on: ubuntu-20.04
     needs: [Build-LocalSecret, Build-Hermes]
     steps:
       - uses: actions/checkout@v2
+      - name: Download Hermes
+        uses: actions/download-artifact@v3
+        with:
+          name: hermes
+          path: /tmp
+      - name: Download LocalSecret
+        uses: actions/download-artifact@v3
+        with:
+          name: localsecret
+          path: /tmp
+      - name: Load images
+        run: |
+          docker load --input /tmp/localsecret.tar
+          docker load --input /tmp/hermes.tar
       - name: Setup Fake API keys
         run: |
           echo not_a_key | tee {api_key,spid}.txt
