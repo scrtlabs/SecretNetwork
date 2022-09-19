@@ -271,6 +271,9 @@ jobs:
           context: .
           push: true
           tags: localhost:5000/release:latest
+          secrets: |
+            API_KEY=00000000000000000000000000000000
+            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
           build-args: |
             SECRET_NODE_TYPE=bootstrap
             CHAIN_ID=secretdev-1

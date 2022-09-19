@@ -16,8 +16,8 @@ jobs:
         db_backend: [rocksdb, goleveldb]
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
-      SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
-      API_KEY_TESTNET: ${{ secrets.API_KEY_TESTNET }}
+      SPID: ${{ secrets.SPID_TESTNET }}
+      API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
       - uses: actions/checkout@v3
       - name: Declare Commit Variables
@@ -62,10 +62,6 @@ jobs:
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
-      - name: Create api keys
-        run: |
-          echo $SPID_TESTNET > spid.txt
-          echo $API_KEY_TESTNET > api_key.txt
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
@@ -86,8 +82,8 @@ jobs:
       matrix:
         db_backend: [goleveldb, rocksdb]
     env: # Or as an environment variable
-      SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
-      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
+      SPID: ${{ secrets.SPID_MAINNET }}
+      API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
@@ -98,10 +94,6 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
-      - name: Create api keys
-        run: |
-          echo $SPID_MAINNET > spid.txt
-          echo $API_KEY_MAINNET > api_key.txt
       - name: Build
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=query-node, make build-mainnet-upgrade
@@ -186,7 +178,7 @@ jobs:
       - name: Build dev docker image
         shell: bash
         run: |
-          DOCKER_TAG=${{ steps.get_version.outputs.VERSION }} make build-localsecret
+          DOCKER_TAG=${{ steps.get_version.outputs.VERSION }} make localsecret
       - name: Push docker image
         run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
