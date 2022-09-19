@@ -307,6 +307,8 @@ jobs:
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: network=host
       - uses: actions/checkout@v2
       - name: Setup Fake API keys
         run: |
@@ -320,7 +322,7 @@ jobs:
             FEATURES=debug-print
             SGX_MODE=SW
           push: true
-          tags: registry:5000/scrt-enclave-secretd:latest
+          tags: localhost:5000/scrt-enclave-secretd:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build LocalSecret Release
@@ -329,7 +331,7 @@ jobs:
           file: deployment/dockerfiles/release.Dockerfile
           context: .
           push: true
-          tags: registry:5000/release:latest
+          tags: localhost:5000/release:latest
           build-args: |
             SECRET_NODE_TYPE=bootstrap
             CHAIN_ID=secretdev-1
@@ -344,7 +346,7 @@ jobs:
           load: true
           tags: ghcr.io/scrtlabs/localsecret:v0.0.0
           build-args: |
-            SCRT_BASE_IMAGE=registry:5000/release:latest
+            SCRT_BASE_IMAGE=localhost:5000/release:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
