@@ -1174,6 +1174,39 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::GetEnv {} => Ok(Response::new()
             .add_attribute("env", serde_json_wasm::to_string(&env).unwrap())
             .add_attribute("info", serde_json_wasm::to_string(&info).unwrap())),
+        ExecuteMsg::ExecuteMultipleContracts { details } => {
+            if details.len() == 0 {
+                return Ok(Response::default().set_data(env.contract.address.as_bytes()));
+            }
+
+            if details[0].should_error {
+                return Err(StdError::generic_err("Error by request"));
+            }
+
+            Ok(Response::new()
+                .add_submessage(SubMsg {
+                    id: details[0].msg_id,
+                    msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                        code_hash: details[0].contract_hash.clone(),
+                        contract_addr: details[0].contract_address.clone(),
+                        msg: Binary(
+                            format!(
+                                r#"{{"execute_multiple_contracts":{{"details":{}}}}}"#,
+                                serde_json_wasm::to_string(&details[1..].to_vec()).unwrap(),
+                            )
+                            .into_bytes(),
+                        ),
+                        funds: vec![],
+                    })
+                    .into(),
+                    reply_on: match details[0].msg_id {
+                        0 => ReplyOn::Never,
+                        _ => ReplyOn::Always,
+                    },
+                    gas_limit: None,
+                })
+                .set_data(details[0].data.as_bytes()))
+        }
     }
 }
 
@@ -2025,6 +2058,15 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (8001, SubMsgResult::Err(_)) => {
             Err(StdError::generic_err(format!("Funds message failed",)))
         }
+        (9000, SubMsgResult::Ok(o)) => match o.data {
+            None => Ok(Response::default().set_data(env.contract.address.as_bytes())),
+            Some(d) => {
+                let new_data =
+                    String::from_utf8_lossy(d.as_slice()) + " -> " + env.contract.address.as_str();
+                Ok(Response::default().set_data(new_data.as_bytes()))
+            }
+        },
+        (9000, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Reply chain failed",))),
 
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

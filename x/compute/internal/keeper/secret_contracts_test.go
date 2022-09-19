@@ -98,6 +98,26 @@ func uploadCode(ctx sdk.Context, t *testing.T, keeper Keeper, wasmPath string, w
 	return codeID, codeHash
 }
 
+func uploadChainCode(ctx sdk.Context, t *testing.T, keeper Keeper, wasmPath string, walletA sdk.AccAddress, bytesCount uint64) (uint64, string) {
+	wasmCode, err := os.ReadFile(wasmPath)
+
+	toBeReplaced := "Gas submessage"
+	replaceBy := strings.Replace(toBeReplaced, "G", fmt.Sprintf("%d", bytesCount), 1)
+	wasmCode = []byte(strings.Replace(string(wasmCode), toBeReplaced, replaceBy, 1))
+
+	require.NoError(t, err)
+
+	codeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	codeHash := hex.EncodeToString(codeInfo.CodeHash)
+
+	return codeID, codeHash
+}
+
 func setupBasicTest(t *testing.T, additionalCoinsInWallets sdk.Coins) (sdk.Context, Keeper, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
 	encodingConfig := MakeEncodingConfig()
 	var transferPortSource types.ICS20TransferPortSource
@@ -120,6 +140,18 @@ func setupTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins
 	codeID, codeHash := uploadCode(ctx, t, keeper, wasmPath, walletA)
 
 	return ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB
+}
+
+func setupChainTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins, amount uint64) (sdk.Context, Keeper, []uint64, []string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
+	ctx, keeper, walletA, privKeyA, walletB, privKeyB := setupBasicTest(t, additionalCoinsInWallets)
+
+	codeIds := make([]uint64, amount)
+	codeHashes := make([]string, amount)
+	for i := uint64(0); i < amount; i++ {
+		codeIds[i], codeHashes[i] = uploadChainCode(ctx, t, keeper, wasmPath, walletA, i)
+	}
+
+	return ctx, keeper, codeIds, codeHashes, walletA, privKeyA, walletB, privKeyB
 }
 
 // getDecryptedWasmEvents gets all "wasm" events and decrypt what's necessary
@@ -3597,6 +3629,50 @@ func TestV1ReplySanity(t *testing.T) {
 	e := json.Unmarshal([]byte(queryRes), &resp)
 	require.NoError(t, e)
 	require.Equal(t, uint32(1337), resp.Get.Count)
+}
+
+type ExecuteDetails struct {
+	ContractAddress string `json:"contract_address"`
+	ContractHash    string `json:"contract_hash"`
+	ShouldError     bool   `json:"should_error"`
+	MsgId           uint64 `json:"msg_id"`
+	Data            string `json:"data"`
+}
+
+func TestV1ReplyChainAllSuccess(t *testing.T) {
+	amountOfContracts := uint64(5)
+	ctx, keeper, codeIds, codeHashes, walletA, privKeyA, _, _ := setupChainTest(t, TestContractPaths[v1Contract], sdk.NewCoins(), amountOfContracts)
+	contractAddresses := make([]sdk.AccAddress, amountOfContracts)
+
+	for i := uint64(0); i < amountOfContracts; i++ {
+		_, _, contractAddresses[i], _, _ = initHelper(t, keeper, ctx, codeIds[i], walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	}
+
+	executeDetails := make([]ExecuteDetails, amountOfContracts-1)
+	for i := uint64(1); i < amountOfContracts; i++ {
+		executeDetails[i-1] = ExecuteDetails{
+			ContractAddress: contractAddresses[i].String(),
+			ContractHash:    codeHashes[i],
+			ShouldError:     false,
+			MsgId:           9000,
+			Data:            fmt.Sprintf("%d", i),
+		}
+	}
+
+	marshaledDetails, err := json.Marshal(executeDetails)
+	require.Empty(t, err)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddresses[0], walletA, privKeyA, fmt.Sprintf(`{"execute_multiple_contracts":{"details": %s}}`, string(marshaledDetails)), true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+
+	expectedFlow := ""
+	for i := uint64(amountOfContracts - 1); i > 0; i-- {
+		expectedFlow += contractAddresses[i].String() + " -> "
+	}
+
+	expectedFlow += contractAddresses[0].String()
+
+	require.Equal(t, expectedFlow, string(data))
 }
 
 func TestInitCreateNewContract(t *testing.T) {
