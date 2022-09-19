@@ -2376,10 +2376,10 @@ safe-buffer@~5.1.1:
   resolved "https://registry.yarnpkg.com/safe-buffer/-/safe-buffer-5.1.2.tgz#991ec69d296e0313747d59bdfd2b745c35f8828d"
   integrity sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g==
 
-secretjs@1.3.0-beta.23:
-  version "1.3.0-beta.23"
-  resolved "https://registry.yarnpkg.com/secretjs/-/secretjs-1.3.0-beta.23.tgz#b956d2479cc6b06c1fed3623ae19a8ba7c540f8a"
-  integrity sha512-zXL0t1h68it1+77+kobAq4JcIWV7EUtHfP2W2Vpc9MpAGLUeJ5XgfSNs6uO4IYq7viIEL7idTTls/7ljWBb8xw==
+secretjs@^1.4.0-alpha.2:
+  version "1.4.0-alpha.2"
+  resolved "https://registry.yarnpkg.com/secretjs/-/secretjs-1.4.0-alpha.2.tgz#cba71a60a0cf59445db217daeee1fda802a165e9"
+  integrity sha512-uIdbISIELOqCMyg3K9kDJsvfk4hRYR1mVSFv1FJa39bZ3dyer2wgLdL+8ZH9mKqwCaRSK53Juk/rxj/HIyKSHA==
   dependencies:
     "@cosmjs/encoding" "0.27.1"
     "@cosmjs/math" "0.27.1"

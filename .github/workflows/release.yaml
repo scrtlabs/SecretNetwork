@@ -26,7 +26,7 @@ jobs:
         run: |
           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
@@ -38,17 +38,17 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -74,7 +74,7 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=query-node, make build-testnet
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
@@ -95,7 +95,7 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Create api keys
@@ -106,13 +106,13 @@ jobs:
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=query-node, make build-mainnet-upgrade
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - name: Log in to the Container registry
         if: ${{ matrix.db_backend == 'goleveldb' }}
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -128,33 +128,36 @@ jobs:
         os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Build CLI
         shell: bash
         run: |
           make build_cli
           cp "secretcli" "secretcli-$RUNNER_OS"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretcli-${{runner.os}}
           path: secretcli-${{runner.os}}
 
-  x-build-cli:
+  MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
-          go install github.com/crazy-max/xgo@latest
+          go install github.com/crazy-max/xgo@v0.17.0
           xgo || true # check installation
-      - name: Build CLI
+      - name: Build MacOS CLI
         shell: bash
         run: |
           make build_macos_arm64_cli
           cp "secretcli-macos-arm64" "secretcli-MacOS-arm64"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretcli-MacOS-arm64
           path: secretcli-MacOS-arm64
@@ -170,7 +173,7 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - name: Log in to the Container registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -188,7 +191,8 @@ jobs:
         run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
   Release:
-    needs: [native-build-cli, build-deb-testnet, build-deb-mainnet, x-build-cli]
+    needs:
+      [native-build-cli, build-deb-testnet, build-deb-mainnet, MacOS-ARM64-CLI]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -200,28 +204,28 @@ jobs:
         shell: bash
         run: |
           echo "::set-output name=IS_PRE_RELEASE::$(echo "${{ steps.get_version.outputs.VERSION }}" | awk 'BEGIN{prerelease="false"} /beta|alpha/{prerelease="true"} END{print prerelease}')"
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretcli-Linux
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretcli-macOS
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretcli-Windows
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretcli-MacOS-arm64
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
       - name: Release

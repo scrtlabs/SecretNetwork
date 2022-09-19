@@ -3,18 +3,20 @@ use serde::{Deserialize, Serialize};
 pub use super::addresses::Addr;
 pub use super::coins::Coin;
 pub use super::timestamp::Timestamp;
+pub use cw_types_v010::types::TransactionInfo;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Env {
     pub block: BlockInfo,
     pub contract: ContractInfo,
+    pub transaction: Option<TransactionInfo>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct BlockInfo {
     /// The height of a block is the number of blocks preceding it in the blockchain.
     pub height: u64,
-    /// Absolute time of the block creation in seconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
+    /// Absolute time of the block creation in nanoseconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
     ///
     /// The source of this is the [BFT Time in Tendermint](https://docs.tendermint.com/master/spec/consensus/bft-time.html),
     /// which has the same nanosecond precision as the `Timestamp` type.

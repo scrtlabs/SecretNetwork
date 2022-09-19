@@ -262,7 +262,7 @@ func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1w
 		ReplyOn:  v1wasmTypes.ReplyNever,
 	}
 
-	if msg.Bank != nil {
+	if msg.Bank != nil { //nolint:gocritic
 		if msg.Bank.Send.FromAddress != contractAddress {
 			return v1wasmTypes.SubMsg{}, fmt.Errorf("contract doesn't have permission to send funds from another account (using BankMsg)")
 		}
@@ -579,15 +579,15 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 // QuerySmart queries the smart contract itself.
 func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
-	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, false)
+	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, 1)
 }
 
 // QuerySmartRecursive queries the smart contract itself. This should only be called when running inside another query recursively.
-func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
-	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, true)
+func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, queryDepth uint32, useDefaultGasLimit bool) ([]byte, error) {
+	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, queryDepth)
 }
 
-func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, req []byte, useDefaultGasLimit bool, recursive bool) ([]byte, error) {
+func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, req []byte, useDefaultGasLimit bool, queryDepth uint32) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "query")
 
 	if useDefaultGasLimit {
@@ -618,7 +618,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 		contractAddress,
 		contractKey,
 	)
-	params.Recursive = recursive
+	params.QueryDepth = queryDepth
 
 	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, req, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)
@@ -808,7 +808,7 @@ func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo
 	}
 }
 
-func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
+func (k Keeper) GetWasm(ctx sdk.Context, codeID uint64) ([]byte, error) {
 	store := ctx.KVStore(k.storeKey)
 	var codeInfo types.CodeInfo
 	codeInfoBz := store.Get(types.GetCodeKey(codeID))

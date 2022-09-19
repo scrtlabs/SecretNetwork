@@ -51,6 +51,13 @@ trusting_period = '79s'
 trust_threshold = { numerator = '1', denominator = '3' }
 address_type = { derivation = 'cosmos' }
 
+#[chains.packet_filter]
+#policy = 'allow'
+#list = [
+#    ['wasm.*', '*'],
+#    ['transfer', '*']
+#]
+
 [[chains]]
 id = 'secretdev-2'
 rpc_addr = 'http://localsecret-2:26657'
@@ -72,3 +79,10 @@ max_block_time = '10s'
 trusting_period = '79s'
 trust_threshold = { numerator = '1', denominator = '3' }
 address_type = { derivation = 'cosmos' }
+
+#[chains.packet_filter]
+#policy = 'allow'
+#list = [
+#    ['wasm.*', '*'],
+#    ['transfer', '*']
+#]

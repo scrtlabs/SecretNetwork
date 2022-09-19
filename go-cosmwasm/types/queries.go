@@ -18,18 +18,18 @@ type ContractQueryResponse struct {
 //-------- Querier -----------
 
 type Querier interface {
-	Query(request QueryRequest, gasLimit uint64) ([]byte, error)
+	Query(request QueryRequest, queryDepth uint32, gasLimit uint64) ([]byte, error)
 	GasConsumed() uint64
 }
 
 // this is a thin wrapper around the desired Go API to give us types closer to Rust FFI
-func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResult {
+func RustQuery(querier Querier, binRequest []byte, queryDepth uint32, gasLimit uint64) QuerierResult {
 	var request QueryRequest
 	err := json.Unmarshal(binRequest, &request)
 	if err != nil {
 		return ToQuerierResult(nil, UnsupportedRequest{err.Error()})
 	}
-	bz, err := querier.Query(request, gasLimit)
+	bz, err := querier.Query(request, queryDepth, gasLimit)
 	return ToQuerierResult(bz, err)
 }
 
@@ -262,16 +262,6 @@ type RawQuery struct {
 type ContractInfoQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
-}
-
-type ContractInfoResponse struct {
-	CodeID  uint64 `json:"code_id"`
-	Creator string `json:"creator"`
-	// Set to the admin who can migrate contract, if any
-	Admin  string `json:"admin,omitempty"`
-	Pinned bool   `json:"pinned"`
-	// Set if the contract is IBC enabled
-	IBCPort string `json:"ibc_port,omitempty"`
 }
 
 type DistQuery struct {
@@ -529,4 +519,14 @@ func (d *ProposalsResponse) UnmarshalJSON(data []byte) error {
 	}
 	d.Proposals = raw
 	return nil
+}
+
+type ContractInfoResponse struct {
+	CodeID  uint64 `json:"code_id"`
+	Creator string `json:"creator"`
+	// Set to the admin who can migrate contract, if any
+	Admin  string `json:"admin,omitempty"`
+	Pinned bool   `json:"pinned"`
+	// Set if the contract is IBC enabled
+	IBCPort string `json:"ibc_port,omitempty"`
 }

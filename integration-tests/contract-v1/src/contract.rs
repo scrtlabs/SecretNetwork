@@ -1,16 +1,26 @@
+use crate::ibc::PACKET_LIFETIME;
 use cosmwasm_std::{
     entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse,
     AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse,
     ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps,
-    DepsMut, DistributionMsg, Empty, Env, GovMsg, IbcMsg, IbcQuery, ListChannelsResponse,
-    MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError,
-    StdResult, ValidatorResponse, WasmMsg, WasmQuery,
+    DepsMut, DistributionMsg, Empty, Env, Event, GovMsg, IbcMsg, IbcQuery, IbcTimeout,
+    ListChannelsResponse, MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg,
+    StakingQuery, StdError, StdResult, ValidatorResponse, WasmMsg, WasmQuery,
 };
 
-use crate::msg::{Msg, QueryMsg};
+use crate::msg::{Msg, PacketMsg, QueryMsg};
+use crate::state::{
+    ack_store, ack_store_read, channel_store, channel_store_read, receive_store,
+    receive_store_read, timeout_store, timeout_store_read,
+};
 
 #[entry_point]
 pub fn instantiate(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResult<Response> {
+    channel_store(deps.storage).save(&"no channel yet".to_string())?;
+    ack_store(deps.storage).save(&"no ack yet".to_string())?;
+    receive_store(deps.storage).save(&"no receive yet".to_string())?;
+    timeout_store(deps.storage).save(&"no timeout yet".to_string())?;
+
     return handle_msg(deps, env, info, msg);
 }
 
@@ -19,15 +29,30 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResul
     return handle_msg(deps, env, info, msg);
 }
 
-fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdResult<Response> {
+fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResult<Response> {
     match msg {
         Msg::Nop {} => {
-            return Ok(Response::new());
+            return Ok(Response::new().set_data(vec![137, 137].as_slice()));
         }
         Msg::BankMsgSend { to_address, amount } => {
             return Ok(
                 Response::new().add_message(CosmosMsg::Bank(BankMsg::Send { to_address, amount }))
             );
+        }
+        Msg::BankMsgBurn { amount } => {
+            return Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Burn { amount })));
+        }
+        Msg::SendIbcPacket { message } => {
+            let channel_id = channel_store_read(deps.storage).load()?;
+            let packet = PacketMsg::Message {
+                value: channel_id + &message,
+            };
+
+            return Ok(Response::new().add_message(IbcMsg::SendPacket {
+                channel_id: channel_store_read(deps.storage).load()?,
+                data: to_binary(&packet)?,
+                timeout: IbcTimeout::with_timestamp(env.block.time.plus_seconds(PACKET_LIFETIME)),
+            }));
         }
         Msg::StargateMsg { type_url, value } => {
             return Ok(Response::new().add_message(CosmosMsg::Stargate { type_url, value }));
@@ -61,21 +86,27 @@ fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdRes
                 })),
             );
         }
-        Msg::GovVote { proposal_id, vote } => {
-            return Ok(
-                Response::new().add_message(CosmosMsg::Gov(GovMsg::Vote { proposal_id, vote }))
-            );
-        }
-        Msg::DistributionMsgSetWithdrawAddress { address } => {
-            return Ok(Response::new().add_message(CosmosMsg::Distribution(
-                DistributionMsg::SetWithdrawAddress { address },
-            )));
-        }
-        Msg::DistributionMsgWithdrawDelegatorReward { validator } => {
+
+        Msg::StakingMsgWithdraw { validator } => {
             return Ok(Response::new().add_message(CosmosMsg::Distribution(
                 DistributionMsg::WithdrawDelegatorReward { validator },
             )));
         }
+        Msg::GovMsgVote {
+            proposal,
+            vote_option,
+        } => {
+            return Ok(Response::new().add_message(CosmosMsg::Gov(GovMsg::Vote {
+                proposal_id: proposal,
+                vote: vote_option,
+            })));
+        }
+        Msg::SetWithdrawAddress { address } => {
+            return Ok(Response::new().add_message(CosmosMsg::Distribution(
+                DistributionMsg::SetWithdrawAddress { address },
+            )));
+        }
+        Msg::CustomMsg {} => return Ok(Response::new().add_message(CosmosMsg::Custom(Empty {}))),
         Msg::IbcMsgTransfer {
             channel_id,
             to_address,
@@ -141,11 +172,20 @@ fn handle_msg(_deps: DepsMut, _env: Env, _info: MessageInfo, msg: Msg) -> StdRes
                 })),
             );
         }
+        Msg::GetTxId {} => match env.transaction {
+            None => Err(StdError::generic_err("Transaction info wasn't set")),
+            Some(t) => {
+                return Ok(Response::new().add_event(
+                    Event::new("count".to_string())
+                        .add_attribute_plaintext("count-val", t.index.to_string()),
+                ))
+            }
+        },
     }
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Stargate { path, data } => {
             return Ok(to_binary(
@@ -242,5 +282,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 &QueryRequest::Wasm(WasmQuery::ContractInfo { contract_addr }),
             )?)?);
         }
+        QueryMsg::GetTxId {} => match env.transaction {
+            None => Err(StdError::generic_err("Transaction info wasn't set")),
+            Some(t) => return Ok(to_binary(&t.index)?),
+        },
+        QueryMsg::LastIbcReceive {} => Ok(to_binary(&receive_store_read(deps.storage).load()?)?),
+        QueryMsg::LastIbcAck {} => Ok(to_binary(&ack_store_read(deps.storage).load()?)?),
+        QueryMsg::LastIbcTimeout {} => Ok(to_binary(&timeout_store_read(deps.storage).load()?)?),
     }
 }

@@ -37,6 +37,7 @@ const (
 func GetTxCmd() *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        types.ModuleName,
+		Aliases:                    []string{"wasm"},
 		Short:                      "Compute transaction subcommands",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
@@ -54,7 +55,7 @@ func GetTxCmd() *cobra.Command {
 func StoreCodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "store [wasm file] --source [source] --builder [builder]",
-		Short: "Upload a wasm binary",
+		Short: "Upload a WASM binary",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -122,9 +123,10 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.
 func InstantiateContractCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --amount [coins,optional]",
-		Short: "Instantiate a wasm contract",
-		Args:  cobra.ExactArgs(2),
+		Use:     "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --amount [coins,optional]",
+		Short:   "Instantiate a wasm contract",
+		Aliases: []string{"init"},
+		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
@@ -147,7 +149,6 @@ func InstantiateContractCmd() *cobra.Command {
 		"io-master-cert.der file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
-	// cmd.Flags().String(flagAdmin, "", "Address of an admin")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -244,9 +245,10 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 // ExecuteContractCmd will instantiate a contract from previously uploaded code.
 func ExecuteContractCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "execute [optional: contract_addr_bech32] [json_encoded_send_args]",
-		Short: "Execute a command on a wasm contract",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "execute [optional: contract_addr_bech32] [json_encoded_send_args]",
+		Short:   "Execute a command on a wasm contract",
+		Aliases: []string{"exec"},
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
@@ -388,7 +390,7 @@ func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 		return nil, err
 	}
 
-	return []byte(hex.EncodeToString(codeResp.DataHash)), nil
+	return []byte(codeResp.CodeHash), nil
 }
 
 func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddress) ([]byte, error) {

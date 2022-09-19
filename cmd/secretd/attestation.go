@@ -90,12 +90,12 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			spidFile, err := Asset("spid.txt") //nolint
+			spidFile, err := Asset("spid.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			apiKeyFile, err := Asset("api_key.txt") //nolint
+			apiKeyFile, err := Asset("api_key.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
@@ -136,12 +136,12 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			regGenState := reg.GetGenesisStateFromAppState(cdc, appState)
 
-			spidFile, err := Asset("spid.txt") //nolint
+			spidFile, err := Asset("spid.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			apiKeyFile, err := Asset("api_key.txt") //nolint
+			apiKeyFile, err := Asset("api_key.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
@@ -340,10 +340,8 @@ func ResetEnclave() *cobra.Command {
 				if err != nil {
 					return err
 				}
-			} else {
-				if err != nil {
-					println(err.Error())
-				}
+			} else if err != nil {
+				println(err.Error())
 			}
 
 			// remove sgx_secrets
@@ -361,10 +359,8 @@ func ResetEnclave() *cobra.Command {
 				if err != nil {
 					return err
 				}
-			} else {
-				if err != nil {
-					println(err.Error())
-				}
+			} else if err != nil {
+				println(err.Error())
 			}
 			return nil
 		},
@@ -431,12 +427,12 @@ Please report any issues with this command
 				}
 			}
 
-			spidFile, err := Asset("spid.txt") //nolint
+			spidFile, err := Asset("spid.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			apiKeyFile, err := Asset("api_key.txt") //nolint
+			apiKeyFile, err := Asset("api_key.txt")
 			if err != nil {
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
@@ -474,7 +470,7 @@ Please report any issues with this command
 				return err
 			}
 
-			if pulsarFlag {
+			if pulsarFlag { //nolint:gocritic
 				regUrl = pulsarRegistrationService
 				log.Println("Registering node on Pulsar testnet")
 			} else if customRegUrl != "" {

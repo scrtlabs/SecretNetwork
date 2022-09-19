@@ -37,7 +37,7 @@ type QueryHandler struct {
 
 var _ wasmTypes.Querier = QueryHandler{}
 
-func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]byte, error) {
+func (q QueryHandler) Query(request wasmTypes.QueryRequest, queryDepth uint32, gasLimit uint64) ([]byte, error) {
 	// set a limit for a subctx
 	sdkGas := gasLimit / types.GasMultiplier
 	subctx := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas))
@@ -58,7 +58,7 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]
 		return q.Plugins.Staking(subctx, request.Staking)
 	}
 	if request.Wasm != nil {
-		return q.Plugins.Wasm(subctx, request.Wasm)
+		return q.Plugins.Wasm(subctx, request.Wasm, queryDepth)
 	}
 	if request.Dist != nil {
 		return q.Plugins.Dist(q.Ctx, request.Dist)
@@ -88,7 +88,7 @@ type QueryPlugins struct {
 	Bank     func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error)
 	Custom   CustomQuerier
 	Staking  func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
-	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error)
 	Dist     func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
 	Mint     func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
 	Gov      func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
@@ -153,51 +153,32 @@ func (e QueryPlugins) Merge(o *QueryPlugins) QueryPlugins {
 //   - /secret.intertx.*
 //   - /cosmos.evidence.*
 //   - /cosmos.upgrade.*
+//   - All "get all" queries - only O(1) queries should be served
 //
 // we reserve the right to add/remove queries in future chain upgrades
 //
 // used this to find all query paths:
 // find -name query.proto | sort | xargs grep -Poin 'package [a-z0-9.]+;|rpc [a-zA-Z]+\('
 var stargateQueryAllowlist = map[string]bool{
-	"/cosmos.auth.v1beta1.Query/Account":  true,
-	"/cosmos.auth.v1beta1.Query/Accounts": true,
-	"/cosmos.auth.v1beta1.Query/Params":   true,
+	"/cosmos.auth.v1beta1.Query/Account": true,
+	"/cosmos.auth.v1beta1.Query/Params":  true,
 
-	"/cosmos.authz.v1beta1.Query/Grants":        true,
-	"/cosmos.authz.v1beta1.Query/GranterGrants": true,
-	"/cosmos.authz.v1beta1.Query/GranteeGrants": true,
+	"/cosmos.bank.v1beta1.Query/Balance":       true,
+	"/cosmos.bank.v1beta1.Query/DenomMetadata": true,
+	"/cosmos.bank.v1beta1.Query/SupplyOf":      true,
+	"/cosmos.bank.v1beta1.Query/Params":        true,
 
-	"/cosmos.bank.v1beta1.Query/Balance":           true,
-	"/cosmos.bank.v1beta1.Query/AllBalances":       true,
-	"/cosmos.bank.v1beta1.Query/SpendableBalances": true,
-	"/cosmos.bank.v1beta1.Query/TotalSupply":       true,
-	"/cosmos.bank.v1beta1.Query/SupplyOf":          true,
-	"/cosmos.bank.v1beta1.Query/Params":            true,
-	"/cosmos.bank.v1beta1.Query/DenomMetadata":     true,
-	"/cosmos.bank.v1beta1.Query/DenomsMetadata":    true,
+	"/cosmos.distribution.v1beta1.Query/Params":                   true,
+	"/cosmos.distribution.v1beta1.Query/DelegatorWithdrawAddress": true,
+	"/cosmos.distribution.v1beta1.Query/FoundationTax":            true,
+	"/cosmos.distribution.v1beta1.Query/ValidatorCommission":      true,
 
-	"/cosmos.distribution.v1beta1.Query/Params":                      true,
-	"/cosmos.distribution.v1beta1.Query/ValidatorOutstandingRewards": true,
-	"/cosmos.distribution.v1beta1.Query/ValidatorCommission":         true,
-	"/cosmos.distribution.v1beta1.Query/ValidatorSlashes":            true,
-	"/cosmos.distribution.v1beta1.Query/DelegationRewards":           true,
-	"/cosmos.distribution.v1beta1.Query/DelegationTotalRewards":      true,
-	"/cosmos.distribution.v1beta1.Query/DelegatorValidators":         true,
-	"/cosmos.distribution.v1beta1.Query/DelegatorWithdrawAddress":    true,
-	"/cosmos.distribution.v1beta1.Query/CommunityPool":               true,
-	"/cosmos.distribution.v1beta1.Query/FoundationTax":               true,
+	"/cosmos.feegrant.v1beta1.Query/Allowance": true,
 
-	"/cosmos.feegrant.v1beta1.Query/Allowance":  true,
-	"/cosmos.feegrant.v1beta1.Query/Allowances": true,
-
-	"/cosmos.gov.v1beta1.Query/Proposal":    true,
-	"/cosmos.gov.v1beta1.Query/Proposals":   true,
-	"/cosmos.gov.v1beta1.Query/Vote":        true,
-	"/cosmos.gov.v1beta1.Query/Votes":       true,
-	"/cosmos.gov.v1beta1.Query/Params":      true,
-	"/cosmos.gov.v1beta1.Query/Deposit":     true,
-	"/cosmos.gov.v1beta1.Query/Deposits":    true,
-	"/cosmos.gov.v1beta1.Query/TallyResult": true,
+	"/cosmos.gov.v1beta1.Query/Deposit":  true,
+	"/cosmos.gov.v1beta1.Query/Params":   true,
+	"/cosmos.gov.v1beta1.Query/Proposal": true,
+	"/cosmos.gov.v1beta1.Query/Vote":     true,
 
 	"/cosmos.mint.v1beta1.Query/Params":           true,
 	"/cosmos.mint.v1beta1.Query/Inflation":        true,
@@ -205,33 +186,23 @@ var stargateQueryAllowlist = map[string]bool{
 
 	"/cosmos.params.v1beta1.Query/Params": true,
 
-	"/cosmos.slashing.v1beta1.Query/Params":       true,
-	"/cosmos.slashing.v1beta1.Query/SigningInfo":  true,
-	"/cosmos.slashing.v1beta1.Query/SigningInfos": true,
+	"/cosmos.slashing.v1beta1.Query/Params":      true,
+	"/cosmos.slashing.v1beta1.Query/SigningInfo": true,
 
-	"/cosmos.staking.v1beta1.Query/Validators":                    true,
-	"/cosmos.staking.v1beta1.Query/Validator":                     true,
-	"/cosmos.staking.v1beta1.Query/ValidatorDelegations":          true,
-	"/cosmos.staking.v1beta1.Query/ValidatorUnbondingDelegations": true,
-	"/cosmos.staking.v1beta1.Query/Delegation":                    true,
-	"/cosmos.staking.v1beta1.Query/UnbondingDelegation":           true,
-	"/cosmos.staking.v1beta1.Query/DelegatorDelegations":          true,
-	"/cosmos.staking.v1beta1.Query/DelegatorUnbondingDelegations": true,
-	"/cosmos.staking.v1beta1.Query/Redelegations":                 true,
-	"/cosmos.staking.v1beta1.Query/DelegatorValidators":           true,
-	"/cosmos.staking.v1beta1.Query/DelegatorValidator":            true,
-	"/cosmos.staking.v1beta1.Query/HistoricalInfo":                true,
-	"/cosmos.staking.v1beta1.Query/Pool":                          true,
-	"/cosmos.staking.v1beta1.Query/Params":                        true,
+	"/cosmos.staking.v1beta1.Query/Validator":           true,
+	"/cosmos.staking.v1beta1.Query/Delegation":          true,
+	"/cosmos.staking.v1beta1.Query/UnbondingDelegation": true,
+	"/cosmos.staking.v1beta1.Query/Params":              true,
 
-	"/ibc.applications.transfer.v1.Query/DenomTrace":  true,
-	"/ibc.applications.transfer.v1.Query/DenomTraces": true,
-	"/ibc.applications.transfer.v1.Query/Params":      true,
-	"/ibc.applications.transfer.v1.Query/DenomHash":   true,
+	"/ibc.applications.transfer.v1.Query/DenomHash":  true,
+	"/ibc.applications.transfer.v1.Query/DenomTrace": true,
+	"/ibc.applications.transfer.v1.Query/Params":     true,
 
-	"/secret.compute.v1beta1.Query/ContractInfo":    true,
-	"/secret.compute.v1beta1.Query/ContractsByCode": true,
-	"/secret.compute.v1beta1.Query/Codes":           true,
+	"/secret.compute.v1beta1.Query/ContractInfo":              true,
+	"/secret.compute.v1beta1.Query/CodeHashByContractAddress": true,
+	"/secret.compute.v1beta1.Query/CodeHashByCodeID":          true,
+	"/secret.compute.v1beta1.Query/LabelByAddress":            true,
+	"/secret.compute.v1beta1.Query/AddressByLabel":            true,
 }
 
 func StargateQuerier(queryRouter GRPCQueryRouter) func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error) {
@@ -725,14 +696,14 @@ func getAccumulatedRewards(ctx sdk.Context, distKeeper distrkeeper.Keeper, deleg
 	return rewards, nil
 }
 
-func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
-	return func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
+func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
 		if request.Smart != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Smart.ContractAddr)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Smart.ContractAddr)
 			}
-			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, false)
+			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, queryDepth, false)
 		}
 		if request.Raw != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Raw.ContractAddr)
@@ -742,6 +713,25 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			models := wasm.QueryRaw(ctx, addr, request.Raw.Key)
 			// TODO: do we want to change the return value?
 			return json.Marshal(models)
+		}
+		if request.ContractInfo != nil {
+			addr, err := sdk.AccAddressFromBech32(request.ContractInfo.ContractAddr)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.ContractInfo.ContractAddr)
+			}
+			info := wasm.GetContractInfo(ctx, addr)
+			if info == nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.ContractInfo.ContractAddr)
+			}
+
+			res := wasmTypes.ContractInfoResponse{
+				CodeID:  info.CodeID,
+				Creator: info.Creator.String(),
+				Admin:   "", // In secret we don't have an admin
+				Pinned:  false,
+				IBCPort: info.IBCPortID,
+			}
+			return json.Marshal(res)
 		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown WasmQuery variant"}
 	}

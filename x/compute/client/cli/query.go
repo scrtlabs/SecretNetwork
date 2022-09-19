@@ -33,6 +33,7 @@ import (
 func GetQueryCmd() *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
+		Aliases:                    []string{"wasm"},
 		Short:                      "Querying commands for the compute module",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
@@ -46,9 +47,9 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdQuery(),
 		GetQueryDecryptTxCmd(),
 		GetCmdQueryLabel(),
-		GetCmdCodeHashByContract(),
+		GetCmdCodeHashByContractAddress(),
+		GetCmdCodeHashByCodeID(),
 		CmdDecryptText(),
-		// GetCmdGetContractHistory(cdc),
 	)
 	return queryCmd
 }
@@ -121,7 +122,7 @@ func GetCmdQueryLabel() *cobra.Command {
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdCodeHashByContract() *cobra.Command {
+func GetCmdCodeHashByContractAddress() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "contract-hash [address]",
 		Short: "Return the code hash of a contract",
@@ -141,6 +142,39 @@ func GetCmdCodeHashByContract() *cobra.Command {
 
 			addr := hex.EncodeToString(res)
 			fmt.Printf("0x%s", addr)
+			return nil
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// GetCmdCodeHashByID return the code hash of a contract by ID
+func GetCmdCodeHashByCodeID() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "contract-hash-by-id [code_id]",
+		Short: "Return the code hash of a contract represented by ID",
+		Long:  "Return the code hash of a contract represented by ID",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHashByCodeID, args[0])
+			res, _, err := clientCtx.Query(route)
+			if err != nil {
+				return fmt.Errorf("error querying contract hash by id: %s", err)
+			}
+
+			if len(res) == 0 {
+				return fmt.Errorf("contract with id %s not found", args[0])
+			}
+
+			addr := hex.EncodeToString(res)
+			fmt.Printf("0x%s\n", addr)
 			return nil
 		},
 	}
@@ -213,12 +247,12 @@ func GetCmdQueryCode() *cobra.Command {
 				return err
 			}
 
-			if len(code.Data) == 0 {
+			if len(code.Wasm) == 0 {
 				return fmt.Errorf("contract not found")
 			}
 
 			fmt.Printf("Downloading wasm code to %s\n", args[1])
-			return os.WriteFile(args[1], code.Data, 0o600)
+			return os.WriteFile(args[1], code.Wasm, 0o600)
 		},
 	}
 
@@ -278,8 +312,7 @@ func CmdDecryptText() *cobra.Command {
 				return fmt.Errorf("error while trying to decode the encrypted output data from base64: %w", err)
 			}
 
-			nonce := dataCipherBz[0:32]
-			originalTxSenderPubkey := dataCipherBz[32:64]
+			nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(dataCipherBz)
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
@@ -291,7 +324,7 @@ func CmdDecryptText() *cobra.Command {
 				return fmt.Errorf("cannot decrypt, not original tx sender")
 			}
 
-			dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataCipherBz[64:], nonce)
+			dataPlaintextB64Bz, err := wasmCtx.Decrypt(ciphertextInput, nonce)
 			if err != nil {
 				return fmt.Errorf("error while trying to decrypt the output data: %w", err)
 			}
@@ -327,44 +360,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return fmt.Errorf("no transaction found with hash %s", args[0])
 			}
 
-			var answer types.DecryptedAnswer
-			var encryptedInput []byte
-			var dataOutputHexB64 string
-
 			txInputs := result.GetTx().GetMsgs()
-
-			if len(txInputs) != 1 {
-				return fmt.Errorf("can only decrypt txs with 1 input. Got %d", len(txInputs))
-			}
-			txInput, ok := txInputs[0].(*types.MsgExecuteContract)
-			if !ok {
-				txInput2, ok := txInputs[0].(*types.MsgInstantiateContract)
-				if !ok {
-					txInput3, ok := txInputs[0].(*types.MsgStoreCode)
-					if ok {
-						txInput3.WASMByteCode = nil
-						return clientCtx.PrintProto(txInput3)
-					}
-					return fmt.Errorf("TX is not a compute transaction")
-
-				}
-				encryptedInput = txInput2.InitMsg
-				dataOutputHexB64 = result.Data
-				answer.Type = "instantiate"
-
-			} else {
-				encryptedInput = txInput.Msg
-				dataOutputHexB64 = result.Data
-				answer.Type = "execute"
-			}
-
-			// decrypt input
-			if len(encryptedInput) < 64 {
-				return fmt.Errorf("input must be > 64 bytes. Got %d", len(encryptedInput))
-			}
-
-			nonce := encryptedInput[0:32]
-			originalTxSenderPubkey := encryptedInput[32:64]
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
@@ -372,23 +368,56 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 				return fmt.Errorf("error in GetTxSenderKeyPair: %w", err)
 			}
 
-			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
-				return fmt.Errorf("cannot decrypt, not original tx sender")
+			answers := types.DecryptedAnswers{
+				Answers:        make([]*types.DecryptedAnswer, len(txInputs)),
+				OutputLogs:     []sdk.StringEvent{},
+				OutputError:    "",
+				PlaintextError: "",
 			}
+			nonces := make([][]byte, len(txInputs))
 
-			ciphertextInput := encryptedInput[64:]
-			var plaintextInput []byte
-			if len(ciphertextInput) > 0 {
-				plaintextInput, err = wasmCtx.Decrypt(ciphertextInput, nonce)
-				if err != nil {
-					return fmt.Errorf("error while trying to decrypt the tx input: %w", err)
+			for i, tx := range txInputs {
+				var encryptedInput []byte
+				answers.Answers[i] = &types.DecryptedAnswer{}
+
+				switch txInput := tx.(type) {
+				case *types.MsgExecuteContract:
+					{
+						encryptedInput = txInput.Msg
+						answers.Answers[i].Type = "execute"
+					}
+				case *types.MsgInstantiateContract:
+					{
+						encryptedInput = txInput.InitMsg
+						answers.Answers[i].Type = "instantiate"
+					}
+				}
+
+				if encryptedInput != nil {
+					nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(encryptedInput)
+					if err != nil {
+						return fmt.Errorf("can't parse encrypted blob: %w", err)
+					}
+
+					if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
+						return fmt.Errorf("cannot decrypt, not original tx sender")
+					}
+
+					var plaintextInput []byte
+					if len(ciphertextInput) > 0 {
+						plaintextInput, err = wasmCtx.Decrypt(ciphertextInput, nonce)
+						if err != nil {
+							return fmt.Errorf("error while trying to decrypt the tx input: %w", err)
+						}
+					}
+
+					answers.Answers[i].Input = string(plaintextInput)
+					nonces[i] = nonce
 				}
 			}
 
-			answer.Input = string(plaintextInput)
-
-			// decrypt data
-			if answer.Type == "execute" {
+			dataOutputHexB64 := result.Data
+			if dataOutputHexB64 != "" {
 				dataOutputAsProtobuf, err := hex.DecodeString(dataOutputHexB64)
 				if err != nil {
 					return fmt.Errorf("error while trying to decode the encrypted output data from hex string: %w", err)
@@ -400,29 +429,49 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					return fmt.Errorf("error while trying to parse data as protobuf: %w: %s", err, dataOutputHexB64)
 				}
 
-				if len(txData.Data) > 1 {
-					println("WARN: more than one response in tx data. only deciphering the first.")
-				}
+				for i, msgData := range txData.Data {
+					if len(msgData.Data) != 0 {
+						var dataField []byte
+						switch {
+						case msgData.MsgType == "/secret.compute.v1beta1.MsgInstantiateContract":
+							var msgResponse types.MsgInstantiateContractResponse
+							err := proto.Unmarshal(msgData.Data, &msgResponse)
+							if err != nil {
+								continue
+							}
 
-				if len(txData.Data) > 0 {
-					dataPlaintextB64Bz, err := wasmCtx.Decrypt(txData.Data[0].Data, nonce)
-					if err != nil {
-						return fmt.Errorf("error while trying to decrypt the output data: %w", err)
+							dataField = msgResponse.Data
+						case msgData.MsgType == "/secret.compute.v1beta1.MsgExecuteContract":
+							var msgResponse types.MsgExecuteContractResponse
+							err := proto.Unmarshal(msgData.Data, &msgResponse)
+							if err != nil {
+								continue
+							}
+
+							dataField = msgResponse.Data
+						default:
+							continue
+						}
+
+						dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataField, nonces[i])
+						if err != nil {
+							continue
+						}
+						dataPlaintextB64 := string(dataPlaintextB64Bz)
+						answers.Answers[i].OutputData = dataPlaintextB64
+
+						dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
+						if err != nil {
+							continue
+						}
+
+						answers.Answers[i].OutputDataAsString = string(dataPlaintext)
 					}
-					dataPlaintextB64 := string(dataPlaintextB64Bz)
-					answer.OutputData = dataPlaintextB64
-
-					dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
-					if err != nil {
-						return fmt.Errorf("error while trying to decode the decrypted output data from base64 '%s': %w", dataPlaintextB64, err)
-					}
-
-					answer.OutputDataAsString = string(dataPlaintext)
 				}
 			}
 
 			// decrypt logs
-			answer.OutputLogs = []sdk.StringEvent{}
+			answers.OutputLogs = []sdk.StringEvent{}
 			for _, l := range result.Logs {
 				for _, e := range l.Events {
 					if e.Type == "wasm" {
@@ -432,11 +481,17 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 								if a.Key != "" {
 									// Try to decrypt the log key. If it doesn't look encrypted, leave it as-is
 									keyCiphertext, err := base64.StdEncoding.DecodeString(a.Key)
-									if err == nil {
+									if err != nil {
+										continue
+									}
+
+									for _, nonce := range nonces {
 										keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
-										if err == nil {
-											a.Key = string(keyPlaintext)
+										if err != nil {
+											continue
 										}
+										a.Key = string(keyPlaintext)
+										break
 									}
 								}
 
@@ -444,37 +499,50 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 								if a.Value != "" {
 									// Try to decrypt the log value. If it doesn't look encrypted, leave it as-is
 									valueCiphertext, err := base64.StdEncoding.DecodeString(a.Value)
-									if err == nil {
+									if err != nil {
+										continue
+									}
+									for _, nonce := range nonces {
 										valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
-										if err == nil {
-											a.Value = string(valuePlaintext)
+										if err != nil {
+											continue
 										}
+										a.Value = string(valuePlaintext)
+										break
 									}
 								}
 
 								e.Attributes[i] = a
 							}
 						}
-						answer.OutputLogs = append(answer.OutputLogs, e)
+						answers.OutputLogs = append(answers.OutputLogs, e)
 					}
 				}
 			}
 
 			if types.IsEncryptedErrorCode(result.Code) && types.ContainsEncryptedString(result.RawLog) {
-				stdErr, err := wasmCtx.DecryptError(result.RawLog, answer.Type, nonce)
-				if err != nil {
-					return err
+				for i, nonce := range nonces {
+					stdErr, err := wasmCtx.DecryptError(result.RawLog, nonce)
+					if err != nil {
+						continue
+					}
+					answers.OutputError = string(append(json.RawMessage(fmt.Sprintf("message inedx %d: ", i)), stdErr...))
+					break
 				}
-
-				answer.OutputError = stdErr
 			} else if types.ContainsEnclaveError(result.RawLog) {
-				answer.PlaintextError = result.RawLog
+				answers.PlaintextError = result.RawLog
 			}
 
-			return clientCtx.PrintObjectLegacy(&answer)
+			jsonBz, err := json.MarshalIndent(answers, "", "    ")
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintString(string(jsonBz))
 		},
 	}
 
+	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -557,12 +625,12 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 	if err != nil {
 		return err
 	}
-	nonce := queryData[:32]
+	nonce, _, _, _ := parseEncryptedBlob(queryData) //nolint:dogsled // Ignoring error since we just encrypted it
 
 	res, _, err := cliCtx.QueryWithData(route, queryData)
 	if err != nil {
 		if types.ErrContainsQueryError(err) {
-			errorPlainBz, err := wasmCtx.DecryptError(err.Error(), "query", nonce)
+			errorPlainBz, err := wasmCtx.DecryptError(err.Error(), nonce)
 			if err != nil {
 				return err
 			}
@@ -597,38 +665,6 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, cliCtx clie
 	fmt.Println(string(decodedResp))
 	return nil
 }
-
-/*
-// GetCmdGetContractHistory prints the code history for a given contract
-func GetCmdGetContractHistory() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "contract-history [bech32_address]",
-		Short: "Prints out the code history for a contract given its address",
-		Long:  "Prints out the code history for a contract given its address",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx := client.GetClientContextFromCmd(cmd)
-			clientCtx, err := client.ReadQueryCommandFlags(clientCtx, cmd.Flags())
-			if err != nil {
-				return err
-			}
-
-			addr, err := sdk.AccAddressFromBech32(args[0])
-			if err != nil {
-				return err
-			}
-
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHistory, addr.String())
-			res, _, err := clientCtx.Query(route)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(res))
-			return nil
-		},
-	}
-}
-*/
 
 type argumentDecoder struct {
 	// dec is the default decoder

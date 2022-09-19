@@ -1,8 +1,13 @@
 package keeper
 
 import (
+	"strings"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 )
 
@@ -27,6 +32,13 @@ func (k Keeper) ensureIbcPort(ctx sdk.Context, contractAddr sdk.AccAddress) (str
 }
 
 const portIDPrefix = "wasm."
+
+func ContractFromPortID(portID string) (sdk.AccAddress, error) {
+	if !strings.HasPrefix(portID, portIDPrefix) {
+		return nil, sdkerrors.Wrapf(types.ErrInvalid, "without prefix")
+	}
+	return sdk.AccAddressFromBech32(portID[len(portIDPrefix):])
+}
 
 func PortIDForContract(addr sdk.AccAddress) string {
 	return portIDPrefix + addr.String()

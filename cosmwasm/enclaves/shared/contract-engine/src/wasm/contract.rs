@@ -16,10 +16,10 @@ use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 
 use crate::contract_validation::ContractKey;
 use crate::db::read_encrypted_key;
-#[cfg(not(feature = "query-only"))]
+// #[cfg(not(feature = "query-only"))]
 use crate::db::{remove_encrypted_key, write_encrypted_key};
 use crate::errors::WasmEngineError;
-use crate::gas::WasmCosts;
+use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::traits::WasmiApi;
@@ -63,15 +63,16 @@ pub struct ContractInstance {
     pub context: Ctx,
     pub memory: MemoryRef,
     pub gas_limit: u64,
-    /// Gas used by wasmi
+    /// Gas used by the WASM code and WASM host
     pub gas_used: u64,
     /// Gas used by external services. This is tracked separately so we don't double-charge for external services later.
     pub gas_used_externally: u64,
     pub gas_costs: WasmCosts,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
-    #[cfg_attr(feature = "query-only", allow(unused))]
+    // #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
+    query_depth: u32,
     pub user_nonce: IoNonce,
     pub user_public_key: Ed25519PublicKey,
     pub cosmwasm_api_version: CosmWasmApiVersion,
@@ -86,6 +87,7 @@ impl ContractInstance {
         gas_costs: WasmCosts,
         contract_key: ContractKey,
         operation: ContractOperation,
+        query_depth: u32,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Self, EnclaveError> {
@@ -115,6 +117,7 @@ impl ContractInstance {
             contract_key,
             module,
             operation,
+            query_depth,
             user_nonce,
             user_public_key,
             cosmwasm_api_version,
@@ -286,13 +289,13 @@ impl ContractInstance {
         self.write_to_allocated_memory(buffer, ptr_to_region_in_wasm_vm)
     }
 
-    /// Track gas used inside wasmi
+    /// Gas used by the WASM code and WASM host
     fn use_gas(&mut self, gas_amount: u64) -> Result<(), WasmEngineError> {
         self.gas_used = self.gas_used.saturating_add(gas_amount);
         self.check_gas_usage()
     }
 
-    /// Track gas used by external services (e.g. storage)
+    /// Gas used by external services. This is tracked separately so we don't double-charge for external services later.
     fn use_gas_externally(&mut self, gas_amount: u64) -> Result<(), WasmEngineError> {
         self.gas_used_externally = self.gas_used_externally.saturating_add(gas_amount);
         self.check_gas_usage()
@@ -344,11 +347,13 @@ impl WasmiApi for ContractInstance {
             String::from_utf8_lossy(&state_key_name)
         );
 
+        self.use_gas(OCALL_BASE_GAS)?;
+
         // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
         // This returns the value from Tendermint
-        let (value, gas_used) =
+        let (value, gas_used_by_storage) =
             read_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
-        self.use_gas_externally(gas_used)?;
+        self.use_gas_externally(gas_used_by_storage)?;
 
         let value = match value {
             // return 0 if key doesn't exist
@@ -376,17 +381,17 @@ impl WasmiApi for ContractInstance {
         Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
-    /// Remove a key from the contract's storage
-    /// v0.10 + v1
-    ///
-    /// Args:
-    /// 1. "key" to delete from Tendermint (buffer of bytes)
-    /// key is a pointer to a region "struct" of "pointer" and "length"
-    /// A Region looks like { ptr: u32, len: u32 }
-    #[cfg(feature = "query-only")]
-    fn remove_db(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        Err(WasmEngineError::UnauthorizedWrite.into())
-    }
+    // /// Remove a key from the contract's storage
+    // /// v0.10 + v1
+    // ///
+    // /// Args:
+    // /// 1. "key" to delete from Tendermint (buffer of bytes)
+    // /// key is a pointer to a region "struct" of "pointer" and "length"
+    // /// A Region looks like { ptr: u32, len: u32 }
+    // #[cfg(feature = "query-only")]
+    // fn remove_db(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    //     Err(WasmEngineError::UnauthorizedWrite.into())
+    // }
 
     /// Remove a key from the contract's storage
     /// v0.10 + v1
@@ -395,7 +400,7 @@ impl WasmiApi for ContractInstance {
     /// 1. "key" to delete from Tendermint (buffer of bytes)
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    #[cfg(not(feature = "query-only"))]
+    // #[cfg(not(feature = "query-only"))]
     fn remove_db(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         if self.operation.is_query() {
             return Err(WasmEngineError::UnauthorizedWrite.into());
@@ -414,30 +419,31 @@ impl WasmiApi for ContractInstance {
         );
 
         // Call remove_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
-        let gas_used = remove_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
-        self.use_gas_externally(gas_used)?;
+        let gas_used_by_storge =
+            remove_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
+        self.use_gas_externally(gas_used_by_storge)?;
 
         // return value from here is never read
         // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L102
         Ok(None)
     }
 
-    /// Write (key,value) into the contract's storage
-    /// v0.10 + v1
-    ///
-    /// Args:
-    /// 1. "key" to write to Tendermint (buffer of bytes)
-    /// 2. "value" to write to Tendermint (buffer of bytes)
-    /// Both of them are pointers to a region "struct" of "pointer" and "length"
-    /// Lets say Region looks like { ptr: u32, len: u32 }
-    #[cfg(feature = "query-only")]
-    fn write_db(
-        &mut self,
-        _state_key_ptr_ptr: i32,
-        _value_ptr_ptr: i32,
-    ) -> Result<Option<RuntimeValue>, Trap> {
-        Err(WasmEngineError::UnauthorizedWrite.into())
-    }
+    // /// Write (key,value) into the contract's storage
+    // /// v0.10 + v1
+    // ///
+    // /// Args:
+    // /// 1. "key" to write to Tendermint (buffer of bytes)
+    // /// 2. "value" to write to Tendermint (buffer of bytes)
+    // /// Both of them are pointers to a region "struct" of "pointer" and "length"
+    // /// Lets say Region looks like { ptr: u32, len: u32 }
+    // #[cfg(feature = "query-only")]
+    // fn write_db(
+    //     &mut self,
+    //     _state_key_ptr_ptr: i32,
+    //     _value_ptr_ptr: i32,
+    // ) -> Result<Option<RuntimeValue>, Trap> {
+    //     Err(WasmEngineError::UnauthorizedWrite.into())
+    // }
 
     /// Write (key,value) into the contract's storage
     /// v0.10 + v1
@@ -447,7 +453,7 @@ impl WasmiApi for ContractInstance {
     /// 2. "value" to write to Tendermint (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// Lets say Region looks like { ptr: u32, len: u32 }
-    #[cfg(not(feature = "query-only"))]
+    // #[cfg(not(feature = "query-only"))]
     fn write_db(
         &mut self,
         state_key_ptr: i32,
@@ -472,7 +478,9 @@ impl WasmiApi for ContractInstance {
             String::from_utf8_lossy(&value),
         );
 
-        let used_gas =
+        self.use_gas(OCALL_BASE_GAS)?;
+
+        let used_gas_by_storage =
             write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
                 .map_err(|err| {
                     debug!(
@@ -481,7 +489,7 @@ impl WasmiApi for ContractInstance {
                     );
                     err
                 })?;
-        self.use_gas_externally(used_gas)?;
+        self.use_gas_externally(used_gas_by_storage)?;
 
         // return value from here is never read
         // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L95
@@ -501,7 +509,7 @@ impl WasmiApi for ContractInstance {
         human_ptr: i32,
         canonical_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_canonicalize_address as u64)?;
+        self.use_gas(self.gas_costs.external_canonicalize_address as u64)?;
 
         let human = self.extract_vector(human_ptr as u32).map_err(|err| {
             debug!(
@@ -606,7 +614,7 @@ impl WasmiApi for ContractInstance {
         canonical_ptr: i32,
         human_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_humanize_address as u64)?;
+        self.use_gas(self.gas_costs.external_humanize_address as u64)?;
 
         let canonical = self.extract_vector(canonical_ptr as u32).map_err(|err| {
             debug!(
@@ -663,25 +671,28 @@ impl WasmiApi for ContractInstance {
             String::from_utf8_lossy(&query_buffer)
         );
 
+        self.use_gas(OCALL_BASE_GAS)?;
+
         // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
         // Returns the value from x/compute
-        let mut gas_used: u64 = 0;
+        let mut gas_used_by_query: u64 = 0;
         let answer = encrypt_and_query_chain(
             &query_buffer,
+            self.query_depth,
             &self.context,
             self.user_nonce,
             self.user_public_key,
-            &mut gas_used,
+            &mut gas_used_by_query,
             self.gas_left(),
         )?;
 
         info!(
             "query_chain() got an answer from outside with gas {} and result {:?}",
-            gas_used,
+            gas_used_by_query,
             String::from_utf8_lossy(&answer)
         );
 
-        self.use_gas_externally(gas_used)?;
+        self.use_gas_externally(gas_used_by_query)?;
 
         // write the result to an output buffer
         // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L353
@@ -705,7 +716,7 @@ impl WasmiApi for ContractInstance {
     /// Validates a human readable address
     /// v1
     fn addr_validate(&mut self, human_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_addr_validate as u64)?;
+        self.use_gas(self.gas_costs.external_addr_validate as u64)?;
 
         let human = self.extract_vector(human_ptr as u32).map_err(|err| {
             debug!("addr_validate() error while trying to read human address from wasm memory");
@@ -724,7 +735,7 @@ impl WasmiApi for ContractInstance {
         }
 
         // Turn Vec<u8> to str
-        let human_addr_str = match std::str::from_utf8(&human) {
+        let source_human_address = match std::str::from_utf8(&human) {
             Err(err) => {
                 debug!(
                     "addr_validate() error while trying to parse human address from bytes to string: {:?}",
@@ -737,18 +748,39 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let (_, _) = match bech32::decode(&human_addr_str) {
+        let canonical_address = match bech32::decode(&source_human_address) {
             Err(err) => {
                 debug!(
                     "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
-                    human_addr_str, err
+                    source_human_address, err
                 );
                 return Ok(Some(RuntimeValue::I32(
                     self.write_to_memory(err.to_string().as_bytes())? as i32,
                 )));
             }
-            Ok(x) => x,
+            Ok((_prefix, canonical_address)) => canonical_address,
         };
+
+        let normalized_human_address = match bech32::encode(
+            BECH32_PREFIX_ACC_ADDR, // like we do in human_address()
+            canonical_address.clone(),
+        ) {
+            Err(err) => {
+                // Assaf: IMO This can never fail. From looking at bech32::encode, it only fails
+                // because input prefix issues. For us the prefix is always "secert" which is valid.
+                debug!("addr_validate() error while trying to encode canonical address {:?} to human: {:?}",  &canonical_address, err);
+                return Ok(Some(RuntimeValue::I32(
+                    self.write_to_memory(err.to_string().as_bytes())? as i32,
+                )));
+            }
+            Ok(normalized_human_address) => normalized_human_address,
+        };
+
+        if source_human_address != normalized_human_address {
+            return Ok(Some(RuntimeValue::I32(
+                self.write_to_memory(b"Address is not normalized")? as i32,
+            )));
+        }
 
         // return 0 == ok
         // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L164
@@ -762,7 +794,7 @@ impl WasmiApi for ContractInstance {
         human_ptr: i32,
         canonical_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_canonicalize_address as u64)?;
+        self.use_gas(self.gas_costs.external_canonicalize_address as u64)?;
 
         let human = self.extract_vector(human_ptr as u32).map_err(|err| {
             debug!("addr_canonicalize() error while trying to read human address from wasm memory");
@@ -882,7 +914,7 @@ impl WasmiApi for ContractInstance {
         signature_ptr: i32,
         public_key_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_secp256k1_verify as u64)?;
+        self.use_gas(self.gas_costs.external_secp256k1_verify as u64)?;
 
         let message_hash_data = self
             .extract_vector(message_hash_ptr as u32)
@@ -1012,7 +1044,7 @@ impl WasmiApi for ContractInstance {
         signature_ptr: i32,
         recovery_param: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_secp256k1_recover_pubkey as u64)?;
+        self.use_gas(self.gas_costs.external_secp256k1_recover_pubkey as u64)?;
 
         let message_hash_data = self
             .extract_vector(message_hash_ptr as u32)
@@ -1140,7 +1172,7 @@ impl WasmiApi for ContractInstance {
         signature_ptr: i32,
         public_key_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_ed25519_verify as u64)?;
+        self.use_gas(self.gas_costs.external_ed25519_verify as u64)?;
 
         let message_data = self.extract_vector(message_ptr as u32).map_err(|err| {
             debug!("ed25519_verify() error while trying to read message from wasm memory");
@@ -1302,7 +1334,7 @@ impl WasmiApi for ContractInstance {
             return Ok(Some(RuntimeValue::I32(WasmApiCryptoError::BatchErr as i32)));
         };
 
-        self.use_gas_externally(
+        self.use_gas(
             self.gas_costs.external_ed25519_batch_verify_base as u64
                 + (signatures.len() as u64)
                     * self.gas_costs.external_ed25519_batch_verify_each as u64,
@@ -1401,7 +1433,7 @@ impl WasmiApi for ContractInstance {
         message_ptr: i32,
         private_key_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_secp256k1_sign as u64)?;
+        self.use_gas(self.gas_costs.external_secp256k1_sign as u64)?;
 
         let message_data = self.extract_vector(message_ptr as u32).map_err(|err| {
             debug!("secp256k1_sign() error while trying to read message from wasm memory");
@@ -1486,7 +1518,7 @@ impl WasmiApi for ContractInstance {
         message_ptr: i32,
         private_key_ptr: i32,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        self.use_gas_externally(self.gas_costs.external_ed25519_sign as u64)?;
+        self.use_gas(self.gas_costs.external_ed25519_sign as u64)?;
 
         let message_data = self.extract_vector(message_ptr as u32).map_err(|err| {
             debug!("ed25519_sign() error while trying to read message from wasm memory");

@@ -44,11 +44,11 @@ type recurseResponse struct {
 var totalWasmQueryCounter int
 
 func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, ctx sdk.Context, keeper Keeper) {
-	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error)
 	countingQuerier := &QueryPlugins{
-		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
+		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
 			totalWasmQueryCounter++
-			return realWasmQuerier(ctx, request)
+			return realWasmQuerier(ctx, request, queryDepth)
 		},
 	}
 
@@ -66,7 +66,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	creator, creatorPriv := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// store the code
-	wasmCode, err := os.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
@@ -130,7 +130,7 @@ func TestGasCostOnQuery(t *testing.T) {
 			expectedGas: 2*GasWork50 + GasReturnHashed,
 		},
 		"recursion 4, some work": {
-			gasLimit: 400_000,
+			gasLimit: 600_000,
 			msg: Recurse{
 				Depth: 4,
 				Work:  50,
@@ -203,7 +203,7 @@ func TestGasOnExternalQuery(t *testing.T) {
 		},
 		"recursion 4, plenty gas": {
 			// this uses 244708 gas
-			gasLimit: 400_000,
+			gasLimit: 600_000,
 			msg: Recurse{
 				Depth: 4,
 				Work:  50,
@@ -330,7 +330,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 		// however, if we don't charge the cpu gas before sub-dispatching, we can recurse over 20 times
 		// TODO: figure out how to asset how deep it went
 		"deep recursion, should die on 5th level": {
-			gasLimit: 1_200_000,
+			gasLimit: 1_400_000,
 			msg: Recurse{
 				Depth: 50,
 				Work:  2000,

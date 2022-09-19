@@ -130,7 +130,7 @@ pub fn create_attestation_report_u(spid: &[u8], api_key: &[u8]) -> SgxResult<()>
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
-        .get_access(false) // This can never be recursive
+        .get_access(1) // This can never be recursive
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
     let enclave = (*enclave_access_token)?;
 
@@ -164,7 +164,7 @@ pub fn untrusted_get_encrypted_seed(
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
-        .get_access(false) // This can never be recursive
+        .get_access(1) // This can never be recursive
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
     let enclave = (*enclave_access_token)?;
     let eid = enclave.geteid();

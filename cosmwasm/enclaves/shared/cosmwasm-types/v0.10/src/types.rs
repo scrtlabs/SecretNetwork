@@ -100,12 +100,25 @@ pub struct Env {
     pub contract_key: Option<String>,
     #[serde(default)]
     pub contract_code_hash: String,
+    #[serde(default)]
+    pub transaction: Option<TransactionInfo>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct TransactionInfo {
+    /// The position of this transaction in the block. The first
+    /// transaction has index 0.
+    ///
+    /// This allows you to get a unique transaction indentifier in this chain
+    /// using the pair (`env.block.height`, `env.transaction.index`).
+    ///
+    pub index: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct BlockInfo {
     pub height: u64,
-    // time is seconds since epoch begin (Jan. 1, 1970)
+    /// Absolute time of the block creation in seconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
     pub time: u64,
     pub chain_id: String,
 }
