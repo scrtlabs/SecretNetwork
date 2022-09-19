@@ -102,7 +102,7 @@ func uploadChainCode(ctx sdk.Context, t *testing.T, keeper Keeper, wasmPath stri
 	wasmCode, err := os.ReadFile(wasmPath)
 
 	toBeReplaced := "Gas submessage"
-	replaceBy := strings.Replace(toBeReplaced, "G", fmt.Sprintf("%d", bytesCount), 1)
+	replaceBy := strings.Replace(toBeReplaced, "G", string(byte(bytesCount)), 1)
 	wasmCode = []byte(strings.Replace(string(wasmCode), toBeReplaced, replaceBy, 1))
 
 	require.NoError(t, err)
