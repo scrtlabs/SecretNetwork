@@ -152,7 +152,6 @@ jobs:
       - name: Setup Files
         run: |
           find "$(pwd)" -name \*.wasm
-          cp secretd /usr/bin/secretd
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
           cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
