@@ -2066,8 +2066,8 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
                 Ok(Response::default().set_data(new_data.as_bytes()))
             }
         },
-        (9000, SubMsgResult::Err(_)) => Err(StdError::generic_err(format!("Reply chain failed",))),
-
+        (9000, SubMsgResult::Err(_)) => Ok(Response::default().set_data("err".as_bytes())),
+        //(9000, SubMsgResult::Err(_)) => Err(StdError::generic_err("err")),
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
 }

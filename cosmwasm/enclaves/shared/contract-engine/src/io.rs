@@ -937,7 +937,7 @@ fn encrypt_v1_wasm_msg(
 }
 
 pub fn create_callback_signature(
-    contract_addr: &CanonicalAddr,
+    _contract_addr: &CanonicalAddr,
     msg_to_sign: &SecretMessage,
     funds_to_send: &[Coin],
 ) -> Vec<u8> {

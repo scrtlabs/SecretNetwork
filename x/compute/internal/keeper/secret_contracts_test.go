@@ -3675,6 +3675,90 @@ func TestV1ReplyChainAllSuccess(t *testing.T) {
 	require.Equal(t, expectedFlow, string(data))
 }
 
+func TestV1ReplyChainPartiallyReplied(t *testing.T) {
+	amountOfContracts := uint64(10)
+	amountOfContractToBeReplied := uint64(5)
+
+	ctx, keeper, codeIds, codeHashes, walletA, privKeyA, _, _ := setupChainTest(t, TestContractPaths[v1Contract], sdk.NewCoins(), amountOfContracts)
+	contractAddresses := make([]sdk.AccAddress, amountOfContracts)
+
+	for i := uint64(0); i < amountOfContracts; i++ {
+		_, _, contractAddresses[i], _, _ = initHelper(t, keeper, ctx, codeIds[i], walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	}
+
+	executeDetails := make([]ExecuteDetails, amountOfContracts-1)
+	for i := uint64(1); i < amountOfContracts; i++ {
+		msgId := uint64(9000)
+		if i >= amountOfContractToBeReplied {
+			msgId = 0
+		}
+
+		executeDetails[i-1] = ExecuteDetails{
+			ContractAddress: contractAddresses[i].String(),
+			ContractHash:    codeHashes[i],
+			ShouldError:     false,
+			MsgId:           msgId,
+			Data:            fmt.Sprintf("%d", i),
+		}
+	}
+
+	marshaledDetails, err := json.Marshal(executeDetails)
+	require.Empty(t, err)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddresses[0], walletA, privKeyA, fmt.Sprintf(`{"execute_multiple_contracts":{"details": %s}}`, string(marshaledDetails)), true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+
+	expectedFlow := ""
+
+	expectedFlow += fmt.Sprintf("%d", amountOfContractToBeReplied) + " -> "
+
+	for i := uint64(amountOfContractToBeReplied - 2); i > 0; i-- {
+		expectedFlow += contractAddresses[i].String() + " -> "
+	}
+
+	expectedFlow += contractAddresses[0].String()
+
+	require.Equal(t, expectedFlow, string(data))
+}
+
+func TestV1ReplyChainWithError(t *testing.T) {
+	amountOfContracts := uint64(5)
+	ctx, keeper, codeIds, codeHashes, walletA, privKeyA, _, _ := setupChainTest(t, TestContractPaths[v1Contract], sdk.NewCoins(), amountOfContracts)
+	contractAddresses := make([]sdk.AccAddress, amountOfContracts)
+
+	for i := uint64(0); i < amountOfContracts; i++ {
+		_, _, contractAddresses[i], _, _ = initHelper(t, keeper, ctx, codeIds[i], walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	}
+
+	executeDetails := make([]ExecuteDetails, amountOfContracts-1)
+	for i := uint64(1); i < amountOfContracts; i++ {
+		executeDetails[i-1] = ExecuteDetails{
+			ContractAddress: contractAddresses[i].String(),
+			ContractHash:    codeHashes[i],
+			ShouldError:     false,
+			MsgId:           9000,
+			Data:            fmt.Sprintf("%d", i),
+		}
+	}
+
+	executeDetails[amountOfContracts-2].ShouldError = true
+
+	marshaledDetails, err := json.Marshal(executeDetails)
+	require.Empty(t, err)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddresses[0], walletA, privKeyA, fmt.Sprintf(`{"execute_multiple_contracts":{"details": %s}}`, string(marshaledDetails)), true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+
+	expectedFlow := "err -> "
+	for i := uint64(amountOfContracts - 4); i > 0; i-- {
+		expectedFlow += contractAddresses[i].String() + " -> "
+	}
+
+	expectedFlow += contractAddresses[0].String()
+
+	require.Equal(t, expectedFlow, string(data))
+}
+
 func TestInitCreateNewContract(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
