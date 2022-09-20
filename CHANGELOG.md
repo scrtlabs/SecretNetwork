@@ -8,6 +8,7 @@
 - Support MetaMask pretty signing
 - Ledger support for x/authz & x/feegrant
 - Revert Chain of Secrets tombstone state and restore slashed funds
+- Updated ibc-go from v3.0.0 to v3.3.0
 
 # 1.3.1
 
