@@ -1,7 +1,6 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
-CURRENT_BRANCH := $(shell git branch --show-current)
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
@@ -143,8 +142,7 @@ build_cli:
 	go build -o secretcli -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
-	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch $(CURRENT_BRANCH) github.com/enigmampc/SecretNetwork/cmd/secretd
+	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
@@ -162,23 +160,23 @@ _build-linux-with-query: vendor
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
-	mv secretd-windows-* secretcli-windows-amd64.exe
+	sudo mv github.com/scrtlabs/SecretNetwork-windows-* secretcli-windows-amd64.exe
 
 build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
-	mv secretd-darwin-* secretcli-macos-amd64
+	sudo mv github.com/scrtlabs/SecretNetwork-darwin-amd64 secretcli-macos-amd64
 
 build_macos_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/arm64
-	mv secretd-darwin-* secretcli-macos-arm64
+	sudo mv github.com/scrtlabs/SecretNetwork-darwin-arm64 secretcli-macos-arm64
 
 build_linux_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
-	mv secretd-linux-amd64 secretcli-linux-amd64
+	sudo mv github.com/scrtlabs/SecretNetwork-linux-amd64 secretcli-linux-amd64
 
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
-	mv secretd-linux-arm64 secretcli-linux-arm64
+	sudo mv github.com/scrtlabs/SecretNetwork-linux-arm64 secretcli-linux-arm64
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
