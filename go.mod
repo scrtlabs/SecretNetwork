@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/cosmos/cosmos-sdk v0.45.8
-	github.com/cosmos/ibc-go/v3 v3.0.0
+	github.com/cosmos/ibc-go/v3 v3.3.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.2
 	github.com/google/gofuzz v1.2.0
@@ -33,7 +33,6 @@ require github.com/cosmos/gorocksdb v1.2.0 // indirect
 require (
 	github.com/creachadair/taskgroup v0.3.2 // indirect
 	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
-	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
