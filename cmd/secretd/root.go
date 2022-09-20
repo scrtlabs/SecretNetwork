@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/codec"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
@@ -315,8 +314,8 @@ func exportAppStateAndTMValidators(
 ) (servertypes.ExportedApp, error) {
 	bootstrap := viper.GetBool("bootstrap")
 
-	encCfg := app.MakeEncodingConfig()
-	encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
+	// encCfg := app.MakeEncodingConfig()
+	// encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
 	var wasmApp *app.SecretNetworkApp
 	if height != -1 {
 		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), bootstrap, appOpts, compute.DefaultWasmConfig())

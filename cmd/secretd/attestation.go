@@ -155,7 +155,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 			userHome, _ := os.UserHomeDir()
 
 			// Load consensus_seed_exchange_pubkey
-			cert := []byte(nil)
+			var cert []byte
 			if len(args) >= 1 {
 				cert, err = os.ReadFile(args[0])
 				if err != nil {

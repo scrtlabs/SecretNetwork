@@ -527,7 +527,7 @@ func TestHandler(k Keeper) sdk.Handler {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-		case *wasmtypes.MsgInstantiateContract: //nolint
+		case *wasmtypes.MsgInstantiateContract:
 			return handleInstantiate(ctx, k, msg)
 		case *wasmtypes.MsgExecuteContract:
 			return handleExecute(ctx, k, msg)
