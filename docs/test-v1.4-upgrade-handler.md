@@ -30,9 +30,11 @@ docker start localsecret -a
 In a second terminal:
 
 ```bash
-#Enter LocalSecret using:
+# Enter LocalSecret using:
 docker exec -it localsecret bash
+```
 
+```bash
 # Init node & enclave
 secretd init --home val2 val2
 secretd init-enclave
@@ -74,7 +76,9 @@ In a third terminal:
 ```bash
 # Enter LocalSecret using:
 docker exec -it localsecret bash
+```
 
+```bash
 # Increase stake of main process to 1M
 # The double signing node can't be the most powerful otherwise weird stuff will happen
 # (The main node will apphash and so is one of the double signing nodes)
@@ -115,7 +119,13 @@ perl -i -pe "s/^persistent_peers = \".+$/persistent_peers = \"$(secretcli status
 secretd start --home val3
 ```
 
-This should tombstone the second validator. On the first validator you should see `INF verified new evidence of byzantine behavior`.
+This should tombstone the second validator. On the first validator you should see `INF verified new evidence of byzantine behavior`. This might take a few seconds. If it take more than 30 seconds, try to stop then start val2 or val3.
+
+To verify that val2 is jailed, this should return `true`:
+
+```bash
+docker exec -it localsecret bash -c 'secretcli q staking validator secretvaloper1fc3fzy78ttp0lwuujw7e52rhspxn8uj5m98e7s | jq .jailed'
+```
 
 ## Step 3
 
@@ -182,8 +192,8 @@ in `app/upgrades/v1.4/cos_patch.go` use these (from val2):
 - )
 + // TESTNET DONT COMMIT!!!!
 + var (
-+	cosValidatorAddress = /* TESTNET DONT COMMIT!!!! */ "secretvaloper1fc3fzy78ttp0lwuujw7e52rhspxn8uj5m98e7s"
-+	cosConsensusAddress = /* TESTNET DONT COMMIT!!!! */ "secretvalcons19vjqkmrawv303rkj36wx4qc5vs0krvfu7yaqmt"
++	/* TESTNET DONT COMMIT!!!! */ cosValidatorAddress = /* TESTNET DONT COMMIT!!!! */ "secretvaloper1fc3fzy78ttp0lwuujw7e52rhspxn8uj5m98e7s" /* TESTNET DONT COMMIT!!!! */
++	/* TESTNET DONT COMMIT!!!! */ cosConsensusAddress = /* TESTNET DONT COMMIT!!!! */ "secretvalcons19vjqkmrawv303rkj36wx4qc5vs0krvfu7yaqmt" /* TESTNET DONT COMMIT!!!! */
 + )
 + // TESTNET DONT COMMIT!!!!
 ```
@@ -212,7 +222,6 @@ rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin
 docker cp localsecret-1.4:/usr/bin/secretcli                                /tmp/upgrade-bin
 docker cp localsecret-1.4:/usr/bin/secretd                                  /tmp/upgrade-bin
 docker cp localsecret-1.4:/usr/lib/librust_cosmwasm_enclave.signed.so       /tmp/upgrade-bin
-docker cp localsecret-1.4:/usr/lib/librust_cosmwasm_query_enclave.signed.so /tmp/upgrade-bin
 docker cp localsecret-1.4:/usr/lib/libgo_cosmwasm.so                        /tmp/upgrade-bin
 
 # Can kill localsecret-1.4 at this point
@@ -225,7 +234,6 @@ docker exec localsecret bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrad
 docker cp /tmp/upgrade-bin/secretcli                                localsecret:/tmp/upgrade-bin
 docker cp /tmp/upgrade-bin/secretd                                  localsecret:/tmp/upgrade-bin
 docker cp /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       localsecret:/tmp/upgrade-bin
-docker cp /tmp/upgrade-bin/librust_cosmwasm_query_enclave.signed.so localsecret:/tmp/upgrade-bin
 docker cp /tmp/upgrade-bin/libgo_cosmwasm.so                        localsecret:/tmp/upgrade-bin
 
 # Overwrite v1.3 binaries with v1.4 binaries without affecting file permissions
@@ -235,7 +243,6 @@ docker cp /tmp/upgrade-bin/libgo_cosmwasm.so                        localsecret:
 
 docker exec localsecret bash -c 'cat /tmp/upgrade-bin/secretcli                                > /usr/bin/secretcli'
 docker exec localsecret bash -c 'cat /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       > /usr/lib/librust_cosmwasm_enclave.signed.so'
-docker exec localsecret bash -c 'cat /tmp/upgrade-bin/librust_cosmwasm_query_enclave.signed.so > /usr/lib/librust_cosmwasm_query_enclave.signed.so'
 docker exec localsecret bash -c 'cat /tmp/upgrade-bin/libgo_cosmwasm.so                        > /usr/lib/libgo_cosmwasm.so'
 
 # We cannot overwrite secretd because it's being used ("Text file busy")
@@ -260,7 +267,10 @@ UPGRADE_BLOCK="$(docker exec localsecret bash -c 'secretcli status | jq "(.SyncI
 PROPOSAL_ID="$(docker exec localsecret bash -c "secretcli tx gov submit-proposal software-upgrade v1.4 --upgrade-height $UPGRADE_BLOCK --title 'Shockwave Delta Upgrade' --description YOLO --deposit 100000000uscrt --from a -y -b block | jq '.logs[0].events[] | select(.type == \"submit_proposal\") | .attributes[] | select(.key == \"proposal_id\") | .value | tonumber'")"
 
 # Vote yes (voting period is 90 seconds)
-docker exec localsecret bash -c "secretcli tx gov vote $PROPOSAL_ID yes --from a -y -b block"
+docker exec localsecret bash -c "secretcli tx gov vote ${PROPOSAL_ID} yes --from a -y -b block"
+
+echo "PROPOSAL_ID = ${PROPOSAL_ID}"
+echo "UPGRADE_BLOCK = ${UPGRADE_BLOCK}"
 ```
 
 ## Step 7
@@ -289,6 +299,11 @@ docker exec -it localsecret bash -c '/tmp/upgrade-bin/secretd start --home val2'
 Then in another terminal, unjail:
 
 ```bash
+# Enter LocalSecret using:
+docker exec -it localsecret bash
+```
+
+```bash
 # Unjail
 secretcli tx slashing unjail --from b -y -b block
 
@@ -304,7 +319,18 @@ secretcli q staking delegations secret1hsjtghm83lt8p0ksmpf3ef9rlcfswksm0c87z5 | 
 
 ## Step 9
 
-Test that old v0.10 contracts are still working (query + exec + init from stored code)
+Test that old v0.10 contracts are still working (query + exec + init from stored code).
+
+```bash
+# This should output "SSCRT":
+secretcli q compute query secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"token_info":{}}' | jq .token_info.symbol
+
+# This should output "0":
+secretcli tx compute exec secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"deposit":{}}' --amount 1uscrt -b block --from a -y | jq .code
+
+# This should output "0":
+secretcli tx compute init 1 '{"name":"Secret SCRT","admin":"secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03","symbol":"SSCRT","decimals":6,"initial_balances":[],"prng_seed":"eW8=","config":{"public_total_supply":true,"enable_deposit":true,"enable_redeem":true,"enable_mint":false,"enable_burn":false},"supported_denoms":["uscrt"]}' --label "$RANDOM" -b block --from a -y | jq .code
+```
 
 ## Step 10
 
