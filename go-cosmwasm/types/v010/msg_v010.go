@@ -3,7 +3,7 @@ package v010types
 import (
 	"encoding/json"
 
-	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 )
 
 //------- Results / Msgs -------------

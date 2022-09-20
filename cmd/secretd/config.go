@@ -2,7 +2,7 @@ package main
 
 import (
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
-	"github.com/enigmampc/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 )
 
 // SecretAppConfig terra specify app config

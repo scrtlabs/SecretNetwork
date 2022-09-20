@@ -2,12 +2,13 @@ package v1_4
 
 import (
 	"fmt"
+
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/enigmampc/SecretNetwork/app/keepers"
-	"github.com/enigmampc/SecretNetwork/app/upgrades"
+	"github.com/scrtlabs/SecretNetwork/app/keepers"
+	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 )
 
 const UpgradeName = "v1.4"
@@ -32,7 +33,6 @@ func CreateUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 			keepers.BankKeeper,
 			keepers.StakingKeeper,
 		)
-
 		if err != nil {
 			panic(fmt.Sprintf("failed to revert tombstoning: %s", err))
 		}

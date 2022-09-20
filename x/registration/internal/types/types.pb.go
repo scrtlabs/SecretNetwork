@@ -6,7 +6,7 @@ package types
 import (
 	bytes "bytes"
 	fmt "fmt"
-	github_com_enigmampc_SecretNetwork_x_registration_remote_attestation "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	github_com_enigmampc_SecretNetwork_x_registration_remote_attestation "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	io "io"
@@ -64,7 +64,7 @@ func (m *SeedConfig) XXX_DiscardUnknown() {
 var xxx_messageInfo_SeedConfig proto.InternalMessageInfo
 
 type RegistrationNodeInfo struct {
-	Certificate   github_com_enigmampc_SecretNetwork_x_registration_remote_attestation.Certificate `protobuf:"bytes,1,opt,name=certificate,proto3,casttype=github.com/enigmampc/SecretNetwork/x/registration/remote_attestation.Certificate" json:"certificate,omitempty"`
+	Certificate   github_com_enigmampc_SecretNetwork_x_registration_remote_attestation.Certificate `protobuf:"bytes,1,opt,name=certificate,proto3,casttype=github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation.Certificate" json:"certificate,omitempty"`
 	EncryptedSeed []byte                                                                           `protobuf:"bytes,2,opt,name=encrypted_seed,json=encryptedSeed,proto3" json:"encrypted_seed,omitempty"`
 }
 

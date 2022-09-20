@@ -5,7 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/enigmampc/SecretNetwork/app/keepers"
+	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

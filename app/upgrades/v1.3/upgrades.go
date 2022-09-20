@@ -9,8 +9,8 @@ import (
 	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
-	"github.com/enigmampc/SecretNetwork/app/keepers"
-	"github.com/enigmampc/SecretNetwork/app/upgrades"
+	"github.com/scrtlabs/SecretNetwork/app/keepers"
+	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 )
 
 const UpgradeName = "v1.3"

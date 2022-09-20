@@ -14,9 +14,9 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/enigmampc/SecretNetwork/x/mauth/client/cli"
-	"github.com/enigmampc/SecretNetwork/x/mauth/keeper"
-	"github.com/enigmampc/SecretNetwork/x/mauth/types"
+	"github.com/scrtlabs/SecretNetwork/x/mauth/client/cli"
+	"github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/mauth/types"
 )
 
 var (

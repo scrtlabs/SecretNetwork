@@ -11,10 +11,10 @@ import (
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	v010cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/log"
 )

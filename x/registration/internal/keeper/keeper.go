@@ -11,8 +11,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
+	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
 // Keeper will have a reference to Wasmer with it's own data directory.

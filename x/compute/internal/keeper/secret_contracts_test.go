@@ -25,9 +25,9 @@ import (
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	v010cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"gonum.org/v1/gonum/stat/combin"
 )
