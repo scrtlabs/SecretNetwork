@@ -88,9 +88,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
-	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
-	wasmtypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	"github.com/enigmampc/SecretNetwork/x/registration"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
 const (

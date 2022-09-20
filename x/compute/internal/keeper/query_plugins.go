@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -21,7 +21,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

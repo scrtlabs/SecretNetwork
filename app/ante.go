@@ -6,7 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/cosmos/ibc-go/v3/modules/core/keeper"
 
-	"github.com/enigmampc/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 )
 
 // HandlerOptions extend the SDK's AnteHandler options by requiring the IBC

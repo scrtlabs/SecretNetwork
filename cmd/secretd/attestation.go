@@ -20,9 +20,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
-	reg "github.com/enigmampc/SecretNetwork/x/registration"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	reg "github.com/scrtlabs/SecretNetwork/x/registration"
+	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 	"github.com/spf13/cobra"
 )
 

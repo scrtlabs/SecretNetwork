@@ -7,7 +7,7 @@ import (
 	bytes "bytes"
 	fmt "fmt"
 	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
-	github_com_enigmampc_SecretNetwork_x_registration_remote_attestation "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	github_com_enigmampc_SecretNetwork_x_registration_remote_attestation "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	io "io"
@@ -28,7 +28,7 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type RaAuthenticate struct {
 	Sender      github_com_cosmos_cosmos_sdk_types.AccAddress                                    `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
-	Certificate github_com_enigmampc_SecretNetwork_x_registration_remote_attestation.Certificate `protobuf:"bytes,2,opt,name=certificate,proto3,casttype=github.com/enigmampc/SecretNetwork/x/registration/remote_attestation.Certificate" json:"ra_cert"`
+	Certificate github_com_enigmampc_SecretNetwork_x_registration_remote_attestation.Certificate `protobuf:"bytes,2,opt,name=certificate,proto3,casttype=github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation.Certificate" json:"ra_cert"`
 }
 
 func (m *RaAuthenticate) Reset()         { *m = RaAuthenticate{} }

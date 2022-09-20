@@ -12,8 +12,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/SecretNetwork/x/compute"
-	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

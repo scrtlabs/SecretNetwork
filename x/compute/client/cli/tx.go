@@ -9,13 +9,13 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 )
