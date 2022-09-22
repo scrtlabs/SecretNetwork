@@ -529,7 +529,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					if err != nil {
 						continue
 					}
-					answers.OutputError = string(append(json.RawMessage(fmt.Sprintf("message inedx %d: ", i)), stdErr...))
+					answers.OutputError = string(append(json.RawMessage(fmt.Sprintf("message index %d: ", i)), stdErr...))
 					break
 				}
 			} else if types.ContainsEnclaveError(result.RawLog) {
