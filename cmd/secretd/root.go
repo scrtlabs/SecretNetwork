@@ -8,21 +8,20 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/codec"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	scrt "github.com/enigmampc/SecretNetwork/types"
-	"github.com/enigmampc/SecretNetwork/x/compute"
 	"github.com/rs/zerolog"
+	scrt "github.com/scrtlabs/SecretNetwork/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	//"github.com/tendermint/tendermint/libs/cli"
 
 	"github.com/cosmos/cosmos-sdk/snapshots"
-	"github.com/enigmampc/SecretNetwork/app"
+	"github.com/scrtlabs/SecretNetwork/app"
 
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
@@ -45,7 +44,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	secretlegacy "github.com/enigmampc/SecretNetwork/app/legacy"
+	secretlegacy "github.com/scrtlabs/SecretNetwork/app/legacy"
 )
 
 // thanks @terra-project for this fix
@@ -315,8 +314,8 @@ func exportAppStateAndTMValidators(
 ) (servertypes.ExportedApp, error) {
 	bootstrap := viper.GetBool("bootstrap")
 
-	encCfg := app.MakeEncodingConfig()
-	encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
+	// encCfg := app.MakeEncodingConfig()
+	// encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
 	var wasmApp *app.SecretNetworkApp
 	if height != -1 {
 		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), bootstrap, appOpts, compute.DefaultWasmConfig())

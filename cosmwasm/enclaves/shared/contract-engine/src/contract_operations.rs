@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
@@ -55,6 +57,7 @@ pub fn init(
     let contract_hash = contract_code.hash();
 
     let base_env: BaseEnv = extract_base_env(env)?;
+    let query_depth = extract_query_depth(env)?;
 
     let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
 
@@ -94,6 +97,7 @@ pub fn init(
         contract_code,
         &contract_key,
         ContractOperation::Init,
+        query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
@@ -155,6 +159,7 @@ pub fn handle(
     let contract_hash = contract_code.hash();
 
     let base_env: BaseEnv = extract_base_env(env)?;
+    let query_depth = extract_query_depth(env)?;
 
     let (sender, contract_address, _, sent_funds) = base_env.get_verification_params();
 
@@ -178,8 +183,8 @@ pub fn handle(
         should_encrypt_output,
         secret_msg,
         decrypted_msg,
-        contract_hash_for_validation,
-    } = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
+        data_for_validation,
+    } = parse_message(msg, &parsed_handle_type)?;
 
     let canonical_sender_address = match to_canonical(sender) {
         Ok(can) => can,
@@ -203,12 +208,12 @@ pub fn handle(
     }
 
     let mut validated_msg = decrypted_msg.clone();
-    let mut reply_params: Option<ReplyParams> = None;
+    let mut reply_params: Option<Vec<ReplyParams>> = None;
     if was_msg_encrypted {
         let x = validate_msg(
             &decrypted_msg,
             &contract_hash,
-            contract_hash_for_validation,
+            data_for_validation,
             Some(parsed_handle_type.clone()),
         )?;
         validated_msg = x.validated_msg;
@@ -224,6 +229,7 @@ pub fn handle(
         contract_code,
         &contract_key,
         ContractOperation::Handle,
+        query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
@@ -302,6 +308,7 @@ pub fn query(
     let contract_hash = contract_code.hash();
 
     let base_env: BaseEnv = extract_base_env(env)?;
+    let query_depth = extract_query_depth(env)?;
 
     let (_, contract_address, _, _) = base_env.get_verification_params();
 
@@ -323,6 +330,7 @@ pub fn query(
         contract_code,
         &contract_key,
         ContractOperation::Query,
+        query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
@@ -349,12 +357,14 @@ pub fn query(
     Ok(QuerySuccess { output })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn start_engine(
     context: Ctx,
     gas_limit: u64,
     contract_code: ContractCode,
     contract_key: &ContractKey,
     operation: ContractOperation,
+    query_depth: u32,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<crate::wasm3::Engine, EnclaveError> {
@@ -365,6 +375,7 @@ fn start_engine(
         contract_code,
         *contract_key,
         operation,
+        query_depth,
         nonce,
         user_public_key,
     )
@@ -412,5 +423,31 @@ fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
         .map(|base_env| {
             trace!("base env: {:?}", base_env);
             base_env
+        })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct EnvWithQD {
+    query_depth: u32,
+}
+
+/// Extract the query_depth from the env parameter.
+///
+/// This is done in a separate method and type definition in order
+/// to simplify the code and avoid further coupling of the query depth
+/// parameter and the CW Env type.
+fn extract_query_depth(env: &[u8]) -> Result<u32, EnclaveError> {
+    serde_json::from_slice::<EnvWithQD>(env)
+        .map_err(|err| {
+            warn!(
+                "error while deserializing env into json {:?}: {}",
+                String::from_utf8_lossy(&env),
+                err
+            );
+            EnclaveError::FailedToDeserialize
+        })
+        .map(|env| {
+            trace!("base env: {:?}", env);
+            env.query_depth
         })
 }

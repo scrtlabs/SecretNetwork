@@ -9,10 +9,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 var _ types.IBCContractKeeper = (*Keeper)(nil)

@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 // NewHandler returns a handler for "compute" type messages.
@@ -20,7 +20,7 @@ func NewHandler(k Keeper) sdk.Handler {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 		switch msg := msg.(type) {
-		case *MsgStoreCode: //nolint
+		case *MsgStoreCode: 
 			return handleStoreCode(ctx, k, msg)
 		case *MsgInstantiateContract:
 			return handleInstantiate(ctx, k, msg)

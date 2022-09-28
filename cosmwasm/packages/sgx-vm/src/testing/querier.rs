@@ -59,6 +59,7 @@ impl<C: DeserializeOwned> Querier for MockQuerier<C> {
     fn query_raw(
         &self,
         bin_request: &[u8],
+        _query_depth: u32,
         gas_limit: u64,
     ) -> FfiResult<SystemResult<StdResult<Binary>>> {
         let response = self.querier.raw_query(bin_request);
@@ -100,7 +101,7 @@ impl MockQuerier {
                 );
             }
         };
-        self.query_raw(&request_binary, gas_limit)
+        self.query_raw(&request_binary, 2, gas_limit)
     }
 }
 

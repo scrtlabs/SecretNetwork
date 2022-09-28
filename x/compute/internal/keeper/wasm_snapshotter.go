@@ -8,8 +8,8 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	protoio "github.com/gogo/protobuf/io"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )

@@ -9,9 +9,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	wasmTypesV010 "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	wasmTypesV1 "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	wasmTypesV010 "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	wasmTypesV1 "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/spf13/cast"
 )
 
@@ -130,8 +130,8 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 		Contract: wasmTypes.ContractInfo{
 			Address: contractAddr.String(),
 		},
-		Key:       wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
-		Recursive: false,
+		Key:        wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
+		QueryDepth: 1,
 	}
 
 	if txCounter, ok := TXCounter(ctx); ok {

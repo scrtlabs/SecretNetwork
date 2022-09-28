@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/require"
 

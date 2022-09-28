@@ -3,7 +3,7 @@ package types
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 )
 
 // IBCContractKeeper IBC lifecycle event handler

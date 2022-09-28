@@ -1,9 +1,9 @@
 package v120
 
 import (
-	v120registration "github.com/enigmampc/SecretNetwork/x/registration/internal/types"
-	v106registration "github.com/enigmampc/SecretNetwork/x/registration/legacy/v106"
-	v120ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
+	v106registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v106"
+	v120ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
 // Migrate accepts exported v1.0.6 x/registration genesis state and

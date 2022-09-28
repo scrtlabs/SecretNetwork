@@ -1,3 +1,4 @@
+sgx_sk.pem
 *.a
 *.deb
 Enclave_t.c
@@ -41,3 +42,4 @@ x/compute/internal/keeper/testdata/ibc.wasm
 x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
 x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
 x/compute/internal/keeper/testdata/v1-contract.wasm
+/github.com

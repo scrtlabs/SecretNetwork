@@ -12,8 +12,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/gorilla/mux"
 )

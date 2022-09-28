@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
