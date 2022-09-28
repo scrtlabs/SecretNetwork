@@ -84,6 +84,7 @@ pub struct Context {
     context: Ctx,
     gas_limit: u64,
     gas_costs: WasmCosts,
+    query_depth: u32,
     #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
 
@@ -179,6 +180,7 @@ impl Engine {
         contract_code: ContractCode,
         contract_key: ContractKey,
         operation: ContractOperation,
+        query_depth: u32,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Engine, EnclaveError> {
@@ -229,6 +231,7 @@ impl Engine {
             context,
             gas_limit,
             gas_costs,
+            query_depth,
             operation,
             contract_key,
             user_nonce,
@@ -979,6 +982,7 @@ fn host_query_chain(
     let mut used_gas: u64 = 0;
     let answer = encrypt_and_query_chain(
         &query_buffer,
+        context.query_depth,
         &context.context,
         context.user_nonce,
         context.user_public_key,
