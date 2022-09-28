@@ -94,7 +94,7 @@ pub fn init(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Init,
         query_depth,
@@ -226,7 +226,7 @@ pub fn handle(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Handle,
         query_depth,
@@ -327,7 +327,7 @@ pub fn query(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Query,
         query_depth,
@@ -361,7 +361,7 @@ pub fn query(
 fn start_engine(
     context: Ctx,
     gas_limit: u64,
-    contract_code: ContractCode,
+    contract_code: &ContractCode,
     contract_key: &ContractKey,
     operation: ContractOperation,
     query_depth: u32,

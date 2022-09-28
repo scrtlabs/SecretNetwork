@@ -21,11 +21,13 @@ use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngine
 use crate::gas::WasmCosts;
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
-use crate::wasm::contract::api_marker;
 use crate::wasm::ContractOperation;
-use crate::wasm3::gas::{get_exhausted_amount, get_remaining_gas, use_gas};
+
+use gas::{get_exhausted_amount, get_remaining_gas, use_gas};
+use module_cache::create_module_instance;
 
 mod gas;
+pub mod module_cache;
 mod validation;
 
 type Wasm3RsError = wasm3::Error;
@@ -177,55 +179,15 @@ impl Engine {
         context: Ctx,
         gas_limit: u64,
         gas_costs: WasmCosts,
-        contract_code: ContractCode,
+        contract_code: &ContractCode,
         contract_key: ContractKey,
         operation: ContractOperation,
         query_depth: u32,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Engine, EnclaveError> {
-        let mut module = walrus::ModuleConfig::new()
-            .generate_producers_section(false)
-            .parse(contract_code.code())
-            .map_err(|_| EnclaveError::InvalidWasm)?;
-
-        for import in module.imports.iter() {
-            eprintln!("import {:?}", import)
-        }
-        for export in module.exports.iter() {
-            eprintln!("export {:?}", export)
-        }
-
-        let cosmwasm_api_version = if let Some(export) = module
-            .exports
-            .iter()
-            .find(|&exp| exp.name == api_marker::V0_10 || exp.name == api_marker::V1)
-        {
-            if export.name == api_marker::V0_10 {
-                CosmWasmApiVersion::V010
-            } else if export.name == api_marker::V1 {
-                CosmWasmApiVersion::V1
-            } else {
-                error!("Invalid cosmwasm api version");
-                return Err(EnclaveError::InvalidWasm);
-            }
-        } else {
-            error!("Invalid cosmwasm api version2");
-            return Err(EnclaveError::InvalidWasm);
-        };
-
-        validation::validate_memory(&mut module)?;
-
-        if let ContractOperation::Init = operation {
-            if module.has_floats() {
-                debug!("contract was found to contain floating point operations");
-                return Err(EnclaveError::WasmModuleWithFP);
-            }
-        }
-
-        gas::add_metering(&mut module, &gas_costs);
-
-        let code = module.emit_wasm();
+        let (code, cosmwasm_api_version) =
+            create_module_instance(contract_code, &gas_costs, operation)?;
 
         let context = Context {
             context,

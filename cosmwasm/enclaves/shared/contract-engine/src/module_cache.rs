@@ -23,6 +23,7 @@ lazy_static! {
         SgxRwLock::new(LruCache::new(0));
 }
 
+#[allow(dead_code)]
 pub fn configure_module_cache(cap: usize) {
     debug!("configuring module cache: {}", cap);
     MODULE_CACHE.write().unwrap().resize(cap)
