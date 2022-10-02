@@ -85,6 +85,7 @@ impl<'env, C> Wasm3RuntimeEx for wasm3::Runtime<'env, C> {
 pub struct Context {
     context: Ctx,
     gas_limit: u64,
+    gas_used_externally: u64,
     gas_costs: WasmCosts,
     query_depth: u32,
     #[cfg_attr(feature = "query-only", allow(unused))]
@@ -98,6 +99,14 @@ pub struct Context {
 }
 
 impl Context {
+    pub fn use_gas_externally(&mut self, amount: u64) {
+        self.gas_used_externally = self.gas_used_externally.saturating_add(amount);
+    }
+
+    pub fn get_gas_used_externally(&self) -> u64 {
+        self.gas_used_externally
+    }
+
     pub fn take_last_error(&mut self) -> Option<WasmEngineError> {
         self.last_error.take()
     }
@@ -192,6 +201,7 @@ impl Engine {
         let context = Context {
             context,
             gas_limit,
+            gas_used_externally: 0,
             gas_costs,
             query_depth,
             operation,
@@ -243,8 +253,11 @@ impl Engine {
         let result = func(&mut instance, &mut self.context);
         debug!("function returned {:?}", result);
 
-        self.used_gas =
-            self.gas_limit - get_remaining_gas(&instance) + get_exhausted_amount(&instance);
+        self.used_gas = self
+            .gas_limit
+            .saturating_sub(get_remaining_gas(&instance))
+            .saturating_sub(self.context.get_gas_used_externally())
+            .saturating_add(get_exhausted_amount(&instance));
 
         result
     }
@@ -663,7 +676,7 @@ fn host_read_db(
     let (value, used_gas) =
         read_encrypted_key(&state_key_name, &context.context, &context.contract_key)
             .map_err(debug_err!("db_read failed to read key from storage"))?;
-    use_gas(instance, used_gas)?;
+    context.use_gas_externally(used_gas);
 
     debug!(
         "db_read received value {:?}",
@@ -699,7 +712,7 @@ fn host_remove_db(
     debug!("db_remove removing key {}", show_bytes(&state_key_name));
 
     let used_gas = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)?;
-    use_gas(instance, used_gas)?;
+    context.use_gas_externally(used_gas);
 
     Ok(())
 }
@@ -735,7 +748,7 @@ fn host_write_db(
         &context.contract_key,
     )
     .map_err(debug_err!("db_write failed to write key to storage",))?;
-    use_gas(instance, used_gas)?;
+    context.use_gas_externally(used_gas);
 
     Ok(())
 }
@@ -842,7 +855,6 @@ fn host_addr_validate(
 
     let human = read_from_memory(instance, addr_to_validate as u32)
         .map_err(debug_err!(err => "humanize_address failed to extract vector from canonical_region_ptr: {err}"))?;
-    use_gas(instance, used_gas)?;
 
     trace!(
         "addr_validate() was called from WASM code with {:?}",
@@ -952,7 +964,7 @@ fn host_query_chain(
         get_remaining_gas(instance),
     )?;
 
-    use_gas(instance, used_gas)?;
+    context.use_gas_externally(used_gas);
 
     write_to_memory(instance, &answer).map(|region_ptr| region_ptr as i32)
 }
