@@ -195,8 +195,7 @@ impl Engine {
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Engine, EnclaveError> {
-        let (code, cosmwasm_api_version) =
-            create_module_instance(contract_code, &gas_costs, operation)?;
+        let versioned_code = create_module_instance(contract_code, &gas_costs, operation)?;
 
         let context = Context {
             context,
@@ -220,8 +219,8 @@ impl Engine {
             gas_limit,
             used_gas: 0,
             environment,
-            code,
-            api_version: cosmwasm_api_version,
+            code: versioned_code.code,
+            api_version: versioned_code.version,
         })
     }
 

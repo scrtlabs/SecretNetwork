@@ -16,8 +16,19 @@ use crate::gas::WasmCosts;
 use crate::wasm::contract::api_marker;
 use crate::wasm::ContractOperation;
 
+pub struct VersionedCode {
+    pub code: Vec<u8>,
+    pub version: CosmWasmApiVersion,
+}
+
+impl VersionedCode {
+    pub fn new(code: Vec<u8>, version: CosmWasmApiVersion) -> Self {
+        Self { code, version }
+    }
+}
+
 lazy_static! {
-    static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], (Vec<u8>, CosmWasmApiVersion)>> =
+    static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], VersionedCode>> =
         SgxRwLock::new(LruCache::new(0));
 }
 
@@ -30,7 +41,7 @@ pub fn create_module_instance(
     contract_code: &ContractCode,
     gas_costs: &WasmCosts,
     operation: ContractOperation,
-) -> Result<(Vec<u8>, CosmWasmApiVersion), EnclaveError> {
+) -> Result<VersionedCode, EnclaveError> {
     debug!("fetching module from cache");
     let cache = MODULE_CACHE.read().unwrap();
 
@@ -46,7 +57,11 @@ pub fn create_module_instance(
     let mut api_version = CosmWasmApiVersion::Invalid;
     debug!("peeking in cache");
     let peek_result = cache.peek(&contract_code.hash());
-    if let Some((cached_code, cached_ver)) = peek_result {
+    if let Some(VersionedCode {
+        code: cached_code,
+        version: cached_ver,
+    }) = peek_result
+    {
         debug!("found instance in cache!");
         code = Some(cached_code.clone());
         api_version = *cached_ver;
@@ -57,9 +72,9 @@ pub fn create_module_instance(
     // if we couldn't find the code in the cache, analyze it now
     if code.is_none() {
         debug!("code not found in cache! analyzing now");
-        let (new_code, new_api_version) = analyze_module(contract_code, gas_costs, operation)?;
-        code = Some(new_code);
-        api_version = new_api_version;
+        let versioned_code = analyze_module(contract_code, gas_costs, operation)?;
+        code = Some(versioned_code.code);
+        api_version = versioned_code.version;
     }
 
     // If we analyzed the code in the previous step, insert it to the LRU cache
@@ -67,7 +82,7 @@ pub fn create_module_instance(
     let mut cache = MODULE_CACHE.write().unwrap();
     if let Some(code) = code.clone() {
         debug!("storing code in cache");
-        cache.put(contract_code.hash(), (code, api_version));
+        cache.put(contract_code.hash(), VersionedCode::new(code, api_version));
     } else {
         // Touch the cache to update the LRU value
         debug!("updating LRU without storing anything");
@@ -77,14 +92,14 @@ pub fn create_module_instance(
     let code = code.unwrap();
 
     debug!("returning built instance");
-    Ok((code, api_version))
+    Ok(VersionedCode::new(code, api_version))
 }
 
 pub fn analyze_module(
     contract_code: &ContractCode,
     gas_costs: &WasmCosts,
     operation: ContractOperation,
-) -> Result<(Vec<u8>, CosmWasmApiVersion), EnclaveError> {
+) -> Result<VersionedCode, EnclaveError> {
     let mut module = walrus::ModuleConfig::new()
         .generate_producers_section(false)
         .parse(contract_code.code())
@@ -124,5 +139,5 @@ pub fn analyze_module(
 
     let code = module.emit_wasm();
 
-    Ok((code, cosmwasm_api_version))
+    Ok(VersionedCode::new(code, cosmwasm_api_version))
 }
