@@ -395,7 +395,7 @@ impl Engine {
                         let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
                         let (handle, args) = (
                             instance
-                                .find_function::<(u32, u32, u32), u32>(&export_name)
+                                .find_function::<(u32, u32, u32), u32>(export_name)
                                 .to_enclave_result()?,
                             (env_ptr, msg_info_ptr, msg_ptr),
                         );
@@ -403,7 +403,7 @@ impl Engine {
                     } else {
                         let (handle, args) = (
                             instance
-                                .find_function::<(u32, u32), u32>(&export_name)
+                                .find_function::<(u32, u32), u32>(export_name)
                                 .to_enclave_result()?,
                             (env_ptr, msg_ptr),
                         );
