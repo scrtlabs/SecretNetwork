@@ -1,0 +1,15 @@
+{
+    "title": "Increase max gas per block from 6M to 8M",
+    "description": "SCRT Labs proposes to increase the max gas per block from 6M to 8M.\n\n## Background\n\nIn the Shockwave Delta upgrade (proposal #110), the gas cost of some contract operations was increased:\n\n- Base WASM invocation from 10k gas units to 100k gas units.\n- WASM chain access 2k gas units per access.\n\nThis was done as part of a continues effort to make gas consumption better reflect resource usage like CPU time and memory and storage access. Once we achieve equilibrium, block times will be more consistent, block space allocation will prioritize transactions that are more mindful about resource usage and it'll be easier for slower nodes to keep up with block production. **This will increase network security**.\n\n## Side effects\n\nAs a result of this gas cost increase and coupled with the 6M total block gas limit, certain existing dApps on the network stopped functioning. For example, [some of Sienna's contracts stopped working](https://forum.sienna.network/t/shockwave-brought-shock-indeed/35) because their gas usage jumped from 2M to 6.2M.\n\n## Solution\n\nTo remedy this situation, SCRT Labs proposes to increase the max gas per block from 6M to 8M.\n\nIn addition, we propose to increase the block size limit from 10MiB to 21MiB. The block size limit was decreased from 21MiB (Tendermint's default) to 10MiB by mistake in proposal #76.\n\n## What's next?\n\n1. In the coming weeks we expect to collect more data about mainnet gas usage after Shockwave Delta. As a result we might want to better tune this parameter again.\n2. We're in very advanced stages of replacing our old WASM engine (wasmi) with a more modern one (wasm3). Early tests show that it's about 3x more resource efficient (we're trying to squeeze more).\n3. In 2023 we're planing to replace wasm3 with wasmer, which is about 150x more resource efficient than wasmi. Wasmer is not compatible with our current SGX SDK, so using in requires quite a big overhaul of our tech stack.",
+    "changes": [
+        {
+            "subspace": "baseapp",
+            "key": "BlockParams",
+            "value": {
+                "max_bytes": "22020096",
+                "max_gas": "8000000"
+            }
+        }
+    ],
+    "deposit": "100000000uscrt"
+}
