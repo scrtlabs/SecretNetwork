@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Secret Network
   description: A REST interface for queries and transactions
-  version: v1.4
+  version: v1.5.0
 paths:
   /cosmos/auth/v1beta1/accounts:
     get:
@@ -13796,7 +13796,7 @@ paths:
   /cosmos/staking/v1beta1/pool:
     get:
       summary: Pool queries the pool info.
-      operationId: Pool
+      operationId: ../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonPool
       responses:
         "200":
           description: A successful response.

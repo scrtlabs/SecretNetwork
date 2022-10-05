@@ -120,7 +120,12 @@ pub fn parse_message(
                     base64::encode(&message)
                 );
 
-                let secret_msg = get_secret_msg(message);
+                let secret_msg = SecretMessage {
+                    nonce: [0; 32],
+                    user_public_key: [0; 32],
+                    msg: message.into(),
+                };
+
                 let decrypted_msg = secret_msg.msg.clone();
 
                 Ok(ParsedMessage {
@@ -484,7 +489,7 @@ pub fn parse_message(
             let tmp_secret_data =
                 get_secret_msg(parsed_encrypted_ibc_packet.packet.data.as_slice());
             let mut was_msg_encrypted = false;
-            let orig_secret_msg = tmp_secret_data;
+            let mut orig_secret_msg = tmp_secret_data;
 
             match orig_secret_msg.decrypt() {
                 Ok(decrypted_msg) => {
@@ -505,6 +510,12 @@ pub fn parse_message(
                         "ibc_packet_receive data was plaintext: {:?}",
                         base64::encode(&message)
                     );
+
+                    orig_secret_msg = SecretMessage {
+                        nonce: [0; 32],
+                        user_public_key: [0; 32],
+                        msg: message.into(),
+                    };
                 }
             }
             Ok(ParsedMessage {
