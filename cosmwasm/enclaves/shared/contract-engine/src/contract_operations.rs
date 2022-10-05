@@ -335,9 +335,11 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
-    let versioned_env = base_env
+    let mut versioned_env = base_env
         .clone()
         .into_versioned_env(&engine.get_api_version());
+
+    versioned_env.set_contract_hash(&contract_hash);
 
     let result = engine.query(&versioned_env, validated_msg);
     *used_gas = engine.gas_used();

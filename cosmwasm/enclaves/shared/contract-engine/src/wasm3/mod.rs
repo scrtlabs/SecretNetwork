@@ -269,7 +269,7 @@ impl Engine {
         link_fn(instance, "humanize_address", host_humanize_address)?;
         link_fn(instance, "query_chain", host_query_chain)?;
 
-        link_fn(instance, "addr_canonicalize", host_canonicalize_address)?;
+        link_fn(instance, "addr_canonicalize", host_addr_canonicalize)?;
         link_fn(instance, "addr_humanize", host_humanize_address)?;
         link_fn(instance, "addr_validate", host_addr_validate)?;
         link_fn(instance, "debug_print", host_debug_print)?;
@@ -844,6 +844,79 @@ fn host_canonicalize_address(
     Ok(0)
 }
 
+fn host_addr_canonicalize(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+    (human_region_ptr, canonical_region_ptr): (i32, i32),
+) -> WasmEngineResult<i32> {
+    let used_gas = context.gas_costs.external_canonicalize_address as u64;
+    use_gas(instance, used_gas)?;
+
+    let human = read_from_memory(instance, human_region_ptr as u32)
+        .map_err(debug_err!(err => "addr_canonicalize failed to extract vector from human_region_ptr: {err}"))?;
+
+    let human_addr_str = match std::str::from_utf8(&human) {
+        Ok(addr) => addr,
+        Err(_err) => {
+            debug!(
+                "addr_canonicalize input was not valid UTF-8: {}",
+                show_bytes(&human)
+            );
+            return write_to_memory(instance, b"input is not valid UTF-8")
+                .map(|n| n as i32)
+                .map_err(debug_err!("failed to write error message to contract"));
+        }
+    };
+    if human_addr_str.is_empty() {
+        debug!("addr_canonicalize input was empty");
+        return write_to_memory(instance, b"Input is empty")
+            .map(|n| n as i32)
+            .map_err(debug_err!("failed to write error message to contract"));
+    }
+
+    debug!("addr_canonicalize was called with {:?}", human_addr_str);
+
+    let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+        Ok(ret) => ret,
+        Err(err) => {
+            debug!(
+                "addr_canonicalize failed to parse input as bech32: {:?}",
+                err
+            );
+            return write_to_memory(instance, err.to_string().as_bytes())
+                .map(|n| n as i32)
+                .map_err(debug_err!("failed to write error message to contract"));
+        }
+    };
+
+    if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
+        debug!("addr_canonicalize was called with an unexpected address prefix");
+        return write_to_memory(
+            instance,
+            format!("wrong address prefix: {:?}", decoded_prefix).as_bytes(),
+        )
+        .map(|n| n as i32)
+        .map_err(debug_err!("failed to write error message to contract"));
+    }
+
+    let canonical = Vec::<u8>::from_base32(&data).map_err(|err| {
+        // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
+        // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
+        debug!("addr_canonicalize failed to parse base32: {}", err);
+        WasmEngineError::Base32Error
+    })?;
+
+    debug!(
+        "addr_canonicalize returning address {}",
+        hex::encode(human_addr_str)
+    );
+
+    write_to_allocated_memory(instance, canonical_region_ptr as u32, &canonical)?;
+
+    // return 0 == ok
+    Ok(0)
+}
+
 fn host_addr_validate(
     context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -876,7 +949,7 @@ fn host_addr_validate(
         Ok(x) => x,
     };
 
-    let canonical_address = match bech32::decode(&source_human_address) {
+    let canonical_address = match bech32::decode(source_human_address) {
         Err(err) => {
             debug!(
                 "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
@@ -912,7 +985,7 @@ fn host_humanize_address(
     instance: &wasm3::Instance<Context>,
     (canonical_region_ptr, human_region_ptr): (i32, i32),
 ) -> WasmEngineResult<i32> {
-    let used_gas = context.gas_costs.external_canonicalize_address as u64;
+    let used_gas = context.gas_costs.external_humanize_address as u64;
     use_gas(instance, used_gas)?;
 
     let canonical = read_from_memory(instance, canonical_region_ptr as u32)
