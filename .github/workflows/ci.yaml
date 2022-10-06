@@ -300,6 +300,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+      - run: rustup update
       - name: Build LocalSecret
         run: |
           echo not_a_key | tee {api_key,spid}.txt
@@ -327,7 +328,7 @@ jobs:
       - name: Run cw20-ics20 tests
         run: |
           git clone --depth 1 --branch secret https://github.com/scrtlabs/cw-plus
-          cd contracts/cw20-ics20
+          cd cw-plus/contracts/cw20-ics20
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
           docker compose -f ./test/docker-compose.yml up -d
