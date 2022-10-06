@@ -331,4 +331,5 @@ jobs:
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
           docker compose -f ./test/docker-compose.yml up -d
+          rustup target add wasm32-unknown-unknown
           make test
