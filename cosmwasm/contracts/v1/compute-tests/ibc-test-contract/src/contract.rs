@@ -118,7 +118,7 @@ pub fn get_resp_based_on_num(env: Env, num: u64) -> StdResult<IbcBasicResponse> 
             msg: CosmosMsg::Wasm(WasmMsg::Execute {
                 code_hash: env.contract.code_hash,
                 contract_addr: env.contract.address.into_string(),
-                msg: Binary::from("{\"increment\":{\"addition\":5}}".as_bytes().to_vec()),
+                msg: Binary::from("{\"increment\":{                                                       \"addition\":5}}".as_bytes().to_vec()),
                 funds: vec![],
             })
             .into(),

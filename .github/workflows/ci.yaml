@@ -323,3 +323,12 @@ jobs:
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*
           yarn
           yarn test
+          docker rm -f localsecret # next step needs the localsecret ports
+      - name: Run cw20-ics20 tests
+        run: |
+          git clone --depth 1 --branch secret https://github.com/scrtlabs/cw-plus
+          cd cw-plus/contracts/cw20-ics20
+          # Use the docker images that we built just a few steps above
+          perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
+          docker compose -f ./test/docker-compose.yml up -d
+          make test
