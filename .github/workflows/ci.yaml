@@ -300,6 +300,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+      - uses: ATiltedTree/setup-rust@v1
+        with:
+          rust-version: stable
       - name: Build LocalSecret
         run: |
           echo not_a_key | tee {api_key,spid}.txt
