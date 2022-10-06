@@ -44,3 +44,5 @@ x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
 x/compute/internal/keeper/testdata/v1-contract.wasm
 /github.com
 third_party/build
+x/compute/internal/keeper/testdata/test-contract/target
+x/compute/internal/keeper/testdata/v1-sanity-contract/target
