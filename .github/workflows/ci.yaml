@@ -300,7 +300,6 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - run: rustup update
       - name: Build LocalSecret
         run: |
           echo not_a_key | tee {api_key,spid}.txt
