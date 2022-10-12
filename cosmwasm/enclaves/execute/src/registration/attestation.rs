@@ -38,7 +38,9 @@ use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
 use enclave_crypto::KeyPair;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
+use super::ocalls::{
+    ocall_get_ias_socket, ocall_get_quote, ocall_get_sn_tss_socket, ocall_sgx_init_quote,
+};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
@@ -51,6 +53,13 @@ pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
 #[cfg(feature = "production")]
 pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
 
+#[cfg(feature = "SGX_MODE_HW")]
+pub const SN_TSS_HOSTNAME: &str = "secretnetwork.trustedservices.scrtlabs.com";
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
+pub const SN_TSS_GID_LIST: &str = "/dev/get-gids";
+#[cfg(feature = "production")]
+pub const SN_TSS_GID_LIST: &str = "/get-gids";
+
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
@@ -59,6 +68,11 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 /// extra_data size that will store the public key of the attesting node
 #[cfg(feature = "SGX_MODE_HW")]
 const REPORT_DATA_SIZE: usize = 32;
+
+#[cfg(feature = "production")]
+pub const SPID: &str = "17FDDCC9477144A2CD84E27CDCE98BE4";
+#[cfg(not(feature = "production"))]
+pub const SPID: &str = "17FDDCC9477144A2CD84E27CDCE98BE4";
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn create_attestation_certificate(
@@ -258,17 +272,6 @@ pub fn create_attestation_report(
 
     report_data.d[..32].copy_from_slice(pub_k);
 
-    /* This is used to match the encoding of the public key here with the ecc key, but honestly
-    the certificate uses curve P256, so that will cause issues anyway -- I'm leaving the code here
-    as a reference in case we want to take another look at this at some point */
-
-    // let mut pub_k_gx = pub_k.gx.clone();
-    // pub_k_gx.reverse();
-    // let mut pub_k_gy = pub_k.gy.clone();
-    // pub_k_gy.reverse();
-    // report_data.d[..32].clone_from_slice(&pub_k_gx);
-    // report_data.d[32..].clone_from_slice(&pub_k_gy);
-
     let rep = match rsgx_create_report(&ti, &report_data) {
         Ok(r) => {
             match SIGNING_METHOD {
@@ -384,7 +387,6 @@ pub fn create_attestation_report(
     // for i in 0..quote_len {
     //     print!("{:02X}", unsafe {*p_quote.offset(i as isize)});
     // }
-    // println!("");
 
     // Check qe_report to defend against replay attack
     // The purpose of p_qe_report is for the ISV enclave to confirm the QUOTE
@@ -574,6 +576,51 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
         .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
 
     config
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn get_gids_from_sn_tss(fd: c_int, cert: Vec<u8>) -> () {
+    trace!("entered get_gids_from_sn_tss fd = {:?}", fd);
+    let config = make_ias_client_config();
+    // let ias_key = String::from_utf8_lossy(api_key_file).trim_end().to_owned();
+
+    let cert_as_base64 = base64::encode(&cert);
+
+    let req = format!(
+        "POST {} HTTP/1.1\r\nHOST: {}\r\nConnection: Close\r\nAccept: */*\r\nContent-Type: application/json\r\nContent-Length: {}\r\n{}\r\n\r\n",
+        SN_TSS_GID_LIST,
+        SN_TSS_HOSTNAME,
+        cert_as_base64.len(),
+        cert_as_base64
+    );
+
+    trace!("request to sn tss: {}", req);
+
+    let dns_name = webpki::DNSNameRef::try_from_ascii_str(SN_TSS_HOSTNAME).unwrap();
+    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
+    let mut sock = TcpStream::new(fd).unwrap();
+    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
+
+    let _result = tls.write(req.as_bytes());
+    let mut plaintext = Vec::new();
+
+    info!("write complete");
+
+    match tls.read_to_end(&mut plaintext) {
+        Ok(_) => (),
+        Err(e) => {
+            warn!("get_gids_from_sn_tss tls.read_to_end: {:?}", e);
+            panic!("Communication error with SN TSS");
+        }
+    }
+    info!("read_to_end complete");
+    let resp_string = String::from_utf8(plaintext.clone()).unwrap();
+
+    trace!("{}", resp_string);
+
+    //resp_string
+
+    //parse_response_sigrl(&plaintext)
 }
 
 #[cfg(feature = "SGX_MODE_HW")]

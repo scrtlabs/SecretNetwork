@@ -214,6 +214,8 @@ pub enum NodeAuthResult {
     SeedEncryptionFailed,
     #[display(fmt = "failed to allocate minimal safety buffer")]
     MemorySafetyAllocationError,
+    #[display(fmt = "Enclave quote status does not match expected status")]
+    EnclaveQuoteStatus,
     #[display(
         fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid"
     )]

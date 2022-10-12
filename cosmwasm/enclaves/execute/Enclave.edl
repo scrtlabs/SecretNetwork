@@ -152,6 +152,7 @@ enclave {
         );
 
         sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
+        sgx_status_t ocall_get_sn_tss_socket([out] int *ret_fd);
 
         sgx_status_t ocall_get_quote(
             [in, size=sigrl_len] uint8_t * p_sigrl,

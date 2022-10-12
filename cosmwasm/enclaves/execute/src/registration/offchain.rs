@@ -322,7 +322,7 @@ fn print_local_report_info(cert: &[u8]) {
 
     let node_auth_result = NodeAuthResult::from(&report.sgx_quote_status);
     // print
-    match verify_quote_status(&report.sgx_quote_status, &report.advisroy_ids) {
+    match verify_quote_status(&report, &report.advisory_ids) {
         Err(status) => match status {
             NodeAuthResult::SwHardeningAndConfigurationNeeded => {
                 println!("Platform status is SW_HARDENING_AND_CONFIGURATION_NEEDED. This means is updated but requires further BIOS configuration");

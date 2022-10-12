@@ -66,6 +66,20 @@ pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
 }
 
 #[no_mangle]
+pub extern "C" fn ocall_get_sn_tss_socket(ret_fd: *mut c_int) -> sgx_status_t {
+    let port = 443;
+    let hostname = "secretnetwork.trustedservices.scrtlabs.com";
+    let addr = lookup_ipv4(hostname, port);
+    let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
+
+    unsafe {
+        *ret_fd = sock.into_raw_fd();
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
 pub extern "C" fn ocall_get_quote(
     p_sigrl: *const u8,
     sigrl_len: u32,

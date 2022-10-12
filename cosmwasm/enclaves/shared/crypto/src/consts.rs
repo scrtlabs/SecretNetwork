@@ -22,7 +22,6 @@ pub const IO_CERTIFICATE_SAVE_PATH: &str = "io-master-cert.der";
 pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed";
 pub const NODE_ENCRYPTED_SEED_KEY_FILE: &str = "consensus_seed.sealed";
 
-//todo: set this to the real value
 #[cfg(feature = "production")]
 pub const MRSIGNER: [u8; 32] = [
     132, 92, 243, 72, 20, 244, 85, 149, 199, 32, 248, 31, 116, 121, 77, 120, 89, 49, 72, 79, 68, 5,
