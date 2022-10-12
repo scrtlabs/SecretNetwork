@@ -1,6 +1,7 @@
 # CHANGELOG
 
 # 1.4.0
+
 - CosmWasm v1
 - Bump WASM gas cost:
   - Base WASM invocation 10k -> 100k
@@ -155,7 +156,7 @@ Secret-CosmWasm remains in a version that is compatabile with the v0.10 of vanil
 
 A new feature has been added - plaintext logs. To send an unencrypted log (contract output), use `plaintext_log` instead of `log`.
 This allows contracts to emit public events, and attach websockets to listen to specific events. To take advantage of this feature, compile contracts with
-`cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.2.0" }`
+`cosmwasm-std = { git = "https://github.com/scrtlabs/SecretNetwork", tag = "v1.2.0" }`
 
 ## Known Issues
 
