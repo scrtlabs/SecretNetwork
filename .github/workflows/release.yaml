@@ -112,7 +112,7 @@ jobs:
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - name: Log in to the Container registry
         if: ${{ matrix.db_backend == 'goleveldb' }}
-        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -173,7 +173,7 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - name: Log in to the Container registry
-        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
