@@ -333,6 +333,6 @@ jobs:
           docker compose -f ./test/docker-compose.yml up -d
           rustup target add wasm32-unknown-unknown
           wget -O - 'https://github.com/WebAssembly/binaryen/releases/download/version_110/binaryen-version_110-x86_64-linux.tar.gz' | tar -xzf -
-          cp binaryen-version_110/bin/wasm-opt /bin/wasm-opt
-          chmod +x /bin/wasm-opt
+          sudo cp binaryen-version_110/bin/wasm-opt /bin/wasm-opt
+          sudo chmod +x /bin/wasm-opt
           make test
