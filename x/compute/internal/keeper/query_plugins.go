@@ -200,7 +200,7 @@ var stargateQueryAllowlist = map[string]bool{
 
 	"/secret.compute.v1beta1.Query/ContractInfo":              true,
 	"/secret.compute.v1beta1.Query/CodeHashByContractAddress": true,
-	"/secret.compute.v1beta1.Query/CodeHashByCodeID":          true,
+	"/secret.compute.v1beta1.Query/CodeHashByCodeId":          true,
 	"/secret.compute.v1beta1.Query/LabelByAddress":            true,
 	"/secret.compute.v1beta1.Query/AddressByLabel":            true,
 }
