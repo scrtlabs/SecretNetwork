@@ -59,7 +59,9 @@ steps:
 
   - script: |
       mkdir -p $(Pipeline.Workspace)/docker
-      docker save -o $(Pipeline.Workspace)/docker/cache.tar $(repository):$(tag)  
+      docker save -o $(Pipeline.Workspace)/docker/cache.tar $(baseImageRepository):$(tag)
+    displayName: Docker save
+    condition: and(not(canceled()), or(failed(), ne(variables.CACHE_RESTORED, 'true')))
 
   - task: Docker@2
     displayName: "Build release image"
