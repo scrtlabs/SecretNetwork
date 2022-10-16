@@ -324,6 +324,13 @@ jobs:
           yarn
           yarn test
           docker rm -f localsecret # next step needs the localsecret ports
+      - name: Install Requirements
+        run: |
+          rustup target add wasm32-unknown-unknown
+          go install github.com/jteeuwen/go-bindata/go-bindata@latest
+          go-bindata -version # check installation
+          chmod +x ./scripts/install-wasm-tools.sh
+          ./scripts/install-wasm-tools.sh
       - name: Run cw20-ics20 tests
         run: |
           git clone --depth 1 --branch secret https://github.com/scrtlabs/cw-plus
