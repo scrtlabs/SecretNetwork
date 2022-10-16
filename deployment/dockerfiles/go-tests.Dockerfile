@@ -4,7 +4,7 @@
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
 FROM rust-go-base-image
 
-RUN cp /go/src/github.com/enigmampc/SecretNetwork/cosmwasm/enclaves/execute/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
+RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
 RUN mkdir -p /opt/secret/.sgx_secrets
 
 RUN rustup target add wasm32-unknown-unknown
