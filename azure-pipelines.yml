@@ -51,7 +51,7 @@ steps:
       command: build
       repository: '$(baseImageRepository)'
       tags: |
-        '$(tag)'
+        $(tag)
         latest
       buildContext: .
       arguments: --build-arg SGX_MODE=HW
