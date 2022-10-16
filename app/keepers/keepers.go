@@ -1,6 +1,8 @@
 package keepers
 
 import (
+	"path/filepath"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -49,12 +51,11 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-	"github.com/enigmampc/SecretNetwork/x/compute"
-	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
-	icaauthkeeper "github.com/enigmampc/SecretNetwork/x/mauth/keeper"
-	icaauthtypes "github.com/enigmampc/SecretNetwork/x/mauth/types"
-	reg "github.com/enigmampc/SecretNetwork/x/registration"
-	"path/filepath"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
+	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
+	icaauthkeeper "github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
+	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
+	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
 type SecretAppKeepers struct {
@@ -132,7 +133,6 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 ) {
-
 	paramsKeeper := initParamsKeeper(appCodec, legacyAmino, ak.keys[paramstypes.StoreKey], ak.tKeys[paramstypes.TStoreKey])
 	ak.ParamsKeeper = &paramsKeeper
 
@@ -226,7 +226,6 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 			ak.DistrKeeper.Hooks(),
 			ak.SlashingKeeper.Hooks()),
 	)
-
 }
 
 func (ak *SecretAppKeepers) CreateScopedKeepers() {

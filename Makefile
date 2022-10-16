@@ -1,7 +1,6 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
-CURRENT_BRANCH := $(shell git branch --show-current)
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
@@ -107,7 +106,7 @@ build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
-	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
+	-X github.com/scrtlabs/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
@@ -143,8 +142,7 @@ build_cli:
 	go build -o secretcli -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
-	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch $(CURRENT_BRANCH) github.com/enigmampc/SecretNetwork/cmd/secretd
+	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
@@ -162,23 +160,23 @@ _build-linux-with-query: vendor
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
-	mv secretd-windows-* secretcli-windows-amd64.exe
+	sudo mv github.com/scrtlabs/SecretNetwork-windows-* secretcli-windows-amd64.exe
 
 build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
-	mv secretd-darwin-* secretcli-macos-amd64
+	sudo mv github.com/scrtlabs/SecretNetwork-darwin-amd64 secretcli-macos-amd64
 
 build_macos_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/arm64
-	mv secretd-darwin-* secretcli-macos-arm64
+	sudo mv github.com/scrtlabs/SecretNetwork-darwin-arm64 secretcli-macos-arm64
 
 build_linux_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
-	mv secretd-linux-amd64 secretcli-linux-amd64
+	sudo mv github.com/scrtlabs/SecretNetwork-linux-amd64 secretcli-linux-amd64
 
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
-	mv secretd-linux-arm64 secretcli-linux-arm64
+	sudo mv github.com/scrtlabs/SecretNetwork-linux-arm64 secretcli-linux-arm64
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
@@ -426,38 +424,33 @@ aesm-image:
 ###                         Swagger & Protobuf                              ###
 ###############################################################################
 
-# Install the runsim binary with a temporary workaround of entering an outside
-# directory as the "go get" command ignores the -mod option and will polute the
-# go.{mod, sum} files.
-#
-# ref: https://github.com/golang/go/issues/30515
-statik:
+.PHONY: update-swagger-openapi-docs statik statik-install proto-swagger-openapi-gen
+
+statik-install:
 	@echo "Installing statik..."
 	@go install github.com/rakyll/statik@v0.1.6
 
-update-swagger-openapi-docs: statik proto-swagger-openapi-gen
+statik:
 	statik -src=client/docs/static/ -dest=client/docs -f -m
-	@if [ -n "$(git status --porcelain)" ]; then \
-        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
-        exit 1;\
-    else \
-        echo "\033[92mSwagger docs are in sync\033[0m";\
-    fi
 
-# Example `CHAIN_VERSION=v1.4 make proto-swagger-openapi-gen`
 proto-swagger-openapi-gen:
+	cp go.mod /tmp/go.mod.bak
+	cp go.sum /tmp/go.sum.bak
 	@./scripts/protoc-swagger-openapi-gen.sh
+	cp /tmp/go.mod.bak go.mod
+	cp /tmp/go.sum.bak go.sum
 
-.PHONY: update-swagger-openapi-docs statik proto-swagger-openapi-gen
-
+# Example `CHAIN_VERSION=v1.4.0 make update-swagger-openapi-docs`
+update-swagger-openapi-docs: statik-install proto-swagger-openapi-gen statik
 
 protoVer=v0.2
 
-proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
+proto-all: proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	go mod tidy
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json

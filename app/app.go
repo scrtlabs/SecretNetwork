@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/enigmampc/SecretNetwork/app/keepers"
-	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
+	"github.com/scrtlabs/SecretNetwork/app/keepers"
+	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -30,10 +30,11 @@ import (
 	ibc "github.com/cosmos/ibc-go/v3/modules/core"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-	"github.com/enigmampc/SecretNetwork/app/upgrades"
-	v1_3 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.3"
-	v1_4 "github.com/enigmampc/SecretNetwork/app/upgrades/v1.4"
-	icaauthtypes "github.com/enigmampc/SecretNetwork/x/mauth/types"
+	"github.com/scrtlabs/SecretNetwork/app/upgrades"
+	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
+	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
+	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
+	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -71,8 +72,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/enigmampc/SecretNetwork/x/compute"
-	reg "github.com/enigmampc/SecretNetwork/x/registration"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
+	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	"github.com/spf13/cast"
 
 	"github.com/gorilla/mux"
@@ -84,7 +85,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	// unnamed import of statik for swagger UI support
-	_ "github.com/enigmampc/SecretNetwork/client/docs/statik"
+	_ "github.com/scrtlabs/SecretNetwork/client/docs/statik"
 )
 
 const appName = "secret"
@@ -114,7 +115,7 @@ var (
 		distrtypes.ModuleName: true,
 	}
 
-	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade}
+	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade, v1_5.Upgrade}
 )
 
 // Verify app interface at compile time

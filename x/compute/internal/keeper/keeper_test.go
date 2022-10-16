@@ -16,11 +16,11 @@ import (
 	stypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
-	eng "github.com/enigmampc/SecretNetwork/types"
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
-	reg "github.com/enigmampc/SecretNetwork/x/registration"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	eng "github.com/scrtlabs/SecretNetwork/types"
+	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
 const SupportedFeatures = "staking,stargate,ibc3"
@@ -240,7 +240,7 @@ func TestInstantiate(t *testing.T) {
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
-	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/enigmampc/SecretNetwork/blob/master/cosmwasm/contracts/hackatom/src/contract.rs", "")
+	contractID, err := keeper.Create(ctx, creator, wasmCode, "https://github.com/scrtlabs/SecretNetwork/blob/master/cosmwasm/contracts/hackatom/src/contract.rs", "")
 	require.NoError(t, err)
 
 	_, _, bob := keyPubAddr()
