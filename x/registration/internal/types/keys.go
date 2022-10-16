@@ -17,7 +17,7 @@ const (
 	RouterKey = ModuleName
 )
 
-//nolint
+// nolint
 var (
 	RegistrationStorePrefix = []byte{0x01}
 	MasterKeyPrefix         = []byte{0x02}
@@ -29,4 +29,22 @@ func RegistrationKeyPrefix(key []byte) []byte {
 
 func MasterCertPrefix(key string) []byte {
 	return append(MasterKeyPrefix, []byte(key)...)
+}
+
+func GetApiKey() ([]byte, error) {
+	apiKeyFile, err := Asset("api_key.txt")
+	if err != nil {
+		return nil, err
+	}
+
+	return apiKeyFile, nil
+}
+
+func GetSpid() ([]byte, error) {
+	apiKeyFile, err := Asset("spid.txt")
+	if err != nil {
+		return nil, err
+	}
+
+	return apiKeyFile, nil
 }

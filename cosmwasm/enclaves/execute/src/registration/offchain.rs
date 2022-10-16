@@ -54,7 +54,6 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     );
 
     validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
     validate_const_ptr!(
         api_key,
@@ -118,6 +117,8 @@ pub unsafe extern "C" fn ecall_init_node(
     master_cert_len: u32,
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
+    api_key: *const u8,
+    api_key_len: u32,
 ) -> sgx_status_t {
     validate_const_ptr!(
         master_cert,
@@ -130,6 +131,14 @@ pub unsafe extern "C" fn ecall_init_node(
         encrypted_seed_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
+
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
+
+    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
 
@@ -169,6 +178,28 @@ pub unsafe extern "C" fn ecall_init_node(
     }
     target_public_key.copy_from_slice(&pk);
 
+    // validate this node is patched and updated
+    let get_key_result = KEY_MANAGER.get_registration_key();
+
+    let kp = if get_key_result.is_err() {
+        let mut key_manager = Keychain::new();
+        key_manager.create_registration_key().unwrap();
+        key_manager.get_registration_key().unwrap()
+    } else {
+        get_key_result.unwrap()
+    };
+
+    let res = create_attestation_certificate(
+        &kp,
+        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        api_key_slice,
+    );
+
+    if res.is_err() {
+        error!("Error starting node, might not be updated",);
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
     let mut key_manager = Keychain::new();
     let seed = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {
         Ok(result) => result,
@@ -202,13 +233,11 @@ pub unsafe extern "C" fn ecall_init_node(
  * Something should go here
  */
 pub unsafe extern "C" fn ecall_get_attestation_report(
-    spid: *const u8,
-    spid_len: u32,
     api_key: *const u8,
     api_key_len: u32,
 ) -> sgx_status_t {
-    validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
+    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
+    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
     validate_const_ptr!(
         api_key,

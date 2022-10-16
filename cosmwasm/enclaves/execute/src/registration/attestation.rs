@@ -17,6 +17,8 @@ use sgx_tcrypto::SgxEccHandle;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use std::sgxfs::remove as SgxFsRemove;
+#[cfg(feature = "SGX_MODE_HW")]
+use std::sgxfs::SgxFile;
 
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
@@ -26,7 +28,6 @@ use sgx_types::{
     sgx_target_info_t, SgxResult,
 };
 
-use std::sgxfs::SgxFile;
 use std::vec::Vec;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::{
@@ -37,7 +38,9 @@ use std::{
     sync::Arc,
 };
 
+#[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::cert::verify_ra_cert;
+#[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
@@ -82,9 +85,9 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 #[cfg(feature = "SGX_MODE_HW")]
 const REPORT_DATA_SIZE: usize = 32;
 
-#[cfg(feature = "production")]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 pub const SPID: &str = "FF2DAAC50DF37862172BC829EE11C579";
-#[cfg(not(feature = "production"))]
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const SPID: &str = "D0A5D0AF1E244EC7EA2175BC2E32093B";
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
@@ -139,6 +142,7 @@ pub fn create_attestation_certificate(
     let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
+    #[cfg(feature = "production")]
     validate_report(&cert_der);
 
     Ok((key_der, cert_der))

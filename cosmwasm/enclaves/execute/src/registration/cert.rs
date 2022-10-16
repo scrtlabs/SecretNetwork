@@ -350,7 +350,7 @@ pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
-    if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
+    if check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         return Err(NodeAuthResult::BadQuoteStatus);
     }
 
@@ -404,14 +404,17 @@ pub fn verify_quote_status(
     }
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 const GID_WHITELIST: [u32; 12] = [
     0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc45, 0xc42, 0xc16, 0xc1e, 0x0c11, 0x0c33, 0xc12, 0xc13,
 ];
 
+#[cfg(feature = "SGX_MODE_HW")]
 fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
     GID_WHITELIST.contains(epid_gid)
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 fn check_advisories(
     quote_status: &SgxQuoteStatus,
     advisories: &AdvisoryIDs,

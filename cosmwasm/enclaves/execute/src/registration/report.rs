@@ -537,6 +537,7 @@ const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
+#[cfg(feature = "SGX_MODE_HW")]
 const INTEL_SA_00334: &str = "INTEL-SA-00334";
 
 lazy_static! {

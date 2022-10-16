@@ -151,7 +151,7 @@ void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
-bool create_attestation_report(Buffer spid, Buffer api_key, Buffer *err);
+bool create_attestation_report(Buffer api_key, Buffer *err);
 
 void free_rust(Buffer buf);
 
@@ -178,7 +178,7 @@ Buffer init_bootstrap(Buffer spid, Buffer api_key, Buffer *err);
 
 cache_t *init_cache(Buffer data_dir, Buffer supported_features, uintptr_t _cache_size, Buffer *err);
 
-bool init_node(Buffer master_cert, Buffer encrypted_seed, Buffer *err);
+bool init_node(Buffer master_cert, Buffer encrypted_seed, Buffer api_key, Buffer *err);
 
 Buffer instantiate(cache_t *cache,
                    Buffer contract_id,

@@ -25,7 +25,7 @@ use cosmwasm_sgx_vm::{
 };
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen
+    untrusted_init_node, untrusted_key_gen,
 };
 
 use ctor::ctor;
@@ -58,7 +58,7 @@ pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
         }
         Ok(res) => {
             clear_error();
-            Buffer::from_vec(format!("{}", res).into_bytes())
+            Buffer::from_vec(format!("{:?}", res).into_bytes())
         }
     }
 }
@@ -132,6 +132,7 @@ pub extern "C" fn init_bootstrap(
 pub extern "C" fn init_node(
     master_cert: Buffer,
     encrypted_seed: Buffer,
+    api_key: Buffer,
     err: Option<&mut Buffer>,
 ) -> bool {
     let pk_slice = match unsafe { master_cert.read() } {
@@ -148,8 +149,15 @@ pub extern "C" fn init_node(
         }
         Some(r) => r,
     };
+    let api_key_slice = match unsafe { api_key.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
 
-    match untrusted_init_node(pk_slice, encrypted_seed_slice) {
+    match untrusted_init_node(pk_slice, encrypted_seed_slice, api_key_slice) {
         Ok(_) => {
             clear_error();
             true
@@ -162,19 +170,7 @@ pub extern "C" fn init_node(
 }
 
 #[no_mangle]
-pub extern "C" fn create_attestation_report(
-    spid: Buffer,
-    api_key: Buffer,
-    err: Option<&mut Buffer>,
-) -> bool {
-    let spid_slice = match unsafe { spid.read() } {
-        None => {
-            set_error(Error::empty_arg("spid"), err);
-            return false;
-        }
-        Some(r) => r,
-    };
-
+pub extern "C" fn create_attestation_report(api_key: Buffer, err: Option<&mut Buffer>) -> bool {
     let api_key_slice = match unsafe { api_key.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
@@ -183,7 +179,7 @@ pub extern "C" fn create_attestation_report(
         Some(r) => r,
     };
 
-    if let Err(status) = create_attestation_report_u(spid_slice, api_key_slice) {
+    if let Err(status) = create_attestation_report_u(api_key_slice) {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }
@@ -410,7 +406,17 @@ pub extern "C" fn handle(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_handle(
-                c, code_id, params, msg, db, api, querier, gas_limit, gas_used, sig_info, handle_type
+                c,
+                code_id,
+                params,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                gas_used,
+                sig_info,
+                handle_type,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -432,7 +438,7 @@ fn do_handle(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     sig_info: Buffer,
-    handle_type: u8
+    handle_type: u8,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
@@ -525,9 +531,7 @@ pub extern "C" fn analyze_code(
     error_msg: Option<&mut Buffer>,
 ) -> AnalysisReport {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_analyze_code(c, checksum)
-        }))
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
@@ -543,7 +547,7 @@ fn do_analyze_code(
         .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
     let report = cache.analyze(&checksum)?;
-    let mut features_vec : Vec<u8> = vec!();
+    let mut features_vec: Vec<u8> = vec![];
     for feature in &report.required_features {
         if features_vec.len() > 0 {
             features_vec.append(&mut (",".as_bytes().to_vec()))
@@ -552,7 +556,7 @@ fn do_analyze_code(
         features_vec.append(&mut feature.as_bytes().to_vec())
     }
 
-    Ok(AnalysisReport{
+    Ok(AnalysisReport {
         has_ibc_entry_points: report.has_ibc_entry_points,
         required_features: Buffer::from_vec(features_vec),
     })
