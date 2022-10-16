@@ -332,4 +332,7 @@ jobs:
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
           docker compose -f ./test/docker-compose.yml up -d
           rustup target add wasm32-unknown-unknown
+          wget -O - 'https://github.com/WebAssembly/binaryen/releases/download/version_110/binaryen-version_110-x86_64-linux.tar.gz' | tar -xzf -
+          sudo cp binaryen-version_110/bin/wasm-opt /bin/wasm-opt
+          sudo chmod +x /bin/wasm-opt
           make test
