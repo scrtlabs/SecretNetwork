@@ -1,5 +1,4 @@
-//go:build !secretcli
-// +build !secretcli
+//go:build !test && !secretcli
 
 package types
 
