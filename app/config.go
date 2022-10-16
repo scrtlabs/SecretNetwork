@@ -47,9 +47,9 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v3/modules/core"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	"github.com/enigmampc/SecretNetwork/x/compute"
-	icaauth "github.com/enigmampc/SecretNetwork/x/mauth"
-	"github.com/enigmampc/SecretNetwork/x/registration"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
+	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
+	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
 var mbasics = module.NewBasicManager(

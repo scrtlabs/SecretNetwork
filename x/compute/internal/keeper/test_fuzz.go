@@ -2,8 +2,8 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	fuzz "github.com/google/gofuzz"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	tmBytes "github.com/tendermint/tendermint/libs/bytes"
 )
 

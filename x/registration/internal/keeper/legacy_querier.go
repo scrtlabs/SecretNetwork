@@ -38,16 +38,15 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 			}
 			return bz, nil
 		case QueryMasterCertificate:
-			rsp, err = queryMasterKey(ctx, keeper) //nolint:staticcheck
-
+			rsp, err = queryMasterKey(ctx, keeper)
 			if err != nil {
 				return nil, err
 			}
 
-			if rsp == nil || reflect.ValueOf(rsp).IsNil() { //nolint:staticcheck
+			if reflect.ValueOf(rsp).IsNil() {
 				return nil, nil
 			}
-			// why indent?
+
 			bz, err = json.Marshal(rsp)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())

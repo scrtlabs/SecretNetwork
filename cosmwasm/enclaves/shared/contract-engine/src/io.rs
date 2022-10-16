@@ -137,7 +137,8 @@ pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) 
 fn encrypt_serializable<T>(
     key: &AESKey,
     val: &T,
-    reply_params: &Option<ReplyParams>,
+    reply_params: &Option<Vec<ReplyParams>>,
+    should_append_all_reply_params: bool,
 ) -> Result<String, EnclaveError>
 where
     T: ?Sized + Serialize,
@@ -149,7 +150,7 @@ where
 
     let trimmed = serialized.trim_start_matches('"').trim_end_matches('"');
 
-    encrypt_preserialized_string(key, trimmed, reply_params)
+    encrypt_preserialized_string(key, trimmed, reply_params, should_append_all_reply_params)
 }
 
 // use this to encrypt a String that has already been serialized.  When that is the case, if
@@ -158,15 +159,20 @@ where
 fn encrypt_preserialized_string(
     key: &AESKey,
     val: &str,
-    reply_params: &Option<ReplyParams>,
+    reply_params: &Option<Vec<ReplyParams>>,
+    should_append_all_reply_params: bool,
 ) -> Result<String, EnclaveError> {
     let serialized = match reply_params {
-        Some(ReplyParams {
-            recipient_contract_hash,
-            ..
-        }) => {
+        Some(v) => {
             let mut ser = vec![];
-            ser.extend_from_slice(&recipient_contract_hash);
+            ser.extend_from_slice(&v[0].recipient_contract_hash);
+            if should_append_all_reply_params {
+                for item in v.iter().skip(1) {
+                    ser.extend_from_slice(cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES);
+                    ser.extend_from_slice(&item.sub_msg_id.to_be_bytes());
+                    ser.extend_from_slice(item.recipient_contract_hash.as_slice());
+                }
+            }
             ser.extend_from_slice(val.as_bytes());
             ser
         }
@@ -453,7 +459,7 @@ pub fn encrypt_output(
     secret_msg: &SecretMessage,
     contract_addr: &CanonicalAddr,
     contract_hash: &str,
-    reply_params: Option<ReplyParams>,
+    reply_params: Option<Vec<ReplyParams>>,
     sender_addr: &CanonicalAddr,
     is_query_output: bool,
     is_ibc_output: bool,
@@ -481,14 +487,15 @@ pub fn encrypt_output(
             internal_reply_enclave_sig,
             internal_msg_id,
         } => {
-            let encrypted_err = encrypt_serializable(&encryption_key, err, &reply_params)?;
+            let encrypted_err = encrypt_serializable(&encryption_key, err, &reply_params, false)?;
             *err = json!({"generic_err":{"msg":encrypted_err}});
             let msg_id = match reply_params {
                 Some(ref r) => {
                     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
-                        &r.sub_msg_id.to_string(),
+                        &r[0].sub_msg_id.to_string(),
                         &reply_params,
+                        true,
                     )?)?;
 
                     Some(encrypted_id)
@@ -503,7 +510,8 @@ pub fn encrypt_output(
                     let reply = Reply {
                         id: msg_id.unwrap(),
                         result: SubMsgResult::Err(encrypted_err),
-                        was_msg_encrypted: true,
+                        was_orig_msg_encrypted: true,
+                        is_encrypted: true,
                     };
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
                         warn!(
@@ -527,7 +535,7 @@ pub fn encrypt_output(
         }
 
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
-            *ok = encrypt_serializable(&encryption_key, ok, &reply_params)?;
+            *ok = encrypt_serializable(&encryption_key, ok, &reply_params, false)?;
         }
 
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
@@ -549,8 +557,9 @@ pub fn encrypt_output(
 
             // v0.10: The logs that will be emitted as part of a "wasm" event.
             for log in ok.log.iter_mut().filter(|log| log.encrypted) {
-                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &None)?;
-                log.value = encrypt_preserialized_string(&encryption_key, &log.value, &None)?;
+                log.key = encrypt_preserialized_string(&encryption_key, &log.key, &None, false)?;
+                log.value =
+                    encrypt_preserialized_string(&encryption_key, &log.value, &None, false)?;
             }
 
             if let Some(data) = &mut ok.data {
@@ -558,6 +567,7 @@ pub fn encrypt_output(
                     &encryption_key,
                     data,
                     &reply_params,
+                    false,
                 )?)?;
             }
 
@@ -565,8 +575,9 @@ pub fn encrypt_output(
                 Some(ref r) => {
                     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
-                        &r.sub_msg_id.to_string(),
+                        &r[0].sub_msg_id.to_string(),
                         &reply_params,
+                        false,
                     )?)?;
 
                     Some(encrypted_id)
@@ -596,7 +607,8 @@ pub fn encrypt_output(
                             events,
                             data: ok.data.clone(),
                         }),
-                        was_msg_encrypted: true,
+                        was_orig_msg_encrypted: true,
+                        is_encrypted: true,
                     };
 
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
@@ -634,6 +646,7 @@ pub fn encrypt_output(
                         secret_msg.user_public_key,
                         contract_addr,
                         contract_hash,
+                        &reply_params,
                     )?;
 
                     // The ID can be extracted from the encrypted wasm msg
@@ -646,15 +659,18 @@ pub fn encrypt_output(
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
-                attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
+                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
+                attr.value =
+                    encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
             }
 
             // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
             for event in ok.events.iter_mut() {
                 for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                    attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
-                    attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
+                    attr.key =
+                        encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
+                    attr.value =
+                        encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
                 }
             }
 
@@ -668,6 +684,7 @@ pub fn encrypt_output(
                     &encryption_key,
                     data,
                     &reply_params,
+                    false,
                 )?)?;
             }
 
@@ -675,8 +692,9 @@ pub fn encrypt_output(
                 Some(ref r) => {
                     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
-                        &r.sub_msg_id.to_string(),
+                        &r[0].sub_msg_id.to_string(),
                         &reply_params,
+                        true,
                     )?)?;
 
                     Some(encrypted_id)
@@ -713,7 +731,8 @@ pub fn encrypt_output(
                             events,
                             data: ok.data.clone(),
                         }),
-                        was_msg_encrypted: true,
+                        was_orig_msg_encrypted: true,
+                        is_encrypted: true,
                     };
 
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
@@ -748,6 +767,7 @@ pub fn encrypt_output(
                         secret_msg.user_public_key,
                         contract_addr,
                         contract_hash,
+                        &reply_params,
                     )?;
 
                     // The ID can be extracted from the encrypted wasm msg
@@ -760,15 +780,18 @@ pub fn encrypt_output(
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
-                attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
+                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
+                attr.value =
+                    encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
             }
 
             // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
             for event in ok.events.iter_mut() {
                 for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                    attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None)?;
-                    attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None)?;
+                    attr.key =
+                        encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
+                    attr.value =
+                        encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
                 }
             }
 
@@ -776,6 +799,7 @@ pub fn encrypt_output(
                 &encryption_key,
                 &ok.acknowledgement,
                 &reply_params,
+                false,
             )?)?;
         }
         RawWasmOutput::OkIBCOpenChannel { ok: _ } => {}
@@ -835,6 +859,7 @@ fn encrypt_v010_wasm_msg(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn encrypt_v1_wasm_msg(
     wasm_msg: &mut cw_types_v1::results::WasmMsg,
     reply_on: &ReplyOn,
@@ -843,6 +868,7 @@ fn encrypt_v1_wasm_msg(
     user_public_key: Ed25519PublicKey,
     contract_addr: &CanonicalAddr,
     reply_recipient_contract_hash: &str,
+    reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
         cw_types_v1::results::WasmMsg::Execute {
@@ -872,6 +898,16 @@ fn encrypt_v1_wasm_msg(
                 hash_appended_msg.extend_from_slice(&msg_id.to_be_bytes());
                 hash_appended_msg.extend_from_slice(reply_recipient_contract_hash.as_bytes());
             }
+
+            if let Some(r) = reply_params {
+                for param in r.iter() {
+                    hash_appended_msg
+                        .extend_from_slice(cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES);
+                    hash_appended_msg.extend_from_slice(&param.sub_msg_id.to_be_bytes());
+                    hash_appended_msg.extend_from_slice(param.recipient_contract_hash.as_slice());
+                }
+            }
+
             hash_appended_msg.extend_from_slice(msg.as_slice());
 
             let mut msg_to_pass = SecretMessage::from_base64(
@@ -902,7 +938,7 @@ fn encrypt_v1_wasm_msg(
 }
 
 pub fn create_callback_signature(
-    contract_addr: &CanonicalAddr,
+    _contract_addr: &CanonicalAddr,
     msg_to_sign: &SecretMessage,
     funds_to_send: &[Coin],
 ) -> Vec<u8> {
@@ -913,7 +949,7 @@ pub fn create_callback_signature(
         .get()
         .to_vec();
 
-    callback_sig_bytes.extend(contract_addr.as_slice());
+    //callback_sig_bytes.extend(contract_addr.as_slice());
     callback_sig_bytes.extend(msg_to_sign.msg.as_slice());
     callback_sig_bytes.extend(serde_json::to_vec(funds_to_send).unwrap());
 

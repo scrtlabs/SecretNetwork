@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/simapp"
-	"github.com/enigmampc/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/tendermint/crypto"
@@ -17,7 +17,7 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	ibctesting "github.com/cosmos/ibc-go/v3/testing"
 
-	icaapp "github.com/enigmampc/SecretNetwork/app"
+	icaapp "github.com/scrtlabs/SecretNetwork/app"
 )
 
 var (

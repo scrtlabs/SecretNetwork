@@ -1046,7 +1046,7 @@ describe("StakingMsg", () => {
             sentFunds: [{ amount: "1", denom: "uscrt" }],
           }),
         ],
-        { gasLimit: 250_000 }
+        { gasLimit: 350_000 }
       );
       if (tx.code !== TxResultCode.Success) {
         console.error(tx.rawLog);
@@ -1119,7 +1119,7 @@ describe("StakingMsg", () => {
               sentFunds: [{ amount: "1", denom: "uscrt" }],
             }),
           ],
-          { gasLimit: 250_000 }
+          { gasLimit: 350_000 }
         );
         if (tx.code !== TxResultCode.Success) {
           console.error(tx.rawLog);
@@ -1416,8 +1416,6 @@ describe("StakingMsg", () => {
           console.error(tx.rawLog);
         }
         expect(tx.code).toBe(TxResultCode.Success);
-
-        console.log(JSON.stringify(tx.jsonLog[1].events));
 
         const { attributes } = tx.jsonLog[1].events.find(
           (e) => e.type === "set_withdraw_address"

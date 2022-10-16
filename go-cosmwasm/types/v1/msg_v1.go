@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	v010msgtypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v010msgtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 )
 
 //------- Results / Msgs -------------
