@@ -2,9 +2,11 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
-FROM rust-go-base-image
+ARG SCRT_BASE_IMAGE_ENCLAVE=baiduxlab/sgx-rust:2004-1.1.3
+FROM $SCRT_BASE_IMAGE_ENCLAVE
 
-RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
+COPY --from=rust-go-base-image /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper
+
 RUN mkdir -p /opt/secret/.sgx_secrets
 
 RUN rustup target add wasm32-unknown-unknown

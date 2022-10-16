@@ -16,9 +16,26 @@ pool:
 workspace:
   clean: all # what to clean up before the job runs
 
+variables:
+  baseImageRepository: 'rust-go-base-image'
+  dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/base.Dockerfile'
+  tag: '$(Build.BuildId)'
+
 steps:
   - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
     displayName: "Save api keys"
+  - task: Cache@2
+    displayName: Cache task
+    inputs:
+      key: 'docker | "$(Agent.OS)" | cache'
+      path: $(Pipeline.Workspace)/docker
+      cacheHitVar: CACHE_RESTORED                #Variable to set to 'true' when the cache is restored
+
+  - script: |
+      docker load -i $(Pipeline.Workspace)/docker/cache.tar
+    displayName: Docker restore
+    condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
+
   - task: Docker@2
     displayName: "Build enclave tests"
     inputs:
@@ -32,11 +49,18 @@ steps:
     displayName: "Build base image"
     inputs:
       command: build
-      repository: rust-go-base-image
-      tags: latest
+      repository: '$(baseImageRepository)'
+      tags: |
+        '$(tag)'
+        latest
       buildContext: .
       arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/base.Dockerfile
+      dockerfile: '$(dockerfilePath)'
+
+  - script: |
+      mkdir -p $(Pipeline.Workspace)/docker
+      docker save -o $(Pipeline.Workspace)/docker/cache.tar $(repository):$(tag)  
+
   - task: Docker@2
     displayName: "Build release image"
     inputs:
@@ -46,6 +70,7 @@ steps:
       buildContext: .
       arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/release.Dockerfile
+
   - task: Docker@2
     displayName: "Build tests image"
     inputs:
@@ -55,6 +80,7 @@ steps:
       buildContext: .
       arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/go-tests.Dockerfile
+
   - task: Docker@2
     displayName: "Build node"
     inputs:
