@@ -7,8 +7,8 @@ use std::untrusted::time::SystemTimeEx;
 
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
-    sgx_ec256_private_t, sgx_ec256_public_t, sgx_epid_group_id_t, sgx_platform_info_t,
-    sgx_status_t, sgx_update_info_bit_t, SgxResult,
+    sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_status_t,
+    sgx_update_info_bit_t, SgxResult,
 };
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -31,7 +31,7 @@ use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
 #[cfg(feature = "SGX_MODE_HW")]
 use super::attestation::get_mr_enclave;
 
-use crate::registration::report::{AdvisoryIDs, SgxEnclaveReport};
+use crate::registration::report::AdvisoryIDs;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
@@ -368,7 +368,7 @@ pub fn verify_quote_status(
         _ => {
             error!(
                 "Invalid attestation quote status - cannot verify remote node: {:?}",
-                quote_status
+                &report.sgx_quote_status
             );
             Err(NodeAuthResult::from(&report.sgx_quote_status))
         }
@@ -404,12 +404,12 @@ pub fn verify_quote_status(
     }
 }
 
-#[cfg(feature = "SGX_MODE_HW")]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 const GID_WHITELIST: [u32; 12] = [
     0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc45, 0xc42, 0xc16, 0xc1e, 0x0c11, 0x0c33, 0xc12, 0xc13,
 ];
 
-#[cfg(feature = "SGX_MODE_HW")]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
     GID_WHITELIST.contains(epid_gid)
 }

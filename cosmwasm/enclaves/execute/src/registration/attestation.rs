@@ -15,10 +15,8 @@ use sgx_tse::{rsgx_create_report, rsgx_self_report, rsgx_verify_report};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tcrypto::SgxEccHandle;
 
-#[cfg(feature = "SGX_MODE_HW")]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use std::sgxfs::remove as SgxFsRemove;
-#[cfg(feature = "SGX_MODE_HW")]
-use std::sgxfs::SgxFile;
 
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
@@ -38,14 +36,13 @@ use std::{
     sync::Arc,
 };
 
-#[cfg(feature = "SGX_MODE_HW")]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::cert::verify_ra_cert;
-#[cfg(feature = "SGX_MODE_HW")]
-use crate::registration::report::AttestationReport;
+
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
 
-#[cfg(feature = "SGX_MODE_HW")]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use enclave_crypto::consts::{
     CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH, NODE_ENCRYPTED_SEED_KEY_FILE,
     NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
@@ -54,9 +51,7 @@ use enclave_crypto::consts::{
 use enclave_crypto::KeyPair;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use super::ocalls::{
-    ocall_get_ias_socket, ocall_get_quote, ocall_get_sn_tss_socket, ocall_sgx_init_quote,
-};
+use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
@@ -69,12 +64,12 @@ pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
 #[cfg(feature = "production")]
 pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
 
-#[cfg(feature = "SGX_MODE_HW")]
-pub const SN_TSS_HOSTNAME: &str = "secretnetwork.trustedservices.scrtlabs.com";
-#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-pub const SN_TSS_GID_LIST: &str = "/dev/get-gids";
-#[cfg(feature = "production")]
-pub const SN_TSS_GID_LIST: &str = "/get-gids";
+// #[cfg(feature = "SGX_MODE_HW")]
+// pub const SN_TSS_HOSTNAME: &str = "secretnetwork.trustedservices.scrtlabs.com";
+// #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
+// pub const SN_TSS_GID_LIST: &str = "/dev/get-gids";
+// #[cfg(feature = "production")]
+// pub const SN_TSS_GID_LIST: &str = "/get-gids";
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
@@ -142,14 +137,14 @@ pub fn create_attestation_certificate(
     let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
-    #[cfg(feature = "production")]
+    #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
     validate_report(&cert_der);
 
     Ok((key_der, cert_der))
 }
 
-#[cfg(feature = "SGX_MODE_HW")]
-pub fn validate_report(cert: &[u8]) -> () {
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+pub fn validate_report(cert: &[u8]) {
     let _ = verify_ra_cert(cert, None).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);
         let _ = SgxFsRemove(CONSENSUS_SEED_SEALING_PATH.as_str());
@@ -545,43 +540,44 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_gids_from_sn_tss(fd: c_int, cert: Vec<u8>) -> () {
-    trace!("entered get_gids_from_sn_tss fd = {:?}", fd);
-    let config = make_ias_client_config();
-
-    let cert_as_base64 = base64::encode(&cert);
-
-    let req = format!(
-        "POST {} HTTP/1.1\r\nHOST: {}\r\nConnection: Close\r\nAccept: */*\r\nContent-Type: application/json\r\nContent-Length: {}\r\n{}\r\n\r\n",
-        SN_TSS_GID_LIST,
-        SN_TSS_HOSTNAME,
-        cert_as_base64.len(),
-        cert_as_base64
-    );
-
-    trace!("request to sn tss: {}", req);
-
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(SN_TSS_HOSTNAME).unwrap();
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::new(fd).unwrap();
-    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
-
-    let _result = tls.write(req.as_bytes());
-    let mut plaintext = Vec::new();
-
-    info!("write complete");
-
-    match tls.read_to_end(&mut plaintext) {
-        Ok(_) => (),
-        Err(e) => {
-            warn!("get_gids_from_sn_tss tls.read_to_end: {:?}", e);
-            panic!("Communication error with SN TSS");
-        }
-    }
-    info!("read_to_end complete");
-    let resp_string = String::from_utf8(plaintext.clone()).unwrap();
-
-    trace!("{}", resp_string);
+#[allow(dead_code)]
+pub fn get_gids_from_sn_tss(_fd: c_int, _cert: Vec<u8>) {
+    // trace!("entered get_gids_from_sn_tss fd = {:?}", fd);
+    // let config = make_ias_client_config();
+    //
+    // let cert_as_base64 = base64::encode(&cert);
+    //
+    // let req = format!(
+    //     "POST {} HTTP/1.1\r\nHOST: {}\r\nConnection: Close\r\nAccept: */*\r\nContent-Type: application/json\r\nContent-Length: {}\r\n{}\r\n\r\n",
+    //     SN_TSS_GID_LIST,
+    //     SN_TSS_HOSTNAME,
+    //     cert_as_base64.len(),
+    //     cert_as_base64
+    // );
+    //
+    // trace!("request to sn tss: {}", req);
+    //
+    // let dns_name = webpki::DNSNameRef::try_from_ascii_str(SN_TSS_HOSTNAME).unwrap();
+    // let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
+    // let mut sock = TcpStream::new(fd).unwrap();
+    // let mut tls = rustls::Stream::new(&mut sess, &mut sock);
+    //
+    // let _result = tls.write(req.as_bytes());
+    // let mut plaintext = Vec::new();
+    //
+    // info!("write complete");
+    //
+    // match tls.read_to_end(&mut plaintext) {
+    //     Ok(_) => (),
+    //     Err(e) => {
+    //         warn!("get_gids_from_sn_tss tls.read_to_end: {:?}", e);
+    //         panic!("Communication error with SN TSS");
+    //     }
+    // }
+    // info!("read_to_end complete");
+    // let resp_string = String::from_utf8(plaintext.clone()).unwrap();
+    //
+    // trace!("{}", resp_string);
 
     //resp_string
 

@@ -30,21 +30,3 @@ func RegistrationKeyPrefix(key []byte) []byte {
 func MasterCertPrefix(key string) []byte {
 	return append(MasterKeyPrefix, []byte(key)...)
 }
-
-func GetApiKey() ([]byte, error) {
-	apiKeyFile, err := Asset("api_key.txt")
-	if err != nil {
-		return nil, err
-	}
-
-	return apiKeyFile, nil
-}
-
-func GetSpid() ([]byte, error) {
-	apiKeyFile, err := Asset("spid.txt")
-	if err != nil {
-		return nil, err
-	}
-
-	return apiKeyFile, nil
-}

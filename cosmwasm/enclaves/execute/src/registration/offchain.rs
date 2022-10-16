@@ -181,12 +181,13 @@ pub unsafe extern "C" fn ecall_init_node(
     // validate this node is patched and updated
     let get_key_result = KEY_MANAGER.get_registration_key();
 
-    let kp = if get_key_result.is_err() {
+    let kp = if let Ok(saved_key) = get_key_result {
+        saved_key
+    } else {
+        // otherwise generate a new key - it doesn't really matter, it's just to get through the cert generation process
         let mut key_manager = Keychain::new();
         key_manager.create_registration_key().unwrap();
         key_manager.get_registration_key().unwrap()
-    } else {
-        get_key_result.unwrap()
     };
 
     let res = create_attestation_certificate(
