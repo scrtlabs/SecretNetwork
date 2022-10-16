@@ -83,9 +83,9 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 const REPORT_DATA_SIZE: usize = 32;
 
 #[cfg(feature = "production")]
-pub const SPID: &str = "17FDDCC9477144A2CD84E27CDCE98BE4";
+pub const SPID: &str = "FF2DAAC50DF37862172BC829EE11C579";
 #[cfg(not(feature = "production"))]
-pub const SPID: &str = "17FDDCC9477144A2CD84E27CDCE98BE4";
+pub const SPID: &str = "D0A5D0AF1E244EC7EA2175BC2E32093B";
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn create_attestation_certificate(
