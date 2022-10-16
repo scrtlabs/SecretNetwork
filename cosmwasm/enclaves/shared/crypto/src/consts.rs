@@ -74,4 +74,4 @@ pub const CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER: u32 = 4;
 
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 
-const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
+pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";

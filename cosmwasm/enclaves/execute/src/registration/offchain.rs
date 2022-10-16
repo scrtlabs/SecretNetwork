@@ -78,17 +78,12 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     }
 
     let kp = key_manager.seed_exchange_key().unwrap();
-    if let Err(status) = attest_from_key(
-        &kp,
-        SEED_EXCH_CERTIFICATE_SAVE_PATH,
-        spid_slice,
-        api_key_slice,
-    ) {
+    if let Err(status) = attest_from_key(&kp, SEED_EXCH_CERTIFICATE_SAVE_PATH, api_key_slice) {
         return status;
     }
 
     let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    if let Err(status) = attest_from_key(&kp, IO_CERTIFICATE_SAVE_PATH, spid_slice, api_key_slice) {
+    if let Err(status) = attest_from_key(&kp, IO_CERTIFICATE_SAVE_PATH, api_key_slice) {
         return status;
     }
 
@@ -230,7 +225,6 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     let (_private_key_der, cert) = match create_attestation_certificate(
         &kp,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-        spid_slice,
         api_key_slice,
     ) {
         Err(e) => {
@@ -281,16 +275,10 @@ pub unsafe extern "C" fn ecall_key_gen(
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn attest_from_key(
-    kp: &KeyPair,
-    save_path: &str,
-    spid: &[u8],
-    api_key: &[u8],
-) -> SgxResult<()> {
+pub fn attest_from_key(kp: &KeyPair, save_path: &str, api_key: &[u8]) -> SgxResult<()> {
     let (_, cert) = match create_attestation_certificate(
         &kp,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-        spid,
         api_key,
     ) {
         Err(e) => {

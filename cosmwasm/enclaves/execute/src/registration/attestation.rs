@@ -9,11 +9,14 @@ use itertools::Itertools;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_rand::{os, Rng};
 #[cfg(feature = "SGX_MODE_HW")]
-use sgx_tse::{rsgx_create_report, rsgx_verify_report};
+use sgx_tse::{rsgx_create_report, rsgx_self_report, rsgx_verify_report};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tcrypto::SgxEccHandle;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use std::sgxfs::remove as SgxFsRemove;
 
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
@@ -23,6 +26,7 @@ use sgx_types::{
     sgx_target_info_t, SgxResult,
 };
 
+use std::sgxfs::SgxFile;
 use std::vec::Vec;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::{
@@ -33,8 +37,17 @@ use std::{
     sync::Arc,
 };
 
+use crate::registration::cert::verify_ra_cert;
+use crate::registration::report::AttestationReport;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
+
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_crypto::consts::{
+    CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH, NODE_ENCRYPTED_SEED_KEY_FILE,
+    NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
+};
+
 use enclave_crypto::KeyPair;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -78,7 +91,6 @@ pub const SPID: &str = "17FDDCC9477144A2CD84E27CDCE98BE4";
 pub fn create_attestation_certificate(
     kp: &KeyPair,
     _sign_type: sgx_quote_sign_type_t,
-    _spid: &[u8],
     _api_key: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // init sgx ecc
@@ -98,48 +110,10 @@ pub fn create_attestation_certificate(
     Ok((key_der, cert_der))
 }
 
-// #[cfg(not(feature = "SGX_MODE_HW"))]
-// pub fn create_report_with_data(
-//     target_info: &sgx_target_info_t,
-//     out_report: &mut sgx_report_t,
-//     // extra_data: &[u8],
-// ) -> sgx_status_t {
-//     let report_data: sgx_report_data_t = sgx_report_data_t::default();
-//     // secret data to be attached with the report.
-//     // if extra_data.len() > REPORT_DATA_SIZE {
-//     //     return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-//     // }
-//     // report_data.d[..extra_data.len()].copy_from_slice(extra_data);
-//     let mut report = sgx_report_t::default();
-//     let ret = unsafe {
-//         sgx_create_report(
-//             target_info as *const sgx_target_info_t,
-//             &report_data as *const sgx_report_data_t,
-//             &mut report as *mut sgx_report_t,
-//         )
-//     };
-//     let result = match ret {
-//         sgx_status_t::SGX_SUCCESS => Ok(report),
-//         _ => Err(ret),
-//     };
-//     match result {
-//         Ok(r) => {
-//             *out_report = r;
-//             sgx_status_t::SGX_SUCCESS
-//         }
-//         Err(err) => {
-//             // println!("[-] Enclave: error creating report");
-//             err
-//         }
-//     }
-// }
-
-// todo: add public/private key handling pub_k: &sgx_ec256_public_t,
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn create_attestation_certificate(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
-    spid: &[u8],
     api_key: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // extract private key from KeyPair
@@ -150,8 +124,7 @@ pub fn create_attestation_certificate(
     let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 
     // call create_report using the secp256k1 public key, and __not__ the P256 one
-    let signed_report = match create_attestation_report(&kp.get_pubkey(), sign_type, spid, api_key)
-    {
+    let signed_report = match create_attestation_report(&kp.get_pubkey(), sign_type, api_key) {
         Ok(r) => r,
         Err(e) => {
             error!("Error creating attestation report");
@@ -166,45 +139,33 @@ pub fn create_attestation_certificate(
     let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
+    validate_report(&cert_der);
+
     Ok((key_der, cert_der))
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_mr_enclave() -> Result<[u8; 32], sgx_status_t> {
-    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
-    let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();
-    let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+pub fn validate_report(cert: &[u8]) -> () {
+    let _ = verify_ra_cert(cert, None).map_err(|e| {
+        info!("Error validating created certificate: {:?}", e);
+        let _ = SgxFsRemove(CONSENSUS_SEED_SEALING_PATH.as_str());
+        let _ = SgxFsRemove(REGISTRATION_KEY_SEALING_PATH.as_str());
+        let _ = SgxFsRemove(
+            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
+                .join(NODE_ENCRYPTED_SEED_KEY_FILE)
+                .as_path(),
+        );
+        let _ = SgxFsRemove(
+            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
+                .join(NODE_EXCHANGE_KEY_FILE)
+                .as_path(),
+        );
+    });
+}
 
-    let res = unsafe {
-        ocall_sgx_init_quote(
-            &mut rt as *mut sgx_status_t,
-            &mut ti as *mut sgx_target_info_t,
-            &mut eg as *mut sgx_epid_group_id_t,
-        )
-    };
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
-    // placeholder report
-    let report_data: sgx_report_data_t = sgx_report_data_t::default();
-
-    let rep = match rsgx_create_report(&ti, &report_data) {
-        Ok(r) => {
-            trace!("This enclave MR_ENCLAVE is: {:?}", r.body.mr_enclave.m);
-            r.body.mr_enclave.m
-        }
-        Err(_e) => {
-            error!("Failed to get local MR_ENCLAVE. Corrupted enclave or other unknown error");
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-        }
-    };
-
-    Ok(rep)
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn get_mr_enclave() -> [u8; 32] {
+    rsgx_self_report().body.mr_enclave.m
 }
 
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
@@ -213,7 +174,6 @@ pub fn get_mr_enclave() -> Result<[u8; 32], sgx_status_t> {
 pub fn create_attestation_report(
     pub_k: &[u8; 32],
     sign_type: sgx_quote_sign_type_t,
-    spid_file: &[u8],
     api_key_file: &[u8],
 ) -> Result<EndorsedAttestationReport, sgx_status_t> {
     // Workflow:
@@ -327,7 +287,8 @@ pub fn create_attestation_report(
     let p_report = (&rep) as *const sgx_report_t;
     let quote_type = sign_type;
 
-    let spid: sgx_spid_t = hex::decode_spid(&String::from_utf8_lossy(spid_file));
+    //&String::from_utf8_lossy(spid_file)
+    let spid: sgx_spid_t = hex::decode_spid(SPID);
 
     let p_spid = &spid as *const sgx_spid_t;
     let p_nonce = &quote_nonce as *const sgx_quote_nonce_t;
@@ -463,10 +424,11 @@ fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, Vec<u8>, Vec<u8
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
         _ => {
-            warn!(
+            error!(
                 "response from IAS server :{} - unknown error or response code",
                 respp.code.unwrap()
             );
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
     }
 
@@ -582,7 +544,6 @@ pub fn make_ias_client_config() -> rustls::ClientConfig {
 pub fn get_gids_from_sn_tss(fd: c_int, cert: Vec<u8>) -> () {
     trace!("entered get_gids_from_sn_tss fd = {:?}", fd);
     let config = make_ias_client_config();
-    // let ias_key = String::from_utf8_lossy(api_key_file).trim_end().to_owned();
 
     let cert_as_base64 = base64::encode(&cert);
 
@@ -701,9 +662,6 @@ pub fn get_report_from_intel(
 
     trace!("resp_string = {}", resp_string);
 
-    // let (attn_report, sig, cert) = ?;
-    //
-    // Ok((attn_report, sig, cert))
     parse_response_attn_report(&plaintext)
 }
 
@@ -714,26 +672,3 @@ fn as_u32_le(array: [u8; 4]) -> u32 {
         + ((array[2] as u32) << 16)
         + ((array[3] as u32) << 24)
 }
-
-// commented out because it only contains one test
-// #[cfg(feature = "test")]
-// pub mod tests {
-//     use crate::crypto::KeyPair;
-//     use crate::registration::cert::verify_ra_cert;
-//
-//     use super::create_attestation_certificate;
-//     use super::sgx_quote_sign_type_t;
-//
-//     // todo: replace public key with real value
-//     pub fn test_create_attestation_certificate() {
-//         let kp = KeyPair::new_from_slice(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap();
-//
-//         let cert =
-//             create_attestation_certificate(&kp, sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE)
-//                 .unwrap();
-//
-//         let result = verify_ra_cert(cert[1]).unwrap();
-//
-//         assert_eq!(result, kp.get_pubkey())
-//     }
-// }

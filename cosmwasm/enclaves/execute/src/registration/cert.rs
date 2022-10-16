@@ -304,12 +304,9 @@ pub fn verify_ra_cert(
     cert_der: &[u8],
     override_verify: Option<SigningMethod>,
 ) -> Result<Vec<u8>, NodeAuthResult> {
-    // Before we reach here, Webpki already verifed the cert is properly signed
-
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
 
     // 2. Verify quote status (mandatory field)
-
     verify_quote_status(&report, &report.advisory_ids)?;
 
     let signing_method: SigningMethod = match override_verify {
@@ -320,13 +317,7 @@ pub fn verify_ra_cert(
     // verify certificate
     match signing_method {
         SigningMethod::MRENCLAVE => {
-            let this_mr_enclave = match get_mr_enclave() {
-                Ok(r) => r,
-                Err(_) => {
-                    error!("This should never happen. If you see this, your node isn't working anymore");
-                    return Err(NodeAuthResult::Panic);
-                }
-            };
+            let this_mr_enclave = get_mr_enclave();
 
             if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
                 error!("Got a different mr_enclave than expected. Invalid certificate");
@@ -359,18 +350,18 @@ pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
+    if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
+        return Err(NodeAuthResult::BadQuoteStatus);
+    }
+
     match &report.sgx_quote_status {
         SgxQuoteStatus::OK
         | SgxQuoteStatus::SwHardeningNeeded
         | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
             check_advisories(&report.sgx_quote_status, advisories)?;
-            if !advisories.contains_lvi_injection() {
-                return Err(NodeAuthResult::EnclaveQuoteStatus);
-            }
-
-            if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
-                return Err(NodeAuthResult::BadQuoteStatus);
-            }
+            // if !advisories.contains_lvi_injection() {
+            //     return Err(NodeAuthResult::EnclaveQuoteStatus);
+            // }
 
             Ok(())
         }
@@ -397,27 +388,25 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded
         | SgxQuoteStatus::GroupOutOfDate => {
             check_advisories(&report.sgx_quote_status, advisories)?;
-            if !advisories.contains_lvi_injection() {
-                return Err(NodeAuthResult::EnclaveQuoteStatus);
-            }
-
-            if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
-                return Err(NodeAuthResult::BadQuoteStatus);
-            }
+            // if !advisories.contains_lvi_injection() {
+            //     return Err(NodeAuthResult::EnclaveQuoteStatus);
+            // }
 
             Ok(())
         }
         _ => {
             error!(
                 "Invalid attestation quote status - cannot verify remote node: {:?}",
-                quote_status
+                &report.sgx_quote_status
             );
             Err(NodeAuthResult::from(&report.sgx_quote_status))
         }
     }
 }
 
-const GID_WHITELIST: [u32; 4] = [1, 2, 3, 4];
+const GID_WHITELIST: [u32; 12] = [
+    0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc45, 0xc42, 0xc16, 0xc1e, 0x0c11, 0x0c33, 0xc12, 0xc13,
+];
 
 fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
     GID_WHITELIST.contains(epid_gid)

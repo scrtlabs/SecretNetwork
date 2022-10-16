@@ -573,6 +573,7 @@ impl AdvisoryIDs {
         vulnerable
     }
 
+    #[allow(dead_code)]
     pub(crate) fn contains_lvi_injection(&self) -> bool {
         for i in self.0.iter() {
             if i == INTEL_SA_00334 {
@@ -606,8 +607,6 @@ impl AttestationReport {
     // just unused in SW mode
     #[allow(dead_code)]
     pub fn from_cert(cert: &[u8]) -> Result<Self, Error> {
-        // Before we reach here, Webpki already verifed the cert is properly signed.
-
         let payload = get_netscape_comment(cert).map_err(|_err| {
             error!("Failed to get netscape comment");
             Error::ReportParseError
