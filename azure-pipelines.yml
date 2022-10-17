@@ -54,7 +54,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --build-arg SGX_MODE=HW
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
       dockerfile: '$(dockerfilePath)'
 
   - script: |
