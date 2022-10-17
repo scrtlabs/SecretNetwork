@@ -35,9 +35,7 @@ func initAppConfig() (string, interface{}) {
 	srvCfg.API.Enable = true
 	srvCfg.API.Swagger = true
 	srvCfg.API.EnableUnsafeCORS = true
-	srvCfg.GRPCWeb.EnableUnsafeCORS = true
 	srvCfg.IAVLCacheSize = 781_250
-	srvCfg.IAVLDisableFastNode = false
 
 	secretAppConfig := SecretAppConfig{
 		Config:     *srvCfg,
