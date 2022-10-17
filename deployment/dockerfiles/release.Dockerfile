@@ -34,6 +34,9 @@ ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
 
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
+ARG API_KEY="00000000000000000000000000000000"
+ARG SPID="FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+
 # workaround because paths seem kind of messed up
 RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so
 RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_sim.so
@@ -66,6 +69,17 @@ RUN mkdir -p /opt/secret/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 RUN mkdir -p /root/config/
 
+RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
+RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
+RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production
+
+RUN echo ${SPID} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/spid.txt
+RUN echo ${SPID} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/spid.txt
+RUN echo ${SPID} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/spid.txt
+
+RUN echo ${API_KEY} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
+RUN echo ${API_KEY} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
+RUN echo ${API_KEY} >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
 
 
 ####### Node parameters

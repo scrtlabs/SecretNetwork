@@ -70,7 +70,7 @@ steps:
       repository: build-release
       tags: latest
       buildContext: .
-      arguments: --build-arg SGX_MODE=HW
+      arguments: --build-arg API_KEY=$(api-key-dev) --build-arg SPID=$(spid) --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/release.Dockerfile
 
   - task: Docker@2
