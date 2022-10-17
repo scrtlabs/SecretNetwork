@@ -70,7 +70,7 @@ steps:
       repository: build-release
       tags: latest
       buildContext: .
-      arguments: --build-arg API_KEY=$(api-key-dev) --build-arg SPID=$(spid) --build-arg SGX_MODE=HW
+      arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/release.Dockerfile
 
   - task: Docker@2
@@ -99,7 +99,7 @@ steps:
       buildContext: .
       repository: ci-enigma-sgx-bootstrap
       tags: latest
-      arguments: --build-arg SECRET_LOCAL_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW
+      arguments: --build-arg API_KEY=$(api-key-dev) --build-arg SPID=$(spid) --build-arg SECRET_LOCAL_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/local-node.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
