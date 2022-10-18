@@ -85,15 +85,9 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			tmConfig := serverCtx.Config
 			tmConfig.SetRoot(clientCtx.HomeDir)
 
-			// Cosmos config (.secretd/config/app.toml)
-			cosmosConfig, err := sdkconfig.GetConfig(serverCtx.Viper)
-			if err != nil {
-				return err
-			}
-
-			// Secret Network config (also part of .secretd/config/app.toml)
+			// Secret Network config (.secretd/config/app.toml)
 			secretConfig := SecretAppConfig{
-				Config:     cosmosConfig,
+				Config:     *sdkconfig.DefaultConfig(),
 				WASMConfig: *compute.DefaultWasmConfig(),
 			}
 
