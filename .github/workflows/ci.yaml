@@ -218,7 +218,7 @@ jobs:
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          go test -v ./x/registration/internal/...
+          go test -v -tags "secretcli" ./x/registration/internal/...
       - name: Test x/compute
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
