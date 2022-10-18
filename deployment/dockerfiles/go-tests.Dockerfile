@@ -1,4 +1,4 @@
-FROM enigmampc.azurecr.io/compile-contracts:1.5.0
+FROM ghcr.io/scrtlabs/compile-contracts:1.5.0
 
 RUN mkdir -p /opt/secret/.sgx_secrets
 

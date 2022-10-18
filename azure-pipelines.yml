@@ -54,7 +54,7 @@ steps:
       repository: '$(nodeImageRepository)'
       tags: latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW
+      arguments: --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --cache-to type=inline --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/release.Dockerfile
 
   - task: Docker@2
