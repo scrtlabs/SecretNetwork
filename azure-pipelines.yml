@@ -19,7 +19,7 @@ workspace:
 variables:
   baseImageRepository: 'azcr.io/enigmampc/ci-base-image'
   nodeImageRepository: 'azcr.io/enigmampc/ci-node-image'
-
+  containerRegistry: 'enigmampcdocker'
   dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/base.Dockerfile'
   tag: '$(Build.BuildId)'
   DOCKER_BUILDKIT: 1
