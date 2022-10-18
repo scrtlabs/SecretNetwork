@@ -465,8 +465,12 @@ protoVer=v0.2
 proto-all: proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
+	cp go.mod /tmp/go.mod.bak
+	cp go.sum /tmp/go.sum.bak
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	cp /tmp/go.mod.bak go.mod
+	cp /tmp/go.sum.bak go.sum
 	go mod tidy
 
 proto-lint:
