@@ -106,7 +106,7 @@ build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
-	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
+	-X github.com/scrtlabs/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
@@ -462,11 +462,12 @@ update-swagger-openapi-docs: statik-install proto-swagger-openapi-gen statik
 
 protoVer=v0.2
 
-proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
+proto-all: proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	go mod tidy
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
