@@ -108,6 +108,8 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 /// This function happens off-chain, so if we panic for some reason it _can_ be acceptable,
 ///  though probably not recommended
 ///
+/// 15/10/22 - this is now called during node startup and will evaluate whether or not a node is valid
+///
 /// # Safety
 ///  Something should go here
 ///
@@ -179,19 +181,12 @@ pub unsafe extern "C" fn ecall_init_node(
     target_public_key.copy_from_slice(&pk);
 
     // validate this node is patched and updated
-    let get_key_result = KEY_MANAGER.get_registration_key();
+    // unwrapping here is fine - it's done later on inside decrypt seed as well
+    let get_key_result = KEY_MANAGER.get_registration_key().unwrap();
 
-    let kp = if let Ok(saved_key) = get_key_result {
-        saved_key
-    } else {
-        // otherwise generate a new key - it doesn't really matter, it's just to get through the cert generation process
-        let mut key_manager = Keychain::new();
-        key_manager.create_registration_key().unwrap();
-        key_manager.get_registration_key().unwrap()
-    };
-
+    // this validates the cert and handles the "what if it fails" inside as well
     let res = create_attestation_certificate(
-        &kp,
+        &get_key_result,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
         api_key_slice,
     );
@@ -206,6 +201,16 @@ pub unsafe extern "C" fn ecall_init_node(
         Ok(result) => result,
         Err(status) => return status,
     };
+
+    // even though key is overwritten later we still want to explicitly remove it in case we increase the security version
+    // to make sure that it is resealed using the new svn
+    let delete_res = key_manager.delete_consensus_seed();
+
+    if delete_res {
+        debug!("Successfully removed consensus seed");
+    } else {
+        debug!("Failed to remove consensus seed. Didn't exist?");
+    }
 
     if let Err(_e) = key_manager.set_consensus_seed(seed) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;

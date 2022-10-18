@@ -141,6 +141,21 @@ impl Keychain {
         self.consensus_callback_secret = Some(consensus_callback_secret);
     }
 
+    /// used to remove the consensus seed - usually we don't care whether deletion was successful or not,
+    /// since we want to try and delete it either way
+    pub fn delete_consensus_seed(&mut self) -> bool {
+        debug!(
+            "Removing consensus seed in {}",
+            *CONSENSUS_SEED_SEALING_PATH
+        );
+        if let Err(e) = std::sgxfs::remove(&CONSENSUS_SEED_SEALING_PATH) {
+            error!("Error removing consensus_seed");
+            return false;
+        }
+        self.consensus_seed = None;
+        true
+    }
+
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
         debug!("Sealing consensus seed in {}", *CONSENSUS_SEED_SEALING_PATH);
         if let Err(e) = consensus_seed.seal(&CONSENSUS_SEED_SEALING_PATH) {
