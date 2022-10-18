@@ -11,6 +11,7 @@ import (
 
 	"github.com/cosmos/go-bip39"
 	"github.com/pkg/errors"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/spf13/cobra"
 	tmconfig "github.com/tendermint/tendermint/config"
 
@@ -90,6 +91,12 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 				return err
 			}
 
+			// Secret Network config (also part of .secretd/config/app.toml)
+			secretConfig := SecretAppConfig{
+				Config:     cosmosConfig,
+				WASMConfig: *compute.DefaultWasmConfig(),
+			}
+
 			chainID, _ := cmd.Flags().GetString(flags.FlagChainID)
 			if chainID == "" {
 				chainID = fmt.Sprintf("test-chain-%s", tmrand.Str(6))
@@ -113,7 +120,7 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			tmConfig.FastSync.Version = "v0"
 
 			// Assaf: This changes the default when creating app.toml in `secretd init` (E.g. on a new node)
-			cosmosConfig.IAVLDisableFastNode = false
+			secretConfig.IAVLDisableFastNode = false
 
 			// Get bip39 mnemonic
 			var mnemonic string
@@ -173,7 +180,7 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			toPrint := newPrintInfo(tmConfig.Moniker, chainID, nodeID, "", appState)
 
 			tmconfig.WriteConfigFile(filepath.Join(tmConfig.RootDir, "config", "config.toml"), tmConfig)
-			sdkconfig.WriteConfigFile(filepath.Join(tmConfig.RootDir, "config", "app.toml"), cosmosConfig)
+			sdkconfig.WriteConfigFile(filepath.Join(tmConfig.RootDir, "config", "app.toml"), secretConfig)
 			return displayInfo(toPrint)
 		},
 	}
