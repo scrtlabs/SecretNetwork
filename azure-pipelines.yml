@@ -41,8 +41,8 @@ steps:
       dockerfile: '$(dockerfilePath)'
 
   - script: |
-      cp deployment/ci/bootstrap_init.sh deployment/docker/local/bootstrap_init.sh
-      cp deployment/ci/node_init.sh deployment/docker/local/node_init.sh
+      cp deployment/ci/bootstrap_init.sh deployment/docker/bootstrap/bootstrap_init.sh
+      cp deployment/ci/node_init.sh deployment/docker/node/node_init.sh
       cp deployment/ci/startup.sh deployment/docker/startup.sh
       cp deployment/ci/node_key.json deployment/docker/node_key.json
     displayName: Overwrite node scripts

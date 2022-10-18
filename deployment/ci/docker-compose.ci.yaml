@@ -50,7 +50,7 @@ services:
     environment:
       - http_proxy
       - https_proxy
-      - SECRET_LOCAL_NODE_TYPE=bootstrap
+      - SECRET_LOCAL_NODE_TYPE=BOOTSTRAP
     expose:
       - 26656
       - 26657
