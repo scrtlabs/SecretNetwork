@@ -106,7 +106,7 @@ build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
-	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
+	-X github.com/scrtlabs/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
@@ -441,38 +441,33 @@ aesm-image:
 ###                         Swagger & Protobuf                              ###
 ###############################################################################
 
-# Install the runsim binary with a temporary workaround of entering an outside
-# directory as the "go get" command ignores the -mod option and will polute the
-# go.{mod, sum} files.
-#
-# ref: https://github.com/golang/go/issues/30515
-statik:
+.PHONY: update-swagger-openapi-docs statik statik-install proto-swagger-openapi-gen
+
+statik-install:
 	@echo "Installing statik..."
 	@go install github.com/rakyll/statik@v0.1.6
 
-update-swagger-openapi-docs: statik proto-swagger-openapi-gen
+statik:
 	statik -src=client/docs/static/ -dest=client/docs -f -m
-	@if [ -n "$(git status --porcelain)" ]; then \
-        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
-        exit 1;\
-    else \
-        echo "\033[92mSwagger docs are in sync\033[0m";\
-    fi
 
-# Example `CHAIN_VERSION=v1.4 make proto-swagger-openapi-gen`
 proto-swagger-openapi-gen:
+	cp go.mod /tmp/go.mod.bak
+	cp go.sum /tmp/go.sum.bak
 	@./scripts/protoc-swagger-openapi-gen.sh
+	cp /tmp/go.mod.bak go.mod
+	cp /tmp/go.sum.bak go.sum
 
-.PHONY: update-swagger-openapi-docs statik proto-swagger-openapi-gen
-
+# Example `CHAIN_VERSION=v1.4.0 make update-swagger-openapi-docs`
+update-swagger-openapi-docs: statik-install proto-swagger-openapi-gen statik
 
 protoVer=v0.2
 
-proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
+proto-all: proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	go mod tidy
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json

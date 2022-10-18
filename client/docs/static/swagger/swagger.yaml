@@ -2,7 +2,7 @@ swagger: '2.0'
 info:
   title: Secret Network
   description: A REST interface for queries and transactions
-  version: v1.4
+  version: v1.5.0
 paths:
   /cosmos/auth/v1beta1/accounts:
     get:
@@ -14904,7 +14904,7 @@ paths:
   /cosmos/staking/v1beta1/pool:
     get:
       summary: Pool queries the pool info.
-      operationId: Pool
+      operationId: ../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonPool
       responses:
         '200':
           description: A successful response.
@@ -35293,10 +35293,10 @@ paths:
           format: uint64
       tags:
         - gRPC Gateway API
-  /compute/v1beta1/code_hash/{code_id}:
+  /compute/v1beta1/code_hash/by_code_id/{code_id}:
     get:
       summary: Query code hash by code id
-      operationId: CodeHashByCodeID
+      operationId: CodeHashByCodeId
       responses:
         '200':
           description: A successful response.
@@ -35502,7 +35502,7 @@ paths:
           format: uint64
       tags:
         - gRPC Gateway API
-  /compute/v1beta1/code_hash/{contract_address}:
+  /compute/v1beta1/code_hash/by_contract_address/{contract_address}:
     get:
       summary: Query code hash by contract address
       operationId: CodeHashByContractAddress
@@ -36143,7 +36143,7 @@ paths:
   /compute/v1beta1/contracts/{code_id}:
     get:
       summary: Query code info by id
-      operationId: ContractsByCodeID
+      operationId: ContractsByCodeId
       responses:
         '200':
           description: A successful response.
@@ -68211,7 +68211,7 @@ definitions:
     properties:
       label:
         type: string
-  secret.compute.v1beta1.QueryContractsByCodeIDResponse:
+  secret.compute.v1beta1.QueryContractsByCodeIdResponse:
     type: object
     properties:
       contract_infos:
