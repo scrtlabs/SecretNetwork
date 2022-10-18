@@ -20,6 +20,7 @@ variables:
   baseImageRepository: 'rust-go-base-image'
   dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/base.Dockerfile'
   tag: '$(Build.BuildId)'
+  DOCKER_BUILDKIT: 1
 
 steps:
   - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
@@ -54,7 +55,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --build-arg API_KEY=$(api-key-dev) --build-arg SPID=$(spid) --build-arg SGX_MODE=HW
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
       dockerfile: '$(dockerfilePath)'
 
   - script: |

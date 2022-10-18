@@ -1,9 +1,6 @@
 # Final image
 FROM build-release
 
-ARG API_KEY="00000000000000000000000000000000"
-ARG SPID="FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
 #
@@ -34,13 +31,6 @@ RUN chmod +x wasmi-sgx-test.sh
 RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
-
-
-RUN echo ${SPID} > spid.txt
-RUN echo ${API_KEY} > api_key.txt
-#RUN mkdir -p /root/.secretd/.compute/
-#RUN mkdir -p /root/.sgx_secrets/
-#RUN mkdir -p /root/.secretd/.node/
 
 # Enable autocomplete
 #RUN secretcli completion > /root/secretcli_completion
