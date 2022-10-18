@@ -44,15 +44,15 @@ RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_s
 WORKDIR /root
 
 # Copy over binaries from the build-env
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
+COPY --from=build-env-rust-go --link /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
+COPY --from=build-env-rust-go --link /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 #COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /usr/lib/
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
+COPY --from=build-env-rust-go --link /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
 
-COPY deployment/docker/bootstrap/bootstrap_init.sh .
-COPY deployment/docker/node/node_init.sh .
-COPY deployment/docker/startup.sh .
-COPY deployment/docker/node_key.json .
+COPY --link deployment/docker/bootstrap/bootstrap_init.sh .
+COPY --link deployment/docker/node/node_init.sh .
+COPY --link deployment/docker/startup.sh .
+COPY --link deployment/docker/node_key.json .
 
 RUN chmod +x /usr/bin/secretd
 RUN chmod +x bootstrap_init.sh
