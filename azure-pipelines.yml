@@ -29,15 +29,6 @@ steps:
     displayName: "Save api keys"
 
   - task: Docker@2
-    displayName: "Build enclave tests"
-    inputs:
-      command: build
-      repository: rust-enclave-test
-      tags: latest
-      buildContext: .
-      arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
-  - task: Docker@2
     displayName: "Build base image"
     inputs:
       command: build
@@ -46,7 +37,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --cache-to type=inline --build-arg SGX_MODE=HW
+      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW
       dockerfile: '$(dockerfilePath)'
 
   - script: |
@@ -63,8 +54,18 @@ steps:
       repository: '$(nodeImageRepository)'
       tags: latest
       buildContext: .
-      arguments: --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag)--cache-from $(nodeImageRepository) --cache-to type=inline --build-arg SGX_MODE=HW
+      arguments: --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --cache-to type=inline --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/release.Dockerfile
+
+  - task: Docker@2
+    displayName: "Build enclave tests"
+    inputs:
+      command: build
+      repository: rust-enclave-test
+      tags: latest
+      buildContext: .
+      arguments: --build-arg SGX_MODE=HW
+      Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
 
   - task: Docker@2
     displayName: "Build tests image"
