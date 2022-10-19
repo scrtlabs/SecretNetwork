@@ -114,6 +114,12 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			tmConfig.FastSync.Version = "v0"
 
 			// Assaf: This changes the default when creating app.toml in `secretd init` (E.g. on a new node)
+			secretConfig.MinGasPrices = "0.0125uscrt"
+			secretConfig.API.Enable = true
+			secretConfig.API.Swagger = true
+			secretConfig.API.EnableUnsafeCORS = true
+			secretConfig.GRPCWeb.Enable = true
+			secretConfig.GRPCWeb.EnableUnsafeCORS = true
 			secretConfig.IAVLDisableFastNode = false
 
 			// Get bip39 mnemonic
