@@ -39,9 +39,6 @@ steps:
       buildContext: .
       arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW
       dockerfile: '$(dockerfilePath)'
-    env:
-      API_KEY=$(api-key-dev)
-      SPID=$(spid)
 
   - script: |
       cp deployment/ci/bootstrap_init.sh deployment/docker/bootstrap/bootstrap_init.sh
