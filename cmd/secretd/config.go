@@ -39,7 +39,6 @@ func initAppConfig() (string, interface{}) {
 	srvCfg.API.EnableUnsafeCORS = true
 	srvCfg.GRPCWeb.Enable = true
 	srvCfg.GRPCWeb.EnableUnsafeCORS = true
-	srvCfg.IAVLCacheSize = 781_250 // 50 MiB
 
 	secretAppConfig := SecretAppConfig{
 		Config:     *srvCfg,
