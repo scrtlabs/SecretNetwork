@@ -13,10 +13,10 @@ test = []
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+sgx_tstd = { branch = "secret", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", features = [
   "backtrace"
 ] }
-sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { branch = "secret", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git" }
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
