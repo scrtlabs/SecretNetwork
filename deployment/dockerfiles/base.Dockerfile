@@ -14,7 +14,6 @@ ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
 
-
 ENV VERSION=${BUILD_VERSION}
 ENV SGX_MODE=${SGX_MODE}
 ENV FEATURES=${FEATURES}
@@ -61,9 +60,6 @@ ARG FEATURES_U
 ARG DB_BACKEND=goleveldb
 ARG CGO_LDFLAGS
 
-ENV API_KEY="00000000000000000000000000000000"
-ENV SPID="FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-
 ENV VERSION=${BUILD_VERSION}
 ENV SGX_MODE=${SGX_MODE}
 ENV FEATURES=${FEATURES}
@@ -98,13 +94,13 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production
 
-RUN echo ${SPID} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/spid.txt
-RUN echo ${SPID} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/spid.txt
-RUN echo ${SPID} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/spid.txt
+RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/spid.txt
+RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/spid.txt
+RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/spid.txt
 
-RUN echo ${API_KEY} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
-RUN echo ${API_KEY} > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
-RUN echo ${API_KEY} >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
 
 RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
