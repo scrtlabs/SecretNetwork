@@ -19,11 +19,6 @@ RUN apt-get update && \
 
 RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
-RUN curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
-    apt-get update && \
-    apt-get install -y nodejs npm && \
-    npm i -g local-cors-proxy
-
 RUN wget -O /root/genesis.json https://github.com/scrtlabs/SecretNetwork/releases/download/v1.2.0/genesis.json
 
 ARG BUILD_VERSION="v0.0.0"
