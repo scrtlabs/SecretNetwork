@@ -65,6 +65,7 @@ services:
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
+      - ${PWD}/x/compute/internal/keeper/testdata/erc20.wasm:/root/erc20.wasm
       # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
