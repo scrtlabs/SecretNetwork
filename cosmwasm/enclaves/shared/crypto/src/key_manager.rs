@@ -6,13 +6,38 @@ use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
 
+// For phase 1 of the seed rotation, all consensus secrets come in two parts:
+// 1. The genesis seed generated on 15 September 2020
+// 2. The current seed
+//
+// The first "current seed" will be generated on the "phase 1 of the seed rotation" upgrade.
+// Then we'll start building a list of state keys per contract, and we'll add to that list whenever
+// we see a contract access a key that's not in the list.
+//
+// If a key is on the list - it means the value is encrypted with the current seed
+// If a key is NOT on the list - it means the value is still encrypted with the genesis seed
+//
+// When we rotate the seed in the future, we'll iterate the list of keys and reencrypt the values with
+// the new seed.
+//
+// When a contract accesses a key that's not on the list, we'll add the key to the list and reencrypt
+// the value with the new seed.
+//
+// All of this is needed because currently the encryption key of the value is derived using the
+// plaintext key, so we don't know the list of keys of any contract. The keys are stored
+// as sha256(key) encrypted with the seed.
 pub struct Keychain {
-    consensus_seed: Option<Seed>,
-    consensus_state_ikm: Option<AESKey>,
-    consensus_seed_exchange_keypair: Option<KeyPair>,
-    consensus_io_exchange_keypair: Option<KeyPair>,
-    consensus_callback_secret: Option<AESKey>,
+    consensus_seed: Option<SeedsHolder<Seed>>,
+    consensus_state_ikm: Option<SeedsHolder<AESKey>>,
+    consensus_seed_exchange_keypair: Option<SeedsHolder<KeyPair>>,
+    consensus_io_exchange_keypair: Option<SeedsHolder<KeyPair>>,
+    consensus_callback_secret: Option<SeedsHolder<AESKey>>,
     registration_key: Option<KeyPair>,
+}
+
+pub struct SeedsHolder<T> {
+    genesis: T,
+    current: T,
 }
 
 lazy_static! {
@@ -22,10 +47,14 @@ lazy_static! {
 #[allow(clippy::new_without_default)]
 impl Keychain {
     pub fn new() -> Self {
-        let consensus_seed = match Seed::unseal(&CONSENSUS_SEED_SEALING_PATH) {
-            Ok(k) => Some(k),
-            Err(_e) => None,
-        };
+        let consensus_seed: Option<SeedsHolder<Seed>> =
+            match Seed::unseal(&CONSENSUS_SEED_SEALING_PATH) {
+                Ok(k) => Some(SeedsHolder {
+                    genesis: k,
+                    current: todo!(),
+                }),
+                Err(_e) => None,
+            };
 
         let registration_key = Self::unseal_registration_key();
 
@@ -78,35 +107,35 @@ impl Keychain {
         self.consensus_seed.is_some()
     }
 
-    pub fn get_consensus_state_ikm(&self) -> Result<AESKey, CryptoError> {
+    pub fn get_consensus_state_ikm(&self) -> Result<SeedsHolder<AESKey>, CryptoError> {
         self.consensus_state_ikm.ok_or_else(|| {
             error!("Error accessing base_state_key (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
-    pub fn get_consensus_seed(&self) -> Result<Seed, CryptoError> {
+    pub fn get_consensus_seed(&self) -> Result<SeedsHolder<Seed>, CryptoError> {
         self.consensus_seed.ok_or_else(|| {
             error!("Error accessing consensus_seed (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
-    pub fn seed_exchange_key(&self) -> Result<KeyPair, CryptoError> {
+    pub fn seed_exchange_key(&self) -> Result<SeedsHolder<KeyPair>, CryptoError> {
         self.consensus_seed_exchange_keypair.ok_or_else(|| {
             error!("Error accessing consensus_seed_exchange_keypair (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
-    pub fn get_consensus_io_exchange_keypair(&self) -> Result<KeyPair, CryptoError> {
+    pub fn get_consensus_io_exchange_keypair(&self) -> Result<SeedsHolder<KeyPair>, CryptoError> {
         self.consensus_io_exchange_keypair.ok_or_else(|| {
             error!("Error accessing consensus_io_exchange_keypair (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
 
-    pub fn get_consensus_callback_secret(&self) -> Result<AESKey, CryptoError> {
+    pub fn get_consensus_callback_secret(&self) -> Result<SeedsHolder<AESKey>, CryptoError> {
         self.consensus_callback_secret.ok_or_else(|| {
             error!("Error accessing consensus_callback_secret (does not exist, or was not initialized)");
             CryptoError::ParsingError
@@ -147,19 +176,31 @@ impl Keychain {
     }
 
     pub fn set_consensus_seed_exchange_keypair(&mut self, kp: KeyPair) {
-        self.consensus_seed_exchange_keypair = Some(kp)
+        self.consensus_seed_exchange_keypair = Some(SeedsHolder {
+            genesis: kp,
+            current: todo!(),
+        })
     }
 
     pub fn set_consensus_io_exchange_keypair(&mut self, kp: KeyPair) {
-        self.consensus_io_exchange_keypair = Some(kp)
+        self.consensus_io_exchange_keypair = Some(SeedsHolder {
+            genesis: kp,
+            current: todo!(),
+        })
     }
 
     pub fn set_consensus_state_ikm(&mut self, consensus_state_ikm: AESKey) {
-        self.consensus_state_ikm = Some(consensus_state_ikm);
+        self.consensus_state_ikm = Some(SeedsHolder {
+            genesis: consensus_state_ikm,
+            current: todo!(),
+        });
     }
 
     pub fn set_consensus_callback_secret(&mut self, consensus_callback_secret: AESKey) {
-        self.consensus_callback_secret = Some(consensus_callback_secret);
+        self.consensus_callback_secret = Some(SeedsHolder {
+            genesis: consensus_callback_secret,
+            current: todo!(),
+        });
     }
 
     /// used to remove the consensus seed - usually we don't care whether deletion was successful or not,
@@ -183,7 +224,10 @@ impl Keychain {
             error!("Error sealing consensus_seed - error code 0xC14");
             return Err(e);
         }
-        self.consensus_seed = Some(consensus_seed);
+        self.consensus_seed = Some(SeedsHolder {
+            genesis: consensus_seed,
+            current: todo!(),
+        });
         Ok(())
     }
 
