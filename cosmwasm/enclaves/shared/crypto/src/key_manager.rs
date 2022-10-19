@@ -148,7 +148,7 @@ impl Keychain {
             "Removing consensus seed in {}",
             *CONSENSUS_SEED_SEALING_PATH
         );
-        if let Err(e) = std::sgxfs::remove(&CONSENSUS_SEED_SEALING_PATH) {
+        if let Err(_e) = std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH.as_str()) {
             error!("Error removing consensus_seed");
             return false;
         }
