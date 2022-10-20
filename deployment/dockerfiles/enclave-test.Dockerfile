@@ -19,8 +19,6 @@ COPY Makefile Makefile
 COPY api_key.txt /enclave-test/cosmwasm/enclaves/execute/
 COPY spid.txt /enclave-test/enclaves/execute/
 
-RUN make vendor
-
 COPY deployment/ci/enclave-test.sh .
 RUN chmod +x enclave-test.sh
 

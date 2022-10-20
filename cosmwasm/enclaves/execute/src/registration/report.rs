@@ -60,7 +60,7 @@ fn as_base64<S>(key: &[u8], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&base64::encode(&key[..]))
+    serializer.serialize_str(&base64::encode(key))
 }
 
 fn from_base64<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
@@ -619,8 +619,7 @@ impl AttestationReport {
             .map(|cert| cert.to_trust_anchor())
             .collect();
 
-        let mut chain: Vec<&[u8]> = Vec::new();
-        chain.push(&ias_cert);
+        let chain: Vec<&[u8]> = vec![&ias_cert];
 
         // set as 04.11.23(dd.mm.yy) - should be valid for the foreseeable future, and not rely on SystemTime
         let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1_699_088_856);

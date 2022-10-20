@@ -23,7 +23,7 @@ pub struct Ed25519PrivateKey {
 }
 
 impl Ed25519PrivateKey {
-    pub fn to_owned(&self) -> AlignedEc256PrivateKey {
+    pub fn to_owned(self) -> AlignedEc256PrivateKey {
         self.key
     }
 

@@ -19,7 +19,7 @@ impl SealedKey for AESKey {
 
 impl SealedKey for Seed {
     fn seal(&self, filepath: &str) -> Result<(), EnclaveError> {
-        seal(&self.as_slice(), filepath)
+        seal(self.as_slice(), filepath)
     }
 
     fn unseal(filepath: &str) -> Result<Self, EnclaveError> {
@@ -31,7 +31,7 @@ impl SealedKey for Seed {
 impl SealedKey for KeyPair {
     fn seal(&self, filepath: &str) -> Result<(), EnclaveError> {
         // Files are automatically closed when they go out of scope.
-        seal(&self.get_privkey(), filepath)
+        seal(self.get_privkey(), filepath)
     }
 
     fn unseal(filepath: &str) -> Result<Self, EnclaveError> {
