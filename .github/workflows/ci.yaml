@@ -121,7 +121,7 @@ jobs:
       - name: Build Executable
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
+          SGX_MODE=SW RUSTC_WRAPPER="$HOME/sccache" make build-linux
       - name: Build Contracts
         run: |
           make build-test-contract
