@@ -12,11 +12,11 @@ test = []
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tstd = { path = "../../../../../../CLionProjects/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
+sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
   "backtrace"
 ] }
-sgx_types = { path = "../../../../../../CLionProjects/incubator-teaclave-sgx-sdk/sgx_types" }
-sgx_trts = { path = "../../../../../../CLionProjects/incubator-teaclave-sgx-sdk/sgx_trts" }
+sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_trts = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_trts" }
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
