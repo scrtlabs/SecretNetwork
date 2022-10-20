@@ -17,7 +17,7 @@ workspace:
   clean: all # what to clean up before the job runs
 
 steps:
-  - checkout: "SecretNetwork"
+  - checkout: "self"
     submodules: true
     displayName: "Checkout Repository and Submodules"
   - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
