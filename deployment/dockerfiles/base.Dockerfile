@@ -48,7 +48,7 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=LOAD
 
-COPY third_party/build third_party/build
+COPY third_party third_party
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm/
