@@ -58,9 +58,6 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 COPY deployment/docker/MakefileCopy Makefile
 
-# RUN make clean
-RUN make vendor
-
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
 COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/

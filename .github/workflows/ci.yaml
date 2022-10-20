@@ -51,7 +51,6 @@ jobs:
       - name: Test enclave
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
           export SGX_MODE=SW
           RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
           make clean-enclave
@@ -122,7 +121,6 @@ jobs:
       - name: Build Executable
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
       - name: Build Contracts
         run: |
@@ -287,7 +285,6 @@ jobs:
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
           cd cosmwasm/enclaves/execute/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
