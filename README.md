@@ -99,7 +99,7 @@ cargo install xargo --version 0.3.25
 
 Use `make build-linux` to build the entire codebase. This will build both the Rust (enclave & contract engine) and the Go (blockchain) code.
 
-To build just the rust code, you can use `make _build-linux`, while to build just the Go code, there is the aptly named `make build_local_no_rust`.
+To build just the rust code, you can use `make build-linux`, while to build just the Go code, there is the aptly named `make build_local_no_rust`.
 
 
 Tip:
