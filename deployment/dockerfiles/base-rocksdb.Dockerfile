@@ -2,7 +2,7 @@
 # > docker build -t enigma .
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd init
 # > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.secretd:/root/.secretd -v ~/.secretcli:/root/.secretcli enigma secretd start
-FROM baiduxlab/sgx-rust:2004-1.1.3 AS build-env-rust-go
+FROM baiduxlab/sgx-rust:2004-1.1.5 AS build-env-rust-go
 
 ENV PATH="/root/.cargo/bin:$PATH"
 ENV GOROOT=/usr/local/go
@@ -55,6 +55,8 @@ COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
 COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
 COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
 COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
+
+RUN cargo install xargo --version 0.3.25
 
 RUN . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
