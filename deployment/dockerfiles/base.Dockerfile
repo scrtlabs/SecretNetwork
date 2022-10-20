@@ -63,15 +63,11 @@ COPY deployment/docker/MakefileCopy Makefile
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
-COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
-COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/
-COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
-COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
-COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
-COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
-
 RUN . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
+
+# switch back to root directory and copy all the sdk stuff
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 # This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
 RUN true
@@ -89,8 +85,13 @@ COPY client client
 
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblz4.so /usr/local/lib/liblz4.so  && ln -s /usr/lib/x86_64-linux-gnu/libzstd.so /usr/local/lib/libzstd.so
 
-RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
+COPY ias_keys ias_keys
+
+COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
+COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
+
+RUN . /opt/sgxsdk/environment && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
+RUN . /opt/sgxsdk/environment && VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
 # RUN rustup target add wasm32-unknown-unknown && apt update -y && apt install clang -y && make build-test-contract
 
