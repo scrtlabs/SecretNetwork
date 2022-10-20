@@ -48,14 +48,17 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=LOAD
 
+COPY rust-toolchain rust-toolchain
+RUN rustup component add rust-src
+RUN cargo install xargo --version 0.3.25
+
 COPY third_party third_party
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm/
 COPY cosmwasm cosmwasm/
 
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
-
+# this is here so we don't have to recompile every time the makefile changes
 COPY deployment/docker/MakefileCopy Makefile
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
@@ -67,16 +70,9 @@ COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/
 COPY api_key.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
 COPY spid.txt /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/
 
-RUN rustup component add rust-src
-
 RUN . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
 
-# Set working directory for the build
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork
-
-# Add source files
-COPY go-cosmwasm go-cosmwasm
 # This is due to some esoteric docker bug with the underlying filesystem, so until I figure out a better way, this should be a workaround
 RUN true
 COPY x x
