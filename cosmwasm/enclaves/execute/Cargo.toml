@@ -13,47 +13,43 @@ crate-type = ["staticlib"]
 default = ["SGX_MODE_SW"]
 SGX_MODE_SW = []
 SGX_MODE_HW = []
-production = [
-  "SGX_MODE_HW",
-  "enclave_crypto/production",
-  "enclave_utils/production",
-  "log/max_level_warn",
-  "log/release_max_level_warn"
-]
+production = ["SGX_MODE_HW", "enclave_crypto/production", "enclave_utils/production", "log/max_level_warn", "log/release_max_level_warn"]
 debug-print = ["enclave_contract_engine/debug-print"]
-test = [
-  "enclave_contract_engine/test",
-  "enclave_crypto/test",
-  "enclave_cosmos_types/test"
-]
+test = ["enclave_contract_engine/test", "enclave_crypto/test", "enclave_cosmos_types/test"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tstd = { branch = "secret", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", features = [
-  "backtrace"
+sgx_tstd = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+    "backtrace"
 ] }
-sgx_types = { branch = "secret", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git" }
+sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
-sgx_tse = { branch = "secret", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git" }
-sgx_rand = { branch = "secret", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git" }
-sgx_tcrypto = { branch = "secret", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git" }
+sgx_tse = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_rand = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tcrypto = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
 enclave-ffi-types = { path = "../ffi-types" }
+
 enclave_contract_engine = { path = "../shared/contract-engine" }
 enclave_crypto = { path = "../shared/crypto" }
 enclave_utils = { path = "../shared/utils" }
 enclave_cosmos_types = { path = "../shared/cosmos-types", optional = true }
+
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 ctor = "0.1.13"
 derive_more = "0.99"
+
 pwasm-utils = { version = "0.12.0", default-features = false }
 parity-wasm = { version = "0.41.0", default-features = false }
+
 base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
+
 # for attestation
 chrono = { git = "https://github.com/mesalock-linux/chrono-sgx" }
 num-bigint = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }
@@ -64,9 +60,7 @@ bit-vec = { version = "0.6", default-features = false }
 lazy_static = "1.4"
 hex = "0.4.2"
 log = "0.4.17"
-simple_logger = { version = "2.3.0", default-features = false, features = [
-  "stderr"
-] }
+simple_logger = { version = "2.3.0", default-features = false, features = ["stderr"] }
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"
@@ -89,4 +83,35 @@ default-features = false
 features = ["dangerous_configuration", "mesalock_sgx"]
 
 [dev-dependencies]
-sgx_edl = { branch = "secret", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git" }
+sgx_edl = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+[patch.'https://github.com/apache/teaclave-sgx-sdk.git']
+sgx_align_struct_attribute = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_align_struct_attribute" }
+sgx_alloc = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_alloc" }
+sgx_backtrace = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace" }
+sgx_backtrace_sys = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace_sys" }
+sgx_build_helper = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_build_helper" }
+sgx_cov = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_cov" }
+sgx_crypto_helper = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_crypto_helper" }
+sgx_demangle = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_demangle" }
+sgx_libc = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_libc" }
+sgx_no_tstd = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_no_tstd" }
+sgx_rand = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand" }
+sgx_rand_derive = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand_derive" }
+sgx_serialize = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize" }
+sgx_serialize_derive = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize_derive" }
+sgx_serialize_derive_internals = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize_derive_internals" }
+sgx_tcrypto = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto" }
+sgx_tcrypto_helper = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto_helper" }
+sgx_tdh = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tdh" }
+sgx_tkey_exchange = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tkey_exchange" }
+sgx_tprotected_fs = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tprotected_fs" }
+sgx_trts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_trts" }
+sgx_tse = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tse" }
+sgx_tseal = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tseal" }
+sgx_tstd = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd" }
+sgx_tunittest = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tunittest" }
+sgx_types = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+#sgx_ucrypto = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_ucrypto" }
+sgx_unwind = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_unwind" }
+#sgx_urts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_urts" }

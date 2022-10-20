@@ -7,12 +7,15 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+        name: Pull git submodules
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -48,7 +51,6 @@ jobs:
       - name: Test enclave
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
           export SGX_MODE=SW
           RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
           make clean-enclave
@@ -57,6 +59,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+        name: Pull git submodules
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
@@ -64,8 +69,8 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -116,7 +121,6 @@ jobs:
       - name: Build Executable
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
           SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
       - name: Build Contracts
         run: |
@@ -168,6 +172,8 @@ jobs:
     needs: Build
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
@@ -175,8 +181,8 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - uses: actions/download-artifact@v3
@@ -235,12 +241,14 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -277,7 +285,6 @@ jobs:
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
           cd cosmwasm/enclaves/execute/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
@@ -332,4 +339,7 @@ jobs:
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
           docker compose -f ./test/docker-compose.yml up -d
           rustup target add wasm32-unknown-unknown
+          wget -O - 'https://github.com/WebAssembly/binaryen/releases/download/version_110/binaryen-version_110-x86_64-linux.tar.gz' | tar -xzf -
+          sudo cp binaryen-version_110/bin/wasm-opt /bin/wasm-opt
+          sudo chmod +x /bin/wasm-opt
           make test

@@ -1,4 +1,4 @@
-FROM baiduxlab/sgx-rust:2004-1.1.3 AS build-env-rust-go
+FROM baiduxlab/sgx-rust:2004-1.1.5 AS build-env-rust-go
 
 ENV PATH="/root/.cargo/bin:$PATH"
 
@@ -16,13 +16,14 @@ ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
 
+
 ENV VERSION=${BUILD_VERSION}
 ENV SGX_MODE=${SGX_MODE}
 ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=LOAD
 
-COPY third_party/build third_party/build
+COPY third_party/ third_party/
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm/
@@ -32,10 +33,9 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 COPY deployment/docker/MakefileCopy Makefile
 
-# RUN make clean
-RUN make vendor
-
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
+
+RUN cargo install xargo --version 0.3.25
 
 RUN . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust

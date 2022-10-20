@@ -31,11 +31,14 @@ func initAppConfig() (string, interface{}) {
 	//   own app.toml to override, or use this default value.
 	//
 	// In simapp, we set the min gas prices to 0.
+	// Assaf: This changes the default if the config is not present at all
+	// (E.g. a new config after a chain upgrade)
 	srvCfg.MinGasPrices = "0.0125uscrt"
 	srvCfg.API.Enable = true
 	srvCfg.API.Swagger = true
 	srvCfg.API.EnableUnsafeCORS = true
-	srvCfg.IAVLCacheSize = 781_250
+	srvCfg.GRPCWeb.Enable = true
+	srvCfg.GRPCWeb.EnableUnsafeCORS = true
 
 	secretAppConfig := SecretAppConfig{
 		Config:     *srvCfg,
