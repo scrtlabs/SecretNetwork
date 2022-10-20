@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euvo pipefail
+set -uvo pipefail
 
 # init the node
 # rm -rf ~/.secret*
