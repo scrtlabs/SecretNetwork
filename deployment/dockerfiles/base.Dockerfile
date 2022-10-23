@@ -27,6 +27,7 @@ RUN apt-get update &&  \
     zlib1g-dev \
     libbz2-dev \
     liblz4-dev \
+    automake \
     libzstd-dev
 #
 
@@ -52,14 +53,12 @@ COPY rust-toolchain rust-toolchain
 RUN rustup component add rust-src
 RUN cargo install xargo --version 0.3.25
 
+# Add submodules
 COPY third_party third_party
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm/
 COPY cosmwasm cosmwasm/
-
-# this is here so we don't have to recompile every time the makefile changes
-COPY deployment/docker/MakefileCopy Makefile
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 

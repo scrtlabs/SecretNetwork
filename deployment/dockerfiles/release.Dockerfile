@@ -19,9 +19,9 @@ RUN apt-get update && \
 
 RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
-RUN curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
     apt-get update && \
-    apt-get install -y nodejs npm && \
+    apt-get install -y nodejs && \
     npm i -g local-cors-proxy
 
 ARG SGX_MODE=SW
@@ -33,8 +33,8 @@ ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
 # workaround because paths seem kind of messed up
-RUN cp /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/libsgx_urts_sim.so
-RUN cp /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/libsgx_uae_service_sim.so
+RUN ln -s /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/x86_64-linux-gnu/libsgx_urts_sim.so
+RUN ln -s /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/x86_64-linux-gnu/libsgx_uae_service_sim.so
 
 # Install ca-certificates
 WORKDIR /root
