@@ -109,6 +109,8 @@ const (
 	staticTooHighMemoryContract = "static-too-high-initial-memory.wasm"
 )
 
+const benchContract = "bench_contract.wasm"
+
 const contractPath = "testdata"
 
 var TestContractPaths = map[string]string{
@@ -120,6 +122,7 @@ var TestContractPaths = map[string]string{
 	v010WithFloats:              filepath.Join(".", contractPath, v010WithFloats),
 	tooHighMemoryContract:       filepath.Join(".", contractPath, tooHighMemoryContract),
 	staticTooHighMemoryContract: filepath.Join(".", contractPath, staticTooHighMemoryContract),
+	benchContract:               filepath.Join(".", contractPath, benchContract),
 }
 
 var (

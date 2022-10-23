@@ -155,7 +155,7 @@ pub unsafe extern "C" fn ecall_init_node(
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
     let mut encrypted_seed = [0u8; ENCRYPTED_SEED_SIZE];
-    encrypted_seed.copy_from_slice(&encrypted_seed_slice);
+    encrypted_seed.copy_from_slice(encrypted_seed_slice);
 
     // public keys in certificates don't have 0x04, so we'll copy it here
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
@@ -312,7 +312,7 @@ pub unsafe extern "C" fn ecall_key_gen(
 
 pub fn attest_from_key(kp: &KeyPair, save_path: &str, api_key: &[u8]) -> SgxResult<()> {
     let (_, cert) = match create_attestation_certificate(
-        &kp,
+        kp,
         sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
         api_key,
     ) {

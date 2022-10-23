@@ -1,3 +1,4 @@
 [submodule "third_party/incubator-teaclave-sgx-sdk"]
 	path = third_party/incubator-teaclave-sgx-sdk
 	url = https://github.com/scrtlabs/incubator-teaclave-sgx-sdk
+	branch = secret-1.1.5

@@ -4,6 +4,9 @@ COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
+SPID ?= 00000000000000000000000000000000
+API_KEY ?= FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -228,12 +231,23 @@ clean:
 	$(MAKE) -C cosmwasm/enclaves/test clean
 
 build-rocksdb-image:
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION} .
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION}-1.1.5 .
 
-build-localsecret:
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES_U="${FEATURES_U}" --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+localsecret: _localsecret-compile
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
+
+_localsecret-compile:
+	docker build \
+				--build-arg BUILD_VERSION=${VERSION} \
+				--build-arg FEATURES="${FEATURES},debug-print" \
+				--build-arg FEATURES_U=${FEATURES_U} \
+				--secret id=API_KEY,src=.env.local \
+				--secret id=SPID,src=.env.local \
+				--build-arg SGX_MODE=SW \
+				-f deployment/dockerfiles/base.Dockerfile \
+				-t rust-go-base-image \
+				.
 
 build-ibc-hermes:
 	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc
@@ -247,75 +261,51 @@ build-custom-dev-image:
     # delete the copies created above
 	rm go-cosmwasm/api/libgo_cosmwasm.so.x $(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so.x
 
-build-testnet: docker_base
+build-testnet: _docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
 	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-build-mainnet-upgrade: docker_base
+build-mainnet-upgrade: _docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
+	docker build --secret API_KEY=${API_KEY} --secret SPID=${SPID} --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb-mainnet.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
-build-mainnet: docker_base
+build-mainnet: _docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-docker_base_rocksdb:
-	docker build \
-			--build-arg BUILD_VERSION=${VERSION} \
-			--build-arg FEATURES=${FEATURES} \
-			--build-arg FEATURES_U=${FEATURES_U} \
-			--build-arg SGX_MODE=${SGX_MODE} \
-			-f deployment/dockerfiles/base-rocksdb.Dockerfile \
-			-t rust-go-base-image \
-			.
-
-docker_base_goleveldb: docker_base
-
-docker_base_rust:
-	docker build \
-				--build-arg BUILD_VERSION=${VERSION} \
-				--build-arg FEATURES=${FEATURES} \
-				--build-arg FEATURES_U=${FEATURES_U} \
-				--build-arg SGX_MODE=${SGX_MODE} \
-				-f deployment/dockerfiles/base-rust.Dockerfile \
-				-t rust-base-image \
-				.
-
-docker_base_go:
-	docker build \
-				--build-arg DB_BACKEND=${DB_BACKEND} \
-				--build-arg BUILD_VERSION=${VERSION} \
-				--build-arg FEATURES=${FEATURES} \
-				--build-arg FEATURES_U=${FEATURES_U} \
-				--build-arg SGX_MODE=${SGX_MODE} \
-				--build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
-				-f deployment/dockerfiles/base-go.Dockerfile \
-				-t rust-go-base-image \
-				.
-
-docker_base: docker_base_rust docker_base_go
-
-docker_bootstrap: docker_base
+docker_bootstrap: _docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
-docker_node: docker_base
+docker_node: _docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
 
-docker_local_azure_hw: docker_base
+docker_local_azure_hw: _docker_base
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-node .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-bootstrap .
 
 docker_enclave_test:
 	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/enclave-test.Dockerfile -t rust-enclave-test .
+
+_docker_base:
+	docker build \
+				--build-arg BUILD_VERSION=${VERSION} \
+				--build-arg FEATURES=${FEATURES} \
+				--build-arg FEATURES_U=${FEATURES_U} \
+				--build-arg SGX_MODE=${SGX_MODE} \
+				--secret id=API_KEY,src=api_key.txt \
+				--secret id=SPID,src=spid.txt \
+				-f deployment/dockerfiles/base.Dockerfile \
+				-t rust-go-base-image \
+				.
 
 # while developing:
 build-enclave: vendor
@@ -465,8 +455,12 @@ protoVer=v0.2
 proto-all: proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
+	cp go.mod /tmp/go.mod.bak
+	cp go.sum /tmp/go.sum.bak
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	cp /tmp/go.mod.bak go.mod
+	cp /tmp/go.sum.bak go.sum
 	go mod tidy
 
 proto-lint:

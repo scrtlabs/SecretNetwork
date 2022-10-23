@@ -49,21 +49,21 @@ lazy_static! {
     )
     .join(NODE_ENCRYPTED_SEED_KEY_FILE)
     .to_str()
-    .unwrap_or(&DEFAULT_SGX_SECRET_PATH.to_string())
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
     pub static ref REGISTRATION_KEY_SEALING_PATH: String = path::Path::new(
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(NODE_EXCHANGE_KEY_FILE)
     .to_str()
-    .unwrap_or(&DEFAULT_SGX_SECRET_PATH.to_string())
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
     pub static ref ATTESTATION_CERT_PATH: String = path::Path::new(
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(ATTESTATION_CERTIFICATE_SAVE_PATH)
     .to_str()
-    .unwrap_or(&DEFAULT_SGX_SECRET_PATH.to_string())
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
 }
 
