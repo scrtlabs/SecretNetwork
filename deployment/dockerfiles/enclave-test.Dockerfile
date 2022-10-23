@@ -18,7 +18,7 @@ COPY cosmwasm/ cosmwasm/
 COPY Makefile Makefile
 
 RUN --mount=type=secret,id=SPID,dst=/run/secrets/spid.txt cat /run/secrets/spid.txt > /enclave-test/cosmwasm/enclaves/execute/spid.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /enclave-test/enclaves/execute/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /enclave-test/cosmwasm/enclaves/execute/api_key.txt
 
 COPY deployment/ci/enclave-test.sh .
 RUN chmod +x enclave-test.sh
