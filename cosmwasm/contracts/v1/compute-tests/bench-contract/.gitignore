@@ -1,0 +1,13 @@
+# Build results
+/target
+*.wasm
+
+# Text file backups
+**/*.rs.bk
+
+# macOS
+.DS_Store
+
+# IDEs
+*.iml
+.idea

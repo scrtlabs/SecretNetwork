@@ -1,8 +1,10 @@
-# Base image
-FROM rust-go-base-image AS build-env-rust-go
+ARG SCRT_BIN_IMAGE=rust-go-base-image
+ARG SCRT_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
+
+FROM $SCRT_BIN_IMAGE AS build-env-rust-go
 
 # Final image
-FROM enigmampc/enigma-sgx-base:2004-1.1.5 as build-release
+FROM $SCRT_BASE_IMAGE as build-node
 
 # wasmi-sgx-test script requirements
 RUN apt-get update && \
@@ -30,6 +32,7 @@ ENV SGX_MODE=${SGX_MODE}
 ARG SECRET_NODE_TYPE=BOOTSTRAP
 ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
 
+ENV PKG_CONFIG_PATH=""
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
 
 # workaround because paths seem kind of messed up
@@ -63,7 +66,6 @@ RUN mkdir -p /root/.secretd/.compute/
 RUN mkdir -p /opt/secret/.sgx_secrets/
 RUN mkdir -p /root/.secretd/.node/
 RUN mkdir -p /root/config/
-
 
 
 ####### Node parameters

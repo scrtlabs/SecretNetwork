@@ -1,6 +1,8 @@
-FROM rust-go-base-image:latest AS build-env-rust-go
-# Final image
-FROM enigmampc/enigma-sgx-base:2004-1.1.3
+ARG SCRT_BIN_IMAGE=rust-go-base-image
+ARG SCRT_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.3
+
+FROM $SCRT_BIN_IMAGE AS build-env-rust-go
+FROM $SCRT_BASE_IMAGE as build-deb
 
 # wasmi-sgx-test script requirements
 RUN apt-get update && \
