@@ -335,6 +335,10 @@ jobs:
           yarn
           yarn test
           docker rm -f localsecret # next step needs the localsecret ports
+      - name: Install Requirements
+        run: |
+          chmod +x ./scripts/install-wasm-tools.sh
+          ./scripts/install-wasm-tools.sh
       - name: Run cw20-ics20 tests
         run: |
           git clone --depth 1 --branch secret https://github.com/scrtlabs/cw-plus
