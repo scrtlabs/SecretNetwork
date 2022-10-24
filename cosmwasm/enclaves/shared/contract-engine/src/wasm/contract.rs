@@ -341,7 +341,7 @@ impl WasmiApi for ContractInstance {
 
         // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
         // This returns the value from Tendermint
-        let (value, gas_used_by_storage) = read_encrypted_key(
+        let (value, gas_used_by_storage) = read_from_encrypted_state(
             &state_key_name,
             &self.context,
             &self.contract_key,

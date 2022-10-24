@@ -2,6 +2,7 @@ use enclave_crypto::consts::{CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES};
 use enclave_crypto::key_manager::SeedsHolder;
 use log::*;
 
+use protobuf::well_known_types::Option;
 use sgx_types::sgx_status_t;
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
@@ -118,6 +119,7 @@ pub fn read_from_encrypted_state(
     has_write_permissions: bool,
     kv_cache: &mut KvCache,
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
+    // Try reading with the new encryption format
     let encrypted_key = encrypt_key_new(plaintext_key, contract_key)?;
 
     let mut encrypted_key_with_header: Vec<u8> = vec![];
@@ -429,6 +431,7 @@ fn encrypt_value_new(
     })
 }
 
+/// encrypted_state_key without the header
 fn decrypt_value_new(
     encrypted_state_key: &[u8],
     encrypted_state_value: &[u8],
