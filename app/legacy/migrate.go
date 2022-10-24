@@ -27,7 +27,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	legacy120 "github.com/enigmampc/SecretNetwork/app/legacy/v120"
+	legacy120 "github.com/scrtlabs/SecretNetwork/app/legacy/v120"
 )
 
 const (

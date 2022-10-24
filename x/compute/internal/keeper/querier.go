@@ -9,7 +9,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 var _ types.QueryServer = GrpcQuerier{} // type assertion
@@ -47,7 +47,7 @@ func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryByContractA
 	}, nil
 }
 
-func (q GrpcQuerier) ContractsByCodeID(c context.Context, req *types.QueryByCodeIDRequest) (*types.QueryContractsByCodeIDResponse, error) {
+func (q GrpcQuerier) ContractsByCodeId(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryContractsByCodeIdResponse, error) {
 	if req.CodeId == 0 {
 		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
 	}
@@ -60,7 +60,7 @@ func (q GrpcQuerier) ContractsByCodeID(c context.Context, req *types.QueryByCode
 		return nil, types.ErrNotFound
 	}
 
-	return &types.QueryContractsByCodeIDResponse{
+	return &types.QueryContractsByCodeIdResponse{
 		ContractInfos: response,
 	}, nil
 }
@@ -88,7 +88,7 @@ func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecr
 	return &types.QuerySecretContractResponse{Data: response}, nil
 }
 
-func (q GrpcQuerier) Code(c context.Context, req *types.QueryByCodeIDRequest) (*types.QueryCodeResponse, error) {
+func (q GrpcQuerier) Code(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryCodeResponse, error) {
 	if req.CodeId == 0 {
 		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
 	}
@@ -144,7 +144,7 @@ func (q GrpcQuerier) CodeHashByContractAddress(c context.Context, req *types.Que
 	}, nil
 }
 
-func (q GrpcQuerier) CodeHashByCodeID(c context.Context, req *types.QueryByCodeIDRequest) (*types.QueryCodeHashResponse, error) {
+func (q GrpcQuerier) CodeHashByCodeId(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryCodeHashResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 
 	codeHashBz, err := queryCodeHashByCodeID(ctx, req.CodeId, q.keeper)

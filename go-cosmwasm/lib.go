@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/api"
-	types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	v010types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 )
 
 // CodeID represents an ID for a given wasm code blob, must be generated from this library

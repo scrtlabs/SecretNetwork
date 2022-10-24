@@ -15,7 +15,7 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
-	cosmwasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	cosmwasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	flag "github.com/spf13/pflag"
 
 	"github.com/spf13/cobra"
@@ -24,10 +24,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
+	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -314,7 +314,7 @@ func CmdDecryptText() *cobra.Command {
 
 			nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(dataCipherBz)
 			if err != nil {
-				return fmt.Errorf("error while parsing encrypted data: %w", err)
+				return fmt.Errorf("error while parsing encrypted blob: %w", err)
 			}
 
 			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
@@ -529,7 +529,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 					if err != nil {
 						continue
 					}
-					answers.OutputError = string(append(json.RawMessage(fmt.Sprintf("message inedx %d: ", i)), stdErr...))
+					answers.OutputError = string(append(json.RawMessage(fmt.Sprintf("message index %d: ", i)), stdErr...))
 					break
 				}
 			} else if types.ContainsEnclaveError(result.RawLog) {

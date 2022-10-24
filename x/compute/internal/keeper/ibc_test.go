@@ -11,10 +11,10 @@ import (
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	v010cosmwasm "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/log"
 )
@@ -733,8 +733,8 @@ func TestIBCPacketReceive(t *testing.T) {
 			},
 		} {
 			t.Run(fmt.Sprintf("%s-Encryption:%t", test.description, isEncrypted), func(t *testing.T) {
-				ibcPacket := createIBCPacket(createIBCEndpoint(PortIDForContract(contractAddress), "channel.1"),
-					createIBCEndpoint(PortIDForContract(contractAddress), "channel.0"),
+				ibcPacket := createIBCPacket(createIBCEndpoint(PortIDForContract(contractAddress), "channel.11231231231231232112312321321321331232132131232132131232"),
+					createIBCEndpoint(PortIDForContract(contractAddress), "channel.0123123213213123123213123123123123123312321321321312321313213"),
 					test.sequence,
 					createIBCTimeout(math.MaxUint64),
 					[]byte{},

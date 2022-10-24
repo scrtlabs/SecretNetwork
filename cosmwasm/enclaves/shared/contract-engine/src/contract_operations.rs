@@ -115,7 +115,7 @@ pub fn init(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Init,
         query_depth,
@@ -217,8 +217,8 @@ pub fn handle(
         should_encrypt_output,
         secret_msg,
         decrypted_msg,
-        contract_hash_for_validation,
-    } = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
+        data_for_validation,
+    } = parse_message(msg, &parsed_handle_type)?;
 
     let canonical_sender_address = match to_canonical(sender) {
         Ok(can) => can,
@@ -242,12 +242,12 @@ pub fn handle(
     }
 
     let mut validated_msg = decrypted_msg.clone();
-    let mut reply_params: Option<ReplyParams> = None;
+    let mut reply_params: Option<Vec<ReplyParams>> = None;
     if was_msg_encrypted {
         let x = validate_msg(
             &decrypted_msg,
             &contract_hash,
-            contract_hash_for_validation,
+            data_for_validation,
             Some(parsed_handle_type.clone()),
         )?;
         validated_msg = x.validated_msg;
@@ -260,7 +260,7 @@ pub fn handle(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Handle,
         query_depth,
@@ -365,7 +365,7 @@ pub fn query(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Query,
         query_depth,
@@ -401,7 +401,7 @@ pub fn query(
 fn start_engine(
     context: Ctx,
     gas_limit: u64,
-    contract_code: ContractCode,
+    contract_code: &ContractCode,
     contract_key: &ContractKey,
     operation: ContractOperation,
     query_depth: u32,

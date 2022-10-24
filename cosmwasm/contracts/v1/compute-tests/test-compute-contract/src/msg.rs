@@ -4,6 +4,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
+pub struct ExecuteDetails {
+    pub contract_address: String,
+    pub contract_hash: String,
+    pub should_error: bool,
+    pub msg_id: u64,
+    pub data: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum InstantiateMsg {
     WasmMsg {
         ty: String,
@@ -399,6 +409,9 @@ pub enum ExecuteMsg {
     },
     CosmosMsgCustom {},
     GetEnv {},
+    ExecuteMultipleContracts {
+        details: Vec<ExecuteDetails>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

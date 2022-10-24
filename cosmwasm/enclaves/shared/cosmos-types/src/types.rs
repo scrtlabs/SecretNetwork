@@ -179,16 +179,16 @@ impl HandleType {
         }
     }
 
-    pub fn get_export_name(h: &HandleType) -> String {
+    pub fn get_export_name(h: &HandleType) -> &'static str {
         match h {
-            HandleType::HANDLE_TYPE_EXECUTE => "execute".to_string(),
-            HandleType::HANDLE_TYPE_REPLY => "reply".to_string(),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => "ibc_channel_open".to_string(),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => "ibc_channel_connect".to_string(),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => "ibc_channel_close".to_string(),
-            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => "ibc_packet_receive".to_string(),
-            HandleType::HANDLE_TYPE_IBC_PACKET_ACK => "ibc_packet_ack".to_string(),
-            HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => "ibc_packet_timeout".to_string(),
+            HandleType::HANDLE_TYPE_EXECUTE => "execute",
+            HandleType::HANDLE_TYPE_REPLY => "reply",
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => "ibc_channel_open",
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => "ibc_channel_connect",
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => "ibc_channel_close",
+            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => "ibc_packet_receive",
+            HandleType::HANDLE_TYPE_IBC_PACKET_ACK => "ibc_packet_ack",
+            HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => "ibc_packet_timeout",
         }
     }
 }

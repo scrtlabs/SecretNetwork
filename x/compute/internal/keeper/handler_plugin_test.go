@@ -12,10 +12,10 @@ import (
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 func TestEncoding(t *testing.T) {

@@ -10,8 +10,8 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
-	v1types "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 var _ porttypes.IBCModule = IBCHandler{}

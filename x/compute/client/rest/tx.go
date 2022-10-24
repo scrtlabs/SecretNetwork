@@ -11,8 +11,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
 
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 func registerTxRoutes(cliCtx client.Context, r *mux.Router) {
