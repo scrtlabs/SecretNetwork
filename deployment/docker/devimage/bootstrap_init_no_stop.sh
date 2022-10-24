@@ -21,7 +21,7 @@ then
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
   jq '
-    .consensus_params.block.time_iota_ms = "1" | 
+    .consensus_params.block.time_iota_ms = "10" | 
     .app_state.staking.params.unbonding_time = "90s" | 
     .app_state.gov.voting_params.voting_period = "90s" |
     .app_state.crisis.constant_fee.denom = "uscrt" |
