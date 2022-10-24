@@ -15,7 +15,7 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
 #[cfg(not(feature = "query-only"))]
-use crate::db::encrypt_key;
+use crate::db::write_to_encrypted_state;
 
 use crate::cosmwasm_config::ContractOperation;
 use crate::db::read_encrypted_key;

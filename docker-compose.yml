@@ -1,0 +1,58 @@
+# docker compose file that sets up a network for beta testing
+
+version: "3"
+
+services:
+  bootstrap:
+    image: ghcr.io/scrtlabs/localsecret:seed-test-1
+    container_name: bootstrap
+    #depends_on:
+    #- aesm
+    #devices:
+    #- /dev/sgx/enclave
+    #- /dev/sgx/provision
+    volumes:
+      #  - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/root/.secretd
+      # - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+      - SECRET_NODE_TYPE=BOOTSTRAP
+      - LOG_LEVEL=trace
+      - CHAINID=confidential-1
+    expose:
+      - 26656
+      - 26657
+    ports:
+      - "5000:5000"
+
+  node:
+    image: ghcr.io/scrtlabs/localsecret:seed-test-1
+    depends_on:
+      - bootstrap
+    #devices:
+    #  - /dev/sgx/enclave
+    #  - /dev/sgx/provision
+    volumes:
+      # - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/tmp/.secretd
+      # - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+      - SECRET_NODE_TYPE=node
+      - LOG_LEVEL=trace
+      - CHAINID=confidential-1
+      - RPC_URL=bootstrap:26657
+      - PERSISTENT_PEERS=115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 10
+        window: 120s

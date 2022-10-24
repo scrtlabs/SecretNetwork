@@ -79,6 +79,9 @@ pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 2;
 pub const CONSENSUS_STATE_IKM_DERIVE_ORDER: u32 = 3;
 pub const CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER: u32 = 4;
 
+pub const ENCRYPTED_KEY_MAGIC_BYTES: &[u8; 6] = b"secret";
+pub const CONSENSUS_SEED_VERSION: u16 = 2;
+
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 
 pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";

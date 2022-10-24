@@ -347,6 +347,12 @@ impl WasmiApi for ContractInstance {
             &self.contract_key,
             &mut self.kv_cache,
         )?;
+        let (value, gas_used_by_storage) = read_from_encrypted_state(
+            &state_key_name,
+            &self.context,
+            &self.contract_key,
+            &mut self.kv_cache,
+        )?;
         self.use_gas_externally(gas_used_by_storage)?;
 
         let value = match value {
@@ -414,7 +420,7 @@ impl WasmiApi for ContractInstance {
 
         // Call remove_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
         let gas_used_by_storge =
-            remove_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
+            remove_from_encrypted_state(&state_key_name, &self.context, &self.contract_key)?;
         self.use_gas_externally(gas_used_by_storge)?;
 
         // return value from here is never read
