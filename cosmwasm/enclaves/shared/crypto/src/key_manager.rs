@@ -47,14 +47,13 @@ lazy_static! {
 #[allow(clippy::new_without_default)]
 impl Keychain {
     pub fn new() -> Self {
-        let consensus_seed: Option<SeedsHolder<Seed>> =
-            match Seed::unseal(&CONSENSUS_SEED_SEALING_PATH) {
-                Ok(k) => Some(SeedsHolder {
-                    genesis: k,
-                    current: todo!(),
-                }),
-                Err(_e) => None,
-            };
+        let consensus_seed: Option<SeedsHolder<Seed>> = match (
+            Seed::unseal(&GENESIS_CONSENSUS_SEED_SEALING_PATH),
+            Seed::unseal(&CURRENT_CONSENSUS_SEED_SEALING_PATH),
+        ) {
+            (Ok(genesis), Ok(current)) => Some(SeedsHolder { genesis, current }),
+            _ => None,
+        };
 
         let registration_key = Self::unseal_registration_key();
 
@@ -75,18 +74,19 @@ impl Keychain {
     fn unseal_registration_key() -> Option<KeyPair> {
         match KeyPair::unseal(&REGISTRATION_KEY_SEALING_PATH) {
             Ok(k) => Some(k),
-            Err(_e) => None,
+            _ => None,
         }
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
-        match Seed::new() {
-            Ok(seed) => {
-                if let Err(_e) = self.set_consensus_seed(seed) {
+        match (Seed::new(), Seed::new()) {
+            (Ok(genesis), Ok(current)) => {
+                if let Err(_e) = self.set_consensus_seed(genesis, current) {
                     return Err(CryptoError::KeyError);
                 }
             }
-            Err(err) => return Err(err),
+            (Err(err), _) => return Err(err),
+            (_, Err(err)) => return Err(err),
         };
         Ok(())
     }
@@ -175,32 +175,20 @@ impl Keychain {
         Ok(())
     }
 
-    pub fn set_consensus_seed_exchange_keypair(&mut self, kp: KeyPair) {
-        self.consensus_seed_exchange_keypair = Some(SeedsHolder {
-            genesis: kp,
-            current: todo!(),
-        })
+    pub fn set_consensus_seed_exchange_keypair(&mut self, genesis: KeyPair, current: KeyPair) {
+        self.consensus_seed_exchange_keypair = Some(SeedsHolder { genesis, current })
     }
 
-    pub fn set_consensus_io_exchange_keypair(&mut self, kp: KeyPair) {
-        self.consensus_io_exchange_keypair = Some(SeedsHolder {
-            genesis: kp,
-            current: todo!(),
-        })
+    pub fn set_consensus_io_exchange_keypair(&mut self, genesis: KeyPair, current: KeyPair) {
+        self.consensus_io_exchange_keypair = Some(SeedsHolder { genesis, current })
     }
 
-    pub fn set_consensus_state_ikm(&mut self, consensus_state_ikm: AESKey) {
-        self.consensus_state_ikm = Some(SeedsHolder {
-            genesis: consensus_state_ikm,
-            current: todo!(),
-        });
+    pub fn set_consensus_state_ikm(&mut self, genesis: AESKey, current: AESKey) {
+        self.consensus_state_ikm = Some(SeedsHolder { genesis, current });
     }
 
-    pub fn set_consensus_callback_secret(&mut self, consensus_callback_secret: AESKey) {
-        self.consensus_callback_secret = Some(SeedsHolder {
-            genesis: consensus_callback_secret,
-            current: todo!(),
-        });
+    pub fn set_consensus_callback_secret(&mut self, genesis: AESKey, current: AESKey) {
+        self.consensus_callback_secret = Some(SeedsHolder { genesis, current });
     }
 
     /// used to remove the consensus seed - usually we don't care whether deletion was successful or not,
@@ -218,16 +206,26 @@ impl Keychain {
         true
     }
 
-    pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
-        debug!("Sealing consensus seed in {}", *CONSENSUS_SEED_SEALING_PATH);
-        if let Err(e) = consensus_seed.seal(&CONSENSUS_SEED_SEALING_PATH) {
-            error!("Error sealing consensus_seed - error code 0xC14");
+    pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) -> Result<(), EnclaveError> {
+        debug!(
+            "Sealing genesis consensus seed in {}",
+            *GENESIS_CONSENSUS_SEED_SEALING_PATH
+        );
+        if let Err(e) = genesis.seal(&GENESIS_CONSENSUS_SEED_SEALING_PATH) {
+            error!("Error sealing genesis consensus_seed - error code 0xC14");
             return Err(e);
         }
-        self.consensus_seed = Some(SeedsHolder {
-            genesis: consensus_seed,
-            current: todo!(),
-        });
+
+        debug!(
+            "Sealing current consensus seed in {}",
+            *CURRENT_CONSENSUS_SEED_SEALING_PATH
+        );
+        if let Err(e) = genesis.seal(&CURRENT_CONSENSUS_SEED_SEALING_PATH) {
+            error!("Error sealing current consensus_seed - error code 0xC14");
+            return Err(e);
+        }
+
+        self.consensus_seed = Some(SeedsHolder { genesis, current });
         Ok(())
     }
 
@@ -239,53 +237,120 @@ impl Keychain {
 
         // consensus_seed_exchange_keypair
 
-        let consensus_seed_exchange_keypair_bytes = self
+        let consensus_seed_exchange_keypair_genesis_bytes = self
             .consensus_seed
             .unwrap()
+            .genesis
             .derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_seed_exchange_keypair = KeyPair::from(consensus_seed_exchange_keypair_bytes);
+        let consensus_seed_exchange_keypair_genesis =
+            KeyPair::from(consensus_seed_exchange_keypair_genesis_bytes);
         trace!(
-            "consensus_seed_exchange_keypair: {:?}",
-            hex::encode(consensus_seed_exchange_keypair.get_pubkey())
+            "consensus_seed_exchange_keypair_genesis: {:?}",
+            hex::encode(consensus_seed_exchange_keypair_genesis.get_pubkey())
         );
-        self.set_consensus_seed_exchange_keypair(consensus_seed_exchange_keypair);
+
+        let consensus_seed_exchange_keypair_current_bytes = self
+            .consensus_seed
+            .unwrap()
+            .current
+            .derive_key_from_this(&CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
+        let consensus_seed_exchange_keypair_current =
+            KeyPair::from(consensus_seed_exchange_keypair_current_bytes);
+        trace!(
+            "consensus_seed_exchange_keypair_current: {:?}",
+            hex::encode(consensus_seed_exchange_keypair_current.get_pubkey())
+        );
+
+        self.set_consensus_seed_exchange_keypair(
+            consensus_seed_exchange_keypair_genesis,
+            consensus_seed_exchange_keypair_current,
+        );
 
         // consensus_io_exchange_keypair
 
-        let consensus_io_exchange_keypair_bytes = self
+        let consensus_io_exchange_keypair_genesis_bytes = self
             .consensus_seed
             .unwrap()
+            .genesis
             .derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
-        let consensus_io_exchange_keypair = KeyPair::from(consensus_io_exchange_keypair_bytes);
+        let consensus_io_exchange_keypair_genesis =
+            KeyPair::from(consensus_io_exchange_keypair_genesis_bytes);
         trace!(
-            "consensus_io_exchange_keypair: {:?}",
-            hex::encode(consensus_io_exchange_keypair.get_pubkey())
+            "consensus_io_exchange_keypair_genesis: {:?}",
+            hex::encode(consensus_io_exchange_keypair_genesis.get_pubkey())
         );
-        self.set_consensus_io_exchange_keypair(consensus_io_exchange_keypair);
+
+        let consensus_io_exchange_keypair_current_bytes = self
+            .consensus_seed
+            .unwrap()
+            .current
+            .derive_key_from_this(&CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER.to_be_bytes());
+        let consensus_io_exchange_keypair_current =
+            KeyPair::from(consensus_io_exchange_keypair_current_bytes);
+        trace!(
+            "consensus_io_exchange_keypair_current: {:?}",
+            hex::encode(consensus_io_exchange_keypair_current.get_pubkey())
+        );
+
+        self.set_consensus_io_exchange_keypair(
+            consensus_io_exchange_keypair_genesis,
+            consensus_io_exchange_keypair_current,
+        );
 
         // consensus_state_ikm
 
-        let consensus_state_ikm = self
+        let consensus_state_ikm_genesis = self
             .consensus_seed
             .unwrap()
+            .genesis
             .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
 
         trace!(
-            "consensus_state_ikm: {:?}",
-            hex::encode(consensus_state_ikm.get())
+            "consensus_state_ikm_genesis: {:?}",
+            hex::encode(consensus_state_ikm_genesis.get())
         );
-        self.set_consensus_state_ikm(consensus_state_ikm);
 
-        let consensus_callback_secret = self
+        let consensus_state_ikm_current = self
             .consensus_seed
             .unwrap()
+            .current
+            .derive_key_from_this(&CONSENSUS_STATE_IKM_DERIVE_ORDER.to_be_bytes());
+
+        trace!(
+            "consensus_state_ikm_current: {:?}",
+            hex::encode(consensus_state_ikm_current.get())
+        );
+
+        self.set_consensus_state_ikm(consensus_state_ikm_genesis, consensus_state_ikm_current);
+
+        // consensus_state_ikm
+
+        let consensus_callback_secret_genesis = self
+            .consensus_seed
+            .unwrap()
+            .genesis
             .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
 
         trace!(
-            "consensus_state_ikm: {:?}",
-            hex::encode(consensus_state_ikm.get())
+            "consensus_callback_secret_genesis: {:?}",
+            hex::encode(consensus_state_ikm_genesis.get())
         );
-        self.set_consensus_callback_secret(consensus_callback_secret);
+
+        let consensus_callback_secret_current = self
+            .consensus_seed
+            .unwrap()
+            .current
+            .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
+
+        trace!(
+            "consensus_callback_secret_current: {:?}",
+            hex::encode(consensus_state_ikm_current.get())
+        );
+
+        self.set_consensus_callback_secret(
+            consensus_callback_secret_genesis,
+            consensus_callback_secret_current,
+        );
 
         Ok(())
     }
@@ -303,7 +368,7 @@ pub mod tests {
     // todo: fix test vectors to actually work
     fn _test_initial_keychain_state() {
         // clear previous data (if any)
-        let _ = std::sgxfs::remove(&*CONSENSUS_SEED_SEALING_PATH);
+        let _ = std::sgxfs::remove(&*GENESIS_CONSENSUS_SEED_SEALING_PATH);
         let _ = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
 
         let _keys = Keychain::new();

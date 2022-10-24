@@ -218,7 +218,7 @@ pub unsafe extern "C" fn ecall_init_node(
         Err(status) => return status,
     };
 
-    if let Err(_e) = key_manager.set_consensus_seed(seed) {
+    if let Err(_e) = key_manager.set_consensus_seed(seed, todo!()) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
