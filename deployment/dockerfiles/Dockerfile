@@ -1,5 +1,13 @@
+# To try and avoid the dockerfile clutter I've included everything in this single file
+# To use you want to choose a specific target based on your use case:
+#
+#   `--target release-image` - a full node docker image
+#   `--target build-deb` - the image used to generate a .deb package
+#   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
+#   `--target compile-secretd` - image with compiled enclave and secretd
+
 ARG SCRT_BASE_IMAGE_SECRETD=enigmampc/rocksdb:v6.24.2-1.1.5
-ARG SCRT_BASE_IMAGE_ENCLAVE=enigmampc/enigma-sgx-base:2004-1.1.5
+ARG SCRT_BASE_IMAGE_ENCLAVE=enigmampc/rocksdb:v6.24.2-1.1.5
 ARG SCRT_RELEASE_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
 
 # ***************** COMPILE ENCLAVE ************** #
@@ -24,7 +32,7 @@ ENV MITIGATION_CVE_2020_0551=LOAD
 
 COPY rust-toolchain rust-toolchain
 RUN rustup component add rust-src
-RUN cargo install xargo --version 0.3.25
+RUN --mount=type=cache,target=/usr/local/cargo/registry cargo install xargo --version 0.3.25
 
 # Add submodules
 COPY third_party third_party
@@ -35,7 +43,7 @@ COPY cosmwasm cosmwasm/
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
-RUN . /opt/sgxsdk/environment && env \
+RUN --mount=type=cache,target=/usr/local/cargo/registry  . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
 
 ENTRYPOINT ["/bin/bash"]
@@ -132,7 +140,7 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
 
-ARG SECRET_NODE_TYPE=BOOTSTRAP
+ARG SECRET_NODE_TYPE=NODE
 ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
 
 ENV PKG_CONFIG_PATH=""
@@ -238,3 +246,25 @@ RUN chmod +x build_deb.sh
 
 # Run secretd by default, omit entrypoint to ease using container with secretcli
 CMD ["/bin/bash", "build_deb.sh"]
+
+# ***************** BUILD DEBIAN ************** #
+# ARG SCRT_COMPILED_BINARIES_SOURCE=compile-secretd
+FROM $SCRT_RELEASE_BASE_IMAGE as build-deb-mainnet
+
+COPY --from=mainnet-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
+COPY --from=mainnet-release /usr/lib/libgo_cosmwasm.so ./go-cosmwasm/api/
+
+CMD ["/bin/bash", "build_deb.sh"]
+
+# ***************** LOCALSECRET ************** #
+FROM release-image as build-localsecret
+
+COPY deployment/docker/devimage/bootstrap_init_no_stop.sh bootstrap_init.sh
+
+RUN chmod +x bootstrap_init.sh
+
+COPY deployment/docker/devimage/faucet/faucet_server.js .
+
+HEALTHCHECK --interval=5s --timeout=1s --retries=120 CMD bash -c 'curl -sfm1 http://localhost:26657/status && curl -s http://localhost:26657/status | jq -e "(.result.sync_info.latest_block_height | tonumber) > 0"'
+
+ENTRYPOINT ["./bootstrap_init.sh"]
