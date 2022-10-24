@@ -181,7 +181,7 @@ pub fn read_from_encrypted_state(
         if let Some(ref plaintext_value) = maybe_plaintext_value {
             // Key exists with the old format, rewriting with the new format
             gas_used_write =
-                write_to_encrypted_state(plaintext_key, plaintext_value, context, contract_key)?;
+                write_to_encrypted_state(plaintext_key, &plaintext_value, context, contract_key)?;
         }
     }
 
