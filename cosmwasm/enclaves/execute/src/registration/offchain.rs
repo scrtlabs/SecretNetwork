@@ -11,6 +11,7 @@ use std::slice;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 
+use crate::registration::attestation::validate_report;
 use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
@@ -162,7 +163,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
     // validate certificate w/ attestation report
     // testing only
-    let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
+    let pk = match validate_report(cert_slice, Some(SigningMethod::MRSIGNER)) {
         Err(e) => {
             error!("Error in validating certificate: {:?}", e);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
