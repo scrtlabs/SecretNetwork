@@ -105,7 +105,6 @@ pub struct Context {
     query_depth: u32,
     #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
-    query_depth: u32,
     contract_key: ContractKey,
     user_nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
@@ -206,12 +205,12 @@ impl Engine {
         contract_code: &ContractCode,
         contract_key: ContractKey,
         operation: ContractOperation,
-        query_depth: u32,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
+        query_depth: u32,
     ) -> Result<Engine, EnclaveError> {
         let versioned_code = create_module_instance(contract_code, &gas_costs, operation)?;
-
+        let kv_cache = KvCache::new();
         let context = Context {
             context,
             query_depth,
