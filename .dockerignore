@@ -10,8 +10,10 @@ docs
 third_party/vendor
 *.bin
 
-cosmwasm-js
-
+.gitpod.yml
+.golangci.yml
+azure-pipelines.yml
+sn-logo.png
 README.md
 .gitignore
 

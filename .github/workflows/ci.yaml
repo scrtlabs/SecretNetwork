@@ -52,71 +52,21 @@ jobs:
           export SGX_MODE=SW
           RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
           make clean-enclave
-  Build:
+
+  Build-Contracts:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
-      - name: Install Intel's SGX SDK
-        run: |
-          mkdir -p "$HOME/.sgxsdk"
-          cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
-          chmod +x "$SDK_BIN"
-          echo yes | ./"$SDK_BIN"
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache xargo sysroot
-        uses: actions/cache@v3
-        with:
-          path: ~/.xargo
-          key: ${{ runner.os }}-xargo-sysroot
-      - name: Cache build artifacts
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/sccache
-          key: ${{ runner.os }}-sccache
-      - run: |
-          rustup component add rust-src clippy
-          cd cosmwasm/enclaves/execute/
-          rustup component add rust-src clippy
-      - name: Install xargo
-        run: |
-          cargo --version
-          rustc --version  
-          cargo +stable install xargo --version 0.3.25
-          xargo --version
       - name: Download sccache
         run: |
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
           tar xf ./sccache-*.tar.gz
           mv ./sccache*/sccache "$HOME/sccache"
-      - name: Create fake api keys
-        run: |
-          mkdir -p ias_keys/sw_dummy
-          mkdir -p ias_keys/develop
-          echo "not_a_key" > ias_keys/sw_dummy/spid.txt
-          echo "not_a_key" > ias_keys/develop/spid.txt
-          echo "not_a_key" > ias_keys/sw_dummy/api_key.txt
-          echo "not_a_key" > ias_keys/develop/api_key.txt
       - name: Install Requirements
         run: |
           rustup target add wasm32-unknown-unknown
-          go install github.com/jteeuwen/go-bindata/go-bindata@latest
-          go-bindata -version # check installation
           chmod +x ./scripts/install-wasm-tools.sh
           ./scripts/install-wasm-tools.sh
-      - name: Build Executable
-        run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
-          SGX_MODE=SW BUILD_PROFILE="minimal" RUSTC_WRAPPER="$HOME/sccache" make build-linux
       - name: Build Contracts
         run: |
           make build-test-contract
@@ -125,10 +75,6 @@ jobs:
         with:
           name: erc20.wasm
           path: erc20.wasm
-      - uses: actions/upload-artifact@v3
-        with:
-          name: secretd
-          path: secretd
       - uses: actions/upload-artifact@v3
         with:
           name: contract.wasm
@@ -141,14 +87,6 @@ jobs:
         with:
           name: ibc.wasm
           path: cosmwasm/contracts/v1/compute-tests/ibc-test-contract/ibc.wasm
-      - uses: actions/upload-artifact@v3
-        with:
-          name: enclave
-          path: ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-      - uses: actions/upload-artifact@v3
-        with:
-          name: libgo_cosmwasm
-          path: ./go-cosmwasm/api/libgo_cosmwasm.so
       - uses: actions/upload-artifact@v3
         with:
           name: contract_with_floats.wasm
@@ -164,7 +102,7 @@ jobs:
 
   Go-Tests:
     runs-on: ubuntu-20.04
-    needs: Build
+    needs: [Build-Contracts, Build-LocalSecret]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
@@ -178,12 +116,18 @@ jobs:
           wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
-      - uses: actions/download-artifact@v3
+      - name: Download LocalSecret
+        uses: actions/download-artifact@v3
         with:
-          name: libgo_cosmwasm
-      - uses: actions/download-artifact@v3
-        with:
-          name: enclave
+          name: localsecret
+          path: /tmp
+      - name: Load images
+        run: |
+          docker load --input /tmp/localsecret.tar
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/bin/secretd /opt/mount/secretd
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/libgo_cosmwasm.so /opt/mount/libgo_cosmwasm.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
+
       - uses: actions/download-artifact@v3
         with:
           name: contract.wasm
@@ -229,6 +173,7 @@ jobs:
           echo "not_a_key" > ias_keys/develop/api_key.txt
           LOG_LEVEL=ERROR go test -v ./x/compute/client/...
           LOG_LEVEL=ERROR go test -p 1 -timeout 90m -v ./x/compute/internal/...
+
   Clippy:
     runs-on: ubuntu-20.04
     steps:
@@ -279,6 +224,7 @@ jobs:
           cd cosmwasm/enclaves/execute/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
+
   MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
@@ -293,17 +239,103 @@ jobs:
       - name: Build MacOS CLI
         run: make build_macos_arm64_cli
 
-  Integration-Tests:
+  Build-LocalSecret:
+    runs-on: ubuntu-20.04
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: network=host
+      - uses: actions/checkout@v2
+      - name: Build LocalSecret Base
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/base.Dockerfile
+          context: .
+          build-args: |
+            FEATURES=debug-print
+            SGX_MODE=SW
+          push: true
+          secrets: |
+            API_KEY=00000000000000000000000000000000
+            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+          tags: localhost:5000/scrt-enclave-secretd:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build LocalSecret Release
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/release.Dockerfile
+          context: .
+          push: true
+          tags: localhost:5000/release:latest
+          build-args: |
+            SECRET_NODE_TYPE=bootstrap
+            CHAIN_ID=secretdev-1
+            SCRT_BIN_IMAGE=localhost:5000/scrt-enclave-secretd:latest
+      - name: Build LocalSecret Final Dev Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/dev-image.Dockerfile
+          context: .
+          load: true
+          tags: ghcr.io/scrtlabs/localsecret:v0.0.0
+          build-args: |
+            SCRT_BASE_IMAGE=localhost:5000/release:latest
+          outputs: type=docker,dest=/tmp/localsecret.tar
+      - name: Upload Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: localsecret
+          path: /tmp/localsecret.tar
+
+  Build-Hermes:
     runs-on: ubuntu-20.04
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v2
-      - name: Build LocalSecret
+      - name: Build Hermes Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/ibc/hermes.Dockerfile
+          context: deployment/dockerfiles/ibc
+          load: true
+          tags: hermes:v0.0.0
+          build-args: |
+            SECRET_NODE_TYPE=bootstrap
+            CHAIN_ID=secretdev-1
+          outputs: type=docker,dest=/tmp/hermes.tar
+      - name: Upload Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: hermes
+          path: /tmp/hermes.tar
+
+  Integration-Tests:
+    runs-on: ubuntu-20.04
+    needs: [Build-LocalSecret, Build-Hermes]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download Hermes
+        uses: actions/download-artifact@v3
+        with:
+          name: hermes
+          path: /tmp
+      - name: Download LocalSecret
+        uses: actions/download-artifact@v3
+        with:
+          name: localsecret
+          path: /tmp
+      - name: Load images
         run: |
-          echo not_a_key | tee {api_key,spid}.txt
-          DOCKER_TAG=v0.0.0 make build-localsecret
-      - name: Build Hermes
-        run: |
-          DOCKER_TAG=v0.0.0 make build-ibc-hermes
+          docker load --input /tmp/localsecret.tar
+          docker load --input /tmp/hermes.tar
       - name: Run integration tests
         run: |
           cd integration-tests
