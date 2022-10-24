@@ -67,7 +67,7 @@ steps:
       repository: rust-enclave-test
       tags: latest
       buildContext: .
-      arguments: --build-arg --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt SGX_MODE=HW
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
 
   - task: Docker@2
