@@ -350,7 +350,11 @@ pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
-    if check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
+    if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
+        error!(
+            "Platform verification error: quote status {:?}",
+            &report.sgx_quote_body.gid
+        );
         return Err(NodeAuthResult::BadQuoteStatus);
     }
 
