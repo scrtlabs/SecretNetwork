@@ -123,7 +123,7 @@ impl Keychain {
     pub fn reseal_registration_key(&mut self) -> Result<(), EnclaveError> {
         match Self::unseal_registration_key() {
             Some(kp) => {
-                if let Err(_e) = std::sgxfs::remove(&REGISTRATION_KEY_SEALING_PATH) {
+                if let Err(_e) = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH) {
                     error!("Failed to reseal registration key - error code 0xC11");
                     return Err(EnclaveError::FailedSeal);
                 };
@@ -131,8 +131,9 @@ impl Keychain {
                     error!("Failed to reseal registration key - error code 0xC12");
                     return Err(EnclaveError::FailedSeal);
                 }
+                Ok(())
             }
-            None => {}
+            None => Ok(()),
         }
     }
 

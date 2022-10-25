@@ -203,7 +203,10 @@ pub unsafe extern "C" fn ecall_init_node(
 
     // even though key is overwritten later we still want to explicitly remove it in case we increase the security version
     // to make sure that it is resealed using the new svn
-    key_manager.reseal_registration_key()?;
+    if let Err(_e) = key_manager.reseal_registration_key() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
+
     let delete_res = key_manager.delete_consensus_seed();
     if delete_res {
         debug!("Successfully removed consensus seed");
