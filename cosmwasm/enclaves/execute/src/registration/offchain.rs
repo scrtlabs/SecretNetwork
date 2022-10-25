@@ -11,6 +11,7 @@ use std::slice;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 
+use crate::registration::attestation::validate_report;
 use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH,
@@ -151,6 +152,17 @@ pub unsafe extern "C" fn ecall_init_node(
         );
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
+
+    // validate this node is patched and updated
+    // unwrapping here is fine - it's done later on inside decrypt seed as well
+    let get_key_result = KEY_MANAGER.get_registration_key().unwrap();
+
+    // this validates the cert and handles the "what if it fails" inside as well
+    let res = create_attestation_certificate(
+        &get_key_result,
+        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        api_key_slice,
+    );
 
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 

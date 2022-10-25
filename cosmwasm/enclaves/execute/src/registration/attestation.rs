@@ -36,7 +36,6 @@ use std::{
     sync::Arc,
 };
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::cert::verify_ra_cert;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -137,14 +136,18 @@ pub fn create_attestation_certificate(
     let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
-    #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-    validate_report(&cert_der);
+    validate_report(&cert_der, None);
 
     Ok((key_der, cert_der))
 }
 
+#[cfg(not(all(feature = "SGX_MODE_HW", feature = "production")))]
+pub fn validate_report(cert: &[u8], override_verify: Option<SigningMethod>) {
+    let _ = verify_ra_cert(cert, None).map_err(|e| info!("Error validating created certificate"));
+}
+
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-pub fn validate_report(cert: &[u8]) {
+pub fn validate_report(cert: &[u8], override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);
         let _ = SgxFsRemove(CONSENSUS_SEED_SEALING_PATH.as_str());
