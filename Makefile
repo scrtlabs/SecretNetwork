@@ -235,7 +235,6 @@ localsecret:
  			--build-arg CHAIN_ID=secretdev-1 \
  			-f deployment/dockerfiles/Dockerfile \
  			--target release-image \
- 			--load \
  			-t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
 build-ibc-hermes:
@@ -243,17 +242,15 @@ build-ibc-hermes:
 
 build-testnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
+	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t enigmampc/secret-network-node:v$(VERSION)-testnet \
-				 --progress plain \
-				 --load \
 				 --target release-image .
-	docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
+	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
@@ -261,8 +258,6 @@ build-testnet:
 				 --cache-from enigmampc/secret-network-node:v$(VERSION)-testnet \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
-				 --progress plain \
-				 --load \
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
