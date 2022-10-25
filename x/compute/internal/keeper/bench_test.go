@@ -19,6 +19,7 @@ const (
 	Noop                          Bench = "noop"
 	BenchCPU                            = "bench_c_p_u"
 	BenchReadStorage                    = "bench_read_storage"
+	BenchReadStorageMultipleKeys        = "bench_read_storage_multiple_keys"
 	BenchWriteStorage                   = "bench_write_storage"
 	BenchAllocate                       = "bench_allocate"
 	BenchReadLargeItemFromStorage       = "bench_read_large_item_from_storage"
@@ -193,10 +194,44 @@ func TestRunBenchmarks(t *testing.T) {
 			bench:    BenchWriteLargeItemToStorage,
 			loops:    10,
 		},
+		"Bench read storage multiple keys": {
+			gasLimit: 10_000_000,
+			bench:    BenchReadStorageMultipleKeys,
+			loops:    10,
+		},
 	}
 
 	contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
-
+	// this is here so read multiple keys works without setup
+	_, _, _, _, _, _ = execHelper(
+		t,
+		keeper,
+		ctx,
+		contractAddr,
+		creator,
+		creatorPriv,
+		BenchWriteStorage,
+		false,
+		true,
+		10_000_000,
+		0,
+		false,
+	)
+	// this is here so read large keys works without setup
+	_, _, _, _, _, _ = execHelper(
+		t,
+		keeper,
+		ctx,
+		contractAddr,
+		creator,
+		creatorPriv,
+		string(BenchWriteLargeItemToStorage),
+		false,
+		true,
+		10_000_000,
+		0,
+		false,
+	)
 	// *** Measure baseline
 	timer := NewBenchTimer("base contract execution", Noop)
 	// make sure we set a limit before calling
