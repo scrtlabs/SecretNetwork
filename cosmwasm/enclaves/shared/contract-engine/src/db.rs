@@ -27,7 +27,7 @@ pub fn write_encrypted_key(
         scrambled_field_name
     );
 
-    let (ad, ad_used_gas) = derive_ad_for_field(&scrambled_field_name, &context)?;
+    let (ad, ad_used_gas) = derive_ad_for_field(&scrambled_field_name, context)?;
 
     let encrypted_value = encrypt_key(&scrambled_field_name, value, contract_key, &ad)?;
 
@@ -228,11 +228,11 @@ fn encrypt_key(
     let encryption_key = get_symmetrical_key(field_name, contract_key);
 
     encryption_key
-        .encrypt_siv(&value, Some(&[ad]))
+        .encrypt_siv(value, Some(&[ad]))
         .map_err(|err| {
             warn!(
                 "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
-                String::from_utf8_lossy(&value),
+                String::from_utf8_lossy(value),
                 err
             );
             WasmEngineError::EncryptionError
@@ -249,10 +249,10 @@ fn decrypt_key(
     // Slice ad from `value`
     let (ad, encrypted_value) = value.split_at(32);
 
-    decryption_key.decrypt_siv(&encrypted_value, Some(&[ad])).map_err(|err| {
+    decryption_key.decrypt_siv(encrypted_value, Some(&[ad])).map_err(|err| {
         warn!(
             "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
-            String::from_utf8_lossy(&field_name),
+            String::from_utf8_lossy(field_name),
             err
         );
         WasmEngineError::DecryptionError

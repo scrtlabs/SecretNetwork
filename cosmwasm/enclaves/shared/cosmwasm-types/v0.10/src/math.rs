@@ -184,12 +184,14 @@ impl TryFrom<&str> for Uint128 {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<String> for Uint128 {
     fn into(self) -> String {
         self.0.to_string()
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<u128> for Uint128 {
     fn into(self) -> u128 {
         self.0

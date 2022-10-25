@@ -41,7 +41,7 @@ endif
 
 SGX_COMMON_CFLAGS += -fstack-protector
 
-CUSTOM_EDL_PATH := ../third_party/vendor/sgx_edl/edl
+CUSTOM_EDL_PATH := ../third_party/incubator-teaclave-sgx-sdk/sgx_edl/edl
 App_SRC_Files := $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name '*.rs') \
     $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name 'Cargo.toml') \
     $(shell find ./ -type f -name '*.rs') \

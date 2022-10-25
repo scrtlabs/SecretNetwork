@@ -715,7 +715,7 @@ pub fn encrypt_output(
                         })
                     }
 
-                    events.extend_from_slice(&ok.events.clone().as_slice());
+                    events.extend_from_slice(ok.events.clone().as_slice());
                     let custom_contract_event_prefix: String = "wasm-".to_string();
                     for event in events.iter_mut() {
                         if event.ty != "wasm" {

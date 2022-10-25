@@ -1,3 +1,4 @@
+.env
 sgx_sk.pem
 *.a
 *.deb
@@ -11,7 +12,6 @@ Enclave_u.o
 /enigmacli*
 /enigmad*
 secretcli*
-incubator-teaclave-sgx-sdk
 libenclave.a
 libEnclave_u.a
 librust_cosmwasm_enclave.signed.so
