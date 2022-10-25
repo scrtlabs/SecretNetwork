@@ -1,11 +1,9 @@
-#![feature(try_reserve)]
-#![feature(btree_drain_filter)]
+extern crate sgx_trts;
+extern crate sgx_types;
+
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
-extern crate sgx_types;
-
-pub mod kv_cache;
 pub mod logger;
 pub mod macros;
 pub mod oom_handler;

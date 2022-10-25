@@ -477,10 +477,10 @@ pub fn parse_message(
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
             // TODO: Maybe mark whether the message was encrypted or not.
             let mut parsed_encrypted_ibc_packet: IbcPacketReceiveMsg =
-                serde_json::from_slice(&message.to_vec()).map_err(|err| {
+                serde_json::from_slice(message).map_err(|err| {
                     warn!(
             "Got an error while trying to deserialize input bytes msg into IbcPacketReceiveMsg message {:?}: {}",
-            String::from_utf8_lossy(&message),
+            String::from_utf8_lossy(message),
             err
         );
                     EnclaveError::FailedToDeserialize

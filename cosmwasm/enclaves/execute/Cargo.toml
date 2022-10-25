@@ -21,16 +21,16 @@ test = ["enclave_contract_engine/test", "enclave_crypto/test", "enclave_cosmos_t
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+sgx_tstd = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
     "backtrace",
     "untrusted_time"
 ] }
-sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
-sgx_tse = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_rand = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tcrypto = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tse = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_rand = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tcrypto = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 enclave-ffi-types = { path = "../ffi-types" }
 
@@ -83,5 +83,33 @@ rev = "95b5e79dc24b02f3ce424437eb9698509d0baf58"
 default-features = false
 features = ["dangerous_configuration", "mesalock_sgx"]
 
-[dev-dependencies]
-sgx_edl = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+[patch.'https://github.com/apache/teaclave-sgx-sdk.git']
+sgx_align_struct_attribute = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_align_struct_attribute" }
+sgx_alloc = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_alloc" }
+sgx_backtrace = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace" }
+sgx_backtrace_sys = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace_sys" }
+sgx_build_helper = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_build_helper" }
+sgx_cov = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_cov" }
+sgx_crypto_helper = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_crypto_helper" }
+sgx_demangle = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_demangle" }
+sgx_libc = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_libc" }
+sgx_no_tstd = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_no_tstd" }
+sgx_rand = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand" }
+sgx_rand_derive = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand_derive" }
+sgx_serialize = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize" }
+sgx_serialize_derive = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize_derive" }
+sgx_serialize_derive_internals = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize_derive_internals" }
+sgx_tcrypto = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto" }
+sgx_tcrypto_helper = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto_helper" }
+sgx_tdh = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tdh" }
+sgx_tkey_exchange = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tkey_exchange" }
+sgx_tprotected_fs = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tprotected_fs" }
+sgx_trts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_trts" }
+sgx_tse = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tse" }
+sgx_tseal = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tseal" }
+sgx_tstd = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd" }
+sgx_tunittest = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_tunittest" }
+sgx_types = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+#sgx_ucrypto = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_ucrypto" }
+sgx_unwind = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_unwind" }
+#sgx_urts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_urts" }

@@ -1,4 +1,4 @@
-ARG SCRT_BASE_IMAGE_SECRETD=enigmampc/rocksdb:v6.24.2
+ARG SCRT_BASE_IMAGE_SECRETD=enigmampc/rocksdb:v6.24.2-1.1.5
 ARG SCRT_BASE_IMAGE_ENCLAVE=baiduxlab/sgx-rust:2004-1.1.3
 # enigmampc/rocksdb:v6.24.2
 
@@ -6,17 +6,6 @@ FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-enclave
 
 ENV PATH="/root/.cargo/bin:$PATH"
 
-RUN apt-get update &&  \
-    apt-get install -y --no-install-recommends \
-    zlib1g-dev \
-    libbz2-dev \
-    liblz4-dev \
-    libzstd-dev \
-    clang-10
-#
-
-
-# rm -rf /tmp/rocksdb
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
@@ -31,18 +20,16 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=LOAD
 
-COPY third_party/build third_party/build
+COPY rust-toolchain rust-toolchain
+RUN rustup component add rust-src
+RUN cargo install xargo --version 0.3.25
+
+# Add submodules
+COPY third_party third_party
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm/
 COPY cosmwasm cosmwasm/
-
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
-
-COPY deployment/docker/MakefileCopy Makefile
-
-# RUN make clean
-RUN make vendor
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 

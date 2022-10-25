@@ -343,7 +343,7 @@ fn decrypt_query_response_error(
     error_msg.decrypt().map_err(|err| {
         debug!(
             "encrypt_and_query_chain() got an error while trying to decrypt the inner error for query {:?}, stopping wasm: {:?}",
-            String::from_utf8_lossy(&query),
+            String::from_utf8_lossy(query),
             err
         );
         WasmEngineError::DecryptionError

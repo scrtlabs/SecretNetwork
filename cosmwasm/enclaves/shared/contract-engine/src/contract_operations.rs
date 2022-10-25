@@ -90,9 +90,9 @@ pub fn init(
     let start = Instant::now();
     verify_params(
         &parsed_sig_info,
-        &sent_funds,
+        sent_funds,
         &canonical_sender_address,
-        &contract_address,
+        contract_address,
         &secret_msg,
     )?;
     let duration = start.elapsed();
@@ -325,7 +325,7 @@ fn extract_sig_info(sig_info: &[u8]) -> Result<SigInfo, EnclaveError> {
     serde_json::from_slice(sig_info).map_err(|err| {
         warn!(
             "handle got an error while trying to deserialize sig info input bytes into json {:?}: {}",
-            String::from_utf8_lossy(&sig_info),
+            String::from_utf8_lossy(sig_info),
             err
         );
         EnclaveError::FailedToDeserialize
@@ -455,7 +455,7 @@ fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
         .map_err(|err| {
             warn!(
                 "error while deserializing env into json {:?}: {}",
-                String::from_utf8_lossy(&env),
+                String::from_utf8_lossy(env),
                 err
             );
             EnclaveError::FailedToDeserialize
@@ -481,7 +481,7 @@ fn extract_query_depth(env: &[u8]) -> Result<u32, EnclaveError> {
         .map_err(|err| {
             warn!(
                 "error while deserializing env into json {:?}: {}",
-                String::from_utf8_lossy(&env),
+                String::from_utf8_lossy(env),
                 err
             );
             EnclaveError::FailedToDeserialize
