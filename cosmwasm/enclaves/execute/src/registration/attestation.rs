@@ -36,7 +36,6 @@ use std::{
     sync::Arc,
 };
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::cert::verify_ra_cert;
 
 #[cfg(feature = "SGX_MODE_HW")]
