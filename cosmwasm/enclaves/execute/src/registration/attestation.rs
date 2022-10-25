@@ -15,9 +15,6 @@ use sgx_tse::{rsgx_create_report, rsgx_self_report, rsgx_verify_report};
 use sgx_tcrypto::rsgx_sha256_slice;
 use sgx_tcrypto::SgxEccHandle;
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-use std::sgxfs::remove as SgxFsRemove;
-
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -41,11 +38,13 @@ use crate::registration::cert::verify_ra_cert;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+#[cfg(all(feature = "SGX_MODE_HW"))]
 use enclave_crypto::consts::{
     CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH, NODE_ENCRYPTED_SEED_KEY_FILE,
     NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
 };
+#[cfg(all(feature = "SGX_MODE_HW"))]
+use std::sgxfs::remove as SgxFsRemove;
 
 use enclave_crypto::KeyPair;
 
@@ -141,12 +140,12 @@ pub fn create_attestation_certificate(
     Ok((key_der, cert_der))
 }
 
-#[cfg(not(all(feature = "SGX_MODE_HW", feature = "production")))]
+#[cfg(not(all(feature = "SGX_MODE_HW")))]
 pub fn validate_report(cert: &[u8], override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None).map_err(|e| info!("Error validating created certificate"));
 }
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+#[cfg(all(feature = "SGX_MODE_HW"))]
 pub fn validate_report(cert: &[u8], override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);

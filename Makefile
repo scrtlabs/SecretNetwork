@@ -4,9 +4,6 @@ COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
-SPID ?= 00000000000000000000000000000000
-API_KEY ?= FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -246,19 +243,46 @@ build-ibc-hermes:
 
 build-testnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet --target release-image .
-	docker build --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/Dockerfile -t deb_build --target build-deb .
+	docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg SGX_MODE=HW \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t enigmampc/secret-network-node:v$(VERSION)-testnet \
+				 --progress plain \
+				 --load \
+				 --target release-image .
+	docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg SGX_MODE=HW \
+				 --cache-from enigmampc/secret-network-node:v$(VERSION)-testnet \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t deb_build \
+				 --progress plain \
+				 --load \
+				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
 build-mainnet-upgrade:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES=production --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/Dockerfile -t deb_build --target build-deb-mainnet .
+	docker build --build-arg FEATURES=production \
+				 --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg SGX_MODE=HW \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t deb_build \
+				 --target build-deb-mainnet .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
 build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES=${FEATURES} \
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
                  --secret id=API_KEY,src=api_key.txt \
@@ -269,14 +293,17 @@ build-mainnet:
                  -f deployment/dockerfiles/Dockerfile \
                  -t enigmampc/secret-network-node:v$(VERSION) \
                  --target release-image .
-	docker build --build-arg FEATURES=production \
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
+				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
+				 --cache-from enigmampc/secret-network-node:v$(VERSION) \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
+				 --load \
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 

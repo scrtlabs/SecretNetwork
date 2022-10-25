@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # To try and avoid the dockerfile clutter I've included everything in this single file
 # To use you want to choose a specific target based on your use case:
 #
@@ -32,7 +33,7 @@ ENV MITIGATION_CVE_2020_0551=LOAD
 
 COPY rust-toolchain rust-toolchain
 RUN rustup component add rust-src
-RUN --mount=type=cache,target=/usr/local/cargo/registry cargo install xargo --version 0.3.25
+RUN --mount=type=cache,target=/root/.cargo/registry cargo install xargo --version 0.3.25
 
 # Add submodules
 COPY third_party third_party
@@ -43,7 +44,7 @@ COPY cosmwasm cosmwasm/
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry  . /opt/sgxsdk/environment && env \
+RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
 
 ENTRYPOINT ["/bin/bash"]
@@ -127,14 +128,13 @@ RUN apt-get update && \
     wget \
     libsnappy-dev \
     libgflags-dev \
-    bash-completion && \
-    rm -rf /var/lib/apt/lists/*
+    bash-completion
 
 RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
 RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
-    apt-get update && \
     apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/* && \
     npm i -g local-cors-proxy
 
 ARG SGX_MODE=SW
@@ -152,6 +152,9 @@ RUN ln -s /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/x86_64-linux-gnu/
 
 # Install ca-certificates
 WORKDIR /root
+
+ARG FEATURES
+ARG FEATURES_U
 
 # Copy over binaries from the build-env
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
@@ -209,17 +212,10 @@ ENTRYPOINT ["/bin/bash", "mainnet_node.sh"]
 
 # ***************** BUILD DEBIAN ************** #
 # ARG SCRT_COMPILED_BINARIES_SOURCE=compile-secretd
-FROM $SCRT_RELEASE_BASE_IMAGE as build-deb
+FROM compile-secretd as build-deb
 
-# wasmi-sgx-test script requirements
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    #### Base utilities ####
-    git \
-    make \
-    wget && \
-    rm -rf /var/lib/apt/lists/*
-
+ARG FEATURES
+ARG FEATURES_U
 ARG BUILD_VERSION="v0.5.0-rc1"
 ARG SGX_MODE=SW
 ENV VERSION=${BUILD_VERSION}
@@ -233,11 +229,10 @@ RUN mkdir -p ./go-cosmwasm/api/
 COPY Makefile .
 
 # Copy over binaries from the build-env
-COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/
-COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
-#COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so ./go-cosmwasm/
-COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/secretd secretd
-COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/secretcli secretcli
+RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/
+RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
+RUN cp /go/src/github.com/enigmampc/SecretNetwork/secretd secretd
+RUN cp /go/src/github.com/enigmampc/SecretNetwork/secretcli secretcli
 
 COPY ./deployment/deb ./deployment/deb
 COPY ./deployment/docker/builder/build_deb.sh .
@@ -249,7 +244,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 
 # ***************** BUILD DEBIAN ************** #
 # ARG SCRT_COMPILED_BINARIES_SOURCE=compile-secretd
-FROM $SCRT_RELEASE_BASE_IMAGE as build-deb-mainnet
+FROM build-deb as build-deb-mainnet
 
 COPY --from=mainnet-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
 COPY --from=mainnet-release /usr/lib/libgo_cosmwasm.so ./go-cosmwasm/api/
