@@ -1,0 +1,37 @@
+[package]
+name = "bench-contract"
+version = "1.0.0"
+authors = ["Enigma <info@enigma.co>"]
+edition = "2018"
+description = "A Test contract intended to use in system tests for the Secret Netowrk"
+license = "MIT"
+exclude = [
+  # Those files are cosmwasm-opt artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "bench-contract.wasm",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[dependencies]
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+schemars = "0.8.1"
+serde = { version = "1.0.114", default-features = false, features = [
+  "derive",
+  "alloc"
+] }
+serde-json-wasm = "0.4.1"
+sha2 = "0.10.2"
