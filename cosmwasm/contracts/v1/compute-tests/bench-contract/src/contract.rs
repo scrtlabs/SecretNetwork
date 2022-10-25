@@ -2,8 +2,12 @@ use benches::cpu::do_cpu_loop;
 
 use crate::benches;
 use crate::benches::allocate::do_allocate_large_memory;
-use crate::benches::read_storage::bench_read_storage_same_key;
-use crate::benches::write_storage::bench_write_storage_different_key;
+use crate::benches::read_storage::{
+    bench_read_large_key_from_storage, bench_read_storage_same_key,
+};
+use crate::benches::write_storage::{
+    bench_write_large_storage_key, bench_write_storage_different_key,
+};
 use cosmwasm_std::{
     entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
@@ -33,8 +37,11 @@ pub fn execute(
         ExecuteMsg::BenchReadStorage {} => bench_read_storage_same_key(deps, 100),
         ExecuteMsg::BenchWriteStorage {} => bench_write_storage_different_key(deps, 100),
         ExecuteMsg::BenchAllocate {} => do_allocate_large_memory(),
-        ExecuteMsg::BenchReadLargeItemFromStorage { .. } => Ok(()),
-        ExecuteMsg::BenchWriteLargeItemToStorage { .. } => Ok(()),
+        // start with running large item bench once, otherwise cache will skew performance numbers
+        ExecuteMsg::BenchReadLargeItemFromStorage { .. } => {
+            bench_read_large_key_from_storage(deps, 2)
+        }
+        ExecuteMsg::BenchWriteLargeItemToStorage { .. } => bench_write_large_storage_key(deps, 2),
     };
 
     Ok(Response::default())

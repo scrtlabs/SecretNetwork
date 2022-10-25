@@ -19,3 +19,12 @@ pub fn bench_read_storage_different_key(deps: Deps, keys: u64) -> StdResult<()> 
 
     Ok(())
 }
+
+pub fn bench_read_large_key_from_storage(deps: DepsMut, keys: u64) -> StdResult<()> {
+    deps.storage.set(b"test.key", crate::benches::LARGE_VALUE);
+    for _ in 1..keys {
+        deps.storage.get(b"test.key");
+    }
+
+    Ok(())
+}

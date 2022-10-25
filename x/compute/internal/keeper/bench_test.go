@@ -22,7 +22,7 @@ const (
 	BenchWriteStorage                   = "bench_write_storage"
 	BenchAllocate                       = "bench_allocate"
 	BenchReadLargeItemFromStorage       = "bench_read_large_item_from_storage"
-	BenchWriteLargeItemToStorage  Bench = "bench_write_large_item_from_storage"
+	BenchWriteLargeItemToStorage  Bench = "bench_write_large_item_to_storage"
 )
 
 func buildBenchMessage(bench Bench) []byte {
@@ -183,6 +183,16 @@ func TestRunBenchmarks(t *testing.T) {
 			bench:    BenchAllocate,
 			loops:    10,
 		},
+		"Read large item from storage": {
+			gasLimit: 5_000_000,
+			bench:    BenchReadLargeItemFromStorage,
+			loops:    10,
+		},
+		"Write large item to storage": {
+			gasLimit: 100_000_000,
+			bench:    BenchWriteLargeItemToStorage,
+			loops:    10,
+		},
 	}
 
 	contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
@@ -190,7 +200,7 @@ func TestRunBenchmarks(t *testing.T) {
 	// *** Measure baseline
 	timer := NewBenchTimer("base contract execution", Noop)
 	// make sure we set a limit before calling
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(1_000_000))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeter(100_000_000))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	msg := buildBenchMessage(Noop)
