@@ -21,6 +21,8 @@ jobs:
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Declare Commit Variables
         id: vars
         shell: bash
@@ -40,7 +42,6 @@ jobs:
         name: "Save api keys"
       - name: Build testnet
         run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} make build-testnet
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
@@ -61,6 +62,8 @@ jobs:
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
@@ -134,6 +137,8 @@ jobs:
       IMAGE_NAME: scrtlabs/localsecret
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
@@ -143,11 +148,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create temp files
-        shell: bash
-        run: |
-          echo "random data" > api_key.txt
-          echo "lol this is ignored" > spid.txt
       - name: Build dev docker image
         shell: bash
         run: |
