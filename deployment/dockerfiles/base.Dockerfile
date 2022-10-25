@@ -1,5 +1,5 @@
 ARG SCRT_BASE_IMAGE_SECRETD=enigmampc/rocksdb:v6.24.2-1.1.5
-ARG SCRT_BASE_IMAGE_ENCLAVE=baiduxlab/sgx-rust:2004-1.1.3
+ARG SCRT_BASE_IMAGE_ENCLAVE=enigmampc/rocksdb:v6.24.2-1.1.5
 # enigmampc/rocksdb:v6.24.2
 
 FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-enclave
