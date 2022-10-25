@@ -153,6 +153,17 @@ pub unsafe extern "C" fn ecall_init_node(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
+    // validate this node is patched and updated
+    // unwrapping here is fine - it's done later on inside decrypt seed as well
+    let get_key_result = KEY_MANAGER.get_registration_key().unwrap();
+
+    // this validates the cert and handles the "what if it fails" inside as well
+    let res = create_attestation_certificate(
+        &get_key_result,
+        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+        api_key_slice,
+    );
+
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
     let mut encrypted_seed = [0u8; ENCRYPTED_SEED_SIZE];
@@ -163,7 +174,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
     // validate certificate w/ attestation report
     // testing only
-    let pk = match validate_report(cert_slice, Some(SigningMethod::MRSIGNER)) {
+    let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
         Err(e) => {
             error!("Error in validating certificate: {:?}", e);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
