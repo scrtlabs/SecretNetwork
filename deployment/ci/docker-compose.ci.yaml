@@ -33,6 +33,26 @@ services:
           cpus: "1"
           memory: "4g"
 
+  bench:
+    image: tests-base-image
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/root/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    entrypoint: ["/bin/bash", "go-tests-bench.sh"]
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "4g"
+
   bootstrap:
     image: azcr.io/enigmampc/ci-node-image:latest
     container_name: bootstrap
