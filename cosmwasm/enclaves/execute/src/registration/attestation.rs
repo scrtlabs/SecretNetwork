@@ -143,7 +143,7 @@ pub fn create_attestation_certificate(
 }
 
 #[cfg(not(all(feature = "SGX_MODE_HW", feature = "production")))]
-pub fn validate_report(cert: &[u8]) {
+pub fn validate_report(cert: &[u8], override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None).map_err(|e| info!("Error validating created certificate"));
 }
 
