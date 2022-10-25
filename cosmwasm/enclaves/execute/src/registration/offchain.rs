@@ -5,13 +5,12 @@
 use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t, SgxResult};
+use sgx_types::{sgx_status_t, SgxResult};
 use std::slice;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::registration::attestation::validate_report;
 use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,

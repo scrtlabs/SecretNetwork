@@ -1,6 +1,4 @@
 // #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
-
-#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -36,7 +34,9 @@ use std::{
 use crate::registration::cert::verify_ra_cert;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
+use enclave_crypto::consts::SIGNING_METHOD;
+
+use enclave_crypto::consts::SigningMethod;
 
 #[cfg(all(feature = "SGX_MODE_HW"))]
 use enclave_crypto::consts::{
