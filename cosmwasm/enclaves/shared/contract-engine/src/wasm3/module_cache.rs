@@ -13,8 +13,8 @@ use enclave_crypto::HASH_SIZE;
 
 use super::{gas, validation};
 use crate::gas::WasmCosts;
-use crate::wasm::contract::api_marker;
-use crate::wasm::ContractOperation;
+use crate::cosmwasm_config::api_marker;
+use crate::cosmwasm_config::ContractOperation;
 
 pub struct VersionedCode {
     pub code: Vec<u8>,

@@ -1,6 +1,7 @@
 use derive_more::Display;
 use log::*;
 
+#[cfg(feature = "wasmi-engine")]
 use wasmi::{Error as InterpreterError, HostError, TrapKind};
 
 use wasm3::Error as Wasm3RsError;
@@ -38,6 +39,7 @@ pub enum WasmEngineError {
 
 pub type WasmEngineResult<T> = Result<T, WasmEngineError>;
 
+#[cfg(feature = "wasmi-engine")]
 impl HostError for WasmEngineError {}
 
 impl From<WasmEngineError> for EnclaveError {
@@ -140,7 +142,7 @@ where
     }
 }
 
-#[allow(dead_code)]
+#[cfg(feature = "wasmi-engine")]
 pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveError {
     wasmi_error
         .try_into_host_error()
@@ -158,7 +160,7 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
         })
 }
 
-#[allow(dead_code)]
+#[cfg(feature = "wasmi-engine")]
 fn trap_kind_to_enclave_error(kind: TrapKind) -> EnclaveError {
     match kind {
         TrapKind::Unreachable => EnclaveError::ContractPanicUnreachable,

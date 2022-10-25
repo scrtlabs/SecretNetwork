@@ -25,38 +25,6 @@ use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::traits::WasmiApi;
 
-/// api_marker is based on this compatibility chart:
-/// https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/README.md#compatibility
-pub mod api_marker {
-    pub const V0_10: &str = "cosmwasm_vm_version_3";
-    pub const V1: &str = "interface_version_8";
-}
-
-/// Right now ContractOperation is used to detect queris and prevent state changes
-#[derive(Clone, Copy, Debug)]
-pub enum ContractOperation {
-    Init,
-    Handle,
-    Query,
-}
-
-#[allow(unused)]
-impl ContractOperation {
-    pub fn is_init(&self) -> bool {
-        matches!(self, ContractOperation::Init)
-    }
-
-    pub fn is_handle(&self) -> bool {
-        matches!(self, ContractOperation::Handle)
-    }
-
-    pub fn is_query(&self) -> bool {
-        matches!(self, ContractOperation::Query)
-    }
-}
-
-const MAX_LOG_LENGTH: usize = 8192;
-
 /// SecretContract maps function index to implementation
 /// When instantiating a module we give it the SecretNetworkImportResolver resolver
 /// When invoking a function inside the module we give it this runtime which is the actual functions implementation ()

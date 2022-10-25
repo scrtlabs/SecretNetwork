@@ -11,10 +11,11 @@ use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 use std::time::Instant;
 
+use crate::cosmwasm_config::ContractOperation;
+
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
-use crate::wasm::traits::WasmiApi;
 
 use super::contract_validation::{
     generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -26,7 +27,6 @@ use super::io::{
 };
 //use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
-use super::wasm::ContractOperation;
 // use super::wasm::{ContractInstance, Engine};
 
 /*
@@ -420,35 +420,6 @@ fn start_engine(
         query_depth,
     )
 }
-
-// TODO remove once the new engine works well
-// fn _start_engine(
-//     context: Ctx,
-//     gas_limit: u64,
-//     contract_code: ContractCode,
-//     contract_key: &ContractKey,
-//     operation: ContractOperation,
-//     nonce: IoNonce,
-//     user_public_key: Ed25519PublicKey,
-// ) -> Result<Engine, EnclaveError> {
-//     let module = create_module_instance(contract_code, operation)?;
-//
-//     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
-//     let wasm_costs = WasmCosts::default();
-//
-//     let contract_instance = ContractInstance::new(
-//         context,
-//         module.clone(),
-//         gas_limit,
-//         wasm_costs,
-//         *contract_key,
-//         operation,
-//         nonce,
-//         user_public_key,
-//     )?;
-//
-//     Ok(Engine::new(contract_instance, module))
-// }
 
 fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
     serde_json::from_slice(env)

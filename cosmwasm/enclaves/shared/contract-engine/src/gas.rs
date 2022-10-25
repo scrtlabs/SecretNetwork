@@ -1,3 +1,4 @@
+#[cfg(feature = "wasmi-engine")]
 pub use pwasm_utils::{inject_gas_counter, rules};
 
 pub const OCALL_BASE_GAS: u64 = 2_000_000;
@@ -81,7 +82,7 @@ impl Default for WasmCosts {
     }
 }
 
-#[allow(dead_code)]
+#[cfg(feature = "wasmi-engine")]
 pub fn gas_rules(wasm_costs: &WasmCosts) -> rules::Set {
     rules::Set::new(wasm_costs.regular, {
         let mut vals = ::std::collections::BTreeMap::new();

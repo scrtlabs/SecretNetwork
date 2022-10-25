@@ -13,10 +13,10 @@ use enclave_ffi_types::EnclaveError;
 use enclave_cosmos_types::types::ContractCode;
 use enclave_crypto::HASH_SIZE;
 
-use super::gas::{gas_rules, WasmCosts};
-use super::memory::validate_memory;
 use super::wasm::create_builder;
 use super::wasm::{ContractOperation, WasmiImportResolver};
+use crate::gas::{gas_rules, WasmCosts};
+use crate::wasm::memory::validate_memory;
 
 lazy_static! {
     static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =

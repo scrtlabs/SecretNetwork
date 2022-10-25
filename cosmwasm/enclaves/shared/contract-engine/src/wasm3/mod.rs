@@ -17,6 +17,7 @@ use crate::contract_validation::ContractKey;
 #[cfg(not(feature = "query-only"))]
 use crate::db::encrypt_key;
 
+use crate::cosmwasm_config::ContractOperation;
 use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
 use crate::db::{remove_encrypted_key, write_encrypted_key, write_multiple_keys};
@@ -24,7 +25,6 @@ use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngine
 use crate::gas::{WasmCosts, OCALL_BASE_GAS, READ_BASE_GAS, WRITE_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
-use crate::wasm::ContractOperation;
 
 use gas::{get_exhausted_amount, get_remaining_gas, use_gas};
 use module_cache::create_module_instance;
