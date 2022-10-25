@@ -81,7 +81,10 @@ steps:
       Dockerfile: deployment/dockerfiles/go-tests.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
-    displayName: "Run system tests"
+    displayName: "Run system tests (go tests)"
+
+  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
+    displayName: "Run benchmarks"
 
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
     displayName: "Run integration tests"
