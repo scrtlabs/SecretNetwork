@@ -4,6 +4,9 @@ COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
+SPID ?= 00000000000000000000000000000000
+API_KEY ?= FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -228,7 +231,7 @@ clean:
 	$(MAKE) -C cosmwasm/enclaves/test clean
 
 build-rocksdb-image:
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION} .
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION}-1.1.5 .
 
 localsecret: _localsecret-compile
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
@@ -239,6 +242,8 @@ _localsecret-compile:
 				--build-arg BUILD_VERSION=${VERSION} \
 				--build-arg FEATURES="${FEATURES},debug-print" \
 				--build-arg FEATURES_U=${FEATURES_U} \
+				--secret id=API_KEY,src=.env.local \
+				--secret id=SPID,src=.env.local \
 				--build-arg SGX_MODE=SW \
 				-f deployment/dockerfiles/base.Dockerfile \
 				-t rust-go-base-image \
@@ -258,7 +263,7 @@ build-custom-dev-image:
 
 build-testnet: _docker_base
 	@mkdir build 2>&3 || true
-	docker build --secret API_KEY=${API_KEY} --secret SPID=${SPID} --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
+	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
 	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
@@ -296,6 +301,8 @@ _docker_base:
 				--build-arg FEATURES=${FEATURES} \
 				--build-arg FEATURES_U=${FEATURES_U} \
 				--build-arg SGX_MODE=${SGX_MODE} \
+				--secret id=API_KEY,src=api_key.txt \
+				--secret id=SPID,src=spid.txt \
 				-f deployment/dockerfiles/base.Dockerfile \
 				-t rust-go-base-image \
 				.

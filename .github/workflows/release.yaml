@@ -35,6 +35,9 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - run: |
+          echo ${{ secrets.SPID_MAINNET }} > spid.txt; echo ${{ secrets.API_KEY_MAINNET }} > api_key.txt
+        name: "Save api keys"
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -61,9 +64,9 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
+      - run: |
+          echo ${{ secrets.SPID_MAINNET }} > spid.txt; echo ${{ secrets.API_KEY_MAINNET }} > api_key.txt
+        name: "Save api keys"
       - name: Build
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=production, make build-mainnet-upgrade

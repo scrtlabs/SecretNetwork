@@ -7,12 +7,15 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+        name: Pull git submodules
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -48,7 +51,6 @@ jobs:
       - name: Test enclave
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
           export SGX_MODE=SW
           RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
           make clean-enclave
@@ -105,6 +107,8 @@ jobs:
     needs: [Build-Contracts, Build-LocalSecret]
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
@@ -112,8 +116,8 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Download LocalSecret
@@ -178,12 +182,14 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -220,7 +226,6 @@ jobs:
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          make vendor
           cd cosmwasm/enclaves/execute/
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
@@ -229,6 +234,8 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
@@ -252,6 +259,8 @@ jobs:
         with:
           driver-opts: network=host
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Build LocalSecret Base
         uses: docker/build-push-action@v3
         with:
@@ -322,6 +331,8 @@ jobs:
     needs: [Build-LocalSecret, Build-Hermes]
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Download Hermes
         uses: actions/download-artifact@v3
         with:
@@ -353,6 +364,10 @@ jobs:
           yarn
           yarn test
           docker rm -f localsecret # next step needs the localsecret ports
+      - name: Install Requirements
+        run: |
+          chmod +x ./scripts/install-wasm-tools.sh
+          ./scripts/install-wasm-tools.sh
       - name: Run cw20-ics20 tests
         run: |
           git clone --depth 1 --branch secret https://github.com/scrtlabs/cw-plus
