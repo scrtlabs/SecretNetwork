@@ -19,4 +19,8 @@ updates:
     directory: "/cosmwasm"
     schedule:
       interval: daily
-  
+
+  - package-ecosystem: gitsubmodule
+    schedule:
+      interval: "daily"
+    directory: "/"

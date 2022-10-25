@@ -525,21 +525,19 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
     trace!("parse result {:?}", result);
     trace!("parse response{:?}", respp);
 
-    let msg: &'static str;
-
-    match respp.code {
-        Some(200) => msg = "OK Operation Successful",
-        Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
-        Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
-        Some(500) => msg = "Internal error occurred",
+    let msg: &'static str = match respp.code {
+        Some(200) => "OK Operation Successful",
+        Some(401) => "Unauthorized Failed to authenticate or authorize request.",
+        Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
+        Some(500) => "Internal error occurred",
         Some(503) => {
-            msg = "Service is currently not able to process the request (due to
+            "Service is currently not able to process the request (due to
             a temporary overloading or maintenance). This is a
             temporary state – the same request can be repeated after
             some time. "
         }
-        _ => msg = "Unknown error occured",
-    }
+        _ => "Unknown error occurred",
+    };
 
     info!("{}", msg);
     let mut len_num: u32 = 0;

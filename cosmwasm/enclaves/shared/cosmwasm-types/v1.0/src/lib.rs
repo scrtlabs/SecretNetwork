@@ -1,4 +1,3 @@
-#![feature(min_const_generics)]
 pub mod addresses;
 pub mod coins;
 pub mod errors;

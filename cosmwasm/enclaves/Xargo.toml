@@ -1,29 +1,29 @@
 [dependencies]
 alloc = {  }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 1 }
-sgx_alloc = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 1 }
-sgx_unwind = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 1 }
-sgx_demangle = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 1 }
-panic_abort = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 1 }
-sgx_libc = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 2 }
-sgx_tkey_exchange = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 2 }
-sgx_tse = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 2 }
-sgx_tcrypto = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 2 }
-sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 3 }
-sgx_backtrace_sys = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 3 }
-panic_unwind = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 3 }
-sgx_tdh = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 4 }
-sgx_tseal = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 4 }
-sgx_tprotected_fs = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 4 }
-std = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 5, features = [
+sgx_types = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_types", stage = 1 }
+sgx_alloc = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_alloc", stage = 1 }
+sgx_unwind = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_unwind", stage = 1 }
+sgx_demangle = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_demangle", stage = 1 }
+panic_abort = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_panic_abort", stage = 1 }
+sgx_libc = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_libc", stage = 2 }
+sgx_tkey_exchange = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tkey_exchange", stage = 2 }
+sgx_tse = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tse", stage = 2 }
+sgx_tcrypto = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto", stage = 2 }
+sgx_trts = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_trts", stage = 3 }
+sgx_backtrace_sys = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace_sys", stage = 3 }
+panic_unwind = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_panic_unwind", stage = 3 }
+sgx_tdh = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tdh", stage = 4 }
+sgx_tseal = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tseal", stage = 4 }
+sgx_tprotected_fs = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tprotected_fs", stage = 4 }
+std = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "c70a82f708fd20e9fd0377990dde097d14024f7a", stage = 5, features = [
     "net",
     "backtrace",
     "untrusted_fs",
 ] }
-sgx_no_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 5 }
-sgx_rand = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 6 }
-sgx_serialize = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 6 }
-sgx_tunittest = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 6 }
-sgx_backtrace = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 7 }
-sgx_cov = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 7 }
-sgx_signal = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", stage = 7 }
+sgx_no_tstd = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_no_tstd", stage = 5 }
+sgx_rand = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_rand", stage = 6 }
+sgx_serialize = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize", stage = 6 }
+sgx_tunittest = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tunittest", stage = 6 }
+sgx_backtrace = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace", stage = 7 }
+sgx_cov = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_cov", stage = 7 }
+sgx_signal = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_signal", stage = 7 }

@@ -72,6 +72,7 @@ impl From<usize> for HostFunctions {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<usize> for HostFunctions {
     fn into(self) -> usize {
         self as usize

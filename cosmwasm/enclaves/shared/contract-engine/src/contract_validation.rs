@@ -143,10 +143,10 @@ pub fn validate_ibc_msg(
     match handle_type {
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
             let mut parsed_ibc_packet: IbcPacketReceiveMsg =
-                serde_json::from_slice(&msg.to_vec()).map_err(|err| {
+                serde_json::from_slice(msg).map_err(|err| {
                     warn!(
                     "IbcPacketReceive msg got an error while trying to deserialize msg input bytes into json {:?}: {}",
-                    String::from_utf8_lossy(&msg),
+                    String::from_utf8_lossy(msg),
                     err
                 );
                     EnclaveError::FailedToDeserialize
@@ -300,7 +300,7 @@ pub fn verify_params(
 
     trace!(
         "sender canonical address is: {:?}",
-        sender_public_key.get_address().0.0
+        sender_public_key.get_address().0 .0
     );
     trace!("sender signature is: {:?}", sig_info.signature);
     trace!("sign bytes are: {:?}", sig_info.sign_bytes);
@@ -347,7 +347,7 @@ fn get_signer_and_messages(
             let sender_public_key =
                 sign_doc
                     .auth_info
-                    .sender_public_key(&sender)
+                    .sender_public_key(sender)
                     .ok_or_else(|| {
                         warn!("Couldn't find message sender in auth_info.signer_infos");
                         EnclaveError::FailedTxVerification
