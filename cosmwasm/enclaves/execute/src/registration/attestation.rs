@@ -140,13 +140,8 @@ pub fn create_attestation_certificate(
     Ok((key_der, cert_der))
 }
 
-#[cfg(not(all(feature = "SGX_MODE_HW")))]
-pub fn validate_report(cert: &[u8], override_verify: Option<SigningMethod>) {
-    let _ = verify_ra_cert(cert, None).map_err(|e| info!("Error validating created certificate"));
-}
-
 #[cfg(all(feature = "SGX_MODE_HW"))]
-pub fn validate_report(cert: &[u8], override_verify: Option<SigningMethod>) {
+pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);
         let _ = SgxFsRemove(CONSENSUS_SEED_SEALING_PATH.as_str());
