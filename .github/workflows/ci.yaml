@@ -329,8 +329,8 @@ jobs:
         run: |
           cd integration-tests
           yarn
-          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
-          # docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml logs -f &
+          # docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
+          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml logs -f &
           yarn test
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
