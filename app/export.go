@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"log"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -11,14 +12,15 @@ import (
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
-func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jailAllowedAddrs []string,
-) (servertypes.ExportedApp, error) {
+// ExportAppStateAndValidators exports the state of the application for a genesis
+// file.
+func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jailAllowedAddrs []string) (servertypes.ExportedApp, error) {
 	// as if they could withdraw from the start of the next block
-	ctx := app.BaseApp.NewContext(true, tmproto.Header{Height: app.BaseApp.LastBlockHeight()})
+	ctx := app.NewContext(true, tmproto.Header{Height: app.LastBlockHeight()})
 
 	// We export at last height + 1, because that's the height at which
 	// Tendermint will start InitChain.
-	height := app.BaseApp.LastBlockHeight() + 1
+	height := app.LastBlockHeight() + 1
 	if forZeroHeight {
 		height = 0
 		app.prepForZeroHeightGenesis(ctx, jailAllowedAddrs)
@@ -32,16 +34,13 @@ func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jai
 	}
 
 	validators, err := staking.WriteValidators(ctx, *app.AppKeepers.StakingKeeper)
-	if err != nil {
-		return servertypes.ExportedApp{}, err
-	}
 
 	return servertypes.ExportedApp{
 		AppState:        appState,
 		Validators:      validators,
 		Height:          height,
 		ConsensusParams: app.BaseApp.GetConsensusParams(ctx),
-	}, nil
+	}, err
 }
 
 // prepare for fresh start at zero height
@@ -51,7 +50,7 @@ func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jai
 func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []string) {
 	applyAllowedAddrs := false
 
-	// Check if there is an allowed address list
+	// check if there is a allowed address list
 	if len(jailAllowedAddrs) > 0 {
 		applyAllowedAddrs = true
 	}
@@ -61,7 +60,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 	for _, addr := range jailAllowedAddrs {
 		_, err := sdk.ValAddressFromBech32(addr)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		allowedAddrsMap[addr] = true
 	}
@@ -85,10 +84,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 			panic(err)
 		}
 
-		delAddr, err := sdk.AccAddressFromBech32(delegation.DelegatorAddress)
-		if err != nil {
-			panic(err)
-		}
+		delAddr := sdk.MustAccAddressFromBech32(delegation.DelegatorAddress)
 
 		_, _ = app.AppKeepers.DistrKeeper.WithdrawDelegationRewards(ctx, delAddr, valAddr)
 	}
@@ -121,11 +117,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 		if err != nil {
 			panic(err)
 		}
-
-		delAddr, err := sdk.AccAddressFromBech32(del.DelegatorAddress)
-		if err != nil {
-			panic(err)
-		}
+		delAddr := sdk.MustAccAddressFromBech32(del.DelegatorAddress)
 
 		app.AppKeepers.DistrKeeper.Hooks().BeforeDelegationCreated(ctx, delAddr, valAddr)
 		app.AppKeepers.DistrKeeper.Hooks().AfterDelegationModified(ctx, delAddr, valAddr)
@@ -161,7 +153,7 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 	counter := int16(0)
 
 	for ; iter.Valid(); iter.Next() {
-		addr := sdk.ValAddress(iter.Key()[1:])
+		addr := sdk.ValAddress(stakingtypes.AddressFromValidatorsKey(iter.Key()))
 		validator, found := app.AppKeepers.StakingKeeper.GetValidator(ctx, addr)
 		if !found {
 			panic("expected validator, not found")
@@ -170,18 +162,22 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 		validator.UnbondingHeight = 0
 		if applyAllowedAddrs && !allowedAddrsMap[addr.String()] {
 			validator.Jailed = true
-			app.AppKeepers.StakingKeeper.SetValidator(ctx, validator)
-			app.AppKeepers.StakingKeeper.DeleteValidatorByPowerIndex(ctx, validator)
-		} else {
-			app.AppKeepers.StakingKeeper.SetValidator(ctx, validator)
 		}
 
+		app.AppKeepers.StakingKeeper.SetValidator(ctx, validator)
 		counter++
 	}
 
-	iter.Close()
+	if err := iter.Close(); err != nil {
+		app.Logger().Error("error while closing the key-value store reverse prefix iterator: ", err)
+		return
+	}
 
-	_, _ = app.AppKeepers.StakingKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
+	_, err := app.AppKeepers.StakingKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	/* Handle slashing state. */
 
 	// reset start height on signing infos
