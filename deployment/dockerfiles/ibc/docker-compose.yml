@@ -40,7 +40,7 @@ services:
       timeout: 5s
       retries: 5
   relayer:
-    image: "hermes:latest"
+    image: "hermes:v0.0.0"
     depends_on:
       localsecret-1:
         condition: service_healthy
