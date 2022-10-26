@@ -1,8 +1,12 @@
+#![cfg_attr(not(target_env = "sgx"), no_std)]
+#![cfg_attr(target_env = "sgx", feature(rustc_private))]
+
+extern crate sgx_trts;
+extern crate sgx_types;
+
 // Trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
-
-extern crate sgx_types;
 
 pub mod consts;
 mod errors;

@@ -1,0 +1,15 @@
+{
+    "title": "Decrease max gas per block from 10M to 4M",
+    "description": "Following the discussions in https://forum.scrt.network/t/discuss-network-issues-w-shade-airdrop-2-21-22/5475/32 & in https://forum.scrt.network/t/governance-meeting-notes-mega-thread/3946/42, SCRT Labs proposes to decrease the max gas per block from 10M to 4M.",
+    "changes": [
+        {
+            "subspace": "baseapp",
+            "key": "BlockParams",
+            "value": {
+                "max_bytes": "10000000",
+                "max_gas": "4000000"
+            }
+        }
+    ],
+    "deposit": "100000000uscrt"
+}

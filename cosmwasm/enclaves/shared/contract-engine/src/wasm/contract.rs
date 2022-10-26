@@ -548,7 +548,7 @@ impl WasmiApi for ContractInstance {
             )));
         }
 
-        let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+        let (decoded_prefix, data) = match bech32::decode(human_addr_str) {
             Err(err) => {
                 debug!(
                     "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
@@ -748,7 +748,7 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let canonical_address = match bech32::decode(&source_human_address) {
+        let canonical_address = match bech32::decode(source_human_address) {
             Err(err) => {
                 debug!(
                     "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
@@ -826,7 +826,7 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+        let (decoded_prefix, data) = match bech32::decode(human_addr_str) {
             Err(err) => {
                 debug!(
                     "addr_canonicalize() error while trying to decode human address {:?} as bech32: {:?}",

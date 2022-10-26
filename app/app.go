@@ -33,6 +33,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
+	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
 	"github.com/cosmos/cosmos-sdk/version"
@@ -114,7 +115,7 @@ var (
 		distrtypes.ModuleName: true,
 	}
 
-	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade}
+	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade, v1_5.Upgrade}
 )
 
 // Verify app interface at compile time

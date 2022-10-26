@@ -17,8 +17,8 @@ jobs:
         db_backend: [rocksdb, goleveldb]
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
-      SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
-      API_KEY_TESTNET: ${{ secrets.API_KEY_TESTNET }}
+      SPID: ${{ secrets.SPID_TESTNET }}
+      API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
       - uses: actions/checkout@v3
       - name: Declare Commit Variables
@@ -27,49 +27,17 @@ jobs:
         run: |
           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
-      - name: Install Intel's SGX SDK
-        run: |
-          mkdir -p "$HOME/.sgxsdk"
-          cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
-          chmod +x "$SDK_BIN"
-          echo yes | ./"$SDK_BIN"
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache xargo sysroot
-        uses: actions/cache@v3
-        with:
-          path: ~/.xargo
-          key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
         uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src clippy
-      - name: Install xargo
-        run: |
-          cargo +stable install xargo --version 0.3.25
-          xargo --version
-      - name: Download sccache
-        run: |
-          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
-          tar xf ./sccache-*.tar.gz
-          mv ./sccache*/sccache "$HOME/sccache"
-      - name: Create api keys
-        run: |
-          echo $SPID_TESTNET > spid.txt
-          echo $API_KEY_TESTNET > api_key.txt
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - run: |
+          echo ${{ secrets.SPID_MAINNET }} > spid.txt; echo ${{ secrets.API_KEY_MAINNET }} > api_key.txt
+        name: "Save api keys"
       - name: Build testnet
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -87,8 +55,8 @@ jobs:
       matrix:
         db_backend: [goleveldb, rocksdb]
     env: # Or as an environment variable
-      SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
-      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
+      SPID: ${{ secrets.SPID_MAINNET }}
+      API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
@@ -96,13 +64,9 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
-      - name: Create api keys
-        run: |
-          echo $SPID_MAINNET > spid.txt
-          echo $API_KEY_MAINNET > api_key.txt
+      - run: |
+          echo ${{ secrets.SPID_MAINNET }} > spid.txt; echo ${{ secrets.API_KEY_MAINNET }} > api_key.txt
+        name: "Save api keys"
       - name: Build
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=production, make build-mainnet-upgrade
@@ -187,7 +151,7 @@ jobs:
       - name: Build dev docker image
         shell: bash
         run: |
-          DOCKER_TAG=${{ steps.get_version.outputs.VERSION }} make build-localsecret
+          DOCKER_TAG=${{ steps.get_version.outputs.VERSION }} make localsecret
       - name: Push docker image
         run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
@@ -200,11 +164,6 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - name: Declare Commit Variables
-        id: is_pre_release
-        shell: bash
-        run: |
-          echo "::set-output name=IS_PRE_RELEASE::$(echo "${{ steps.get_version.outputs.VERSION }}" | awk 'BEGIN{prerelease="false"} /beta|alpha/{prerelease="true"} END{print prerelease}')"
       - uses: actions/download-artifact@v3
         with:
           name: secretcli-Linux
@@ -232,7 +191,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          prerelease: ${{ steps.is_pre_release.outputs.IS_PRE_RELEASE }}
+          prerelease: true
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb

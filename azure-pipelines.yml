@@ -16,9 +16,50 @@ pool:
 workspace:
   clean: all # what to clean up before the job runs
 
+variables:
+  baseImageRepository: 'azcr.io/enigmampc/ci-base-image'
+  nodeImageRepository: 'azcr.io/enigmampc/ci-node-image'
+  containerRegistry: 'enigmampcdocker'
+  dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/base.Dockerfile'
+  tag: '$(Build.BuildId)'
+  DOCKER_BUILDKIT: 1
+
 steps:
+  - checkout: "self"
+    submodules: true
+    displayName: "Checkout Repository and Submodules"
   - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
     displayName: "Save api keys"
+
+  - task: Docker@2
+    displayName: "Build base image"
+    inputs:
+      command: build
+      repository: '$(baseImageRepository)'
+      tags: |
+        $(tag)
+        latest
+      buildContext: .
+      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW
+      dockerfile: '$(dockerfilePath)'
+
+  - script: |
+      cp deployment/ci/bootstrap_init.sh deployment/docker/bootstrap/bootstrap_init.sh
+      cp deployment/ci/node_init.sh deployment/docker/node/node_init.sh
+      cp deployment/ci/startup.sh deployment/docker/startup.sh
+      cp deployment/ci/node_key.json deployment/docker/node_key.json
+    displayName: Overwrite node scripts
+
+  - task: Docker@2
+    displayName: "Build release image"
+    inputs:
+      command: build
+      repository: '$(nodeImageRepository)'
+      tags: latest
+      buildContext: .
+      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW
+      Dockerfile: deployment/dockerfiles/release.Dockerfile
+
   - task: Docker@2
     displayName: "Build enclave tests"
     inputs:
@@ -26,26 +67,9 @@ steps:
       repository: rust-enclave-test
       tags: latest
       buildContext: .
-      arguments: --build-arg SGX_MODE=HW
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
-  - task: Docker@2
-    displayName: "Build base image"
-    inputs:
-      command: build
-      repository: rust-go-base-image
-      tags: latest
-      buildContext: .
-      arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/base.Dockerfile
-  - task: Docker@2
-    displayName: "Build release image"
-    inputs:
-      command: build
-      repository: build-release
-      tags: latest
-      buildContext: .
-      arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/release.Dockerfile
+
   - task: Docker@2
     displayName: "Build tests image"
     inputs:
@@ -55,27 +79,12 @@ steps:
       buildContext: .
       arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/go-tests.Dockerfile
-  - task: Docker@2
-    displayName: "Build node"
-    inputs:
-      command: build
-      repository: ci-enigma-sgx-node
-      tags: latest
-      buildContext: .
-      arguments: --build-arg SECRET_LOCAL_NODE_TYPE=NODE --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/local-node.Dockerfile
-  - task: Docker@2
-    displayName: "Build bootstrap"
-    inputs:
-      command: build
-      buildContext: .
-      repository: ci-enigma-sgx-bootstrap
-      tags: latest
-      arguments: --build-arg SECRET_LOCAL_NODE_TYPE=BOOTSTRAP --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/local-node.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
-    displayName: "Run system tests"
+    displayName: "Run system tests (go tests)"
+
+  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
+    displayName: "Run benchmarks"
 
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
     displayName: "Run integration tests"
