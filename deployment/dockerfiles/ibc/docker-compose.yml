@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   localsecret-1:
-    image: "ghcr.io/scrtlabs/localsecret:latest"
+    image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
     # ports are only here in case interaction
     # between localhost and container is desired
     ports:
@@ -20,7 +20,7 @@ services:
       timeout: 5s
       retries: 5
   localsecret-2:
-    image: "ghcr.io/scrtlabs/localsecret:latest"
+    image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
     # ports are only here in case interaction
     # between localhost and container is desired
     ports:
