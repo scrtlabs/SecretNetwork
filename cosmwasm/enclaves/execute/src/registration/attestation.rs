@@ -1,4 +1,7 @@
-// #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
+use enclave_crypto::KeyPair;
+use std::vec::Vec;
+
+#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -6,11 +9,13 @@ use itertools::Itertools;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_rand::{os, Rng};
+
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::{rsgx_create_report, rsgx_self_report, rsgx_verify_report};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tcrypto::rsgx_sha256_slice;
+
 use sgx_tcrypto::SgxEccHandle;
 
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
@@ -21,7 +26,6 @@ use sgx_types::{
     sgx_target_info_t, SgxResult,
 };
 
-use std::vec::Vec;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::{
     io::{Read, Write},
@@ -31,11 +35,13 @@ use std::{
     sync::Arc,
 };
 
+#[cfg(all(feature = "SGX_MODE_HW"))]
 use crate::registration::cert::verify_ra_cert;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SIGNING_METHOD;
 
+#[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SigningMethod;
 
 #[cfg(all(feature = "SGX_MODE_HW"))]
@@ -45,8 +51,6 @@ use enclave_crypto::consts::{
 };
 #[cfg(all(feature = "SGX_MODE_HW"))]
 use std::sgxfs::remove as SgxFsRemove;
-
-use enclave_crypto::KeyPair;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
