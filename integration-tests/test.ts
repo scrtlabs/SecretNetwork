@@ -1912,6 +1912,10 @@ describe("IBC", () => {
       v1Wasm,
       v010Wasm,
     ]);
+    if (tx.code !== TxResultCode.Success) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(TxResultCode.Success);
 
     contracts["secretdev-2"].v1.codeId = Number(
       tx.arrayLog.find((x) => x.key === "code_id").value
@@ -1930,6 +1934,10 @@ describe("IBC", () => {
       contracts["secretdev-2"].v1,
       contracts["secretdev-2"].v010,
     ]);
+    if (tx.code !== TxResultCode.Success) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(TxResultCode.Success);
 
     contracts["secretdev-2"].v1.address = tx.arrayLog.find(
       (x) => x.key === "contract_address"
@@ -1984,11 +1992,9 @@ describe("IBC", () => {
       },
       timeoutTimestampSec: String(Math.floor(Date.now() / 1000 + 30)),
     });
-
-    if (result.code !== 0) {
+    if (result.code !== TxResultCode.Success) {
       console.error(result.rawLog);
     }
-
     expect(result.code).toBe(TxResultCode.Success);
 
     // checking ack/timeout on secretdev-1 might be cleaner

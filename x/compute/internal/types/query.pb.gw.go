@@ -86,8 +86,8 @@ func local_request_Query_ContractInfo_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func request_Query_ContractsByCodeID_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq QueryByCodeIDRequest
+func request_Query_ContractsByCodeId_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq QueryByCodeIdRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -108,13 +108,13 @@ func request_Query_ContractsByCodeID_0(ctx context.Context, marshaler runtime.Ma
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "code_id", err)
 	}
 
-	msg, err := client.ContractsByCodeID(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.ContractsByCodeId(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_Query_ContractsByCodeID_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq QueryByCodeIDRequest
+func local_request_Query_ContractsByCodeId_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq QueryByCodeIdRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -135,7 +135,7 @@ func local_request_Query_ContractsByCodeID_0(ctx context.Context, marshaler runt
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "code_id", err)
 	}
 
-	msg, err := server.ContractsByCodeID(ctx, &protoReq)
+	msg, err := server.ContractsByCodeId(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -213,7 +213,7 @@ func local_request_Query_QuerySecretContract_0(ctx context.Context, marshaler ru
 }
 
 func request_Query_Code_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq QueryByCodeIDRequest
+	var protoReq QueryByCodeIdRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -240,7 +240,7 @@ func request_Query_Code_0(ctx context.Context, marshaler runtime.Marshaler, clie
 }
 
 func local_request_Query_Code_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq QueryByCodeIDRequest
+	var protoReq QueryByCodeIdRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -338,8 +338,8 @@ func local_request_Query_CodeHashByContractAddress_0(ctx context.Context, marsha
 
 }
 
-func request_Query_CodeHashByCodeID_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq QueryByCodeIDRequest
+func request_Query_CodeHashByCodeId_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq QueryByCodeIdRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -360,13 +360,13 @@ func request_Query_CodeHashByCodeID_0(ctx context.Context, marshaler runtime.Mar
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "code_id", err)
 	}
 
-	msg, err := client.CodeHashByCodeID(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.CodeHashByCodeId(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_Query_CodeHashByCodeID_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq QueryByCodeIDRequest
+func local_request_Query_CodeHashByCodeId_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq QueryByCodeIdRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -387,7 +387,7 @@ func local_request_Query_CodeHashByCodeID_0(ctx context.Context, marshaler runti
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "code_id", err)
 	}
 
-	msg, err := server.CodeHashByCodeID(ctx, &protoReq)
+	msg, err := server.CodeHashByCodeId(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -526,7 +526,7 @@ func RegisterQueryHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 
 	})
 
-	mux.Handle("GET", pattern_Query_ContractsByCodeID_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Query_ContractsByCodeId_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
@@ -535,14 +535,14 @@ func RegisterQueryHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Query_ContractsByCodeID_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Query_ContractsByCodeId_0(rctx, inboundMarshaler, server, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_Query_ContractsByCodeID_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Query_ContractsByCodeId_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -626,7 +626,7 @@ func RegisterQueryHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 
 	})
 
-	mux.Handle("GET", pattern_Query_CodeHashByCodeID_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Query_CodeHashByCodeId_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
@@ -635,14 +635,14 @@ func RegisterQueryHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Query_CodeHashByCodeID_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Query_CodeHashByCodeId_0(rctx, inboundMarshaler, server, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_Query_CodeHashByCodeID_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Query_CodeHashByCodeId_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -747,7 +747,7 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 
 	})
 
-	mux.Handle("GET", pattern_Query_ContractsByCodeID_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Query_ContractsByCodeId_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
@@ -756,14 +756,14 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Query_ContractsByCodeID_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Query_ContractsByCodeId_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_Query_ContractsByCodeID_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Query_ContractsByCodeId_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -847,7 +847,7 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 
 	})
 
-	mux.Handle("GET", pattern_Query_CodeHashByCodeID_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Query_CodeHashByCodeId_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
@@ -856,14 +856,14 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Query_CodeHashByCodeID_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Query_CodeHashByCodeId_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_Query_CodeHashByCodeID_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Query_CodeHashByCodeId_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -913,7 +913,7 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 var (
 	pattern_Query_ContractInfo_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "info", "contract_address"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_Query_ContractsByCodeID_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "contracts", "code_id"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_ContractsByCodeId_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "contracts", "code_id"}, "", runtime.AssumeColonVerbOpt(true)))
 
 	pattern_Query_QuerySecretContract_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "query", "contract_address"}, "", runtime.AssumeColonVerbOpt(true)))
 
@@ -921,9 +921,9 @@ var (
 
 	pattern_Query_Codes_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"compute", "v1beta1", "codes"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_Query_CodeHashByContractAddress_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "code_hash", "contract_address"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_CodeHashByContractAddress_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"compute", "v1beta1", "code_hash", "by_contract_address", "contract_address"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_Query_CodeHashByCodeID_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "code_hash", "code_id"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_Query_CodeHashByCodeId_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"compute", "v1beta1", "code_hash", "by_code_id", "code_id"}, "", runtime.AssumeColonVerbOpt(true)))
 
 	pattern_Query_LabelByAddress_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"compute", "v1beta1", "label", "contract_address"}, "", runtime.AssumeColonVerbOpt(true)))
 
@@ -933,7 +933,7 @@ var (
 var (
 	forward_Query_ContractInfo_0 = runtime.ForwardResponseMessage
 
-	forward_Query_ContractsByCodeID_0 = runtime.ForwardResponseMessage
+	forward_Query_ContractsByCodeId_0 = runtime.ForwardResponseMessage
 
 	forward_Query_QuerySecretContract_0 = runtime.ForwardResponseMessage
 
@@ -943,7 +943,7 @@ var (
 
 	forward_Query_CodeHashByContractAddress_0 = runtime.ForwardResponseMessage
 
-	forward_Query_CodeHashByCodeID_0 = runtime.ForwardResponseMessage
+	forward_Query_CodeHashByCodeId_0 = runtime.ForwardResponseMessage
 
 	forward_Query_LabelByAddress_0 = runtime.ForwardResponseMessage
 

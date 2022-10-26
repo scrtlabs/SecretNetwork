@@ -1,4 +1,5 @@
-// #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
+use enclave_crypto::KeyPair;
+use std::vec::Vec;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
@@ -8,15 +9,14 @@ use itertools::Itertools;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_rand::{os, Rng};
+
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tse::{rsgx_create_report, rsgx_self_report, rsgx_verify_report};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tcrypto::rsgx_sha256_slice;
-use sgx_tcrypto::SgxEccHandle;
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-use std::sgxfs::remove as SgxFsRemove;
+use sgx_tcrypto::SgxEccHandle;
 
 use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
@@ -26,7 +26,6 @@ use sgx_types::{
     sgx_target_info_t, SgxResult,
 };
 
-use std::vec::Vec;
 #[cfg(feature = "SGX_MODE_HW")]
 use std::{
     io::{Read, Write},
@@ -36,19 +35,22 @@ use std::{
     sync::Arc,
 };
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+#[cfg(all(feature = "SGX_MODE_HW"))]
 use crate::registration::cert::verify_ra_cert;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use enclave_crypto::consts::{SigningMethod, SIGNING_METHOD};
+use enclave_crypto::consts::SIGNING_METHOD;
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_crypto::consts::SigningMethod;
+
+#[cfg(all(feature = "SGX_MODE_HW"))]
 use enclave_crypto::consts::{
     CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH, NODE_ENCRYPTED_SEED_KEY_FILE,
     NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
 };
-
-use enclave_crypto::KeyPair;
+#[cfg(all(feature = "SGX_MODE_HW"))]
+use std::sgxfs::remove as SgxFsRemove;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
@@ -81,7 +83,7 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 const REPORT_DATA_SIZE: usize = 32;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-pub const SPID: &str = "FF2DAAC50DF37862172BC829EE11C579";
+pub const SPID: &str = "00CD3D1B5CA3511C543F817C036107E1";
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const SPID: &str = "D0A5D0AF1E244EC7EA2175BC2E32093B";
 
@@ -137,14 +139,13 @@ pub fn create_attestation_certificate(
     let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
-    #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-    validate_report(&cert_der);
+    validate_report(&cert_der, None);
 
     Ok((key_der, cert_der))
 }
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-pub fn validate_report(cert: &[u8]) {
+#[cfg(all(feature = "SGX_MODE_HW"))]
+pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);
         let _ = SgxFsRemove(CONSENSUS_SEED_SEALING_PATH.as_str());
@@ -488,21 +489,19 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
     trace!("parse result {:?}", result);
     trace!("parse response{:?}", respp);
 
-    let msg: &'static str;
-
-    match respp.code {
-        Some(200) => msg = "OK Operation Successful",
-        Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
-        Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
-        Some(500) => msg = "Internal error occurred",
+    let msg: &'static str = match respp.code {
+        Some(200) => "OK Operation Successful",
+        Some(401) => "Unauthorized Failed to authenticate or authorize request.",
+        Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
+        Some(500) => "Internal error occurred",
         Some(503) => {
-            msg = "Service is currently not able to process the request (due to
+            "Service is currently not able to process the request (due to
             a temporary overloading or maintenance). This is a
             temporary state – the same request can be repeated after
             some time. "
         }
-        _ => msg = "Unknown error occured",
-    }
+        _ => "Unknown error occurred",
+    };
 
     info!("{}", msg);
     let mut len_num: u32 = 0;

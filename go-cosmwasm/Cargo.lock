@@ -626,18 +626,15 @@ dependencies = [
 
 [[package]]
 name = "sgx_edl"
-version = "1.1.3"
-source = "git+https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git?branch=secret#29e29a2b2bafec2caa54d3bd55416567cfc620dc"
+version = "1.1.5"
 
 [[package]]
 name = "sgx_types"
-version = "1.1.3"
-source = "git+https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git?branch=secret#29e29a2b2bafec2caa54d3bd55416567cfc620dc"
+version = "1.1.5"
 
 [[package]]
 name = "sgx_urts"
-version = "1.1.3"
-source = "git+https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git?branch=secret#29e29a2b2bafec2caa54d3bd55416567cfc620dc"
+version = "1.1.5"
 dependencies = [
  "libc",
  "sgx_types",

@@ -94,7 +94,7 @@ pub fn gen_ecc_cert(
                             writer
                                 .next()
                                 .write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-                            writer.next().write_utf8_string(&ISSUER);
+                            writer.next().write_utf8_string(ISSUER);
                         });
                     });
                 });
@@ -118,7 +118,7 @@ pub fn gen_ecc_cert(
                             writer
                                 .next()
                                 .write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-                            writer.next().write_utf8_string(&SUBJECT);
+                            writer.next().write_utf8_string(SUBJECT);
                         });
                     });
                 });
@@ -162,7 +162,7 @@ pub fn gen_ecc_cert(
             // Signature
             let sig = {
                 let tbs = &writer.buf[4..];
-                ecc_handle.ecdsa_sign_slice(tbs, &prv_k).unwrap()
+                ecc_handle.ecdsa_sign_slice(tbs, prv_k).unwrap()
             };
             let sig_der = yasna::construct_der(|writer| {
                 writer.write_sequence(|writer| {
@@ -268,7 +268,7 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
     let ias_ca_core: &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
     let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD).unwrap();
 
-    let mut ca_reader = BufReader::new(&IAS_REPORT_CA[..]);
+    let mut ca_reader = BufReader::new(IAS_REPORT_CA);
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store
@@ -350,7 +350,11 @@ pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
-    if check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
+    if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
+        error!(
+            "Platform verification error: quote status {:?}",
+            &report.sgx_quote_body.gid
+        );
         return Err(NodeAuthResult::BadQuoteStatus);
     }
 
@@ -405,8 +409,9 @@ pub fn verify_quote_status(
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-const GID_WHITELIST: [u32; 12] = [
-    0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc45, 0xc42, 0xc16, 0xc1e, 0x0c11, 0x0c33, 0xc12, 0xc13,
+const GID_WHITELIST: [u32; 21] = [
+    0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc41, 0xc55, 0xc15, 0xc13, 0xc40, 0xc4f, 0xc12, 0xc14, 0xc45,
+    0xc42, 0xc16, 0xc1e, 0xc47, 0xc4e, 0x0c11, 0x0c33, 0xc92,
 ];
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]

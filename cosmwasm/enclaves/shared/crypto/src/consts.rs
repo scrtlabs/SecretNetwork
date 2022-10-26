@@ -3,6 +3,7 @@ use std::path;
 
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 use lazy_static::lazy_static;
+use sgx_types::sgx_quote_sign_type_t;
 
 pub const CERTEXPIRYDAYS: i64 = 3652i64;
 
@@ -35,6 +36,12 @@ pub const MRSIGNER: [u8; 32] = [
 ];
 
 #[cfg(feature = "production")]
+pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_LINKABLE_SIGNATURE;
+
+#[cfg(not(feature = "production"))]
+pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+
+#[cfg(feature = "production")]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
 
 #[cfg(all(not(feature = "production"), not(feature = "test")))]
@@ -49,21 +56,21 @@ lazy_static! {
     )
     .join(NODE_ENCRYPTED_SEED_KEY_FILE)
     .to_str()
-    .unwrap_or(&DEFAULT_SGX_SECRET_PATH.to_string())
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
     pub static ref REGISTRATION_KEY_SEALING_PATH: String = path::Path::new(
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(NODE_EXCHANGE_KEY_FILE)
     .to_str()
-    .unwrap_or(&DEFAULT_SGX_SECRET_PATH.to_string())
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
     pub static ref ATTESTATION_CERT_PATH: String = path::Path::new(
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(ATTESTATION_CERTIFICATE_SAVE_PATH)
     .to_str()
-    .unwrap_or(&DEFAULT_SGX_SECRET_PATH.to_string())
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
 }
 

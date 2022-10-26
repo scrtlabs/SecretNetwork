@@ -34,7 +34,7 @@ services:
           memory: "4g"
 
   bootstrap:
-    image: ci-enigma-sgx-bootstrap
+    image: azcr.io/enigmampc/ci-node-image:latest
     container_name: bootstrap
     depends_on:
       - aesm
@@ -50,12 +50,13 @@ services:
     environment:
       - http_proxy
       - https_proxy
+      - SECRET_LOCAL_NODE_TYPE=BOOTSTRAP
     expose:
       - 26656
       - 26657
 
   node:
-    image: ci-enigma-sgx-node
+    image: azcr.io/enigmampc/ci-node-image:latest
     depends_on:
       - bootstrap
     devices:
@@ -64,12 +65,14 @@ services:
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
+      - ${PWD}/x/compute/internal/keeper/testdata/erc20.wasm:/root/erc20.wasm
       # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:
       - http_proxy
       - https_proxy
+      - SECRET_LOCAL_NODE_TYPE=node
 
   enclave-test:
     image: rust-enclave-test

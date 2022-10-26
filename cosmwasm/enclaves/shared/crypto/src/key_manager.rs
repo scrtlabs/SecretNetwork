@@ -27,10 +27,7 @@ impl Keychain {
             Err(_e) => None,
         };
 
-        let registration_key = match KeyPair::unseal(&REGISTRATION_KEY_SEALING_PATH) {
-            Ok(k) => Some(k),
-            Err(_e) => None,
-        };
+        let registration_key = Self::unseal_registration_key();
 
         let mut x = Keychain {
             consensus_seed,
@@ -44,6 +41,13 @@ impl Keychain {
         let _ = x.generate_consensus_master_keys();
 
         x
+    }
+
+    fn unseal_registration_key() -> Option<KeyPair> {
+        match KeyPair::unseal(&REGISTRATION_KEY_SEALING_PATH) {
+            Ok(k) => Some(k),
+            Err(_e) => None,
+        }
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
@@ -116,9 +120,26 @@ impl Keychain {
         })
     }
 
+    pub fn reseal_registration_key(&mut self) -> Result<(), EnclaveError> {
+        match Self::unseal_registration_key() {
+            Some(kp) => {
+                if let Err(_e) = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH) {
+                    error!("Failed to reseal registration key - error code 0xC11");
+                    return Err(EnclaveError::FailedSeal);
+                };
+                if let Err(_e) = kp.seal(&REGISTRATION_KEY_SEALING_PATH) {
+                    error!("Failed to reseal registration key - error code 0xC12");
+                    return Err(EnclaveError::FailedSeal);
+                }
+                Ok(())
+            }
+            None => Ok(()),
+        }
+    }
+
     pub fn set_registration_key(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
         if let Err(e) = kp.seal(&REGISTRATION_KEY_SEALING_PATH) {
-            error!("Error sealing registration key");
+            error!("Error sealing registration key - error code 0xC13");
             return Err(e);
         }
         self.registration_key = Some(kp);
@@ -159,7 +180,7 @@ impl Keychain {
     pub fn set_consensus_seed(&mut self, consensus_seed: Seed) -> Result<(), EnclaveError> {
         debug!("Sealing consensus seed in {}", *CONSENSUS_SEED_SEALING_PATH);
         if let Err(e) = consensus_seed.seal(&CONSENSUS_SEED_SEALING_PATH) {
-            error!("Error sealing consensus_seed");
+            error!("Error sealing consensus_seed - error code 0xC14");
             return Err(e);
         }
         self.consensus_seed = Some(consensus_seed);

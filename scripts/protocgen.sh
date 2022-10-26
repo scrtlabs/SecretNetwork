@@ -36,5 +36,5 @@ done
 #$(find "$(pwd)/third_party/proto/ibc" -maxdepth 4 -name '*.proto')
 
 # move proto files to the right places
-cp -r github.com/enigmampc/SecretNetwork/* ./
+cp -r github.com/scrtlabs/SecretNetwork/* ./
 rm -rf github.com
