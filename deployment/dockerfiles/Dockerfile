@@ -170,6 +170,7 @@ RUN chmod +x node_init.sh
 
 RUN secretd completion > /root/secretd_completion
 
+RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
 RUN echo 'source /root/secretd_completion' >> ~/.bashrc
 
 RUN mkdir -p /root/.secretd/.compute/

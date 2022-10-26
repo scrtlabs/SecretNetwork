@@ -247,6 +247,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg SECRET_NODE_TYPE=NODE \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t enigmampc/secret-network-node:v$(VERSION)-testnet \
 				 --target release-image .
@@ -282,18 +283,18 @@ build-mainnet:
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
                  --secret id=API_KEY,src=api_key.txt \
                  --secret id=SPID,src=spid.txt \
+                 --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
                  --load \
                  -f deployment/dockerfiles/Dockerfile \
-                 -t enigmampc/secret-network-node:v$(VERSION) \
+                 -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target release-image .
 	docker build --build-arg FEATURES="production, ${FEATURES}" \
 				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
-				 --cache-from enigmampc/secret-network-node:v$(VERSION) \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
