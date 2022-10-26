@@ -3,6 +3,7 @@ use std::path;
 
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 use lazy_static::lazy_static;
+use sgx_types::sgx_quote_sign_type_t;
 
 pub const CERTEXPIRYDAYS: i64 = 3652i64;
 
@@ -33,6 +34,12 @@ pub const MRSIGNER: [u8; 32] = [
     131, 215, 25, 231, 125, 234, 202, 20, 112, 246, 186, 246, 42, 77, 119, 67, 3, 200, 153, 219,
     105, 2, 15, 156, 112, 238, 29, 252, 8, 199, 206, 158,
 ];
+
+#[cfg(feature = "production")]
+pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_LINKABLE_SIGNATURE;
+
+#[cfg(not(feature = "production"))]
+pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
 #[cfg(feature = "production")]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;

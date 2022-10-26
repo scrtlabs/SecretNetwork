@@ -175,8 +175,8 @@ jobs:
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
-          LOG_LEVEL=ERROR go test -v ./x/compute/client/...
-          LOG_LEVEL=ERROR go test -p 1 -timeout 90m -v ./x/compute/internal/...
+          LOG_LEVEL=ERROR go test -v -tags "test" ./x/compute/client/...
+          LOG_LEVEL=ERROR go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-20.04
@@ -248,11 +248,6 @@ jobs:
 
   Build-LocalSecret:
     runs-on: ubuntu-20.04
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -261,41 +256,24 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Build LocalSecret Base
+      - name: Build LocalSecret
         uses: docker/build-push-action@v3
         with:
-          file: deployment/dockerfiles/base.Dockerfile
-          context: .
-          build-args: |
-            FEATURES=debug-print
-            SGX_MODE=SW
-          push: true
-          secrets: |
-            API_KEY=00000000000000000000000000000000
-            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-          tags: localhost:5000/scrt-enclave-secretd:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Build LocalSecret Release
-        uses: docker/build-push-action@v3
-        with:
-          file: deployment/dockerfiles/release.Dockerfile
-          context: .
-          push: true
-          tags: localhost:5000/release:latest
-          build-args: |
-            SECRET_NODE_TYPE=bootstrap
-            CHAIN_ID=secretdev-1
-            SCRT_BIN_IMAGE=localhost:5000/scrt-enclave-secretd:latest
-      - name: Build LocalSecret Final Dev Image
-        uses: docker/build-push-action@v3
-        with:
-          file: deployment/dockerfiles/dev-image.Dockerfile
+          file: deployment/dockerfiles/Dockerfile
           context: .
           load: true
           tags: ghcr.io/scrtlabs/localsecret:v0.0.0
+          secrets: |
+            API_KEY=00000000000000000000000000000000
+            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
           build-args: |
-            SCRT_BASE_IMAGE=localhost:5000/release:latest
+            SECRET_NODE_TYPE=BOOTSTRAP
+            CHAIN_ID=secretdev-1
+            FEATURES=debug-print
+            SGX_MODE=SW
+          target: release-image
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localsecret.tar
       - name: Upload Image
         uses: actions/upload-artifact@v3
@@ -317,7 +295,7 @@ jobs:
           load: true
           tags: hermes:v0.0.0
           build-args: |
-            SECRET_NODE_TYPE=bootstrap
+            SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
           outputs: type=docker,dest=/tmp/hermes.tar
       - name: Upload Image
@@ -352,7 +330,6 @@ jobs:
           cd integration-tests
           yarn
           docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
-          # docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml logs -f &
           yarn test
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests

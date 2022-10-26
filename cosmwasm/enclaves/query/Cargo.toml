@@ -33,7 +33,4 @@ log = "0.4.17"
 simple_logger = { version = "2.3.0", default-features = false, features = ["stderr"] }
 ctor = "0.1.13"
 
-[dev-dependencies]
-sgx_edl = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-
 lazy_static = "1.4"

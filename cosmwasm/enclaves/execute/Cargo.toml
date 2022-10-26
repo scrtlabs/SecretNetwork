@@ -82,9 +82,6 @@ rev = "95b5e79dc24b02f3ce424437eb9698509d0baf58"
 default-features = false
 features = ["dangerous_configuration", "mesalock_sgx"]
 
-[dev-dependencies]
-sgx_edl = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-
 [patch.'https://github.com/apache/teaclave-sgx-sdk.git']
 sgx_align_struct_attribute = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_align_struct_attribute" }
 sgx_alloc = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_alloc" }

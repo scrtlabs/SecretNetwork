@@ -20,7 +20,7 @@ variables:
   baseImageRepository: 'azcr.io/enigmampc/ci-base-image'
   nodeImageRepository: 'azcr.io/enigmampc/ci-node-image'
   containerRegistry: 'enigmampcdocker'
-  dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/base.Dockerfile'
+  dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/Dockerfile'
   tag: '$(Build.BuildId)'
   DOCKER_BUILDKIT: 1
 
@@ -40,7 +40,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW
+      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --target compile-secretd
       dockerfile: '$(dockerfilePath)'
 
   - script: |
@@ -57,8 +57,8 @@ steps:
       repository: '$(nodeImageRepository)'
       tags: latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/release.Dockerfile
+      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
+      Dockerfile: deployment/dockerfiles/Dockerfile
 
   - task: Docker@2
     displayName: "Build enclave tests"
@@ -67,8 +67,8 @@ steps:
       repository: rust-enclave-test
       tags: latest
       buildContext: .
-      arguments: --build-arg --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
+      Dockerfile: deployment/dockerfiles/tests/enclave-test.Dockerfile
 
   - task: Docker@2
     displayName: "Build tests image"
@@ -78,7 +78,7 @@ steps:
       tags: latest
       buildContext: .
       arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/go-tests.Dockerfile
+      Dockerfile: deployment/dockerfiles/tests/go-tests.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
     displayName: "Run system tests"
