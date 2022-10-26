@@ -267,7 +267,7 @@ jobs:
             API_KEY=00000000000000000000000000000000
             SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
           build-args: |
-            SECRET_NODE_TYPE=bootstrap
+            SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
             FEATURES=debug-print
             SGX_MODE=SW
@@ -295,7 +295,7 @@ jobs:
           load: true
           tags: hermes:v0.0.0
           build-args: |
-            SECRET_NODE_TYPE=bootstrap
+            SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
           outputs: type=docker,dest=/tmp/hermes.tar
       - name: Upload Image
