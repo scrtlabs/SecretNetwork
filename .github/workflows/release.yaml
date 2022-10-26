@@ -39,7 +39,7 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - run: |
-          echo ${{ secrets.SPID_MAINNET }} > spid.txt; echo ${{ secrets.API_KEY_MAINNET }} > api_key.txt
+          echo ${{ secrets.SPID_TESTNET }} > spid.txt; echo ${{ secrets.API_KEY_TESTNET }} > api_key.txt
         name: "Save api keys"
       - name: Build testnet
         run: |
