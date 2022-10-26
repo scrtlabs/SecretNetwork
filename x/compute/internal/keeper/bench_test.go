@@ -203,6 +203,7 @@ func TestRunBenchmarks(t *testing.T) {
 
 	contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
 	// this is here so read multiple keys works without setup
+	msg := buildBenchMessage(BenchWriteStorage)
 	_, _, _, _, _, _ = execHelper(
 		t,
 		keeper,
@@ -210,7 +211,7 @@ func TestRunBenchmarks(t *testing.T) {
 		contractAddr,
 		creator,
 		creatorPriv,
-		BenchWriteStorage,
+		string(msg),
 		false,
 		true,
 		10_000_000,
@@ -218,6 +219,7 @@ func TestRunBenchmarks(t *testing.T) {
 		false,
 	)
 	// this is here so read large keys works without setup
+	msg = buildBenchMessage(BenchWriteLargeItemToStorage)
 	_, _, _, _, _, _ = execHelper(
 		t,
 		keeper,
@@ -225,7 +227,7 @@ func TestRunBenchmarks(t *testing.T) {
 		contractAddr,
 		creator,
 		creatorPriv,
-		string(BenchWriteLargeItemToStorage),
+		string(msg),
 		false,
 		true,
 		10_000_000,
@@ -238,7 +240,7 @@ func TestRunBenchmarks(t *testing.T) {
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(100_000_000))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-	msg := buildBenchMessage(Noop)
+	msg = buildBenchMessage(Noop)
 
 	for i := uint64(1); i < 10; i++ {
 		start := time.Now()
