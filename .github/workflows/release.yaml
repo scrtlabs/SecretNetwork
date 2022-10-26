@@ -19,6 +19,7 @@ jobs:
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
+      DOCKER_BUILDKIT: 1
     steps:
       - uses: actions/checkout@v3
         with:
@@ -60,6 +61,7 @@ jobs:
       API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
+      DOCKER_BUILDKIT: 1
     steps:
       - uses: actions/checkout@v3
         with:
@@ -135,6 +137,7 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/localsecret
+      DOCKER_BUILDKIT: 1
     steps:
       - uses: actions/checkout@v3
         with:
