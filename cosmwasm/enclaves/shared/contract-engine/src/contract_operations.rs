@@ -387,7 +387,7 @@ pub fn query(
         output,
         &secret_msg,
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
-        &"".to_string(), // Not used for queries (can't call a sub-message from a query),
+        "", // Not used for queries (can't call a sub-message from a query),
         None,            // Not used for queries (Query response is not replied to the caller),
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
         true,

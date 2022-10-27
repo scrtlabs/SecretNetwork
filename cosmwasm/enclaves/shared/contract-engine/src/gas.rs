@@ -1,7 +1,7 @@
 #[cfg(feature = "wasmi-engine")]
 pub use pwasm_utils::{inject_gas_counter, rules};
 
-pub const OCALL_BASE_GAS: u64 = 2_000_000;
+//pub const OCALL_BASE_GAS: u64 = 2_000_000;
 pub const WRITE_BASE_GAS: u64 = 200_000;
 pub const READ_BASE_GAS: u64 = 100_000;
 

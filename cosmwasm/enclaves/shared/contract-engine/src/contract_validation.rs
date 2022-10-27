@@ -1,7 +1,7 @@
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;

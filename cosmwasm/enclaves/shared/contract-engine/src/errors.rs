@@ -1,4 +1,6 @@
 use derive_more::Display;
+
+#[cfg(feature = "wasmi-engine")]
 use log::*;
 
 #[cfg(feature = "wasmi-engine")]

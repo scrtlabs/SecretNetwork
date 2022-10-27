@@ -20,33 +20,24 @@ use crate::db::encrypt_key;
 use crate::cosmwasm_config::ContractOperation;
 use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, write_encrypted_key, write_multiple_keys};
+use crate::db::{remove_encrypted_key, write_multiple_keys};
 use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngineResult};
-use crate::gas::{WasmCosts, OCALL_BASE_GAS, READ_BASE_GAS, WRITE_BASE_GAS};
+use crate::gas::{WasmCosts, READ_BASE_GAS, WRITE_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 
 use gas::{get_exhausted_amount, get_remaining_gas, use_gas};
 use module_cache::create_module_instance;
 
-use std::sync::SgxRwLock;
-
 mod gas;
 pub mod module_cache;
 mod validation;
-use lazy_static::lazy_static;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
 
 use enclave_utils::kv_cache::KvCache;
-use std::collections::HashMap;
-
-lazy_static! {
-    static ref W3_MODULE_CACHE: SgxRwLock<HashMap<[u8; 32], (Vec<u8>, CosmWasmApiVersion)>> =
-        SgxRwLock::new(HashMap::new());
-}
 
 macro_rules! debug_err {
     ($message: literal) => {
@@ -448,7 +439,7 @@ impl Engine {
                     handle.call_with_context(context, args)
                 }
                 CosmWasmApiVersion::V1 => {
-                    let export_name = HandleType::get_export_name(&handle_type);
+                    let export_name = HandleType::get_export_name(handle_type);
 
                     if handle_type == &HandleType::HANDLE_TYPE_EXECUTE {
                         let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
@@ -572,7 +563,7 @@ impl Engine {
             EnclaveError::from(err)
         })?;
 
-        self.with_instance(|instance, context| {
+        self.with_instance(|instance, _context| {
             use_gas(instance, used_gas)?;
             Ok(vec![])
         })?;
@@ -839,7 +830,7 @@ fn host_read_db(
 
     debug!(
         "db_read received value {:?}",
-        value.as_ref().map(|v| show_bytes(&v))
+        value.as_ref().map(|v| show_bytes(v))
     );
 
     let value = match value {
@@ -973,7 +964,7 @@ fn host_canonicalize_address(
 
     //debug!("canonicalize_address was called with {:?}", human_addr_str);
 
-    let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+    let (decoded_prefix, data) = match bech32::decode(human_addr_str) {
         Ok(ret) => ret,
         Err(err) => {
             debug!(
@@ -1046,7 +1037,7 @@ fn host_addr_canonicalize(
 
     debug!("addr_canonicalize was called with {:?}", human_addr_str);
 
-    let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+    let (decoded_prefix, data) = match bech32::decode(human_addr_str) {
         Ok(ret) => ret,
         Err(err) => {
             debug!(

@@ -28,4 +28,4 @@ impl ContractOperation {
     }
 }
 
-pub const MAX_LOG_LENGTH: usize = 8192;
+//pub const MAX_LOG_LENGTH: usize = 8192;

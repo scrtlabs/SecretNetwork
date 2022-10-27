@@ -62,7 +62,7 @@ pub fn write_encrypted_key(
     // Get the state key from the key manager
 
     let (scrambled_field_name, ad_used_gas, db_data) =
-        encrypt_key(key, value, &context, contract_key)?;
+        encrypt_key(key, value, context, contract_key)?;
 
     // Write the new data as concat(ad, encrypted_val)
     let write_used_gas = write_db(context, &scrambled_field_name, &db_data).map_err(|err| {

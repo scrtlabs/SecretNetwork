@@ -11,12 +11,7 @@ pub struct KvCache(BTreeMap<Vec<u8>, Vec<u8>>, BTreeMap<Vec<u8>, Vec<u8>>);
 
 impl KvCache {
     pub fn new() -> Self {
-        Self {
-            // 0 is cache that we need to write at the end of the tx (new keys)
-            0: Default::default(),
-            // 1 is just used for a read cache (for reading multiple keys in a row)
-            1: Default::default(),
-        }
+        Self(Default::default(), Default::default())
     }
 
     pub fn write(&mut self, k: &[u8], v: &[u8]) -> Option<Vec<u8>> {
@@ -36,11 +31,8 @@ impl KvCache {
             Some(value.clone())
         }
         // if no hit in the writeable cache, try the readable one
-        else if let Some(value) = self.1.get(key) {
-            Some(value.clone())
-        } else {
-            // trace!("************ Cache miss ***********");
-            None
+        else {
+            self.1.get(key).cloned()
         }
     }
 
