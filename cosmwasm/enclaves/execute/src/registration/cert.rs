@@ -302,14 +302,18 @@ pub fn verify_ra_cert(
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_ra_cert(
     cert_der: &[u8],
-    override_verify: Option<SigningMethod>,
+    override_verify_type: Option<SigningMethod>,
 ) -> Result<Vec<u8>, NodeAuthResult> {
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
 
-    // 2. Verify quote status (mandatory field)
-    verify_quote_status(&report, &report.advisory_ids)?;
+    // this is a small hack - override_verify_type is only used when verifying the master certificate
+    // and in that case we don't care about checking vulns etc. Master certificate will also have
+    // a bad GID in prod, so there's no reason to verify it
+    if override_verify_type.is_none() {
+        verify_quote_status(&report, &report.advisory_ids)?;
+    }
 
-    let signing_method: SigningMethod = match override_verify {
+    let signing_method: SigningMethod = match override_verify_type {
         Some(method) => method,
         None => SIGNING_METHOD,
     };
@@ -345,11 +349,23 @@ pub fn verify_ra_cert(
     Ok(report_public_key)
 }
 
+// fn transform_u32_to_array_of_u8(x: u32) -> [u8; 4] {
+//     let b1: u8 = ((x >> 24) & 0xff) as u8;
+//     let b2: u8 = ((x >> 16) & 0xff) as u8;
+//     let b3: u8 = ((x >> 8) & 0xff) as u8;
+//     let b4: u8 = (x & 0xff) as u8;
+//     return [b1, b2, b3, b4];
+// }
+
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
+    // info!(
+    //     "Got GID: {:?}",
+    //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
+    // );
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         error!(
             "Platform verification error: quote status {:?}",
