@@ -83,7 +83,7 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 const REPORT_DATA_SIZE: usize = 32;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-pub const SPID: &str = "00CD3D1B5CA3511C543F817C036107E1";
+pub const SPID: &str = "783C75FD041E28AEA2DBCD48617577FE";
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const SPID: &str = "D0A5D0AF1E244EC7EA2175BC2E32093B";
 
