@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/hex"
+	"fmt"
 	"io"
 
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
@@ -144,6 +145,8 @@ func (ws *WasmSnapshotter) Restore(
 		}
 
 		wasmCode := payload.Payload
+
+		fmt.Println("Writing wasm file to disk")
 
 		// Store the WASM bytes using the existing API
 		// FIXME: check which codeIDs the checksum matches??
