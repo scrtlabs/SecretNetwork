@@ -23,6 +23,7 @@ pub enum ExecuteMsg {
     BenchCPU {},
     BenchReadStorage {},
     BenchWriteStorage {},
+    BenchReadStorageMultipleKeys {},
     BenchAllocate {},
     BenchReadLargeItemFromStorage {},
     BenchWriteLargeItemToStorage {},
