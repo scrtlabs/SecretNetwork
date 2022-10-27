@@ -270,7 +270,7 @@ build-testnet: _docker_base
 
 build-mainnet-upgrade: _docker_base
 	@mkdir build 2>&3 || true
-	docker build --secret API_KEY=${API_KEY} --secret SPID=${SPID} --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb-mainnet.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
