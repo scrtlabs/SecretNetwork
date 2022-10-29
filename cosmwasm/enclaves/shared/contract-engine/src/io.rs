@@ -370,6 +370,7 @@ pub fn manipulate_callback_sig_for_plaintext(
                                 user_public_key: [0; 32],
                                 msg: msg.as_slice().to_vec(),
                             };
+
                             *callback_sig = Some(create_callback_signature(
                                 contract_addr,
                                 &msg_to_sign,
@@ -526,6 +527,11 @@ pub fn encrypt_output(
                         msg: reply_as_vec,
                     };
 
+                    trace!(
+                        "Generated internal callback signature for msg {:?}",
+                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice())
+                    );
+
                     Some(Binary::from(
                         create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
                     ))
@@ -623,6 +629,11 @@ pub fn encrypt_output(
                         user_public_key: secret_msg.user_public_key,
                         msg: reply_as_vec,
                     };
+
+                    trace!(
+                        "Generated internal callback signature for msg {:?}",
+                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice())
+                    );
 
                     Some(Binary::from(
                         create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
@@ -748,6 +759,11 @@ pub fn encrypt_output(
                         user_public_key: secret_msg.user_public_key,
                         msg: reply_as_vec,
                     };
+
+                    trace!(
+                        "Generated internal callback signature for msg {:?}",
+                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice())
+                    );
 
                     Some(Binary::from(
                         create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),

@@ -618,6 +618,41 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
             Ok(resp)
         }
+        ExecuteMsg::AddAttributeStep1 {} => Ok(Response::new()
+            .add_submessage(SubMsg {
+                id: 8451,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    msg: Binary("{\"add_attribute_step2\":{}}".as_bytes().to_vec()),
+                    contract_addr: env.contract.address.into_string(),
+                    code_hash: env.contract.code_hash,
+                    funds: vec![],
+                }),
+                gas_limit: Some(10000000_u64),
+                reply_on: ReplyOn::Success,
+            })
+            .add_attribute_plaintext("attr1", "🦄")
+            .set_data(to_binary("step1")?)),
+        ExecuteMsg::AddAttributeStep2 {} => Ok(Response::new()
+            .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                msg: Binary("{\"add_attribute_step3\":{}}".as_bytes().to_vec()),
+                contract_addr: env.contract.address.into_string(),
+                code_hash: env.contract.code_hash,
+                funds: vec![],
+            }))
+            .add_attribute_plaintext("attr2", "🦄")
+            .set_data(to_binary("step2")?)),
+        ExecuteMsg::AddAttributeStep3 {} => Ok(Response::new()
+            .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                msg: Binary("{\"add_attribute_step4\":{}}".as_bytes().to_vec()),
+                contract_addr: env.contract.address.into_string(),
+                code_hash: env.contract.code_hash,
+                funds: vec![],
+            }))
+            .add_attribute_plaintext("attr3", "🦄")
+            .set_data(to_binary("step3")?)),
+        ExecuteMsg::AddAttributeStep4 {} => Ok(Response::new()
+            .add_attribute_plaintext("attr4", "🦄")
+            .set_data(to_binary("step4")?)),
         ExecuteMsg::InitV10NoReply {
             counter,
             code_id,
@@ -2067,6 +2102,9 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             }
         },
         (9000, SubMsgResult::Err(_)) => Ok(Response::default().set_data("err".as_bytes())),
+        (8451, SubMsgResult::Ok(_)) => {
+            Ok(Response::new().add_attribute_plaintext("attr_reply", "🦄"))
+        }
         //(9000, SubMsgResult::Err(_)) => Err(StdError::generic_err("err")),
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
