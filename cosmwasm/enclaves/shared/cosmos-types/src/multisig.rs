@@ -209,7 +209,7 @@ fn decode_multisig_signature_old(raw_blob: &[u8]) -> Result<Vec<Vec<u8>>, Crypto
                 if let Some(raw_signature) =
                     sig_including_len.get(len_size..current_sig_len + len_size)
                 {
-                    signatures.push((&raw_signature).to_vec());
+                    signatures.push(raw_signature.to_vec());
                     idx += 1 + len_size + current_sig_len; // prefix_byte + length_byte + len(sig)
                 } else {
                     warn!("Multisig signature malformed. decoding failed!");

@@ -19,8 +19,11 @@ jobs:
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
+      DOCKER_BUILDKIT: 1
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Declare Commit Variables
         id: vars
         shell: bash
@@ -35,9 +38,11 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - run: |
+          echo ${{ secrets.SPID_TESTNET }} > spid.txt; echo ${{ secrets.API_KEY_TESTNET }} > api_key.txt
+        name: "Save api keys"
       - name: Build testnet
         run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} make build-testnet
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
@@ -56,14 +61,17 @@ jobs:
       API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
+      DOCKER_BUILDKIT: 1
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
+      - run: |
+          echo ${{ secrets.SPID_MAINNET }} > spid.txt; echo ${{ secrets.API_KEY_MAINNET }} > api_key.txt
+        name: "Save api keys"
       - name: Build
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=production, make build-mainnet-upgrade
@@ -129,8 +137,11 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/localsecret
+      DOCKER_BUILDKIT: 1
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
@@ -140,11 +151,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create temp files
-        shell: bash
-        run: |
-          echo "random data" > api_key.txt
-          echo "lol this is ignored" > spid.txt
       - name: Build dev docker image
         shell: bash
         run: |

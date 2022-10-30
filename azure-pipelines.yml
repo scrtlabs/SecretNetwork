@@ -25,6 +25,9 @@ variables:
   DOCKER_BUILDKIT: 1
 
 steps:
+  - checkout: "self"
+    submodules: true
+    displayName: "Checkout Repository and Submodules"
   - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
     displayName: "Save api keys"
 
@@ -64,7 +67,7 @@ steps:
       repository: rust-enclave-test
       tags: latest
       buildContext: .
-      arguments: --build-arg SGX_MODE=HW
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
 
   - task: Docker@2
@@ -78,7 +81,10 @@ steps:
       Dockerfile: deployment/dockerfiles/go-tests.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
-    displayName: "Run system tests"
+    displayName: "Run system tests (go tests)"
+
+  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
+    displayName: "Run benchmarks"
 
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
     displayName: "Run integration tests"
