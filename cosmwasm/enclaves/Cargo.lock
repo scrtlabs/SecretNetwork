@@ -591,12 +591,15 @@ dependencies = [
  "log",
  "ring",
  "ripemd160",
+ "rustls",
  "secp256k1",
  "sgx_trts",
  "sgx_tstd",
  "sgx_types",
  "sha2 0.8.2",
  "sha3",
+ "webpki",
+ "webpki-roots",
  "x25519-dalek",
 ]
 

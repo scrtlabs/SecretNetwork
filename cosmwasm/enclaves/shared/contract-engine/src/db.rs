@@ -2,7 +2,6 @@ use enclave_crypto::consts::{CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES};
 use enclave_crypto::key_manager::SeedsHolder;
 use log::*;
 
-use protobuf::well_known_types::Option;
 use sgx_types::sgx_status_t;
 
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
@@ -181,7 +180,7 @@ pub fn read_from_encrypted_state(
         if let Some(ref plaintext_value) = maybe_plaintext_value {
             // Key exists with the old format, rewriting with the new format
             gas_used_write =
-                write_to_encrypted_state(plaintext_key, &plaintext_value, context, contract_key)?;
+                write_to_encrypted_state(plaintext_key, plaintext_value, context, contract_key)?;
         }
     }
 
@@ -337,43 +336,6 @@ fn write_db(context: &Ctx, key: &[u8], value: &[u8]) -> Result<u64, WasmEngineEr
     }
 }
 
-fn derive_ad_for_field_old(
-    field_name: &[u8],
-    context: &Ctx,
-) -> Result<([u8; 32], u64), WasmEngineError> {
-    let (old_value, gas_used) = read_db(context, field_name)?;
-    let ad = sha_256(
-        old_value
-            .as_ref()
-            // Extract previous_ad to calculate the new ad (first 32 bytes)
-            .map(|old_value| old_value.split_at(32).0)
-            // No data exist yet for this state_key_name, so creating a new `ad`
-            .unwrap_or(field_name),
-    );
-    Ok((ad, gas_used))
-}
-
-// #[cfg(not(feature = "query-only"))]
-fn encrypt_key_inner(
-    field_name: &[u8],
-    value: &[u8],
-    contract_key: &ContractKey,
-    ad: &[u8],
-) -> Result<Vec<u8>, WasmEngineError> {
-    let encryption_key = get_symmetrical_key_old(field_name, contract_key);
-
-    encryption_key
-        .encrypt_siv(value, Some(&[ad]))
-        .map_err(|err| {
-            warn!(
-                "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
-                String::from_utf8_lossy(value),
-                err
-            );
-            WasmEngineError::EncryptionError
-    })
-}
-
 fn decrypt_value_old(
     field_name: &[u8],
     value: &[u8],
@@ -420,11 +382,11 @@ fn encrypt_value_new(
     let encryption_key = get_symmetrical_key_new(contract_key);
 
     encryption_key
-        .encrypt_siv(&plaintext_state_value, Some(&[encrypted_state_key]))
+        .encrypt_siv(plaintext_state_value, Some(&[encrypted_state_key]))
         .map_err(|err| {
             warn!(
                 "write_db() got an error while trying to encrypt_value_new the value '{:?}', stopping wasm: {:?}",
-                String::from_utf8_lossy(&plaintext_state_value),
+                String::from_utf8_lossy(plaintext_state_value),
                 err
             );
             WasmEngineError::EncryptionError
@@ -439,7 +401,7 @@ fn decrypt_value_new(
 ) -> Result<Vec<u8>, WasmEngineError> {
     let decryption_key = get_symmetrical_key_new(contract_key);
 
-    decryption_key.decrypt_siv(&encrypted_state_value, Some(&[encrypted_state_key])).map_err(|err| {
+    decryption_key.decrypt_siv(encrypted_state_value, Some(&[encrypted_state_key])).map_err(|err| {
         warn!(
             "read_db() got an error while trying to decrypt_value_new the value {:?} for key {:?}, stopping wasm: {:?}",
             encrypted_state_value,
@@ -457,11 +419,11 @@ fn encrypt_key_new(
     let encryption_key = get_symmetrical_key_new(contract_key);
 
     encryption_key
-        .encrypt_siv(&plaintext_state_key, Some(&[]))
+        .encrypt_siv(plaintext_state_key, Some(&[]))
         .map_err(|err| {
             warn!(
                 "write_db() got an error while trying to encrypt_key_new the key '{:?}', stopping wasm: {:?}",
-                String::from_utf8_lossy(&plaintext_state_key),
+                String::from_utf8_lossy(plaintext_state_key),
                 err
             );
             WasmEngineError::EncryptionError
@@ -475,7 +437,7 @@ fn decrypt_key_new(
 ) -> Result<Vec<u8>, WasmEngineError> {
     let decryption_key = get_symmetrical_key_new(contract_key);
 
-    decryption_key.decrypt_siv(&encrypted_state_key, Some(&[])).map_err(|err| {
+    decryption_key.decrypt_siv(encrypted_state_key, Some(&[])).map_err(|err| {
         warn!(
             "read_db() got an error while trying to decrypt_key_new the key {:?}, stopping wasm: {:?}",
             encrypted_state_key,

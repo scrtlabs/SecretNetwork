@@ -3,29 +3,31 @@ use derive_more::Display;
 #[derive(Debug, Display)]
 pub enum CryptoError {
     /// The ECDH process failed.
-    DerivingKeyError,
+    DerivingKeyError = 1,
     /// A key was missing.
-    MissingKeyError,
+    MissingKeyError = 2,
     /// The symmetric decryption has failed for some reason.
-    DecryptionError,
+    DecryptionError = 3,
     /// The ciphertext provided was improper.
     /// e.g. MAC wasn't valid, missing IV etc.
-    ImproperEncryption,
+    ImproperEncryption = 4,
     /// The symmetric encryption has failed for some reason.
-    EncryptionError,
+    EncryptionError = 5,
     /// The signing process has failed for some reason.
-    SigningError,
+    SigningError = 6,
     /// The signature couldn't be parsed correctly.
-    ParsingError,
+    ParsingError = 7,
     /// The public key can't be recovered from a message & signature.
-    RecoveryError,
+    RecoveryError = 8,
     /// A key wasn't valid.
     /// e.g. PrivateKey, PublicKey, SharedSecret.
-    KeyError,
+    KeyError = 9,
     /// The random function had failed generating randomness
-    RandomError,
+    RandomError = 10,
     /// An error related to signature verification
-    VerificationError,
+    VerificationError = 11,
+    SocketCreationError = 12,
+    IPv4LookupError = 13,
 }
 
 #[derive(Debug, Display)]

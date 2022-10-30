@@ -33,7 +33,7 @@ use super::seed_exchange::decrypt_seed;
 /// `ecall_init_bootstrap`
 ///
 /// Function to handle the initialization of the bootstrap node. Generates the master private/public
-/// key (seed + pk_io/sk_io). This happens once at the initialization of a chain. Returns the master
+/// key (seed + pk_io/sk_io). This happens once at the genesis of a chain. Returns the master
 /// public key (pk_io), which is saved on-chain, and used to propagate the seed to registering nodes
 ///
 /// # Safety
@@ -77,16 +77,24 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     }
 
     let kp = key_manager.seed_exchange_key().unwrap();
-    if let Err(status) = attest_from_key(&kp, SEED_EXCH_CERTIFICATE_SAVE_PATH, api_key_slice) {
+    if let Err(status) =
+        attest_from_key(&kp.current, SEED_EXCH_CERTIFICATE_SAVE_PATH, api_key_slice)
+    {
         return status;
     }
 
     let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    if let Err(status) = attest_from_key(&kp, IO_CERTIFICATE_SAVE_PATH, api_key_slice) {
+    if let Err(status) = attest_from_key(&kp.current, IO_CERTIFICATE_SAVE_PATH, api_key_slice) {
         return status;
     }
 
-    public_key.copy_from_slice(&key_manager.seed_exchange_key().unwrap().get_pubkey());
+    public_key.copy_from_slice(
+        &key_manager
+            .seed_exchange_key()
+            .unwrap()
+            .current
+            .get_pubkey(),
+    );
     trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
         hex::encode(public_key)
@@ -213,12 +221,22 @@ pub unsafe extern "C" fn ecall_init_node(
         debug!("Failed to remove consensus seed. Didn't exist?");
     }
 
-    let seed = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {
+    let genesis_seed = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {
         Ok(result) => result,
         Err(status) => return status,
     };
 
-    if let Err(_e) = key_manager.set_consensus_seed(seed, todo!()) {
+    let new_consensus_seed = match key_manager.get_next_consensus_seed_from_service(0, genesis_seed)
+    {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Consensus seed failure: {}", e as u64);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    // TODO get current seed from seed server
+    if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
@@ -273,7 +291,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         };
 
     //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH) {
+    if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH.as_str()) {
         return status;
     }
 

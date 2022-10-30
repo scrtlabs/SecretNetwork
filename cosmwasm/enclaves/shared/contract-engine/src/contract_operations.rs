@@ -18,7 +18,7 @@ use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
 
 use super::contract_validation::{
-    generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
+    generate_contract_key, validate_contract_key, validate_msg, verify_params, ContractKey,
 };
 use super::gas::WasmCosts;
 use super::io::{
@@ -76,7 +76,7 @@ pub fn init(
 
     let canonical_sender_address = to_canonical(sender)?;
 
-    let contract_key = generate_encryption_key(
+    let contract_key = generate_contract_key(
         &canonical_sender_address,
         &block_height,
         &contract_hash,

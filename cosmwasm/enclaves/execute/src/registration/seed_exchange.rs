@@ -11,13 +11,16 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
     let shared_enc_key = KEY_MANAGER
         .seed_exchange_key()
         .unwrap()
+        .current
         .diffie_hellman(&new_node_pk);
 
     let authenticated_data: Vec<&[u8]> = vec![&new_node_pk];
 
     // encrypt the seed using the symmetric key derived in the previous stage
+    // genesis seed is passed in registration
+    // TODO get current seed from the seed server
     let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
-        KEY_MANAGER.get_consensus_seed().unwrap().as_slice() as &[u8],
+        KEY_MANAGER.get_consensus_seed().unwrap().genesis.as_slice() as &[u8],
         Some(&authenticated_data),
     ) {
         Ok(r) => {
@@ -53,14 +56,15 @@ pub fn decrypt_seed(
         })?
         .diffie_hellman(&master_pk);
 
-    let mut seed = Seed::default();
+    let mut genesis_seed = Seed::default();
 
     // Create AD of encryption
     let my_public_key = key_manager.get_registration_key().unwrap().get_pubkey();
     let authenticated_data: Vec<&[u8]> = vec![&my_public_key];
 
     // decrypt
-    seed.as_mut()
+    genesis_seed
+        .as_mut()
         .copy_from_slice(&match AESKey::new_from_slice(&shared_enc_key)
             .decrypt_siv(&encrypted_seed, Some(&authenticated_data))
         {
@@ -76,5 +80,5 @@ pub fn decrypt_seed(
             }
             Err(_e) => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
         });
-    Ok(seed)
+    Ok(genesis_seed)
 }
