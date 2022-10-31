@@ -151,12 +151,24 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build dev docker image
-        shell: bash
-        run: |
-          DOCKER_TAG=${{ steps.get_version.outputs.VERSION }} make localsecret
-      - name: Push docker image
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
+      - name: Build LocalSecret
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
+          secrets: |
+            API_KEY=00000000000000000000000000000000
+            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+          build-args: |
+            SECRET_NODE_TYPE=BOOTSTRAP
+            CHAIN_ID=secretdev-1
+            FEATURES=debug-print
+            SGX_MODE=SW
+          target: build-localsecret
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   Release:
     needs:
