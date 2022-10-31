@@ -5,6 +5,7 @@
 - Fix IBC contracts bug ([#1199](https://github.com/scrtlabs/SecretNetwork/pull/1199))
 - Fix creating accounts using ICA ([#1215](https://github.com/scrtlabs/SecretNetwork/pull/1215))
 - Fix node registration ([#1221](https://github.com/scrtlabs/SecretNetwork/pull/1221))
+- Fix nested attributes in CosmWasm v1 reply ([#1241](https://github.com/scrtlabs/SecretNetwork/pull/1241))
 - Fix state sync ([#1243](https://github.com/scrtlabs/SecretNetwork/pull/1243))
 - Fix some protobuf type names ([256d9b](https://github.com/scrtlabs/SecretNetwork/commit/256d9b2184d923d5493b6ede3c89980d3028ce8f))
 - Update cosmos-sdk from v0.45.9 to v0.45.10
