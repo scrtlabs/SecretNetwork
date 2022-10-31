@@ -277,6 +277,7 @@ build-mainnet-upgrade:
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
                  -f deployment/dockerfiles/Dockerfile \
+                 --load \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target mainnet-release .
 	docker build --build-arg FEATURES="production, ${FEATURES}" \
