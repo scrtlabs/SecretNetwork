@@ -1,9 +1,11 @@
 package keeper
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -52,14 +54,16 @@ type ExtensionSnapshotter interface {
 var _ snapshottypes.ExtensionSnapshotter = (*WasmSnapshotter)(nil)
 
 type WasmSnapshotter struct {
-	cms    storetypes.MultiStore
-	keeper *Keeper
+	cms           storetypes.MultiStore
+	keeper        *Keeper
+	wasmDirectory string
 }
 
-func NewWasmSnapshotter(cms storetypes.MultiStore, keeper *Keeper) *WasmSnapshotter {
+func NewWasmSnapshotter(cms storetypes.MultiStore, keeper *Keeper, wasmDirectory string) *WasmSnapshotter {
 	return &WasmSnapshotter{
-		cms:    cms,
-		keeper: keeper,
+		cms:           cms,
+		keeper:        keeper,
+		wasmDirectory: wasmDirectory,
 	}
 }
 
@@ -144,15 +148,17 @@ func (ws *WasmSnapshotter) Restore(
 			return item, nil
 		}
 
-		wasmCode := payload.Payload
+		wasmBytes := payload.Payload
 
-		fmt.Println("Writing wasm file to disk")
+		hash := sha256.Sum256(wasmBytes)
 
-		// Store the WASM bytes using the existing API
-		// FIXME: check which codeIDs the checksum matches??
-		_, err = ws.keeper.wasmer.Create(wasmCode)
+		wasmFileName := hex.EncodeToString(hash[:])
+
+		wasmFilePath := filepath.Join(ws.wasmDirectory, wasmFileName)
+
+		err = os.WriteFile(wasmFilePath, wasmBytes, 0o600 /* -rw-rw-r-- */)
 		if err != nil {
-			return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+			return snapshottypes.SnapshotItem{}, sdkerrors.Wrapf(err, "failed to write wasm file '%v' to disk", wasmFilePath)
 		}
 	}
 }
