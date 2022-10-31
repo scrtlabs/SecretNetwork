@@ -8,6 +8,7 @@
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
 ARG SCRT_BASE_IMAGE_SECRETD=enigmampc/rocksdb:v6.24.2-1.1.5
+ARG TEST=enigmampc/rocksdb:v6.24.2
 ARG SCRT_BASE_IMAGE_ENCLAVE=enigmampc/rocksdb:v6.24.2-1.1.5
 ARG SCRT_RELEASE_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
 
@@ -50,7 +51,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment &
 ENTRYPOINT ["/bin/bash"]
 
 # ***************** COMPILE SECRETD ************** #
-FROM $SCRT_BASE_IMAGE_SECRETD AS compile-secretd
+FROM $TEST AS compile-secretd
 
 ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
@@ -74,7 +75,7 @@ ENV VERSION=${BUILD_VERSION}
 ENV SGX_MODE=${SGX_MODE}
 ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
-ENV MITIGATION_CVE_2020_0551=LOAD
+ENV CGO_LDFLAGS=${CGO_LDFLAGS}
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm
@@ -112,8 +113,8 @@ RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets
 RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
 RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
 
-RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=LOAD VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
+RUN . /opt/sgxsdk/environment && env && CGO_LDFLAGS=${CGO_LDFLAGS} DB_BACKEND=${DB_BACKEND} VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_local_no_rust
+RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} SGX_MODE=${SGX_MODE} make build_cli
 
 # ******************* RELEASE IMAGE ******************** #
 FROM $SCRT_RELEASE_BASE_IMAGE as release-image
@@ -198,6 +199,9 @@ ENTRYPOINT ["/bin/bash", "startup.sh"]
 # ***************** MAINNET UPGRADE ************** #
 
 FROM release-image as mainnet-release
+
+ARG BUILD_VERSION="v0.0.0"
+ENV VERSION=${BUILD_VERSION}
 
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
     && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so

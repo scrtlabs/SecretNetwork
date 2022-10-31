@@ -228,7 +228,7 @@ clean:
 	$(MAKE) -C cosmwasm/enclaves/test clean
 
 localsecret:
-	docker build \
+	DOCKER_BUILDKIT=1 docker build \
 			--build-arg FEATURES="${FEATURES},debug-print" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \
@@ -251,7 +251,9 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t enigmampc/secret-network-node:v$(VERSION)-testnet \
 				 --target release-image .
@@ -260,6 +262,8 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --cache-from enigmampc/secret-network-node:v$(VERSION)-testnet \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
@@ -268,17 +272,31 @@ build-testnet:
 
 build-mainnet-upgrade:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES=production \
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
+                 --build-arg FEATURES_U=${FEATURES_U} \
+                 --build-arg BUILDKIT_INLINE_CACHE=1 \
+                 --secret id=API_KEY,src=api_key.txt \
+                 --secret id=SPID,src=spid.txt \
+                 --build-arg SECRET_NODE_TYPE=NODE \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
+                 --build-arg BUILD_VERSION=${VERSION} \
+                 --build-arg SGX_MODE=HW \
+                 -f deployment/dockerfiles/Dockerfile \
+                 --load \
+                 -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
+                 --target mainnet-release .
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
+				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
 				 --target build-deb-mainnet .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
-	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
 build-mainnet:
 	@mkdir build 2>&3 || true
@@ -290,6 +308,7 @@ build-mainnet:
                  --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
                  --load \
                  -f deployment/dockerfiles/Dockerfile \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
@@ -300,6 +319,7 @@ build-mainnet:
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
