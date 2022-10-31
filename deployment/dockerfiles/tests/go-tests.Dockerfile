@@ -33,8 +33,10 @@ COPY api_key.txt ias_keys/sw_dummy/api_key.txt
 COPY api_key.txt ias_keys/production/api_key.txt
 
 COPY deployment/ci/go-tests.sh .
+COPY deployment/ci/go-tests-bench.sh .
 
 RUN chmod +x go-tests.sh
+RUN chmod +x go-tests-bench.sh
 
 COPY --from=azcr.io/enigmampc/ci-base-image:latest /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
 COPY --from=azcr.io/enigmampc/ci-base-image:latest /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so

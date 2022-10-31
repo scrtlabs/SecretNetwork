@@ -4,6 +4,9 @@ COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
+SPID ?= 00000000000000000000000000000000
+API_KEY ?= FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release

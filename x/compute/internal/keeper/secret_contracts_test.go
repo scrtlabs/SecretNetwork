@@ -6401,6 +6401,45 @@ func TestAddrValidateFunction(t *testing.T) {
 	require.Equal(t, string(data), "\"Apple\"")
 }
 
+func TestNestedAttribute(t *testing.T) {
+	// For more reference: https://github.com/scrtlabs/SecretNetwork/issues/1235
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, data, events, _, err := execHelper(t, keeper, ctx, v1ContractAddress, walletA, privKeyA, `{"add_attribute_step1":{}}`, true, true, 10*defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: v1ContractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: v1ContractAddress.String()},
+				{Key: "attr2", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: v1ContractAddress.String()},
+				{Key: "attr3", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: v1ContractAddress.String()},
+				{Key: "attr4", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: v1ContractAddress.String()},
+				{Key: "attr_reply", Value: "🦄"},
+			},
+		},
+		events,
+	)
+
+	require.Equal(t, string(data), "\"reply\"")
+}
+
 func TestEnv(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
