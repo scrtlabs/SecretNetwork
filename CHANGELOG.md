@@ -1,5 +1,22 @@
 # CHANGELOG
 
+# 1.5.0
+
+- Fix IBC contracts bug ([#1199](https://github.com/scrtlabs/SecretNetwork/pull/1199))
+- Fix creating accounts using ICA ([#1215](https://github.com/scrtlabs/SecretNetwork/pull/1215))
+- Fix node registration ([#1221](https://github.com/scrtlabs/SecretNetwork/pull/1221))
+- Fix state sync ([#1243](https://github.com/scrtlabs/SecretNetwork/pull/1243))
+- Fix some protobuf type names ([256d9b](https://github.com/scrtlabs/SecretNetwork/commit/256d9b2184d923d5493b6ede3c89980d3028ce8f))
+- Update cosmos-sdk from v0.45.9 to v0.45.10
+- Update Tendermint from v0.34.21 to v0.34.22
+- Update ibc-go from v3.3.0 to v3.3.1
+
+# 1.4.1
+
+- Patch againt the IBC Dragonberry vulnerability
+- Update cosmos-sdk from v0.45.5 to v0.45.9
+- Update Tendermint from v0.34.19 to v0.34.21
+
 # 1.4.0
 
 - CosmWasm v1
@@ -9,7 +26,7 @@
 - Support MetaMask pretty signing
 - Ledger support for x/authz & x/feegrant
 - Revert Chain of Secrets tombstone state and restore slashed funds
-- Updated ibc-go from v3.0.0 to v3.3.0
+- Update ibc-go from v3.0.0 to v3.3.0
 
 # 1.3.1
 
@@ -17,19 +34,19 @@
 - Mainnet docker image with automatic node registration & state sync ([docs](https://docs.scrt.network/node-guides/full-node-docker.html)).
 - Mempool optimizations (Thanks @ValarDragon!). For more info see [this](https://github.com/scrtlabs/cosmos-sdk/pull/141#issuecomment-1136767411).
 - Fix missing `libsnappy1v5` dependency for rocksdb deb package.
-- Updated `${LCD_URL}/swagger/` for v1.3 and added `${LCD_URL}/openapi/`.
+- Update `${LCD_URL}/swagger/` for v1.3 and add `${LCD_URL}/openapi/`.
 
 # 1.3.0
 
 - Bug fix when calculating gas prices caused by queries. This is will increase gas prices for contracts that use external queries, and will more accurately reflect resources used
-- Updated cosmos-sdk from v0.44.5 to v0.45.4
+- Update cosmos-sdk from v0.44.5 to v0.45.4
   - Add the `secretd rollback` command
   - Add the `~/.secretd/.compute` directory to state sync
   - Full changelog: [`cosmos-sdk/v0.44.5...v0.45.4`](https://github.com/cosmos/cosmos-sdk/compare/v0.44.5...v0.45.4)
-- Updated tendermint from v0.34.16 to v0.34.19
+- Update tendermint from v0.34.16 to v0.34.19
 - Fix registration failure for Intel Xeon 23xx-series processors (icelake still unsupported)
 - Floating point checks no longer ran on execute (only on init)
-- Upgraded ibc-go from v1.1.5 to v3
+- Update ibc-go from v1.1.5 to v3.0.0
   - Added support for ICS27 - default host messages include voting, delegate/undelegate and voting
   - Full changelog: [`ibc-go/v1.1.5...v1.3.0`](https://github.com/cosmos/ibc-go/compare/v1.1.5...v1.3.0)
 - Backport API from CosmWasm v1:
