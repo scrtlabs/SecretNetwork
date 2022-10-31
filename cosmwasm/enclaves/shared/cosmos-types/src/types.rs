@@ -23,7 +23,7 @@ use cw_types_v010::{
 use crate::traits::CosmosAminoPubkey;
 
 pub fn calc_contract_hash(contract_bytes: &[u8]) -> [u8; HASH_SIZE] {
-    sha_256(&contract_bytes)
+    sha_256(contract_bytes)
 }
 
 pub struct ContractCode<'code> {
@@ -250,7 +250,9 @@ impl SignDoc {
 pub struct TxBody {
     pub messages: Vec<CosmWasmMsg>,
     // Leaving this here for discoverability. We can use this, but don't verify it today.
+    #[allow(dead_code)]
     memo: (),
+    #[allow(dead_code)]
     timeout_height: (),
 }
 
@@ -497,12 +499,13 @@ impl CosmWasmMsg {
 pub struct AuthInfo {
     pub signer_infos: Vec<SignerInfo>,
     // Leaving this here for discoverability. We can use this, but don't verify it today.
+    #[allow(dead_code)]
     fee: (),
 }
 
 impl AuthInfo {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
-        let raw_auth_info = proto::tx::tx::AuthInfo::parse_from_bytes(&bytes).map_err(|err| {
+        let raw_auth_info = proto::tx::tx::AuthInfo::parse_from_bytes(bytes).map_err(|err| {
             warn!("Could not parse AuthInfo from protobuf bytes: {:?}", err);
             EnclaveError::FailedToDeserialize
         })?;

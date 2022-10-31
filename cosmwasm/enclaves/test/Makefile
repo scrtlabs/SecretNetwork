@@ -1,5 +1,5 @@
 SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
-CUSTOM_EDL_PATH := ../../../third_party/vendor/sgx_edl/edl
+CUSTOM_EDL_PATH := ../../../third_party/incubator-teaclave-sgx-sdk/edl/
 
 SGX_COMMON_CFLAGS += -fstack-protector
 App_Include_Paths := -I./ -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
