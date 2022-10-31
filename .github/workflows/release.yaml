@@ -139,6 +139,8 @@ jobs:
       IMAGE_NAME: scrtlabs/localsecret
       DOCKER_BUILDKIT: 1
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -167,8 +169,6 @@ jobs:
             FEATURES=debug-print
             SGX_MODE=SW
           target: build-localsecret
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   Release:
     needs:
