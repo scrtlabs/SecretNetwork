@@ -251,6 +251,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t enigmampc/secret-network-node:v$(VERSION)-testnet \
@@ -260,6 +261,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --cache-from enigmampc/secret-network-node:v$(VERSION)-testnet \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
@@ -274,6 +276,7 @@ build-mainnet-upgrade:
                  --secret id=API_KEY,src=api_key.txt \
                  --secret id=SPID,src=spid.txt \
                  --build-arg SECRET_NODE_TYPE=NODE \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
                  -f deployment/dockerfiles/Dockerfile \
@@ -285,6 +288,7 @@ build-mainnet-upgrade:
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
@@ -302,6 +306,7 @@ build-mainnet:
                  --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
                  --load \
                  -f deployment/dockerfiles/Dockerfile \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
@@ -312,6 +317,7 @@ build-mainnet:
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
