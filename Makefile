@@ -228,7 +228,7 @@ clean:
 	$(MAKE) -C cosmwasm/enclaves/test clean
 
 localsecret:
-	docker build \
+	DOCKER_BUILDKIT=1 docker build \
 			--build-arg FEATURES="${FEATURES},debug-print" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \

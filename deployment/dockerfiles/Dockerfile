@@ -199,6 +199,9 @@ ENTRYPOINT ["/bin/bash", "startup.sh"]
 
 FROM release-image as mainnet-release
 
+ARG BUILD_VERSION="v0.0.0"
+ENV VERSION=${BUILD_VERSION}
+
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
     && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
 
