@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
@@ -379,7 +380,7 @@ func NewSecretNetworkApp(
 
 	if manager := app.BaseApp.SnapshotManager(); manager != nil {
 		err := manager.RegisterExtensions(
-			compute.NewWasmSnapshotter(app.BaseApp.CommitMultiStore(), app.AppKeepers.ComputeKeeper),
+			compute.NewWasmSnapshotter(app.BaseApp.CommitMultiStore(), app.AppKeepers.ComputeKeeper, path.Join(homePath, ".compute", "wasm", "wasm")),
 		)
 		if err != nil {
 			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
