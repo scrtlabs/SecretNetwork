@@ -278,8 +278,9 @@ build-mainnet-upgrade:
                  --build-arg SGX_MODE=HW \
                  -f deployment/dockerfiles/Dockerfile \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
-                 --target release-image .
-	docker build --build-arg FEATURES=production \
+                 --target mainnet-release .
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
+				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
@@ -289,7 +290,6 @@ build-mainnet-upgrade:
 				 -t deb_build \
 				 --target build-deb-mainnet .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
-	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
 build-mainnet:
 	@mkdir build 2>&3 || true
