@@ -370,6 +370,7 @@ pub fn manipulate_callback_sig_for_plaintext(
                                 user_public_key: [0; 32],
                                 msg: msg.as_slice().to_vec(),
                             };
+
                             *callback_sig = Some(create_callback_signature(
                                 contract_addr,
                                 &msg_to_sign,
@@ -526,9 +527,17 @@ pub fn encrypt_output(
                         msg: reply_as_vec,
                     };
 
-                    Some(Binary::from(
+                    let sig = Binary::from(
                         create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
-                    ))
+                    );
+
+                    trace!(
+                        "Generated internal callback signature for msg {:?} signatire is: {:?}",
+                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
+                        sig
+                    );
+
+                    Some(sig)
                 }
                 None => None, // Not a reply, we don't need enclave sig
             }
@@ -589,22 +598,22 @@ pub fn encrypt_output(
 
             *internal_reply_enclave_sig = match reply_params {
                 Some(_) => {
-                    let events = match ok.log.len() {
-                        0 => vec![],
-                        _ => {
-                            let mut logs = ok.log.clone();
-                            logs.sort_by(|a, b| a.key.cmp(&b.key));
-                            vec![Event {
-                                ty: "wasm".to_string(),
-                                attributes: logs,
-                            }]
-                        }
-                    };
+                    // let events = match ok.log.len() {
+                    //     0 => vec![],
+                    //     _ => {
+                    //         let mut logs = ok.log.clone();
+                    //         logs.sort_by(|a, b| a.key.cmp(&b.key));
+                    //         vec![Event {
+                    //             ty: "wasm".to_string(),
+                    //             attributes: logs,
+                    //         }]
+                    //     }
+                    // };
 
                     let reply = Reply {
                         id: msg_id.unwrap(),
                         result: SubMsgResult::Ok(SubMsgResponse {
-                            events,
+                            events: vec![],
                             data: ok.data.clone(),
                         }),
                         was_orig_msg_encrypted: true,
@@ -624,9 +633,17 @@ pub fn encrypt_output(
                         msg: reply_as_vec,
                     };
 
-                    Some(Binary::from(
+                    let sig = Binary::from(
                         create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
-                    ))
+                    );
+
+                    trace!(
+                        "Generated internal callback signature for msg {:?} signatire is: {:?}",
+                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
+                        sig
+                    );
+
+                    Some(sig)
                 }
                 None => None, // Not a reply, we don't need enclave sig
             }
@@ -706,24 +723,24 @@ pub fn encrypt_output(
 
             *internal_reply_enclave_sig = match reply_params {
                 Some(_) => {
-                    let mut events: Vec<Event> = vec![];
+                    let events: Vec<Event> = vec![];
 
-                    if !ok.attributes.is_empty() {
-                        events.push(Event {
-                            ty: "wasm".to_string(),
-                            attributes: ok.attributes.clone(),
-                        })
-                    }
+                    // if !ok.attributes.is_empty() {
+                    //     events.push(Event {
+                    //         ty: "wasm".to_string(),
+                    //         attributes: ok.attributes.clone(),
+                    //     })
+                    // }
 
-                    events.extend_from_slice(ok.events.clone().as_slice());
-                    let custom_contract_event_prefix: String = "wasm-".to_string();
-                    for event in events.iter_mut() {
-                        if event.ty != "wasm" {
-                            event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
-                        }
+                    // events.extend_from_slice(ok.events.clone().as_slice());
+                    // let custom_contract_event_prefix: String = "wasm-".to_string();
+                    // for event in events.iter_mut() {
+                    //     if event.ty != "wasm" {
+                    //         event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
+                    //     }
 
-                        event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
-                    }
+                    //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
+                    // }
 
                     let reply = Reply {
                         id: msg_id.unwrap(),
@@ -749,9 +766,17 @@ pub fn encrypt_output(
                         msg: reply_as_vec,
                     };
 
-                    Some(Binary::from(
+                    let sig = Binary::from(
                         create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
-                    ))
+                    );
+
+                    trace!(
+                        "Generated internal callback signature for msg {:?} signatire is: {:?}",
+                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
+                        sig
+                    );
+
+                    Some(sig)
                 }
                 None => None, // Not a reply, we don't need enclave sig
             }

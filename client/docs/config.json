@@ -40,6 +40,17 @@
       }
     },
     {
+      "url": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonUpgradedConsensusState"
+        }
+      }
+    },
+    {
       "url": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.json",
       "operationIds": {
         "rename": {
