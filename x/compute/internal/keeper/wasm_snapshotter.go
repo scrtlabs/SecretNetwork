@@ -150,10 +150,8 @@ func (ws *WasmSnapshotter) Restore(
 
 		wasmBytes := payload.Payload
 
-		hash := sha256.Sum256(wasmBytes)
-
-		wasmFileName := hex.EncodeToString(hash[:])
-
+		codeHash := sha256.Sum256(wasmBytes)
+		wasmFileName := hex.EncodeToString(codeHash[:])
 		wasmFilePath := filepath.Join(ws.wasmDirectory, wasmFileName)
 
 		err = os.WriteFile(wasmFilePath, wasmBytes, 0o600 /* -rw-rw-r-- */)
