@@ -30,7 +30,7 @@ pub struct DecryptedSecretMessage {
 pub fn redact_custom_events(reply: &mut Reply) {
     reply.result = match &reply.result {
         SubMsgResult::Ok(r) => {
-            let mut events: Vec<Event> = Default::default();
+            let events: Vec<Event> = Default::default();
 
             // let filtered_attributes = vec!["contract_address".to_string(), "code_id".to_string()];
             // for ev in r.events.iter() {

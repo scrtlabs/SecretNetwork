@@ -723,7 +723,7 @@ pub fn encrypt_output(
 
             *internal_reply_enclave_sig = match reply_params {
                 Some(_) => {
-                    let mut events: Vec<Event> = vec![];
+                    let events: Vec<Event> = vec![];
 
                     // if !ok.attributes.is_empty() {
                     //     events.push(Event {
