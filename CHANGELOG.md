@@ -12,7 +12,7 @@
 - Update Tendermint from v0.34.21 to v0.34.22
 - Update ibc-go from v3.3.0 to v3.3.1
 
-# 1.4.1
+# 1.4.1-patch.3
 
 - Patch againt the IBC Dragonberry vulnerability
 - Update cosmos-sdk from v0.45.5 to v0.45.9
