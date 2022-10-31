@@ -154,7 +154,7 @@ func (ws *WasmSnapshotter) Restore(
 		wasmFileName := hex.EncodeToString(codeHash[:])
 		wasmFilePath := filepath.Join(ws.wasmDirectory, wasmFileName)
 
-		err = os.WriteFile(wasmFilePath, wasmBytes, 0o600 /* -rw-rw-r-- */)
+		err = os.WriteFile(wasmFilePath, wasmBytes, 0o600 /* -rw------- */)
 		if err != nil {
 			return snapshottypes.SnapshotItem{}, sdkerrors.Wrapf(err, "failed to write wasm file '%v' to disk", wasmFilePath)
 		}
