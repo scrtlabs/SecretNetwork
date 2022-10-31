@@ -236,12 +236,13 @@ localsecret:
 			--build-arg SGX_MODE=SW \
  			--build-arg SECRET_NODE_TYPE=BOOTSTRAP \
  			--build-arg CHAIN_ID=secretdev-1 \
+ 			--load \
  			-f deployment/dockerfiles/Dockerfile \
- 			--target release-image \
+ 			--target build-localsecret \
  			-t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
 build-ibc-hermes:
-	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc
+	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc --load
 
 build-testnet:
 	@mkdir build 2>&3 || true
