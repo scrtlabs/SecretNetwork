@@ -2102,9 +2102,9 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             }
         },
         (9000, SubMsgResult::Err(_)) => Ok(Response::default().set_data("err".as_bytes())),
-        (8451, SubMsgResult::Ok(_)) => {
-            Ok(Response::new().add_attribute_plaintext("attr_reply", "🦄"))
-        }
+        (8451, SubMsgResult::Ok(_)) => Ok(Response::new()
+            .add_attribute_plaintext("attr_reply", "🦄")
+            .set_data(to_binary("reply")?)),
         //(9000, SubMsgResult::Err(_)) => Err(StdError::generic_err("err")),
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }

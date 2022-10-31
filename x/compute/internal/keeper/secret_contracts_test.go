@@ -6425,11 +6425,19 @@ func TestNestedAttribute(t *testing.T) {
 				{Key: "contract_address", Value: v1ContractAddress.String()},
 				{Key: "attr3", Value: "🦄"},
 			},
+			{
+				{Key: "contract_address", Value: v1ContractAddress.String()},
+				{Key: "attr4", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: v1ContractAddress.String()},
+				{Key: "attr_reply", Value: "🦄"},
+			},
 		},
 		events,
 	)
 
-	require.Equal(t, string(data), "\"step1\"")
+	require.Equal(t, string(data), "\"reply\"")
 }
 
 func TestEnv(t *testing.T) {

@@ -32,27 +32,27 @@ pub fn redact_custom_events(reply: &mut Reply) {
         SubMsgResult::Ok(r) => {
             let mut events: Vec<Event> = Default::default();
 
-            let filtered_attributes = vec!["contract_address".to_string(), "code_id".to_string()];
-            for ev in r.events.iter() {
-                if !ev.ty.starts_with("wasm") {
-                    continue;
-                }
+            // let filtered_attributes = vec!["contract_address".to_string(), "code_id".to_string()];
+            // for ev in r.events.iter() {
+            //     if !ev.ty.starts_with("wasm") {
+            //         continue;
+            //     }
 
-                let mut new_ev = Event {
-                    ty: ev.ty.clone(),
-                    attributes: vec![],
-                };
+            //     let mut new_ev = Event {
+            //         ty: ev.ty.clone(),
+            //         attributes: vec![],
+            //     };
 
-                for attr in &ev.attributes {
-                    if !filtered_attributes.contains(&attr.key) {
-                        new_ev.attributes.push(attr.clone());
-                    }
-                }
+            //     for attr in &ev.attributes {
+            //         if !filtered_attributes.contains(&attr.key) {
+            //             new_ev.attributes.push(attr.clone());
+            //         }
+            //     }
 
-                if !new_ev.attributes.is_empty() {
-                    events.push(new_ev);
-                }
-            }
+            //     if !new_ev.attributes.is_empty() {
+            //         events.push(new_ev);
+            //     }
+            // }
 
             SubMsgResult::Ok(SubMsgResponse {
                 events,
