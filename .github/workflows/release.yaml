@@ -38,7 +38,7 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Sets env vars for rocksdb
-        if: ${{ matrix.db_backend == 'db_backend' }}
+        if: ${{ matrix.db_backend == 'rocksdb' }}
         run: |
           echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
 
