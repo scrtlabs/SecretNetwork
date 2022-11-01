@@ -19,7 +19,6 @@ jobs:
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
-      DOCKER_BUILDKIT: 1
     steps:
       - uses: actions/checkout@v3
         with:
@@ -61,22 +60,50 @@ jobs:
       API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
-      DOCKER_BUILDKIT: 1
     steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - run: |
-          echo ${{ secrets.SPID_MAINNET }} > spid.txt; echo ${{ secrets.API_KEY_MAINNET }} > api_key.txt
-        name: "Save api keys"
+      - name: Build and Push Node Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          push: true
+          tags: ghcr.io/scrtlabs/secret-network-node:v${{ steps.get_version.outputs.VERSION }}
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_MAINNET }}
+            SPID=${{ secrets.SPID_MAINNET }}
+          build-args: |
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${DB_BACKEND}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: mainnet-release
+      - name: Build Release .deb Package
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          load: true
+          tags: build-deb-mainnet
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_MAINNET }}
+            SPID=${{ secrets.SPID_MAINNET }}
+          build-args: |
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${{ matrix.db_backend }}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: deb_build
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Build
         run: |
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=production, make build-mainnet-upgrade
+          docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
         with:

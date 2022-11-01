@@ -253,6 +253,7 @@ build-testnet:
 				 --build-arg SGX_MODE=HW \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t enigmampc/secret-network-node:v$(VERSION)-testnet \
 				 --target release-image .
@@ -261,6 +262,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --cache-from enigmampc/secret-network-node:v$(VERSION)-testnet \
 				 -f deployment/dockerfiles/Dockerfile \
