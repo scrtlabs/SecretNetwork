@@ -43,7 +43,7 @@ jobs:
           file: deployment/dockerfiles/Dockerfile
           context: .
           load: true
-          tags: build-deb
+          tags: deb_build
           secrets: |
             API_KEY=${{ secrets.API_KEY_TESTNET }}
             SPID=${{ secrets.SPID_TESTNET }}
@@ -52,7 +52,7 @@ jobs:
             DB_BACKEND=${{ matrix.db_backend }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
-          target: deb_build
+          target: build-deb
       - name: Run .deb Package Image
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $(CUR_DIR)/build:/build deb_build
@@ -110,7 +110,7 @@ jobs:
           file: deployment/dockerfiles/Dockerfile
           context: .
           load: true
-          tags: build-deb-mainnet
+          tags: deb_build
           secrets: |
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
@@ -119,7 +119,7 @@ jobs:
             DB_BACKEND=${{ matrix.db_backend }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
-          target: deb_build
+          target: build-deb-mainnet
       - name: Run .deb Package Image
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $(CUR_DIR)/build:/build deb_build
