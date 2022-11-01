@@ -105,6 +105,8 @@ jobs:
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
+            FEATURES=production
+            FEATURES_U=production
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
@@ -126,6 +128,8 @@ jobs:
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
+            FEATURES=production
+            FEATURES_U=production
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
             CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
