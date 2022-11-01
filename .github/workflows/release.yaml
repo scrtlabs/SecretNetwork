@@ -37,12 +37,25 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - run: |
-          echo ${{ secrets.SPID_TESTNET }} > spid.txt; echo ${{ secrets.API_KEY_TESTNET }} > api_key.txt
-        name: "Save api keys"
-      - name: Build testnet
+      - name: Build .deb Package Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          load: true
+          tags: build-deb
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_TESTNET }}
+            SPID=${{ secrets.SPID_TESTNET }}
+          build-args: |
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${{ matrix.db_backend }}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: deb_build
+      - name: Run .deb Package Image
         run: |
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} make build-testnet
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $(CUR_DIR)/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
         with:
@@ -67,23 +80,31 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - name: Log in to the Container registry
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and Push Node Image
+        if: ${{ matrix.db_backend == 'goleveldb' }}
         uses: docker/build-push-action@v3
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
           push: true
-          tags: ghcr.io/scrtlabs/secret-network-node:v${{ steps.get_version.outputs.VERSION }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.get_version.outputs.VERSION }}
           secrets: |
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
             SECRET_NODE_TYPE=NODE
-            DB_BACKEND=${DB_BACKEND}
+            DB_BACKEND=${{ matrix.db_backend }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
           target: mainnet-release
-      - name: Build Release .deb Package
+      - name: Build .deb Package Image
         uses: docker/build-push-action@v3
         with:
           file: deployment/dockerfiles/Dockerfile
@@ -99,26 +120,14 @@ jobs:
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
           target: deb_build
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Build
+      - name: Run .deb Package Image
         run: |
-          docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $(CUR_DIR)/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
-      - name: Log in to the Container registry
-        if: ${{ matrix.db_backend == 'goleveldb' }}
-        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push docker image
-        if: ${{ matrix.db_backend == 'goleveldb' }}
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
 
   native-build-cli:
     runs-on: ${{matrix.os}}
