@@ -205,6 +205,8 @@ ENV VERSION=${BUILD_VERSION}
 
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
     && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
+RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+    && wget -O /usr/lib/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/libgo_cosmwasm.so
 
 COPY deployment/docker/node/mainnet_node.sh .
 RUN chmod +x mainnet_node.sh
