@@ -37,6 +37,11 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - name: Sets env vars for rocksdb
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        run: |
+          echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
+
       - name: Build .deb Package Image
         uses: docker/build-push-action@v3
         with:
@@ -50,12 +55,13 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
+            CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
           target: build-deb
       - name: Run .deb Package Image
         run: |
-          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $(CUR_DIR)/build:/build deb_build
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
         with:
@@ -104,6 +110,11 @@ jobs:
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
           target: mainnet-release
+      - name: Sets env vars for rocksdb
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        run: |
+          echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
+
       - name: Build .deb Package Image
         uses: docker/build-push-action@v3
         with:
@@ -117,12 +128,13 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
+            CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
           target: build-deb-mainnet
       - name: Run .deb Package Image
         run: |
-          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $(CUR_DIR)/build:/build deb_build
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - uses: actions/upload-artifact@v3
         with:
