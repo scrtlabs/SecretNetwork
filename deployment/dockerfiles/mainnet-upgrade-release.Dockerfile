@@ -41,7 +41,9 @@ WORKDIR /root
 
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
     && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
-#    &&  wget -O /usr/lib/librust_cosmwasm_query_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_query_enclave.signed.so
+
+RUN MRSIGNER=$(sgx_sign dump -enclave /usr/lib/librust_cosmwasm_enclave.signed.so -dumpfile /dev/stdout 2>/dev/null | grep -A 2 'mrsigner->value' | grep -v 'mrsigner->value' | perl -pe 's/0x| |\n//g') \
+    && test "845cf34814f45595c720f81f74794d785931484f4405d6e5036ef88713ff3fa6" = "$MRSIGNER"
 
 # Copy over binaries from the build-env
 
