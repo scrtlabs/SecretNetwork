@@ -250,7 +250,6 @@ CMD ["/bin/bash", "build_deb.sh"]
 FROM build-deb as build-deb-mainnet
 
 COPY --from=mainnet-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
-COPY --from=mainnet-release /usr/lib/libgo_cosmwasm.so ./go-cosmwasm/api/
 
 CMD ["/bin/bash", "build_deb.sh"]
 
