@@ -22,7 +22,8 @@ test = ["enclave_contract_engine/test", "enclave_crypto/test", "enclave_cosmos_t
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
-    "backtrace"
+    "backtrace",
+    "untrusted_time"
 ] }
 sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 

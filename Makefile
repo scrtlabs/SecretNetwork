@@ -358,6 +358,10 @@ callback-sanity-test:
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
+build-bench-contract:
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/bench-contract
+	cp $(TEST_CONTRACT_V1_PATH)/bench-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+
 build-test-contract:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update

@@ -1,4 +1,5 @@
 #![feature(stmt_expr_attributes)]
+#![feature(vec_into_raw_parts)]
 
 // Trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
 #[cfg(not(target_env = "sgx"))]
@@ -9,17 +10,19 @@ extern crate sgx_types;
 
 mod contract_operations;
 mod contract_validation;
+mod cosmwasm_config;
 mod db;
 mod errors;
 pub mod external;
 mod gas;
 mod io;
-mod memory;
 mod message;
-pub(crate) mod module_cache;
 mod query_chain;
 pub(crate) mod types;
+#[cfg(feature = "wasmi-engine")]
 mod wasm;
+#[cfg(feature = "wasm3")]
+mod wasm3;
 
 pub use contract_operations::{handle, init, query};
 

@@ -8,8 +8,10 @@ use cw_types_v010::types::CanonicalAddr;
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
-use enclave_utils::coalesce;
 use log::*;
+// use std::time::Instant;
+
+use crate::cosmwasm_config::ContractOperation;
 
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
@@ -23,9 +25,9 @@ use super::io::{
     encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
     set_all_logs_to_plaintext,
 };
-use super::module_cache::create_module_instance;
+//use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
-use super::wasm::{ContractInstance, ContractOperation, Engine};
+// use super::wasm::{ContractInstance, Engine};
 
 /*
 Each contract is compiled with these functions already implemented in wasm:
@@ -53,13 +55,22 @@ pub fn init(
 ) -> Result<InitSuccess, EnclaveError> {
     trace!("Starting init");
 
+    //let start = Instant::now();
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
 
+    //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in extract_base_env is: {:?}", duration);
     let query_depth = extract_query_depth(env)?;
 
+    //let start = Instant::now();
     let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in get_verification_paramsis: {:?}", duration);
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
@@ -76,6 +87,7 @@ pub fn init(
 
     let secret_msg = SecretMessage::from_slice(msg)?;
 
+    //let start = Instant::now();
     verify_params(
         &parsed_sig_info,
         sent_funds,
@@ -83,60 +95,69 @@ pub fn init(
         contract_address,
         &secret_msg,
     )?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in verify_params: {:?}", duration);
 
+    //let start = Instant::now();
     let decrypted_msg = secret_msg.decrypt()?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in decrypt: {:?}", duration);
 
+    //let start = Instant::now();
     let ValidatedMessage {
         validated_msg,
         reply_params,
     } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in validate_msg: {:?}", duration);
 
+    //let start = Instant::now();
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Init,
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in start_engine: {:?}", duration);
 
-    let mut versioned_env =
-        base_env.into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
+    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
-    let (env_bytes, msg_info_bytes) = versioned_env.get_wasm_ptrs()?;
-
-    let env_ptr = engine.write_to_memory(&env_bytes)?;
-    let msg_info_ptr = engine.write_to_memory(&msg_info_bytes)?;
-    let msg_ptr = engine.write_to_memory(&validated_msg)?;
-
-    // This wrapper is used to coalesce all errors in this block to one object
-    // so we can `.map_err()` in one place for all of them
-    let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.init(env_ptr, msg_info_ptr, msg_ptr)?;
-        let output = engine.extract_vector(vec_ptr)?;
-        let output = encrypt_output(
-            output,
-            &secret_msg,
-            &canonical_contract_address,
-            versioned_env.get_contract_hash(),
-            reply_params,
-            &canonical_sender_address,
-            false,
-            false,
-        )?;
-
-        Ok(output)
-    })
-    .map_err(|err| {
-        *used_gas = engine.gas_used();
-        err
-    })?;
+    //let start = Instant::now();
+    let result = engine.init(&versioned_env, validated_msg);
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in engine.init: {:?}", duration);
 
     *used_gas = engine.gas_used();
+    let output = result?;
+
+    engine
+        .flush_cache()
+        .map_err(|_| EnclaveError::FailedFunctionCall)?;
+
+    // TODO: copy cosmwasm's structures to enclave
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
+    //let start = Instant::now();
+    let output = encrypt_output(
+        output,
+        &secret_msg,
+        &canonical_contract_address,
+        versioned_env.get_contract_hash(),
+        reply_params,
+        &canonical_sender_address,
+        false,
+        false,
+    )?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in encrypt_output: {:?}", duration);
+
     // todo: can move the key to somewhere in the output message if we want
 
     Ok(InitSuccess {
@@ -239,7 +260,7 @@ pub fn handle(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Handle,
         query_depth,
@@ -249,68 +270,54 @@ pub fn handle(
 
     let mut versioned_env = base_env
         .clone()
-        .into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
+        .into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
-    let (env_bytes, msg_info_bytes) = versioned_env.get_wasm_ptrs()?;
+    let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
+    *used_gas = engine.gas_used();
+    let mut output = result?;
 
-    let env_ptr = engine.write_to_memory(&env_bytes)?;
-    let msg_info_ptr = engine.write_to_memory(&msg_info_bytes)?;
-    let msg_ptr = engine.write_to_memory(&validated_msg)?;
+    engine
+        .flush_cache()
+        .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
-    // This wrapper is used to coalesce all errors in this block to one object
-    // so we can `.map_err()` in one place for all of them
-    let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.handle(env_ptr, msg_info_ptr, msg_ptr, parsed_handle_type.clone())?;
+    debug!(
+        "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
+        secret_msg.nonce, secret_msg.user_public_key
+    );
+    if should_encrypt_output {
+        output = encrypt_output(
+            output,
+            &secret_msg,
+            &canonical_contract_address,
+            versioned_env.get_contract_hash(),
+            reply_params,
+            &canonical_sender_address,
+            false,
+            is_ibc_msg(parsed_handle_type),
+        )?;
+    } else {
+        let mut raw_output =
+            manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
+        set_all_logs_to_plaintext(&mut raw_output);
 
-        let mut output = engine.extract_vector(vec_ptr)?;
-
-        debug!(
-            "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
-            secret_msg.nonce, secret_msg.user_public_key
+        let finalized_output =
+            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false);
+        trace!(
+            "Wasm output for plaintext message is: {:?}",
+            finalized_output
         );
 
-        if should_encrypt_output {
-            output = encrypt_output(
-                output,
-                &secret_msg,
-                &canonical_contract_address,
-                versioned_env.get_contract_hash(),
-                reply_params,
-                &canonical_sender_address,
-                false,
-                is_ibc_msg(parsed_handle_type.clone()),
-            )?;
-        } else {
-            let mut raw_output =
-                manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
-            set_all_logs_to_plaintext(&mut raw_output);
-
-            let finalized_output =
-                finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false);
-            trace!(
-                "Wasm output for plaintext message is: {:?}",
-                finalized_output
+        output = serde_json::to_vec(&finalized_output).map_err(|err| {
+            debug!(
+                "got an error while trying to serialize output json into bytes {:?}: {}",
+                finalized_output, err
             );
+            EnclaveError::FailedToSerialize
+        })?;
+    }
 
-            output = serde_json::to_vec(&finalized_output).map_err(|err| {
-                debug!(
-                    "got an error while trying to serialize output json into bytes {:?}: {}",
-                    finalized_output, err
-                );
-                EnclaveError::FailedToSerialize
-            })?;
-        }
-
-        Ok(output)
-    })
-    .map_err(|err| {
-        *used_gas = engine.gas_used();
-        err
-    })?;
-
-    *used_gas = engine.gas_used();
     Ok(HandleSuccess { output })
 }
 
@@ -358,7 +365,7 @@ pub fn query(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Query,
         query_depth,
@@ -366,41 +373,27 @@ pub fn query(
         secret_msg.user_public_key,
     )?;
 
-    let mut versioned_env =
-        base_env.into_versioned_env(&engine.contract_instance.cosmwasm_api_version);
+    let mut versioned_env = base_env
+        .clone()
+        .into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
-    let (env_bytes, _) = versioned_env.get_wasm_ptrs()?;
-
-    let env_ptr = engine.write_to_memory(&env_bytes)?;
-    let msg_ptr = engine.write_to_memory(&validated_msg)?;
-
-    // This wrapper is used to coalesce all errors in this block to one object
-    // so we can `.map_err()` in one place for all of them
-    let output = coalesce!(EnclaveError, {
-        let vec_ptr = engine.query(env_ptr, msg_ptr)?;
-
-        let output = engine.extract_vector(vec_ptr)?;
-
-        let output = encrypt_output(
-            output,
-            &secret_msg,
-            &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
-            "",   // Not used for queries (can't call a sub-message from a query),
-            None, // Not used for queries (Query response is not replied to the caller),
-            &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
-            true,
-            false,
-        )?;
-        Ok(output)
-    })
-    .map_err(|err| {
-        *used_gas = engine.gas_used();
-        err
-    })?;
-
+    let result = engine.query(&versioned_env, validated_msg);
     *used_gas = engine.gas_used();
+    let output = result?;
+
+    let output = encrypt_output(
+        output,
+        &secret_msg,
+        &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
+        "",   // Not used for queries (can't call a sub-message from a query),
+        None, // Not used for queries (Query response is not replied to the caller),
+        &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
+        true,
+        false,
+    )?;
+
     Ok(QuerySuccess { output })
 }
 
@@ -408,31 +401,24 @@ pub fn query(
 fn start_engine(
     context: Ctx,
     gas_limit: u64,
-    contract_code: ContractCode,
+    contract_code: &ContractCode,
     contract_key: &ContractKey,
     operation: ContractOperation,
     query_depth: u32,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
-) -> Result<Engine, EnclaveError> {
-    let module = create_module_instance(contract_code, operation)?;
-
-    // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
-    let wasm_costs = WasmCosts::default();
-
-    let contract_instance = ContractInstance::new(
+) -> Result<crate::wasm3::Engine, EnclaveError> {
+    crate::wasm3::Engine::new(
         context,
-        module.clone(),
         gas_limit,
-        wasm_costs,
+        WasmCosts::default(),
+        contract_code,
         *contract_key,
         operation,
-        query_depth,
         nonce,
         user_public_key,
-    )?;
-
-    Ok(Engine::new(contract_instance, module))
+        query_depth,
+    )
 }
 
 fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {

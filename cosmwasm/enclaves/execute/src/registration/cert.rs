@@ -3,7 +3,6 @@
 use std::io::BufReader;
 use std::str;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::untrusted::time::SystemTimeEx;
 
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{

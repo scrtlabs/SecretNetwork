@@ -1,10 +1,11 @@
+use wasmi::ImportsBuilder;
 use wasmi::{
-    Error as InterpreterError, FuncInstance, FuncRef, ImportsBuilder, ModuleImportResolver,
-    Signature, ValueType,
+    Error as InterpreterError, FuncInstance, FuncRef, ModuleImportResolver, Signature, ValueType,
 };
 
 use super::externals::HostFunctions;
 
+#[allow(dead_code)]
 pub fn create_builder(resolver: &dyn ModuleImportResolver) -> ImportsBuilder {
     ImportsBuilder::new().with_resolver("env", resolver)
 }
