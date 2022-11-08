@@ -16,6 +16,11 @@ ARG SCRT_RELEASE_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
 
 FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-enclave
 
+RUN apt-get update &&  \
+    apt-get install -y --no-install-recommends \
+    clang-10 && \
+    rm -rf /var/lib/apt/lists/*
+
 ENV PATH="/root/.cargo/bin:$PATH"
 
 # Set working directory for the build
