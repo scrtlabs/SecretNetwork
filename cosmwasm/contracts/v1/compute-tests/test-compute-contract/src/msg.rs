@@ -178,6 +178,10 @@ pub enum ExecuteMsg {
         address: String,
         code_hash: String,
     },
+    AddAttributeStep1 {},
+    AddAttributeStep2 {},
+    AddAttributeStep3 {},
+    AddAttributeStep4 {},
     InitV10NoReply {
         code_id: u64,
         code_hash: String,

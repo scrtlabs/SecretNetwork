@@ -492,8 +492,9 @@ fn verify_callback_sig_impl(
 
     if callback_signature != callback_sig {
         trace!(
-            "Contract signature does not match with the one sent: {:?}",
-            callback_signature
+            "Contract signature does not match with the one sent: {:?}. Expected message to be signed: {:?}",
+            callback_signature,
+            String::from_utf8_lossy(msg.msg.as_slice())
         );
 
         return false;
