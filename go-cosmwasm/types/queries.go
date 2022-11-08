@@ -322,8 +322,10 @@ type IBCEndpoint struct {
 type IBCOrder = string
 
 // These are the only two valid values for IbcOrder
-const Unordered = "ORDER_UNORDERED"
-const Ordered = "ORDER_ORDERED"
+const (
+	Unordered = "ORDER_UNORDERED"
+	Ordered   = "ORDER_ORDERED"
+)
 
 type IBCChannel struct {
 	Endpoint             IBCEndpoint `json:"endpoint"`

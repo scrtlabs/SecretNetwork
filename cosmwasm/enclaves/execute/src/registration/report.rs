@@ -537,6 +537,9 @@ const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
 
+#[cfg(feature = "SGX_MODE_HW")]
+const INTEL_SA_00334: &str = "INTEL-SA-00334";
+
 lazy_static! {
     static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
         (
@@ -570,6 +573,16 @@ impl AdvisoryIDs {
         }
         vulnerable
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn contains_lvi_injection(&self) -> bool {
+        for i in self.0.iter() {
+            if i == INTEL_SA_00334 {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 /// A report that can be signed by Intel EPID (which generates
@@ -585,7 +598,7 @@ pub struct AttestationReport {
     /// Content of the quote
     pub sgx_quote_body: SgxQuote,
     pub platform_info_blob: Option<Vec<u8>>,
-    pub advisroy_ids: AdvisoryIDs,
+    pub advisory_ids: AdvisoryIDs,
 }
 
 impl AttestationReport {
@@ -595,8 +608,6 @@ impl AttestationReport {
     // just unused in SW mode
     #[allow(dead_code)]
     pub fn from_cert(cert: &[u8]) -> Result<Self, Error> {
-        // Before we reach here, Webpki already verifed the cert is properly signed.
-
         let payload = get_netscape_comment(cert).map_err(|_err| {
             error!("Failed to get netscape comment");
             Error::ReportParseError
@@ -717,7 +728,7 @@ impl AttestationReport {
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,
-            advisroy_ids: AdvisoryIDs(advisories),
+            advisory_ids: AdvisoryIDs(advisories),
         })
     }
 }

@@ -11,12 +11,16 @@ type frame []dbm.Iterator
 
 // iteratorStack contains one frame for each contract, indexed by a counter
 // 10 is a rather arbitrary guess on how many frames might be needed simultaneously
-var iteratorStack = make(map[uint64]frame, 10)
-var iteratorStackMutex sync.Mutex
+var (
+	iteratorStack      = make(map[uint64]frame, 10)
+	iteratorStackMutex sync.Mutex
+)
 
 // this is a global counter when we create DBs
-var dbCounter uint64
-var dbCounterMutex sync.Mutex
+var (
+	dbCounter      uint64
+	dbCounterMutex sync.Mutex
+)
 
 // startContract is called at the beginning of a contract runtime to create a new frame on the iteratorStack
 // updates dbCounter for an index

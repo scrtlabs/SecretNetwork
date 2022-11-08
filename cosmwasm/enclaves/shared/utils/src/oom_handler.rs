@@ -1,6 +1,6 @@
-use core::sync::atomic::{AtomicBool, Ordering};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(not(feature = "production"))]
 use std::backtrace::{self, PrintFormat};

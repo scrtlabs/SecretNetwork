@@ -1,13 +1,16 @@
 {
   "rust-analyzer.linkedProjects": [
     "cosmwasm/Cargo.toml",
+    "cosmwasm/enclaves/test/Cargo.toml",
+    "cosmwasm/packages/sgx-vm/Cargo.toml",
+    "go-cosmwasm/Cargo.toml",
+    "third_party/build/Cargo.toml",
     "cosmwasm/enclaves/Cargo.toml",
     "cosmwasm/contracts/v1/compute-tests/test-compute-contract/Cargo.toml",
     "cosmwasm/contracts/v1/compute-tests/ibc-test-contract/Cargo.toml",
     "cosmwasm/contracts/v010/compute-tests/test-compute-contract/Cargo.toml",
     "integration-tests/contract-v1/Cargo.toml",
-    "integration-tests/contract-v0.10/Cargo.toml",
-    "go-cosmwasm/Cargo.toml"
+    "integration-tests/contract-v0.10/Cargo.toml"
   ],
   "rust-analyzer.diagnostics.experimental.enable": true,
   "rust-analyzer.rustfmt.rangeFormatting.enable": true,

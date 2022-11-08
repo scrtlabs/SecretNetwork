@@ -46,7 +46,7 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
+func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
 	//pkSlice := sendSlice(masterCert)
 	//defer freeAfterSend(pkSlice)
 	//seedSlice := sendSlice(seed)
@@ -265,7 +265,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
+func CreateAttestationReport(apiKey []byte) (bool, error) {
 	//errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {

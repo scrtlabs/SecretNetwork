@@ -3,7 +3,6 @@
 use std::io::BufReader;
 use std::str;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::untrusted::time::SystemTimeEx;
 
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
@@ -302,17 +301,18 @@ pub fn verify_ra_cert(
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_ra_cert(
     cert_der: &[u8],
-    override_verify: Option<SigningMethod>,
+    override_verify_type: Option<SigningMethod>,
 ) -> Result<Vec<u8>, NodeAuthResult> {
-    // Before we reach here, Webpki already verifed the cert is properly signed
-
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
 
-    // 2. Verify quote status (mandatory field)
+    // this is a small hack - override_verify_type is only used when verifying the master certificate
+    // and in that case we don't care about checking vulns etc. Master certificate will also have
+    // a bad GID in prod, so there's no reason to verify it
+    if override_verify_type.is_none() {
+        verify_quote_status(&report, &report.advisory_ids)?;
+    }
 
-    verify_quote_status(&report.sgx_quote_status, &report.advisroy_ids)?;
-
-    let signing_method: SigningMethod = match override_verify {
+    let signing_method: SigningMethod = match override_verify_type {
         Some(method) => method,
         None => SIGNING_METHOD,
     };
@@ -320,13 +320,7 @@ pub fn verify_ra_cert(
     // verify certificate
     match signing_method {
         SigningMethod::MRENCLAVE => {
-            let this_mr_enclave = match get_mr_enclave() {
-                Ok(r) => r,
-                Err(_) => {
-                    error!("This should never happen. If you see this, your node isn't working anymore");
-                    return Err(NodeAuthResult::Panic);
-                }
-            };
+            let this_mr_enclave = get_mr_enclave();
 
             if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
                 error!("Got a different mr_enclave than expected. Invalid certificate");
@@ -354,73 +348,108 @@ pub fn verify_ra_cert(
     Ok(report_public_key)
 }
 
+// fn transform_u32_to_array_of_u8(x: u32) -> [u8; 4] {
+//     let b1: u8 = ((x >> 24) & 0xff) as u8;
+//     let b2: u8 = ((x >> 16) & 0xff) as u8;
+//     let b3: u8 = ((x >> 8) & 0xff) as u8;
+//     let b4: u8 = (x & 0xff) as u8;
+//     return [b1, b2, b3, b4];
+// }
+
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 pub fn verify_quote_status(
-    quote_status: &SgxQuoteStatus,
+    report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
-    match quote_status {
-        SgxQuoteStatus::OK => Ok(()),
-        SgxQuoteStatus::SwHardeningNeeded => Ok(()),
-        SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
-            let vulnerable = advisories.vulnerable();
-            if vulnerable.is_empty() {
-                Ok(())
-            } else {
-                error!("Platform is updated but requires further BIOS configuration");
-                error!(
-                    "The following vulnerabilities must be mitigated: {:?}",
-                    vulnerable
-                );
-                Err(NodeAuthResult::from(quote_status))
-            }
+    // info!(
+    //     "Got GID: {:?}",
+    //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
+    // );
+    if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
+        error!(
+            "Platform verification error: quote status {:?}",
+            &report.sgx_quote_body.gid
+        );
+        return Err(NodeAuthResult::BadQuoteStatus);
+    }
+
+    match &report.sgx_quote_status {
+        SgxQuoteStatus::OK
+        | SgxQuoteStatus::SwHardeningNeeded
+        | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
+            check_advisories(&report.sgx_quote_status, advisories)?;
+            // if !advisories.contains_lvi_injection() {
+            //     return Err(NodeAuthResult::EnclaveQuoteStatus);
+            // }
+
+            Ok(())
         }
         _ => {
             error!(
                 "Invalid attestation quote status - cannot verify remote node: {:?}",
-                quote_status
+                &report.sgx_quote_status
             );
-            Err(NodeAuthResult::from(quote_status))
+            Err(NodeAuthResult::from(&report.sgx_quote_status))
         }
     }
 }
 
+// the difference here is that we allow GROUP_OUT_OF_DATE for testnet machines to make joining a bit
+// easier
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub fn verify_quote_status(
-    quote_status: &SgxQuoteStatus,
+    report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
-    match quote_status {
-        SgxQuoteStatus::OK => Ok(()),
-        SgxQuoteStatus::SwHardeningNeeded => Ok(()),
-        SgxQuoteStatus::GroupOutOfDate => {
-            warn!("TCB level of SGX platform service is outdated. You should check for firmware updates");
-            warn!(
-                "The following vulnerabilities must be mitigated: {:?}",
-                advisories.vulnerable()
-            );
+    match &report.sgx_quote_status {
+        SgxQuoteStatus::OK
+        | SgxQuoteStatus::SwHardeningNeeded
+        | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded
+        | SgxQuoteStatus::GroupOutOfDate => {
+            check_advisories(&report.sgx_quote_status, advisories)?;
+            // if !advisories.contains_lvi_injection() {
+            //     return Err(NodeAuthResult::EnclaveQuoteStatus);
+            // }
+
             Ok(())
-        }
-        SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
-            let vulnerable = advisories.vulnerable();
-            if vulnerable.is_empty() {
-                Ok(())
-            } else {
-                error!("Platform is updated but requires further BIOS configuration");
-                error!(
-                    "The following vulnerabilities must be mitigated: {:?}",
-                    vulnerable
-                );
-                Err(NodeAuthResult::from(quote_status))
-            }
         }
         _ => {
             error!(
                 "Invalid attestation quote status - cannot verify remote node: {:?}",
-                quote_status
+                &report.sgx_quote_status
             );
-            Err(NodeAuthResult::from(quote_status))
+            Err(NodeAuthResult::from(&report.sgx_quote_status))
         }
+    }
+}
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+const GID_WHITELIST: [u32; 21] = [
+    0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc41, 0xc55, 0xc15, 0xc13, 0xc40, 0xc4f, 0xc12, 0xc14, 0xc45,
+    0xc42, 0xc16, 0xc1e, 0xc47, 0xc4e, 0x0c11, 0x0c33, 0xc92,
+];
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
+    GID_WHITELIST.contains(epid_gid)
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+fn check_advisories(
+    quote_status: &SgxQuoteStatus,
+    advisories: &AdvisoryIDs,
+) -> Result<(), NodeAuthResult> {
+    // this checks if there are any vulnerabilities that are not on in the whitelisted list
+    let vulnerable = advisories.vulnerable();
+    if vulnerable.is_empty() {
+        Ok(())
+    } else {
+        error!("Platform is updated but requires further BIOS configuration");
+        error!(
+            "The following vulnerabilities must be mitigated: {:?}",
+            vulnerable
+        );
+        Err(NodeAuthResult::from(quote_status))
     }
 }
 

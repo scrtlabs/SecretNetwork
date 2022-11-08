@@ -8,7 +8,7 @@ Start a v1.4 chain.
 - Port 26657 open for cw20-ics20 tests
 
 ```bash
-docker run -it -p 9091:9091 -p 26657:26657 --name localsecret ghcr.io/scrtlabs/localsecret:v1.4.0
+docker run -it -p 9091:9091 -p 26657:26657 --name localsecret ghcr.io/scrtlabs/localsecret:v1.4.1-patch.3
 ```
 
 ## Step 2
@@ -69,7 +69,7 @@ Copy binaries from v1.5 chain to v1.4 chain.
 
 ```bash
 # Start a v1.5 chain and wait a bit for it to setup
-docker run -it -d --name localsecret-1.5 ghcr.io/scrtlabs/localsecret:v1.5.0-beta.4
+docker run -it -d --name localsecret-1.5 ghcr.io/scrtlabs/localsecret:v1.5.0
 sleep 5
 
 # Copy binaries from v1.5 chain to host (a limitation of `docker cp`)
