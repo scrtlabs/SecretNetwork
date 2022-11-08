@@ -2,14 +2,15 @@ package keeper
 
 import (
 	"fmt"
-	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/gonum/stat"
-	"github.com/stretchr/testify/require"
 	"math"
 	"os"
 	"testing"
 	"time"
+
+	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/gonum/stat"
+	"github.com/stretchr/testify/require"
 )
 
 type Bench string
@@ -63,7 +64,6 @@ func (b *BenchTime) appendGas(gasUsed uint64) {
 }
 
 func (b *BenchTime) AppendResult(singleRunTime time.Duration, gasUsed uint64) {
-
 	b.appendGas(gasUsed)
 	b.iterations += 1
 
@@ -76,17 +76,15 @@ func (b *BenchTime) AppendResult(singleRunTime time.Duration, gasUsed uint64) {
 		b.Min = singleRunTime
 	}
 
-	//currentAvgSum := uint64(b.Mean) * b.iterations
-	//newAvgSum := currentAvgSum + uint64(singleRunTime)
+	// currentAvgSum := uint64(b.Mean) * b.iterations
+	// newAvgSum := currentAvgSum + uint64(singleRunTime)
 
 	//b.Mean = time.Duration(newAvgSum / b.iterations)
 	//
 	b.Mean, b.StdEv = stat.MeanStdDev(b.datapoints, nil)
-
 }
 
 func (b *BenchTime) PrintReport() {
-
 	stdevTime := time.Duration(math.Floor(b.StdEv))
 	stdevMean := time.Duration(math.Floor(b.Mean))
 
@@ -107,7 +105,6 @@ func (b *BenchTime) PrintReport() {
 }
 
 func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey, ctx sdk.Context, keeper Keeper) {
-
 	encodingConfig := MakeEncodingConfig()
 
 	encoders := DefaultEncoders(nil, encodingConfig.Marshaler)
@@ -130,7 +127,6 @@ func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAd
 }
 
 func TestRunBenchmarks(t *testing.T) {
-
 	cases := map[string]struct {
 		gasLimit   uint64
 		bench      Bench
@@ -169,7 +165,6 @@ func TestRunBenchmarks(t *testing.T) {
 	timers := make(map[string]BenchTime)
 
 	for name, tc := range cases {
-
 		t.Run(name, func(t *testing.T) {
 			timer := NewBenchTimer(name, tc.bench)
 			// make sure we set a limit before calling
@@ -202,7 +197,6 @@ func TestRunBenchmarks(t *testing.T) {
 			}
 			timers[name] = timer
 		})
-
 	}
 
 	for name := range cases {
