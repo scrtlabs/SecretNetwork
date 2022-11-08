@@ -1,7 +1,12 @@
 use derive_more::Display;
+
+#[cfg(feature = "wasmi-engine")]
 use log::*;
 
+#[cfg(feature = "wasmi-engine")]
 use wasmi::{Error as InterpreterError, HostError, TrapKind};
+
+use wasm3::Error as Wasm3RsError;
 
 use enclave_ffi_types::{EnclaveError, UntrustedVmError};
 
@@ -12,6 +17,7 @@ use crate::external::ecalls::BufferRecoveryError;
 pub enum WasmEngineError {
     #[display(fmt = "FailedOcall")]
     FailedOcall(UntrustedVmError),
+    /// The untrusted host seems to be misbehaving
     HostMisbehavior,
     OutOfGas,
     Panic,
@@ -29,9 +35,13 @@ pub enum WasmEngineError {
     /// The contract attempted to write to storage during a query
     UnauthorizedWrite,
 
+    /// The contract tried calling an unrecognized function
     NonExistentImportFunction,
 }
 
+pub type WasmEngineResult<T> = Result<T, WasmEngineError>;
+
+#[cfg(feature = "wasmi-engine")]
 impl HostError for WasmEngineError {}
 
 impl From<WasmEngineError> for EnclaveError {
@@ -69,6 +79,72 @@ impl From<Box<WasmEngineError>> for EnclaveError {
     }
 }
 
+/// This trait is used to convert foreign error types to EnclaveError
+pub trait ToEnclaveError {
+    fn to_enclave_error(self) -> EnclaveError;
+}
+
+impl ToEnclaveError for Wasm3RsError {
+    fn to_enclave_error(self) -> EnclaveError {
+        match self {
+            Wasm3RsError::MemoryAllocationFailure => EnclaveError::MemoryAllocationError,
+            Wasm3RsError::ParseError(_parse_error) => EnclaveError::InvalidWasm,
+            Wasm3RsError::ModuleAlreadyLinked => EnclaveError::CannotInitializeWasmMemory,
+            Wasm3RsError::ModuleTooLarge => EnclaveError::InvalidWasm,
+            Wasm3RsError::MalformedModuleName => EnclaveError::InvalidWasm,
+            Wasm3RsError::MalformedFunctionName => EnclaveError::InvalidWasm,
+            Wasm3RsError::MalformedFunctionSignature => EnclaveError::InvalidWasm,
+            Wasm3RsError::MalformedGlobalName => EnclaveError::InvalidWasm,
+            Wasm3RsError::GlobalNotFound => EnclaveError::InvalidWasm,
+            Wasm3RsError::FunctionNotFound => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::FunctionImportMissing => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::ArgumentCountMismatch => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::ArgumentTypeMismatch => EnclaveError::FailedFunctionCall,
+            Wasm3RsError::MemoryInUse => EnclaveError::MemoryReadError,
+            Wasm3RsError::OutOfMemory => EnclaveError::OutOfMemory,
+
+            // Traps.
+            Wasm3RsError::OutOfBoundsMemoryAccess => {
+                EnclaveError::ContractPanicMemoryAccessOutOfBounds
+            }
+            Wasm3RsError::DivisionByZero => EnclaveError::ContractPanicDivisionByZero,
+            Wasm3RsError::IntegerOverflow => EnclaveError::ContractPanicUnreachable,
+            Wasm3RsError::InvalidIntegerConversion => {
+                EnclaveError::ContractPanicInvalidConversionToInt
+            }
+            Wasm3RsError::IndirectCallTypeMismatch => {
+                EnclaveError::ContractPanicUnexpectedSignature
+            }
+            Wasm3RsError::UndefinedTableElement => {
+                EnclaveError::ContractPanicTableAccessOutOfBounds
+            }
+            Wasm3RsError::NullTableElement => EnclaveError::ContractPanicTableAccessOutOfBounds,
+            Wasm3RsError::ExitCalled => EnclaveError::ContractPanicUnreachable,
+            Wasm3RsError::AbortCalled => EnclaveError::ContractPanicUnreachable,
+            Wasm3RsError::UnreachableExecuted => EnclaveError::ContractPanicUnreachable,
+            Wasm3RsError::StackOverflow => EnclaveError::ContractPanicStackOverflow,
+
+            // Other errors.
+            Wasm3RsError::Unknown(_string) => EnclaveError::Unknown,
+        }
+    }
+}
+
+/// This trait is used to convert foreign result types to EnclaveError
+pub trait ToEnclaveResult<T> {
+    fn to_enclave_result(self) -> Result<T, EnclaveError>;
+}
+
+impl<T, E> ToEnclaveResult<T> for Result<T, E>
+where
+    E: ToEnclaveError,
+{
+    fn to_enclave_result(self) -> Result<T, EnclaveError> {
+        self.map_err(|err| err.to_enclave_error())
+    }
+}
+
+#[cfg(feature = "wasmi-engine")]
 pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveError {
     wasmi_error
         .try_into_host_error()
@@ -86,6 +162,7 @@ pub fn wasmi_error_to_enclave_error(wasmi_error: InterpreterError) -> EnclaveErr
         })
 }
 
+#[cfg(feature = "wasmi-engine")]
 fn trap_kind_to_enclave_error(kind: TrapKind) -> EnclaveError {
     match kind {
         TrapKind::Unreachable => EnclaveError::ContractPanicUnreachable,

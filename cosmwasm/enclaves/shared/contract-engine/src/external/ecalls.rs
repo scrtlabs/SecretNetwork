@@ -114,7 +114,7 @@ fn ecall_configure_runtime_impl(config: RuntimeConfiguration) -> sgx_status_t {
         "inside ecall_configure_runtime: {}",
         config.module_cache_size
     );
-    crate::module_cache::configure_module_cache(config.module_cache_size as usize);
+    crate::wasm3::module_cache::configure_module_cache(config.module_cache_size as usize);
     sgx_status_t::SGX_SUCCESS
 }
 

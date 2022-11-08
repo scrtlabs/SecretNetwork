@@ -1,6 +1,9 @@
+#[cfg(feature = "wasmi-engine")]
 pub use pwasm_utils::{inject_gas_counter, rules};
 
-pub const OCALL_BASE_GAS: u64 = 2_000_000;
+//pub const OCALL_BASE_GAS: u64 = 2_000_000;
+pub const WRITE_BASE_GAS: u64 = 200_000;
+pub const READ_BASE_GAS: u64 = 100_000;
 
 /// Wasm cost table
 pub struct WasmCosts {
@@ -12,22 +15,22 @@ pub struct WasmCosts {
     pub mul: u32,
     /// Memory (load/store) operations multiplier.
     pub mem: u32,
-    /// General static query of U256 value from env-info
-    pub static_u256: u32,
-    /// General static query of Address value from env-info
-    pub static_address: u32,
+    // /// General static query of U256 value from env-info
+    // pub static_u256: u32,
+    // /// General static query of Address value from env-info
+    // pub static_address: u32,
     /// Memory stipend. Amount of free memory (in 64kb pages) each contract can use for stack.
     pub initial_mem: u32,
     /// Grow memory cost, per page (64kb)
     pub grow_mem: u32,
-    /// Memory copy cost, per byte
-    pub memcpy: u32,
-    /// Max stack height (native WebAssembly stack limiter)
-    pub max_stack_height: u32,
-    /// Cost of wasm opcode is calculated as TABLE_ENTRY_COST * `opcodes_mul` / `opcodes_div`
-    pub opcodes_mul: u32,
-    /// Cost of wasm opcode is calculated as TABLE_ENTRY_COST * `opcodes_mul` / `opcodes_div`
-    pub opcodes_div: u32,
+    // /// Memory copy cost, per byte
+    // pub memcpy: u32,
+    // /// Max stack height (native WebAssembly stack limiter)
+    // pub max_stack_height: u32,
+    // /// Cost of wasm opcode is calculated as TABLE_ENTRY_COST * `opcodes_mul` / `opcodes_div`
+    // pub opcodes_mul: u32,
+    // /// Cost of wasm opcode is calculated as TABLE_ENTRY_COST * `opcodes_mul` / `opcodes_div`
+    // pub opcodes_div: u32,
     /// Cost invoking humanize_address from WASM
     pub external_humanize_address: u32,
     /// Cost invoking canonicalize_address from WASM
@@ -57,14 +60,14 @@ impl Default for WasmCosts {
             div: 16,
             mul: 4,
             mem: 2,
-            static_u256: 64,
-            static_address: 40,
+            // static_u256: 64,
+            // static_address: 40,
             initial_mem: 8192,
             grow_mem: 8192,
-            memcpy: 1,
-            max_stack_height: 64 * 1024, // Assaf: I don't think that this goes anywhere
-            opcodes_mul: 3,
-            opcodes_div: 8,
+            // memcpy: 1,
+            // max_stack_height: 64 * 1024,
+            // opcodes_mul: 3,
+            // opcodes_div: 8,
             external_humanize_address: 8192,
             external_canonicalize_address: 8192,
             external_addr_validate: 8192,
@@ -79,6 +82,7 @@ impl Default for WasmCosts {
     }
 }
 
+#[cfg(feature = "wasmi-engine")]
 pub fn gas_rules(wasm_costs: &WasmCosts) -> rules::Set {
     rules::Set::new(wasm_costs.regular, {
         let mut vals = ::std::collections::BTreeMap::new();

@@ -1,18 +1,18 @@
+use parity_wasm::elements::deserialize_buffer;
 use std::collections::HashSet;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{Read, Write};
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use parity_wasm::elements::{deserialize_buffer};
 
 /*
 use crate::backends::{backend, compile};
 */
 use crate::checksum::Checksum;
 use crate::compatability::{check_wasm, check_wasm_exports, REQUIRED_IBC_EXPORTS};
-use crate::features::required_features_from_module;
 use crate::errors::{VmError, VmResult};
+use crate::features::required_features_from_module;
 use crate::instance::Instance;
 /*
 use crate::modules::FileSystemCache;
@@ -24,6 +24,7 @@ const WASM_DIR: &str = "wasm";
 const MODULES_DIR: &str = "modules";
 */
 
+#[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
 struct Stats {
     hits_module: u32,
@@ -143,7 +144,7 @@ where
 
         let has_ibc_entry_points = match check_wasm_exports(&module, REQUIRED_IBC_EXPORTS) {
             Ok(_) => true,
-            Err(_) => false
+            Err(_) => false,
         };
 
         Ok(AnalysisReport {

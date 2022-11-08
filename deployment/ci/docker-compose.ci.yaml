@@ -30,7 +30,27 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1"
+          cpus: "2"
+          memory: "4g"
+
+  bench:
+    image: tests-base-image
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/root/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    entrypoint: ["/bin/bash", "go-tests-bench.sh"]
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
           memory: "4g"
 
   bench:

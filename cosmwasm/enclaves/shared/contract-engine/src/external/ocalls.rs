@@ -118,4 +118,13 @@ extern "C" {
         value: *const u8,
         value_len: usize,
     ) -> sgx_status_t;
+
+    pub fn ocall_multiple_write_db(
+        retval: *mut OcallReturn,
+        context: Ctx,
+        vm_error: *mut UntrustedVmError,
+        gas_used: *mut u64,
+        keys: *const u8,
+        keys_len: usize,
+    ) -> sgx_status_t;
 }

@@ -19,6 +19,7 @@ std = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "c70a82f70
     "net",
     "backtrace",
     "untrusted_fs",
+    "untrusted_time"
 ] }
 sgx_no_tstd = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_no_tstd", stage = 5 }
 sgx_rand = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_rand", stage = 6 }
