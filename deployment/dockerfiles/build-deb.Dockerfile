@@ -1,6 +1,8 @@
-FROM rust-go-base-image:latest AS build-env-rust-go
-# Final image
-FROM enigmampc/enigma-sgx-base:2004-1.1.3
+ARG SCRT_BIN_IMAGE=rust-go-base-image
+ARG SCRT_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.3
+
+FROM $SCRT_BIN_IMAGE AS build-env-rust-go
+FROM $SCRT_BASE_IMAGE as build-deb
 
 # wasmi-sgx-test script requirements
 RUN apt-get update && \
@@ -27,7 +29,7 @@ COPY Makefile .
 # Copy over binaries from the build-env
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
-COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so ./go-cosmwasm/
+#COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so ./go-cosmwasm/
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretd secretd
 COPY --from=build-env-rust-go /go/src/github.com/enigmampc/SecretNetwork/secretcli secretcli
 

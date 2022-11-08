@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"os"
 	"path/filepath"
 	"testing"

@@ -12,7 +12,7 @@ import (
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	channelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v3/modules/core/05-port/keeper"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
@@ -37,12 +37,12 @@ import (
 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
-	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
+	wasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm"
 
-	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	v1wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
+	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 type ResponseHandler interface {
@@ -183,7 +183,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	}
 
 	// for MsgInstantiateContract, there is only one signer which is msg.Sender
-	// (https://github.com/enigmampc/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
+	// (https://github.com/scrtlabs/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
 	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer)
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
@@ -579,15 +579,15 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 // QuerySmart queries the smart contract itself.
 func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
-	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, false)
+	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, 1)
 }
 
 // QuerySmartRecursive queries the smart contract itself. This should only be called when running inside another query recursively.
-func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, useDefaultGasLimit bool) ([]byte, error) {
-	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, true)
+func (k Keeper) querySmartRecursive(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte, queryDepth uint32, useDefaultGasLimit bool) ([]byte, error) {
+	return k.querySmartImpl(ctx, contractAddr, req, useDefaultGasLimit, queryDepth)
 }
 
-func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, req []byte, useDefaultGasLimit bool, recursive bool) ([]byte, error) {
+func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, req []byte, useDefaultGasLimit bool, queryDepth uint32) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "query")
 
 	if useDefaultGasLimit {
@@ -618,7 +618,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 		contractAddress,
 		contractKey,
 	)
-	params.Recursive = recursive
+	params.QueryDepth = queryDepth
 
 	queryResult, gasUsed, qErr := k.wasmer.Query(codeInfo.CodeHash, params, req, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx))
 	consumeGas(ctx, gasUsed)

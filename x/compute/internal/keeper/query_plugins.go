@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -21,7 +21,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -37,7 +37,7 @@ type QueryHandler struct {
 
 var _ wasmTypes.Querier = QueryHandler{}
 
-func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]byte, error) {
+func (q QueryHandler) Query(request wasmTypes.QueryRequest, queryDepth uint32, gasLimit uint64) ([]byte, error) {
 	// set a limit for a subctx
 	sdkGas := gasLimit / types.GasMultiplier
 	subctx := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas))
@@ -58,7 +58,7 @@ func (q QueryHandler) Query(request wasmTypes.QueryRequest, gasLimit uint64) ([]
 		return q.Plugins.Staking(subctx, request.Staking)
 	}
 	if request.Wasm != nil {
-		return q.Plugins.Wasm(subctx, request.Wasm)
+		return q.Plugins.Wasm(subctx, request.Wasm, queryDepth)
 	}
 	if request.Dist != nil {
 		return q.Plugins.Dist(q.Ctx, request.Dist)
@@ -88,7 +88,7 @@ type QueryPlugins struct {
 	Bank     func(ctx sdk.Context, request *wasmTypes.BankQuery) ([]byte, error)
 	Custom   CustomQuerier
 	Staking  func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error)
-	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	Wasm     func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error)
 	Dist     func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error)
 	Mint     func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error)
 	Gov      func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error)
@@ -200,7 +200,7 @@ var stargateQueryAllowlist = map[string]bool{
 
 	"/secret.compute.v1beta1.Query/ContractInfo":              true,
 	"/secret.compute.v1beta1.Query/CodeHashByContractAddress": true,
-	"/secret.compute.v1beta1.Query/CodeHashByCodeID":          true,
+	"/secret.compute.v1beta1.Query/CodeHashByCodeId":          true,
 	"/secret.compute.v1beta1.Query/LabelByAddress":            true,
 	"/secret.compute.v1beta1.Query/AddressByLabel":            true,
 }
@@ -696,14 +696,14 @@ func getAccumulatedRewards(ctx sdk.Context, distKeeper distrkeeper.Keeper, deleg
 	return rewards, nil
 }
 
-func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
-	return func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
+func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
+	return func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
 		if request.Smart != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Smart.ContractAddr)
 			if err != nil {
 				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Smart.ContractAddr)
 			}
-			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, false)
+			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, queryDepth, false)
 		}
 		if request.Raw != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Raw.ContractAddr)
@@ -713,6 +713,25 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 			models := wasm.QueryRaw(ctx, addr, request.Raw.Key)
 			// TODO: do we want to change the return value?
 			return json.Marshal(models)
+		}
+		if request.ContractInfo != nil {
+			addr, err := sdk.AccAddressFromBech32(request.ContractInfo.ContractAddr)
+			if err != nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.ContractInfo.ContractAddr)
+			}
+			info := wasm.GetContractInfo(ctx, addr)
+			if info == nil {
+				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.ContractInfo.ContractAddr)
+			}
+
+			res := wasmTypes.ContractInfoResponse{
+				CodeID:  info.CodeID,
+				Creator: info.Creator.String(),
+				Admin:   "", // In secret we don't have an admin
+				Pinned:  false,
+				IBCPort: info.IBCPortID,
+			}
+			return json.Marshal(res)
 		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown WasmQuery variant"}
 	}

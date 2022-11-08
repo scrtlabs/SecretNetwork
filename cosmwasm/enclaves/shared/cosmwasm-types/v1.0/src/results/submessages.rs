@@ -74,7 +74,8 @@ pub struct Reply {
     /// Use this to identify which submessage triggered the `reply`.
     pub id: Binary,
     pub result: SubMsgResult,
-    pub was_msg_encrypted: bool,
+    pub was_orig_msg_encrypted: bool,
+    pub is_encrypted: bool,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct DecryptedReply {

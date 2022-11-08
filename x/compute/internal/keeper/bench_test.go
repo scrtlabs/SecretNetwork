@@ -19,10 +19,11 @@ const (
 	Noop                          Bench = "noop"
 	BenchCPU                            = "bench_c_p_u"
 	BenchReadStorage                    = "bench_read_storage"
+	BenchReadStorageMultipleKeys        = "bench_read_storage_multiple_keys"
 	BenchWriteStorage                   = "bench_write_storage"
 	BenchAllocate                       = "bench_allocate"
 	BenchReadLargeItemFromStorage       = "bench_read_large_item_from_storage"
-	BenchWriteLargeItemToStorage  Bench = "bench_write_large_item_from_storage"
+	BenchWriteLargeItemToStorage  Bench = "bench_write_large_item_to_storage"
 )
 
 func buildBenchMessage(bench Bench) []byte {
@@ -31,28 +32,37 @@ func buildBenchMessage(bench Bench) []byte {
 }
 
 type BenchTime struct {
-	Name       string
-	Case       Bench
-	Mean       float64
-	iterations uint64
-	Min        time.Duration
-	Max        time.Duration
-	datapoints []float64
-	StdEv      float64
-	AvgGas     uint64
+	Name        string
+	Case        Bench
+	Mean        float64
+	iterations  uint64
+	Min         time.Duration
+	Max         time.Duration
+	datapoints  []float64
+	StdEv       float64
+	AvgGas      uint64
+	BaseAvgGas  uint64
+	BaseAvgTime time.Duration
 }
 
 func NewBenchTimer(name string, bench Bench) BenchTime {
 	return BenchTime{
-		Name:       name,
-		Case:       bench,
-		Mean:       0,
-		Min:        math.MaxInt64,
-		Max:        0,
-		datapoints: []float64{},
-		StdEv:      0,
-		AvgGas:     0,
+		Name:        name,
+		Case:        bench,
+		Mean:        0,
+		Min:         math.MaxInt64,
+		Max:         0,
+		datapoints:  []float64{},
+		StdEv:       0,
+		AvgGas:      0,
+		BaseAvgGas:  0,
+		BaseAvgTime: 0,
 	}
+}
+
+func (b *BenchTime) SetBaselineValues(gas uint64, time time.Duration) {
+	b.BaseAvgGas = gas
+	b.BaseAvgTime = time
 }
 
 func (b *BenchTime) appendGas(gasUsed uint64) {
@@ -90,7 +100,7 @@ func (b *BenchTime) PrintReport() {
 	stdevTime := time.Duration(math.Floor(b.StdEv))
 	stdevMean := time.Duration(math.Floor(b.Mean))
 
-	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Mean: %s \n\t Min: %s \n\t Max: %s \n\t StdDev: %s \n\t Gas Used (average): %d \n\t Gas Value: %f [Kgas/ms]",
+	s := fmt.Sprintf("*** Timer for test %s *** \n Ran benchmark: %s for %d runs \n ** Results ** \n\t Mean: %s \n\t Min: %s \n\t Max: %s \n\t StdDev: %s \n\t Gas Used (average): %d \n\t Gas Efficiency: %f [s/Mgas]",
 		b.Name,
 		b.Case,
 		b.iterations,
@@ -99,11 +109,18 @@ func (b *BenchTime) PrintReport() {
 		b.Max,
 		stdevTime,
 		b.AvgGas,
-		float64(b.AvgGas)/b.Mean*1000,
+		(stdevMean.Seconds())*1e6/float64(b.AvgGas),
+	)
+
+	ns := fmt.Sprintf("**** Normalized efficiency: \n\t Mean: %s \n\t Gas Used (average): %d \n\t Gas Efficiency: %f [s/Mgas]",
+		stdevMean-b.BaseAvgTime,
+		b.AvgGas-b.BaseAvgGas,
+		(stdevMean.Seconds()-b.BaseAvgTime.Seconds())*1e6/float64(b.AvgGas-b.BaseAvgGas),
 	)
 
 	// todo: log this properly
 	println(s)
+	println(ns)
 }
 
 func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey, ctx sdk.Context, keeper Keeper) {
@@ -137,11 +154,11 @@ func TestRunBenchmarks(t *testing.T) {
 		loops      uint64
 		callbackfn func() uint64
 	}{
-		"warmup": {
-			gasLimit: 1_000_000,
-			bench:    Noop,
-			loops:    10,
-		},
+		//"warmup": {
+		//	gasLimit: 1_000_000,
+		//	bench:    Noop,
+		//	loops:    1,
+		//},
 		"Empty execution (contract startup time)": {
 			gasLimit: 1_000_000,
 			bench:    Noop,
@@ -162,9 +179,93 @@ func TestRunBenchmarks(t *testing.T) {
 			bench:    BenchReadStorage,
 			loops:    10,
 		},
+		"Allocate a lot of memory inside the contract": {
+			gasLimit: 1_000_000,
+			bench:    BenchAllocate,
+			loops:    10,
+		},
+		"Read large item from storage": {
+			gasLimit: 5_000_000,
+			bench:    BenchReadLargeItemFromStorage,
+			loops:    10,
+		},
+		"Write large item to storage": {
+			gasLimit: 100_000_000,
+			bench:    BenchWriteLargeItemToStorage,
+			loops:    10,
+		},
+		"Bench read storage multiple keys": {
+			gasLimit: 10_000_000,
+			bench:    BenchReadStorageMultipleKeys,
+			loops:    10,
+		},
 	}
 
 	contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
+	// this is here so read multiple keys works without setup
+	msg := buildBenchMessage(BenchWriteStorage)
+	_, _, _, _, _, _ = execHelper(
+		t,
+		keeper,
+		ctx,
+		contractAddr,
+		creator,
+		creatorPriv,
+		string(msg),
+		false,
+		true,
+		10_000_000,
+		0,
+		false,
+	)
+	// this is here so read large keys works without setup
+	msg = buildBenchMessage(BenchWriteLargeItemToStorage)
+	_, _, _, _, _, _ = execHelper(
+		t,
+		keeper,
+		ctx,
+		contractAddr,
+		creator,
+		creatorPriv,
+		string(msg),
+		false,
+		true,
+		10_000_000,
+		0,
+		false,
+	)
+	// *** Measure baseline
+	timer := NewBenchTimer("base contract execution", Noop)
+	// make sure we set a limit before calling
+	ctx = ctx.WithGasMeter(sdk.NewGasMeter(100_000_000))
+	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
+
+	msg = buildBenchMessage(Noop)
+
+	for i := uint64(1); i < 10; i++ {
+		start := time.Now()
+		// call bench
+		_, _, qErr, _, gasUsed, _ := execHelper(
+			t,
+			keeper,
+			ctx,
+			contractAddr,
+			creator,
+			creatorPriv,
+			string(msg),
+			false,
+			true,
+			1_000_000,
+			0,
+			false,
+		)
+		elapsed := time.Since(start)
+		require.Empty(t, qErr)
+		timer.AppendResult(elapsed, gasUsed)
+	}
+
+	//
+	AvgGasBase, AvgTimeBase := timer.AvgGas, timer.Mean
 
 	timers := make(map[string]BenchTime)
 
@@ -172,6 +273,7 @@ func TestRunBenchmarks(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			timer := NewBenchTimer(name, tc.bench)
+			timer.SetBaselineValues(AvgGasBase, time.Duration(math.Floor(AvgTimeBase)))
 			// make sure we set a limit before calling
 			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
 			require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
@@ -197,7 +299,6 @@ func TestRunBenchmarks(t *testing.T) {
 				)
 				elapsed := time.Since(start)
 				require.Empty(t, qErr)
-				println("Gas used by execute: %d", gasUsed)
 				timer.AppendResult(elapsed, gasUsed)
 			}
 			timers[name] = timer

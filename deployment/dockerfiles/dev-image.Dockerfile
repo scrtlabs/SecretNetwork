@@ -1,5 +1,6 @@
 # Final image
-FROM build-release
+ARG SCRT_BASE_IMAGE=build-release
+FROM $SCRT_BASE_IMAGE as build-localsecret
 
 COPY deployment/docker/devimage/bootstrap_init_no_stop.sh bootstrap_init.sh
 

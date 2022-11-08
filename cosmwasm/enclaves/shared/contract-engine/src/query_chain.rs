@@ -20,15 +20,17 @@ use cw_types_v010::{
 
 pub fn encrypt_and_query_chain(
     query: &[u8],
+    query_depth: u32,
     context: &Ctx,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     gas_used: &mut u64,
     gas_limit: u64,
 ) -> Result<Vec<u8>, WasmEngineError> {
-    if let Some(answer) = check_recursion_limit() {
+    if let Some(answer) = check_recursion_limit(query_depth) {
         return serialize_error_response(&answer);
     }
+    let new_query_depth = query_depth + 1;
 
     let mut query_struct: QueryRequest = match serde_json::from_slice(query) {
         Ok(query_struct) => query_struct,
@@ -52,7 +54,8 @@ pub fn encrypt_and_query_chain(
 
     // Call query_chain (this bubbles up to x/compute via ocalls and FFI to Go code)
     // This returns the answer from x/compute
-    let (result, query_used_gas) = query_chain(context, &encrypted_query, gas_limit);
+    let (result, query_used_gas) =
+        query_chain(context, &encrypted_query, new_query_depth, gas_limit);
     *gas_used = query_used_gas;
     let encrypted_answer_as_vec = result?;
 
@@ -145,6 +148,7 @@ pub fn encrypt_and_query_chain(
 fn query_chain(
     context: &Ctx,
     query: &[u8],
+    query_depth: u32,
     gas_limit: u64,
 ) -> (Result<Vec<u8>, WasmEngineError>, u64) {
     let mut ocall_return = OcallReturn::Success;
@@ -161,6 +165,7 @@ fn query_chain(
             enclave_buffer.as_mut_ptr(),
             query.as_ptr(),
             query.len(),
+            query_depth,
         );
 
         trace!("ocall_query_chain returned with gas {}", gas_used);
@@ -196,8 +201,8 @@ fn query_chain(
 ///
 /// We make sure that a recursion limit is in place in order to
 /// mitigate cases where the enclave runs out of memory.
-fn check_recursion_limit() -> Option<SystemResult<StdResult<Binary>>> {
-    if recursion_depth::limit_reached() {
+fn check_recursion_limit(query_depth: u32) -> Option<SystemResult<StdResult<Binary>>> {
+    if recursion_depth::limit_reached(query_depth) {
         debug!(
             "Recursion limit reached while performing nested queries. Returning error to contract."
         );
@@ -338,7 +343,7 @@ fn decrypt_query_response_error(
     error_msg.decrypt().map_err(|err| {
         debug!(
             "encrypt_and_query_chain() got an error while trying to decrypt the inner error for query {:?}, stopping wasm: {:?}",
-            String::from_utf8_lossy(&query),
+            String::from_utf8_lossy(query),
             err
         );
         WasmEngineError::DecryptionError

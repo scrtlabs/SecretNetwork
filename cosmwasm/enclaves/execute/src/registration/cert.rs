@@ -3,7 +3,6 @@
 use std::io::BufReader;
 use std::str;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::untrusted::time::SystemTimeEx;
 
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
@@ -94,7 +93,7 @@ pub fn gen_ecc_cert(
                             writer
                                 .next()
                                 .write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-                            writer.next().write_utf8_string(&ISSUER);
+                            writer.next().write_utf8_string(ISSUER);
                         });
                     });
                 });
@@ -118,7 +117,7 @@ pub fn gen_ecc_cert(
                             writer
                                 .next()
                                 .write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-                            writer.next().write_utf8_string(&SUBJECT);
+                            writer.next().write_utf8_string(SUBJECT);
                         });
                     });
                 });
@@ -162,7 +161,7 @@ pub fn gen_ecc_cert(
             // Signature
             let sig = {
                 let tbs = &writer.buf[4..];
-                ecc_handle.ecdsa_sign_slice(tbs, &prv_k).unwrap()
+                ecc_handle.ecdsa_sign_slice(tbs, prv_k).unwrap()
             };
             let sig_der = yasna::construct_der(|writer| {
                 writer.write_sequence(|writer| {
@@ -268,7 +267,7 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
     let ias_ca_core: &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
     let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD).unwrap();
 
-    let mut ca_reader = BufReader::new(&IAS_REPORT_CA[..]);
+    let mut ca_reader = BufReader::new(IAS_REPORT_CA);
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store

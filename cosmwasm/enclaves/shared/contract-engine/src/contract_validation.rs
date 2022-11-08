@@ -1,6 +1,7 @@
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
+// use std::time::Instant;
 
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
@@ -109,9 +110,10 @@ pub fn validate_contract_key(
 
 pub struct ValidatedMessage {
     pub validated_msg: Vec<u8>,
-    pub reply_params: Option<ReplyParams>,
+    pub reply_params: Option<Vec<ReplyParams>>,
 }
 
+#[derive(Debug)]
 pub struct ReplyParams {
     pub recipient_contract_hash: Vec<u8>,
     pub sub_msg_id: u64,
@@ -121,14 +123,14 @@ pub struct ReplyParams {
 pub fn validate_msg(
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
-    contract_hash_for_validation: Option<Vec<u8>>,
+    data_for_validation: Option<Vec<u8>>,
     handle_type: Option<HandleType>,
 ) -> Result<ValidatedMessage, EnclaveError> {
     match handle_type {
-        None => validate_basic_msg(msg, contract_hash, contract_hash_for_validation),
+        None => validate_basic_msg(msg, contract_hash, data_for_validation),
         Some(h) => match is_ibc_msg(h.clone()) {
-            false => validate_basic_msg(msg, contract_hash, contract_hash_for_validation),
-            true => validate_ibc_msg(msg, contract_hash, contract_hash_for_validation, h),
+            false => validate_basic_msg(msg, contract_hash, data_for_validation),
+            true => validate_ibc_msg(msg, contract_hash, data_for_validation, h),
         },
     }
 }
@@ -136,16 +138,16 @@ pub fn validate_msg(
 pub fn validate_ibc_msg(
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
-    contract_hash_for_validation: Option<Vec<u8>>,
+    data_for_validation: Option<Vec<u8>>,
     handle_type: HandleType,
 ) -> Result<ValidatedMessage, EnclaveError> {
     match handle_type {
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
             let mut parsed_ibc_packet: IbcPacketReceiveMsg =
-                serde_json::from_slice(&msg.to_vec()).map_err(|err| {
+                serde_json::from_slice(msg).map_err(|err| {
                     warn!(
                     "IbcPacketReceive msg got an error while trying to deserialize msg input bytes into json {:?}: {}",
-                    String::from_utf8_lossy(&msg),
+                    String::from_utf8_lossy(msg),
                     err
                 );
                     EnclaveError::FailedToDeserialize
@@ -154,7 +156,7 @@ pub fn validate_ibc_msg(
             let validated_msg = validate_basic_msg(
                 parsed_ibc_packet.packet.data.as_slice(),
                 contract_hash,
-                contract_hash_for_validation,
+                data_for_validation,
             )?;
             parsed_ibc_packet.packet.data = validated_msg.validated_msg.as_slice().into();
 
@@ -179,18 +181,50 @@ pub fn validate_ibc_msg(
 pub fn validate_basic_msg(
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
-    contract_hash_for_validation: Option<Vec<u8>>,
+    data_for_validation: Option<Vec<u8>>,
 ) -> Result<ValidatedMessage, EnclaveError> {
-    if contract_hash_for_validation.is_none() && msg.len() < HEX_ENCODED_HASH_SIZE {
+    if data_for_validation.is_none() && msg.len() < HEX_ENCODED_HASH_SIZE {
         warn!("Malformed message - expected contract code hash to be prepended to the msg");
         return Err(EnclaveError::ValidationFailure);
     }
 
     let mut received_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] = [0u8; HEX_ENCODED_HASH_SIZE];
     let mut validated_msg: Vec<u8>;
-    match contract_hash_for_validation {
+    let mut reply_params: Option<Vec<ReplyParams>> = None;
+
+    match data_for_validation {
         Some(c) => {
             received_contract_hash.copy_from_slice(&c.as_slice()[0..HEX_ENCODED_HASH_SIZE]);
+            let mut partial_msg = c[HEX_ENCODED_HASH_SIZE..].to_vec();
+            while partial_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
+                && partial_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())]
+                    == *REPLY_ENCRYPTION_MAGIC_BYTES
+            {
+                if reply_params.is_none() {
+                    reply_params = Some(vec![]);
+                }
+
+                partial_msg = partial_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
+
+                let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
+                sub_msg_deserialized.copy_from_slice(&partial_msg[..SIZE_OF_U64]);
+
+                let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_deserialized);
+                partial_msg = partial_msg[SIZE_OF_U64..].to_vec();
+
+                let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
+                    [0u8; HEX_ENCODED_HASH_SIZE];
+                reply_recipient_contract_hash
+                    .copy_from_slice(&partial_msg[0..HEX_ENCODED_HASH_SIZE]);
+
+                reply_params.as_mut().unwrap().push(ReplyParams {
+                    recipient_contract_hash: reply_recipient_contract_hash.to_vec(),
+                    sub_msg_id,
+                });
+
+                partial_msg = partial_msg[HEX_ENCODED_HASH_SIZE..].to_vec();
+            }
+
             validated_msg = msg.to_vec();
         }
         None => {
@@ -210,9 +244,13 @@ pub fn validate_basic_msg(
         return Err(EnclaveError::ValidationFailure);
     }
 
-    if validated_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
+    while validated_msg.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
         && validated_msg[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())] == *REPLY_ENCRYPTION_MAGIC_BYTES
     {
+        if reply_params.is_none() {
+            reply_params = Some(vec![]);
+        }
+
         validated_msg = validated_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
 
         let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
@@ -224,18 +262,18 @@ pub fn validate_basic_msg(
         let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
             [0u8; HEX_ENCODED_HASH_SIZE];
         reply_recipient_contract_hash.copy_from_slice(&validated_msg[0..HEX_ENCODED_HASH_SIZE]);
-        return Ok(ValidatedMessage {
-            validated_msg: validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec(),
-            reply_params: Some(ReplyParams {
-                recipient_contract_hash: reply_recipient_contract_hash.to_vec(),
-                sub_msg_id,
-            }),
+
+        reply_params.as_mut().unwrap().push(ReplyParams {
+            recipient_contract_hash: reply_recipient_contract_hash.to_vec(),
+            sub_msg_id,
         });
+
+        validated_msg = validated_msg[HEX_ENCODED_HASH_SIZE..].to_vec();
     }
 
     Ok(ValidatedMessage {
         validated_msg,
-        reply_params: None,
+        reply_params,
     })
 }
 
@@ -249,25 +287,38 @@ pub fn verify_params(
 ) -> Result<(), EnclaveError> {
     debug!("Verifying message signatures for: {:?}", sig_info);
 
+    //let start = Instant::now();
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
     if let Some(callback_sig) = &sig_info.callback_sig {
         return verify_callback_sig(callback_sig.as_slice(), sender, msg, sent_funds);
     }
+    // let duration = start.elapsed();
+    // trace!(
+    //     "verify_params: Time elapsed in verify_callback_sig: {:?}",
+    //     duration
+    // );
 
     trace!(
         "Sign bytes are: {:?}",
         String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
     );
 
+    //let start = Instant::now();
     let (sender_public_key, messages) = get_signer_and_messages(sig_info, sender)?;
+    // let duration = start.elapsed();
+    // trace!(
+    //     "verify_params: Time elapsed in get_signer_and_messages: {:?}",
+    //     duration
+    // );
 
     trace!(
         "sender canonical address is: {:?}",
-        sender_public_key.get_address().0.0
+        sender_public_key.get_address().0 .0
     );
     trace!("sender signature is: {:?}", sig_info.signature);
     trace!("sign bytes are: {:?}", sig_info.sign_bytes);
 
+    //let start = Instant::now();
     sender_public_key
         .verify_bytes(
             sig_info.sign_bytes.as_slice(),
@@ -278,7 +329,13 @@ pub fn verify_params(
             warn!("Signature verification failed: {:?}", err);
             EnclaveError::FailedTxVerification
         })?;
+    // let duration = start.elapsed();
+    // trace!(
+    //     "verify_params: Time elapsed in verify_bytes: {:?}",
+    //     duration
+    // );
 
+    // let start = Instant::now();
     if verify_message_params(
         &messages,
         sender,
@@ -290,7 +347,11 @@ pub fn verify_params(
         info!("Parameters verified successfully");
         return Ok(());
     }
-
+    // let duration = start.elapsed();
+    // trace!(
+    //     "verify_params: Time elapsed in verify_message_params: {:?}",
+    //     duration
+    // );
     warn!("Parameter verification failed");
 
     Err(EnclaveError::FailedTxVerification)
@@ -310,7 +371,7 @@ fn get_signer_and_messages(
             let sender_public_key =
                 sign_doc
                     .auth_info
-                    .sender_public_key(&sender)
+                    .sender_public_key(sender)
                     .ok_or_else(|| {
                         warn!("Couldn't find message sender in auth_info.signer_infos");
                         EnclaveError::FailedTxVerification

@@ -11,8 +11,10 @@ import (
 
 	"github.com/cosmos/go-bip39"
 	"github.com/pkg/errors"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/spf13/cobra"
-	cfg "github.com/tendermint/tendermint/config"
+	tmconfig "github.com/tendermint/tendermint/config"
+
 	"github.com/tendermint/tendermint/libs/cli"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmrand "github.com/tendermint/tendermint/libs/rand"
@@ -22,6 +24,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/server"
+	sdkconfig "github.com/cosmos/cosmos-sdk/server/config"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -77,8 +80,16 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			cdc := clientCtx.Codec
 
 			serverCtx := server.GetServerContextFromCmd(cmd)
-			config := serverCtx.Config
-			config.SetRoot(clientCtx.HomeDir)
+
+			// Tendermint config (.secretd/config/config.toml)
+			tmConfig := serverCtx.Config
+			tmConfig.SetRoot(clientCtx.HomeDir)
+
+			// Secret Network config (.secretd/config/app.toml)
+			secretConfig := SecretAppConfig{
+				Config:     *sdkconfig.DefaultConfig(),
+				WASMConfig: *compute.DefaultWasmConfig(),
+			}
 
 			chainID, _ := cmd.Flags().GetString(flags.FlagChainID)
 			if chainID == "" {
@@ -93,14 +104,23 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 					"9cdaa5856e0245ecd73bd464308fb990fbc53b57@scrt-seed-03.scrtlabs.com:26656", // SCRT Labs 3
 				}
 				// Override default settings in config.toml
-				config.P2P.Seeds = strings.Join(seeds, ",")
+				tmConfig.P2P.Seeds = strings.Join(seeds, ",")
 			}
 
-			config.P2P.MaxNumInboundPeers = 320
-			config.P2P.MaxNumOutboundPeers = 40
-			config.Mempool.Size = 10000
-			config.StateSync.TrustPeriod = 112 * time.Hour
-			config.FastSync.Version = "v0"
+			tmConfig.P2P.MaxNumInboundPeers = 320
+			tmConfig.P2P.MaxNumOutboundPeers = 40
+			tmConfig.Mempool.Size = 10000
+			tmConfig.StateSync.TrustPeriod = 112 * time.Hour
+			tmConfig.FastSync.Version = "v0"
+
+			// Assaf: This changes the default when creating app.toml in `secretd init` (E.g. on a new node)
+			secretConfig.MinGasPrices = "0.0125uscrt"
+			secretConfig.API.Enable = true
+			secretConfig.API.Swagger = true
+			secretConfig.API.EnableUnsafeCORS = true
+			secretConfig.GRPCWeb.Enable = true
+			secretConfig.GRPCWeb.EnableUnsafeCORS = true
+			secretConfig.IAVLDisableFastNode = false
 
 			// Get bip39 mnemonic
 			var mnemonic string
@@ -118,14 +138,14 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 				}
 			}
 
-			nodeID, _, err := genutil.InitializeNodeValidatorFilesFromMnemonic(config, mnemonic)
+			nodeID, _, err := genutil.InitializeNodeValidatorFilesFromMnemonic(tmConfig, mnemonic)
 			if err != nil {
 				return err
 			}
 
-			config.Moniker = args[0]
+			tmConfig.Moniker = args[0]
 
-			genFile := config.GenesisFile()
+			genFile := tmConfig.GenesisFile()
 			overwrite, _ := cmd.Flags().GetBool(FlagOverwrite)
 
 			if !overwrite && tmos.FileExists(genFile) {
@@ -157,9 +177,10 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 				return errors.Wrap(err, "Failed to export gensis file")
 			}
 
-			toPrint := newPrintInfo(config.Moniker, chainID, nodeID, "", appState)
+			toPrint := newPrintInfo(tmConfig.Moniker, chainID, nodeID, "", appState)
 
-			cfg.WriteConfigFile(filepath.Join(config.RootDir, "config", "config.toml"), config)
+			tmconfig.WriteConfigFile(filepath.Join(tmConfig.RootDir, "config", "config.toml"), tmConfig)
+			sdkconfig.WriteConfigFile(filepath.Join(tmConfig.RootDir, "config", "app.toml"), secretConfig)
 			return displayInfo(toPrint)
 		},
 	}

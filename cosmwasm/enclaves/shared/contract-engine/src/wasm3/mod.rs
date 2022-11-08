@@ -14,22 +14,30 @@ use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
+#[cfg(not(feature = "query-only"))]
+use crate::db::encrypt_key;
+
+use crate::cosmwasm_config::ContractOperation;
 use crate::db::read_encrypted_key;
 #[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, write_encrypted_key};
+use crate::db::{remove_encrypted_key, write_multiple_keys};
 use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngineResult};
-use crate::gas::WasmCosts;
+use crate::gas::{WasmCosts, READ_BASE_GAS, WRITE_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
-use crate::wasm::contract::api_marker;
-use crate::wasm::ContractOperation;
-use crate::wasm3::gas::{get_exhausted_amount, get_remaining_gas, use_gas};
+
+use gas::{get_exhausted_amount, get_remaining_gas, use_gas};
+use module_cache::create_module_instance;
 
 mod gas;
+pub mod module_cache;
 mod validation;
+// use std::time::Instant;
 
 type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
+
+use enclave_utils::kv_cache::KvCache;
 
 macro_rules! debug_err {
     ($message: literal) => {
@@ -83,18 +91,27 @@ impl<'env, C> Wasm3RuntimeEx for wasm3::Runtime<'env, C> {
 pub struct Context {
     context: Ctx,
     gas_limit: u64,
+    gas_used_externally: u64,
     gas_costs: WasmCosts,
+    query_depth: u32,
     #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
-
     contract_key: ContractKey,
     user_nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
-
+    kv_cache: KvCache,
     last_error: Option<WasmEngineError>,
 }
 
 impl Context {
+    pub fn use_gas_externally(&mut self, amount: u64) {
+        self.gas_used_externally = self.gas_used_externally.saturating_add(amount);
+    }
+
+    pub fn get_gas_used_externally(&self) -> u64 {
+        self.gas_used_externally
+    }
+
     pub fn take_last_error(&mut self) -> Option<WasmEngineError> {
         self.last_error.take()
     }
@@ -176,68 +193,35 @@ impl Engine {
         context: Ctx,
         gas_limit: u64,
         gas_costs: WasmCosts,
-        contract_code: ContractCode,
+        contract_code: &ContractCode,
         contract_key: ContractKey,
         operation: ContractOperation,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
+        query_depth: u32,
     ) -> Result<Engine, EnclaveError> {
-        let mut module = walrus::ModuleConfig::new()
-            .generate_producers_section(false)
-            .parse(contract_code.code())
-            .map_err(|_| EnclaveError::InvalidWasm)?;
-
-        for import in module.imports.iter() {
-            eprintln!("import {:?}", import)
-        }
-        for export in module.exports.iter() {
-            eprintln!("export {:?}", export)
-        }
-
-        let cosmwasm_api_version = if let Some(export) = module
-            .exports
-            .iter()
-            .find(|&exp| exp.name == api_marker::V0_10 || exp.name == api_marker::V1)
-        {
-            if export.name == api_marker::V0_10 {
-                CosmWasmApiVersion::V010
-            } else if export.name == api_marker::V1 {
-                CosmWasmApiVersion::V1
-            } else {
-                error!("Invalid cosmwasm api version");
-                return Err(EnclaveError::InvalidWasm);
-            }
-        } else {
-            error!("Invalid cosmwasm api version2");
-            return Err(EnclaveError::InvalidWasm);
-        };
-
-        validation::validate_memory(&mut module)?;
-
-        if let ContractOperation::Init = operation {
-            if module.has_floats() {
-                debug!("contract was found to contain floating point operations");
-                return Err(EnclaveError::WasmModuleWithFP);
-            }
-        }
-
-        gas::add_metering(&mut module, &gas_costs);
-
-        let code = module.emit_wasm();
-
+        let versioned_code = create_module_instance(contract_code, &gas_costs, operation)?;
+        let kv_cache = KvCache::new();
         let context = Context {
             context,
+            query_depth,
             gas_limit,
+            gas_used_externally: 0,
             gas_costs,
             operation,
             contract_key,
             user_nonce,
             user_public_key,
+            kv_cache,
             last_error: None,
         };
 
         debug!("setting up runtime");
+        // let start = Instant::now();
+
         let environment = wasm3::Environment::new().to_enclave_result()?;
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in Environment::new() is: {:?}", duration);
         debug!("initialized environment");
 
         Ok(Self {
@@ -245,8 +229,8 @@ impl Engine {
             gas_limit,
             used_gas: 0,
             environment,
-            code,
-            api_version: cosmwasm_api_version,
+            code: versioned_code.code,
+            api_version: versioned_code.version,
         })
     }
 
@@ -254,32 +238,56 @@ impl Engine {
     where
         F: FnOnce(&mut wasm3::Instance<Context>, &mut Context) -> Result<Vec<u8>, EnclaveError>,
     {
+        // let start = Instant::now();
         let runtime = self
             .environment
             .new_runtime::<Context>(1024 * 60, Some(192 /* 12 MiB */))
             .to_enclave_result()?;
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in environment.new_runtime is: {:?}", duration);
         debug!("initialized runtime");
 
+        // let start = Instant::now();
         let module = self
             .environment
             .parse_module(&self.code)
             .to_enclave_result()?;
+        // let duration = start.elapsed();
+        // trace!(
+        // "Time elapsed in environment.parse_module is: {:?}",
+        // duration
+        // );
         debug!("parsed module");
 
+        // let start = Instant::now();
         let mut instance = runtime.load_module(module).to_enclave_result()?;
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in runtime.load_module is: {:?}", duration);
         debug!("created instance");
 
+        // let start = Instant::now();
         gas::set_gas_limit(&instance, self.gas_limit)?;
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in set_gas_limit is: {:?}", duration);
         debug!("set gas limit");
 
+        // let start = Instant::now();
         Self::link_host_functions(&mut instance).to_enclave_result()?;
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in link_host_functions is: {:?}", duration);
         debug!("linked functions");
 
+        // let start = Instant::now();
         let result = func(&mut instance, &mut self.context);
+        // let duration = start.elapsed();
+        // trace!("Instance: elapsed time for running func is: {:?}", duration);
         debug!("function returned {:?}", result);
 
-        self.used_gas =
-            self.gas_limit - get_remaining_gas(&instance) + get_exhausted_amount(&instance);
+        self.used_gas = self
+            .gas_limit
+            .saturating_sub(get_remaining_gas(&instance))
+            .saturating_sub(self.context.get_gas_used_externally())
+            .saturating_add(get_exhausted_amount(&instance));
 
         result
     }
@@ -292,7 +300,7 @@ impl Engine {
         link_fn(instance, "humanize_address", host_humanize_address)?;
         link_fn(instance, "query_chain", host_query_chain)?;
 
-        link_fn(instance, "addr_canonicalize", host_canonicalize_address)?;
+        link_fn(instance, "addr_canonicalize", host_addr_canonicalize)?;
         link_fn(instance, "addr_humanize", host_humanize_address)?;
         link_fn(instance, "addr_validate", host_addr_validate)?;
         link_fn(instance, "debug_print", host_debug_print)?;
@@ -347,8 +355,18 @@ impl Engine {
 
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
+            // let start = Instant::now();
             let env_ptr = write_to_memory(instance, &env_bytes)?;
+            // let duration = start.elapsed();
+            // trace!(
+            //     "Time elapsed in env_bytes write_to_memory is: {:?}",
+            //     duration
+            // );
+
+            // let start = Instant::now();
             let msg_ptr = write_to_memory(instance, &msg)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in msg write_to_memory is: {:?}", duration);
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -369,16 +387,26 @@ impl Engine {
                             .to_enclave_result()?,
                         (env_ptr, msg_info_ptr, msg_ptr),
                     );
+                    // let start = Instant::now();
+                    // let res =
                     init.call_with_context(context, args)
+                    // let duration = start.elapsed();
+                    // trace!("Time elapsed in call_with_context is: {:?}", duration);
+                    // res
                 }
                 CosmWasmApiVersion::Invalid => {
                     return Err(EnclaveError::InvalidWasm);
                 }
             };
-
+            // let start = Instant::now();
             let output_ptr = check_execution_result(instance, context, result)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in check_execution_result is: {:?}", duration);
 
+            // let start = Instant::now();
             let output = read_from_memory(instance, output_ptr)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in read_from_memory is: {:?}", duration);
 
             Ok(output)
         })
@@ -396,10 +424,10 @@ impl Engine {
             debug!("starting handle");
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
-            let env_ptr = write_to_memory(instance, &env_bytes)?;
-            debug!("handle written env");
             let msg_ptr = write_to_memory(instance, &msg)?;
             debug!("handle written msg");
+            let env_ptr = write_to_memory(instance, &env_bytes)?;
+            debug!("handle written env");
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -412,13 +440,13 @@ impl Engine {
                     handle.call_with_context(context, args)
                 }
                 CosmWasmApiVersion::V1 => {
-                    let export_name = HandleType::get_export_name(&handle_type);
+                    let export_name = HandleType::get_export_name(handle_type);
 
                     if handle_type == &HandleType::HANDLE_TYPE_EXECUTE {
                         let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
                         let (handle, args) = (
                             instance
-                                .find_function::<(u32, u32, u32), u32>(&export_name)
+                                .find_function::<(u32, u32, u32), u32>(export_name)
                                 .to_enclave_result()?,
                             (env_ptr, msg_info_ptr, msg_ptr),
                         );
@@ -426,7 +454,7 @@ impl Engine {
                     } else {
                         let (handle, args) = (
                             instance
-                                .find_function::<(u32, u32), u32>(&export_name)
+                                .find_function::<(u32, u32), u32>(export_name)
                                 .to_enclave_result()?,
                             (env_ptr, msg_ptr),
                         );
@@ -493,6 +521,55 @@ impl Engine {
 
             Ok(output)
         })
+    }
+
+    #[cfg(feature = "query-only")]
+    pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
+        Ok(())
+    }
+
+    #[cfg(not(feature = "query-only"))]
+    pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
+        let keys: Vec<(Vec<u8>, Vec<u8>)> = self
+            .context
+            .kv_cache
+            .flush()
+            .into_iter()
+            .map(|(k, v)| {
+                let (enc_key, _, enc_v) =
+                    encrypt_key(&k, &v, &self.context.context, &self.context.contract_key).unwrap();
+
+                (enc_key.to_vec(), enc_v)
+            })
+            // todo: fix
+            // .map_err(|_|
+            //     {
+            //         debug!(
+            //         "addr_validate() error while trying to parse human address from bytes to string: {:?}",
+            //         err
+            //     );
+            //         return Ok(Some(RuntimeValue::I32(
+            //             self.write_to_memory(b"Input is not valid UTF-8")? as i32,
+            //         )));
+            //     }
+            // )?
+            .collect();
+
+        let used_gas = write_multiple_keys(&self.context.context, keys).map_err(|err| {
+            debug!(
+                "write_db() error while trying to write the value to state: {:?}",
+                err
+            );
+
+            EnclaveError::from(err)
+        })?;
+
+        self.with_instance(|instance, _context| {
+            use_gas(instance, used_gas)?;
+            Ok(vec![])
+        })?;
+
+        Ok(())
     }
 }
 
@@ -615,10 +692,26 @@ fn read_from_memory<C>(
     instance: &wasm3::Instance<C>,
     region_ptr: u32,
 ) -> WasmEngineResult<Vec<u8>> {
+    // let start = Instant::now();
     let runtime = instance.runtime();
+    // let duration = start.elapsed();
+    // trace!(
+    //     "read_from_memory: Time elapsed in instance.runtime(): {:?}",
+    //     duration
+    // );
+
+    // let start = Instant::now();
+    // let res =
     runtime.try_with_memory_or(WasmEngineError::MemoryReadError, |memory| {
         CWMemory::new(memory).extract_vector(region_ptr)
     })?
+    // let duration = start.elapsed();
+    // trace!(
+    //     "read_from_memory: Time elapsed in runtime.try_with_memory_or(): {:?}",
+    //     duration
+    // );
+
+    // res
 }
 
 fn decode_sections_from_memory<C>(
@@ -632,14 +725,29 @@ fn decode_sections_from_memory<C>(
 }
 
 fn write_to_memory<C>(instance: &wasm3::Instance<C>, buffer: &[u8]) -> WasmEngineResult<u32> {
+    // let start = Instant::now();
     let region_ptr = (|| {
         let alloc_fn = instance.find_function::<u32, u32>("allocate")?;
         alloc_fn.call(buffer.len() as u32)
     })()
     .map_err(debug_err!(err => "failed to allocate {} bytes in contract: {err}", buffer.len()))
     .map_err(|_| WasmEngineError::MemoryAllocationError)?;
+    // let duration = start.elapsed();
+    // trace!(
+    //     "write_to_memory: Time elapsed in allocate function call: {:?}",
+    //     duration
+    // );
 
+    // let start = Instant::now();
+    // let res =
     write_to_allocated_memory(instance, region_ptr, buffer)
+    // let duration = start.elapsed();
+    // trace!(
+    //     "write_to_memory: Time elapsed in write_to_allocated_memory: {:?}",
+    //     duration
+    // );
+
+    //res
 }
 
 fn write_to_allocated_memory<C>(
@@ -689,20 +797,43 @@ fn host_read_db(
     instance: &wasm3::Instance<Context>,
     state_key_region_ptr: i32,
 ) -> WasmEngineResult<i32> {
+    // todo: time this
+    use_gas(instance, READ_BASE_GAS)?;
+
     let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_read failed to extract vector from state_key_region_ptr: {err}"),
     )?;
 
     debug!("db_read reading key {}", show_bytes(&state_key_name));
 
-    let (value, used_gas) =
-        read_encrypted_key(&state_key_name, &context.context, &context.contract_key)
-            .map_err(debug_err!("db_read failed to read key from storage"))?;
-    use_gas(instance, used_gas)?;
+    let value = context.kv_cache.read(&state_key_name);
+
+    if let Some(unwrapped) = value {
+        debug!("Got value from cache");
+        let ptr_to_region_in_wasm_vm = write_to_memory(instance, &unwrapped).map_err(|err| {
+            debug!(
+                "read_db() error while trying to allocate {} bytes for the value",
+                unwrapped.len(),
+            );
+            err
+        })?;
+
+        return Ok(ptr_to_region_in_wasm_vm as i32);
+    }
+
+    debug!("Missed value in cache");
+    let (value, used_gas) = read_encrypted_key(
+        &state_key_name,
+        &context.context,
+        &context.contract_key,
+        &mut context.kv_cache,
+    )
+    .map_err(debug_err!("db_read failed to read key from storage"))?;
+    context.use_gas_externally(used_gas);
 
     debug!(
         "db_read received value {:?}",
-        value.as_ref().map(|v| show_bytes(&v))
+        value.as_ref().map(|v| show_bytes(v))
     );
 
     let value = match value {
@@ -734,7 +865,7 @@ fn host_remove_db(
     debug!("db_remove removing key {}", show_bytes(&state_key_name));
 
     let used_gas = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)?;
-    use_gas(instance, used_gas)?;
+    context.use_gas_externally(used_gas);
 
     Ok(())
 }
@@ -750,12 +881,20 @@ fn host_write_db(
         return Err(WasmEngineError::UnauthorizedWrite);
     }
 
+    use_gas(instance, WRITE_BASE_GAS)?;
+
+    // let start = Instant::now();
     let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
     )?;
     let value = read_from_memory(instance, value_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
     )?;
+    // let duration = start.elapsed();
+    // trace!(
+    //     "host_write_db: Time elapsed in read_from_memory x2: {:?}",
+    //     duration
+    // );
 
     debug!(
         "db_write writing key: {}, value: {}",
@@ -763,14 +902,16 @@ fn host_write_db(
         show_bytes(&value)
     );
 
-    let used_gas = write_encrypted_key(
-        &state_key_name,
-        &value,
-        &context.context,
-        &context.contract_key,
-    )
-    .map_err(debug_err!("db_write failed to write key to storage",))?;
-    use_gas(instance, used_gas)?;
+    context.kv_cache.write(&state_key_name, &value);
+
+    // let used_gas = write_encrypted_key(
+    //     &state_key_name,
+    //     &value,
+    //     &context.context,
+    //     &context.contract_key,
+    // )
+    // .map_err(debug_err!("db_write failed to write key to storage",))?;
+    // use_gas(instance, used_gas)?;
 
     Ok(())
 }
@@ -824,9 +965,9 @@ fn host_canonicalize_address(
             .map_err(debug_err!("failed to write error message to contract"));
     }
 
-    debug!("canonicalize_address was called with {:?}", human_addr_str);
+    //debug!("canonicalize_address was called with {:?}", human_addr_str);
 
-    let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+    let (decoded_prefix, data) = match bech32::decode(human_addr_str) {
         Ok(ret) => ret,
         Err(err) => {
             debug!(
@@ -867,6 +1008,79 @@ fn host_canonicalize_address(
     Ok(0)
 }
 
+fn host_addr_canonicalize(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+    (human_region_ptr, canonical_region_ptr): (i32, i32),
+) -> WasmEngineResult<i32> {
+    let used_gas = context.gas_costs.external_canonicalize_address as u64;
+    use_gas(instance, used_gas)?;
+
+    let human = read_from_memory(instance, human_region_ptr as u32)
+        .map_err(debug_err!(err => "addr_canonicalize failed to extract vector from human_region_ptr: {err}"))?;
+
+    let human_addr_str = match std::str::from_utf8(&human) {
+        Ok(addr) => addr,
+        Err(_err) => {
+            debug!(
+                "addr_canonicalize input was not valid UTF-8: {}",
+                show_bytes(&human)
+            );
+            return write_to_memory(instance, b"input is not valid UTF-8")
+                .map(|n| n as i32)
+                .map_err(debug_err!("failed to write error message to contract"));
+        }
+    };
+    if human_addr_str.is_empty() {
+        debug!("addr_canonicalize input was empty");
+        return write_to_memory(instance, b"Input is empty")
+            .map(|n| n as i32)
+            .map_err(debug_err!("failed to write error message to contract"));
+    }
+
+    debug!("addr_canonicalize was called with {:?}", human_addr_str);
+
+    let (decoded_prefix, data) = match bech32::decode(human_addr_str) {
+        Ok(ret) => ret,
+        Err(err) => {
+            debug!(
+                "addr_canonicalize failed to parse input as bech32: {:?}",
+                err
+            );
+            return write_to_memory(instance, err.to_string().as_bytes())
+                .map(|n| n as i32)
+                .map_err(debug_err!("failed to write error message to contract"));
+        }
+    };
+
+    if decoded_prefix != BECH32_PREFIX_ACC_ADDR {
+        debug!("addr_canonicalize was called with an unexpected address prefix");
+        return write_to_memory(
+            instance,
+            format!("wrong address prefix: {:?}", decoded_prefix).as_bytes(),
+        )
+        .map(|n| n as i32)
+        .map_err(debug_err!("failed to write error message to contract"));
+    }
+
+    let canonical = Vec::<u8>::from_base32(&data).map_err(|err| {
+        // Assaf: From reading https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#607
+        // and https://docs.rs/bech32/0.7.2/src/bech32/lib.rs.html#228 I don't think this can fail that way
+        debug!("addr_canonicalize failed to parse base32: {}", err);
+        WasmEngineError::Base32Error
+    })?;
+
+    debug!(
+        "addr_canonicalize returning address {}",
+        hex::encode(human_addr_str)
+    );
+
+    write_to_allocated_memory(instance, canonical_region_ptr as u32, &canonical)?;
+
+    // return 0 == ok
+    Ok(0)
+}
+
 fn host_addr_validate(
     context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -877,7 +1091,6 @@ fn host_addr_validate(
 
     let human = read_from_memory(instance, addr_to_validate as u32)
         .map_err(debug_err!(err => "humanize_address failed to extract vector from canonical_region_ptr: {err}"))?;
-    use_gas(instance, used_gas)?;
 
     trace!(
         "addr_validate() was called from WASM code with {:?}",
@@ -900,7 +1113,7 @@ fn host_addr_validate(
         Ok(x) => x,
     };
 
-    let canonical_address = match bech32::decode(&source_human_address) {
+    let canonical_address = match bech32::decode(source_human_address) {
         Err(err) => {
             debug!(
                 "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
@@ -936,7 +1149,7 @@ fn host_humanize_address(
     instance: &wasm3::Instance<Context>,
     (canonical_region_ptr, human_region_ptr): (i32, i32),
 ) -> WasmEngineResult<i32> {
-    let used_gas = context.gas_costs.external_canonicalize_address as u64;
+    let used_gas = context.gas_costs.external_humanize_address as u64;
     use_gas(instance, used_gas)?;
 
     let canonical = read_from_memory(instance, canonical_region_ptr as u32)
@@ -979,6 +1192,7 @@ fn host_query_chain(
     let mut used_gas: u64 = 0;
     let answer = encrypt_and_query_chain(
         &query_buffer,
+        context.query_depth,
         &context.context,
         context.user_nonce,
         context.user_public_key,
@@ -986,7 +1200,7 @@ fn host_query_chain(
         get_remaining_gas(instance),
     )?;
 
-    use_gas(instance, used_gas)?;
+    context.use_gas_externally(used_gas);
 
     write_to_memory(instance, &answer).map(|region_ptr| region_ptr as i32)
 }

@@ -3,7 +3,7 @@ package mauth
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	"github.com/enigmampc/SecretNetwork/x/mauth/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
 
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"

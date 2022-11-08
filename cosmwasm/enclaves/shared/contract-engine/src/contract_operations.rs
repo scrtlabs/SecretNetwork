@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
@@ -7,6 +9,9 @@ use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
+// use std::time::Instant;
+
+use crate::cosmwasm_config::ContractOperation;
 
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
@@ -22,7 +27,6 @@ use super::io::{
 };
 //use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
-use super::wasm::ContractOperation;
 // use super::wasm::{ContractInstance, Engine};
 
 /*
@@ -51,12 +55,22 @@ pub fn init(
 ) -> Result<InitSuccess, EnclaveError> {
     trace!("Starting init");
 
+    //let start = Instant::now();
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
 
+    //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in extract_base_env is: {:?}", duration);
+    let query_depth = extract_query_depth(env)?;
 
+    //let start = Instant::now();
     let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in get_verification_paramsis: {:?}", duration);
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
@@ -73,42 +87,64 @@ pub fn init(
 
     let secret_msg = SecretMessage::from_slice(msg)?;
 
+    //let start = Instant::now();
     verify_params(
         &parsed_sig_info,
-        &sent_funds,
+        sent_funds,
         &canonical_sender_address,
-        &contract_address,
+        contract_address,
         &secret_msg,
     )?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in verify_params: {:?}", duration);
 
+    //let start = Instant::now();
     let decrypted_msg = secret_msg.decrypt()?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in decrypt: {:?}", duration);
 
+    //let start = Instant::now();
     let ValidatedMessage {
         validated_msg,
         reply_params,
     } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in validate_msg: {:?}", duration);
 
+    //let start = Instant::now();
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Init,
+        query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in start_engine: {:?}", duration);
 
     let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
+    //let start = Instant::now();
     let result = engine.init(&versioned_env, validated_msg);
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in engine.init: {:?}", duration);
+
     *used_gas = engine.gas_used();
     let output = result?;
+
+    engine
+        .flush_cache()
+        .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
     // TODO: copy cosmwasm's structures to enclave
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
+    //let start = Instant::now();
     let output = encrypt_output(
         output,
         &secret_msg,
@@ -119,6 +155,8 @@ pub fn init(
         false,
         false,
     )?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in encrypt_output: {:?}", duration);
 
     // todo: can move the key to somewhere in the output message if we want
 
@@ -155,6 +193,7 @@ pub fn handle(
     let contract_hash = contract_code.hash();
 
     let base_env: BaseEnv = extract_base_env(env)?;
+    let query_depth = extract_query_depth(env)?;
 
     let (sender, contract_address, _, sent_funds) = base_env.get_verification_params();
 
@@ -178,8 +217,8 @@ pub fn handle(
         should_encrypt_output,
         secret_msg,
         decrypted_msg,
-        contract_hash_for_validation,
-    } = parse_message(msg, &parsed_sig_info, &parsed_handle_type)?;
+        data_for_validation,
+    } = parse_message(msg, &parsed_handle_type)?;
 
     let canonical_sender_address = match to_canonical(sender) {
         Ok(can) => can,
@@ -203,12 +242,12 @@ pub fn handle(
     }
 
     let mut validated_msg = decrypted_msg.clone();
-    let mut reply_params: Option<ReplyParams> = None;
+    let mut reply_params: Option<Vec<ReplyParams>> = None;
     if was_msg_encrypted {
         let x = validate_msg(
             &decrypted_msg,
             &contract_hash,
-            contract_hash_for_validation,
+            data_for_validation,
             Some(parsed_handle_type.clone()),
         )?;
         validated_msg = x.validated_msg;
@@ -221,9 +260,10 @@ pub fn handle(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Handle,
+        query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
@@ -237,6 +277,10 @@ pub fn handle(
     let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
     *used_gas = engine.gas_used();
     let mut output = result?;
+
+    engine
+        .flush_cache()
+        .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
     debug!(
         "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
@@ -281,7 +325,7 @@ fn extract_sig_info(sig_info: &[u8]) -> Result<SigInfo, EnclaveError> {
     serde_json::from_slice(sig_info).map_err(|err| {
         warn!(
             "handle got an error while trying to deserialize sig info input bytes into json {:?}: {}",
-            String::from_utf8_lossy(&sig_info),
+            String::from_utf8_lossy(sig_info),
             err
         );
         EnclaveError::FailedToDeserialize
@@ -302,6 +346,7 @@ pub fn query(
     let contract_hash = contract_code.hash();
 
     let base_env: BaseEnv = extract_base_env(env)?;
+    let query_depth = extract_query_depth(env)?;
 
     let (_, contract_address, _, _) = base_env.get_verification_params();
 
@@ -320,16 +365,19 @@ pub fn query(
     let mut engine = start_engine(
         context,
         gas_limit,
-        contract_code,
+        &contract_code,
         &contract_key,
         ContractOperation::Query,
+        query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
     )?;
 
-    let versioned_env = base_env
+    let mut versioned_env = base_env
         .clone()
         .into_versioned_env(&engine.get_api_version());
+
+    versioned_env.set_contract_hash(&contract_hash);
 
     let result = engine.query(&versioned_env, validated_msg);
     *used_gas = engine.gas_used();
@@ -339,8 +387,8 @@ pub fn query(
         output,
         &secret_msg,
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
-        &"".to_string(), // Not used for queries (can't call a sub-message from a query),
-        None,            // Not used for queries (Query response is not replied to the caller),
+        "",   // Not used for queries (can't call a sub-message from a query),
+        None, // Not used for queries (Query response is not replied to the caller),
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
         true,
         false,
@@ -349,12 +397,14 @@ pub fn query(
     Ok(QuerySuccess { output })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn start_engine(
     context: Ctx,
     gas_limit: u64,
-    contract_code: ContractCode,
+    contract_code: &ContractCode,
     contract_key: &ContractKey,
     operation: ContractOperation,
+    query_depth: u32,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
 ) -> Result<crate::wasm3::Engine, EnclaveError> {
@@ -367,44 +417,16 @@ fn start_engine(
         operation,
         nonce,
         user_public_key,
+        query_depth,
     )
 }
-
-// TODO remove once the new engine works well
-// fn _start_engine(
-//     context: Ctx,
-//     gas_limit: u64,
-//     contract_code: ContractCode,
-//     contract_key: &ContractKey,
-//     operation: ContractOperation,
-//     nonce: IoNonce,
-//     user_public_key: Ed25519PublicKey,
-// ) -> Result<Engine, EnclaveError> {
-//     let module = create_module_instance(contract_code, operation)?;
-//
-//     // Set the gas costs for wasm op-codes (there is an inline stack_height limit in WasmCosts)
-//     let wasm_costs = WasmCosts::default();
-//
-//     let contract_instance = ContractInstance::new(
-//         context,
-//         module.clone(),
-//         gas_limit,
-//         wasm_costs,
-//         *contract_key,
-//         operation,
-//         nonce,
-//         user_public_key,
-//     )?;
-//
-//     Ok(Engine::new(contract_instance, module))
-// }
 
 fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
     serde_json::from_slice(env)
         .map_err(|err| {
             warn!(
                 "error while deserializing env into json {:?}: {}",
-                String::from_utf8_lossy(&env),
+                String::from_utf8_lossy(env),
                 err
             );
             EnclaveError::FailedToDeserialize
@@ -412,5 +434,31 @@ fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
         .map(|base_env| {
             trace!("base env: {:?}", base_env);
             base_env
+        })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct EnvWithQD {
+    query_depth: u32,
+}
+
+/// Extract the query_depth from the env parameter.
+///
+/// This is done in a separate method and type definition in order
+/// to simplify the code and avoid further coupling of the query depth
+/// parameter and the CW Env type.
+fn extract_query_depth(env: &[u8]) -> Result<u32, EnclaveError> {
+    serde_json::from_slice::<EnvWithQD>(env)
+        .map_err(|err| {
+            warn!(
+                "error while deserializing env into json {:?}: {}",
+                String::from_utf8_lossy(env),
+                err
+            );
+            EnclaveError::FailedToDeserialize
+        })
+        .map(|env| {
+            trace!("base env: {:?}", env);
+            env.query_depth
         })
 }

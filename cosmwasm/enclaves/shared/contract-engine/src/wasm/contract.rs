@@ -13,48 +13,17 @@ use cw_types_generic::CosmWasmApiVersion;
 use cw_types_v010::consts::BECH32_PREFIX_ACC_ADDR;
 
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
+use enclave_utils::kv_cache::KvCache;
 
 use crate::contract_validation::ContractKey;
-use crate::db::read_encrypted_key;
-#[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, write_encrypted_key};
+use crate::db::{encrypt_key, read_encrypted_key};
+// #[cfg(not(feature = "query-only"))]
+use crate::db::{remove_encrypted_key, /* write_encrypted_key, */ write_multiple_keys};
 use crate::errors::WasmEngineError;
 use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
 use crate::types::IoNonce;
 use crate::wasm::traits::WasmiApi;
-
-/// api_marker is based on this compatibility chart:
-/// https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/README.md#compatibility
-pub mod api_marker {
-    pub const V0_10: &str = "cosmwasm_vm_version_3";
-    pub const V1: &str = "interface_version_8";
-}
-
-/// Right now ContractOperation is used to detect queris and prevent state changes
-#[derive(Clone, Copy, Debug)]
-pub enum ContractOperation {
-    Init,
-    Handle,
-    Query,
-}
-
-#[allow(unused)]
-impl ContractOperation {
-    pub fn is_init(&self) -> bool {
-        matches!(self, ContractOperation::Init)
-    }
-
-    pub fn is_handle(&self) -> bool {
-        matches!(self, ContractOperation::Handle)
-    }
-
-    pub fn is_query(&self) -> bool {
-        matches!(self, ContractOperation::Query)
-    }
-}
-
-const MAX_LOG_LENGTH: usize = 8192;
 
 /// SecretContract maps function index to implementation
 /// When instantiating a module we give it the SecretNetworkImportResolver resolver
@@ -62,6 +31,7 @@ const MAX_LOG_LENGTH: usize = 8192;
 pub struct ContractInstance {
     pub context: Ctx,
     pub memory: MemoryRef,
+    pub kv_cache: KvCache,
     pub gas_limit: u64,
     /// Gas used by the WASM code and WASM host
     pub gas_used: u64,
@@ -70,8 +40,9 @@ pub struct ContractInstance {
     pub gas_costs: WasmCosts,
     pub contract_key: ContractKey,
     pub module: ModuleRef,
-    #[cfg_attr(feature = "query-only", allow(unused))]
+    // #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
+    query_depth: u32,
     pub user_nonce: IoNonce,
     pub user_public_key: Ed25519PublicKey,
     pub cosmwasm_api_version: CosmWasmApiVersion,
@@ -87,6 +58,7 @@ impl ContractInstance {
         gas_costs: WasmCosts,
         contract_key: ContractKey,
         operation: ContractOperation,
+        query_depth: u32,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Self, EnclaveError> {
@@ -106,9 +78,12 @@ impl ContractInstance {
             return Err(EnclaveError::InvalidWasm);
         };
 
+        let kv_cache = KvCache::new();
+
         Ok(Self {
             context,
             memory,
+            kv_cache,
             gas_limit,
             gas_used: 0,
             gas_used_externally: 0,
@@ -116,6 +91,7 @@ impl ContractInstance {
             contract_key,
             module,
             operation,
+            query_depth,
             user_nonce,
             user_public_key,
             cosmwasm_api_version,
@@ -347,10 +323,30 @@ impl WasmiApi for ContractInstance {
 
         self.use_gas(OCALL_BASE_GAS)?;
 
+        let value = self.kv_cache.read(&state_key_name);
+
+        if let Some(unwrapped) = value {
+            let ptr_to_region_in_wasm_vm = self.write_to_memory(&unwrapped).map_err(|err| {
+                debug!(
+                    "read_db() error while trying to allocate {} bytes for the value",
+                    unwrapped.len(),
+                );
+                err
+            })?;
+
+            // Return pointer to the allocated buffer with the value written to it
+            // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L80
+            return Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)));
+        }
+
         // Call read_db (this bubbles up to Tendermint via ocalls and FFI to Go code)
         // This returns the value from Tendermint
-        let (value, gas_used_by_storage) =
-            read_encrypted_key(&state_key_name, &self.context, &self.contract_key)?;
+        let (value, gas_used_by_storage) = read_encrypted_key(
+            &state_key_name,
+            &self.context,
+            &self.contract_key,
+            &mut self.kv_cache,
+        )?;
         self.use_gas_externally(gas_used_by_storage)?;
 
         let value = match value {
@@ -379,17 +375,17 @@ impl WasmiApi for ContractInstance {
         Ok(Some(RuntimeValue::I32(ptr_to_region_in_wasm_vm as i32)))
     }
 
-    /// Remove a key from the contract's storage
-    /// v0.10 + v1
-    ///
-    /// Args:
-    /// 1. "key" to delete from Tendermint (buffer of bytes)
-    /// key is a pointer to a region "struct" of "pointer" and "length"
-    /// A Region looks like { ptr: u32, len: u32 }
-    #[cfg(feature = "query-only")]
-    fn remove_db(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
-        Err(WasmEngineError::UnauthorizedWrite.into())
-    }
+    // /// Remove a key from the contract's storage
+    // /// v0.10 + v1
+    // ///
+    // /// Args:
+    // /// 1. "key" to delete from Tendermint (buffer of bytes)
+    // /// key is a pointer to a region "struct" of "pointer" and "length"
+    // /// A Region looks like { ptr: u32, len: u32 }
+    // #[cfg(feature = "query-only")]
+    // fn remove_db(&mut self, _state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
+    //     Err(WasmEngineError::UnauthorizedWrite.into())
+    // }
 
     /// Remove a key from the contract's storage
     /// v0.10 + v1
@@ -398,7 +394,7 @@ impl WasmiApi for ContractInstance {
     /// 1. "key" to delete from Tendermint (buffer of bytes)
     /// key is a pointer to a region "struct" of "pointer" and "length"
     /// A Region looks like { ptr: u32, len: u32 }
-    #[cfg(not(feature = "query-only"))]
+    // #[cfg(not(feature = "query-only"))]
     fn remove_db(&mut self, state_key_ptr_ptr: i32) -> Result<Option<RuntimeValue>, Trap> {
         if self.operation.is_query() {
             return Err(WasmEngineError::UnauthorizedWrite.into());
@@ -426,22 +422,22 @@ impl WasmiApi for ContractInstance {
         Ok(None)
     }
 
-    /// Write (key,value) into the contract's storage
-    /// v0.10 + v1
-    ///
-    /// Args:
-    /// 1. "key" to write to Tendermint (buffer of bytes)
-    /// 2. "value" to write to Tendermint (buffer of bytes)
-    /// Both of them are pointers to a region "struct" of "pointer" and "length"
-    /// Lets say Region looks like { ptr: u32, len: u32 }
-    #[cfg(feature = "query-only")]
-    fn write_db(
-        &mut self,
-        _state_key_ptr_ptr: i32,
-        _value_ptr_ptr: i32,
-    ) -> Result<Option<RuntimeValue>, Trap> {
-        Err(WasmEngineError::UnauthorizedWrite.into())
-    }
+    // /// Write (key,value) into the contract's storage
+    // /// v0.10 + v1
+    // ///
+    // /// Args:
+    // /// 1. "key" to write to Tendermint (buffer of bytes)
+    // /// 2. "value" to write to Tendermint (buffer of bytes)
+    // /// Both of them are pointers to a region "struct" of "pointer" and "length"
+    // /// Lets say Region looks like { ptr: u32, len: u32 }
+    // #[cfg(feature = "query-only")]
+    // fn write_db(
+    //     &mut self,
+    //     _state_key_ptr_ptr: i32,
+    //     _value_ptr_ptr: i32,
+    // ) -> Result<Option<RuntimeValue>, Trap> {
+    //     Err(WasmEngineError::UnauthorizedWrite.into())
+    // }
 
     /// Write (key,value) into the contract's storage
     /// v0.10 + v1
@@ -451,7 +447,7 @@ impl WasmiApi for ContractInstance {
     /// 2. "value" to write to Tendermint (buffer of bytes)
     /// Both of them are pointers to a region "struct" of "pointer" and "length"
     /// Lets say Region looks like { ptr: u32, len: u32 }
-    #[cfg(not(feature = "query-only"))]
+    // #[cfg(not(feature = "query-only"))]
     fn write_db(
         &mut self,
         state_key_ptr: i32,
@@ -478,19 +474,63 @@ impl WasmiApi for ContractInstance {
 
         self.use_gas(OCALL_BASE_GAS)?;
 
-        let used_gas_by_storage =
-            write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
-                .map_err(|err| {
-                    debug!(
-                        "write_db() error while trying to write the value to state: {:?}",
-                        err
-                    );
-                    err
-                })?;
-        self.use_gas_externally(used_gas_by_storage)?;
+        self.kv_cache.write(&state_key_name, &value);
 
-        // return value from here is never read
-        // https://github.com/scrtlabs/SecretNetwork/blob/2aacc3333ba3a10ed54c03c56576d72c7c9dcc59/cosmwasm/packages/std/src/imports.rs?plain=1#L95
+        // let used_gas_by_storage =
+        //     write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
+        //         .map_err(|err| {
+        //             debug!(
+        //                 "write_db() error while trying to write the value to state: {:?}",
+        //                 err
+        //             );
+        //             err
+        //         })?;
+        // self.use_gas_externally(used_gas_by_storage)?;
+
+        Ok(None)
+    }
+
+    // #[cfg(feature = "query-only")]
+    // fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
+    //     Ok(None)
+    // }
+
+    //#[cfg(not(feature = "query-only"))]
+    fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
+        let keys: Vec<(Vec<u8>, Vec<u8>)> = self
+            .kv_cache
+            .flush()
+            .into_iter()
+            .map(|(k, v)| {
+                let (enc_key, _, enc_v) =
+                    encrypt_key(&k, &v, &self.context, &self.contract_key).unwrap();
+
+                (enc_key.to_vec(), enc_v)
+            })
+            // todo: fix
+            // .map_err(|_|
+            //     {
+            //         debug!(
+            //         "addr_validate() error while trying to parse human address from bytes to string: {:?}",
+            //         err
+            //     );
+            //         return Ok(Some(RuntimeValue::I32(
+            //             self.write_to_memory(b"Input is not valid UTF-8")? as i32,
+            //         )));
+            //     }
+            // )?
+            .collect();
+
+        let used_gas = write_multiple_keys(&self.context, keys).map_err(|err| {
+            debug!(
+                "write_db() error while trying to write the value to state: {:?}",
+                err
+            );
+            err
+        })?;
+
+        self.use_gas_externally(used_gas)?;
+
         Ok(None)
     }
 
@@ -546,7 +586,7 @@ impl WasmiApi for ContractInstance {
             )));
         }
 
-        let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+        let (decoded_prefix, data) = match bech32::decode(human_addr_str) {
             Err(err) => {
                 debug!(
                     "canonicalize_address() error while trying to decode human address {:?} as bech32: {:?}",
@@ -676,6 +716,7 @@ impl WasmiApi for ContractInstance {
         let mut gas_used_by_query: u64 = 0;
         let answer = encrypt_and_query_chain(
             &query_buffer,
+            self.query_depth,
             &self.context,
             self.user_nonce,
             self.user_public_key,
@@ -745,7 +786,7 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let canonical_address = match bech32::decode(&source_human_address) {
+        let canonical_address = match bech32::decode(source_human_address) {
             Err(err) => {
                 debug!(
                     "addr_validate() error while trying to decode human address {:?} as bech32: {:?}",
@@ -823,7 +864,7 @@ impl WasmiApi for ContractInstance {
             Ok(x) => x,
         };
 
-        let (decoded_prefix, data) = match bech32::decode(&human_addr_str) {
+        let (decoded_prefix, data) = match bech32::decode(human_addr_str) {
             Err(err) => {
                 debug!(
                     "addr_canonicalize() error while trying to decode human address {:?} as bech32: {:?}",

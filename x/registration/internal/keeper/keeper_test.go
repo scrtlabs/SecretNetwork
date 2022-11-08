@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	eng "github.com/enigmampc/SecretNetwork/types"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	eng "github.com/scrtlabs/SecretNetwork/types"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
+	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 	"github.com/stretchr/testify/require"
 )
 

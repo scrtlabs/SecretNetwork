@@ -1174,6 +1174,39 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::GetEnv {} => Ok(Response::new()
             .add_attribute("env", serde_json_wasm::to_string(&env).unwrap())
             .add_attribute("info", serde_json_wasm::to_string(&info).unwrap())),
+        ExecuteMsg::ExecuteMultipleContracts { details } => {
+            if details.len() == 0 {
+                return Ok(Response::default().set_data(env.contract.address.as_bytes()));
+            }
+
+            if details[0].should_error {
+                return Err(StdError::generic_err("Error by request"));
+            }
+
+            Ok(Response::new()
+                .add_submessage(SubMsg {
+                    id: details[0].msg_id,
+                    msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                        code_hash: details[0].contract_hash.clone(),
+                        contract_addr: details[0].contract_address.clone(),
+                        msg: Binary(
+                            format!(
+                                r#"{{"execute_multiple_contracts":{{"details":{}}}}}"#,
+                                serde_json_wasm::to_string(&details[1..].to_vec()).unwrap(),
+                            )
+                            .into_bytes(),
+                        ),
+                        funds: vec![],
+                    })
+                    .into(),
+                    reply_on: match details[0].msg_id {
+                        0 => ReplyOn::Never,
+                        _ => ReplyOn::Always,
+                    },
+                    gas_limit: None,
+                })
+                .set_data(details[0].data.as_bytes()))
+        }
     }
 }
 
@@ -2025,7 +2058,16 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (8001, SubMsgResult::Err(_)) => {
             Err(StdError::generic_err(format!("Funds message failed",)))
         }
-
+        (9000, SubMsgResult::Ok(o)) => match o.data {
+            None => Ok(Response::default().set_data(env.contract.address.as_bytes())),
+            Some(d) => {
+                let new_data =
+                    String::from_utf8_lossy(d.as_slice()) + " -> " + env.contract.address.as_str();
+                Ok(Response::default().set_data(new_data.as_bytes()))
+            }
+        },
+        (9000, SubMsgResult::Err(_)) => Ok(Response::default().set_data("err".as_bytes())),
+        //(9000, SubMsgResult::Err(_)) => Err(StdError::generic_err("err")),
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
 }
@@ -2414,65 +2456,58 @@ fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -
 fn test_canonicalize_address_errors(deps: DepsMut) -> StdResult<Response> {
     match deps.api.addr_canonicalize("") {
         Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("addr_canonicalize errored: Input is empty") {
-                return Err(StdError::generic_err(
-                    "empty address should have failed with 'addr_canonicalize errored: Input is empty'",
-                ));
+            if !msg.to_lowercase().contains("input is empty") {
+                return Err(StdError::generic_err(format!(
+                    "empty address should have failed with 'addr_canonicalize errored: Input is empty; got {:?}'",
+                msg)));
             }
             // all is good, continue
         }
-        _ => {
+        other => {
             return Err(StdError::generic_err(
-                "empty address should have failed with 'addr_canonicalize errored: Input is empty'",
+                format!("empty address should have failed with 'addr_canonicalize errored: Input is empty', instead was {:?}", other),
             ))
         }
     }
 
     match deps.api.addr_canonicalize("   ") {
         Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("addr_canonicalize errored: invalid length") {
-                return Err(StdError::generic_err(
-                    "empty trimmed address should have failed with 'addr_canonicalize errored: invalid length'",
-                ));
+            if !msg.to_lowercase().contains("invalid length") {
+                return Err(StdError::generic_err(format!(
+                    "empty trimmed address should have failed with 'addr_canonicalize errored: invalid length; got {:?}'",
+                    msg)));
             }
             // all is good, continue
         }
-        _ => {
+        other => {
             return Err(StdError::generic_err(
-                "empty trimmed address should have failed with 'addr_canonicalize errored: invalid length'",
+                format!("empty trimmed address should have failed with 'addr_canonicalize errored: invalid length', instead was: {:?}", other),
             ))
         }
     }
 
     match deps.api.addr_canonicalize("cosmos1h99hrcc54ms9lxxxx") {
-        Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("addr_canonicalize errored: invalid checksum") {
-                return Err(StdError::generic_err(
-                    "bad bech32 should have failed with 'addr_canonicalize errored: invalid checksum'",
-                ));
-            }
+        Err(StdError::GenericErr { msg })
+            if msg == String::from("addr_canonicalize errored: invalid checksum") =>
+        {
             // all is good, continue
         }
-        _ => {
+        other => {
             return Err(StdError::generic_err(
-                "bad bech32 should have failed with 'addr_canonicalize errored: invalid checksum'",
+                format!("bad bech32 should have failed with 'addr_canonicalize errored: invalid checksum', instead was {:?}", other),
             ))
         }
     }
 
     match deps.api.addr_canonicalize("cosmos1h99hrcc54ms9luwpex9kw0rwdt7etvfdyxh6gu") {
-        Err(StdError::GenericErr { msg }) => {
-            if msg != String::from("addr_canonicalize errored: wrong address prefix: \"cosmos\"")
-            {
-                return Err(StdError::generic_err(
-                    "bad prefix should have failed with 'addr_canonicalize errored: wrong address prefix: \"cosmos\"'",
-                    ));
-            }
+        Err(StdError::GenericErr { msg })
+            if msg == String::from("addr_canonicalize errored: wrong address prefix: \"cosmos\"") =>
+        {
             // all is good, continue
         }
-        _ => {
+        other => {
             return Err(StdError::generic_err(
-                "bad prefix should have failed with 'addr_canonicalize errored: wrong address prefix: \"cosmos\"'",
+                format!("bad prefix should have failed with 'addr_canonicalize errored: wrong address prefix: \"cosmos\"', instead was {:?}", other),
             ))
         }
     }

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/codec/types"
-	wasmTypes "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

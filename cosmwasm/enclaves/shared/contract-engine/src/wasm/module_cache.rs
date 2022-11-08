@@ -13,16 +13,17 @@ use enclave_ffi_types::EnclaveError;
 use enclave_cosmos_types::types::ContractCode;
 use enclave_crypto::HASH_SIZE;
 
-use super::gas::{gas_rules, WasmCosts};
-use super::memory::validate_memory;
 use super::wasm::create_builder;
 use super::wasm::{ContractOperation, WasmiImportResolver};
+use crate::gas::{gas_rules, WasmCosts};
+use crate::wasm::memory::validate_memory;
 
 lazy_static! {
     static ref MODULE_CACHE: SgxRwLock<LruCache<[u8; HASH_SIZE], wasmi::Module>> =
         SgxRwLock::new(LruCache::new(0));
 }
 
+#[allow(dead_code)]
 pub fn configure_module_cache(cap: usize) {
     debug!("configuring module cache: {}", cap);
     MODULE_CACHE.write().unwrap().resize(cap)

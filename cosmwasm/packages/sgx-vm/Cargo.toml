@@ -64,8 +64,8 @@ lazy_static = "1.4"
 enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
     "build_headers"
 ] }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
-sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
+sgx_types = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_urts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_urts" }
 log = "0.4.8"
 base64 = "0.12.0"
 parking_lot = "0.11"

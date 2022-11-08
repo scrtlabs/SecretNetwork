@@ -1,3 +1,5 @@
+.env
+sgx_sk.pem
 *.a
 *.deb
 Enclave_t.c
@@ -10,7 +12,6 @@ Enclave_u.o
 /enigmacli*
 /enigmad*
 secretcli*
-incubator-teaclave-sgx-sdk
 libenclave.a
 libEnclave_u.a
 librust_cosmwasm_enclave.signed.so
@@ -41,3 +42,7 @@ x/compute/internal/keeper/testdata/ibc.wasm
 x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
 x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
 x/compute/internal/keeper/testdata/v1-contract.wasm
+/github.com
+third_party/build
+x/compute/internal/keeper/testdata/test-contract/target
+x/compute/internal/keeper/testdata/v1-sanity-contract/target

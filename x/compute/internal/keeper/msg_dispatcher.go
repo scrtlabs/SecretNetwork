@@ -9,10 +9,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	v010wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v010"
-	v1wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types/v1"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -266,9 +266,10 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		msg_id := []byte(fmt.Sprint(msg.ID))
 		// now handle the reply, we use the parent context, and abort on error
 		reply := v1wasmTypes.Reply{
-			ID:              msg_id,
-			Result:          result,
-			WasMsgEncrypted: msg.WasMsgEncrypted,
+			ID:                  msg_id,
+			Result:              result,
+			WasOrigMsgEncrypted: msg.WasMsgEncrypted,
+			IsEncrypted:         false,
 		}
 
 		// we can ignore any result returned as there is nothing to do with the data
@@ -313,6 +314,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 			replySigInfo = ogSigInfo
 			reply.ID = dataWithInternalReplyInfo.InternalMsgId
+			reply.IsEncrypted = true
 			replySigInfo.CallbackSignature = dataWithInternalReplyInfo.InternaReplyEnclaveSig
 		}
 

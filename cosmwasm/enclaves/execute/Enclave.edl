@@ -124,7 +124,8 @@ enclave {
             uint64_t gas_limit,
             [out] EnclaveBuffer* value,
             [in, count=query_len] const uint8_t* query,
-            uintptr_t query_len
+            uintptr_t query_len,
+            uint32_t query_depth
         ) allow (ecall_allocate, ecall_query);
 
         OcallReturn ocall_remove_db(
@@ -133,6 +134,14 @@ enclave {
             [out] uint64_t* gas_used,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
+        );
+
+        OcallReturn ocall_multiple_write_db(
+            Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
+            [in, count=keys_len] const uint8_t* keys,
+            uintptr_t keys_len
         );
 
         OcallReturn ocall_write_db(

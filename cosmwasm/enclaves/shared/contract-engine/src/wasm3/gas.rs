@@ -178,7 +178,7 @@ fn inject_metering(
     new_instrs.append(seq.instrs_mut());
 
     let block = func.block_mut(block_id);
-    new_instrs.extend_from_slice(&block);
+    new_instrs.extend_from_slice(block);
     block.instrs = new_instrs;
 }
 

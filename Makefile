@@ -1,9 +1,11 @@
 PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
-CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
+
+SPID ?= 00000000000000000000000000000000
+API_KEY ?= FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
@@ -107,7 +109,7 @@ build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
-	-X github.com/enigmampc/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
+	-X github.com/scrtlabs/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags)"
@@ -143,8 +145,8 @@ build_cli:
 	go build -o secretcli -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
-	@echo "--> WARNING! This builds from origin/$(CURRENT_BRANCH)!"
-	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --branch $(CURRENT_BRANCH) github.com/enigmampc/SecretNetwork/cmd/secretd
+	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
+
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
 	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
@@ -161,23 +163,23 @@ _build-linux-with-query: vendor
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
-	mv secretd-windows-* secretcli-windows-amd64.exe
+	sudo mv github.com/scrtlabs/SecretNetwork-windows-* secretcli-windows-amd64.exe
 
 build_macos_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
-	mv secretd-darwin-* secretcli-macos-amd64
+	sudo mv github.com/scrtlabs/SecretNetwork-darwin-amd64 secretcli-macos-amd64
 
 build_macos_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/arm64
-	mv secretd-darwin-* secretcli-macos-arm64
+	sudo mv github.com/scrtlabs/SecretNetwork-darwin-arm64 secretcli-macos-arm64
 
 build_linux_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
-	mv secretd-linux-amd64 secretcli-linux-amd64
+	sudo mv github.com/scrtlabs/SecretNetwork-linux-amd64 secretcli-linux-amd64
 
 build_linux_arm64_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
-	mv secretd-linux-arm64 secretcli-linux-arm64
+	sudo mv github.com/scrtlabs/SecretNetwork-linux-arm64 secretcli-linux-arm64
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
@@ -195,7 +197,7 @@ deb-no-compile:
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
@@ -229,12 +231,23 @@ clean:
 	$(MAKE) -C cosmwasm/enclaves/test clean
 
 build-rocksdb-image:
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION} .
+	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION}-1.1.5 .
 
-build-localsecret:
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=SW --build-arg FEATURES_U="${FEATURES_U},query-node" --build-arg FEATURES="${FEATURES},debug-print" -f deployment/dockerfiles/base.Dockerfile -t rust-go-base-image .
+localsecret: _localsecret-compile
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
 	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
+
+_localsecret-compile:
+	docker build \
+				--build-arg BUILD_VERSION=${VERSION} \
+				--build-arg FEATURES="${FEATURES},debug-print" \
+				--build-arg FEATURES_U=${FEATURES_U} \
+				--secret id=API_KEY,src=.env.local \
+				--secret id=SPID,src=.env.local \
+				--build-arg SGX_MODE=SW \
+				-f deployment/dockerfiles/base.Dockerfile \
+				-t rust-go-base-image \
+				.
 
 build-ibc-hermes:
 	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc
@@ -248,75 +261,51 @@ build-custom-dev-image:
     # delete the copies created above
 	rm go-cosmwasm/api/libgo_cosmwasm.so.x $(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so.x
 
-build-testnet: docker_base
+build-testnet: _docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
 	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-build-mainnet-upgrade: docker_base
+build-mainnet-upgrade: _docker_base
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
+	docker build --secret API_KEY=${API_KEY} --secret SPID=${SPID} --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb-mainnet.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
-build-mainnet: docker_base
+build-mainnet: _docker_base
 	@mkdir build 2>&3 || true
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
 	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-docker_base_rocksdb:
-	docker build \
-			--build-arg BUILD_VERSION=${VERSION} \
-			--build-arg FEATURES=${FEATURES} \
-			--build-arg FEATURES_U=${FEATURES_U} \
-			--build-arg SGX_MODE=${SGX_MODE} \
-			-f deployment/dockerfiles/base-rocksdb.Dockerfile \
-			-t rust-go-base-image \
-			.
-
-docker_base_goleveldb: docker_base
-
-docker_base_rust:
-	docker build \
-				--build-arg BUILD_VERSION=${VERSION} \
-				--build-arg FEATURES=${FEATURES} \
-				--build-arg FEATURES_U=${FEATURES_U} \
-				--build-arg SGX_MODE=${SGX_MODE} \
-				-f deployment/dockerfiles/base-rust.Dockerfile \
-				-t rust-base-image \
-				.
-
-docker_base_go:
-	docker build \
-				--build-arg DB_BACKEND=${DB_BACKEND} \
-				--build-arg BUILD_VERSION=${VERSION} \
-				--build-arg FEATURES=${FEATURES} \
-				--build-arg FEATURES_U=${FEATURES_U} \
-				--build-arg SGX_MODE=${SGX_MODE} \
-				--build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
-				-f deployment/dockerfiles/base-go.Dockerfile \
-				-t rust-go-base-image \
-				.
-
-docker_base: docker_base_rust docker_base_go
-
-docker_bootstrap: docker_base
+docker_bootstrap: _docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
 
-docker_node: docker_base
+docker_node: _docker_base
 	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
 
-docker_local_azure_hw: docker_base
+docker_local_azure_hw: _docker_base
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-node .
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-bootstrap .
 
 docker_enclave_test:
 	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/enclave-test.Dockerfile -t rust-enclave-test .
+
+_docker_base:
+	docker build \
+				--build-arg BUILD_VERSION=${VERSION} \
+				--build-arg FEATURES=${FEATURES} \
+				--build-arg FEATURES_U=${FEATURES_U} \
+				--build-arg SGX_MODE=${SGX_MODE} \
+				--secret id=API_KEY,src=api_key.txt \
+				--secret id=SPID,src=spid.txt \
+				-f deployment/dockerfiles/base.Dockerfile \
+				-t rust-go-base-image \
+				.
 
 # while developing:
 build-enclave: vendor
@@ -349,6 +338,10 @@ callback-sanity-test:
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
+build-bench-contract:
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/bench-contract
+	cp $(TEST_CONTRACT_V1_PATH)/bench-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+
 build-test-contract:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update
@@ -368,7 +361,7 @@ prep-go-tests: build-test-contract
 go-tests: build-test-contract
 	SGX_MODE=SW $(MAKE) build-linux-with-query
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
+	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
@@ -442,38 +435,37 @@ aesm-image:
 ###                         Swagger & Protobuf                              ###
 ###############################################################################
 
-# Install the runsim binary with a temporary workaround of entering an outside
-# directory as the "go get" command ignores the -mod option and will polute the
-# go.{mod, sum} files.
-#
-# ref: https://github.com/golang/go/issues/30515
-statik:
+.PHONY: update-swagger-openapi-docs statik statik-install proto-swagger-openapi-gen
+
+statik-install:
 	@echo "Installing statik..."
 	@go install github.com/rakyll/statik@v0.1.6
 
-update-swagger-openapi-docs: statik proto-swagger-openapi-gen
+statik:
 	statik -src=client/docs/static/ -dest=client/docs -f -m
-	@if [ -n "$(git status --porcelain)" ]; then \
-        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
-        exit 1;\
-    else \
-        echo "\033[92mSwagger docs are in sync\033[0m";\
-    fi
 
-# Example `CHAIN_VERSION=v1.4 make proto-swagger-openapi-gen`
 proto-swagger-openapi-gen:
+	cp go.mod /tmp/go.mod.bak
+	cp go.sum /tmp/go.sum.bak
 	@./scripts/protoc-swagger-openapi-gen.sh
+	cp /tmp/go.mod.bak go.mod
+	cp /tmp/go.sum.bak go.sum
 
-.PHONY: update-swagger-openapi-docs statik proto-swagger-openapi-gen
-
+# Example `CHAIN_VERSION=v1.4.0 make update-swagger-openapi-docs`
+update-swagger-openapi-docs: statik-install proto-swagger-openapi-gen statik
 
 protoVer=v0.2
 
-proto-all: proto-format proto-lint proto-gen proto-swagger-openapi-gen
+proto-all: proto-lint proto-gen proto-swagger-openapi-gen
 
 proto-gen:
+	cp go.mod /tmp/go.mod.bak
+	cp go.sum /tmp/go.sum.bak
 	@echo "Generating Protobuf files"
 	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	cp /tmp/go.mod.bak go.mod
+	cp /tmp/go.sum.bak go.sum
+	go mod tidy
 
 proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json

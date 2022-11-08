@@ -8,7 +8,7 @@ import (
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	"github.com/enigmampc/SecretNetwork/x/mauth/types"
+	"github.com/scrtlabs/SecretNetwork/x/mauth/types"
 )
 
 var _ types.MsgServer = msgServer{}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	wasm "github.com/enigmampc/SecretNetwork/go-cosmwasm"
+	wasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm"
 )
 
 // This is just a demo to ensure we can compile a static go binary

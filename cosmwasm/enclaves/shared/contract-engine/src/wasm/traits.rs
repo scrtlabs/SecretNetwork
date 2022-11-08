@@ -2,6 +2,8 @@ use wasmi::{RuntimeValue, Trap};
 
 /// These functions are imported to WASM code
 pub trait WasmiApi {
+    fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap>;
+
     /// CosmWasm v0.10 + v1
     fn read_db(&mut self, state_key_ptr: i32) -> Result<Option<RuntimeValue>, Trap>;
 

@@ -13,8 +13,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 type Recurse struct {
@@ -44,11 +44,11 @@ type recurseResponse struct {
 var totalWasmQueryCounter int
 
 func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, ctx sdk.Context, keeper Keeper) {
-	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error)
 	countingQuerier := &QueryPlugins{
-		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
+		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
 			totalWasmQueryCounter++
-			return realWasmQuerier(ctx, request)
+			return realWasmQuerier(ctx, request, queryDepth)
 		},
 	}
 
