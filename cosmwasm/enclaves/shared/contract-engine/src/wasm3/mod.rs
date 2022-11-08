@@ -32,7 +32,7 @@ use module_cache::create_module_instance;
 mod gas;
 pub mod module_cache;
 mod validation;
-use std::time::Instant;
+// use std::time::Instant;
 
 type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
@@ -217,11 +217,11 @@ impl Engine {
         };
 
         debug!("setting up runtime");
-        let start = Instant::now();
+        // let start = Instant::now();
 
         let environment = wasm3::Environment::new().to_enclave_result()?;
-        let duration = start.elapsed();
-        trace!("Time elapsed in Environment::new() is: {:?}", duration);
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in Environment::new() is: {:?}", duration);
         debug!("initialized environment");
 
         Ok(Self {
@@ -238,49 +238,49 @@ impl Engine {
     where
         F: FnOnce(&mut wasm3::Instance<Context>, &mut Context) -> Result<Vec<u8>, EnclaveError>,
     {
-        let start = Instant::now();
+        // let start = Instant::now();
         let runtime = self
             .environment
             .new_runtime::<Context>(1024 * 60, Some(192 /* 12 MiB */))
             .to_enclave_result()?;
-        let duration = start.elapsed();
-        trace!("Time elapsed in environment.new_runtime is: {:?}", duration);
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in environment.new_runtime is: {:?}", duration);
         debug!("initialized runtime");
 
-        let start = Instant::now();
+        // let start = Instant::now();
         let module = self
             .environment
             .parse_module(&self.code)
             .to_enclave_result()?;
-        let duration = start.elapsed();
-        trace!(
-            "Time elapsed in environment.parse_module is: {:?}",
-            duration
-        );
+        // let duration = start.elapsed();
+        // trace!(
+        // "Time elapsed in environment.parse_module is: {:?}",
+        // duration
+        // );
         debug!("parsed module");
 
-        let start = Instant::now();
+        // let start = Instant::now();
         let mut instance = runtime.load_module(module).to_enclave_result()?;
-        let duration = start.elapsed();
-        trace!("Time elapsed in runtime.load_module is: {:?}", duration);
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in runtime.load_module is: {:?}", duration);
         debug!("created instance");
 
-        let start = Instant::now();
+        // let start = Instant::now();
         gas::set_gas_limit(&instance, self.gas_limit)?;
-        let duration = start.elapsed();
-        trace!("Time elapsed in set_gas_limit is: {:?}", duration);
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in set_gas_limit is: {:?}", duration);
         debug!("set gas limit");
 
-        let start = Instant::now();
+        // let start = Instant::now();
         Self::link_host_functions(&mut instance).to_enclave_result()?;
-        let duration = start.elapsed();
-        trace!("Time elapsed in link_host_functions is: {:?}", duration);
+        // let duration = start.elapsed();
+        // trace!("Time elapsed in link_host_functions is: {:?}", duration);
         debug!("linked functions");
 
-        let start = Instant::now();
+        // let start = Instant::now();
         let result = func(&mut instance, &mut self.context);
-        let duration = start.elapsed();
-        trace!("Instance: elapsed time for running func is: {:?}", duration);
+        // let duration = start.elapsed();
+        // trace!("Instance: elapsed time for running func is: {:?}", duration);
         debug!("function returned {:?}", result);
 
         self.used_gas = self
@@ -355,18 +355,18 @@ impl Engine {
 
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
-            let start = Instant::now();
+            // let start = Instant::now();
             let env_ptr = write_to_memory(instance, &env_bytes)?;
-            let duration = start.elapsed();
-            trace!(
-                "Time elapsed in env_bytes write_to_memory is: {:?}",
-                duration
-            );
+            // let duration = start.elapsed();
+            // trace!(
+            //     "Time elapsed in env_bytes write_to_memory is: {:?}",
+            //     duration
+            // );
 
-            let start = Instant::now();
+            // let start = Instant::now();
             let msg_ptr = write_to_memory(instance, &msg)?;
-            let duration = start.elapsed();
-            trace!("Time elapsed in msg write_to_memory is: {:?}", duration);
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in msg write_to_memory is: {:?}", duration);
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -387,25 +387,26 @@ impl Engine {
                             .to_enclave_result()?,
                         (env_ptr, msg_info_ptr, msg_ptr),
                     );
-                    let start = Instant::now();
-                    let res = init.call_with_context(context, args);
-                    let duration = start.elapsed();
-                    trace!("Time elapsed in call_with_context is: {:?}", duration);
-                    res
+                    // let start = Instant::now();
+                    // let res =
+                    init.call_with_context(context, args)
+                    // let duration = start.elapsed();
+                    // trace!("Time elapsed in call_with_context is: {:?}", duration);
+                    // res
                 }
                 CosmWasmApiVersion::Invalid => {
                     return Err(EnclaveError::InvalidWasm);
                 }
             };
-            let start = Instant::now();
+            // let start = Instant::now();
             let output_ptr = check_execution_result(instance, context, result)?;
-            let duration = start.elapsed();
-            trace!("Time elapsed in check_execution_result is: {:?}", duration);
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in check_execution_result is: {:?}", duration);
 
-            let start = Instant::now();
+            // let start = Instant::now();
             let output = read_from_memory(instance, output_ptr)?;
-            let duration = start.elapsed();
-            trace!("Time elapsed in read_from_memory is: {:?}", duration);
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in read_from_memory is: {:?}", duration);
 
             Ok(output)
         })
@@ -691,25 +692,26 @@ fn read_from_memory<C>(
     instance: &wasm3::Instance<C>,
     region_ptr: u32,
 ) -> WasmEngineResult<Vec<u8>> {
-    let start = Instant::now();
+    // let start = Instant::now();
     let runtime = instance.runtime();
-    let duration = start.elapsed();
-    trace!(
-        "read_from_memory: Time elapsed in instance.runtime(): {:?}",
-        duration
-    );
+    // let duration = start.elapsed();
+    // trace!(
+    //     "read_from_memory: Time elapsed in instance.runtime(): {:?}",
+    //     duration
+    // );
 
-    let start = Instant::now();
-    let res = runtime.try_with_memory_or(WasmEngineError::MemoryReadError, |memory| {
+    // let start = Instant::now();
+    // let res =
+    runtime.try_with_memory_or(WasmEngineError::MemoryReadError, |memory| {
         CWMemory::new(memory).extract_vector(region_ptr)
-    })?;
-    let duration = start.elapsed();
-    trace!(
-        "read_from_memory: Time elapsed in runtime.try_with_memory_or(): {:?}",
-        duration
-    );
+    })?
+    // let duration = start.elapsed();
+    // trace!(
+    //     "read_from_memory: Time elapsed in runtime.try_with_memory_or(): {:?}",
+    //     duration
+    // );
 
-    res
+    // res
 }
 
 fn decode_sections_from_memory<C>(
@@ -723,28 +725,29 @@ fn decode_sections_from_memory<C>(
 }
 
 fn write_to_memory<C>(instance: &wasm3::Instance<C>, buffer: &[u8]) -> WasmEngineResult<u32> {
-    let start = Instant::now();
+    // let start = Instant::now();
     let region_ptr = (|| {
         let alloc_fn = instance.find_function::<u32, u32>("allocate")?;
         alloc_fn.call(buffer.len() as u32)
     })()
     .map_err(debug_err!(err => "failed to allocate {} bytes in contract: {err}", buffer.len()))
     .map_err(|_| WasmEngineError::MemoryAllocationError)?;
-    let duration = start.elapsed();
-    trace!(
-        "write_to_memory: Time elapsed in allocate function call: {:?}",
-        duration
-    );
+    // let duration = start.elapsed();
+    // trace!(
+    //     "write_to_memory: Time elapsed in allocate function call: {:?}",
+    //     duration
+    // );
 
-    let start = Instant::now();
-    let res = write_to_allocated_memory(instance, region_ptr, buffer);
-    let duration = start.elapsed();
-    trace!(
-        "write_to_memory: Time elapsed in write_to_allocated_memory: {:?}",
-        duration
-    );
+    // let start = Instant::now();
+    // let res =
+    write_to_allocated_memory(instance, region_ptr, buffer)
+    // let duration = start.elapsed();
+    // trace!(
+    //     "write_to_memory: Time elapsed in write_to_allocated_memory: {:?}",
+    //     duration
+    // );
 
-    res
+    //res
 }
 
 fn write_to_allocated_memory<C>(
@@ -880,18 +883,18 @@ fn host_write_db(
 
     use_gas(instance, WRITE_BASE_GAS)?;
 
-    let start = Instant::now();
+    // let start = Instant::now();
     let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
     )?;
     let value = read_from_memory(instance, value_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
     )?;
-    let duration = start.elapsed();
-    trace!(
-        "host_write_db: Time elapsed in read_from_memory x2: {:?}",
-        duration
-    );
+    // let duration = start.elapsed();
+    // trace!(
+    //     "host_write_db: Time elapsed in read_from_memory x2: {:?}",
+    //     duration
+    // );
 
     debug!(
         "db_write writing key: {}, value: {}",

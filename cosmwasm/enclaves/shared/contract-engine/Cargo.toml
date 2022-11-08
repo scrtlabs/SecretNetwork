@@ -17,8 +17,7 @@ wasmi-engine = ["wasmi", "parity-wasm", "pwasm-utils"]
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
-  "backtrace",
-  "untrusted_time"
+  "backtrace"
 ] }
 sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 
