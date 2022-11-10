@@ -40,10 +40,16 @@ func initAppConfig() (string, interface{}) {
 	srvCfg.GRPCWeb.Enable = true
 	srvCfg.GRPCWeb.EnableUnsafeCORS = true
 
+	// defaulting this to false until we can verify it's amazballs
+	srvCfg.GRPC.Concurrency = false
+
 	secretAppConfig := SecretAppConfig{
 		Config:     *srvCfg,
 		WASMConfig: *compute.DefaultWasmConfig(),
 	}
+	secretAppConfig.Config.IAVLDisableFastNode = false
+
+	secretAppConfig.WASMConfig.EnclaveCacheSize = 200
 
 	secretAppTemplate := serverconfig.DefaultConfigTemplate + compute.DefaultConfigTemplate
 
