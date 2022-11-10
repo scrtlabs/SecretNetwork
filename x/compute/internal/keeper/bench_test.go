@@ -7,11 +7,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/codec/legacy"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	"github.com/gonum/stat"
+
 	"github.com/stretchr/testify/require"
 )
+
+type ParamKeyValue struct {
+	key   string
+	value string
+}
 
 type Bench string
 
@@ -24,11 +32,27 @@ const (
 	BenchWriteStorage                   = "bench_write_storage"
 	BenchAllocate                       = "bench_allocate"
 	BenchReadLargeItemFromStorage       = "bench_read_large_item_from_storage"
+	CreateViewingKey                    = "create_viewing_key"
+	SetViewingKey                       = "set_viewing_key"
+	WithPermit                          = "with_permit"
+	Balance                             = "balance"
 	BenchWriteLargeItemToStorage  Bench = "bench_write_large_item_to_storage"
 )
 
-func buildBenchMessage(bench Bench) []byte {
-	x := fmt.Sprintf("{\"%s\": {}}", bench)
+func buildBenchMessage(bench Bench, params []ParamKeyValue) []byte {
+	// Constract the msg parameters if exist
+	paramsString := ""
+	if len(params) > 0 {
+		for i, param := range params {
+			paramsString += fmt.Sprintf("\"%s\": \"%s\"", param.key, param.value)
+			if i < len(params)-1 {
+				paramsString += ","
+				break
+			}
+		}
+	}
+
+	x := fmt.Sprintf("{\"%s\": {%s}}", bench, paramsString)
 	return []byte(x)
 }
 
@@ -144,10 +168,12 @@ func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAd
 }
 
 func TestRunBenchmarks(t *testing.T) {
+	viewingKey := "my_vk"
 	cases := map[string]struct {
 		gasLimit   uint64
 		bench      Bench
 		loops      uint64
+		params     []ParamKeyValue
 		callbackfn func() uint64
 	}{
 		//"warmup": {
@@ -195,11 +221,22 @@ func TestRunBenchmarks(t *testing.T) {
 			bench:    BenchReadStorageMultipleKeys,
 			loops:    10,
 		},
+		"Create viewing key": {
+			gasLimit: 1_000_000,
+			bench:    CreateViewingKey,
+			loops:    10,
+		},
+		"Set viewing key": {
+			gasLimit: 1_000_000,
+			bench:    SetViewingKey,
+			loops:    10,
+			params:   []ParamKeyValue{{key: "key", value: viewingKey}},
+		},
 	}
 
 	contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
 	// this is here so read multiple keys works without setup
-	msg := buildBenchMessage(BenchWriteStorage)
+	msg := buildBenchMessage(BenchWriteStorage, nil)
 	_, _, _, _, _, _ = execHelper(
 		t,
 		keeper,
@@ -215,7 +252,7 @@ func TestRunBenchmarks(t *testing.T) {
 		false,
 	)
 	// this is here so read large keys works without setup
-	msg = buildBenchMessage(BenchWriteLargeItemToStorage)
+	msg = buildBenchMessage(BenchWriteLargeItemToStorage, nil)
 	_, _, _, _, _, _ = execHelper(
 		t,
 		keeper,
@@ -236,7 +273,7 @@ func TestRunBenchmarks(t *testing.T) {
 	ctx = ctx.WithGasMeter(sdk.NewGasMeter(100_000_000))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-	msg = buildBenchMessage(Noop)
+	msg = buildBenchMessage(Noop, nil)
 
 	for i := uint64(1); i < 10; i++ {
 		start := time.Now()
@@ -273,7 +310,7 @@ func TestRunBenchmarks(t *testing.T) {
 			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
 			require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
-			msg := buildBenchMessage(tc.bench)
+			msg := buildBenchMessage(tc.bench, tc.params)
 
 			for i := uint64(1); i < tc.loops+1; i++ {
 				start := time.Now()
@@ -304,4 +341,129 @@ func TestRunBenchmarks(t *testing.T) {
 		timer, _ := timers[name]
 		timer.PrintReport()
 	}
+
+	// Run the query benchmarks.
+	// Notice that it's done in the same test, as the result of the queries depend on the
+	// transactions above.
+	RunQueryBenchmarks(t, keeper, ctx, contractAddr, creator, creatorPriv, viewingKey)
+}
+
+func RunQueryBenchmarks(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddr sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey,
+	viewingKey string,
+) {
+	timers := make(map[string]BenchTime)
+
+	queryCases := map[string]struct {
+		bench            Bench
+		queryFunctionPtr func(
+			t *testing.T, keeper Keeper, ctx sdk.Context,
+			contractAddr sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey,
+			viewingKey string,
+		)
+		loops uint64
+	}{
+		"Query with viewing-key": {
+			bench:            WithPermit,
+			queryFunctionPtr: vkBenchRun,
+			loops:            10,
+		},
+		"Query with permit": {
+			bench:            Balance,
+			queryFunctionPtr: PermitBenchRun,
+			loops:            10,
+		},
+	}
+
+	for name, tc := range queryCases {
+		t.Run(name, func(t *testing.T) {
+			timer := NewBenchTimer(name, tc.bench)
+			for i := uint64(1); i < tc.loops+1; i++ {
+				start := time.Now()
+				// call bench
+				tc.queryFunctionPtr(t, keeper, ctx, contractAddr, creator, creatorPriv, viewingKey)
+				elapsed := time.Since(start)
+				timer.AppendResult(elapsed, 0)
+			}
+			timers[name] = timer
+		})
+	}
+
+	for name := range queryCases {
+		timer, _ := timers[name]
+		timer.PrintReport()
+	}
+}
+
+func vkBenchRun(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddr sdk.AccAddress, creator sdk.AccAddress, _ crypto.PrivKey,
+	viewingKey string,
+) {
+	vkQueryMsg := fmt.Sprintf(`{"balance":{"address": "%s", "key":"%s"}}`, creator, viewingKey)
+
+	expectedResult := `{"balance":{"amount":"42"}}`
+	queryAndVerify(t, keeper, ctx, contractAddr, vkQueryMsg, expectedResult)
+}
+
+func PermitBenchRun(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddr sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey,
+	_ string,
+) {
+	permitSignature := generatePermitSignature(ctx, keeper, contractAddr, creator, creatorPriv)
+	permitQueryMsg := fmt.Sprintf(
+		`{"with_permit":{"query":{"balance":{}}, "permit":{"params":{"permit_name":"test","chain_id":"test-secret-X","allowed_tokens":["%s"],"permissions":["balance"]},"signature":%s}}}`,
+		contractAddr,
+		permitSignature,
+	)
+
+	expectedResult := `{"balance":{"amount":"42"}}`
+	queryAndVerify(t, keeper, ctx, contractAddr, permitQueryMsg, expectedResult)
+}
+
+func generatePermitSignature(
+	ctx sdk.Context, keeper Keeper, contractAddr sdk.AccAddress,
+	creator sdk.AccAddress, creatorPriv crypto.PrivKey,
+) string {
+	// Create the permit string
+	permitString := fmt.Sprintf(
+		`{"chain_id":"%s","account_number":"0","sequence":"0","msgs":[{"type":"query_permit","value":{"permit_name":"test","allowed_tokens":["%s"],"permissions":["balance"]}}],"fee":{"amount":[{"denom":"uscrt","amount":"0"}],"gas":"1"},"memo":""}`,
+		TestConfig.ChainID,
+		contractAddr.String(),
+	)
+
+	// Turn permitString into bytes array
+	permitBytes := []byte(permitString)
+
+	// Convert permitBytes into a legacytx.StdSignDoc struct
+	var permitSignDoc legacytx.StdSignDoc
+	legacy.Cdc.MustUnmarshalJSON(permitBytes, &permitSignDoc)
+
+	// Convert permitSignDoc into bytes array again
+	permitSignDocBytes := sdk.MustSortJSON(legacy.Cdc.MustMarshalJSON(permitSignDoc))
+
+	// Sign permitSignDocBytes and create a legacytx.StdSignature struct
+	signature, _ := creatorPriv.Sign(permitSignDocBytes)
+	permitSignature := legacytx.StdSignature{
+		PubKey:    creatorPriv.PubKey(),
+		Signature: signature,
+	}
+
+	// Convert permitSignature into a JSON bytes array
+	permitSignatureJson := legacy.Cdc.MustMarshalJSON(permitSignature)
+
+	// Format permitSignatureJson into a string
+	permitSignatureJsonString := fmt.Sprintf("%s\n", permitSignatureJson)
+	return permitSignatureJsonString
+}
+
+func queryAndVerify(
+	t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress,
+	queryMsg string, expectedResult string,
+) {
+	permitQueryRes, qErr := queryHelper(t, keeper, ctx, contractAddr, queryMsg, true, true, 1_000_000)
+	require.Empty(t, qErr)
+	require.JSONEq(t, expectedResult, permitQueryRes)
 }
