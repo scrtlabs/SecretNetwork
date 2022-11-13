@@ -57,8 +57,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             bench_read_large_key_from_storage(deps, 2)
         }
         ExecuteMsg::BenchWriteLargeItemToStorage { .. } => bench_write_large_storage_key(deps, 2),
-        ExecuteMsg::CreateViewingKey {} => try_create_key(deps, env, info),
-        ExecuteMsg::SetViewingKey { key, .. } => try_set_key(deps, info, key),
+        ExecuteMsg::BenchCreateViewingKey {} => try_create_key(deps, env, info),
+        ExecuteMsg::BenchSetViewingKey { key, .. } => try_set_key(deps, info, key),
     };
 
     Ok(Response::default())
@@ -67,7 +67,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::WithPermit { permit, query } => permit_queries(deps, permit, query),
+        QueryMsg::NoopQuery {} => Ok(Binary::default()),
+        QueryMsg::BenchGetBalanceWithPermit { permit, query } => {
+            permit_queries(deps, permit, query)
+        }
         _ => viewing_keys_queries(deps, msg),
     }
 }
@@ -129,9 +132,11 @@ pub fn viewing_keys_queries(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
         let result = ViewingKey::check(deps.storage, address.as_str(), key.as_str());
         if result.is_ok() {
             return match msg {
-                QueryMsg::Balance { .. } => to_binary(&QueryAnswer::Balance {
-                    amount: Uint128::from(BALANCE_QUERY_RESULT),
-                }),
+                QueryMsg::BenchGetBalanceWithViewingKey { .. } => {
+                    to_binary(&QueryAnswer::Balance {
+                        amount: Uint128::from(BALANCE_QUERY_RESULT),
+                    })
+                }
                 _ => panic!("This query type does not require authentication"),
             };
         }

@@ -31,8 +31,8 @@ pub enum ExecuteMsg {
     BenchAllocate {},
     BenchReadLargeItemFromStorage {},
     BenchWriteLargeItemToStorage {},
-    CreateViewingKey {},
-    SetViewingKey {
+    BenchCreateViewingKey {},
+    BenchSetViewingKey {
         key: String,
         padding: Option<String>,
     },
@@ -47,11 +47,12 @@ pub enum QueryWithPermit {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Balance {
+    NoopQuery {},
+    BenchGetBalanceWithViewingKey {
         address: String,
         key: String,
     },
-    WithPermit {
+    BenchGetBalanceWithPermit {
         permit: Permit,
         query: QueryWithPermit,
     },
@@ -60,7 +61,9 @@ pub enum QueryMsg {
 impl QueryMsg {
     pub fn get_validation_params(&self) -> (Vec<&String>, ViewingKeyObj) {
         match self {
-            Self::Balance { address, key } => (vec![address], ViewingKeyObj(key.clone())),
+            Self::BenchGetBalanceWithViewingKey { address, key } => {
+                (vec![address], ViewingKeyObj(key.clone()))
+            }
             _ => panic!("This query type does not require authentication"),
         }
     }

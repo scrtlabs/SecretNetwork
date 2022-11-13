@@ -26,16 +26,17 @@ type Bench string
 // Available benches
 const (
 	Noop                          Bench = "noop"
+	NoopQuery                     Bench = "noop_query"
 	BenchCPU                            = "bench_c_p_u"
 	BenchReadStorage                    = "bench_read_storage"
 	BenchReadStorageMultipleKeys        = "bench_read_storage_multiple_keys"
 	BenchWriteStorage                   = "bench_write_storage"
 	BenchAllocate                       = "bench_allocate"
 	BenchReadLargeItemFromStorage       = "bench_read_large_item_from_storage"
-	CreateViewingKey                    = "create_viewing_key"
-	SetViewingKey                       = "set_viewing_key"
-	WithPermit                          = "with_permit"
-	Balance                             = "balance"
+	BenchCreateViewingKey               = "bench_create_viewing_key"
+	BenchSetViewingKey                  = "bench_set_viewing_key"
+	BenchGetBalanceWithPermit           = "bench_with_permit"
+	BenchGetBalanceWithViewingKey       = "bench_get_balance_with_viewing_key"
 	BenchWriteLargeItemToStorage  Bench = "bench_write_large_item_to_storage"
 )
 
@@ -167,8 +168,7 @@ func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAd
 	return contractAddr, creator, creatorPriv, ctx, keeper
 }
 
-func TestRunBenchmarks(t *testing.T) {
-	viewingKey := "my_vk"
+func TestRunExecuteBenchmarks(t *testing.T) {
 	cases := map[string]struct {
 		gasLimit   uint64
 		bench      Bench
@@ -223,14 +223,14 @@ func TestRunBenchmarks(t *testing.T) {
 		},
 		"Create viewing key": {
 			gasLimit: 1_000_000,
-			bench:    CreateViewingKey,
+			bench:    BenchCreateViewingKey,
 			loops:    10,
 		},
 		"Set viewing key": {
 			gasLimit: 1_000_000,
-			bench:    SetViewingKey,
+			bench:    BenchSetViewingKey,
 			loops:    10,
-			params:   []ParamKeyValue{{key: "key", value: viewingKey}},
+			params:   []ParamKeyValue{{key: "key", value: "my_vk"}},
 		},
 	}
 
@@ -341,49 +341,78 @@ func TestRunBenchmarks(t *testing.T) {
 		timer, _ := timers[name]
 		timer.PrintReport()
 	}
-
-	// Run the query benchmarks.
-	// Notice that it's done in the same test, as the result of the queries depend on the
-	// transactions above.
-	RunQueryBenchmarks(t, keeper, ctx, contractAddr, creator, creatorPriv, viewingKey)
 }
 
-func RunQueryBenchmarks(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey,
-	viewingKey string,
-) {
+func TestRunQueryBenchmarks(t *testing.T) {
+	contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
+
+	viewingKey := "my_vk"
+	t.Run("Set viewing key", func(t *testing.T) {
+		// make sure we set a limit before calling
+		ctx = ctx.WithGasMeter(sdk.NewGasMeter(1_000_000))
+		require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
+
+		msg := buildBenchMessage(BenchSetViewingKey, []ParamKeyValue{{key: "key", value: viewingKey}})
+		// call bench
+		_, _, qErr, _, _, _ := execHelper(
+			t,
+			keeper,
+			ctx,
+			contractAddr,
+			creator,
+			creatorPriv,
+			string(msg),
+			false,
+			true,
+			1_000_000,
+			0,
+			false,
+		)
+		require.Empty(t, qErr)
+	})
+
 	timers := make(map[string]BenchTime)
 
 	queryCases := map[string]struct {
-		bench            Bench
-		queryFunctionPtr func(
-			t *testing.T, keeper Keeper, ctx sdk.Context,
-			contractAddr sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey,
-			viewingKey string,
-		)
-		loops uint64
+		bench          Bench
+		loops          uint64
+		queryMsg       string
+		expectedResult string
 	}{
+		"Empty query": {
+			bench:          NoopQuery,
+			loops:          10,
+			queryMsg:       `{"noop_query":{}}`,
+			expectedResult: "",
+		},
 		"Query with viewing-key": {
-			bench:            WithPermit,
-			queryFunctionPtr: vkBenchRun,
-			loops:            10,
+			bench:          BenchGetBalanceWithViewingKey,
+			loops:          10,
+			queryMsg:       fmt.Sprintf(`{"bench_get_balance_with_viewing_key":{"address": "%s", "key":"%s"}}`, creator, viewingKey),
+			expectedResult: `{"balance":{"amount":"42"}}`,
 		},
 		"Query with permit": {
-			bench:            Balance,
-			queryFunctionPtr: PermitBenchRun,
-			loops:            10,
+			bench:          BenchGetBalanceWithPermit,
+			loops:          10,
+			queryMsg:       createPermitQueryMsg(ctx, keeper, contractAddr, creator, creatorPriv),
+			expectedResult: `{"balance":{"amount":"42"}}`,
 		},
 	}
 
+	AvgTimeBase := measureTimeBaseline(t, keeper, ctx, contractAddr)
 	for name, tc := range queryCases {
 		t.Run(name, func(t *testing.T) {
 			timer := NewBenchTimer(name, tc.bench)
+			timer.SetBaselineValues(0, time.Duration(math.Floor(AvgTimeBase)))
 			for i := uint64(1); i < tc.loops+1; i++ {
 				start := time.Now()
 				// call bench
-				tc.queryFunctionPtr(t, keeper, ctx, contractAddr, creator, creatorPriv, viewingKey)
+				queryRes, qErr := queryHelper(t, keeper, ctx, contractAddr, tc.queryMsg, true, true, 1_000_000)
 				elapsed := time.Since(start)
+
+				require.Empty(t, qErr)
+				require.Equal(t, tc.expectedResult, queryRes)
+
 				timer.AppendResult(elapsed, 0)
 			}
 			timers[name] = timer
@@ -396,31 +425,33 @@ func RunQueryBenchmarks(
 	}
 }
 
-func vkBenchRun(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creator sdk.AccAddress, _ crypto.PrivKey,
-	viewingKey string,
-) {
-	vkQueryMsg := fmt.Sprintf(`{"balance":{"address": "%s", "key":"%s"}}`, creator, viewingKey)
+// Measure the avg time of querying an empty query
+func measureTimeBaseline(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress) float64 {
+	timer := NewBenchTimer("base contract query", NoopQuery)
 
-	expectedResult := `{"balance":{"amount":"42"}}`
-	queryAndVerify(t, keeper, ctx, contractAddr, vkQueryMsg, expectedResult)
+	for i := uint64(1); i < 10; i++ {
+		start := time.Now()
+
+		queryRes, qErr := queryHelper(t, keeper, ctx, contractAddr, `{"noop_query":{}}`, true, true, 1_000_000)
+		elapsed := time.Since(start)
+		require.Empty(t, qErr)
+		require.Equal(t, "", queryRes)
+
+		timer.AppendResult(elapsed, 0)
+	}
+
+	AvgTimeBase := timer.Mean
+	return AvgTimeBase
 }
 
-func PermitBenchRun(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey,
-	_ string,
-) {
+func createPermitQueryMsg(ctx sdk.Context, keeper Keeper, contractAddr sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey) string {
 	permitSignature := generatePermitSignature(ctx, keeper, contractAddr, creator, creatorPriv)
 	permitQueryMsg := fmt.Sprintf(
-		`{"with_permit":{"query":{"balance":{}}, "permit":{"params":{"permit_name":"test","chain_id":"test-secret-X","allowed_tokens":["%s"],"permissions":["balance"]},"signature":%s}}}`,
+		`{"bench_get_balance_with_permit":{"query":{"balance":{}}, "permit":{"params":{"permit_name":"test","chain_id":"test-secret-X","allowed_tokens":["%s"],"permissions":["balance"]},"signature":%s}}}`,
 		contractAddr,
 		permitSignature,
 	)
-
-	expectedResult := `{"balance":{"amount":"42"}}`
-	queryAndVerify(t, keeper, ctx, contractAddr, permitQueryMsg, expectedResult)
+	return permitQueryMsg
 }
 
 func generatePermitSignature(
@@ -457,13 +488,4 @@ func generatePermitSignature(
 	// Format permitSignatureJson into a string
 	permitSignatureJsonString := fmt.Sprintf("%s\n", permitSignatureJson)
 	return permitSignatureJsonString
-}
-
-func queryAndVerify(
-	t *testing.T, keeper Keeper, ctx sdk.Context, contractAddr sdk.AccAddress,
-	queryMsg string, expectedResult string,
-) {
-	permitQueryRes, qErr := queryHelper(t, keeper, ctx, contractAddr, queryMsg, true, true, 1_000_000)
-	require.Empty(t, qErr)
-	require.JSONEq(t, expectedResult, permitQueryRes)
 }
