@@ -57,8 +57,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             bench_read_large_key_from_storage(deps, 2)
         }
         ExecuteMsg::BenchWriteLargeItemToStorage { .. } => bench_write_large_storage_key(deps, 2),
-        ExecuteMsg::BenchCreateViewingKey {} => try_create_key(deps, env, info),
-        ExecuteMsg::BenchSetViewingKey { key, .. } => try_set_key(deps, info, key),
+        ExecuteMsg::BenchCreateViewingKey {} => {
+            create_key(deps, env, info);
+            Ok(())
+        }
+        ExecuteMsg::BenchSetViewingKey { key, .. } => {
+            set_key(deps, info, key);
+            Ok(())
+        }
     };
 
     Ok(Response::default())
@@ -69,9 +75,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::NoopQuery {} => Ok(Binary::default()),
         QueryMsg::BenchGetBalanceWithPermit { permit, query } => {
-            permit_queries(deps, permit, query)
+            query_with_permit(deps, permit, query)
         }
-        _ => viewing_keys_queries(deps, msg),
+        _ => query_with_view_key(deps, msg),
     }
 }
 
@@ -80,23 +86,25 @@ pub fn reply(_deps: DepsMut, _env: Env, _reply: Reply) -> StdResult<Response> {
     Ok(Response::default())
 }
 
-pub fn try_create_key(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<()> {
-    let _key = ViewingKey::create(
+pub fn create_key(deps: DepsMut, env: Env, info: MessageInfo) {
+    ViewingKey::create(
         deps.storage,
         &info,
         &env,
         info.sender.as_str(),
         "some_entropy".as_bytes(),
     );
-    Ok(())
 }
 
-pub fn try_set_key(deps: DepsMut, info: MessageInfo, key: String) -> StdResult<()> {
+pub fn set_key(deps: DepsMut, info: MessageInfo, key: String) {
     ViewingKey::set(deps.storage, info.sender.as_str(), key.as_str());
-    Ok(())
 }
 
-fn permit_queries(deps: Deps, permit: Permit, query: QueryWithPermit) -> Result<Binary, StdError> {
+fn query_with_permit(
+    deps: Deps,
+    permit: Permit,
+    query: QueryWithPermit,
+) -> Result<Binary, StdError> {
     // Validate permit content
     let token_address = ContractAddressStore::load(deps.storage)?;
 
@@ -125,7 +133,7 @@ fn permit_queries(deps: Deps, permit: Permit, query: QueryWithPermit) -> Result<
     }
 }
 
-pub fn viewing_keys_queries(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query_with_view_key(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     let (addresses, key) = msg.get_validation_params();
 
     for address in addresses {
