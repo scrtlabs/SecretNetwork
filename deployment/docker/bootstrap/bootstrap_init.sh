@@ -51,6 +51,8 @@ fi
 
 lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &
 
+cp $(which secretd) $(dirname $(which secretd))/secretcli
+
 setsid node faucet_server.js &
 
 # sleep infinity
