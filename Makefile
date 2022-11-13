@@ -293,7 +293,14 @@ docker_local_azure_hw: _docker_base
 	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-bootstrap .
 
 docker_enclave_test:
-	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/enclave-test.Dockerfile -t rust-enclave-test .
+	docker build \
+				--build-arg FEATURES="test ${FEATURES}" \
+				--build-arg SGX_MODE=${SGX_MODE} \
+				--secret id=API_KEY,src=.env.local \
+				--secret id=SPID,src=.env.local \
+				-f deployment/dockerfiles/enclave-test.Dockerfile \
+				-t rust-enclave-test \
+				.
 
 _docker_base:
 	docker build \

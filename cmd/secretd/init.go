@@ -11,7 +11,6 @@ import (
 
 	"github.com/cosmos/go-bip39"
 	"github.com/pkg/errors"
-	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/spf13/cobra"
 	tmconfig "github.com/tendermint/tendermint/config"
 
@@ -24,7 +23,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/server"
-	sdkconfig "github.com/cosmos/cosmos-sdk/server/config"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -85,12 +83,6 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			tmConfig := serverCtx.Config
 			tmConfig.SetRoot(clientCtx.HomeDir)
 
-			// Secret Network config (.secretd/config/app.toml)
-			secretConfig := SecretAppConfig{
-				Config:     *sdkconfig.DefaultConfig(),
-				WASMConfig: *compute.DefaultWasmConfig(),
-			}
-
 			chainID, _ := cmd.Flags().GetString(flags.FlagChainID)
 			if chainID == "" {
 				chainID = fmt.Sprintf("test-chain-%s", tmrand.Str(6))
@@ -112,15 +104,6 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			tmConfig.Mempool.Size = 10000
 			tmConfig.StateSync.TrustPeriod = 112 * time.Hour
 			tmConfig.FastSync.Version = "v0"
-
-			// Assaf: This changes the default when creating app.toml in `secretd init` (E.g. on a new node)
-			secretConfig.MinGasPrices = "0.0125uscrt"
-			secretConfig.API.Enable = true
-			secretConfig.API.Swagger = true
-			secretConfig.API.EnableUnsafeCORS = true
-			secretConfig.GRPCWeb.Enable = true
-			secretConfig.GRPCWeb.EnableUnsafeCORS = true
-			secretConfig.IAVLDisableFastNode = false
 
 			// Get bip39 mnemonic
 			var mnemonic string
@@ -180,7 +163,6 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			toPrint := newPrintInfo(tmConfig.Moniker, chainID, nodeID, "", appState)
 
 			tmconfig.WriteConfigFile(filepath.Join(tmConfig.RootDir, "config", "config.toml"), tmConfig)
-			sdkconfig.WriteConfigFile(filepath.Join(tmConfig.RootDir, "config", "app.toml"), secretConfig)
 			return displayInfo(toPrint)
 		},
 	}
