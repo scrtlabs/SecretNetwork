@@ -11,7 +11,7 @@ if [ ! -e "$file" ]; then
   mkdir -p ./.sgx_secrets
   secretd config chain-id "$chain_id"
   secretd config keyring-backend test
-
+  secretd config output json
   # export SECRET_NETWORK_CHAIN_ID=secretdev-1
   # export SECRET_NETWORK_KEYRING_BACKEND=test
   secretd init banana --chain-id "$chain_id"

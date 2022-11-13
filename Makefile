@@ -251,7 +251,6 @@ build-testnet-bootstrap:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
-				 --load \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=BOOTSTRAP \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
@@ -266,7 +265,6 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
-				 --load \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \

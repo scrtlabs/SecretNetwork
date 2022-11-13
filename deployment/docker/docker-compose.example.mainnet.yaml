@@ -1,3 +1,4 @@
+# Example of a docker-compose file that runs both the aesm and SN node
 version: '3.4'
 
 services:
@@ -12,7 +13,7 @@ services:
     tty: true
 
   node:
-    image: ghcr.io/scrtlabs/secret-network-node:1.3.0-docker
+    image: ghcr.io/scrtlabs/secret-network-node:1.5.1
     devices:
       - /dev/sgx/enclave
       - /dev/sgx/provision
