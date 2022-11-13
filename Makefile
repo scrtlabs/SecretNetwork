@@ -244,6 +244,20 @@ localsecret:
 build-ibc-hermes:
 	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc --load
 
+build-testnet-bootstrap:
+	@mkdir build 2>&3 || true
+	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg SGX_MODE=HW \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
+				 --build-arg SECRET_NODE_TYPE=BOOTSTRAP \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t ghcr.io/scrtlabs/secret-network-bootstrap-testnet:v$(VERSION) \
+				 --target release-image .
+
 build-testnet:
 	@mkdir build 2>&3 || true
 	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
@@ -255,7 +269,7 @@ build-testnet:
 				 --build-arg SECRET_NODE_TYPE=NODE \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 -f deployment/dockerfiles/Dockerfile \
-				 -t enigmampc/secret-network-node:v$(VERSION)-testnet \
+				 -t ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
 				 --target release-image .
 	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
@@ -264,7 +278,7 @@ build-testnet:
 				 --build-arg SGX_MODE=HW \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
-				 --cache-from enigmampc/secret-network-node:v$(VERSION)-testnet \
+				 --cache-from ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
 				 --target build-deb .

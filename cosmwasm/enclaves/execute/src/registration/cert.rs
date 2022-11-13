@@ -406,7 +406,12 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::SwHardeningNeeded
         | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded
         | SgxQuoteStatus::GroupOutOfDate => {
-            check_advisories(&report.sgx_quote_status, advisories)?;
+            let results = check_advisories(&report.sgx_quote_status, advisories);
+
+            if results.is_err() {
+                warn!("This platform has vulnerabilities that will not be approved on mainnet");
+            }
+
             // if !advisories.contains_lvi_injection() {
             //     return Err(NodeAuthResult::EnclaveQuoteStatus);
             // }

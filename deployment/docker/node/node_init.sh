@@ -16,16 +16,19 @@ then
   rm -rf ~/.secretd/* || true
 
   mkdir -p /root/.secretd/.node
-  # secretd config keyring-backend test
   secretd config node tcp://"$RPC_URL"
   secretd config chain-id "$CHAINID"
+  secretd config keyring-backend test
 #  export SECRET_NETWORK_CHAIN_ID=$CHAINID
 #  export SECRET_NETWORK_KEYRING_BACKEND=test
   # secretd init "$(hostname)" --chain-id enigma-testnet || true
 
   secretd init "$MONIKER" --chain-id "$CHAINID"
 
-  # cp /tmp/.secretd/keyring-test /root/.secretd/ -r
+  b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
+
+  secretd keys add a
+  echo $b_mnemonic | secretd keys add b --recover
 
   echo "Initializing chain: $CHAINID with node moniker: $(hostname)"
 
@@ -47,14 +50,15 @@ then
 
   echo "Public key: $(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )"
 
-  cp /opt/secret/.sgx_secrets/attestation_cert.der /root/.secretd/config/
-
-  openssl base64 -A -in attestation_cert.der -out b64_cert
+  curl http://bootstrap:5000/faucet?address=$(secretcli keys show -a a)
+  # cp /opt/secret/.sgx_secrets/attestation_cert.der ./
+  sleep 10
+  # openssl base64 -A -in attestation_cert.der -out b64_cert
   # secretd tx register auth attestation_cert.der --from a --gas-prices 0.25uscrt -y
 
-  curl -G --data-urlencode "cert=$(cat b64_cert)" http://"$REGISTRATION_SERVICE"/register
+  secretd tx register auth /opt/secret/.sgx_secrets/attestation_cert.der -y --from a --gas-prices 0.25uscrt
 
-  sleep 20
+  sleep 10
 
   SEED=$(secretd q register seed "$PUBLIC_KEY"  2> /dev/null | cut -c 3-)
   echo "SEED: $SEED"

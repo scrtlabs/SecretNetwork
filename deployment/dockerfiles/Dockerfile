@@ -169,6 +169,7 @@ COPY deployment/docker/bootstrap/bootstrap_init.sh .
 COPY deployment/docker/node/node_init.sh .
 COPY deployment/docker/startup.sh .
 COPY deployment/docker/node_key.json .
+COPY deployment/docker/devimage/faucet/faucet_server.js .
 
 RUN chmod +x /usr/bin/secretd
 RUN chmod +x bootstrap_init.sh

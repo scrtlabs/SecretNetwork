@@ -22,15 +22,17 @@ then
 
   perl -i -pe 's/"1814400s"/"80s"/g' ~/.secretd/config/genesis.json
 
+  b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
+
   secretcli keys add a
-  secretcli keys add b
+  echo $b_mnemonic | secretd keys add b --recover
   secretcli keys add c
   secretcli keys add d
 
   secretd add-genesis-account "$(secretcli keys show -a a)" 1000000000000000000uscrt
-#  secretd add-genesis-account "$(secretcli keys show -a b)" 1000000000000000000uscrt
-#  secretd add-genesis-account "$(secretcli keys show -a c)" 1000000000000000000uscrt
-#  secretd add-genesis-account "$(secretcli keys show -a d)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretcli keys show -a b)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretcli keys show -a c)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretcli keys show -a d)" 1000000000000000000uscrt
 
 
   secretd gentx a 1000000uscrt --keyring-backend test --chain-id enigma-pub-testnet-3

@@ -15,21 +15,21 @@ if [ ! -e "$file" ]; then
   # export SECRET_NETWORK_CHAIN_ID=secretdev-1
   # export SECRET_NETWORK_KEYRING_BACKEND=test
   secretd init banana --chain-id "$chain_id"
-
+  b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
   perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
   perl -i -pe 's/"172800000000000"/"90000000000"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
 
   secretd keys add a
-  secretd keys add b
+  echo $b_mnemonic | secretd keys add b --recover
   secretd keys add c
   secretd keys add d
 
   secretd add-genesis-account "$(secretd keys show -a a)" 1000000000000000000uscrt
-#  secretd add-genesis-account "$(secretd keys show -a b)" 1000000000000000000uscrt
-#  secretd add-genesis-account "$(secretd keys show -a c)" 1000000000000000000uscrt
-#  secretd add-genesis-account "$(secretd keys show -a d)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretd keys show -a b)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretd keys show -a c)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretd keys show -a d)" 1000000000000000000uscrt
 
 
   secretd gentx a 1000000uscrt --chain-id "$chain_id"
@@ -50,6 +50,8 @@ if [ ! -e "$file" ]; then
 fi
 
 lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &
+
+setsid node faucet_server.js &
 
 # sleep infinity
 source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
