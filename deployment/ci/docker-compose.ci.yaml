@@ -53,7 +53,7 @@ services:
           cpus: "2"
           memory: "4g"
 
-  bench:
+  bench-query-concurrent:
     image: tests-base-image
     depends_on:
       - aesm
@@ -65,7 +65,7 @@ services:
       - /tmp/secretd:/root/.secretd
       - /tmp/secretcli:/root/.secretcli
     stdin_open: true
-    entrypoint: ["/bin/bash", "go-tests-bench.sh"]
+    entrypoint: ["node", "query-concurrent"]
     tty: true
     deploy:
       resources:

@@ -34,6 +34,8 @@ COPY api_key.txt ias_keys/production/api_key.txt
 
 COPY deployment/ci/go-tests.sh .
 COPY deployment/ci/go-tests-bench.sh .
+#COPY path/to/tests.js
+#RUN cd path/to/tests && npm i
 
 RUN chmod +x go-tests.sh
 RUN chmod +x go-tests-bench.sh
