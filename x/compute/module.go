@@ -3,6 +3,7 @@ package compute
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 
 	"github.com/gorilla/mux"
@@ -151,7 +152,9 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 }
 
 // BeginBlock returns the begin blocker for the compute module.
-func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
+func (am AppModule) BeginBlock(_ sdk.Context, req abci.RequestBeginBlock) {
+	fmt.Printf("beginning block with a new encrypted random: %d\n", req.Header.EncryptedRandom)
+}
 
 // EndBlock returns the end blocker for the compute module. It returns no validator
 // updates.
