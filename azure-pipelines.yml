@@ -78,7 +78,7 @@ steps:
       tags: latest
       buildContext: .
       arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/tests/go-tests.Dockerfile
+      Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
     displayName: "Run system tests (go tests)"
