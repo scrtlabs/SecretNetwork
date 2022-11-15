@@ -51,7 +51,13 @@ secretd validate-genesis
 
 secretd config node tcp://localhost:26657
 
-RUST_BACKTRACE=1 secretd start &
+if [ -z "$NO_TESTS" ]
+then
+    RUST_BACKTRACE=1 secretd start
+else
+    RUST_BACKTRACE=1 secretd start &
+fi
+
 
 ########## RUN INTEGRATION TESTS
 

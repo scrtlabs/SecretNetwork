@@ -71,7 +71,17 @@ steps:
       Dockerfile: deployment/dockerfiles/tests/enclave-test.Dockerfile
 
   - task: Docker@2
-    displayName: "Build tests image"
+    displayName: "Build Integration tests image"
+    inputs:
+      command: build
+      repository: integration-tests
+      tags: latest
+      buildContext: .
+      arguments: --build-arg SGX_MODE=HW
+      Dockerfile: deployment/dockerfiles/tests/integration-tests.Dockerfile
+
+  - task: Docker@2
+    displayName: "Build System tests image"
     inputs:
       command: build
       repository: tests-base-image
@@ -86,8 +96,11 @@ steps:
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
     displayName: "Run benchmarks"
 
+  - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests integration-tests
+    displayName: "Run integration tests (new)"
+
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
-    displayName: "Run integration tests"
+    displayName: "Run integration tests (old)"
 
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from enclave-test aesm enclave-test
     displayName: "Run enclave tests"
