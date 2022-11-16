@@ -5,8 +5,10 @@ go 1.19
 replace (
 	// dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.10-secret.1
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.10-secret.1-custom_tm
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	// tendermint with custom block header
+	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint-random v0.0.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )

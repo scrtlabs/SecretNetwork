@@ -694,6 +694,8 @@ github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71e
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
 github.com/scrtlabs/cosmos-sdk v0.45.10-secret.1 h1:LwdGlKvGf6VL+uliKg46xGUdVhn7bvHryPOVwhet/Yg=
 github.com/scrtlabs/cosmos-sdk v0.45.10-secret.1/go.mod h1:CbfWNs4PuxxsvRD/snQuSBDwIhtsD7rIDTVQyYMKTa0=
+github.com/scrtlabs/tendermint-random v0.0.1 h1:fKQAXcM3gR8l3kTdN5mdiy6VXCxOCdA6HeCxZb7C7XU=
+github.com/scrtlabs/tendermint-random v0.0.1/go.mod h1:KKY5uCLyKJsvc6hRRtIdBUp2LLEDsf/IEUcOEBf8REs=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/shirou/gopsutil v2.20.5+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
