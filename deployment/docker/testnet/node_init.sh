@@ -50,7 +50,7 @@ then
 
   echo "Public key: $(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )"
 
-  curl http://bootstrap:5000/faucet?address=$(secretd keys show -a a)
+  curl http://"$FAUCET_URL"/faucet?address=$(secretd keys show -a a)
   # cp /opt/secret/.sgx_secrets/attestation_cert.der ./
   sleep 10
   # openssl base64 -A -in attestation_cert.der -out b64_cert

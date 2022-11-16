@@ -26,6 +26,7 @@ services:
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
+      - /tmp/sgx_secrets:/opt/secret/.sgx_secrets
       # - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
@@ -60,6 +61,13 @@ services:
       - CHAINID=confidential-1
       - RPC_URL=bootstrap:26657
       - PERSISTENT_PEERS=115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656
+    expose:
+      - 9090
+      - 9091
+      - 1317
+      - 26657
+      - 26656
+
     deploy:
       restart_policy:
         condition: on-failure
@@ -75,3 +83,5 @@ services:
       - node
     ports:
       - "1337:1337"
+      - "9091:9091"
+      - "9090:9090"
