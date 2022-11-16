@@ -8,7 +8,7 @@ replace (
 	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.10-secret.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// custom tendermint with another header
-	github.com/tendermint/tendermint => /home/esh/Development/projects/tendermint-random
+	//github.com/tendermint/tendermint => github.com/scrtlabs/tendermint-random v0.0.1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
