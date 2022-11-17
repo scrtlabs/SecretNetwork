@@ -79,6 +79,10 @@ message Header {
   // consensus info
   bytes evidence_hash    = 13;  // evidence included in the block
   bytes proposer_address = 14;  // original proposer of the block
+
+  // encrypted random source
+  int64 encrypted_random = 15; // a random number encrypted by the proposer to be consumed by contracts
+
 }
 
 // Data contains the set of transactions included in the block
