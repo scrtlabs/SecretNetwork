@@ -17,7 +17,7 @@ import (
 
 const (
 	defaultLRUCacheSize        = uint64(0)
-	defaultEnclaveLRUCacheSize = uint8(15)
+	defaultEnclaveLRUCacheSize = uint16(100)
 	defaultQueryGasLimit       = uint64(10_000_000)
 )
 
@@ -216,7 +216,7 @@ func contractSDKEventAttributes(customAttributes []wasmTypesV010.LogAttribute, c
 type WasmConfig struct {
 	SmartQueryGasLimit uint64
 	CacheSize          uint64
-	EnclaveCacheSize   uint8
+	EnclaveCacheSize   uint16
 }
 
 // DefaultWasmConfig returns the default settings for WasmConfig
@@ -259,11 +259,20 @@ func NewVerificationInfo(
 
 // GetConfig load config values from the app options
 func GetConfig(appOpts servertypes.AppOptions) *WasmConfig {
-	return &WasmConfig{
-		SmartQueryGasLimit: cast.ToUint64(appOpts.Get("wasm.contract-query-gas-limit")),
-		CacheSize:          cast.ToUint64(appOpts.Get("wasm.contract-memory-cache-size")),
-		EnclaveCacheSize:   cast.ToUint8(appOpts.Get("wasm.contract-memory-enclave-cache-size")),
+
+	config := DefaultWasmConfig()
+
+	updatedGasLimit := cast.ToUint64(appOpts.Get("wasm.contract-query-gas-limit"))
+	if updatedGasLimit > 0 {
+		config.SmartQueryGasLimit = updatedGasLimit
 	}
+
+	enclaveCacheSize := cast.ToUint16(appOpts.Get("wasm.contract-memory-enclave-cache-size"))
+	if enclaveCacheSize > 0 {
+		config.EnclaveCacheSize = enclaveCacheSize
+	}
+
+	return config
 }
 
 // DefaultConfigTemplate default config template for wasm module

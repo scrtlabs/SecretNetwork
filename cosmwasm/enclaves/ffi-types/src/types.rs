@@ -40,7 +40,7 @@ pub struct RuntimeConfiguration {
     /// The amount of wasmi modules cached in an LRU cache inside the enclave.
     /// This speeds up the execution of recently used modules, but has a significant
     /// memory overhead.
-    pub module_cache_size: u8,
+    pub module_cache_size: u32,
 }
 
 /// This struct holds a pointer to memory in userspace, that contains the storage
