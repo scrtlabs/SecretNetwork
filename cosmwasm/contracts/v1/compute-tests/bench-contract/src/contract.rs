@@ -20,7 +20,7 @@ use secret_toolkit::permit::{validate, Permit, TokenPermissions};
 use secret_toolkit::crypto::sha_256;
 use secret_toolkit::viewing_key::{ViewingKey, ViewingKeyStore};
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, QueryWithPermit};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg};
 use crate::state::ContractAddressStore;
 
 pub const BALANCE_QUERY_RESULT: u32 = 42;
@@ -75,9 +75,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::NoopQuery {} => Ok(Binary::default()),
         QueryMsg::BenchGetBalanceWithPermit { permit, .. } => {
-            query_with_permit_loop_multiple(env, permit)
+            query_with_permit_loop_multiple(deps, env, permit)
         }
-        QueryMsg::BenchGetBalanceWithViewingKey => query_with_view_key_loop_multiple(deps, msg),
+        QueryMsg::BenchGetBalanceWithViewingKey { .. } => query_with_view_key_loop_multiple(deps, msg),
     }
 }
 
@@ -101,6 +101,7 @@ pub fn set_key(deps: DepsMut, info: MessageInfo, key: String) {
 }
 
 fn query_with_permit_loop_multiple(
+    deps: Deps,
     env: Env,
     permit: Permit,
 ) -> Result<Binary, StdError> {
