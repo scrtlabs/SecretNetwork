@@ -43,7 +43,7 @@ install_sdk(){
    # original shell's working directory
    cd "$HOME/.sgxsdk"
 
-   wget -O sgx_linux_x64_sdk_2.13.100.4.bin https://download.01.org/intel-sgx/sgx-linux/2.13/distro/ubuntu20.04-server/sgx_linux_x64_sdk_2.13.100.4.bin
+   wget -O sgx_linux_x64_sdk_2.13.100.4.bin https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/sgx_linux_x64_sdk_2.17.101.1.bin
 
    # Make the driver and SDK installers executable
    chmod +x ./sgx_linux_*.bin
@@ -107,7 +107,7 @@ install_psw(){
     wget -O /tmp/libprotobuf10_3.0.0-9_amd64.deb http://ftp.br.debian.org/debian/pool/main/p/protobuf/libprotobuf10_3.0.0-9_amd64.deb
     (sleep 3 ; echo y) | sudo gdebi /tmp/libprotobuf10_3.0.0-9_amd64.deb
 
-    sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le autoconf libtool
+    sudo apt install -y libsgx-enclave-common libsgx-enclave-common-dev libsgx-urts sgx-aesm-service libsgx-uae-service libsgx-launch libsgx-aesm-launch-plugin libsgx-ae-le sgx-aesm-service libsgx-uae-service autoconf libtool
 }
 
 deps
