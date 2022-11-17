@@ -406,7 +406,7 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::SwHardeningNeeded
         | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded
         | SgxQuoteStatus::GroupOutOfDate => {
-            check_advisories(&report.sgx_quote_status, advisories)?;
+            let _ = check_advisories(&report.sgx_quote_status, advisories);
             // if !advisories.contains_lvi_injection() {
             //     return Err(NodeAuthResult::EnclaveQuoteStatus);
             // }
