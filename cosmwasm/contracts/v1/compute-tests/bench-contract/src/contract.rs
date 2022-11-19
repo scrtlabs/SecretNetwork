@@ -105,9 +105,9 @@ fn query_with_permit_loop_multiple(
     env: Env,
     permit: Permit,
 ) -> Result<Binary, StdError> {
-    // Validate permit content
+    // running this too many times will skew results as the VK gets cached and this becomes way more performant
     let token_address = env.contract.address.to_string();
-    for _i in 1..1000 {
+    for _i in 1..2 {
         validate(
             deps,
             PREFIX_REVOKED_PERMITS,
@@ -125,7 +125,8 @@ fn query_with_permit_loop_multiple(
 
 pub fn query_with_view_key_loop_multiple(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
 
-    for _i in 1..1000 {
+    // running this too many times will skew results as the VK gets cached and this becomes way more performant
+    for _i in 1..2 {
         let (addresses, key) = msg.get_validation_params();
 
         for address in addresses {
