@@ -41,7 +41,7 @@ pub fn execute(
         ExecuteMsg::BenchReadLargeItemFromStorage { .. } => {
             bench_read_large_key_from_storage(deps, 1)
         }
-        ExecuteMsg::SetUpReadLargeItem { .. } => setup_read_large_from_storage(deps),
+        ExecuteMsg::SetupReadLargeItem { .. } => setup_read_large_from_storage(deps),
     };
 
     Ok(Response::default())
