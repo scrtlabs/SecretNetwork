@@ -20,7 +20,7 @@ use secret_toolkit::permit::{validate, Permit, TokenPermissions};
 use secret_toolkit::crypto::sha_256;
 use secret_toolkit::viewing_key::{ViewingKey, ViewingKeyStore};
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, QueryWithPermit};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg};
 use crate::state::ContractAddressStore;
 
 pub const BALANCE_QUERY_RESULT: u32 = 42;
@@ -71,13 +71,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::NoopQuery {} => Ok(Binary::default()),
-        QueryMsg::BenchGetBalanceWithPermit { permit, query } => {
-            query_with_permit(deps, permit, query)
+        QueryMsg::BenchGetBalanceWithPermit { permit, .. } => {
+            query_with_permit_loop_multiple(deps, env, permit)
         }
-        _ => query_with_view_key(deps, msg),
+        QueryMsg::BenchGetBalanceWithViewingKey { .. } => query_with_view_key_loop_multiple(deps, msg),
     }
 }
 
@@ -100,57 +100,41 @@ pub fn set_key(deps: DepsMut, info: MessageInfo, key: String) {
     ViewingKey::set(deps.storage, info.sender.as_str(), key.as_str());
 }
 
-fn query_with_permit(
+fn query_with_permit_loop_multiple(
     deps: Deps,
+    env: Env,
     permit: Permit,
-    query: QueryWithPermit,
 ) -> Result<Binary, StdError> {
-    // Validate permit content
-    let token_address = ContractAddressStore::load(deps.storage)?;
-
-    validate(
-        deps,
-        PREFIX_REVOKED_PERMITS,
-        &permit,
-        token_address.into_string(),
-        None,
-    )?;
-
-    // Permit validated! We can now execute the query.
-    match query {
-        QueryWithPermit::Balance {} => {
-            if !permit.check_permission(&TokenPermissions::Balance) {
-                return Err(StdError::generic_err(format!(
-                    "No permission to query balance, got permissions {:?}",
-                    permit.params.permissions
-                )));
-            }
-
-            to_binary(&QueryAnswer::Balance {
-                amount: Uint128::from(BALANCE_QUERY_RESULT),
-            })
-        }
+    // running this too many times will skew results as the VK gets cached and this becomes way more performant
+    let token_address = env.contract.address.to_string();
+    for _i in 1..2 {
+        validate(
+            deps,
+            PREFIX_REVOKED_PERMITS,
+            &permit,
+            token_address.clone(),
+            None,
+        )?;
+        permit.check_permission(&TokenPermissions::Balance);
     }
+
+    to_binary(&QueryAnswer::Balance {
+        amount: Uint128::from(BALANCE_QUERY_RESULT),
+    })
 }
 
-pub fn query_with_view_key(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
-    let (addresses, key) = msg.get_validation_params();
+pub fn query_with_view_key_loop_multiple(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
 
-    for address in addresses {
-        let result = ViewingKey::check(deps.storage, address.as_str(), key.as_str());
-        if result.is_ok() {
-            return match msg {
-                QueryMsg::BenchGetBalanceWithViewingKey { .. } => {
-                    to_binary(&QueryAnswer::Balance {
-                        amount: Uint128::from(BALANCE_QUERY_RESULT),
-                    })
-                }
-                _ => panic!("This query type does not require authentication"),
-            };
+    // running this too many times will skew results as the VK gets cached and this becomes way more performant
+    for _i in 1..2 {
+        let (addresses, key) = msg.get_validation_params();
+
+        for address in addresses {
+            let _ = ViewingKey::check(deps.storage, address.as_str(), key.as_str());
         }
     }
 
-    to_binary(&QueryAnswer::ViewingKeyError {
-        msg: "Wrong viewing key for this address or viewing key not set".to_string(),
+    to_binary(&QueryAnswer::Balance {
+        amount: Uint128::from(BALANCE_QUERY_RESULT),
     })
 }

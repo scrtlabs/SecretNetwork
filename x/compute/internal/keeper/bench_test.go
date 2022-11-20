@@ -373,6 +373,8 @@ func TestRunQueryBenchmarks(t *testing.T) {
 
 	timers := make(map[string]BenchTime)
 
+	permit := generatePermitSignature(contractAddr, creatorPriv)
+
 	queryCases := map[string]struct {
 		bench          Bench
 		loops          uint64
@@ -394,7 +396,7 @@ func TestRunQueryBenchmarks(t *testing.T) {
 		"Query with permit": {
 			bench:          BenchGetBalanceWithPermit,
 			loops:          10,
-			queryMsg:       createPermitQueryMsg(ctx, keeper, contractAddr, creator, creatorPriv),
+			queryMsg:       createPermitQueryMsg(permit, contractAddr),
 			expectedResult: `{"balance":{"amount":"42"}}`,
 		},
 	}
@@ -405,9 +407,12 @@ func TestRunQueryBenchmarks(t *testing.T) {
 			timer := NewBenchTimer(name, tc.bench)
 			timer.SetBaselineValues(0, time.Duration(math.Floor(AvgTimeBase)))
 			for i := uint64(1); i < tc.loops+1; i++ {
+
+				queryMsg := tc.queryMsg
+
 				start := time.Now()
 				// call bench
-				queryRes, qErr := queryHelper(t, keeper, ctx, contractAddr, tc.queryMsg, true, true, 1_000_000)
+				queryRes, qErr := queryHelper(t, keeper, ctx, contractAddr, queryMsg, true, true, 1_000_000)
 				elapsed := time.Since(start)
 
 				require.Empty(t, qErr)
@@ -444,19 +449,17 @@ func measureTimeBaseline(t *testing.T, keeper Keeper, ctx sdk.Context, contractA
 	return AvgTimeBase
 }
 
-func createPermitQueryMsg(ctx sdk.Context, keeper Keeper, contractAddr sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey) string {
-	permitSignature := generatePermitSignature(ctx, keeper, contractAddr, creator, creatorPriv)
+func createPermitQueryMsg(permit string, contractAddr sdk.AccAddress) string {
 	permitQueryMsg := fmt.Sprintf(
 		`{"bench_get_balance_with_permit":{"query":{"balance":{}}, "permit":{"params":{"permit_name":"test","chain_id":"test-secret-X","allowed_tokens":["%s"],"permissions":["balance"]},"signature":%s}}}`,
 		contractAddr,
-		permitSignature,
+		permit,
 	)
 	return permitQueryMsg
 }
 
 func generatePermitSignature(
-	ctx sdk.Context, keeper Keeper, contractAddr sdk.AccAddress,
-	creator sdk.AccAddress, creatorPriv crypto.PrivKey,
+	contractAddr sdk.AccAddress, creatorPriv crypto.PrivKey,
 ) string {
 	// Create the permit string
 	permitString := fmt.Sprintf(

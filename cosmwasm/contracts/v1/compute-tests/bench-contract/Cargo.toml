@@ -1,7 +1,7 @@
 [package]
 name = "bench-contract"
 version = "1.0.0"
-authors = ["Enigma <info@enigma.co>"]
+authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "A Test contract intended to use in system tests for the Secret Netowrk"
 license = "MIT"
