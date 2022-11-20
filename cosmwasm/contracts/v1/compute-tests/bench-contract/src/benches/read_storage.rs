@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, DepsMut, StdResult};
+use cosmwasm_std::{DepsMut, StdResult};
 
 // as long as keys is > 10 the single write shouldn't produce high enough variance
 // if anyone wants to they can set up test.key in the go side of things to make it more accurate
