@@ -293,7 +293,7 @@ func TestInstantiate(t *testing.T) {
 	// gas can change +- 10% before we start failing, though maybe for consensus we should check a constant amount
 	gasAfter := ctx.GasMeter().GasConsumed()
 	require.Greater(t, gasAfter-gasBefore, types.InstanceCost)
-	require.Less(t, gasAfter-gasBefore, types.InstanceCost+2000)
+	require.Less(t, gasAfter-gasBefore, types.InstanceCost+8000)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, contractAddr)
@@ -513,7 +513,7 @@ func TestExecute(t *testing.T) {
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
 	require.Greater(t, gasAfter-gasBefore, types.InstanceCost)
-	require.Less(t, gasAfter-gasBefore, types.InstanceCost+2_000)
+	require.Less(t, gasAfter-gasBefore, types.InstanceCost+8_000)
 
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
