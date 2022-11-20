@@ -5,10 +5,11 @@ go 1.19
 replace (
 	// dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221116143318-08eb62eb76a0
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221120225249-54c3b1bdb88c
+	github.com/cosmos/ibc-go/v3 => github.com/scrtlabs/ibc-go/v3 v3.3.2-0.20221120123421-0d1461ed4d95
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// tendermint with custom block header
-	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint-random v0.0.2-0.20221117125740-173758e9facd
+	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint-random v0.0.2-0.20221120223636-f9356e3e55b1
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
@@ -16,7 +17,7 @@ replace (
 require (
 	github.com/cosmos/cosmos-sdk v0.45.10
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/ibc-go/v3 v3.3.1
+	github.com/cosmos/ibc-go/v3 v3.0.0-00010101000000-000000000000
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.2
 	github.com/gonum/stat v0.0.0-20181125101827-41a0da705a5b
@@ -85,7 +86,7 @@ require (
 	github.com/gonum/internal v0.0.0-20181124074243-f884aa714029 // indirect
 	github.com/gonum/lapack v0.0.0-20181123203213-e4cdc5a0bff9 // indirect
 	github.com/gonum/matrix v0.0.0-20181209220409-c518dec07be9 // indirect
-	github.com/google/btree v1.0.0 // indirect
+	github.com/google/btree v1.0.1 // indirect
 	github.com/google/orderedcode v0.0.1 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
