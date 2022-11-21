@@ -75,5 +75,8 @@ then
 
   secretd config node tcp://localhost:26657
 
+  # this is here to make sure that the node doesn't resync
+  cp /opt/secret/.sgx_secrets/attestation_cert.der /root/.secretd/config/
+
 fi
 secretd start
