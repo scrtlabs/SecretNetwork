@@ -1669,7 +1669,7 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 				require.True(t, ok, "%+v", r)
 			}()
 
-			_, _, _, _, _, _ = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, testContract.IsCosmWasmV1, 200_000, 0)
+			_, _, _, _, _, _ = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, testContract.IsCosmWasmV1, 100_000, 0)
 
 			// this should fail with out of gas because 1GiB will ask for
 			// 134,217,728 gas units (8192 per page times 16,384 pages)
