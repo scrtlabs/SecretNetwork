@@ -1,7 +1,7 @@
 const {
     SecretNetworkClient,
     Wallet,
-} = require("../dist");
+} = require("secretjs");
 const fs = require("fs");
 
 const initial_token_amount = "100000";
