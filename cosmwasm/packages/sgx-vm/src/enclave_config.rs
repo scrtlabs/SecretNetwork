@@ -30,7 +30,7 @@ extern "C" {
 // }
 
 pub struct EnclaveRuntimeConfig {
-    pub module_cache_size: u8,
+    pub module_cache_size: u32,
 }
 
 impl EnclaveRuntimeConfig {

@@ -27,6 +27,7 @@ pub enum ExecuteMsg {
     BenchAllocate {},
     BenchReadLargeItemFromStorage {},
     BenchWriteLargeItemToStorage {},
+    SetupReadLargeItem {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -519,10 +519,11 @@ pub mod tests {
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
 
-        let result =
-            verify_ra_cert(&tls_ra_cert, None).expect_err("Certificate should not pass validation");
+        let res = verify_ra_cert(&tls_ra_cert, None);
 
-        assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
+        assert!(res.is_ok());
+
+        // assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
     }
 
     // #[cfg(not(feature = "SGX_MODE_HW"))]
