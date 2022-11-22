@@ -11,7 +11,7 @@ trigger:
       - "LICENSE"
 
 pool:
-  name: "sgx scale set"
+  name: "sgx scale set new"
 
 workspace:
   clean: all # what to clean up before the job runs
