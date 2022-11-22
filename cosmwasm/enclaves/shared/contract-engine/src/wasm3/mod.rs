@@ -14,13 +14,11 @@ use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
-#[cfg(not(feature = "query-only"))]
-use crate::db::write_to_encrypted_state;
 
 use crate::cosmwasm_config::ContractOperation;
-use crate::db::read_encrypted_key;
+use crate::db::read_from_encrypted_state;
 #[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, write_multiple_keys};
+use crate::db::{remove_from_encrypted_state, write_multiple_keys};
 use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngineResult};
 use crate::gas::{WasmCosts, READ_BASE_GAS, WRITE_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
@@ -530,6 +528,8 @@ impl Engine {
 
     #[cfg(not(feature = "query-only"))]
     pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
+        use crate::db::create_encrypted_key;
+
         let keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .context
             .kv_cache
@@ -537,7 +537,8 @@ impl Engine {
             .into_iter()
             .map(|(k, v)| {
                 let (enc_key, _, enc_v) =
-                    encrypt_key(&k, &v, &self.context.context, &self.context.contract_key).unwrap();
+                    create_encrypted_key(&k, &v, &self.context.context, &self.context.contract_key)
+                        .unwrap();
 
                 (enc_key.to_vec(), enc_v)
             })
@@ -822,10 +823,15 @@ fn host_read_db(
     }
 
     debug!("Missed value in cache");
-    let (value, used_gas) = read_encrypted_key(
+    let (value, used_gas) = read_from_encrypted_state(
         &state_key_name,
         &context.context,
         &context.contract_key,
+        match context.operation {
+            ContractOperation::Init => true,
+            ContractOperation::Handle => true,
+            ContractOperation::Query => false,
+        },
         &mut context.kv_cache,
     )
     .map_err(debug_err!("db_read failed to read key from storage"))?;
@@ -864,7 +870,8 @@ fn host_remove_db(
 
     debug!("db_remove removing key {}", show_bytes(&state_key_name));
 
-    let used_gas = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)?;
+    let used_gas =
+        remove_from_encrypted_state(&state_key_name, &context.context, &context.contract_key)?;
     context.use_gas_externally(used_gas);
 
     Ok(())

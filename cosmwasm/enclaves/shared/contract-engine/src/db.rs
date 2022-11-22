@@ -104,11 +104,10 @@ pub fn create_encrypted_key(
 
     debug!(
         "Removed scrambled field name: {:?} and created new key with magic: {:?}",
-        scrambled_field_name
-        encrypted_key_with_header
+        scrambled_field_name, encrypted_key_with_header
     );
 
-    Ok((encrypted_key_with_header, gas_used_remove, db_data))
+    Ok((encrypted_key_with_header, gas_used_remove, encrypted_value))
 }
 
 pub fn read_from_encrypted_state(
@@ -427,22 +426,5 @@ fn encrypt_key_new(
                 err
             );
             WasmEngineError::EncryptionError
-    })
-}
-
-// This function is needed for when we migrate from the 2nd to the 3rd seed
-fn decrypt_key_new(
-    encrypted_state_key: &[u8],
-    contract_key: &ContractKey,
-) -> Result<Vec<u8>, WasmEngineError> {
-    let decryption_key = get_symmetrical_key_new(contract_key);
-
-    decryption_key.decrypt_siv(encrypted_state_key, Some(&[])).map_err(|err| {
-        warn!(
-            "read_db() got an error while trying to decrypt_key_new the key {:?}, stopping wasm: {:?}",
-            encrypted_state_key,
-            err
-        );
-        WasmEngineError::DecryptionError
     })
 }

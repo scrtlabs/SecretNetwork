@@ -16,9 +16,9 @@ use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_utils::kv_cache::KvCache;
 
 use crate::contract_validation::ContractKey;
-use crate::db::{encrypt_key, read_encrypted_key};
+use crate::db::{create_encrypted_key, read_from_encrypted_state};
 // #[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, /* write_encrypted_key, */ write_multiple_keys};
+use crate::db::{remove_from_encrypted_state, /* write_encrypted_key, */ write_multiple_keys};
 use crate::errors::WasmEngineError;
 use crate::gas::{WasmCosts, OCALL_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
@@ -345,12 +345,11 @@ impl WasmiApi for ContractInstance {
             &state_key_name,
             &self.context,
             &self.contract_key,
-            &mut self.kv_cache,
-        )?;
-        let (value, gas_used_by_storage) = read_from_encrypted_state(
-            &state_key_name,
-            &self.context,
-            &self.contract_key,
+            match self.operation {
+                ContractOperation::Init => true,
+                ContractOperation::Handle => true,
+                ContractOperation::Query => false,
+            },
             &mut self.kv_cache,
         )?;
         self.use_gas_externally(gas_used_by_storage)?;
@@ -509,7 +508,7 @@ impl WasmiApi for ContractInstance {
             .into_iter()
             .map(|(k, v)| {
                 let (enc_key, _, enc_v) =
-                    encrypt_key(&k, &v, &self.context, &self.contract_key).unwrap();
+                    create_encrypted_key(&k, &v, &self.context, &self.contract_key).unwrap();
 
                 (enc_key.to_vec(), enc_v)
             })

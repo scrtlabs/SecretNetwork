@@ -209,11 +209,20 @@ impl Keychain {
     /// since we want to try and delete it either way
     pub fn delete_consensus_seed(&mut self) -> bool {
         debug!(
-            "Removing consensus seed in {}",
-            *CONSENSUS_SEED_SEALING_PATH
+            "Removing genesis consensus seed in {}",
+            *GENESIS_CONSENSUS_SEED_SEALING_PATH
         );
-        if let Err(_e) = std::sgxfs::remove(CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            debug!("Error removing consensus_seed");
+        if let Err(_e) = std::sgxfs::remove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
+            debug!("Error removing genesis consensus_seed");
+            return false;
+        }
+
+        debug!(
+            "Removing current consensus seed in {}",
+            *CURRENT_CONSENSUS_SEED_SEALING_PATH
+        );
+        if let Err(_e) = std::sgxfs::remove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
+            debug!("Error removing genesis consensus_seed");
             return false;
         }
         self.consensus_seed = None;
