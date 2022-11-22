@@ -89,6 +89,7 @@ services:
     expose:
       - 26656
       - 26657
+      - 1317
 
   node-no-tests:
     image: azcr.io/enigmampc/ci-node-image:latest
