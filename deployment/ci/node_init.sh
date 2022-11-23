@@ -11,6 +11,8 @@ set -uvo pipefail
 #secretcli config keyring-backend test
 rm -rf ~/.secretd
 
+NO_TESTS="${NO_TESTS:''}"
+
 mkdir -p /root/.secretd/.node
 secretd config keyring-backend test
 secretd config node tcp://bootstrap:26657

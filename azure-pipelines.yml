@@ -96,7 +96,7 @@ steps:
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
     displayName: "Run benchmarks"
 
-  - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests aesm bootstrap node integration-tests
+  - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests aesm bootstrap node-no-tests integration-tests
     displayName: "Run integration tests (new)"
 
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
