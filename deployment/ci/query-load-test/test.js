@@ -227,9 +227,15 @@ const initializeContract = async (
     return [codeHash, contractAddress];
 };
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 (async () => {
     let endpoint = ENDPOINT;
     let chainId = CHAIN_ID;
+
+    // todo: replace this with a loop that waits for the node
+    console.log(`Sleeping for 30s till node starts`);
+    await sleep(30000);
 
     const client = await initializeClient(endpoint, chainId);
 
