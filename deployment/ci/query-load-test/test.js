@@ -234,15 +234,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     let chainId = CHAIN_ID;
 
     // todo: replace this with a loop that waits for the node
-    console.log(`Sleeping for 30s till node starts`);
-    await sleep(30000);
+    console.log(`Sleeping for 60s till nodes start`);
+    await sleep(60000);
 
-    const client = await initializeClient(endpoint, chainId);
+    try {
+        const client = await initializeClient(endpoint, chainId);
 
-    const [code_hash, contract_address] = await initializeContract(client, "snip20-ibc.wasm.gz");
+        const [code_hash, contract_address] = await initializeContract(client, "snip20-ibc.wasm.gz");
 
-    for (let i = 0; i < 1; ++i) {
-        await runContractQueryLoad(client, 100, contract_address, code_hash);
-        console.log("\n\n");
+        for (let i = 0; i < 1; ++i) {
+            await runContractQueryLoad(client, 100, contract_address, code_hash);
+            console.log("\n\n");
+        }
+    } catch (e) {
+        console.log(`Error running or initializing contract: ${JSON.stringify(e)}`);
     }
+
 })();
