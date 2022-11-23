@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -uvo pipefail
-
+set -o nounset
 # init the node
 # rm -rf ~/.secret*
 #secretcli config chain-id enigma-testnet
@@ -11,7 +11,7 @@ set -uvo pipefail
 #secretcli config keyring-backend test
 rm -rf ~/.secretd
 
-NO_TESTS="${NO_TESTS:''}"
+NO_TESTS="${NO_TESTS:-}"
 
 mkdir -p /root/.secretd/.node
 secretd config keyring-backend test
