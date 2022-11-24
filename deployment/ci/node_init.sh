@@ -53,7 +53,7 @@ secretd validate-genesis
 
 secretd config node tcp://localhost:26657
 
-if [ -z "$NO_TESTS" ]
+if [ ! -z "$NO_TESTS" ]
 then
     RUST_BACKTRACE=1 secretd start
 else

@@ -219,7 +219,7 @@ const initializeContract = async (
         );
     }
 
-    const contractAddress = (await client.query.compute.contractsByCode(codeId))
+    const contractAddress = (await client.query.compute.contractsByCodeId({code_id: String(codeId)}))
         .contract_infos[0].contract_address;
 
     console.log(`Contract address: ${contractAddress}`);
