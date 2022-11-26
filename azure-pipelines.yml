@@ -97,7 +97,7 @@ steps:
     displayName: "Run benchmarks"
 
   - script: |
-      docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility -d up --exit-code-from integration-tests aesm bootstrap node-no-tests integration-tests
+      docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests aesm bootstrap node-no-tests integration-tests -d 
       docker logs -f integration-tests_1
     displayName: "Run integration tests (new)"
 
