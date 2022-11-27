@@ -87,7 +87,7 @@ pub fn add_metering(module: &mut Module, gas_costs: &WasmCosts) {
 /// Instruction cost function.
 fn instruction_cost(_instr: &Instr, _gas_costs: &WasmCosts) -> u64 {
     // Currently default to 1 for all instructions.
-    1
+    2
 }
 
 fn transform_function(

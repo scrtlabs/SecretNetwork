@@ -165,10 +165,11 @@ COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwa
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
 
-COPY deployment/docker/bootstrap/bootstrap_init.sh .
-COPY deployment/docker/node/node_init.sh .
-COPY deployment/docker/startup.sh .
-COPY deployment/docker/node_key.json .
+COPY deployment/docker/testnet/bootstrap_init.sh .
+COPY deployment/docker/testnet/node_init.sh .
+COPY deployment/docker/testnet/startup.sh .
+COPY deployment/docker/testnet/node_key.json .
+COPY deployment/docker/localsecret/faucet/faucet_server.js .
 
 RUN chmod +x /usr/bin/secretd
 RUN chmod +x bootstrap_init.sh
@@ -214,7 +215,7 @@ RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
     && wget -O /usr/lib/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/libgo_cosmwasm.so
 
-COPY deployment/docker/node/mainnet_node.sh .
+COPY deployment/docker/mainnet/mainnet_node.sh .
 RUN chmod +x mainnet_node.sh
 
 ENTRYPOINT ["/bin/bash", "mainnet_node.sh"]
@@ -262,11 +263,11 @@ CMD ["/bin/bash", "build_deb.sh"]
 # ***************** LOCALSECRET ************** #
 FROM release-image as build-localsecret
 
-COPY deployment/docker/devimage/bootstrap_init_no_stop.sh bootstrap_init.sh
+COPY deployment/docker/localsecret/bootstrap_init_no_stop.sh bootstrap_init.sh
 
 RUN chmod +x bootstrap_init.sh
 
-COPY deployment/docker/devimage/faucet/faucet_server.js .
+COPY deployment/docker/localsecret/faucet/faucet_server.js .
 
 HEALTHCHECK --interval=5s --timeout=1s --retries=120 CMD bash -c 'curl -sfm1 http://localhost:26657/status && curl -s http://localhost:26657/status | jq -e "(.result.sync_info.latest_block_height | tonumber) > 0"'
 

@@ -1,0 +1,87 @@
+# docker compose file that sets up a network for beta testing
+
+version: '3'
+
+services:
+  aesm:
+    image: fortanix/aesmd:2.13.103.1-1
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+  bootstrap:
+    image: ghcr.io/scrtlabs/secret-network-bootstrap-testnet:v1.6.0-alpha.4
+    container_name: bootstrap
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/root/.secretd
+      - /tmp/sgx_secrets:/opt/secret/.sgx_secrets
+      # - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+      - SECRET_LOCAL_NODE_TYPE=BOOTSTRAP
+      - CHAINID=confidential-1
+    expose:
+      - 26656
+      - 26657
+    ports:
+      - "5000:5000"
+
+  node:
+    image: ghcr.io/scrtlabs/secret-network-node-testnet:v1.6.0-alpha.4
+    depends_on:
+      - bootstrap
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      # - /tmp/secretd:/tmp/.secretd
+      # - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+      - SECRET_LOCAL_NODE_TYPE=node
+      - CHAINID=confidential-1
+      - RPC_URL=bootstrap:26657
+      - PERSISTENT_PEERS=115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656
+    expose:
+      - 9090
+      - 9091
+      - 1317
+      - 26657
+      - 26656
+
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 10
+        window: 120s
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - node
+    ports:
+      - "1337:1337"
+      - "9091:9091"
+      - "9090:9090"
