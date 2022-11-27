@@ -256,4 +256,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         console.log(`Error running or initializing contract: ${JSON.stringify(e)}`);
     }
 
+    // let prints to stdout catch up
+    await sleep(10000);
 })();
