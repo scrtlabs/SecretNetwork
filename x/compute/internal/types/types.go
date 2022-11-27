@@ -259,7 +259,6 @@ func NewVerificationInfo(
 
 // GetConfig load config values from the app options
 func GetConfig(appOpts servertypes.AppOptions) *WasmConfig {
-
 	config := DefaultWasmConfig()
 
 	updatedGasLimit := cast.ToUint64(appOpts.Get("wasm.contract-query-gas-limit"))
