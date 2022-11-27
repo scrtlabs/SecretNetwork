@@ -32,9 +32,7 @@ async function runContractQueryLoad(
     contract_address,
     code_hash,
 ) {
-    console.log(
-        `------------------------------[Running Wasm Query load]------------------------------`
-    );
+
     /**
      * We want to support multiple tx functions in the future, in order to do so we need to randomly choose the tx to send each time.
      * We are measuring time and we don't want the random function to affect the time so we will calculate the random numbers before running the timer
@@ -47,12 +45,16 @@ async function runContractQueryLoad(
         ["owner", "balance"],
         false,
     );
-    console.log(`got permit: ${JSON.stringify(permit)}`)
-//     const query = await secretjs.query.snip20.getBalance({
-//         contract: { address: contractAddress, code_hash: code_hash! },
-//     address: accounts[0].address,
-//         auth: { permit },
-// });
+
+    const time_pre_run_single = Date.now();
+    await client.query.snip20.getBalance(
+        {
+            contract: {address: contract_address, code_hash},
+            address: client.address,
+            auth: {permit}
+        })
+    const time_post_run_single = Date.now();
+
     const q_promises = [];
     const time_pre_run = Date.now();
     for (let i = 0; i < QUERY_LOAD_COUNT; ++i) {
@@ -68,7 +70,7 @@ async function runContractQueryLoad(
     try {
         result = await Promise.all(q_promises);
     } catch (e) {
-        console.log(`Error: ${JSON.stringify(e)}`)
+        console.log(`Error getting promises: ${JSON.stringify(e)}`)
     }
     const time_post_run = Date.now();
 
@@ -82,13 +84,17 @@ async function runContractQueryLoad(
 
         }
     }
-
     console.log(
-        `++++ Total time for ${QUERY_LOAD_COUNT} bank queries is: ${
+        `------------------------------[Running Wasm Query load]------------------------------\n
+        \t ** Time for a single snip20 balance query with permit: 
+        ${time_post_run_single - time_pre_run_single}[ms] ** \n
+        \t *** Total time for ${QUERY_LOAD_COUNT} snip20 balance queries is: ${
             time_post_run - time_pre_run
-        } ms ++++`);
-
-    console.log(`Success rate: ${success} / ${q_promises.length}`)
+        }[ms] ***\n
+        \t Success rate: ${success} / ${q_promises.length}
+        --------------------------------------------------------------------------------------
+        `
+    );
 }
 
 // async function runTxLoad(
