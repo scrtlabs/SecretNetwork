@@ -108,6 +108,10 @@ impl Context {
         self.gas_used_externally = self.gas_used_externally.saturating_add(amount);
     }
 
+    pub fn refund_gas_externally(&mut self, amount: u64) {
+        self.gas_used_externally = self.gas_used_externally.saturating_sub(amount);
+    }
+
     pub fn get_gas_used_externally(&self) -> u64 {
         self.gas_used_externally
     }
@@ -530,6 +534,13 @@ impl Engine {
 
     #[cfg(not(feature = "query-only"))]
     pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
+
+        // here we refund all the pseudo gas charged for writes to cache
+        // todo: optimize to only charge for writes that change chain state
+        let total_gas_to_refund = self.context.kv_cache.drain_gas_tracker();
+
+        self.context.refund_gas_externally(total_gas_to_refund);
+
         let keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .context
             .kv_cache
@@ -902,7 +913,9 @@ fn host_write_db(
         show_bytes(&value)
     );
 
-    context.kv_cache.write(&state_key_name, &value);
+    let (_, pseudo_cost_for_write) = context.kv_cache.write(&state_key_name, &value);
+
+    context.use_gas_externally(pseudo_cost_for_write);
 
     // let used_gas = write_encrypted_key(
     //     &state_key_name,

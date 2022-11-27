@@ -119,7 +119,7 @@ pub fn read_encrypted_key(
         Ok((value, gas_used)) => match value {
             Some(value) => match decrypt_key(&scrambled_field_name, &value, contract_key) {
                 Ok(decrypted) => {
-                    let _ = kv_cache.write_cache_only(key, &decrypted);
+                    let _ = kv_cache.store_in_ro_cache(key, &decrypted);
                     Ok((Some(decrypted), gas_used))
                 }
                 // This error case is why we have all the matches here.
