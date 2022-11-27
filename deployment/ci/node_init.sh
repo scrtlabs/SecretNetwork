@@ -23,6 +23,8 @@ secretd init "$(hostname)" --chain-id secretdev-1 || true
 PERSISTENT_PEERS="115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656"
 
 sed -i 's/persistent_peers = ""/persistent_peers = "'$PERSISTENT_PEERS'"/g' ~/.secretd/config/config.toml
+perl -i -pe 's/concurrency = false/concurrency = true/' .secretd/config/app.toml
+
 echo "Set persistent_peers: $PERSISTENT_PEERS"
 
 echo "Waiting for bootstrap to start..."
