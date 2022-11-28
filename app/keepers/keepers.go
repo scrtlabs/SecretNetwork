@@ -52,32 +52,36 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
+	tokenfactorytypes "github.com/scrtlabs/SecretNetwork/x/tokenfactory/types"
+
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	icaauthkeeper "github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
+	tokenfactorykeeper "github.com/scrtlabs/SecretNetwork/x/tokenfactory/keeper"
 )
 
 type SecretAppKeepers struct {
 	// keepers
-	AccountKeeper    *authkeeper.AccountKeeper
-	AuthzKeeper      *authzkeeper.Keeper
-	BankKeeper       *bankkeeper.BaseKeeper
-	CapabilityKeeper *capabilitykeeper.Keeper
-	StakingKeeper    *stakingkeeper.Keeper
-	SlashingKeeper   *slashingkeeper.Keeper
-	MintKeeper       *mintkeeper.Keeper
-	DistrKeeper      *distrkeeper.Keeper
-	GovKeeper        *govkeeper.Keeper
-	CrisisKeeper     *crisiskeeper.Keeper
-	UpgradeKeeper    *upgradekeeper.Keeper
-	ParamsKeeper     *paramskeeper.Keeper
-	EvidenceKeeper   *evidencekeeper.Keeper
-	FeegrantKeeper   *feegrantkeeper.Keeper
-	ComputeKeeper    *compute.Keeper
-	RegKeeper        *reg.Keeper
-	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
-	TransferKeeper   *ibctransferkeeper.Keeper
+	AccountKeeper      *authkeeper.AccountKeeper
+	AuthzKeeper        *authzkeeper.Keeper
+	BankKeeper         *bankkeeper.BaseKeeper
+	CapabilityKeeper   *capabilitykeeper.Keeper
+	StakingKeeper      *stakingkeeper.Keeper
+	SlashingKeeper     *slashingkeeper.Keeper
+	MintKeeper         *mintkeeper.Keeper
+	DistrKeeper        *distrkeeper.Keeper
+	GovKeeper          *govkeeper.Keeper
+	CrisisKeeper       *crisiskeeper.Keeper
+	UpgradeKeeper      *upgradekeeper.Keeper
+	ParamsKeeper       *paramskeeper.Keeper
+	EvidenceKeeper     *evidencekeeper.Keeper
+	FeegrantKeeper     *feegrantkeeper.Keeper
+	ComputeKeeper      *compute.Keeper
+	TokenFactoryKeeper *tokenfactorykeeper.Keeper
+	RegKeeper          *reg.Keeper
+	IbcKeeper          *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
+	TransferKeeper     *ibctransferkeeper.Keeper
 
 	ICAControllerKeeper *icacontrollerkeeper.Keeper
 	ICAHostKeeper       *icahostkeeper.Keeper
@@ -219,6 +223,15 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		appCodec, ak.keys[evidencetypes.StoreKey], ak.StakingKeeper, ak.SlashingKeeper,
 	)
 
+	tokenFactoryKeeper := tokenfactorykeeper.NewKeeper(
+		ak.keys[tokenfactorytypes.StoreKey],
+		ak.GetSubspace(tokenfactorytypes.ModuleName),
+		ak.AccountKeeper,
+		ak.BankKeeper.WithMintCoinsRestriction(tokenfactorytypes.NewTokenFactoryDenomMintCoinsRestriction()),
+		ak.DistrKeeper,
+	)
+	ak.TokenFactoryKeeper = &tokenFactoryKeeper
+
 	// Register the staking hooks
 	// NOTE: StakingKeeper above is passed by reference, so that it will contain these hooks
 	ak.StakingKeeper.SetHooks(
@@ -260,6 +273,9 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	// if we want to allow any custom callbacks
 	supportedFeatures := "staking,stargate,ibc3"
 
+	// wasmOpts = append(owasm.RegisterCustomPlugins(ak.GAMMKeeper, ak.BankKeeper, ak.TwapKeeper, ak.TokenFactoryKeeper), wasmOpts...)
+	// wasmOpts = append(owasm.RegisterStargateQueries(*bApp.GRPCQueryRouter(), appCodec), wasmOpts...)
+
 	computeKeeper := compute.NewKeeper(
 		appCodec,
 		*legacyAmino,
@@ -282,6 +298,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		supportedFeatures,
 		nil,
 		nil,
+		// wasmOpts...,
 	)
 	ak.ComputeKeeper = &computeKeeper
 
@@ -345,6 +362,8 @@ func (ak *SecretAppKeepers) InitKeys() {
 		ibctransfertypes.StoreKey,
 		capabilitytypes.StoreKey,
 		compute.StoreKey,
+		tokenfactorytypes.StoreKey,
+
 		reg.StoreKey,
 		feegrant.StoreKey,
 		authzkeeper.StoreKey,
@@ -373,6 +392,8 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
+	paramsKeeper.Subspace(tokenfactorytypes.ModuleName)
+
 	paramsKeeper.Subspace(reg.ModuleName)
 
 	return paramsKeeper
