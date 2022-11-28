@@ -5,7 +5,6 @@ use crate::{AESKey, KeyPair, Seed};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
-
 use sgx_types::c_int;
 use std::net::SocketAddr;
 use std::os::unix::io::IntoRawFd;
@@ -243,7 +242,7 @@ impl Keychain {
             "Sealing current consensus seed in {}",
             *CURRENT_CONSENSUS_SEED_SEALING_PATH
         );
-        if let Err(e) = genesis.seal(&CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
+        if let Err(e) = current.seal(&CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
             error!("Error sealing current consensus_seed - error code 0xC14");
             return Err(e);
         }
@@ -397,6 +396,7 @@ impl Keychain {
             trace!("Error while trying to convert to socket addrs {:?}", err);
             CryptoError::SocketCreationError
         })?;
+
         for a in addrs {
             if let SocketAddr::V4(_) = a {
                 addr = Some(a);
@@ -423,10 +423,11 @@ impl Keychain {
     fn get_challange_from_service(fd: c_int, host_name: &str) -> Result<Vec<u8>, CryptoError> {
         pub const CHALLANGE_ENDPOINT: &str = "/authenticate";
 
-        let req = format!(
-            "GET {} HTTP/1.1\r\nHOST: {}\r\nConnection: close\r\n\r\n",
-            CHALLANGE_ENDPOINT, host_name,
-        );
+        let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
+        CHALLANGE_ENDPOINT,
+        host_name,
+        encoded_json.len(),
+        encoded_json);
 
         trace!("{}", req);
         let config = Keychain::make_client_config();
