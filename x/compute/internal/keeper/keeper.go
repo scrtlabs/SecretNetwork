@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -677,6 +678,10 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	return contractKey
+}
+
+func (k Keeper) GetNewConsensusSeed(seedId uint32) error {
+	return api.GetNewConsensusSeed(seedId)
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {

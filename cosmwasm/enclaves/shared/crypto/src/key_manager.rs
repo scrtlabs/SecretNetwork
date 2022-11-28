@@ -423,6 +423,8 @@ impl Keychain {
     fn get_challange_from_service(fd: c_int, host_name: &str) -> Result<Vec<u8>, CryptoError> {
         pub const CHALLANGE_ENDPOINT: &str = "/authenticate";
 
+        let encoded_json = format!("Hello? Is it me you're looking for?");
+
         let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
         CHALLANGE_ENDPOINT,
         host_name,

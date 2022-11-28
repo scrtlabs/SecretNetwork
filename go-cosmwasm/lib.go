@@ -59,6 +59,10 @@ func (w *Wasmer) Cleanup() {
 	api.ReleaseCache(w.cache)
 }
 
+func (w *Wasmer) GetNewConsensusSeed(seedId uint32) error {
+	return api.GetNewConsensusSeed(seedId)
+}
+
 // Create will compile the wasm code, and store the resulting pre-compile
 // as well as the original code. Both can be referenced later via CodeID
 // This must be done one time for given code, after which it can be

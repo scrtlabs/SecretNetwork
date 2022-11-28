@@ -305,6 +305,15 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
 /// process
 ///
 #[no_mangle]
+pub unsafe extern "C" fn ecall_get_new_consensus_seed(seed_id: u32) -> sgx_types::sgx_status_t {
+    sgx_status_t::SGX_SUCCESS
+}
+
+///
+/// This function generates the registration_key, which is used in the attestation and registration
+/// process
+///
+#[no_mangle]
 pub unsafe extern "C" fn ecall_key_gen(
     public_key: &mut [u8; PUBLIC_KEY_SIZE],
 ) -> sgx_types::sgx_status_t {
