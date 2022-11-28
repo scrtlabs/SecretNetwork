@@ -450,7 +450,10 @@ impl Keychain {
     }
 
     fn try_get_consensus_seed_from_service(id: u16) -> Result<Seed, CryptoError> {
-        pub const SEED_SERVICE_DNS: &str = "sss.scrtlabs.com";
+        #[cfg(feature = "production")]
+        pub const SEED_SERVICE_DNS: &'static str = "sss.scrtlabs.com";
+        #[cfg(not(feature = "production"))]
+        pub const SEED_SERVICE_DNS: &'static str = "sssd.scrtlabs.com";
         let socket = Keychain::create_socket_to_service(SEED_SERVICE_DNS)?;
         Keychain::get_challange_from_service(socket, SEED_SERVICE_DNS);
         let s: [u8; 32] = [
