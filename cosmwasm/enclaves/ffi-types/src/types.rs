@@ -334,3 +334,17 @@ pub enum QueryResult {
         err: EnclaveError,
     },
 }
+
+/// This struct is returned from ecall_generate_random.
+/// cbindgen:prefix-with-name
+#[repr(C)]
+pub enum GenerateRandomResult {
+    Success {
+        /// A pointer to the output of the calculation
+        encrypted_output: u64,
+    },
+    Failure {
+        /// The error that happened in the enclave
+        err: EnclaveError,
+    },
+}

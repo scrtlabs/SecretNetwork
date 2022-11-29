@@ -6,10 +6,11 @@ use lazy_static::lazy_static;
 use log::*;
 
 use sgx_types::sgx_status_t;
+use sgx_rand::random;
 
 use enclave_ffi_types::{
     Ctx, EnclaveBuffer, EnclaveError, HandleResult, HealthCheckResult, InitResult, QueryResult,
-    RuntimeConfiguration,
+    RuntimeConfiguration, GenerateRandomResult,
 };
 
 use enclave_utils::{oom_handler, validate_const_ptr, validate_mut_ptr};
@@ -456,6 +457,17 @@ unsafe fn ecall_query_impl(
 #[no_mangle]
 pub unsafe extern "C" fn ecall_health_check() -> HealthCheckResult {
     HealthCheckResult::Success
+}
+
+/// # Safety
+/// Always use protection
+#[no_mangle]
+pub unsafe extern "C" fn ecall_generate_random() -> GenerateRandomResult {
+    let result: u64 = random();
+
+    GenerateRandomResult::Success {
+        encrypted_output: result
+    }
 }
 
 #[cfg(feature = "test")]
