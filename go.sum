@@ -692,8 +692,8 @@ github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb
 github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da/go.mod h1:gi+0XIa01GRL2eRQVjQkKGqKF3SF9vZR/HnPullcV2E=
 github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71efZx0=
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
-github.com/scrtlabs/cosmos-sdk v0.45.10-secret.2 h1:q/7nFZXtym4SHau+VnyOGrXcVsK0wJtxyB5X0HJgKIc=
-github.com/scrtlabs/cosmos-sdk v0.45.10-secret.2/go.mod h1:CbfWNs4PuxxsvRD/snQuSBDwIhtsD7rIDTVQyYMKTa0=
+github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221129095422-c94a4d71a1c9 h1:Te34nm/mBUjddXWBnE1dGIYsDGeKFBAWmvybK6AN7vM=
+github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221129095422-c94a4d71a1c9/go.mod h1:CbfWNs4PuxxsvRD/snQuSBDwIhtsD7rIDTVQyYMKTa0=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/shirou/gopsutil v2.20.5+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
