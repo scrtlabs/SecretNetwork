@@ -28,6 +28,9 @@ pub enum CryptoError {
     VerificationError = 11,
     SocketCreationError = 12,
     IPv4LookupError = 13,
+    IntelCommunicationError = 14,
+    SSSCommunicationError = 15,
+    BadResponse = 16,
 }
 
 #[derive(Debug, Display)]

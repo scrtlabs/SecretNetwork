@@ -5,16 +5,6 @@ use crate::{AESKey, KeyPair, Seed};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
-use sgx_types::c_int;
-use std::net::SocketAddr;
-use std::os::unix::io::IntoRawFd;
-use std::{
-    io::{Read, Write},
-    net::TcpStream,
-    str,
-    string::String,
-    sync::Arc,
-};
 
 // For phase 1 of the seed rotation, all consensus secrets come in two parts:
 // 1. The genesis seed generated on 15 September 2020
@@ -70,7 +60,7 @@ impl Keychain {
         let registration_key = Self::unseal_registration_key();
 
         let mut x = Keychain {
-            consensus_seed_id: 1,
+            consensus_seed_id: CONSENSUS_SEED_VERSION,
             consensus_seed,
             registration_key,
             consensus_state_ikm: None,
@@ -125,6 +115,14 @@ impl Keychain {
             error!("Error accessing base_state_key (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
+    }
+
+    pub fn get_consensus_seed_id(&self) -> u16 {
+        self.consensus_seed_id
+    }
+
+    pub fn inc_consensus_seed_id(&mut self) -> () {
+        self.consensus_seed_id += 1;
     }
 
     pub fn get_consensus_seed(&self) -> Result<SeedsHolder<Seed>, CryptoError> {
@@ -375,157 +373,6 @@ impl Keychain {
         );
 
         Ok(())
-    }
-
-    pub fn make_client_config() -> rustls::ClientConfig {
-        let mut config = rustls::ClientConfig::new();
-
-        config
-            .root_store
-            .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-
-        config
-    }
-
-    fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
-        use std::net::ToSocketAddrs;
-
-        let mut addr: Option<SocketAddr> = None;
-
-        let addrs = (host_name, 3000).to_socket_addrs().map_err(|err| {
-            trace!("Error while trying to convert to socket addrs {:?}", err);
-            CryptoError::SocketCreationError
-        })?;
-
-        for a in addrs {
-            if let SocketAddr::V4(_) = a {
-                addr = Some(a);
-            }
-        }
-
-        if addr.is_none() {
-            trace!("Failed to resolve the IPv4 address of the service");
-            return Err(CryptoError::IPv4LookupError);
-        }
-
-        let sock = TcpStream::connect(&addr.unwrap()).map_err(|err| {
-            trace!(
-                "Error while trying to connect to service with addr: {:?}, err: {:?}",
-                addr,
-                err
-            );
-            CryptoError::SocketCreationError
-        })?;
-
-        return Ok(sock.into_raw_fd());
-    }
-
-    fn get_challange_from_service(fd: c_int, host_name: &str) -> Result<Vec<u8>, CryptoError> {
-        pub const CHALLANGE_ENDPOINT: &str = "/authenticate";
-
-        let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-        CHALLANGE_ENDPOINT,
-        host_name,
-        encoded_json.len(),
-        encoded_json);
-
-        trace!("{}", req);
-        let config = Keychain::make_client_config();
-        let dns_name = webpki::DNSNameRef::try_from_ascii_str(host_name).unwrap();
-        let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-        let mut sock = TcpStream::new(fd).unwrap();
-        let mut tls = rustls::Stream::new(&mut sess, &mut sock);
-
-        let _result = tls.write(req.as_bytes());
-        let mut plaintext = Vec::new();
-
-        info!("write complete");
-
-        tls.read_to_end(&mut plaintext).unwrap();
-        info!("read_to_end complete");
-        let resp_string = String::from_utf8(plaintext.clone()).unwrap();
-        info!("resp string {}", resp_string);
-
-        Ok(plaintext)
-    }
-
-    fn try_get_consensus_seed_from_service(id: u16) -> Result<Seed, CryptoError> {
-        #[cfg(feature = "production")]
-        pub const SEED_SERVICE_DNS: &'static str = "sss.scrtlabs.com";
-        #[cfg(not(feature = "production"))]
-        pub const SEED_SERVICE_DNS: &'static str = "sssd.scrtlabs.com";
-        let socket = Keychain::create_socket_to_service(SEED_SERVICE_DNS)?;
-        Keychain::get_challange_from_service(socket, SEED_SERVICE_DNS);
-        let s: [u8; 32] = [
-            0, id as u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-            22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-        ];
-        let mut seed = Seed::default();
-        seed.as_mut().copy_from_slice(&s);
-        Ok(seed)
-    }
-
-    // Retreiving consensus seed from SingularitySeedService
-    // id - The desired seed id
-    // retries - The amount of times to retry upon failure. 0 means infinite
-    pub fn get_next_consensus_seed_from_service(
-        &mut self,
-        retries: u8,
-        genesis_seed: Seed,
-    ) -> Result<Seed, CryptoError> {
-        let mut opt_seed: Result<Seed, CryptoError> = Err(CryptoError::DecryptionError);
-
-        match retries {
-            0 => {
-                trace!("Looping consensus seed lookup forever");
-                loop {
-                    if let Ok(seed) =
-                        Keychain::try_get_consensus_seed_from_service(self.consensus_seed_id)
-                    {
-                        opt_seed = Ok(seed);
-                        break;
-                    }
-                }
-            }
-            _ => {
-                for try_id in 1..retries + 1 {
-                    trace!("Looping consensus seed lookup {}/{}", try_id, retries);
-                    match Keychain::try_get_consensus_seed_from_service(self.consensus_seed_id) {
-                        Ok(seed) => {
-                            opt_seed = Ok(seed);
-                            break;
-                        }
-                        Err(e) => opt_seed = Err(e),
-                    }
-                }
-            }
-        };
-
-        if let Err(e) = opt_seed {
-            return Err(e);
-        }
-
-        let mut seed = opt_seed?;
-        trace!(
-            "LIORRR Genesis seed is {:?} service seed is {:?}",
-            genesis_seed.as_slice(),
-            seed.as_slice()
-        );
-
-        // XOR the seed with the genesis seed
-        let mut seed_vec = seed.as_mut().to_vec();
-        seed_vec
-            .iter_mut()
-            .zip(genesis_seed.as_slice().to_vec().iter())
-            .for_each(|(x1, x2)| *x1 ^= *x2);
-
-        seed.as_mut().copy_from_slice(seed_vec.as_slice());
-
-        trace!("LIORRR New seed is {:?}", seed.as_slice());
-
-        trace!("Successfully fetched consensus seed from service");
-        self.consensus_seed_id += 1;
-        Ok(seed)
     }
 }
 

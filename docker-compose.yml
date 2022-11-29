@@ -3,18 +3,28 @@
 version: "3"
 
 services:
-  bootstrap:
-    image: ghcr.io/scrtlabs/localsecret:seed-test-1
-    container_name: bootstrap
-    #depends_on:
-    #- aesm
-    #devices:
-    #- /dev/sgx/enclave
-    #- /dev/sgx/provision
+  aesm:
+    image: fortanix/aesmd:2.13.103.1-1
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
-      #  - /tmp/aesmd:/var/run/aesmd
+      - /tmp/aesmd:/var/run/aesmd
+    stdin_open: true
+    tty: true
+
+  bootstrap:
+    image: ghcr.io/scrtlabs/testnet:sbs-1
+    container_name: bootstrap
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/root/.secretd
-      # - /tmp/secretcli:/root/.secretcli
+      - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:
@@ -30,16 +40,16 @@ services:
       - "5000:5000"
 
   node:
-    image: ghcr.io/scrtlabs/localsecret:seed-test-1
+    image: ghcr.io/scrtlabs/testnet:s-1
     depends_on:
       - bootstrap
-    #devices:
-    #  - /dev/sgx/enclave
-    #  - /dev/sgx/provision
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
-      # - /tmp/aesmd:/var/run/aesmd
+      - /tmp/aesmd:/var/run/aesmd
       - /tmp/secretd:/tmp/.secretd
-      # - /tmp/secretcli:/root/.secretcli
+      - /tmp/secretcli:/root/.secretcli
     stdin_open: true
     tty: true
     environment:
@@ -56,4 +66,4 @@ services:
         condition: on-failure
         delay: 10s
         max_attempts: 10
-        window: 120s
+        window: 123s

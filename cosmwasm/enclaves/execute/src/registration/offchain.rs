@@ -6,19 +6,32 @@ use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
 use sgx_types::{sgx_status_t, SgxResult};
+use std::any::Any;
 use std::slice;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use enclave_ffi_types::NodeAuthResult;
 
 use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
 };
-use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_crypto::{
+    key_manager, CryptoError, KeyPair, Keychain, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE,
+};
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_ffi_types::NodeAuthResult;
 use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::write_to_untrusted;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
+
+use sgx_types::c_int;
+use std::net::SocketAddr;
+use std::os::unix::io::IntoRawFd;
+use std::{
+    io::{BufReader, ErrorKind, Read, Write},
+    net::TcpStream,
+    str,
+    string::String,
+    sync::Arc,
+};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
@@ -171,8 +184,12 @@ pub unsafe extern "C" fn ecall_init_node(
     }
 
     // this validates the cert and handles the "what if it fails" inside as well
-    let res =
-        create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
+    let res = create_attestation_certificate(
+        &temp_key_result.as_ref().unwrap(),
+        SIGNATURE_TYPE,
+        api_key_slice,
+        None,
+    );
     if res.is_err() {
         error!("Error starting node, might not be updated",);
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -226,8 +243,14 @@ pub unsafe extern "C" fn ecall_init_node(
         Err(status) => return status,
     };
 
-    let new_consensus_seed = match key_manager.get_next_consensus_seed_from_service(0, genesis_seed)
-    {
+    trace!("HERE {}", line!());
+    let new_consensus_seed = match get_next_consensus_seed_from_service(
+        &mut key_manager,
+        0,
+        genesis_seed,
+        api_key_slice,
+        KEY_MANAGER.get_registration_key().unwrap(),
+    ) {
         Ok(s) => s,
         Err(e) => {
             error!("Consensus seed failure: {}", e as u64);
@@ -282,7 +305,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         &kp.get_pubkey().to_vec()
     );
     let (_private_key_der, cert) =
-        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice) {
+        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice, None) {
             Err(e) => {
                 warn!("Error in create_attestation_certificate: {:?}", e);
                 return e;
@@ -332,7 +355,7 @@ pub unsafe extern "C" fn ecall_key_gen(
 }
 
 pub fn attest_from_key(kp: &KeyPair, save_path: &str, api_key: &[u8]) -> SgxResult<()> {
-    let (_, cert) = match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key) {
+    let (_, cert) = match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key, None) {
         Err(e) => {
             error!("Error in create_attestation_certificate: {:?}", e);
             return Err(e);
@@ -345,6 +368,351 @@ pub fn attest_from_key(kp: &KeyPair, save_path: &str, api_key: &[u8]) -> SgxResu
     }
 
     Ok(())
+}
+
+fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
+    use std::net::ToSocketAddrs;
+
+    let mut addr: Option<SocketAddr> = None;
+
+    let addrs = (host_name, 3000).to_socket_addrs().map_err(|err| {
+        trace!("Error while trying to convert to socket addrs {:?}", err);
+        CryptoError::SocketCreationError
+    })?;
+
+    for a in addrs {
+        if let SocketAddr::V4(_) = a {
+            addr = Some(a);
+        }
+    }
+
+    if addr.is_none() {
+        trace!("Failed to resolve the IPv4 address of the service");
+        return Err(CryptoError::IPv4LookupError);
+    }
+
+    let sock = TcpStream::connect(&addr.unwrap()).map_err(|err| {
+        trace!(
+            "Error while trying to connect to service with addr: {:?}, err: {:?}",
+            addr,
+            err
+        );
+        CryptoError::SocketCreationError
+    })?;
+
+    return Ok(sock.into_raw_fd());
+}
+
+fn make_client_config() -> rustls::ClientConfig {
+    let mut config = rustls::ClientConfig::new();
+
+    pub const SSS_CA: &[u8] = include_bytes!("sss_ca.pem");
+    let mut pem_reader = BufReader::new(SSS_CA);
+
+    let mut root_store = rustls::RootCertStore::empty();
+    root_store
+        .add_pem_file(&mut pem_reader)
+        .expect("Failed to add PEM");
+
+    config.root_store = root_store;
+
+    config
+}
+
+fn get_body_from_response(resp: &[u8]) -> Result<String, CryptoError> {
+    trace!("get_body_from_response");
+    let mut headers = [httparse::EMPTY_HEADER; 16];
+    let mut respp = httparse::Response::new(&mut headers);
+    let result = respp.parse(resp);
+    trace!("parse result {:?}", result);
+
+    match respp.code {
+        Some(200) => info!("Response okay"),
+        Some(401) => {
+            error!("Unauthorized Failed to authenticate or authorize request.");
+            return Err(CryptoError::BadResponse);
+        }
+        Some(404) => {
+            error!("Not Found");
+            return Err(CryptoError::BadResponse);
+        }
+        Some(500) => {
+            error!("Internal error occurred in SSS server");
+            return Err(CryptoError::BadResponse);
+        }
+        Some(503) => {
+            error!(
+                "Service is currently not able to process the request (due to
+            a temporary overloading or maintenance). This is a
+            temporary state – the same request can be repeated after
+            some time. "
+            );
+            return Err(CryptoError::BadResponse);
+        }
+        _ => {
+            error!(
+                "response from SSS server :{} - unknown error or response code",
+                respp.code.unwrap()
+            );
+            return Err(CryptoError::BadResponse);
+        }
+    }
+
+    let mut len_num: u32 = 0;
+    trace!(
+        "LIORRRR headers {:?} {}",
+        respp.headers,
+        respp.headers.len()
+    );
+
+    for i in 0..respp.headers.len() {
+        let h = respp.headers[i];
+        //println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
+        match h.name.to_lowercase().as_str() {
+            "content-length" => {
+                let len_str = String::from_utf8(h.value.to_vec()).unwrap();
+                len_num = len_str.parse::<u32>().unwrap();
+                trace!("content length = {}", len_num);
+            }
+            _ => (),
+        }
+    }
+
+    let mut body = "".to_string();
+    if len_num != 0 {
+        let header_len = result.unwrap().unwrap();
+        let resp_body = &resp[header_len..];
+        body = str::from_utf8(resp_body).unwrap().to_string();
+    }
+
+    Ok(body)
+}
+
+fn get_challenge_from_service(
+    fd: c_int,
+    host_name: &str,
+    api_key: &[u8],
+    kp: KeyPair,
+) -> Result<Vec<u8>, CryptoError> {
+    pub const CHALLENGE_ENDPOINT: &str = "/authenticate";
+    trace!("HERE {}", line!());
+    let (_, cert) = match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key, None) {
+        Err(_) => {
+            trace!("Failed to get certificate from intel for seed service");
+            return Err(CryptoError::IntelCommunicationError);
+        }
+        Ok(res) => res,
+    };
+
+    let serialized_cert = base64::encode(cert);
+
+    trace!("HERE {}", line!());
+    let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
+    CHALLENGE_ENDPOINT,
+    host_name,
+    serialized_cert.len(),
+    serialized_cert);
+
+    trace!("{}", req);
+    let config = make_client_config();
+    let dns_name = webpki::DNSNameRef::try_from_ascii_str(host_name).unwrap();
+    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
+    let mut sock = TcpStream::new(fd).map_err(|err| {
+        trace!("Error while trying to create TcpStream {:?}", err);
+        CryptoError::SocketCreationError
+    })?;
+    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
+
+    let _result = tls.write(req.as_bytes());
+    let mut plaintext = Vec::new();
+
+    info!("write complete");
+
+    match tls.read_to_end(&mut plaintext) {
+        Ok(_) => {}
+        Err(e) => {
+            if e.kind() != ErrorKind::ConnectionAborted {
+                trace!("Error while reading https response {:?}", e);
+                return Err(CryptoError::SSSCommunicationError);
+            }
+        }
+    }
+
+    info!("read_to_end complete");
+
+    let challenge = base64::decode(get_body_from_response(&plaintext)?).map_err(|err| {
+        trace!("https response wasn't base64  {:?}", err);
+        CryptoError::SSSCommunicationError
+    })?;
+
+    info!("LIORRR challenge {:?}", challenge);
+
+    Ok(challenge)
+}
+
+fn get_seed_from_service(
+    fd: c_int,
+    host_name: &str,
+    api_key: &[u8],
+    kp: KeyPair,
+    id: u16,
+    challenge: Vec<u8>,
+) -> Result<Vec<u8>, CryptoError> {
+    pub const SEED_ENDPOINT: &str = "/seed/";
+    trace!("HERE {}", line!());
+    let (_, cert) = match create_attestation_certificate(
+        &kp,
+        SIGNATURE_TYPE,
+        api_key,
+        Some(challenge.as_slice()),
+    ) {
+        Err(_) => {
+            trace!("Failed to get certificate from intel for seed service");
+            return Err(CryptoError::IntelCommunicationError);
+        }
+        Ok(res) => res,
+    };
+
+    let serialized_cert = base64::encode(cert);
+
+    trace!("HERE {}", line!());
+    let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
+    format!("{}{}", SEED_ENDPOINT, id),
+    host_name,
+    serialized_cert.len(),
+    serialized_cert);
+
+    trace!("{}", req);
+    let config = make_client_config();
+    let dns_name = webpki::DNSNameRef::try_from_ascii_str(host_name).unwrap();
+    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
+    let mut sock = TcpStream::new(fd).map_err(|err| {
+        trace!("Error while trying to create TcpStream {:?}", err);
+        CryptoError::SocketCreationError
+    })?;
+    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
+
+    let _result = tls.write(req.as_bytes());
+    let mut plaintext = Vec::new();
+
+    info!("write complete");
+
+    match tls.read_to_end(&mut plaintext) {
+        Ok(_) => {}
+        Err(e) => {
+            if e.kind() != ErrorKind::ConnectionAborted {
+                trace!("Error while reading https response {:?}", e);
+                return Err(CryptoError::SSSCommunicationError);
+            }
+        }
+    }
+
+    info!("read_to_end complete");
+
+    let seed = base64::decode(get_body_from_response(&plaintext)?).map_err(|err| {
+        trace!("https response wasn't base64  {:?}", err);
+        CryptoError::SSSCommunicationError
+    })?;
+
+    info!("LIORRR seed {:?}", seed);
+
+    Ok(seed)
+}
+
+fn try_get_consensus_seed_from_service(
+    id: u16,
+    api_key: &[u8],
+    kp: KeyPair,
+) -> Result<Seed, CryptoError> {
+    #[cfg(feature = "production")]
+    pub const SEED_SERVICE_DNS: &'static str = "sss.scrtlabs.com";
+    #[cfg(not(feature = "production"))]
+    pub const SEED_SERVICE_DNS: &'static str = "sssd.scrtlabs.com";
+
+    trace!("HERE {}", line!());
+    let mut socket = create_socket_to_service(SEED_SERVICE_DNS)?;
+    trace!("HERE {}", line!());
+    let challenge = get_challenge_from_service(socket, SEED_SERVICE_DNS, api_key, kp)?;
+    socket = create_socket_to_service(SEED_SERVICE_DNS)?;
+    get_seed_from_service(socket, SEED_SERVICE_DNS, api_key, kp, id, challenge)?;
+    let s: [u8; 32] = [
+        0, id as u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+        23, 24, 25, 26, 27, 28, 29, 30, 31,
+    ];
+    let mut seed = Seed::default();
+    seed.as_mut().copy_from_slice(&s);
+    Ok(seed)
+}
+
+// Retreiving consensus seed from SingularitySeedService
+// id - The desired seed id
+// retries - The amount of times to retry upon failure. 0 means infinite
+fn get_next_consensus_seed_from_service(
+    key_manager: &mut Keychain,
+    retries: u8,
+    genesis_seed: Seed,
+    api_key: &[u8],
+    kp: KeyPair,
+) -> Result<Seed, CryptoError> {
+    let mut opt_seed: Result<Seed, CryptoError> = Err(CryptoError::DecryptionError);
+
+    match retries {
+        0 => {
+            trace!("Looping consensus seed lookup forever");
+            loop {
+                if let Ok(seed) = try_get_consensus_seed_from_service(
+                    key_manager.get_consensus_seed_id(),
+                    api_key,
+                    kp,
+                ) {
+                    opt_seed = Ok(seed);
+                    break;
+                }
+            }
+        }
+        _ => {
+            for try_id in 1..retries + 1 {
+                trace!("Looping consensus seed lookup {}/{}", try_id, retries);
+                match try_get_consensus_seed_from_service(
+                    key_manager.get_consensus_seed_id(),
+                    api_key,
+                    kp,
+                ) {
+                    Ok(seed) => {
+                        opt_seed = Ok(seed);
+                        break;
+                    }
+                    Err(e) => opt_seed = Err(e),
+                }
+            }
+        }
+    };
+
+    if let Err(e) = opt_seed {
+        return Err(e);
+    }
+
+    let mut seed = opt_seed?;
+    trace!(
+        "LIORRR Genesis seed is {:?} service seed is {:?}",
+        genesis_seed.as_slice(),
+        seed.as_slice()
+    );
+
+    // XOR the seed with the genesis seed
+    let mut seed_vec = seed.as_mut().to_vec();
+    seed_vec
+        .iter_mut()
+        .zip(genesis_seed.as_slice().to_vec().iter())
+        .for_each(|(x1, x2)| *x1 ^= *x2);
+
+    seed.as_mut().copy_from_slice(seed_vec.as_slice());
+
+    trace!("LIORRR New seed is {:?}", seed.as_slice());
+
+    trace!("Successfully fetched consensus seed from service");
+    key_manager.inc_consensus_seed_id();
+    Ok(seed)
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]

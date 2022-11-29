@@ -254,7 +254,7 @@ build-testnet-bootstrap:
 				 --build-arg SECRET_NODE_TYPE=BOOTSTRAP \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 -f deployment/dockerfiles/Dockerfile \
-				 -t ghcr.io/scrtlabs/secret-network-bootstrap-testnet:v$(VERSION) \
+				 -t ghcr.io/scrtlabs/testnet:${DOCKER_TAG} \
 				 --target release-image .
 
 build-testnet:
@@ -268,7 +268,7 @@ build-testnet:
 				 --build-arg SECRET_NODE_TYPE=NODE \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 -f deployment/dockerfiles/Dockerfile \
-				 -t ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
+				 -t ghcr.io/scrtlabs/testnet:${DOCKER_TAG} \
 				 --target release-image .
 	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
@@ -277,7 +277,7 @@ build-testnet:
 				 --build-arg SGX_MODE=HW \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
-				 --cache-from ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
+				 --cache-from ghcr.io/scrtlabs/testnet:${DOCKER_TAG} \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
 				 --target build-deb .
