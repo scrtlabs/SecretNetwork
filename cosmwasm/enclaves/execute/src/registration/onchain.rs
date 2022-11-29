@@ -12,6 +12,7 @@ use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
     validate_const_ptr, validate_mut_ptr,
 };
+use crate::registration::seed_exchange::SeedType;
 
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
@@ -34,7 +35,8 @@ use super::seed_exchange::encrypt_seed;
 pub unsafe extern "C" fn ecall_authenticate_new_node(
     cert: *const u8,
     cert_len: u32,
-    seed: &mut [u8; ENCRYPTED_SEED_SIZE],
+    // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
+    seed: &mut [u8; ENCRYPTED_SEED_SIZE]
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
@@ -65,10 +67,27 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             &target_public_key.to_vec()
         );
 
-        let res: Vec<u8> =
-            encrypt_seed(target_public_key).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+        #[cfg(not(feature = "use_seed_service"))]
+        {
+            let mut res: Vec<u8> =
+                encrypt_seed(target_public_key, SeedType::Genesis).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
-        Ok(res)
+            let res_current: Vec<u8> =
+                encrypt_seed(target_public_key, SeedType::Current).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+
+            res.extend(&res_current);
+
+            Ok(res)
+        }
+
+        #[cfg(feature = "use_seed_service")]
+        {
+            let res: Vec<u8> =
+                encrypt_seed(target_public_key, SeedType::Genesis).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+
+            Ok(res)
+        }
+
     });
 
     if let Err(_err) = oom_handler::restore_safety_buffer() {
@@ -79,7 +98,8 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     if let Ok(res) = result {
         match res {
             Ok(res) => {
-                seed.copy_from_slice(&res);
+                seed[0] = res.len() as u8;
+                seed[1..].copy_from_slice(&res);
                 NodeAuthResult::Success
             }
             Err(e) => e,

@@ -7,8 +7,8 @@ import (
 
 const (
 	EnclaveRegistrationKey = "new_node_seed_exchange_keypair.sealed"
-	PublicKeyLength        = 64 // encoded length
-	EncryptedKeyLength     = 96 // encoded length
+	PublicKeyLength        = 64  // encoded length
+	EncryptedKeyLength     = 194 // encoded length
 	MasterNodeKeyId        = "NodeExchMasterKey"
 	MasterIoKeyId          = "IoExchMasterKey"
 	SecretNodeSeedConfig   = "seed.json"

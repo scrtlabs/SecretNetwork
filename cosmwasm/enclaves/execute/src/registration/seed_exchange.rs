@@ -6,8 +6,14 @@ use enclave_crypto::consts::ENCRYPTED_SEED_SIZE;
 use enclave_crypto::{
     AESKey, Keychain, SIVEncryptable, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE, SEED_KEY_SIZE,
 };
+use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
-pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
+pub enum SeedType {
+    Genesis,
+    Current
+}
+
+pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE], seed_type: SeedType) -> SgxResult<Vec<u8>> {
     let shared_enc_key = KEY_MANAGER
         .seed_exchange_key()
         .unwrap()
@@ -16,11 +22,20 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
 
     let authenticated_data: Vec<&[u8]> = vec![&new_node_pk];
 
+    let seed_to_share = match seed_type {
+        SeedType::Genesis => {
+            KEY_MANAGER.get_consensus_seed().unwrap().genesis.clone()
+        }
+        SeedType::Current => {
+            KEY_MANAGER.get_consensus_seed().unwrap().current.clone()
+        }
+    };
+
     // encrypt the seed using the symmetric key derived in the previous stage
     // genesis seed is passed in registration
     // TODO get current seed from the seed server
     let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
-        KEY_MANAGER.get_consensus_seed().unwrap().genesis.as_slice() as &[u8],
+        seed_to_share.as_slice(),
         Some(&authenticated_data),
     ) {
         Ok(r) => {
@@ -45,7 +60,7 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
 pub fn decrypt_seed(
     key_manager: &Keychain,
     master_pk: [u8; PUBLIC_KEY_SIZE],
-    encrypted_seed: [u8; ENCRYPTED_SEED_SIZE],
+    encrypted_seed: [u8; SINGLE_ENCRYPTED_SEED_SIZE],
 ) -> SgxResult<Seed> {
     // create shared encryption key using ECDH
     let shared_enc_key = key_manager

@@ -33,6 +33,8 @@ use std::{
     sync::Arc,
 };
 
+use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
+
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::report::AttestationReport;
 
@@ -41,6 +43,12 @@ use super::cert::verify_ra_cert;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::cert::{ocall_get_update_info, verify_quote_status};
 use super::seed_exchange::decrypt_seed;
+
+#[cfg(not(feature = "use_seed_service"))]
+const EXPECTED_SEED_SIZE: u32 = 96;
+
+#[cfg(feature = "use_seed_service")]
+const EXPECTED_SEED_SIZE: u32 = 48;
 
 ///
 /// `ecall_init_bootstrap`
@@ -79,6 +87,28 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 
     if let Err(_e) = key_manager.create_consensus_seed() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    #[cfg(feature = "use_seed_service")]
+    {
+        let temp_keypair = KeyPair::new()?;
+
+        let new_consensus_seed = match get_next_consensus_seed_from_service(
+            &mut key_manager,
+            0,
+            genesis_seed,
+            api_key_slice,
+            temp_keypair,
+            crate::APP_VERSION
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Consensus seed failure: {}", e as u64);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        };
+
+        key_manager.set_consensus_seed(key_manager.get_consensus_seed()?.genesis, new_consensus_seed)?;
     }
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
@@ -200,6 +230,11 @@ pub unsafe extern "C" fn ecall_init_node(
     let mut encrypted_seed = [0u8; ENCRYPTED_SEED_SIZE];
     encrypted_seed.copy_from_slice(encrypted_seed_slice);
 
+    if encrypted_seed[0] as u32 != EXPECTED_SEED_SIZE {
+        error!("Got encrypted seed of different size than expected: {}", encrypted_seed[0]);
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
     // public keys in certificates don't have 0x04, so we'll copy it here
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
@@ -238,25 +273,44 @@ pub unsafe extern "C" fn ecall_init_node(
         debug!("Failed to remove consensus seed. Didn't exist?");
     }
 
-    let genesis_seed = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {
+    let mut single_seed_bytes = [0u8; SINGLE_ENCRYPTED_SEED_SIZE];
+    single_seed_bytes.copy_from_slice(&encrypted_seed[1..(SINGLE_ENCRYPTED_SEED_SIZE + 1)]);
+
+    let genesis_seed = match decrypt_seed(&key_manager, target_public_key, single_seed_bytes) {
         Ok(result) => result,
         Err(status) => return status,
     };
 
-    trace!("HERE {}", line!());
-    let new_consensus_seed = match get_next_consensus_seed_from_service(
-        &mut key_manager,
-        0,
-        genesis_seed,
-        api_key_slice,
-        KEY_MANAGER.get_registration_key().unwrap(),
-    ) {
-        Ok(s) => s,
-        Err(e) => {
-            error!("Consensus seed failure: {}", e as u64);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-    };
+    let new_consensus_seed;
+
+    #[cfg(feature = "use_seed_service")]
+    {
+        trace!("HERE {}", line!());
+        new_consensus_seed = match get_next_consensus_seed_from_service(
+            &mut key_manager,
+            0,
+            genesis_seed,
+            api_key_slice,
+            KEY_MANAGER.get_registration_key().unwrap(),
+            crate::APP_VERSION
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Consensus seed failure: {}", e as u64);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        };
+    }
+
+    #[cfg(not(feature = "use_seed_service"))]
+    {
+        single_seed_bytes.copy_from_slice(&encrypted_seed[(SINGLE_ENCRYPTED_SEED_SIZE + 1)..(SINGLE_ENCRYPTED_SEED_SIZE * 2 + 1)]);
+        new_consensus_seed = match decrypt_seed(&key_manager, target_public_key, single_seed_bytes) {
+            Ok(result) => result,
+            Err(status) => return status,
+        };
+    }
+
 
     // TODO get current seed from seed server
     if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
@@ -375,7 +429,8 @@ fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
 
     let mut addr: Option<SocketAddr> = None;
 
-    let addrs = (host_name, 3000).to_socket_addrs().map_err(|err| {
+    const SERVICE_PORT: u16 = 3000;
+    let addrs = (host_name, SERVICE_PORT).to_socket_addrs().map_err(|err| {
         trace!("Error while trying to convert to socket addrs {:?}", err);
         CryptoError::SocketCreationError
     })?;
@@ -653,6 +708,7 @@ fn get_next_consensus_seed_from_service(
     genesis_seed: Seed,
     api_key: &[u8],
     kp: KeyPair,
+    seed_id: u16
 ) -> Result<Seed, CryptoError> {
     let mut opt_seed: Result<Seed, CryptoError> = Err(CryptoError::DecryptionError);
 
@@ -661,7 +717,7 @@ fn get_next_consensus_seed_from_service(
             trace!("Looping consensus seed lookup forever");
             loop {
                 if let Ok(seed) = try_get_consensus_seed_from_service(
-                    key_manager.get_consensus_seed_id(),
+                    seed_id,
                     api_key,
                     kp,
                 ) {

@@ -174,14 +174,16 @@ pub fn untrusted_get_encrypted_seed(
     let enclave = (*enclave_access_token)?;
     let eid = enclave.geteid();
     let mut retval = NodeAuthResult::Success;
+
     let mut seed = [0u8; ENCRYPTED_SEED_SIZE];
+    let mut seed_len: u32 = 0;
     let status = unsafe {
         ecall_authenticate_new_node(
             eid,
             &mut retval,
             cert.as_ptr(),
             cert.len() as u32,
-            &mut seed,
+            &mut seed
         )
     };
 
@@ -192,6 +194,7 @@ pub fn untrusted_get_encrypted_seed(
     if retval != NodeAuthResult::Success {
         return Ok(Err(retval));
     }
+
 
     if seed.is_empty() {
         error!("Got empty seed from encryption");
