@@ -16,6 +16,7 @@ use log::*;
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
+use itertools::Itertools;
 use num_bigint::BigUint;
 
 use yasna::models::ObjectIdentifier;
@@ -365,6 +366,7 @@ pub fn verify_quote_status(
     //     "Got GID: {:?}",
     //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
     // );
+
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         error!(
             "Platform verification error: quote status {:?}",
@@ -378,9 +380,6 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::SwHardeningNeeded
         | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
             check_advisories(&report.sgx_quote_status, advisories)?;
-            // if !advisories.contains_lvi_injection() {
-            //     return Err(NodeAuthResult::EnclaveQuoteStatus);
-            // }
 
             Ok(())
         }
@@ -428,19 +427,27 @@ pub fn verify_quote_status(
     }
 }
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
-const WHITELIST_FROM_FILE: &[u8] = include_bytes!("../");
+const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
 
 #[cfg(all(not(all(feature = "SGX_MODE_HW", feature = "production")), feature = "test"))]
-const WHITELIST_FROM_FILE: &[u8] = &[0x0c, 12, 00, 0x69, 0x42];
+const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
 
 #[cfg(any(all(feature = "SGX_MODE_HW", feature = "production"), feature = "test"))]
 fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
+    #[cfg(feature = "epid_whitelist_disabled")]
+    {
+        return true;
+    }
 
-    let x: Vec<u32> = WHITELIST_FROM_FILE.as_chunks::<2>().0.iter().map(|arr| {
-        u16::from_be_bytes(arr.into()) as u32
-    }).collect();
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
+    {
+        let decoded = base64::decode(WHITELIST_FROM_FILE).unwrap(); //will never fail since data is constant
+        let x: Vec<u32> = decoded.as_chunks::<4>().0.into_iter().map(|&arr| {
+            u32::from_be_bytes(arr)
+        }).collect();
 
-    x.contains(epid_gid)
+        x.contains(epid_gid)
+    }
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -546,6 +553,7 @@ pub mod tests {
     // }
 
     pub fn test_epid_whitelist() {
+
         // check that we parse this correctly
         let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
         assert_eq!(res, true);
@@ -561,7 +569,7 @@ pub mod tests {
         let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x120c as u32));
         assert_eq!(res, false);
 
-        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x1212 as u32));
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc120000 as u32));
         assert_eq!(res, false);
 
         let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x1242 as u32));
