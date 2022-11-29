@@ -427,16 +427,20 @@ pub fn verify_quote_status(
         }
     }
 }
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
+const WHITELIST_FROM_FILE: &[u8] = include_bytes!("../");
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-const GID_WHITELIST: [u32; 21] = [
-    0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc41, 0xc55, 0xc15, 0xc13, 0xc40, 0xc4f, 0xc12, 0xc14, 0xc45,
-    0xc42, 0xc16, 0xc1e, 0xc47, 0xc4e, 0x0c11, 0x0c33, 0xc92,
-];
+#[cfg(all(not(all(feature = "SGX_MODE_HW", feature = "production")), feature = "test"))]
+const WHITELIST_FROM_FILE: &[u8] = &[0x0c, 12, 00, 0x69, 0x42];
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+#[cfg(any(all(feature = "SGX_MODE_HW", feature = "production"), feature = "test"))]
 fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
-    GID_WHITELIST.contains(epid_gid)
+
+    let x: Vec<u32> = WHITELIST_FROM_FILE.as_chunks::<2>().0.iter().map(|arr| {
+        u16::from_be_bytes(arr.into()) as u32
+    }).collect();
+
+    x.contains(epid_gid)
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -540,6 +544,30 @@ pub mod tests {
     //
     //     assert_eq!(result, NodeAuthResult::GroupOutOfDate)
     // }
+
+    pub fn test_epid_whitelist() {
+        // check that we parse this correctly
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
+        assert_eq!(res, true);
+
+        // check that 2nd number works
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x6942 as u32));
+        assert_eq!(res, true);
+
+        // check all kinds of failures that should return false
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x0 as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x120c as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x1212 as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x1242 as u32));
+        assert_eq!(res, false);
+
+    }
 
     pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();
