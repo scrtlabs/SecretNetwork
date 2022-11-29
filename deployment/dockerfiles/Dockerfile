@@ -141,8 +141,7 @@ RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
 RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
     apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/* && \
-    npm i -g local-cors-proxy
+    rm -rf /var/lib/apt/lists/*
 
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}

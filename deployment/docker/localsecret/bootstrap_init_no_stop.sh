@@ -21,9 +21,15 @@ then
 
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
-  perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
-  perl -i -pe 's/"172800s"/"90s"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
-  perl -i -pe 's/"1814400s"/"80s"/g' ~/.secretd/config/genesis.json # unbonding period 21 days -> 80 seconds
+  jq '
+    .consensus_params.block.time_iota_ms = "10" |
+    .app_state.staking.params.unbonding_time = "90s" |
+    .app_state.gov.voting_params.voting_period = "90s" |
+    .app_state.crisis.constant_fee.denom = "uscrt" |
+    .app_state.gov.deposit_params.min_deposit.denom = "uscrt" |
+    .app_state.mint.params.mint_denom = "uscrt" |
+    .app_state.staking.params.bond_denom = "uscrt"
+  ' ~/.secretd/config/genesis.json > ~/.secretd/config/genesis.json.tmp && mv ~/.secretd/config/genesis.json{.tmp,}
 
   perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/g' ~/.secretd/config/app.toml # enable cors
 
@@ -53,11 +59,8 @@ then
   secretd validate-genesis
 fi
 
-# Setup CORS for LCD & gRPC-web
-perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' .secretd/config/app.toml
-perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' .secretd/config/app.toml
+# Set concurrency to true to use grpc-gateway instead of falling back to rpc
 perl -i -pe 's/concurrency = false/concurrency = true/' .secretd/config/app.toml
-lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
 
 # Setup faucet
 setsid node faucet_server.js &
