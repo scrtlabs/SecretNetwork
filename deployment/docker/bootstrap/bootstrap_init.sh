@@ -1,23 +1,27 @@
 #!/bin/bash
 
+# alias secretd='/home/azureuser/elad/SecretNetwork/secretd'
 file=~/.secretd/config/genesis.json
 if [ ! -e "$file" ]; then
   # init the node
   rm -rf ~/.secretd/*
+  # diffi helman key, genesis.json, 
   rm -rf /opt/secret/.sgx_secrets/*
+  # encryption keys for use inside the enclave
 
-  chain_id=${CHAINID:-supernova-1}
+  chain_id=secretdev-1
 
   mkdir -p ./.sgx_secrets
   secretd config chain-id "$chain_id"
   secretd config keyring-backend test
 
-  # export SECRET_NETWORK_CHAIN_ID=secretdev-1
-  # export SECRET_NETWORK_KEYRING_BACKEND=test
+  export SECRET_NETWORK_CHAIN_ID=secretdev-1
+  export SECRET_NETWORK_KEYRING_BACKEND=test
   secretd init banana --chain-id "$chain_id"
+  # Create Pa, PUBa
 
 
-  cp ~/node_key.json ~/.secretd/config/node_key.json
+  # cp ~/node_key.json ~/.secretd/config/node_key.json
   perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
   perl -i -pe 's/"172800000000000"/"90000000000"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
 
@@ -42,14 +46,17 @@ if [ ! -e "$file" ]; then
 
 #  secretd init-enclave
   secretd init-bootstrap
-#  cp new_node_seed_exchange_keypair.sealed .sgx_secrets
+# created PUBe, Pe (probably creates the enclave cert as well)
+
+# cp new_node_seed_exchange_keypair.sealed .sgx_secrets
   secretd validate-genesis
 
   perl -i -pe 's/max_subscription_clients.+/max_subscription_clients = 100/' ~/.secretd/config/config.toml
   perl -i -pe 's/max_subscriptions_per_client.+/max_subscriptions_per_client = 50/' ~/.secretd/config/config.toml
 fi
 
-lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &
+# lcp --proxyUrl http://localhost:1317 --port 1337 --proxyPartial '' &
 
 # sleep infinity
-source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+# source /opt/sgxsdk/environment && RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap

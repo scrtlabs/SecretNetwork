@@ -50,6 +50,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
+	"github.com/scrtlabs/SecretNetwork/x/tokenfactory"
 )
 
 var mbasics = module.NewBasicManager(
@@ -82,6 +83,8 @@ var mbasics = module.NewBasicManager(
 		evidence.AppModuleBasic{},
 		transfer.AppModuleBasic{},
 		vesting.AppModuleBasic{},
+		tokenfactory.AppModuleBasic{},
+
 		feegrantmodule.AppModuleBasic{},
 		ica.AppModuleBasic{},
 	},

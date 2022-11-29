@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -78,12 +79,14 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
+	"github.com/scrtlabs/SecretNetwork/x/tokenfactory"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
+	tokenfactorytypes "github.com/scrtlabs/SecretNetwork/x/tokenfactory/types"
 	// unnamed import of statik for swagger UI support
 	_ "github.com/scrtlabs/SecretNetwork/client/docs/statik"
 )
@@ -108,6 +111,7 @@ var (
 		govtypes.ModuleName:            {authtypes.Burner},
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 		icatypes.ModuleName:            nil,
+		tokenfactorytypes.ModuleName:   {authtypes.Minter, authtypes.Burner},
 	}
 
 	// Module accounts that are allowed to receive tokens
@@ -246,6 +250,7 @@ func NewSecretNetworkApp(
 		upgrade.NewAppModule(*app.AppKeepers.UpgradeKeeper),
 		evidence.NewAppModule(*app.AppKeepers.EvidenceKeeper),
 		compute.NewAppModule(*app.AppKeepers.ComputeKeeper),
+		tokenfactory.NewAppModule(*app.AppKeepers.TokenFactoryKeeper, app.AppKeepers.AccountKeeper, app.AppKeepers.BankKeeper),
 		params.NewAppModule(*app.AppKeepers.ParamsKeeper),
 		authzmodule.NewAppModule(appCodec, *app.AppKeepers.AuthzKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, app.interfaceRegistry),
 		reg.NewAppModule(*app.AppKeepers.RegKeeper),
@@ -280,6 +285,7 @@ func NewSecretNetworkApp(
 		icaauthtypes.ModuleName,
 		// custom modules
 		compute.ModuleName,
+		tokenfactorytypes.ModuleName,
 		reg.ModuleName,
 	)
 
@@ -307,6 +313,7 @@ func NewSecretNetworkApp(
 		icatypes.ModuleName,
 		icaauthtypes.ModuleName,
 		compute.ModuleName,
+		tokenfactorytypes.ModuleName,
 		reg.ModuleName,
 	)
 
@@ -323,8 +330,10 @@ func NewSecretNetworkApp(
 		govtypes.ModuleName,
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
+
 		// custom modules
 		compute.ModuleName,
+		tokenfactorytypes.ModuleName,
 		reg.ModuleName,
 
 		icatypes.ModuleName,
@@ -522,4 +531,8 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 // LegacyAmino returns the application's sealed codec.
 func (app *SecretNetworkApp) LegacyAmino() *codec.LegacyAmino {
 	return app.legacyAmino
+}
+
+func (app *SecretNetworkApp) ExportState(ctx sdk.Context) map[string]json.RawMessage {
+	return app.mm.ExportGenesis(ctx, app.AppCodec())
 }

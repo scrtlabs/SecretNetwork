@@ -1,0 +1,76 @@
+package apptesting
+
+import (
+	"encoding/json"
+
+	"github.com/scrtlabs/SecretNetwork/app"
+)
+
+var defaultGenesisBz []byte
+
+func getDefaultGenesisStateBytes() []byte {
+	if len(defaultGenesisBz) == 0 {
+		genesisState := app.NewDefaultGenesisState()
+		stateBytes, err := json.MarshalIndent(genesisState, "", " ")
+		if err != nil {
+			panic(err)
+		}
+		defaultGenesisBz = stateBytes
+	}
+	return defaultGenesisBz
+}
+
+// Setup initializes a new OsmosisApp.
+// func Setup(isCheckTx bool) *OsmosisApp {
+// 	db := dbm.NewMemDB()
+// 	app := NewOsmosisApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, simapp.EmptyAppOptions{}, GetWasmEnabledProposals(), EmptyWasmOpts)
+// 	if !isCheckTx {
+// 		stateBytes := getDefaultGenesisStateBytes()
+
+// 		app.InitChain(
+// 			abci.RequestInitChain{
+// 				Validators:      []abci.ValidatorUpdate{},
+// 				ConsensusParams: simapp.DefaultConsensusParams,
+// 				AppStateBytes:   stateBytes,
+// 			},
+// 		)
+// 	}
+
+// 	return app
+// }
+
+// SetupTestingAppWithLevelDb initializes a new OsmosisApp intended for testing,
+// with LevelDB as a db.
+// func SetupTestingAppWithLevelDb(isCheckTx bool) (app *OsmosisApp, cleanupFn func()) {
+// 	dir := "osmosis_testing"
+// 	db, err := sdk.NewLevelDB("osmosis_leveldb_testing", dir)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	app = NewOsmosisApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, simapp.EmptyAppOptions{}, GetWasmEnabledProposals(), EmptyWasmOpts)
+// 	if !isCheckTx {
+// 		genesisState := NewDefaultGenesisState()
+// 		stateBytes, err := json.MarshalIndent(genesisState, "", " ")
+// 		if err != nil {
+// 			panic(err)
+// 		}
+
+// 		app.InitChain(
+// 			abci.RequestInitChain{
+// 				Validators:      []abci.ValidatorUpdate{},
+// 				ConsensusParams: simapp.DefaultConsensusParams,
+// 				AppStateBytes:   stateBytes,
+// 			},
+// 		)
+// 	}
+
+// 	cleanupFn = func() {
+// 		db.Close()
+// 		err = os.RemoveAll(dir)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 	}
+
+// 	return app, cleanupFn
+// }

@@ -91,6 +91,9 @@ import (
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
+
+	"github.com/scrtlabs/SecretNetwork/x/tokenfactory"
+	tokenfactorytypes "github.com/scrtlabs/SecretNetwork/x/tokenfactory/types"
 )
 
 const (
@@ -159,6 +162,7 @@ var ModuleBasics = module.NewBasicManager(
 	evidence.AppModuleBasic{},
 	// transfer.AppModuleBasic{},
 	registration.AppModuleBasic{},
+	tokenfactory.AppModuleBasic{},
 )
 
 func MakeTestCodec() codec.Codec {
@@ -286,6 +290,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:            {authtypes.Burner},
+		tokenfactorytypes.ModuleName:   {authtypes.Minter, authtypes.Burner},
 	}
 	authSubsp, _ := paramsKeeper.GetSubspace(authtypes.ModuleName)
 	authKeeper := authkeeper.NewAccountKeeper(
@@ -347,6 +352,15 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		authtypes.FeeCollectorName,
 		nil,
 	)
+
+	// tokenFactoryKeeper := tokenfactorykeeper.NewKeeper(
+	// 	keys[tokenfactorytypes.StoreKey],
+	// 	paramsKeeper.GetSubspace(tokenfactorytypes.ModuleName),
+	// 	AccountKeeper,
+	// 	bankKeeper.WithMintCoinsRestriction(tokenfactorytypes.NewTokenFactoryDenomMintCoinsRestriction()),
+	// 	distKeeper,
+	// )
+	// TokenFactoryKeeper = &tokenFactoryKeeper
 
 	// set genesis items required for distribution
 	distKeeper.SetParams(ctx, distrtypes.DefaultParams())
@@ -506,6 +520,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		staking.NewAppModule(encodingConfig.Marshaler, stakingKeeper, authKeeper, bankKeeper),
 		distribution.NewAppModule(encodingConfig.Marshaler, distKeeper, authKeeper, bankKeeper, stakingKeeper),
 		gov.NewAppModule(encodingConfig.Marshaler, govKeeper, authKeeper, bankKeeper),
+		// tokenfactory.NewAppModule(*app.TokenFactoryKeeper, app.AccountKeeper, app.BankKeeper),
 	)
 	am.RegisterServices(module.NewConfigurator(encodingConfig.Marshaler, msgRouter, queryRouter))
 	wasmtypes.RegisterMsgServer(msgRouter, NewMsgServerImpl(keeper))
