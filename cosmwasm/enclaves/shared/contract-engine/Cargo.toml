@@ -19,8 +19,8 @@ wasmi-engine = ["wasmi", "parity-wasm", "pwasm-utils"]
 sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
   "backtrace"
 ] }
-sgx_rand = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand" }
 sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_rand = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand" }
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
