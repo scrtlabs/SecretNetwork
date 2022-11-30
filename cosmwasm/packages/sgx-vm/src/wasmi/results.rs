@@ -1,6 +1,6 @@
 use super::exports;
 use crate::VmResult;
-use enclave_ffi_types::{HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{GenerateRandomResult, HandleResult, InitResult, QueryResult};
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {

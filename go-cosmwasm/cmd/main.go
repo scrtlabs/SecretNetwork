@@ -27,6 +27,9 @@ func main() {
 		panic(err)
 	}
 
+	random := wasm.GetRandomNumber()
+	fmt.Println("", random)
+
 	id, err := wasmer.Create(bz)
 	if err != nil {
 		panic(err)

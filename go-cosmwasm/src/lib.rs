@@ -27,6 +27,7 @@ use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
     untrusted_init_node, untrusted_key_gen
 };
+use cosmwasm_sgx_vm::wasmi::get_random_number_from_enclave;
 
 use ctor::ctor;
 use log::*;
@@ -324,6 +325,11 @@ fn do_get_code(cache: &mut CosmCache<DB, GoApi, GoQuerier>, id: Buffer) -> Resul
         .try_into()?;
     let wasm = cache.load_wasm(&id)?;
     Ok(wasm)
+}
+
+#[no_mangle]
+pub extern "C" fn get_random_number() -> u64 {
+    get_random_number_from_enclave()
 }
 
 #[no_mangle]

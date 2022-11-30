@@ -4,7 +4,7 @@ use log::*;
 
 use sgx_types::{sgx_enclave_id_t, sgx_status_t, SgxResult};
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, GenerateRandomResult, HandleResult, InitResult, QueryResult};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -50,6 +50,11 @@ extern "C" {
         sig_info: *const u8,
         sig_info_len: usize,
         handle_type: u8,
+    ) -> sgx_status_t;
+
+    pub fn ecall_generate_random(
+        eid: sgx_enclave_id_t,
+        retval: *mut GenerateRandomResult,
     ) -> sgx_status_t;
 }
 

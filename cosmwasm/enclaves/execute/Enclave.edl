@@ -97,6 +97,8 @@ enclave {
             uintptr_t msg_len
         );
 
+        public GenerateRandomResult ecall_generate_random();
+
         public HealthCheckResult ecall_health_check();
 
         public uint32_t ecall_run_tests();

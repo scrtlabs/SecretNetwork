@@ -36,6 +36,7 @@ include = [
     "Ctx",
     "InitResult",
     "HandleResult",
+    "GenerateRandomResult",
     "QueryResult",
     "OcallReturn",
     "HealthCheckResult",

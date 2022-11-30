@@ -10,7 +10,7 @@ use crate::enclave::ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
 
-use enclave_ffi_types::{Ctx, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, GenerateRandomResult, HandleResult, InitResult, QueryResult};
 
 use sgx_types::sgx_status_t;
 
@@ -20,8 +20,8 @@ use serde::Deserialize;
 use super::exports::FullContext;
 use super::imports;
 use super::results::{
-    handle_result_to_vm_result, init_result_to_vm_result, query_result_to_vm_result, HandleSuccess,
-    InitSuccess, QuerySuccess,
+    handle_result_to_vm_result, init_result_to_vm_result, query_result_to_vm_result,
+    HandleSuccess, InitSuccess, QuerySuccess,
 };
 
 pub struct Module<S, Q>
@@ -108,6 +108,7 @@ where
         let enclave_access_token = ENCLAVE_DOORBELL
             .get_access(1) // This can never be recursive
             .ok_or_else(Self::busy_enclave_err)?;
+
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
         let status = unsafe {
@@ -293,5 +294,47 @@ fn get_query_depth(env: &[u8]) -> VmResult<u32> {
             "could not parse the env parameter: {:?}",
             String::from_utf8_lossy(env)
         ))),
+    }
+}
+
+fn get_busy_enclave_error() -> VmError {
+    VmError::generic_err("The enclave is too busy and can not respond to this query")
+}
+
+pub fn get_random_number_from_enclave() -> u64 {
+    trace!("get_random_number_from_enclave() called");
+
+    let mut random_retval = MaybeUninit::<GenerateRandomResult>::uninit();
+
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or_else(get_busy_enclave_error).unwrap();
+
+    let enclave = enclave_access_token.map_err(EnclaveError::sdk_err).unwrap();
+
+    let status = unsafe {
+        imports::ecall_generate_random(
+            enclave.geteid(),
+            random_retval.as_mut_ptr(),
+        )
+    };
+
+    trace!("generate_random() returned");
+
+    match status {
+        sgx_status_t::SGX_SUCCESS => {
+            let random_result = unsafe { random_retval.assume_init() };
+            match random_result {
+                GenerateRandomResult::Success{ encrypted_output } => {
+                    encrypted_output
+                },
+                GenerateRandomResult::Failure { .. } => {
+                    222u64
+                }
+            }
+        }
+        failure_status => 0,
     }
 }

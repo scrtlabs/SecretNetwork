@@ -128,6 +128,12 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveVector(code), nil
 }
 
+func GetRandomNumberFromEnclave() uint64 {
+	res, _ := C.get_random_number()
+	fmt.Println("got random number from inside the enclave:", res)
+	return uint64(res)
+}
+
 func Instantiate(
 	cache Cache,
 	code_id []byte,

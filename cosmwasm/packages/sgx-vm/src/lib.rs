@@ -22,7 +22,7 @@ mod attestation;
 mod enclave;
 mod enclave_config;
 mod seed;
-mod wasmi;
+pub mod wasmi;
 
 #[cfg(feature = "enclave-tests")]
 pub mod enclave_tests;

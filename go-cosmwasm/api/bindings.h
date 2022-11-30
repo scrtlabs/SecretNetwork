@@ -161,6 +161,8 @@ Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
 Buffer get_health_check(Buffer *err);
 
+uint64_t get_random_number(void);
+
 Buffer handle(cache_t *cache,
               Buffer code_id,
               Buffer params,
