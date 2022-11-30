@@ -16,7 +16,7 @@ use log::*;
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
-use itertools::Itertools;
+
 use num_bigint::BigUint;
 
 use yasna::models::ObjectIdentifier;
@@ -429,7 +429,10 @@ pub fn verify_quote_status(
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
 const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
 
-#[cfg(all(not(all(feature = "SGX_MODE_HW", feature = "production")), feature = "test"))]
+#[cfg(all(
+    not(all(feature = "SGX_MODE_HW", feature = "production")),
+    feature = "test"
+))]
 const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
 
 #[cfg(any(all(feature = "SGX_MODE_HW", feature = "production"), feature = "test"))]
@@ -442,11 +445,13 @@ fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
     #[cfg(not(feature = "epid_whitelist_disabled"))]
     {
         let decoded = base64::decode(WHITELIST_FROM_FILE).unwrap(); //will never fail since data is constant
-        let x: Vec<u32> = decoded.as_chunks::<4>().0.into_iter().map(|&arr| {
-            u32::from_be_bytes(arr)
-        }).collect();
 
-        x.contains(epid_gid)
+        decoded.as_chunks::<4>().0.iter().any(|&arr| {
+            if epid_gid == &u32::from_be_bytes(arr) {
+                return true;
+            }
+            false
+        })
     }
 }
 
@@ -553,7 +558,6 @@ pub mod tests {
     // }
 
     pub fn test_epid_whitelist() {
-
         // check that we parse this correctly
         let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
         assert_eq!(res, true);
@@ -574,7 +578,6 @@ pub mod tests {
 
         let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x1242 as u32));
         assert_eq!(res, false);
-
     }
 
     pub fn test_certificate_valid() {
