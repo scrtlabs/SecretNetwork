@@ -53,8 +53,22 @@ impl Keychain {
             Seed::unseal(&GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()),
             Seed::unseal(&CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()),
         ) {
-            (Ok(genesis), Ok(current)) => Some(SeedsHolder { genesis, current }),
-            _ => None,
+            (Ok(genesis), Ok(current)) => {
+                trace!(
+                    "New keychain created with the following seeds {:?}, {:?}",
+                    genesis.as_slice(),
+                    current.as_slice()
+                );
+                Some(SeedsHolder { genesis, current })
+            }
+            (Err(e), _) => {
+                trace!("Failed to unseal seeds {}", e);
+                None
+            }
+            (_, Err(e)) => {
+                trace!("Failed to unseal seeds {}", e);
+                None
+            }
         };
 
         let registration_key = Self::unseal_registration_key();
@@ -227,6 +241,12 @@ impl Keychain {
     }
 
     pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) -> Result<(), EnclaveError> {
+        trace!(
+            "Consensus seeds were set to be the following {:?}, {:?}",
+            genesis.as_slice(),
+            current.as_slice()
+        );
+
         debug!(
             "Sealing genesis consensus seed in {}",
             *GENESIS_CONSENSUS_SEED_SEALING_PATH

@@ -103,12 +103,16 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         Ok(s) => s,
         Err(e) => {
             error!("Consensus seed failure: {}", e as u64);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            panic!();
         }
     };
 
     // TODO get current seed from seed server
     if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    if let Err(_e) = key_manager.generate_consensus_master_keys() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
@@ -277,17 +281,19 @@ pub unsafe extern "C" fn ecall_init_node(
         Err(status) => return status,
     };
 
+    let registration_key = key_manager.get_registration_key().unwrap();
+
     let new_consensus_seed = match get_next_consensus_seed_from_service(
         &mut key_manager,
         1,
         genesis_seed,
         api_key_slice,
-        KEY_MANAGER.get_registration_key().unwrap(),
+        registration_key,
     ) {
         Ok(s) => s,
         Err(e) => {
             error!("Consensus seed failure: {}", e as u64);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            panic!();
         }
     };
 

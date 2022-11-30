@@ -20,7 +20,15 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
     // genesis seed is passed in registration
     // TODO get current seed from the seed server
 
-    trace!("Encrypting seed with shared enc key {:?}", shared_enc_key);
+    trace!(
+        "LIOR Encryption {:?} {:?}",
+        KEY_MANAGER
+            .seed_exchange_key()
+            .unwrap()
+            .current
+            .get_pubkey(),
+        new_node_pk
+    );
     let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
         KEY_MANAGER.get_consensus_seed().unwrap().genesis.as_slice() as &[u8],
         Some(&authenticated_data),
@@ -64,8 +72,11 @@ pub fn decrypt_seed(
     let my_public_key = key_manager.get_registration_key().unwrap().get_pubkey();
     let authenticated_data: Vec<&[u8]> = vec![&my_public_key];
 
-    trace!("Decrypting seed with shared enc key {:?}", shared_enc_key);
-    trace!("My pub key on decryption {:?}", my_public_key);
+    trace!(
+        "Public keys on decryption: {:?} {:?}",
+        key_manager.get_registration_key().unwrap().get_pubkey(),
+        master_pk
+    );
 
     // decrypt
     genesis_seed
