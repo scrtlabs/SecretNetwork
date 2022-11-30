@@ -16,6 +16,7 @@ use log::*;
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
+
 use num_bigint::BigUint;
 
 use yasna::models::ObjectIdentifier;
@@ -365,6 +366,7 @@ pub fn verify_quote_status(
     //     "Got GID: {:?}",
     //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
     // );
+
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         error!(
             "Platform verification error: quote status {:?}",
@@ -378,9 +380,6 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::SwHardeningNeeded
         | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
             check_advisories(&report.sgx_quote_status, advisories)?;
-            // if !advisories.contains_lvi_injection() {
-            //     return Err(NodeAuthResult::EnclaveQuoteStatus);
-            // }
 
             Ok(())
         }
@@ -427,16 +426,33 @@ pub fn verify_quote_status(
         }
     }
 }
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
+const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-const GID_WHITELIST: [u32; 21] = [
-    0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc41, 0xc55, 0xc15, 0xc13, 0xc40, 0xc4f, 0xc12, 0xc14, 0xc45,
-    0xc42, 0xc16, 0xc1e, 0xc47, 0xc4e, 0x0c11, 0x0c33, 0xc92,
-];
+#[cfg(all(
+    not(all(feature = "SGX_MODE_HW", feature = "production")),
+    feature = "test"
+))]
+const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+#[cfg(any(all(feature = "SGX_MODE_HW", feature = "production"), feature = "test"))]
 fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
-    GID_WHITELIST.contains(epid_gid)
+    #[cfg(feature = "epid_whitelist_disabled")]
+    {
+        return true;
+    }
+
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
+    {
+        let decoded = base64::decode(WHITELIST_FROM_FILE).unwrap(); //will never fail since data is constant
+
+        decoded.as_chunks::<4>().0.iter().any(|&arr| {
+            if epid_gid == &u32::from_be_bytes(arr) {
+                return true;
+            }
+            false
+        })
+    }
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -540,6 +556,29 @@ pub mod tests {
     //
     //     assert_eq!(result, NodeAuthResult::GroupOutOfDate)
     // }
+
+    pub fn test_epid_whitelist() {
+        // check that we parse this correctly
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
+        assert_eq!(res, true);
+
+        // check that 2nd number works
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x6942 as u32));
+        assert_eq!(res, true);
+
+        // check all kinds of failures that should return false
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x0 as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x120c as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc120000 as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x1242 as u32));
+        assert_eq!(res, false);
+    }
 
     pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();
