@@ -24,7 +24,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
-	wasmapi "github.com/scrtlabs/SecretNetwork/go-cosmwasm"
+	wasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm"
 )
 
 var (
@@ -156,7 +156,9 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 // BeginBlock returns the begin blocker for the compute module.
 func (am AppModule) BeginBlock(_ sdk.Context, req abci.RequestBeginBlock) {
 	fmt.Println("This block received the ecrypted random:", req.Header.EncryptedRandom)
-	fmt.Println("We got an ecrypted random from the enclave:", wasmapi.GetRandomNumber())
+
+	res := wasm.GetRandomNumber()
+	fmt.Println("We got an ecrypted random from the enclave!", res)
 }
 
 // EndBlock returns the end blocker for the compute module. It returns no validator

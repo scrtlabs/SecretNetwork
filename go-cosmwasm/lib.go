@@ -1,5 +1,6 @@
 package cosmwasm
 
+import "C"
 import (
 	"encoding/json"
 	"fmt"
@@ -37,7 +38,8 @@ type Wasmer struct {
 }
 
 func GetRandomNumber() uint64 {
-	return api.GetRandomNumberFromEnclave()
+	result := api.GetRandom()
+	return result
 }
 
 // NewWasmer creates an new binding, with the given dataDir where

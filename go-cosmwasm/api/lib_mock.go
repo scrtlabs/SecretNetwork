@@ -35,6 +35,13 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
+func GetRandom() uint64 {
+	//result, _ := C.get_random_number()
+	//fmt.Println("got random number from inside the enclave:", result)
+	//return uint64(result)
+	return 0
+}
+
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	//errmsg := C.Buffer{}
 	//
