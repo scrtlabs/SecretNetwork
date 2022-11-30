@@ -85,6 +85,37 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
+    let genesis_seed = key_manager.get_consensus_seed().unwrap().genesis;
+    let temp_key_result = KeyPair::new();
+
+    if temp_key_result.is_err() {
+        error!("Failed to generate temporary key for attestation");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    let new_consensus_seed = match get_next_consensus_seed_from_service(
+        &mut key_manager,
+        1,
+        genesis_seed,
+        api_key_slice,
+        temp_key_result.unwrap(),
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Consensus seed failure: {}", e as u64);
+            panic!();
+        }
+    };
+
+    // TODO get current seed from seed server
+    if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    if let Err(_e) = key_manager.generate_consensus_master_keys() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
     if let Err(_e) = key_manager.create_registration_key() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
@@ -108,6 +139,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             .current
             .get_pubkey(),
     );
+
     trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
         hex::encode(public_key)
@@ -223,6 +255,11 @@ pub unsafe extern "C" fn ecall_init_node(
     }
     target_public_key.copy_from_slice(&pk);
 
+    trace!(
+        "ecall_init_node target public key is: {:?}",
+        target_public_key
+    );
+
     let mut key_manager = Keychain::new();
 
     // even though key is overwritten later we still want to explicitly remove it in case we increase the security version
@@ -238,23 +275,25 @@ pub unsafe extern "C" fn ecall_init_node(
         debug!("Failed to remove consensus seed. Didn't exist?");
     }
 
+    trace!("Target public key is: {:?}", target_public_key);
     let genesis_seed = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {
         Ok(result) => result,
         Err(status) => return status,
     };
 
-    trace!("HERE {}", line!());
+    let registration_key = key_manager.get_registration_key().unwrap();
+
     let new_consensus_seed = match get_next_consensus_seed_from_service(
         &mut key_manager,
-        0,
+        1,
         genesis_seed,
         api_key_slice,
-        KEY_MANAGER.get_registration_key().unwrap(),
+        registration_key,
     ) {
         Ok(s) => s,
         Err(e) => {
             error!("Consensus seed failure: {}", e as u64);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            panic!();
         }
     };
 
@@ -459,12 +498,6 @@ fn get_body_from_response(resp: &[u8]) -> Result<String, CryptoError> {
     }
 
     let mut len_num: u32 = 0;
-    trace!(
-        "LIORRRR headers {:?} {}",
-        respp.headers,
-        respp.headers.len()
-    );
-
     for i in 0..respp.headers.len() {
         let h = respp.headers[i];
         //println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
@@ -495,7 +528,6 @@ fn get_challenge_from_service(
     kp: KeyPair,
 ) -> Result<Vec<u8>, CryptoError> {
     pub const CHALLENGE_ENDPOINT: &str = "/authenticate";
-    trace!("HERE {}", line!());
     let (_, cert) = match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key, None) {
         Err(_) => {
             trace!("Failed to get certificate from intel for seed service");
@@ -506,7 +538,6 @@ fn get_challenge_from_service(
 
     let serialized_cert = base64::encode(cert);
 
-    trace!("HERE {}", line!());
     let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
     CHALLENGE_ENDPOINT,
     host_name,
@@ -545,8 +576,6 @@ fn get_challenge_from_service(
         CryptoError::SSSCommunicationError
     })?;
 
-    info!("LIORRR challenge {:?}", challenge);
-
     Ok(challenge)
 }
 
@@ -559,7 +588,6 @@ fn get_seed_from_service(
     challenge: Vec<u8>,
 ) -> Result<Vec<u8>, CryptoError> {
     pub const SEED_ENDPOINT: &str = "/seed/";
-    trace!("HERE {}", line!());
     let (_, cert) = match create_attestation_certificate(
         &kp,
         SIGNATURE_TYPE,
@@ -575,7 +603,6 @@ fn get_seed_from_service(
 
     let serialized_cert = base64::encode(cert);
 
-    trace!("HERE {}", line!());
     let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
     format!("{}{}", SEED_ENDPOINT, id),
     host_name,
@@ -614,8 +641,6 @@ fn get_seed_from_service(
         CryptoError::SSSCommunicationError
     })?;
 
-    info!("LIORRR seed {:?}", seed);
-
     Ok(seed)
 }
 
@@ -629,16 +654,10 @@ fn try_get_consensus_seed_from_service(
     #[cfg(not(feature = "production"))]
     pub const SEED_SERVICE_DNS: &'static str = "sssd.scrtlabs.com";
 
-    trace!("HERE {}", line!());
     let mut socket = create_socket_to_service(SEED_SERVICE_DNS)?;
-    trace!("HERE {}", line!());
     let challenge = get_challenge_from_service(socket, SEED_SERVICE_DNS, api_key, kp)?;
     socket = create_socket_to_service(SEED_SERVICE_DNS)?;
-    get_seed_from_service(socket, SEED_SERVICE_DNS, api_key, kp, id, challenge)?;
-    let s: [u8; 32] = [
-        0, id as u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-        23, 24, 25, 26, 27, 28, 29, 30, 31,
-    ];
+    let s = get_seed_from_service(socket, SEED_SERVICE_DNS, api_key, kp, id, challenge)?;
     let mut seed = Seed::default();
     seed.as_mut().copy_from_slice(&s);
     Ok(seed)
@@ -693,11 +712,6 @@ fn get_next_consensus_seed_from_service(
     }
 
     let mut seed = opt_seed?;
-    trace!(
-        "LIORRR Genesis seed is {:?} service seed is {:?}",
-        genesis_seed.as_slice(),
-        seed.as_slice()
-    );
 
     // XOR the seed with the genesis seed
     let mut seed_vec = seed.as_mut().to_vec();
@@ -707,8 +721,6 @@ fn get_next_consensus_seed_from_service(
         .for_each(|(x1, x2)| *x1 ^= *x2);
 
     seed.as_mut().copy_from_slice(seed_vec.as_slice());
-
-    trace!("LIORRR New seed is {:?}", seed.as_slice());
 
     trace!("Successfully fetched consensus seed from service");
     key_manager.inc_consensus_seed_id();
