@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -171,7 +172,13 @@ func redactError(err error) (bool, error) {
 	// sdk/5 is insufficient funds (on bank send)
 	// (we can theoretically redact less in the future, but this is a first step to safety)
 	codespace, code, _ := sdkerrors.ABCIInfo(err, false)
-	return true, fmt.Errorf("codespace: %s, code: %d. For more info please use the following link: https://github.com/scrtlabs/cosmos-sdk/blob/HEAD/types/errors/errors.go", codespace, code)
+
+	// In software mode, ignore redaction in order the understand the errors.
+	if os.Getenv("SGX_MODE") == "SW" {
+		return true, err
+	}
+
+	return true, fmt.Errorf("the error was redacted (codespace: %s, code: %d). For more info use latest localsecret and reproduce the issue", codespace, code)
 }
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
