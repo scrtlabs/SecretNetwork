@@ -21,6 +21,7 @@ sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd
 ] }
 sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 sgx_rand = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand" }
+sgx_trts = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_trts" }
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }

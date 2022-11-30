@@ -1,6 +1,10 @@
 #![feature(stmt_expr_attributes)]
 #![feature(vec_into_raw_parts)]
 
+#![cfg_attr(not(target_env = "sgx"), no_std)]
+#![cfg_attr(target_env = "sgx", feature(rustc_private))]
+
+
 // Trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
@@ -8,6 +12,7 @@ extern crate sgx_tstd as std;
 extern crate core;
 extern crate sgx_types;
 extern crate sgx_rand;
+extern crate sgx_trts;
 
 mod contract_operations;
 mod contract_validation;

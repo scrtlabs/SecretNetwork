@@ -22,7 +22,7 @@ mod ed25519;
 mod hmac;
 pub mod secp256k1;
 
-mod rng;
+pub mod rng;
 
 pub mod hash;
 

@@ -6,7 +6,6 @@ use lazy_static::lazy_static;
 use log::*;
 
 use sgx_types::sgx_status_t;
-use sgx_rand::random;
 
 use enclave_ffi_types::{
     Ctx, EnclaveBuffer, EnclaveError, HandleResult, HealthCheckResult, InitResult, QueryResult,
@@ -14,6 +13,8 @@ use enclave_ffi_types::{
 };
 
 use enclave_utils::{oom_handler, validate_const_ptr, validate_mut_ptr};
+use sgx_trts::trts::rsgx_read_rand;
+use enclave_ffi_types::EnclaveError::RandomError;
 
 use crate::external::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
@@ -463,10 +464,19 @@ pub unsafe extern "C" fn ecall_health_check() -> HealthCheckResult {
 /// Always use protection
 #[no_mangle]
 pub unsafe extern "C" fn ecall_generate_random() -> GenerateRandomResult {
-    let result: u64 = random();
+    let mut rand_buf: [u8; 8] = [0; 8];
 
-    GenerateRandomResult::Success {
-        encrypted_output: result
+    match rsgx_read_rand(&mut rand_buf) {
+        Ok(_) => {
+            GenerateRandomResult::Success {
+                encrypted_output: u64::from_be_bytes(rand_buf)
+            }
+        },
+        Err(_) => {
+            GenerateRandomResult::Failure {
+                err: RandomError
+            }
+        }
     }
 }
 

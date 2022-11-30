@@ -156,6 +156,8 @@ pub enum EnclaveError {
     FailedTxVerification,
     #[display(fmt = "contract tried to write to storage during a query")]
     UnauthorizedWrite,
+    #[display(fmt = "failed to extract random")]
+    RandomError,
 
     // serious issues
     /// The host was caught trying to disrupt the enclave.

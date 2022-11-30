@@ -553,6 +553,7 @@ dependencies = [
  "serde 1.0.118",
  "serde_json 1.0.60",
  "sgx_rand",
+ "sgx_trts",
  "sgx_tstd",
  "sgx_types",
  "sha2 0.8.2",
