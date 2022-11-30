@@ -6,16 +6,13 @@ use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
 use sgx_types::{sgx_status_t, SgxResult};
-use std::any::Any;
 use std::slice;
 
 use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
 };
-use enclave_crypto::{
-    key_manager, CryptoError, KeyPair, Keychain, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE,
-};
+use enclave_crypto::{CryptoError, KeyPair, Keychain, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 use enclave_utils::pointers::validate_mut_slice;

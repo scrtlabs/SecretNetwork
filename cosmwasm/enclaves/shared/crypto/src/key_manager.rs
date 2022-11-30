@@ -50,8 +50,8 @@ lazy_static! {
 impl Keychain {
     pub fn new() -> Self {
         let consensus_seed: Option<SeedsHolder<Seed>> = match (
-            Seed::unseal(&GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()),
-            Seed::unseal(&CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()),
+            Seed::unseal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()),
+            Seed::unseal(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()),
         ) {
             (Ok(genesis), Ok(current)) => {
                 trace!(
@@ -89,7 +89,7 @@ impl Keychain {
     }
 
     fn unseal_registration_key() -> Option<KeyPair> {
-        match KeyPair::unseal(&REGISTRATION_KEY_SEALING_PATH.as_str()) {
+        match KeyPair::unseal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
             Ok(k) => Some(k),
             _ => None,
         }
@@ -135,7 +135,7 @@ impl Keychain {
         self.consensus_seed_id
     }
 
-    pub fn inc_consensus_seed_id(&mut self) -> () {
+    pub fn inc_consensus_seed_id(&mut self) {
         self.consensus_seed_id += 1;
     }
 
@@ -181,7 +181,7 @@ impl Keychain {
                     error!("Failed to reseal registration key - error code 0xC11");
                     return Err(EnclaveError::FailedSeal);
                 };
-                if let Err(_e) = kp.seal(&REGISTRATION_KEY_SEALING_PATH.as_str()) {
+                if let Err(_e) = kp.seal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
                     error!("Failed to reseal registration key - error code 0xC12");
                     return Err(EnclaveError::FailedSeal);
                 }
@@ -192,7 +192,7 @@ impl Keychain {
     }
 
     pub fn set_registration_key(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
-        if let Err(e) = kp.seal(&REGISTRATION_KEY_SEALING_PATH.as_str()) {
+        if let Err(e) = kp.seal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
             error!("Error sealing registration key - error code 0xC13");
             return Err(e);
         }
@@ -251,7 +251,7 @@ impl Keychain {
             "Sealing genesis consensus seed in {}",
             *GENESIS_CONSENSUS_SEED_SEALING_PATH
         );
-        if let Err(e) = genesis.seal(&GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
+        if let Err(e) = genesis.seal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
             error!("Error sealing genesis consensus_seed - error code 0xC14");
             return Err(e);
         }
@@ -260,7 +260,7 @@ impl Keychain {
             "Sealing current consensus seed in {}",
             *CURRENT_CONSENSUS_SEED_SEALING_PATH
         );
-        if let Err(e) = current.seal(&CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
+        if let Err(e) = current.seal(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
             error!("Error sealing current consensus_seed - error code 0xC14");
             return Err(e);
         }
@@ -400,7 +400,8 @@ impl Keychain {
 pub mod tests {
 
     use super::{
-        Keychain, CONSENSUS_SEED_SEALING_PATH, /*KEY_MANAGER,*/ REGISTRATION_KEY_SEALING_PATH,
+        Keychain, CURRENT_CONSENSUS_SEED_SEALING_PATH, GENESIS_CONSENSUS_SEED_SEALING_PATH,
+        /*KEY_MANAGER,*/ REGISTRATION_KEY_SEALING_PATH,
     };
     // use crate::crypto::CryptoError;
     // use crate::crypto::{KeyPair, Seed};
@@ -409,6 +410,7 @@ pub mod tests {
     fn _test_initial_keychain_state() {
         // clear previous data (if any)
         let _ = std::sgxfs::remove(&*GENESIS_CONSENSUS_SEED_SEALING_PATH);
+        let _ = std::sgxfs::remove(&*CURRENT_CONSENSUS_SEED_SEALING_PATH);
         let _ = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
 
         let _keys = Keychain::new();
