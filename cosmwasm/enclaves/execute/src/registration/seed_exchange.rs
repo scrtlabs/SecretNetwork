@@ -21,7 +21,7 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
     // TODO get current seed from the seed server
 
     trace!(
-        "LIOR Encryption {:?} {:?}",
+        "Public keys on encryption {:?} {:?}",
         KEY_MANAGER
             .seed_exchange_key()
             .unwrap()

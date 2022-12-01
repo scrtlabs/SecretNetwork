@@ -214,7 +214,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
     // this validates the cert and handles the "what if it fails" inside as well
     let res = create_attestation_certificate(
-        &temp_key_result.as_ref().unwrap(),
+        temp_key_result.as_ref().unwrap(),
         SIGNATURE_TYPE,
         api_key_slice,
         None,
@@ -350,7 +350,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         };
 
     //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH.as_str()) {
+    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
         return status;
     }
 
@@ -436,7 +436,7 @@ fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
         CryptoError::SocketCreationError
     })?;
 
-    return Ok(sock.into_raw_fd());
+    Ok(sock.into_raw_fd())
 }
 
 fn make_client_config() -> rustls::ClientConfig {
@@ -498,13 +498,10 @@ fn get_body_from_response(resp: &[u8]) -> Result<String, CryptoError> {
     for i in 0..respp.headers.len() {
         let h = respp.headers[i];
         //println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
-        match h.name.to_lowercase().as_str() {
-            "content-length" => {
-                let len_str = String::from_utf8(h.value.to_vec()).unwrap();
-                len_num = len_str.parse::<u32>().unwrap();
-                trace!("content length = {}", len_num);
-            }
-            _ => (),
+        if h.name.to_lowercase().as_str() == "content-length" {
+            let len_str = String::from_utf8(h.value.to_vec()).unwrap();
+            len_num = len_str.parse::<u32>().unwrap();
+            trace!("content length = {}", len_num);
         }
     }
 
@@ -600,8 +597,8 @@ fn get_seed_from_service(
 
     let serialized_cert = base64::encode(cert);
 
-    let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-    format!("{}{}", SEED_ENDPOINT, id),
+    let req = format!("GET {}{} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
+    SEED_ENDPOINT, id,
     host_name,
     serialized_cert.len(),
     serialized_cert);
@@ -647,9 +644,9 @@ fn try_get_consensus_seed_from_service(
     kp: KeyPair,
 ) -> Result<Seed, CryptoError> {
     #[cfg(feature = "production")]
-    pub const SEED_SERVICE_DNS: &'static str = "sss.scrtlabs.com";
+    pub const SEED_SERVICE_DNS: &str = "sss.scrtlabs.com";
     #[cfg(not(feature = "production"))]
-    pub const SEED_SERVICE_DNS: &'static str = "sssd.scrtlabs.com";
+    pub const SEED_SERVICE_DNS: &str = "sssd.scrtlabs.com";
 
     let mut socket = create_socket_to_service(SEED_SERVICE_DNS)?;
     let challenge = get_challenge_from_service(socket, SEED_SERVICE_DNS, api_key, kp)?;
