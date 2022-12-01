@@ -1,31 +1,35 @@
+# Example of a docker-compose file that runs both the aesm and SN node
 version: '3.4'
 
 services:
   aesm:
-    image: enigmampc/aesm
+    image: fortanix/aesmd:2.17.100.3
     devices:
-      - /dev/sgx
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
       - /tmp/aesmd:/var/run/aesmd
     stdin_open: true
     tty: true
 
   node:
-    image: enigmampc/secret-network-node:v1.0.0-mainnet
+    image: ghcr.io/scrtlabs/secret-network-node:1.5.1
     devices:
-      - /dev/sgx
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
     volumes:
       - /tmp/aesmd:/var/run/aesmd
       - /tmp/.secretd:/root/.secretd
       - /tmp/.secretcli:/root/.secretcli
-      - /tmp/.sgx_secrets:/root/.sgx_secrets
+      - /tmp/.sgx_secrets:/opt/secret/.sgx_secrets
     environment:
       - SGX_MODE=HW
       - MONIKER
-      - RPC_URL
       - CHAINID
-      - PERSISTENT_PEERS
+      - STATE_SYNC1
+      - STATE_SYNC2
       - REGISTRATION_SERVICE
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:26657"]
       interval: 1m30s
@@ -35,3 +39,5 @@ services:
     ports:
       - "26656:26656"
       - "26657:26657"
+      - "1317:1317"
+      - "9091:9091"

@@ -32,6 +32,8 @@ then
 
   secretd init "$MONIKER" --chain-id "$CHAINID"
 
+  perl -i -pe 's/concurrency = false/concurrency = true/' /root/.secretd/config/app.toml
+
   echo "Initialized chain: $CHAINID with node moniker: $MONIKER"
 
   cp /root/genesis.json /root/.secretd/config/genesis.json
@@ -52,7 +54,7 @@ then
     echo "Trust hash: $TRUST_HASH; Block height: $BLOCK_HEIGHT"
 
     # enable state sync (this is the only line in the config that uses enable = false. This could change and break everything
-    perl -i -pe 's/enable = false/enable = true/' ~/.secretd/config/config.toml
+    perl -i -pe 's/enable = false/enable = true/' /root/.secretd/config/config.toml
 
     sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1true| ; \
     s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$STATE_SYNC1,$STATE_SYNC2\"| ; \
