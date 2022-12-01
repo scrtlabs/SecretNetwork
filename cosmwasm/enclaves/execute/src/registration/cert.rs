@@ -1,38 +1,30 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
-use std::io::BufReader;
-use std::str;
-use std::time::{SystemTime, UNIX_EPOCH};
-
+use bit_vec::BitVec;
+use chrono::{Duration, TimeZone};
+use chrono::Utc as TzUtc;
+#[cfg(feature = "SGX_MODE_HW")]
+use log::*;
+use num_bigint::BigUint;
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
     sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_status_t,
     sgx_update_info_bit_t, SgxResult,
 };
-
-#[cfg(feature = "SGX_MODE_HW")]
-use log::*;
-
-use bit_vec::BitVec;
-use chrono::Utc as TzUtc;
-use chrono::{Duration, TimeZone};
-
-use num_bigint::BigUint;
-
+use std::io::BufReader;
+use std::str;
+use std::time::{SystemTime, UNIX_EPOCH};
 use yasna::models::ObjectIdentifier;
 
-use enclave_ffi_types::NodeAuthResult;
-
-use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS};
-
+use enclave_crypto::consts::{CERTEXPIRYDAYS, SigningMethod};
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
-
-#[cfg(feature = "SGX_MODE_HW")]
-use super::attestation::get_mr_enclave;
+use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::report::AdvisoryIDs;
 
+#[cfg(feature = "SGX_MODE_HW")]
+use super::attestation::get_mr_enclave;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
 
@@ -485,7 +477,7 @@ pub mod tests {
 
     use super::verify_ra_cert;
 
-    // #[cfg(feature = "SGX_MODE_HW")]
+// #[cfg(feature = "SGX_MODE_HW")]
     // fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
     //     let mut cert = vec![];
     //     let mut f =
