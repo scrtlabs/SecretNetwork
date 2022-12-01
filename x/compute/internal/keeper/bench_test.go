@@ -37,6 +37,7 @@ const (
 	BenchSetViewingKey                  = "bench_set_viewing_key"
 	BenchGetBalanceWithPermit           = "bench_with_permit"
 	BenchGetBalanceWithViewingKey       = "bench_get_balance_with_viewing_key"
+	SetupReadLargeItemFromStorage       = "setup_read_large_item"
 	BenchWriteLargeItemToStorage  Bench = "bench_write_large_item_to_storage"
 )
 
@@ -252,7 +253,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 		false,
 	)
 	// this is here so read large keys works without setup
-	msg = buildBenchMessage(BenchWriteLargeItemToStorage, nil)
+	msg = buildBenchMessage(SetupReadLargeItemFromStorage, nil)
 	_, _, _, _, _, _ = execHelper(
 		t,
 		keeper,

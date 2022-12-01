@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -uvo pipefail
-
+set -o nounset
 # init the node
 # rm -rf ~/.secret*
 #secretcli config chain-id enigma-testnet
@@ -10,6 +10,8 @@ set -uvo pipefail
 #secretcli config trust-node true
 #secretcli config keyring-backend test
 rm -rf ~/.secretd
+
+NO_TESTS="${NO_TESTS:-}"
 
 mkdir -p /root/.secretd/.node
 secretd config keyring-backend test
@@ -21,6 +23,8 @@ secretd init "$(hostname)" --chain-id secretdev-1 || true
 PERSISTENT_PEERS="115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656"
 
 sed -i 's/persistent_peers = ""/persistent_peers = "'$PERSISTENT_PEERS'"/g' ~/.secretd/config/config.toml
+perl -i -pe 's/concurrency = false/concurrency = true/' .secretd/config/app.toml
+
 echo "Set persistent_peers: $PERSISTENT_PEERS"
 
 echo "Waiting for bootstrap to start..."
@@ -51,7 +55,13 @@ secretd validate-genesis
 
 secretd config node tcp://localhost:26657
 
-RUST_BACKTRACE=1 secretd start &
+if [ ! -z "$NO_TESTS" ]
+then
+    RUST_BACKTRACE=1 secretd start
+else
+    RUST_BACKTRACE=1 secretd start &
+fi
+
 
 ########## RUN INTEGRATION TESTS
 

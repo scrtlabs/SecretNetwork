@@ -11,7 +11,7 @@ trigger:
       - "LICENSE"
 
 pool:
-  name: "sgx scale set"
+  name: "sgx scale set new"
 
 workspace:
   clean: all # what to clean up before the job runs
@@ -20,7 +20,7 @@ variables:
   baseImageRepository: 'azcr.io/enigmampc/ci-base-image'
   nodeImageRepository: 'azcr.io/enigmampc/ci-node-image'
   containerRegistry: 'enigmampcdocker'
-  dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/base.Dockerfile'
+  dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/Dockerfile'
   tag: '$(Build.BuildId)'
   DOCKER_BUILDKIT: 1
 
@@ -40,14 +40,14 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW
+      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --target compile-secretd
       dockerfile: '$(dockerfilePath)'
 
   - script: |
-      cp deployment/ci/bootstrap_init.sh deployment/docker/bootstrap/bootstrap_init.sh
-      cp deployment/ci/node_init.sh deployment/docker/node/node_init.sh
-      cp deployment/ci/startup.sh deployment/docker/startup.sh
-      cp deployment/ci/node_key.json deployment/docker/node_key.json
+      cp deployment/ci/bootstrap_init.sh deployment/docker/testnet/bootstrap_init.sh
+      cp deployment/ci/node_init.sh deployment/docker/testnet/node_init.sh
+      cp deployment/ci/startup.sh deployment/docker/testnet/startup.sh
+      cp deployment/ci/node_key.json deployment/docker/testnet/node_key.json
     displayName: Overwrite node scripts
 
   - task: Docker@2
@@ -57,8 +57,8 @@ steps:
       repository: '$(nodeImageRepository)'
       tags: latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/release.Dockerfile
+      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
+      Dockerfile: deployment/dockerfiles/Dockerfile
 
   - task: Docker@2
     displayName: "Build enclave tests"
@@ -68,17 +68,27 @@ steps:
       tags: latest
       buildContext: .
       arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/enclave-test.Dockerfile
+      Dockerfile: deployment/dockerfiles/tests/enclave-test.Dockerfile
 
   - task: Docker@2
-    displayName: "Build tests image"
+    displayName: "Build Integration tests image"
+    inputs:
+      command: build
+      repository: integration-tests
+      tags: latest
+      buildContext: .
+      arguments: --build-arg SGX_MODE=HW
+      Dockerfile: deployment/dockerfiles/tests/integration-tests.Dockerfile
+
+  - task: Docker@2
+    displayName: "Build System tests image"
     inputs:
       command: build
       repository: tests-base-image
       tags: latest
       buildContext: .
       arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/go-tests.Dockerfile
+      Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
     displayName: "Run system tests (go tests)"
@@ -86,8 +96,12 @@ steps:
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
     displayName: "Run benchmarks"
 
+  - script: |
+      docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests aesm bootstrap node-no-tests integration-tests
+    displayName: "Run integration tests (new)"
+
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
-    displayName: "Run integration tests"
+    displayName: "Run integration tests (old)"
 
   - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from enclave-test aesm enclave-test
     displayName: "Run enclave tests"

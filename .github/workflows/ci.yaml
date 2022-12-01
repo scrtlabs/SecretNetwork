@@ -6,7 +6,7 @@ jobs:
   Enclave-Unit-Tests:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
         name: Pull git submodules
@@ -58,7 +58,7 @@ jobs:
   Build-Contracts:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Download sccache
         run: |
           wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
@@ -106,7 +106,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [Build-Contracts, Build-LocalSecret]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - uses: actions/setup-go@v3
@@ -165,7 +165,7 @@ jobs:
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          go test -v ./x/registration/internal/...
+          go test -v -tags "secretcli" ./x/registration/internal/...
       - name: Test x/compute
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -175,13 +175,13 @@ jobs:
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
-          LOG_LEVEL=ERROR go test -v ./x/compute/client/...
-          LOG_LEVEL=ERROR go test -p 1 -timeout 90m -v ./x/compute/internal/...
+          LOG_LEVEL=ERROR go test -v -tags "test" ./x/compute/client/...
+          LOG_LEVEL=ERROR go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Install Intel's SGX SDK
@@ -233,7 +233,7 @@ jobs:
   MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - uses: actions/setup-go@v3
@@ -248,54 +248,32 @@ jobs:
 
   Build-LocalSecret:
     runs-on: ubuntu-20.04
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
           driver-opts: network=host
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Build LocalSecret Base
+      - name: Build LocalSecret
         uses: docker/build-push-action@v3
         with:
-          file: deployment/dockerfiles/base.Dockerfile
-          context: .
-          build-args: |
-            FEATURES=debug-print
-            SGX_MODE=SW
-          push: true
-          secrets: |
-            API_KEY=00000000000000000000000000000000
-            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-          tags: localhost:5000/scrt-enclave-secretd:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Build LocalSecret Release
-        uses: docker/build-push-action@v3
-        with:
-          file: deployment/dockerfiles/release.Dockerfile
-          context: .
-          push: true
-          tags: localhost:5000/release:latest
-          build-args: |
-            SECRET_NODE_TYPE=bootstrap
-            CHAIN_ID=secretdev-1
-            SCRT_BIN_IMAGE=localhost:5000/scrt-enclave-secretd:latest
-      - name: Build LocalSecret Final Dev Image
-        uses: docker/build-push-action@v3
-        with:
-          file: deployment/dockerfiles/dev-image.Dockerfile
+          file: deployment/dockerfiles/Dockerfile
           context: .
           load: true
           tags: ghcr.io/scrtlabs/localsecret:v0.0.0
+          secrets: |
+            API_KEY=00000000000000000000000000000000
+            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
           build-args: |
-            SCRT_BASE_IMAGE=localhost:5000/release:latest
+            SECRET_NODE_TYPE=BOOTSTRAP
+            CHAIN_ID=secretdev-1
+            FEATURES=debug-print
+            SGX_MODE=SW
+          target: build-localsecret
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localsecret.tar
       - name: Upload Image
         uses: actions/upload-artifact@v3
@@ -308,7 +286,7 @@ jobs:
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Build Hermes Image
         uses: docker/build-push-action@v3
         with:
@@ -317,7 +295,7 @@ jobs:
           load: true
           tags: hermes:v0.0.0
           build-args: |
-            SECRET_NODE_TYPE=bootstrap
+            SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
           outputs: type=docker,dest=/tmp/hermes.tar
       - name: Upload Image
@@ -330,7 +308,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [Build-LocalSecret, Build-Hermes]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Download Hermes
@@ -352,7 +330,6 @@ jobs:
           cd integration-tests
           yarn
           docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
-          # docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml logs -f &
           yarn test
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests

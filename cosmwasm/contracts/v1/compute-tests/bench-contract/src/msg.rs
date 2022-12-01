@@ -36,6 +36,7 @@ pub enum ExecuteMsg {
         key: String,
         padding: Option<String>,
     },
+    SetupReadLargeItem {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

@@ -15,8 +15,6 @@ extern "C" {
     pub fn ecall_get_attestation_report(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
-        spid: *const u8,
-        spid_len: u32,
         api_key: *const u8,
         api_key_len: u32,
     ) -> sgx_status_t;
@@ -55,6 +53,20 @@ pub fn lookup_ipv4(host: &str, port: u16) -> SocketAddr {
 pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
     let port = 443;
     let hostname = "api.trustedservices.intel.com";
+    let addr = lookup_ipv4(hostname, port);
+    let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
+
+    unsafe {
+        *ret_fd = sock.into_raw_fd();
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub extern "C" fn ocall_get_sn_tss_socket(ret_fd: *mut c_int) -> sgx_status_t {
+    let port = 443;
+    let hostname = "secretnetwork.trustedservices.scrtlabs.com";
     let addr = lookup_ipv4(hostname, port);
     let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
 
@@ -126,7 +138,7 @@ pub extern "C" fn ocall_get_update_info(
     unsafe { sgx_report_attestation_status(platform_blob, enclave_trusted, update_info) }
 }
 
-pub fn create_attestation_report_u(spid: &[u8], api_key: &[u8]) -> SgxResult<()> {
+pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -137,14 +149,7 @@ pub fn create_attestation_report_u(spid: &[u8], api_key: &[u8]) -> SgxResult<()>
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let status = unsafe {
-        ecall_get_attestation_report(
-            eid,
-            &mut retval,
-            spid.as_ptr(),
-            spid.len() as u32,
-            api_key.as_ptr(),
-            api_key.len() as u32,
-        )
+        ecall_get_attestation_report(eid, &mut retval, api_key.as_ptr(), api_key.len() as u32)
     };
 
     if status != sgx_status_t::SGX_SUCCESS {

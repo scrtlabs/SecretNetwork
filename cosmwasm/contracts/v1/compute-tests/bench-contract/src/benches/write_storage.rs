@@ -18,10 +18,11 @@ pub fn bench_write_storage_different_key(deps: DepsMut, keys: u64) -> StdResult<
 }
 
 pub fn bench_write_large_storage_key(deps: DepsMut, keys: u64) -> StdResult<()> {
-    for i in 1..keys {
+    for i in 0..keys {
         deps.storage
             .set(&i.to_be_bytes(), crate::benches::LARGE_VALUE);
     }
 
     Ok(())
 }
+
