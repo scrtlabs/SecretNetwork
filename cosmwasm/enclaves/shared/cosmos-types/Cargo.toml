@@ -1,6 +1,6 @@
 [package]
 name = "enclave_cosmos_types"
-version = "1.4.0"
+version = "1.6.0"
 authors = ["Cashmaney <itzik@enigma.co>"]
 edition = "2018"
 

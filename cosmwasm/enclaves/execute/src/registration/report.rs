@@ -532,10 +532,10 @@ impl SgxQuote {
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00615"];
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00615"];
 
 lazy_static! {
     static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
@@ -585,7 +585,7 @@ pub struct AttestationReport {
     /// Content of the quote
     pub sgx_quote_body: SgxQuote,
     pub platform_info_blob: Option<Vec<u8>>,
-    pub advisroy_ids: AdvisoryIDs,
+    pub advisory_ids: AdvisoryIDs,
 }
 
 impl AttestationReport {
@@ -595,8 +595,6 @@ impl AttestationReport {
     // just unused in SW mode
     #[allow(dead_code)]
     pub fn from_cert(cert: &[u8]) -> Result<Self, Error> {
-        // Before we reach here, Webpki already verifed the cert is properly signed.
-
         let payload = get_netscape_comment(cert).map_err(|_err| {
             error!("Failed to get netscape comment");
             Error::ReportParseError
@@ -717,7 +715,7 @@ impl AttestationReport {
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,
-            advisroy_ids: AdvisoryIDs(advisories),
+            advisory_ids: AdvisoryIDs(advisories),
         })
     }
 }

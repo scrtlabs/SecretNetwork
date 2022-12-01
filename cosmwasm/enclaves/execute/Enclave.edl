@@ -33,8 +33,6 @@ enclave {
         );
 
         public sgx_status_t ecall_get_attestation_report(
-            [in, count=spid_len] const uint8_t* spid,
-            uint32_t spid_len,
             [in, count=api_key_len] const uint8_t* api_key,
             uint32_t api_key_len
         );
@@ -49,7 +47,9 @@ enclave {
             [in, count=master_cert_len] const uint8_t* master_cert,
             uintptr_t master_cert_len,
             [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,
-            uintptr_t encrypted_seed_len
+            uintptr_t encrypted_seed_len,
+            [in, count=api_key_len] const uint8_t* api_key,
+            uint32_t api_key_len
         );
 
         public sgx_status_t ecall_configure_runtime(
@@ -160,6 +160,7 @@ enclave {
         );
 
         sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
+        sgx_status_t ocall_get_sn_tss_socket([out] int *ret_fd);
 
         sgx_status_t ocall_get_quote(
             [in, size=sigrl_len] uint8_t * p_sigrl,
