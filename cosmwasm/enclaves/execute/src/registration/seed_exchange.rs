@@ -10,7 +10,7 @@ use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
 pub enum SeedType {
     Genesis,
-    Current
+    Current,
 }
 
 pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE], seed_type: SeedType) -> SgxResult<Vec<u8>> {
@@ -23,12 +23,8 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE], seed_type: SeedType) -> 
     let authenticated_data: Vec<&[u8]> = vec![&new_node_pk];
 
     let seed_to_share = match seed_type {
-        SeedType::Genesis => {
-            KEY_MANAGER.get_consensus_seed().unwrap().genesis.clone()
-        }
-        SeedType::Current => {
-            KEY_MANAGER.get_consensus_seed().unwrap().current.clone()
-        }
+        SeedType::Genesis => KEY_MANAGER.get_consensus_seed().unwrap().genesis,
+        SeedType::Current => KEY_MANAGER.get_consensus_seed().unwrap().current,
     };
 
     // encrypt the seed using the symmetric key derived in the previous stage
@@ -44,12 +40,11 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE], seed_type: SeedType) -> 
             .get_pubkey(),
         new_node_pk
     );
-    let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
-        seed_to_share.as_slice(),
-        Some(&authenticated_data),
-    ) {
+    let res = match AESKey::new_from_slice(&shared_enc_key)
+        .encrypt_siv(seed_to_share.as_slice(), Some(&authenticated_data))
+    {
         Ok(r) => {
-            if r.len() != ENCRYPTED_SEED_SIZE {
+            if r.len() != ENCRYPTED_SEED_SIZE as usize {
                 error!(
                     "Seed encryption failed. Got seed of unexpected length: {:?}",
                     r.len()

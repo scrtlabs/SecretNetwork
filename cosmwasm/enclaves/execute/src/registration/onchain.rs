@@ -6,13 +6,13 @@ use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
 
+use crate::registration::seed_exchange::SeedType;
 use enclave_crypto::consts::ENCRYPTED_SEED_SIZE;
 use enclave_crypto::PUBLIC_KEY_SIZE;
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
     validate_const_ptr, validate_mut_ptr,
 };
-use crate::registration::seed_exchange::SeedType;
 
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     cert: *const u8,
     cert_len: u32,
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
-    seed: &mut [u8; ENCRYPTED_SEED_SIZE]
+    seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
@@ -69,11 +69,11 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
         #[cfg(not(feature = "use_seed_service"))]
         {
-            let mut res: Vec<u8> =
-                encrypt_seed(target_public_key, SeedType::Genesis).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+            let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis)
+                .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
-            let res_current: Vec<u8> =
-                encrypt_seed(target_public_key, SeedType::Current).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+            let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current)
+                .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
             res.extend(&res_current);
 
@@ -82,12 +82,11 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
         #[cfg(feature = "use_seed_service")]
         {
-            let res: Vec<u8> =
-                encrypt_seed(target_public_key, SeedType::Genesis).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+            let res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis)
+                .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
             Ok(res)
         }
-
     });
 
     if let Err(_err) = oom_handler::restore_safety_buffer() {
