@@ -6,16 +6,13 @@ use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
 use sgx_types::{sgx_status_t, SgxResult};
-use std::any::Any;
 use std::slice;
 
 use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
     SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
 };
-use enclave_crypto::{
-    key_manager, CryptoError, KeyPair, Keychain, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE,
-};
+use enclave_crypto::{CryptoError, KeyPair, Keychain, Seed, KEY_MANAGER, PUBLIC_KEY_SIZE};
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_ffi_types::NodeAuthResult;
 use enclave_utils::pointers::validate_mut_slice;
@@ -138,6 +135,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             .current
             .get_pubkey(),
     );
+
     trace!(
         "ecall_init_bootstrap consensus_seed_exchange_keypair public key: {:?}",
         hex::encode(public_key)
@@ -215,7 +213,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
     // this validates the cert and handles the "what if it fails" inside as well
     let res = create_attestation_certificate(
-        &temp_key_result.as_ref().unwrap(),
+        temp_key_result.as_ref().unwrap(),
         SIGNATURE_TYPE,
         api_key_slice,
         None,
@@ -258,6 +256,11 @@ pub unsafe extern "C" fn ecall_init_node(
     }
     target_public_key.copy_from_slice(&pk);
 
+    trace!(
+        "ecall_init_node target public key is: {:?}",
+        target_public_key
+    );
+
     let mut key_manager = Keychain::new();
 
     // even though key is overwritten later we still want to explicitly remove it in case we increase the security version
@@ -276,6 +279,7 @@ pub unsafe extern "C" fn ecall_init_node(
     let mut single_seed_bytes = [0u8; SINGLE_ENCRYPTED_SEED_SIZE];
     single_seed_bytes.copy_from_slice(&encrypted_seed[1..(SINGLE_ENCRYPTED_SEED_SIZE + 1)]);
 
+    trace!("Target public key is: {:?}", target_public_key);
     let genesis_seed = match decrypt_seed(&key_manager, target_public_key, single_seed_bytes) {
         Ok(result) => result,
         Err(status) => return status,
@@ -368,7 +372,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         };
 
     //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH.as_str()) {
+    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
         return status;
     }
 
@@ -455,7 +459,7 @@ fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
         CryptoError::SocketCreationError
     })?;
 
-    return Ok(sock.into_raw_fd());
+    Ok(sock.into_raw_fd())
 }
 
 fn make_client_config() -> rustls::ClientConfig {
@@ -514,22 +518,13 @@ fn get_body_from_response(resp: &[u8]) -> Result<String, CryptoError> {
     }
 
     let mut len_num: u32 = 0;
-    trace!(
-        "LIORRRR headers {:?} {}",
-        respp.headers,
-        respp.headers.len()
-    );
-
     for i in 0..respp.headers.len() {
         let h = respp.headers[i];
         //println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
-        match h.name.to_lowercase().as_str() {
-            "content-length" => {
-                let len_str = String::from_utf8(h.value.to_vec()).unwrap();
-                len_num = len_str.parse::<u32>().unwrap();
-                trace!("content length = {}", len_num);
-            }
-            _ => (),
+        if h.name.to_lowercase().as_str() == "content-length" {
+            let len_str = String::from_utf8(h.value.to_vec()).unwrap();
+            len_num = len_str.parse::<u32>().unwrap();
+            trace!("content length = {}", len_num);
         }
     }
 
@@ -550,7 +545,6 @@ fn get_challenge_from_service(
     kp: KeyPair,
 ) -> Result<Vec<u8>, CryptoError> {
     pub const CHALLENGE_ENDPOINT: &str = "/authenticate";
-    trace!("HERE {}", line!());
     let (_, cert) = match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key, None) {
         Err(_) => {
             trace!("Failed to get certificate from intel for seed service");
@@ -561,7 +555,6 @@ fn get_challenge_from_service(
 
     let serialized_cert = base64::encode(cert);
 
-    trace!("HERE {}", line!());
     let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
     CHALLENGE_ENDPOINT,
     host_name,
@@ -600,8 +593,6 @@ fn get_challenge_from_service(
         CryptoError::SSSCommunicationError
     })?;
 
-    info!("LIORRR challenge {:?}", challenge);
-
     Ok(challenge)
 }
 
@@ -614,7 +605,6 @@ fn get_seed_from_service(
     challenge: Vec<u8>,
 ) -> Result<Vec<u8>, CryptoError> {
     pub const SEED_ENDPOINT: &str = "/seed/";
-    trace!("HERE {}", line!());
     let (_, cert) = match create_attestation_certificate(
         &kp,
         SIGNATURE_TYPE,
@@ -630,9 +620,8 @@ fn get_seed_from_service(
 
     let serialized_cert = base64::encode(cert);
 
-    trace!("HERE {}", line!());
-    let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-    format!("{}{}", SEED_ENDPOINT, id),
+    let req = format!("GET {}{} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
+    SEED_ENDPOINT, id,
     host_name,
     serialized_cert.len(),
     serialized_cert);
@@ -669,8 +658,6 @@ fn get_seed_from_service(
         CryptoError::SSSCommunicationError
     })?;
 
-    info!("LIORRR seed {:?}", seed);
-
     Ok(seed)
 }
 
@@ -680,20 +667,14 @@ fn try_get_consensus_seed_from_service(
     kp: KeyPair,
 ) -> Result<Seed, CryptoError> {
     #[cfg(feature = "production")]
-    pub const SEED_SERVICE_DNS: &'static str = "sss.scrtlabs.com";
+    pub const SEED_SERVICE_DNS: &str = "sss.scrtlabs.com";
     #[cfg(not(feature = "production"))]
-    pub const SEED_SERVICE_DNS: &'static str = "sssd.scrtlabs.com";
+    pub const SEED_SERVICE_DNS: &str = "sssd.scrtlabs.com";
 
-    trace!("HERE {}", line!());
     let mut socket = create_socket_to_service(SEED_SERVICE_DNS)?;
-    trace!("HERE {}", line!());
     let challenge = get_challenge_from_service(socket, SEED_SERVICE_DNS, api_key, kp)?;
     socket = create_socket_to_service(SEED_SERVICE_DNS)?;
-    get_seed_from_service(socket, SEED_SERVICE_DNS, api_key, kp, id, challenge)?;
-    let s: [u8; 32] = [
-        0, id as u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-        23, 24, 25, 26, 27, 28, 29, 30, 31,
-    ];
+    let s = get_seed_from_service(socket, SEED_SERVICE_DNS, api_key, kp, id, challenge)?;
     let mut seed = Seed::default();
     seed.as_mut().copy_from_slice(&s);
     Ok(seed)
@@ -749,11 +730,6 @@ fn get_next_consensus_seed_from_service(
     }
 
     let mut seed = opt_seed?;
-    trace!(
-        "LIORRR Genesis seed is {:?} service seed is {:?}",
-        genesis_seed.as_slice(),
-        seed.as_slice()
-    );
 
     // XOR the seed with the genesis seed
     let mut seed_vec = seed.as_mut().to_vec();
@@ -763,8 +739,6 @@ fn get_next_consensus_seed_from_service(
         .for_each(|(x1, x2)| *x1 ^= *x2);
 
     seed.as_mut().copy_from_slice(seed_vec.as_slice());
-
-    trace!("LIORRR New seed is {:?}", seed.as_slice());
 
     trace!("Successfully fetched consensus seed from service");
     key_manager.inc_consensus_seed_id();
