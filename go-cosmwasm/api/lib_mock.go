@@ -35,6 +35,10 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
+func GetNewConsensusSeed(seedId uint32) error {
+	return nil
+}
+
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	//errmsg := C.Buffer{}
 	//

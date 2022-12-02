@@ -28,6 +28,10 @@ enclave {
             uint32_t api_key_len
         );
 
+        public sgx_status_t ecall_get_new_consensus_seed(
+            uint32_t seed_id
+        );
+
         public sgx_status_t ecall_key_gen(
             [out, count=32] uint8_t* public_key
         );

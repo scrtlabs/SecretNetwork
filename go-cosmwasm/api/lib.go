@@ -108,6 +108,15 @@ func InitEnclaveRuntime(moduleCacheSize uint8) error {
 	return nil
 }
 
+func GetNewConsensusSeed(seedId uint32) error {
+	errmsg := C.Buffer{}
+	_, err := C.get_new_consensus_seed(u32(seedId), &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func Create(cache Cache, wasm []byte) ([]byte, error) {
 	code := sendSlice(wasm)
 	defer freeAfterSend(code)

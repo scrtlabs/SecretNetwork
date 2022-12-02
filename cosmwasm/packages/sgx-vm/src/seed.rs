@@ -33,6 +33,12 @@ extern "C" {
         public_key: &mut [u8; 32],
     ) -> sgx_status_t;
 
+    pub fn ecall_get_new_consensus_seed(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        seed_id: u32,
+    ) -> sgx_status_t;
+
     /// Trigger a query method in a wasm contract
     pub fn ecall_health_check(
         eid: sgx_enclave_id_t,
@@ -105,6 +111,35 @@ pub fn untrusted_init_node(
     }
 
     Ok(())
+}
+
+pub fn untrusted_get_new_consensus_seed(seed_id: u32) -> SgxResult<bool> {
+    info!("Initializing enclave for untrusted_get_new_consensus_seed..");
+
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    info!("Initialized enclave successfully!");
+
+    let eid = enclave.geteid();
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+
+    // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
+    let status = unsafe { ecall_get_new_consensus_seed(eid, &mut retval, seed_id) };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if retval != sgx_status_t::SGX_SUCCESS {
+        return Err(retval);
+    }
+
+    Ok(true)
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
