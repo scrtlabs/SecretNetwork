@@ -187,12 +187,16 @@ pub fn untrusted_get_encrypted_seed(
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
+        debug!("Error from authenticate new node");
         return Err(status);
     }
 
     if retval != NodeAuthResult::Success {
+        debug!("Error from authenticate new node, bad NodeAuthResult");
         return Ok(Err(retval));
     }
+
+    debug!("Done auth, got seed: {:?}", seed);
 
     if seed.is_empty() {
         error!("Got empty seed from encryption");
