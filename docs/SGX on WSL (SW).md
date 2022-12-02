@@ -1,3 +1,5 @@
+### NOTE: The 5.15 Kernel is now available on Windows 11 22h2, so you can get it directly from the MS store
+
 ## How to Run SGX (Software mode) in WSL
 
 For developers that use WSL, using SGX apps is quite annoying. With the default kernel being 5.10 that means there is no support for SGX. 

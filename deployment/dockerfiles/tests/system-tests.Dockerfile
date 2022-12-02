@@ -1,3 +1,6 @@
+# This dockerfile contains tests that only test the compute module, using a single node. They do not execute tests
+# on multiple nodes, nor do they require a full network or interfaces with user libraries, network latency, etc.
+
 FROM ghcr.io/scrtlabs/compile-contracts:1.5.0
 
 RUN mkdir -p /opt/secret/.sgx_secrets
@@ -34,6 +37,8 @@ COPY api_key.txt ias_keys/production/api_key.txt
 
 COPY deployment/ci/go-tests.sh .
 COPY deployment/ci/go-tests-bench.sh .
+#COPY path/to/tests.js
+#RUN cd path/to/tests && npm i
 
 RUN chmod +x go-tests.sh
 RUN chmod +x go-tests-bench.sh

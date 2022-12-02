@@ -74,7 +74,7 @@ typedef struct cache_t {
 } cache_t;
 
 typedef struct EnclaveRuntimeConfig {
-  uint8_t module_cache_size;
+  uint32_t module_cache_size;
 } EnclaveRuntimeConfig;
 
 /**

@@ -12,9 +12,8 @@ if [ ! -e "$file" ]; then
   secretd config chain-id "$chain_id"
   secretd config keyring-backend test
   secretd config output json
-  # export SECRET_NETWORK_CHAIN_ID=secretdev-1
-  # export SECRET_NETWORK_KEYRING_BACKEND=test
   secretd init banana --chain-id "$chain_id"
+
   b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
 
   cp ~/node_key.json ~/.secretd/config/node_key.json

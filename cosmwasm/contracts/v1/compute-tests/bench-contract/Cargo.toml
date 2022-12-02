@@ -1,7 +1,7 @@
 [package]
 name = "bench-contract"
 version = "1.0.0"
-authors = ["Enigma <info@enigma.co>"]
+authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "A Test contract intended to use in system tests for the Secret Netowrk"
 license = "MIT"
@@ -26,12 +26,17 @@ incremental = false
 overflow-checks = true
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
+secret-toolkit = { version = "0.6.0", features = [
+  "permit",
+  "viewing-key",
+  "crypto",
+] }
 schemars = "0.8.1"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",
-  "alloc"
+  "alloc",
 ] }
 serde-json-wasm = "0.4.1"
 sha2 = "0.10.2"
