@@ -97,11 +97,16 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     if let Ok(res) = result {
         match res {
             Ok(res) => {
+                trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
+
                 seed[0] = res.len() as u8;
                 seed[1..].copy_from_slice(&res);
                 NodeAuthResult::Success
             }
-            Err(e) => e,
+            Err(e) => {
+                trace!("error encrypting seed {:?}", e);
+                e
+            }
         }
     } else {
         // There's no real need here to test if oom happened
