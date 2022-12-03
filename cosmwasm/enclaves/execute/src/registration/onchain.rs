@@ -101,6 +101,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
                 seed[0] = res.len() as u8;
                 seed[1..].copy_from_slice(&res);
+                trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
                 NodeAuthResult::Success
             }
             Err(e) => {
