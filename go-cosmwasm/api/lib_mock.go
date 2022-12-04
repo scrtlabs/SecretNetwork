@@ -35,8 +35,8 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
-func GetNewConsensusSeed(seedId uint32, apiKey []byte) error {
-	return nil
+func GetNewConsensusSeed(seedId uint32, apiKey []byte) ([]byte, error) {
+	return nil, nil
 }
 
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {

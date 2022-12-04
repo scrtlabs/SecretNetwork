@@ -414,6 +414,12 @@ pub unsafe extern "C" fn ecall_get_new_consensus_seed(
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
     seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_status_t {
+    validate_mut_ptr!(
+        seed.as_mut_ptr(),
+        seed.len(),
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+
     let mut key_manager = Keychain::new();
     if key_manager.unseal_only_genesis().is_err() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -422,6 +428,8 @@ pub unsafe extern "C" fn ecall_get_new_consensus_seed(
     let genesis_seed = key_manager.get_consensus_seed().unwrap().genesis;
     let registration_key = key_manager.get_registration_key().unwrap();
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
+    let my_pub_key = key_manager.get_registration_key().unwrap().get_pubkey();
 
     match get_next_consensus_seed_from_service(
         &mut key_manager,
@@ -437,6 +445,16 @@ pub unsafe extern "C" fn ecall_get_new_consensus_seed(
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
     };
+
+    let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis).unwrap();
+    let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current).unwrap();
+    res.extend(&res_current);
+
+    trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
+
+    seed[0] = res.len() as u8;
+    seed[1..].copy_from_slice(&res);
+    trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
 
     sgx_status_t::SGX_SUCCESS
 }
