@@ -534,5 +534,5 @@ func (app *SecretNetworkApp) LegacyAmino() *codec.LegacyAmino {
 }
 
 func (app *SecretNetworkApp) ExportState(ctx sdk.Context) map[string]json.RawMessage {
-	return app.mm.ExportGenesis(ctx, app.AppCodec())
+	return app.mm.ExportGenesis(ctx, app.AppCodec(), []string{})
 }
