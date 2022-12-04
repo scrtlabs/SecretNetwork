@@ -8,7 +8,7 @@ Start a v1.5 chain.
 - Port 26657 open for cw20-ics20 tests
 
 ```bash
-docker run -it -p 9091:9091 -p 26657:26657 --name localsecret ghcr.io/scrtlabs/localsecret:v1.5.1-patch.3
+docker run -it -p 9091:9091 -p 26657:26657 -p 1317:1317 --name localsecret ghcr.io/scrtlabs/localsecret:v1.5.1-patch.3
 ```
 
 ## Step 2 (Test seed rotation)
