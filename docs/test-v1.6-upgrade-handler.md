@@ -38,13 +38,13 @@ secretd tx compute instantiate 1 "$INIT" --from a --label "c" -y
 
 ```bash
 secretd query compute list-contract-by-code 1
-CONTRACT=[[FILL_CONTRACT_ADDRESS_HERE]]
+CONTRACT="[[FILL_CONTRACT_ADDRESS_HERE]]"
 ```
 
 ### Execute contract
 
 ```bash
-secretd tx compute execute $CONTRACT '{"increment":{"addition": 13}}' --from a
+secretd tx compute execute $CONTRACT '{"increment":{"addition": 13}}' --from a -y
 ```
 
 ## Step 3
@@ -67,8 +67,8 @@ module.exports = async () => {
 
 async function waitForBlocks() {
   while (true) {
-    const secretjs = await SecretNetworkClient.create({
-      grpcWebUrl: "http://localhost:9091",
+    const secretjs = new SecretNetworkClient({
+      url: "http://localhost:1317",
       chainId: "secretdev-1",
     });
 
@@ -79,11 +79,12 @@ async function waitForBlocks() {
         break;
       }
     } catch (e) {
-      // console.error(e);
+      // console.eerror(e);
     }
     await sleep(250);
   }
-}' > test/globalSetup.ts
+}
+' > test/globalSetup.ts
 ```
 
 ```bash
@@ -195,7 +196,7 @@ secretd query compute query $CONTRACT '{"get": {}}'
 ```
 
 Expected result should be:
-TODO
+{"get":{"count":23}}
 
 ## Step 8
 
