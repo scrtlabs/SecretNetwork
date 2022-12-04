@@ -15,6 +15,7 @@ extern "C" {
         encrypted_seed_len: u32,
         api_key: *const u8,
         api_key_len: u32,
+        seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
     ) -> sgx_status_t;
 
     pub fn ecall_init_bootstrap(
@@ -31,15 +32,6 @@ extern "C" {
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         public_key: &mut [u8; 32],
-    ) -> sgx_status_t;
-
-    pub fn ecall_get_new_consensus_seed(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        seed_id: u32,
-        api_key: *const u8,
-        api_key_len: u32,
-        seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
     ) -> sgx_status_t;
 
     /// Trigger a query method in a wasm contract
@@ -77,7 +69,7 @@ pub fn untrusted_init_node(
     master_cert: &[u8],
     encrypted_seed: &[u8],
     api_key: &[u8],
-) -> SgxResult<()> {
+) -> SgxResult<[u8; ENCRYPTED_SEED_SIZE as usize]> {
     info!("Initializing enclave..");
 
     // Bind the token to a local variable to ensure its
@@ -106,6 +98,7 @@ pub fn untrusted_init_node(
         seed_to_enclave[0..].copy_from_slice(encrypted_seed);
     }
 
+    let mut seed = [0u8; ENCRYPTED_SEED_SIZE as usize];
     let status = unsafe {
         ecall_init_node(
             eid,
@@ -116,6 +109,7 @@ pub fn untrusted_init_node(
             seed_to_enclave.len() as u32,
             api_key.as_ptr(),
             api_key.len() as u32,
+            &mut seed,
         )
     };
 
@@ -125,53 +119,6 @@ pub fn untrusted_init_node(
 
     if ret != sgx_status_t::SGX_SUCCESS {
         return Err(ret);
-    }
-
-    Ok(())
-}
-
-pub fn untrusted_get_new_consensus_seed(
-    seed_id: u32,
-    api_key: &[u8],
-) -> SgxResult<[u8; ENCRYPTED_SEED_SIZE as usize]> {
-    info!("Initializing enclave for untrusted_get_new_consensus_seed..");
-
-    // Bind the token to a local variable to ensure its
-    // destructor runs in the end of the function
-    let enclave_access_token = ENCLAVE_DOORBELL
-        .get_access(1) // This can never be recursive
-        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
-    let enclave = (*enclave_access_token)?;
-
-    info!("Initialized enclave successfully!");
-
-    let eid = enclave.geteid();
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-
-    // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
-    let mut seed = [0u8; ENCRYPTED_SEED_SIZE as usize];
-    let status = unsafe {
-        ecall_get_new_consensus_seed(
-            eid,
-            &mut retval,
-            seed_id,
-            api_key.as_ptr(),
-            api_key.len() as u32,
-            &mut seed,
-        )
-    };
-
-    if status != sgx_status_t::SGX_SUCCESS {
-        return Err(status);
-    }
-
-    if retval != sgx_status_t::SGX_SUCCESS {
-        return Err(retval);
-    }
-
-    if seed.is_empty() {
-        error!("Got empty seed from encryption");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     Ok(seed)

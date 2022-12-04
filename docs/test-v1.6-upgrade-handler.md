@@ -100,7 +100,7 @@ yarn test
 
 ## Step 4
 
-Propose a software upgrade on the v1.4 chain.
+Propose a software upgrade on the v1.5 chain.
 
 ```bash
 # 30 blocks (3 minutes) until upgrade block
@@ -126,7 +126,7 @@ Copy binaries from v1.6 chain to v1.5 chain.
 
 ```bash
 # Start a v1.6 chain and wait a bit for it to setup
-docker run -it -d --name localsecret-1.6 ghcr.io/scrtlabs/localsecret:v1.6.0-beta.3
+docker run -it -d --name localsecret-1.6 ghcr.io/scrtlabs/localsecret:v1.6.0-beta.4
 sleep 5
 
 # Copy binaries from v1.6 chain to host (a limitation of `docker cp`)

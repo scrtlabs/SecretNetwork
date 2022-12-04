@@ -2,9 +2,11 @@ package keeper
 
 import (
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -39,6 +41,7 @@ func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, 
 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
+	wasLegacySeedPathUsed := false
 
 	apiKey, err := types.GetApiKey()
 	if err != nil {
@@ -46,7 +49,14 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	}
 
 	if !fileExists(seedPath) {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
+		wasLegacySeedPathUsed = true
+
+		// In case we don't find the new seed file we will try to load the lagacy seed file
+		seedPath = filepath.Join(homeDir, types.SecretNodeCfgFolder, types.LegacySecretNodeSeedConfig)
+
+		if !fileExists(seedPath) {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
+		}
 	}
 
 	// get PK from CLI
@@ -73,14 +83,44 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	_, err = enclave.LoadSeed(cert, enc, apiKey)
+	if wasLegacySeedPathUsed {
+		newEnc := make([]byte, len(enc)+1)
+
+		tmp := make([]byte, 2)
+		binary.LittleEndian.PutUint16(tmp, uint16(len(enc)))
+		newEnc[0] = tmp[0]
+
+		copy(newEnc[1:], enc)
+
+		enc = newEnc
+	}
+
+	seed, err := enclave.LoadSeed(cert, enc, apiKey)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	if wasLegacySeedPathUsed {
+		cfg := types.SeedConfig{
+			EncryptedKey: hex.EncodeToString(seed),
+			MasterCert:   seedCfg.MasterCert,
+		}
+
+		cfgBytes, err := json.Marshal(&cfg)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
+		seedFilePath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
+		err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
 	}
 }
 
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
-	//fmt.Println("RegisterNode")
+	// fmt.Println("RegisterNode")
 	var encSeed []byte
 
 	if isSimulationMode(ctx) {
