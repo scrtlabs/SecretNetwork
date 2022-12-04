@@ -41,9 +41,9 @@ dependencies = [
 
 [[package]]
 name = "aho-corasick"
-version = "0.7.20"
+version = "0.7.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc936419f96fa211c1b9166887b38e5e40b19958e5b895be7c1f93adec7071ac"
+checksum = "b4f55bd91a0978cbfd91c457a164bab8b4001c833b7f323132c0a4e1922dd44e"
 dependencies = [
  "memchr",
 ]
@@ -314,7 +314,7 @@ checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "cosmos_proto"
-version = "1.4.0"
+version = "1.6.0"
 dependencies = [
  "dirs",
  "protobuf",
@@ -387,7 +387,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_generic"
-version = "0.1.0"
+version = "1.6.0"
 dependencies = [
  "base64 0.13.1",
  "cw_types_v010",
@@ -401,7 +401,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_v010"
-version = "1.4.0"
+version = "1.6.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -415,7 +415,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_v1"
-version = "1.4.0"
+version = "1.6.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -526,7 +526,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_contract_engine"
-version = "1.4.0"
+version = "1.6.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -562,7 +562,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_cosmos_types"
-version = "1.4.0"
+version = "1.6.0"
 dependencies = [
  "cosmos_proto",
  "cw_types_v010",
@@ -580,7 +580,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_crypto"
-version = "1.4.0"
+version = "1.6.0"
 dependencies = [
  "aes-siv",
  "cosmos_proto",
@@ -602,7 +602,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_utils"
-version = "1.4.0"
+version = "1.6.0"
 dependencies = [
  "enclave-ffi-types",
  "lazy_static",
@@ -1223,7 +1223,7 @@ dependencies = [
 
 [[package]]
 name = "secret-enclave"
-version = "1.4.0"
+version = "1.6.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bit-vec",

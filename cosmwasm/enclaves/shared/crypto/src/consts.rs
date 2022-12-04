@@ -3,6 +3,7 @@ use std::path;
 
 pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
 use lazy_static::lazy_static;
+use sgx_types::sgx_quote_sign_type_t;
 
 pub const CERTEXPIRYDAYS: i64 = 3652i64;
 
@@ -22,7 +23,6 @@ pub const IO_CERTIFICATE_SAVE_PATH: &str = "io-master-cert.der";
 pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed";
 pub const NODE_ENCRYPTED_SEED_KEY_FILE: &str = "consensus_seed.sealed";
 
-//todo: set this to the real value
 #[cfg(feature = "production")]
 pub const MRSIGNER: [u8; 32] = [
     132, 92, 243, 72, 20, 244, 85, 149, 199, 32, 248, 31, 116, 121, 77, 120, 89, 49, 72, 79, 68, 5,
@@ -34,6 +34,12 @@ pub const MRSIGNER: [u8; 32] = [
     131, 215, 25, 231, 125, 234, 202, 20, 112, 246, 186, 246, 42, 77, 119, 67, 3, 200, 153, 219,
     105, 2, 15, 156, 112, 238, 29, 252, 8, 199, 206, 158,
 ];
+
+#[cfg(feature = "production")]
+pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_LINKABLE_SIGNATURE;
+
+#[cfg(not(feature = "production"))]
+pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
 #[cfg(feature = "production")]
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRENCLAVE;
@@ -75,4 +81,4 @@ pub const CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER: u32 = 4;
 
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 
-const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
+pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";

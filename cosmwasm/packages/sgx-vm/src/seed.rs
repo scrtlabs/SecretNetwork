@@ -13,6 +13,8 @@ extern "C" {
         master_cert_len: u32,
         encrypted_seed: *const u8,
         encrypted_seed_len: u32,
+        api_key: *const u8,
+        api_key_len: u32,
     ) -> sgx_status_t;
 
     pub fn ecall_init_bootstrap(
@@ -62,7 +64,11 @@ pub fn untrusted_health_check() -> SgxResult<HealthCheckResult> {
     Ok(ret)
 }
 
-pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResult<()> {
+pub fn untrusted_init_node(
+    master_cert: &[u8],
+    encrypted_seed: &[u8],
+    api_key: &[u8],
+) -> SgxResult<()> {
     info!("Initializing enclave..");
 
     // Bind the token to a local variable to ensure its
@@ -85,6 +91,8 @@ pub fn untrusted_init_node(master_cert: &[u8], encrypted_seed: &[u8]) -> SgxResu
             master_cert.len() as u32,
             encrypted_seed.as_ptr(),
             encrypted_seed.len() as u32,
+            api_key.as_ptr(),
+            api_key.len() as u32,
         )
     };
 

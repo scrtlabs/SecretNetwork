@@ -5,7 +5,7 @@ use crate::benches::allocate::do_allocate_large_memory;
 
 use crate::benches::read_storage::{
     bench_read_large_key_from_storage, bench_read_storage_different_key,
-    bench_read_storage_same_key,
+    bench_read_storage_same_key, setup_read_large_from_storage,
 };
 use crate::benches::write_storage::{
     bench_write_large_storage_key, bench_write_storage_different_key,
@@ -53,10 +53,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::BenchReadStorageMultipleKeys {} => bench_read_storage_different_key(deps, 100),
         ExecuteMsg::BenchAllocate {} => do_allocate_large_memory(),
         // start with running large item bench once, otherwise cache will skew performance numbers
+        ExecuteMsg::BenchWriteLargeItemToStorage { .. } => bench_write_large_storage_key(deps, 1),
         ExecuteMsg::BenchReadLargeItemFromStorage { .. } => {
-            bench_read_large_key_from_storage(deps, 2)
+            bench_read_large_key_from_storage(deps, 1)
         }
-        ExecuteMsg::BenchWriteLargeItemToStorage { .. } => bench_write_large_storage_key(deps, 2),
+        ExecuteMsg::SetupReadLargeItem { .. } => setup_read_large_from_storage(deps),
         ExecuteMsg::BenchCreateViewingKey {} => {
             create_key(deps, env, info);
             Ok(())
@@ -77,7 +78,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::BenchGetBalanceWithPermit { permit, .. } => {
             query_with_permit_loop_multiple(deps, env, permit)
         }
-        QueryMsg::BenchGetBalanceWithViewingKey { .. } => query_with_view_key_loop_multiple(deps, msg),
+        QueryMsg::BenchGetBalanceWithViewingKey { .. } => {
+            query_with_view_key_loop_multiple(deps, msg)
+        }
     }
 }
 
@@ -124,7 +127,6 @@ fn query_with_permit_loop_multiple(
 }
 
 pub fn query_with_view_key_loop_multiple(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
-
     // running this too many times will skew results as the VK gets cached and this becomes way more performant
     for _i in 1..2 {
         let (addresses, key) = msg.get_validation_params();

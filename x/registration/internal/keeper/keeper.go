@@ -40,6 +40,11 @@ func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
+	apiKey, err := types.GetApiKey()
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
 	if !fileExists(seedPath) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
 	}
@@ -68,7 +73,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	_, err = enclave.LoadSeed(cert, enc)
+	_, err = enclave.LoadSeed(cert, enc, apiKey)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
