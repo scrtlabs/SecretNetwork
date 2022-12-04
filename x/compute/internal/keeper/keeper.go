@@ -3,8 +3,10 @@ package keeper
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -75,6 +77,7 @@ type Keeper struct {
 	messenger        Messenger
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
+	homeDir       string
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
 }
@@ -127,6 +130,7 @@ func NewKeeper(
 		capabilityKeeper: capabilityKeeper,
 		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
+		homeDir:          homeDir,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
@@ -687,7 +691,43 @@ func (k Keeper) GetNewConsensusSeed(seedId uint32) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize enclave: %w", err)
 	}
-	return api.GetNewConsensusSeed(seedId, apiKeyFile)
+
+	seed, err := api.GetNewConsensusSeed(seedId, apiKeyFile)
+	if err != nil {
+		return err
+	}
+
+	legacySeedFilePath := filepath.Join(k.homeDir, reg.SecretNodeCfgFolder, reg.LegacySecretNodeSeedConfig)
+
+	fileContent, err := os.ReadFile(legacySeedFilePath)
+	if err != nil {
+		return err
+	}
+
+	var prevSeedConfig reg.SeedConfig
+
+	err = json.Unmarshal(fileContent, &prevSeedConfig)
+	if err != nil {
+		return err
+	}
+
+	cfg := reg.SeedConfig{
+		EncryptedKey: hex.EncodeToString(seed),
+		MasterCert:   prevSeedConfig.MasterCert,
+	}
+
+	cfgBytes, err := json.Marshal(&cfg)
+	if err != nil {
+		return err
+	}
+
+	seedFilePath := filepath.Join(k.homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+	err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {

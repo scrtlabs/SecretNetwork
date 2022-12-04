@@ -291,23 +291,24 @@ pub extern "C" fn get_new_consensus_seed(
     seed_id: u32,
     api_key: Buffer,
     err: Option<&mut Buffer>,
-) -> bool {
+) -> Buffer {
     let api_key_slice = match unsafe { api_key.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
-            return false;
+            return Buffer::default();
         }
         Some(r) => r,
     };
 
     match untrusted_get_new_consensus_seed(seed_id, api_key_slice) {
         Err(e) => {
+            // An error happened in the SGX sdk.
             set_error(Error::enclave_err(e.to_string()), err);
-            false
+            Buffer::default()
         }
-        Ok(_r) => {
+        Ok(seed) => {
             clear_error();
-            true
+            Buffer::from_vec(seed.to_vec())
         }
     }
 }

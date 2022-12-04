@@ -39,6 +39,7 @@ extern "C" {
         seed_id: u32,
         api_key: *const u8,
         api_key_len: u32,
+        seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
     ) -> sgx_status_t;
 
     /// Trigger a query method in a wasm contract
@@ -129,7 +130,10 @@ pub fn untrusted_init_node(
     Ok(())
 }
 
-pub fn untrusted_get_new_consensus_seed(seed_id: u32, api_key: &[u8]) -> SgxResult<bool> {
+pub fn untrusted_get_new_consensus_seed(
+    seed_id: u32,
+    api_key: &[u8],
+) -> SgxResult<[u8; ENCRYPTED_SEED_SIZE as usize]> {
     info!("Initializing enclave for untrusted_get_new_consensus_seed..");
 
     // Bind the token to a local variable to ensure its
@@ -145,6 +149,7 @@ pub fn untrusted_get_new_consensus_seed(seed_id: u32, api_key: &[u8]) -> SgxResu
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
     // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
+    let mut seed = [0u8; ENCRYPTED_SEED_SIZE as usize];
     let status = unsafe {
         ecall_get_new_consensus_seed(
             eid,
@@ -152,6 +157,7 @@ pub fn untrusted_get_new_consensus_seed(seed_id: u32, api_key: &[u8]) -> SgxResu
             seed_id,
             api_key.as_ptr(),
             api_key.len() as u32,
+            &mut seed,
         )
     };
 
@@ -163,7 +169,12 @@ pub fn untrusted_get_new_consensus_seed(seed_id: u32, api_key: &[u8]) -> SgxResu
         return Err(retval);
     }
 
-    Ok(true)
+    if seed.is_empty() {
+        error!("Got empty seed from encryption");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
+
+    Ok(seed)
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {

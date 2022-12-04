@@ -411,6 +411,8 @@ pub unsafe extern "C" fn ecall_get_new_consensus_seed(
     seed_id: u32,
     api_key: *const u8,
     api_key_len: u32,
+    // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
+    seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_status_t {
     let mut key_manager = Keychain::new();
     if key_manager.unseal_only_genesis().is_err() {

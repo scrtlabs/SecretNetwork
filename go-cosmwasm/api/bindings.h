@@ -161,7 +161,7 @@ Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
 Buffer get_health_check(Buffer *err);
 
-bool get_new_consensus_seed(uint32_t seed_id, Buffer api_key, Buffer *err);
+Buffer get_new_consensus_seed(uint32_t seed_id, Buffer api_key, Buffer *err);
 
 Buffer handle(cache_t *cache,
               Buffer code_id,

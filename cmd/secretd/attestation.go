@@ -259,6 +259,7 @@ func ConfigureSecret() *cobra.Command {
 				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
 			}
 
+			
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
 				MasterCert:   base64.StdEncoding.EncodeToString(cert),
@@ -509,9 +510,9 @@ Please report any issues with this command
 			if len(seed) > 2 {
 				seed = seed[2:]
 			}
-
+			
 			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
-				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 148 without 0x prefix)")
 			}
 
 			regPublicKey := details.RegistrationKey

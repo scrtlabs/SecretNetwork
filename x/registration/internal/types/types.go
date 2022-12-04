@@ -6,14 +6,15 @@ import (
 )
 
 const (
-	EnclaveRegistrationKey   = "new_node_seed_exchange_keypair.sealed"
-	PublicKeyLength          = 64  // encoded length
-	EncryptedKeyLength       = 194 // hex encoded length
-	LegacyEncryptedKeyLength = 96  // hex encoded length
-	MasterNodeKeyId          = "NodeExchMasterKey"
-	MasterIoKeyId            = "IoExchMasterKey"
-	SecretNodeSeedConfig     = "seed.json"
-	SecretNodeCfgFolder      = ".node"
+	EnclaveRegistrationKey     = "new_node_seed_exchange_keypair.sealed"
+	PublicKeyLength            = 64  // encoded length
+	EncryptedKeyLength         = 194 // hex encoded length
+	LegacyEncryptedKeyLength   = 96  // hex encoded length
+	MasterNodeKeyId            = "NodeExchMasterKey"
+	MasterIoKeyId              = "IoExchMasterKey"
+	LegacySecretNodeSeedConfig = "seed.json"
+	SecretNodeSeedConfig       = "seedv2.json"
+	SecretNodeCfgFolder        = ".node"
 )
 
 const (

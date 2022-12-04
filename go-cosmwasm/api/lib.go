@@ -108,16 +108,17 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 	return nil
 }
 
-func GetNewConsensusSeed(seedId uint32, apiKey []byte) error {
+func GetNewConsensusSeed(seedId uint32, apiKey []byte) ([]byte, error) {
 	errmsg := C.Buffer{}
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.get_new_consensus_seed(u32(seedId), apiKeySlice, &errmsg)
+	res, err := C.get_new_consensus_seed(u32(seedId), apiKeySlice, &errmsg)
 	if err != nil {
-		return errorWithMessage(err, errmsg)
+		return nil, errorWithMessage(err, errmsg)
 	}
-	return nil
+
+	return receiveVector(res), nil
 }
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
