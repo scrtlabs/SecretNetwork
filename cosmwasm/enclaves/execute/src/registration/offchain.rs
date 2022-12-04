@@ -22,9 +22,14 @@ use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
 use super::attestation::create_attestation_certificate;
 use super::cert::verify_ra_cert;
+
+#[cfg(feature = "use_seed_service")]
 use super::seed_service::get_next_consensus_seed_from_service;
 
-use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
+use super::seed_exchange::decrypt_seed;
+
+#[cfg(feature = "use_seed_service")]
+use super::seed_exchange::{encrypt_seed, SeedType};
 
 ///
 /// `ecall_init_bootstrap`
@@ -164,8 +169,10 @@ pub unsafe extern "C" fn ecall_init_node(
     encrypted_seed_len: u32,
     api_key: *const u8,
     api_key_len: u32,
+    #[cfg(feature = "use_seed_service")]
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
     seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
+    #[cfg(not(feature = "use_seed_service"))] _seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_status_t {
     validate_const_ptr!(
         master_cert,
