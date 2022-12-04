@@ -281,13 +281,13 @@ pub unsafe extern "C" fn ecall_init_node(
     #[cfg(feature = "use_seed_service")]
     {
         debug!("New consensus seed not found! Need to get it from service");
-        if KEY_MANAGER.get_consensus_seed().is_err() {
+        if key_manager.get_consensus_seed().is_err() {
             new_consensus_seed = match get_next_consensus_seed_from_service(
                 &mut key_manager,
                 0,
                 genesis_seed,
                 api_key_slice,
-                KEY_MANAGER.get_registration_key().unwrap(),
+                key_manager.get_registration_key().unwrap(),
                 crate::APP_VERSION,
             ) {
                 Ok(s) => s,
@@ -396,34 +396,24 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn ecall_get_new_consensus_seed(seed_id: u32) -> sgx_status_t {
-    #[cfg(feature = "use_seed_service")]
-    {
-        new_consensus_seed = match get_next_consensus_seed_from_service(
-            &mut key_manager,
-            0,
-            genesis_seed,
-            api_key_slice,
-            KEY_MANAGER.get_registration_key().unwrap(),
-            seed_id as u16,
-        ) {
-            Ok(s) => s,
-            Err(e) => {
-                error!("Consensus seed failure: {}", e as u64);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        };
+    let mut key_manager = Keychain::new();
 
-        sgx_status_t::SGX_SUCCESS
-    }
+    new_consensus_seed = match get_next_consensus_seed_from_service(
+        &mut key_manager,
+        0,
+        genesis_seed,
+        api_key_slice,
+        key_manager.get_registration_key().unwrap(),
+        seed_id as u16,
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Consensus seed failure: {}", e as u64);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
 
-    #[cfg(not(feature = "use_seed_service"))]
-    {
-        debug!(
-            "called get new seed for id {} but we're not using the service",
-            seed_id
-        );
-        sgx_status_t::SGX_SUCCESS
-    }
+    sgx_status_t::SGX_SUCCESS
 }
 
 ///
