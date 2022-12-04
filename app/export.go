@@ -11,7 +11,7 @@ import (
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
-func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jailAllowedAddrs []string,
+func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jailAllowedAddrs []string, modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
 	// as if they could withdraw from the start of the next block
 	ctx := app.BaseApp.NewContext(true, tmproto.Header{Height: app.BaseApp.LastBlockHeight()})
@@ -24,7 +24,7 @@ func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jai
 		app.prepForZeroHeightGenesis(ctx, jailAllowedAddrs)
 	}
 
-	genState := app.mm.ExportGenesis(ctx, app.appCodec)
+	genState := app.mm.ExportGenesis(ctx, app.appCodec, modulesToExport)
 
 	appState, err := json.MarshalIndent(genState, "", "  ")
 	if err != nil {

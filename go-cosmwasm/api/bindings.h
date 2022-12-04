@@ -74,7 +74,7 @@ typedef struct cache_t {
 } cache_t;
 
 typedef struct EnclaveRuntimeConfig {
-  uint8_t module_cache_size;
+  uint32_t module_cache_size;
 } EnclaveRuntimeConfig;
 
 /**
@@ -160,6 +160,8 @@ Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
 Buffer get_health_check(Buffer *err);
+
+bool get_new_consensus_seed(uint32_t seed_id, Buffer *err);
 
 Buffer handle(cache_t *cache,
               Buffer code_id,

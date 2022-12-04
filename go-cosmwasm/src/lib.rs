@@ -25,7 +25,7 @@ use cosmwasm_sgx_vm::{
 };
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen,
+    untrusted_init_node, untrusted_key_gen, untrusted_get_new_consensus_seed
 };
 
 use ctor::ctor;
@@ -260,7 +260,7 @@ pub extern "C" fn release_cache(cache: *mut cache_t) {
 
 #[repr(C)]
 pub struct EnclaveRuntimeConfig {
-    pub module_cache_size: u8,
+    pub module_cache_size: u32,
 }
 
 impl EnclaveRuntimeConfig {
@@ -283,6 +283,21 @@ pub extern "C" fn configure_enclave_runtime(
         set_error(e, err);
     } else {
         clear_error();
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_new_consensus_seed(seed_id: u32, err: Option<&mut Buffer>) -> bool {
+
+    match untrusted_get_new_consensus_seed(seed_id) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), err);
+            false
+        }
+        Ok(_r) => {
+            clear_error();
+            true
+        }
     }
 }
 

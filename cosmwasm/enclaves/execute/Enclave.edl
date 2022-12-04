@@ -28,6 +28,10 @@ enclave {
             uint32_t api_key_len
         );
 
+        public sgx_status_t ecall_get_new_consensus_seed(
+            uint32_t seed_id
+        );
+
         public sgx_status_t ecall_key_gen(
             [out, count=32] uint8_t* public_key
         );
@@ -40,7 +44,7 @@ enclave {
         public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
             uintptr_t cert_len,
-            [out, count=48] uint8_t* seed
+            [out, count=97] uint8_t* seed
         );
 
         public sgx_status_t ecall_init_node(

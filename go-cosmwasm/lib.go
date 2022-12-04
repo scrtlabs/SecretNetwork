@@ -36,12 +36,12 @@ type Wasmer struct {
 	cache api.Cache
 }
 
-// NewWasmer creates an new binding, with the given dataDir where
+// NewWasmer creates a new binding, with the given dataDir where
 // it can store raw wasm and the pre-compile cache.
 // cacheSize sets the size of an optional in-memory LRU cache for prepared VMs.
 // They allow popular contracts to be executed very rapidly (no loading overhead),
 // but require ~32-64MB each in memory usage.
-func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, moduleCacheSize uint8) (*Wasmer, error) {
+func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, moduleCacheSize uint16) (*Wasmer, error) {
 	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize)
 	if err != nil {
 		return nil, err
@@ -57,6 +57,10 @@ func NewWasmer(dataDir string, supportedFeatures string, cacheSize uint64, modul
 // Cleanup should be called when no longer using this to free resources on the rust-side
 func (w *Wasmer) Cleanup() {
 	api.ReleaseCache(w.cache)
+}
+
+func (w *Wasmer) GetNewConsensusSeed(seedId uint32) error {
+	return api.GetNewConsensusSeed(seedId)
 }
 
 // Create will compile the wasm code, and store the resulting pre-compile

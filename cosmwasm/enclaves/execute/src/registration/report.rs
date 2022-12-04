@@ -532,13 +532,10 @@ impl SgxQuote {
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00615"];
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
-
-#[cfg(feature = "SGX_MODE_HW")]
-const INTEL_SA_00334: &str = "INTEL-SA-00334";
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00615"];
 
 lazy_static! {
     static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
@@ -572,16 +569,6 @@ impl AdvisoryIDs {
             }
         }
         vulnerable
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn contains_lvi_injection(&self) -> bool {
-        for i in self.0.iter() {
-            if i == INTEL_SA_00334 {
-                return true;
-            }
-        }
-        false
     }
 }
 

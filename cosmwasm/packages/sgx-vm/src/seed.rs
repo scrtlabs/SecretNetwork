@@ -1,7 +1,7 @@
-use enclave_ffi_types::HealthCheckResult;
+use enclave_ffi_types::{HealthCheckResult, ENCRYPTED_SEED_SIZE, SINGLE_ENCRYPTED_SEED_SIZE};
 use sgx_types::*;
 
-use log::info;
+use log::{error, info};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -31,6 +31,12 @@ extern "C" {
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         public_key: &mut [u8; 32],
+    ) -> sgx_status_t;
+
+    pub fn ecall_get_new_consensus_seed(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        seed_id: u32,
     ) -> sgx_status_t;
 
     /// Trigger a query method in a wasm contract
@@ -83,14 +89,28 @@ pub fn untrusted_init_node(
     let eid = enclave.geteid();
     let mut ret = sgx_status_t::SGX_SUCCESS;
 
+    let mut seed_to_enclave = [0u8; ENCRYPTED_SEED_SIZE as usize];
+
+    if (encrypted_seed.len()) > ENCRYPTED_SEED_SIZE as usize {
+        error!("Tried to setup node with seed that is too long");
+        return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
+    }
+
+    if encrypted_seed.len() == SINGLE_ENCRYPTED_SEED_SIZE {
+        seed_to_enclave[0] = encrypted_seed.len() as u8;
+        seed_to_enclave[1..].copy_from_slice(encrypted_seed);
+    } else {
+        seed_to_enclave[0..].copy_from_slice(encrypted_seed);
+    }
+
     let status = unsafe {
         ecall_init_node(
             eid,
             &mut ret,
             master_cert.as_ptr(),
             master_cert.len() as u32,
-            encrypted_seed.as_ptr(),
-            encrypted_seed.len() as u32,
+            seed_to_enclave.as_ptr(),
+            seed_to_enclave.len() as u32,
             api_key.as_ptr(),
             api_key.len() as u32,
         )
@@ -105,6 +125,35 @@ pub fn untrusted_init_node(
     }
 
     Ok(())
+}
+
+pub fn untrusted_get_new_consensus_seed(seed_id: u32) -> SgxResult<bool> {
+    info!("Initializing enclave for untrusted_get_new_consensus_seed..");
+
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    info!("Initialized enclave successfully!");
+
+    let eid = enclave.geteid();
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+
+    // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
+    let status = unsafe { ecall_get_new_consensus_seed(eid, &mut retval, seed_id) };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if retval != sgx_status_t::SGX_SUCCESS {
+        return Err(retval);
+    }
+
+    Ok(true)
 }
 
 pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {

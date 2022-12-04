@@ -254,7 +254,8 @@ func ConfigureSecret() *cobra.Command {
 
 			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
 			seed := args[1]
-			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
+			println(seed)
+			if (len(seed) != reg.LegacyEncryptedKeyLength && len(seed) != reg.EncryptedKeyLength) || !reg.IsHexString(seed) {
 				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
 			}
 

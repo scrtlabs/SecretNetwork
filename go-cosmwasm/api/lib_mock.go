@@ -35,6 +35,10 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
+func GetNewConsensusSeed(seedId uint32) error {
+	return nil
+}
+
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	//errmsg := C.Buffer{}
 	//
@@ -80,7 +84,7 @@ func ReleaseCache(cache Cache) {
 	// C.release_cache(cache.ptr)
 }
 
-func InitEnclaveRuntime(ModuleCacheSize uint8) error {
+func InitEnclaveRuntime(ModuleCacheSize uint16) error {
 	return nil
 }
 

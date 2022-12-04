@@ -13,6 +13,11 @@ mod seed_exchange;
 #[cfg(feature = "SGX_MODE_HW")]
 mod ocalls;
 
+#[cfg(feature = "SGX_MODE_HW")]
+pub mod print_report;
+#[cfg(feature = "use_seed_service")]
+pub mod seed_service;
+
 #[cfg(feature = "test")]
 pub mod tests {
     use super::*;
@@ -30,6 +35,7 @@ pub mod tests {
             report::tests::test_attestation_report_test();
             cert::tests::test_certificate_valid();
             cert::tests::test_certificate_invalid_configuration_needed();
+            cert::tests::test_epid_whitelist();
         });
 
         // The test doesn't work for some reason

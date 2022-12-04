@@ -106,7 +106,6 @@ dependencies = [
  "num_cpus",
  "parity-wasm",
  "parking_lot",
- "schemars",
  "secret-cosmwasm-std",
  "serde",
  "serde_json",

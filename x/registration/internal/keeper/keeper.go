@@ -80,7 +80,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 }
 
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
-	fmt.Println("RegisterNode")
+	//fmt.Println("RegisterNode")
 	var encSeed []byte
 
 	if isSimulationMode(ctx) {
@@ -106,7 +106,8 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
 	}
-
+	fmt.Println("Done RegisterNode")
+	fmt.Println("Got seed: ", hex.EncodeToString(encSeed))
 	regInfo := types.RegistrationNodeInfo{
 		Certificate:   certificate,
 		EncryptedSeed: encSeed,
@@ -165,7 +166,9 @@ func validateSeedParams(config types.SeedConfig) error {
 		return err
 	}
 
-	if len(config.EncryptedKey) != types.EncryptedKeyLength || !IsHexString(config.EncryptedKey) {
+	lenKey := len(config.EncryptedKey)
+
+	if (lenKey != types.EncryptedKeyLength && lenKey != types.LegacyEncryptedKeyLength) || !IsHexString(config.EncryptedKey) {
 		return sdkerrors.Wrap(types.ErrSeedValidationParams, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
 	}
 	return nil

@@ -94,16 +94,25 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
-func InitEnclaveRuntime(moduleCacheSize uint8) error {
+func InitEnclaveRuntime(moduleCacheSize uint16) error {
 	errmsg := C.Buffer{}
 
 	config := C.EnclaveRuntimeConfig{
-		module_cache_size: u8(moduleCacheSize),
+		module_cache_size: u32(moduleCacheSize),
 	}
 	_, err := C.configure_enclave_runtime(config, &errmsg)
 	if err != nil {
 		err = errorWithMessage(err, errmsg)
 		return err
+	}
+	return nil
+}
+
+func GetNewConsensusSeed(seedId uint32) error {
+	errmsg := C.Buffer{}
+	_, err := C.get_new_consensus_seed(u32(seedId), &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
 	}
 	return nil
 }

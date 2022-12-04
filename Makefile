@@ -31,6 +31,13 @@ TEST_COMPUTE_MODULE_PATH = ./x/compute/internal/keeper/testdata/
 ENCLAVE_PATH = cosmwasm/enclaves/
 EXECUTE_ENCLAVE_PATH = $(ENCLAVE_PATH)/execute/
 QUERY_ENCLAVE_PATH = $(ENCLAVE_PATH)/query/
+DOCKER_BUILD_ARGS ?=
+
+DOCKER_BUILDX_CHECK = $(@shell docker build --load test)
+
+ifeq (Building,$(findstring Building,$(DOCKER_BUILDX_CHECK)))
+	DOCKER_BUILD_ARGS += "--load"
+endif
 
 ifeq ($(SGX_MODE), HW)
 	ext := hw
@@ -234,6 +241,7 @@ localsecret:
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \
 			--build-arg SGX_MODE=SW \
+			$(DOCKER_BUILD_ARGS) \
  			--build-arg SECRET_NODE_TYPE=BOOTSTRAP \
  			--build-arg CHAIN_ID=secretdev-1 \
  			-f deployment/dockerfiles/Dockerfile \
@@ -250,6 +258,7 @@ build-testnet-bootstrap:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=BOOTSTRAP \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
@@ -264,6 +273,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
@@ -275,6 +285,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --cache-from ghcr.io/scrtlabs/testnet:${DOCKER_TAG} \
@@ -295,7 +306,7 @@ build-mainnet-upgrade:
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
                  -f deployment/dockerfiles/Dockerfile \
-                 --load \
+                 $(DOCKER_BUILD_ARGS) \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target mainnet-release .
 	docker build --build-arg FEATURES="production, ${FEATURES}" \
@@ -322,7 +333,7 @@ build-mainnet:
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
                  --build-arg DB_BACKEND=${DB_BACKEND} \
-                 --load \
+                 $(DOCKER_BUILD_ARGS) \
                  -f deployment/dockerfiles/Dockerfile \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target release-image .
@@ -336,7 +347,7 @@ build-mainnet:
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
-				 --load \
+				 $(DOCKER_BUILD_ARGS) \
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
