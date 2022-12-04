@@ -5,15 +5,17 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	channelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v3/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
@@ -681,7 +683,11 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 }
 
 func (k Keeper) GetNewConsensusSeed(seedId uint32) error {
-	return api.GetNewConsensusSeed(seedId)
+	apiKeyFile, err := reg.GetApiKey()
+	if err != nil {
+		return fmt.Errorf("failed to initialize enclave: %w", err)
+	}
+	return api.GetNewConsensusSeed(seedId, apiKeyFile)
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {

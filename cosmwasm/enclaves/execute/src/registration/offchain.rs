@@ -22,6 +22,7 @@ use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
 use super::attestation::create_attestation_certificate;
 use super::cert::verify_ra_cert;
+use super::seed_service::get_next_consensus_seed_from_service;
 
 use super::seed_exchange::decrypt_seed;
 
@@ -72,7 +73,14 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 
     #[cfg(feature = "use_seed_service")]
     {
-        let temp_keypair = KeyPair::new()?;
+        let temp_keypair = match KeyPair::new() {
+            Ok(kp) => kp,
+            Err(e) => {
+                error!("failed to create keypair {:?}", e);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        };
+        let genesis_seed = key_manager.get_consensus_seed().unwrap().genesis;
 
         let new_consensus_seed = match get_next_consensus_seed_from_service(
             &mut key_manager,
@@ -89,10 +97,13 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             }
         };
 
-        key_manager.set_consensus_seed(
-            key_manager.get_consensus_seed()?.genesis,
-            new_consensus_seed,
-        )?;
+        if key_manager
+            .set_consensus_seed(genesis_seed, new_consensus_seed)
+            .is_err()
+        {
+            error!("failed to set new consensus seed");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     }
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
@@ -280,6 +291,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
     #[cfg(feature = "use_seed_service")]
     {
+        let reg_key = key_manager.get_registration_key().unwrap();
         debug!("New consensus seed not found! Need to get it from service");
         if key_manager.get_consensus_seed().is_err() {
             new_consensus_seed = match get_next_consensus_seed_from_service(
@@ -287,7 +299,7 @@ pub unsafe extern "C" fn ecall_init_node(
                 0,
                 genesis_seed,
                 api_key_slice,
-                key_manager.get_registration_key().unwrap(),
+                reg_key,
                 crate::APP_VERSION,
             ) {
                 Ok(s) => s,
@@ -395,15 +407,26 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
 /// process
 ///
 #[no_mangle]
-pub unsafe extern "C" fn ecall_get_new_consensus_seed(seed_id: u32) -> sgx_status_t {
+pub unsafe extern "C" fn ecall_get_new_consensus_seed(
+    seed_id: u32,
+    api_key: *const u8,
+    api_key_len: u32,
+) -> sgx_status_t {
     let mut key_manager = Keychain::new();
+    if key_manager.unseal_only_genesis().is_err() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
 
-    new_consensus_seed = match get_next_consensus_seed_from_service(
+    let genesis_seed = key_manager.get_consensus_seed().unwrap().genesis;
+    let registration_key = key_manager.get_registration_key().unwrap();
+    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
+    match get_next_consensus_seed_from_service(
         &mut key_manager,
         0,
         genesis_seed,
         api_key_slice,
-        key_manager.get_registration_key().unwrap(),
+        registration_key,
         seed_id as u16,
     ) {
         Ok(s) => s,

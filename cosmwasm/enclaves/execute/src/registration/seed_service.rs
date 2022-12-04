@@ -1,9 +1,10 @@
 use log::*;
 
-use enclave_crypto::{CryptoError, Seed};
+use enclave_crypto::{consts::SIGNATURE_TYPE, CryptoError, KeyPair, Keychain, Seed};
 
 use sgx_types::c_int;
 
+use crate::registration::create_attestation_certificate;
 use std::{
     io::{BufReader, ErrorKind, Read, Write},
     net::{SocketAddr, TcpStream},
@@ -260,7 +261,7 @@ fn try_get_consensus_seed_from_service(
     let challenge = get_challenge_from_service(socket, SEED_SERVICE_DNS, api_key, kp)?;
     socket = create_socket_to_service(SEED_SERVICE_DNS)?;
     let s = get_seed_from_service(socket, SEED_SERVICE_DNS, api_key, kp, id, challenge)?;
-    let mut seedz = Seed::default();
+    let mut seed = Seed::default();
     seed.as_mut().copy_from_slice(&s);
     Ok(seed)
 }
@@ -268,7 +269,7 @@ fn try_get_consensus_seed_from_service(
 // Retreiving consensus seed from SingularitySeedService
 // id - The desired seed id
 // retries - The amount of times to retry upon failure. 0 means infinite
-fn get_next_consensus_seed_from_service(
+pub fn get_next_consensus_seed_from_service(
     key_manager: &mut Keychain,
     retries: u8,
     genesis_seed: Seed,

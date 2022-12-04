@@ -37,6 +37,8 @@ extern "C" {
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         seed_id: u32,
+        api_key: *const u8,
+        api_key_len: u32,
     ) -> sgx_status_t;
 
     /// Trigger a query method in a wasm contract
@@ -127,7 +129,7 @@ pub fn untrusted_init_node(
     Ok(())
 }
 
-pub fn untrusted_get_new_consensus_seed(seed_id: u32) -> SgxResult<bool> {
+pub fn untrusted_get_new_consensus_seed(seed_id: u32, api_key: &[u8]) -> SgxResult<bool> {
     info!("Initializing enclave for untrusted_get_new_consensus_seed..");
 
     // Bind the token to a local variable to ensure its
@@ -143,7 +145,15 @@ pub fn untrusted_get_new_consensus_seed(seed_id: u32) -> SgxResult<bool> {
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
     // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
-    let status = unsafe { ecall_get_new_consensus_seed(eid, &mut retval, seed_id) };
+    let status = unsafe {
+        ecall_get_new_consensus_seed(
+            eid,
+            &mut retval,
+            seed_id,
+            api_key.as_ptr(),
+            api_key.len() as u32,
+        )
+    };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);

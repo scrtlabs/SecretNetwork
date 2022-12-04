@@ -29,7 +29,9 @@ enclave {
         );
 
         public sgx_status_t ecall_get_new_consensus_seed(
-            uint32_t seed_id
+            uint32_t seed_id,
+            [in, count=api_key_len] const uint8_t* api_key,
+            uint32_t api_key_len
         );
 
         public sgx_status_t ecall_key_gen(

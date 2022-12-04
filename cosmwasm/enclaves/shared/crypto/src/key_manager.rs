@@ -95,6 +95,20 @@ impl Keychain {
         }
     }
 
+    pub fn unseal_only_genesis(&mut self) -> Result<(), CryptoError> {
+        match Seed::unseal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
+            Ok(genesis) => {
+                let current = Seed::new()?;
+                self.consensus_seed = Some(SeedsHolder { genesis, current });
+                Ok(())
+            }
+            Err(e) => {
+                trace!("Failed to unseal consensus seed {}", e);
+                Err(CryptoError::KeyError)
+            }
+        }
+    }
+
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
         match (Seed::new(), Seed::new()) {
             (Ok(genesis), Ok(current)) => {

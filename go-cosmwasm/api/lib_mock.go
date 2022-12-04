@@ -35,7 +35,7 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
-func GetNewConsensusSeed(seedId uint32) error {
+func GetNewConsensusSeed(seedId uint32, apiKey []byte) error {
 	return nil
 }
 

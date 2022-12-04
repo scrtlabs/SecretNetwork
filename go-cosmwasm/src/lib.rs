@@ -24,8 +24,8 @@ use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen, untrusted_get_new_consensus_seed
+    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_get_new_consensus_seed,
+    untrusted_health_check, untrusted_init_node, untrusted_key_gen,
 };
 
 use ctor::ctor;
@@ -287,9 +287,20 @@ pub extern "C" fn configure_enclave_runtime(
 }
 
 #[no_mangle]
-pub extern "C" fn get_new_consensus_seed(seed_id: u32, err: Option<&mut Buffer>) -> bool {
+pub extern "C" fn get_new_consensus_seed(
+    seed_id: u32,
+    api_key: Buffer,
+    err: Option<&mut Buffer>,
+) -> bool {
+    let api_key_slice = match unsafe { api_key.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
 
-    match untrusted_get_new_consensus_seed(seed_id) {
+    match untrusted_get_new_consensus_seed(seed_id, api_key_slice) {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
             false
