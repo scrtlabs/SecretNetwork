@@ -8,8 +8,8 @@ use sgx_types::{sgx_status_t, SgxResult};
 use std::slice;
 
 use enclave_crypto::consts::{
-    SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
-    SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
+    SigningMethod, ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, ENCRYPTED_SEED_SIZE,
+    IO_CERTIFICATE_SAVE_PATH, SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -83,7 +83,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             genesis_seed,
             api_key_slice,
             temp_keypair,
-            enclave_crypto::consts::CONSENSUS_SEED_VERSION,
+            CONSENSUS_SEED_VERSION,
         ) {
             Ok(s) => s,
             Err(e) => {
@@ -298,11 +298,11 @@ pub unsafe extern "C" fn ecall_init_node(
         if key_manager.get_consensus_seed().is_err() {
             new_consensus_seed = match get_next_consensus_seed_from_service(
                 &mut key_manager,
-                0,
+                1,
                 genesis_seed,
                 api_key_slice,
                 reg_key,
-                crate::APP_VERSION,
+                CONSENSUS_SEED_VERSION,
             ) {
                 Ok(s) => s,
                 Err(e) => {

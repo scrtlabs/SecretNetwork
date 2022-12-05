@@ -148,31 +148,19 @@ Copy binaries from v1.6 chain to v1.5 chain.
 
 ```bash
 # Start a v1.6 chain and wait a bit for it to setup
-docker run -it -d --name localsecret-1.6 ghcr.io/scrtlabs/localsecret:v1.6.0-beta.5
-sleep 5
-
-# Copy binaries from v1.6 chain to host (a limitation of `docker cp`)
-
-rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin
-
-docker cp localsecret-1.6:/usr/bin/secretd                                  /tmp/upgrade-bin
-docker cp localsecret-1.6:/usr/lib/librust_cosmwasm_enclave.signed.so       /tmp/upgrade-bin
-docker cp localsecret-1.6:/usr/lib/libgo_cosmwasm.so                        /tmp/upgrade-bin
-
-# Can kill localsecret-1.6 at this point
-docker rm -f localsecret-1.6
+SGX_MODE=SW make build_linux
 
 # Copy binaries from host to current v1.5 chain
 
 docker exec bootstrap bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 docker exec node bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 
-docker cp /tmp/upgrade-bin/secretd                                  bootstrap:/tmp/upgrade-bin
-docker cp /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       bootstrap:/tmp/upgrade-bin
-docker cp /tmp/upgrade-bin/libgo_cosmwasm.so                        bootstrap:/tmp/upgrade-bin
-docker cp /tmp/upgrade-bin/secretd                                  node:/tmp/upgrade-bin
-docker cp /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       node:/tmp/upgrade-bin
-docker cp /tmp/upgrade-bin/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
+docker cp secretd                                                  bootstrap:/tmp/upgrade-bin
+docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           bootstrap:/tmp/upgrade-bin
+docker cp go-cosmwasm/api/libgo_cosmwasm.so                        bootstrap:/tmp/upgrade-bin
+docker cp secretd                                                  node:/tmp/upgrade-bin
+docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           node:/tmp/upgrade-bin
+docker cp go-cosmwasm/api/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
 
 docker exec node bash -c 'pkill -9 secretd'
 
