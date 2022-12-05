@@ -1,4 +1,7 @@
-use enclave_ffi_types::{HealthCheckResult, ENCRYPTED_SEED_SIZE, SINGLE_ENCRYPTED_SEED_SIZE};
+use enclave_ffi_types::{
+    HealthCheckResult, ENCRYPTED_SEED_SIZE, NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE,
+    NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE, SINGLE_ENCRYPTED_SEED_SIZE,
+};
 use sgx_types::*;
 
 use log::{error, info};
@@ -91,12 +94,22 @@ pub fn untrusted_init_node(
         return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
     }
 
-    if encrypted_seed.len() == SINGLE_ENCRYPTED_SEED_SIZE {
-        seed_to_enclave[0] = encrypted_seed.len() as u8;
-        seed_to_enclave[1..].copy_from_slice(encrypted_seed);
-    } else {
-        seed_to_enclave[0..].copy_from_slice(encrypted_seed);
-    }
+    match encrypted_seed.len() {
+        SINGLE_ENCRYPTED_SEED_SIZE => {
+            seed_to_enclave[0] = encrypted_seed.len() as u8;
+            seed_to_enclave[1..SINGLE_ENCRYPTED_SEED_SIZE + 1].copy_from_slice(encrypted_seed);
+        }
+        NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE => seed_to_enclave
+            [0..NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE]
+            .copy_from_slice(encrypted_seed),
+        NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE => seed_to_enclave
+            [0..NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE]
+            .copy_from_slice(encrypted_seed),
+        _ => {
+            error!("Received seed with wrong length");
+            return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
+        }
+    };
 
     let mut seed = [0u8; ENCRYPTED_SEED_SIZE as usize];
     let status = unsafe {

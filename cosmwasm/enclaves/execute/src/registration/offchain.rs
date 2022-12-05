@@ -23,13 +23,9 @@ use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use super::attestation::create_attestation_certificate;
 use super::cert::verify_ra_cert;
 
-#[cfg(feature = "use_seed_service")]
 use super::seed_service::get_next_consensus_seed_from_service;
 
-use super::seed_exchange::decrypt_seed;
-
-#[cfg(feature = "use_seed_service")]
-use super::seed_exchange::{encrypt_seed, SeedType};
+use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
 
 ///
 /// `ecall_init_bootstrap`
@@ -70,7 +66,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    #[cfg(feature = "use_seed_service")]
+    #[cfg(feature = "use_seed_service_on_bootstrap")]
     {
         let temp_keypair = match KeyPair::new() {
             Ok(kp) => kp,
@@ -169,10 +165,8 @@ pub unsafe extern "C" fn ecall_init_node(
     encrypted_seed_len: u32,
     api_key: *const u8,
     api_key_len: u32,
-    #[cfg(feature = "use_seed_service")]
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
     seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
-    #[cfg(not(feature = "use_seed_service"))] _seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_status_t {
     validate_const_ptr!(
         master_cert,
@@ -297,54 +291,42 @@ pub unsafe extern "C" fn ecall_init_node(
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
     } else {
-        #[cfg(not(feature = "use_seed_service"))]
-        {
-            error!(
-                "Got encrypted seed of different size than expected: {}",
-                encrypted_seed_slice[0]
-            );
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
+        let reg_key = key_manager.get_registration_key().unwrap();
+        let my_pub_key = reg_key.get_pubkey();
 
-        #[cfg(feature = "use_seed_service")]
-        {
-            let reg_key = key_manager.get_registration_key().unwrap();
-            let my_pub_key = reg_key.get_pubkey();
-
-            debug!("New consensus seed not found! Need to get it from service");
-            if key_manager.get_consensus_seed().is_err() {
-                new_consensus_seed = match get_next_consensus_seed_from_service(
-                    &mut key_manager,
-                    0,
-                    genesis_seed,
-                    api_key_slice,
-                    reg_key,
-                    crate::APP_VERSION,
-                ) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        error!("Consensus seed failure: {}", e as u64);
-                        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-                    }
-                };
-
-                if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
+        debug!("New consensus seed not found! Need to get it from service");
+        if key_manager.get_consensus_seed().is_err() {
+            new_consensus_seed = match get_next_consensus_seed_from_service(
+                &mut key_manager,
+                0,
+                genesis_seed,
+                api_key_slice,
+                reg_key,
+                crate::APP_VERSION,
+            ) {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("Consensus seed failure: {}", e as u64);
                     return sgx_status_t::SGX_ERROR_UNEXPECTED;
                 }
-            } else {
-                debug!("New consensus seed already exists, no need to get it from service");
+            };
+
+            if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
-
-            let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis).unwrap();
-            let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current).unwrap();
-            res.extend(&res_current);
-
-            trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
-
-            seed[0] = res.len() as u8;
-            seed[1..].copy_from_slice(&res);
-            trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
+        } else {
+            debug!("New consensus seed already exists, no need to get it from service");
         }
+
+        let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis).unwrap();
+        let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current).unwrap();
+        res.extend(&res_current);
+
+        trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
+
+        seed[0] = res.len() as u8;
+        seed[1..].copy_from_slice(&res);
+        trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
     }
 
     // this initializes the key manager with all the keys we need for computations
