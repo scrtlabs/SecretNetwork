@@ -26,7 +26,7 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type SeedConfig struct {
-	MasterKey   string `protobuf:"bytes,1,opt,name=master_key,json=masterKey,proto3" json:"pk"`
+	MasterCert   string `protobuf:"bytes,1,opt,name=master_cert,json=masterCert,proto3" json:"pk"`
 	EncryptedKey string `protobuf:"bytes,2,opt,name=encrypted_key,json=encryptedKey,proto3" json:"encKey"`
 }
 
@@ -154,7 +154,7 @@ func (this *SeedConfig) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.MasterKey != that1.MasterKey {
+	if this.MasterCert != that1.MasterCert {
 		return false
 	}
 	if this.EncryptedKey != that1.EncryptedKey {
@@ -216,10 +216,10 @@ func (m *SeedConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.MasterKey) > 0 {
-		i -= len(m.MasterKey)
-		copy(dAtA[i:], m.MasterKey)
-		i = encodeVarintTypes(dAtA, i, uint64(len(m.MasterKey)))
+	if len(m.MasterCert) > 0 {
+		i -= len(m.MasterCert)
+		copy(dAtA[i:], m.MasterCert)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.MasterCert)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -280,7 +280,7 @@ func (m *SeedConfig) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.MasterKey)
+	l = len(m.MasterCert)
 	if l > 0 {
 		n += 1 + l + sovTypes(uint64(l))
 	}
@@ -373,7 +373,7 @@ func (m *SeedConfig) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.MasterKey = string(dAtA[iNdEx:postIndex])
+			m.MasterCert = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {

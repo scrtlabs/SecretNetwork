@@ -14,8 +14,8 @@ type (
 
 	// GenesisState is the struct representation of the export genesis
 	GenesisState struct {
-		Registration              []RegistrationNodeInfo `json:"reg_info"`
-		NodeExchMasterCertificate []byte                 `json:"node_exch_cert"`
-		IoMasterCertificate       []byte                 `json:"io_exch_cert"`
+		Registration      []RegistrationNodeInfo `json:"reg_info"`
+		NodeExchMasterKey []byte                 `json:"node_exch_key"`
+		IoMasterKey       []byte                 `json:"io_exch_key"`
 	}
 )

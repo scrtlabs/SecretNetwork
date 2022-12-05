@@ -16,11 +16,9 @@ import (
 	"regexp"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	regtypes "github.com/scrtlabs/SecretNetwork/x/registration"
 	"google.golang.org/grpc/encoding"
 	"google.golang.org/grpc/encoding/proto"
-
-	regtypes "github.com/scrtlabs/SecretNetwork/x/registration"
-	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 
 	"github.com/miscreant/miscreant.go"
 	"golang.org/x/crypto/curve25519"
@@ -61,9 +59,9 @@ func GzipIt(input []byte) ([]byte, error) {
 
 // WASMContext wraps github.com/cosmos/cosmos-sdk/client/client.Context
 type WASMContext struct {
-	CLIContext       client.Context
-	TestKeyPairPath  string
-	TestMasterIOCert regtypes.MasterCertificate
+	CLIContext      client.Context
+	TestKeyPairPath string
+	TestMasterIOKey regtypes.MasterKey
 }
 
 type keyPair struct {
@@ -139,9 +137,9 @@ var hkdfSalt = []byte{
 }
 
 func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
-	var masterIoKey regtypes.Key
-	if ctx.TestMasterIOCert.Bytes != nil { // TODO check length?
-		masterIoKey.Key = ctx.TestMasterIOCert.Bytes
+	var masterIoKey []byte
+	if ctx.TestMasterIOKey.Bytes != nil { // TODO check length?
+		masterIoKey = ctx.TestMasterIOKey.Bytes
 	} else {
 		res, _, err := ctx.CLIContext.Query("/secret.registration.v1beta1.Query/TxKey")
 		if err != nil {
@@ -154,9 +152,9 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 		}
 	}
 
-	ioPubkey, err := ra.UNSAFE_VerifyRaCert(masterIoKey.Key)
+	ioPubkey, err := base64.StdEncoding.DecodeString(string(masterIoKey))
 	if err != nil {
-		println(masterIoKey.Key)
+		println(string(masterIoKey))
 		return nil, err
 	}
 

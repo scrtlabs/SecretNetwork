@@ -12,7 +12,7 @@ import (
 
 const (
 	QueryEncryptedSeed     = "seed"
-	QueryMasterCertificate = "master-cert"
+	QueryMasterKey = "master-key"
 )
 
 // controls error output on querier - set true when testing/debugging

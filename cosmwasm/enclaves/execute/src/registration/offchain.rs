@@ -12,10 +12,10 @@ use enclave_crypto::consts::{
     IO_KEY_SAVE_PATH, SEED_EXCH_KEY_SAVE_PATH, SIGNATURE_TYPE,
 };
 
-use enclave_crypto::{key_manager, KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::rewrite_on_untrusted;
+use enclave_utils::storage::{rewrite_on_untrusted, write_to_untrusted};
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
@@ -29,7 +29,7 @@ use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
 
 pub fn write_public_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
     if let Err(status) =
-        rewrite_on_untrusted(base64::encode(&kp.get_pubkey()).as_slice(), save_path)
+        rewrite_on_untrusted(base64::encode(&kp.get_pubkey()).as_bytes(), save_path)
     {
         return Err(status);
     }
@@ -78,7 +78,6 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         api_key_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let mut key_manager = Keychain::new();
 
@@ -88,6 +87,8 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 
     #[cfg(feature = "use_seed_service_on_bootstrap")]
     {
+        let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
         let temp_keypair = match KeyPair::new() {
             Ok(kp) => kp,
             Err(e) => {

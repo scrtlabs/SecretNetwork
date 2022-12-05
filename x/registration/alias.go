@@ -18,7 +18,7 @@ const (
 	RouterKey                  = types.RouterKey
 	EnclaveRegistrationKey     = types.EnclaveRegistrationKey
 	QueryEncryptedSeed         = keeper.QueryEncryptedSeed
-	QueryMasterCertificate     = keeper.QueryMasterCertificate
+	QueryMasterKey             = keeper.QueryMasterKey
 	SecretNodeSeedConfig       = types.SecretNodeSeedConfig
 	LegacySecretNodeSeedConfig = types.LegacySecretNodeSeedConfig
 	SecretNodeCfgFolder        = types.SecretNodeCfgFolder
@@ -58,6 +58,6 @@ type (
 	Keeper            = keeper.Keeper
 	SeedConfig        = types.SeedConfig
 	EnclaveApi        = enclave.Api
-	MasterCertificate = types.MasterCertificate
+	MasterKey         = types.MasterKey
 	Key               = types.Key
 )
