@@ -161,8 +161,6 @@ Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
 Buffer get_health_check(Buffer *err);
 
-bool get_new_consensus_seed(uint32_t seed_id, Buffer *err);
-
 Buffer handle(cache_t *cache,
               Buffer code_id,
               Buffer params,
@@ -180,7 +178,7 @@ Buffer init_bootstrap(Buffer spid, Buffer api_key, Buffer *err);
 
 cache_t *init_cache(Buffer data_dir, Buffer supported_features, uintptr_t _cache_size, Buffer *err);
 
-bool init_node(Buffer master_cert, Buffer encrypted_seed, Buffer api_key, Buffer *err);
+Buffer init_node(Buffer master_cert, Buffer encrypted_seed, Buffer api_key, Buffer *err);
 
 Buffer instantiate(cache_t *cache,
                    Buffer contract_id,

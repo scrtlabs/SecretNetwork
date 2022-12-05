@@ -8,8 +8,8 @@ use sgx_types::{sgx_status_t, SgxResult};
 use std::slice;
 
 use enclave_crypto::consts::{
-    SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
-    SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
+    SigningMethod, ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, ENCRYPTED_SEED_SIZE,
+    IO_CERTIFICATE_SAVE_PATH, SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -23,13 +23,9 @@ use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use super::attestation::create_attestation_certificate;
 use super::cert::verify_ra_cert;
 
-use super::seed_exchange::decrypt_seed;
+use super::seed_service::get_next_consensus_seed_from_service;
 
-#[cfg(not(feature = "use_seed_service"))]
-const EXPECTED_SEED_SIZE: u32 = 96;
-
-#[cfg(feature = "use_seed_service")]
-const EXPECTED_SEED_SIZE: u32 = 48;
+use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
 
 ///
 /// `ecall_init_bootstrap`
@@ -70,9 +66,16 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    #[cfg(feature = "use_seed_service")]
+    #[cfg(feature = "use_seed_service_on_bootstrap")]
     {
-        let temp_keypair = KeyPair::new()?;
+        let temp_keypair = match KeyPair::new() {
+            Ok(kp) => kp,
+            Err(e) => {
+                error!("failed to create keypair {:?}", e);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        };
+        let genesis_seed = key_manager.get_consensus_seed().unwrap().genesis;
 
         let new_consensus_seed = match get_next_consensus_seed_from_service(
             &mut key_manager,
@@ -80,7 +83,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             genesis_seed,
             api_key_slice,
             temp_keypair,
-            enclave_crypto::consts::CONSENSUS_SEED_VERSION,
+            CONSENSUS_SEED_VERSION,
         ) {
             Ok(s) => s,
             Err(e) => {
@@ -89,10 +92,13 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             }
         };
 
-        key_manager.set_consensus_seed(
-            key_manager.get_consensus_seed()?.genesis,
-            new_consensus_seed,
-        )?;
+        if key_manager
+            .set_consensus_seed(genesis_seed, new_consensus_seed)
+            .is_err()
+        {
+            error!("failed to set new consensus seed");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     }
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
@@ -159,6 +165,8 @@ pub unsafe extern "C" fn ecall_init_node(
     encrypted_seed_len: u32,
     api_key: *const u8,
     api_key_len: u32,
+    // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
+    seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_status_t {
     validate_const_ptr!(
         master_cert,
@@ -208,19 +216,6 @@ pub unsafe extern "C" fn ecall_init_node(
     );
     if res.is_err() {
         error!("Error starting node, might not be updated",);
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    //let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
-
-    // let mut encrypted_seed = [0u8; ENCRYPTED_SEED_SIZE];
-    // encrypted_seed.copy_from_slice(encrypted_seed_slice);
-
-    if encrypted_seed_slice[0] as u32 != EXPECTED_SEED_SIZE {
-        error!(
-            "Got encrypted seed of different size than expected: {}",
-            encrypted_seed_slice[0]
-        );
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
@@ -276,38 +271,10 @@ pub unsafe extern "C" fn ecall_init_node(
         Err(status) => return status,
     };
 
+    let encrypted_seed_len = encrypted_seed_slice[0] as u32;
     let new_consensus_seed;
 
-    #[cfg(feature = "use_seed_service")]
-    {
-        debug!("New consensus seed not found! Need to get it from service");
-        if KEY_MANAGER.get_consensus_seed().is_err() {
-            new_consensus_seed = match get_next_consensus_seed_from_service(
-                &mut key_manager,
-                0,
-                genesis_seed,
-                api_key_slice,
-                KEY_MANAGER.get_registration_key().unwrap(),
-                crate::APP_VERSION,
-            ) {
-                Ok(s) => s,
-                Err(e) => {
-                    error!("Consensus seed failure: {}", e as u64);
-                    return sgx_status_t::SGX_ERROR_UNEXPECTED;
-                }
-            };
-
-            // TODO get current seed from seed server
-            if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        } else {
-            debug!("New consensus seed already exists, no need to get it from service");
-        }
-    }
-
-    #[cfg(not(feature = "use_seed_service"))]
-    {
+    if encrypted_seed_len as usize == 2 * SINGLE_ENCRYPTED_SEED_SIZE {
         debug!("Consensus seed service not active. Loading from registration");
 
         single_seed_bytes.copy_from_slice(
@@ -320,10 +287,46 @@ pub unsafe extern "C" fn ecall_init_node(
             Err(status) => return status,
         };
 
-        // TODO get current seed from seed server
         if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
+    } else {
+        let reg_key = key_manager.get_registration_key().unwrap();
+        let my_pub_key = reg_key.get_pubkey();
+
+        debug!("New consensus seed not found! Need to get it from service");
+        if key_manager.get_consensus_seed().is_err() {
+            new_consensus_seed = match get_next_consensus_seed_from_service(
+                &mut key_manager,
+                1,
+                genesis_seed,
+                api_key_slice,
+                reg_key,
+                CONSENSUS_SEED_VERSION,
+            ) {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("Consensus seed failure: {}", e as u64);
+                    return sgx_status_t::SGX_ERROR_UNEXPECTED;
+                }
+            };
+
+            if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        } else {
+            debug!("New consensus seed already exists, no need to get it from service");
+        }
+
+        let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis).unwrap();
+        let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current).unwrap();
+        res.extend(&res_current);
+
+        trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
+
+        seed[0] = res.len() as u8;
+        seed[1..].copy_from_slice(&res);
+        trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
     }
 
     // this initializes the key manager with all the keys we need for computations
@@ -388,42 +391,6 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     }
 
     sgx_status_t::SGX_SUCCESS
-}
-
-///
-/// This function generates the registration_key, which is used in the attestation and registration
-/// process
-///
-#[no_mangle]
-pub unsafe extern "C" fn ecall_get_new_consensus_seed(seed_id: u32) -> sgx_status_t {
-    #[cfg(feature = "use_seed_service")]
-    {
-        new_consensus_seed = match get_next_consensus_seed_from_service(
-            &mut key_manager,
-            0,
-            genesis_seed,
-            api_key_slice,
-            KEY_MANAGER.get_registration_key().unwrap(),
-            seed_id as u16,
-        ) {
-            Ok(s) => s,
-            Err(e) => {
-                error!("Consensus seed failure: {}", e as u64);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        };
-
-        sgx_status_t::SGX_SUCCESS
-    }
-
-    #[cfg(not(feature = "use_seed_service"))]
-    {
-        debug!(
-            "called get new seed for id {} but we're not using the service",
-            seed_id
-        );
-        sgx_status_t::SGX_SUCCESS
-    }
 }
 
 ///

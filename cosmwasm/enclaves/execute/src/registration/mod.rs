@@ -15,7 +15,7 @@ mod ocalls;
 
 #[cfg(feature = "SGX_MODE_HW")]
 pub mod print_report;
-#[cfg(feature = "use_seed_service")]
+
 pub mod seed_service;
 
 #[cfg(feature = "test")]

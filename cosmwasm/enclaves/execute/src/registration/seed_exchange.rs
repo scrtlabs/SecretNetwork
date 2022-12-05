@@ -83,7 +83,7 @@ pub fn decrypt_seed(
 
     trace!(
         "Public keys on decryption: {:?} {:?}",
-        key_manager.get_registration_key().unwrap().get_pubkey(),
+        my_public_key,
         master_pk
     );
 

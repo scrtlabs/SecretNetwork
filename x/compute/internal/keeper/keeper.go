@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -73,6 +72,7 @@ type Keeper struct {
 	messenger        Messenger
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
+	homeDir       string
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
 }
@@ -125,6 +125,7 @@ func NewKeeper(
 		capabilityKeeper: capabilityKeeper,
 		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
+		homeDir:          homeDir,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
@@ -678,10 +679,6 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	return contractKey
-}
-
-func (k Keeper) GetNewConsensusSeed(seedId uint32) error {
-	return api.GetNewConsensusSeed(seedId)
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {

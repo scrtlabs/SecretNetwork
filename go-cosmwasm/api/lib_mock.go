@@ -35,10 +35,6 @@ func HealthCheck() ([]byte, error) {
 	return nil, nil
 }
 
-func GetNewConsensusSeed(seedId uint32) error {
-	return nil
-}
-
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	//errmsg := C.Buffer{}
 	//
@@ -50,7 +46,7 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
+func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) ([]byte, error) {
 	//pkSlice := sendSlice(masterCert)
 	//defer freeAfterSend(pkSlice)
 	//seedSlice := sendSlice(seed)
@@ -61,7 +57,7 @@ func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, err
 	//if err != nil {
 	//	return false, errorWithMessage(err, errmsg)
 	//}
-	return true, nil
+	return nil, nil
 }
 
 type Querier = types.Querier
