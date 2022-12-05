@@ -9,13 +9,13 @@ use std::slice;
 
 use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, ENCRYPTED_SEED_SIZE,
-    IO_CERTIFICATE_SAVE_PATH, SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
+    IO_KEY_SAVE_PATH, SEED_EXCH_KEY_SAVE_PATH, SIGNATURE_TYPE,
 };
 
-use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_crypto::{key_manager, KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::write_to_untrusted;
+use enclave_utils::storage::rewrite_on_untrusted;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
@@ -26,6 +26,26 @@ use super::cert::verify_ra_cert;
 use super::seed_service::get_next_consensus_seed_from_service;
 
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
+
+pub fn write_public_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
+    if let Err(status) =
+        rewrite_on_untrusted(base64::encode(&kp.get_pubkey()).as_slice(), save_path)
+    {
+        return Err(status);
+    }
+
+    Ok(())
+}
+
+pub fn write_master_pub_keys(key_manager: &Keychain) -> SgxResult<()> {
+    let kp = key_manager.seed_exchange_key().unwrap();
+    write_public_key(&kp.current, SEED_EXCH_KEY_SAVE_PATH)?;
+
+    let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
+    write_public_key(&kp.current, IO_KEY_SAVE_PATH)?;
+
+    Ok(())
+}
 
 ///
 /// `ecall_init_bootstrap`
@@ -109,17 +129,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    let kp = key_manager.seed_exchange_key().unwrap();
-    if let Err(status) =
-        create_certificate_from_key(&kp.current, SEED_EXCH_CERTIFICATE_SAVE_PATH, api_key_slice)
-    {
-        return status;
-    }
-
-    let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    if let Err(status) =
-        create_certificate_from_key(&kp.current, IO_CERTIFICATE_SAVE_PATH, api_key_slice)
-    {
+    if let Err(status) = write_master_pub_keys(&key_manager) {
         return status;
     }
 
@@ -334,6 +344,10 @@ pub unsafe extern "C" fn ecall_init_node(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
+    if let Err(status) = write_master_pub_keys(&key_manager) {
+        return status;
+    }
+
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -422,22 +436,4 @@ pub unsafe extern "C" fn ecall_key_gen(
     public_key.clone_from_slice(&pubkey);
     trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
-}
-
-/// create_certificate_from_key takes a keypair and uses IAS to create a signed certificate with the
-/// public key of the keypair in the payload
-pub fn create_certificate_from_key(kp: &KeyPair, save_path: &str, api_key: &[u8]) -> SgxResult<()> {
-    let (_, cert) = match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key, None) {
-        Err(e) => {
-            error!("Error in create_attestation_certificate: {:?}", e);
-            return Err(e);
-        }
-        Ok(res) => res,
-    };
-
-    if let Err(status) = write_to_untrusted(cert.as_slice(), save_path) {
-        return Err(status);
-    }
-
-    Ok(())
 }
