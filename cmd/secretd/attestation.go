@@ -150,20 +150,20 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 			userHome, _ := os.UserHomeDir()
 
 			// Load consensus_seed_exchange_pubkey
-			var cert []byte
+			var key []byte
 			if len(args) >= 1 {
-				cert, err = os.ReadFile(args[0])
+				key, err = os.ReadFile(args[0])
 				if err != nil {
 					return err
 				}
 			} else {
-				cert, err = os.ReadFile(filepath.Join(userHome, reg.NodeExchMasterCertPath))
+				key, err = os.ReadFile(filepath.Join(userHome, reg.NodeExchMasterKeyPath))
 				if err != nil {
 					return err
 				}
 			}
 
-			pubkey, err := ra.UNSAFE_VerifyRaCert(cert)
+			pubkey, err := base64.StdEncoding.DecodeString(string(key))
 			if err != nil {
 				return err
 			}
@@ -180,16 +180,17 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			// Load consensus_io_exchange_pubkey
 			if len(args) == 2 {
-				cert, err = os.ReadFile(args[1])
+				key, err = os.ReadFile(args[1])
 				if err != nil {
 					return err
 				}
 			} else {
-				cert, err = os.ReadFile(filepath.Join(userHome, reg.IoExchMasterCertPath))
+				key, err = os.ReadFile(filepath.Join(userHome, reg.IoExchMasterKeyPath))
 				if err != nil {
 					return err
 				}
 			}
+
 			regGenState.IoMasterCertificate.Bytes = cert
 
 			// Create genesis state from certificates
@@ -242,12 +243,12 @@ func ParseCert() *cobra.Command {
 
 func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "configure-secret [master-cert] [seed]",
-		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted " +
+		Use: "configure-secret [master-key] [seed]",
+		Short: "After registration is successful, configure the secret node with the master key file and the encrypted " +
 			"seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cert, err := os.ReadFile(args[0])
+			masterKey, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
 			}
@@ -259,10 +260,9 @@ func ConfigureSecret() *cobra.Command {
 				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
 			}
 
-			
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
-				MasterCert:   base64.StdEncoding.EncodeToString(cert),
+				MasterKey:    string(masterKey),
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)
@@ -510,7 +510,7 @@ Please report any issues with this command
 			if len(seed) > 2 {
 				seed = seed[2:]
 			}
-			
+
 			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
 				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 148 without 0x prefix)")
 			}

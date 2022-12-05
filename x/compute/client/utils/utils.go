@@ -188,12 +188,12 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 
 func (ctx WASMContext) OfflineEncrypt(plaintext []byte, pathToMasterIoKey string) ([]byte, error) {
 	// parse coins trying to be sent
-	cert, err := os.ReadFile(pathToMasterIoKey)
+	key, err := os.ReadFile(pathToMasterIoKey)
 	if err != nil {
 		return nil, err
 	}
 
-	pubkey, err := ra.UNSAFE_VerifyRaCert(cert)
+	pubkey, err := base64.StdEncoding.DecodeString(string(key))
 	if err != nil {
 		return nil, err
 	}

@@ -18,8 +18,8 @@ const (
 )
 
 const (
-	NodeExchMasterCertPath = "node-master-cert.der"
-	IoExchMasterCertPath   = "io-master-cert.der"
+	NodeExchMasterKeyPath = "node-master-key.txt"
+	IoExchMasterKeyPath   = "io-master-key.txt"
 )
 
 const AttestationCertPath = "attestation_cert.der"

@@ -25,8 +25,8 @@ const (
 	EncryptedKeyLength         = types.EncryptedKeyLength
 	LegacyEncryptedKeyLength   = types.LegacyEncryptedKeyLength
 	AttestationCertPath        = types.AttestationCertPath
-	IoExchMasterCertPath       = types.IoExchMasterCertPath
-	NodeExchMasterCertPath     = types.NodeExchMasterCertPath
+	IoExchMasterKeyPath        = types.IoExchMasterKeyPath
+	NodeExchMasterKeyPath      = types.NodeExchMasterKeyPath
 )
 
 var (
