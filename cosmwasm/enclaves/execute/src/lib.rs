@@ -14,8 +14,6 @@ pub use enclave_contract_engine;
 pub mod registration;
 mod tests;
 
-pub const APP_VERSION: u16 = 0;
-
 #[cfg(feature = "production")]
 #[ctor]
 fn init_logger() {

@@ -3,21 +3,16 @@ package keeper
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
-
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	channelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v3/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
@@ -684,50 +679,6 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	return contractKey
-}
-
-func (k Keeper) GetNewConsensusSeed(seedId uint32) error {
-	apiKeyFile, err := reg.GetApiKey()
-	if err != nil {
-		return fmt.Errorf("failed to initialize enclave: %w", err)
-	}
-
-	seed, err := api.GetNewConsensusSeed(seedId, apiKeyFile)
-	if err != nil {
-		return err
-	}
-
-	legacySeedFilePath := filepath.Join(k.homeDir, reg.SecretNodeCfgFolder, reg.LegacySecretNodeSeedConfig)
-
-	fileContent, err := os.ReadFile(legacySeedFilePath)
-	if err != nil {
-		return err
-	}
-
-	var prevSeedConfig reg.SeedConfig
-
-	err = json.Unmarshal(fileContent, &prevSeedConfig)
-	if err != nil {
-		return err
-	}
-
-	cfg := reg.SeedConfig{
-		EncryptedKey: hex.EncodeToString(seed),
-		MasterCert:   prevSeedConfig.MasterCert,
-	}
-
-	cfgBytes, err := json.Marshal(&cfg)
-	if err != nil {
-		return err
-	}
-
-	seedFilePath := filepath.Join(k.homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-	err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {

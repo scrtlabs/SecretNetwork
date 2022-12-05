@@ -58,7 +58,7 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
+func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) ([]byte, error) {
 	pkSlice := sendSlice(masterCert)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
@@ -67,11 +67,11 @@ func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, err
 	defer freeAfterSend(apiKeySlice)
 	errmsg := C.Buffer{}
 
-	_, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
+	res, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
 	if err != nil {
-		return false, errorWithMessage(err, errmsg)
+		return nil, errorWithMessage(err, errmsg)
 	}
-	return true, nil
+	return receiveVector(res), nil
 }
 
 type Querier = types.Querier
@@ -106,19 +106,6 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 		return err
 	}
 	return nil
-}
-
-func GetNewConsensusSeed(seedId uint32, apiKey []byte) ([]byte, error) {
-	errmsg := C.Buffer{}
-	apiKeySlice := sendSlice(apiKey)
-	defer freeAfterSend(apiKeySlice)
-
-	res, err := C.get_new_consensus_seed(u32(seedId), apiKeySlice, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
-	}
-
-	return receiveVector(res), nil
 }
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {

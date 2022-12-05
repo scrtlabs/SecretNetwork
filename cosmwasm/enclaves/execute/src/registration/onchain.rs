@@ -67,26 +67,15 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             &target_public_key.to_vec()
         );
 
-        #[cfg(not(feature = "use_seed_service"))]
-        {
-            let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis)
-                .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+        let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis)
+            .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
-            let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current)
-                .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+        let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current)
+            .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
-            res.extend(&res_current);
+        res.extend(&res_current);
 
-            Ok(res)
-        }
-
-        #[cfg(feature = "use_seed_service")]
-        {
-            let res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis)
-                .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
-
-            Ok(res)
-        }
+        Ok(res)
     });
 
     if let Err(_err) = oom_handler::restore_safety_buffer() {
