@@ -302,6 +302,8 @@ pub enum StdCosmWasmMsg {
         label: String,
         callback_sig: Option<Vec<u8>>,
     },
+    #[serde(other)]
+    Other,
 }
 
 impl StdCosmWasmMsg {
@@ -362,6 +364,7 @@ impl StdCosmWasmMsg {
                     callback_sig,
                 })
             }
+            Self::Other => Ok(CosmWasmMsg::Other),
         }
     }
 }
