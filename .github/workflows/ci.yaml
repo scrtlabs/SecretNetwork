@@ -211,6 +211,8 @@ jobs:
           rustup component add rust-src clippy
           cd cosmwasm/enclaves/execute/
           rustup component add rust-src clippy
+          cd - && cd check-hw
+          rustup component add rust-src clippy
       - name: Install xargo
         run: |
           cd cosmwasm/enclaves/execute/
@@ -226,7 +228,8 @@ jobs:
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
-          cd cosmwasm/enclaves/execute/
+          mkdir -p ias_keys/production
+          echo "not_a_key" > ias_keys/production/api_key.txt
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
