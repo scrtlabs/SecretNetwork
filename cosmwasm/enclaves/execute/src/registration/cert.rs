@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
 use bit_vec::BitVec;
-use chrono::{Duration, TimeZone};
 use chrono::Utc as TzUtc;
+use chrono::{Duration, TimeZone};
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 use num_bigint::BigUint;
@@ -16,7 +16,7 @@ use std::str;
 use std::time::{SystemTime, UNIX_EPOCH};
 use yasna::models::ObjectIdentifier;
 
-use enclave_crypto::consts::{CERTEXPIRYDAYS, SigningMethod};
+use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS};
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
 use enclave_ffi_types::NodeAuthResult;
@@ -353,7 +353,7 @@ pub fn verify_ra_cert(
 pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
-) -> Result<(), NodeAuthResult> {
+) -> Result<NodeAuthResult, NodeAuthResult> {
     // info!(
     //     "Got GID: {:?}",
     //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
@@ -373,7 +373,7 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
             check_advisories(&report.sgx_quote_status, advisories)?;
 
-            Ok(())
+            Ok(NodeAuthResult::Success)
         }
         _ => {
             error!(
@@ -391,7 +391,7 @@ pub fn verify_quote_status(
 pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
-) -> Result<(), NodeAuthResult> {
+) -> Result<NodeAuthResult, NodeAuthResult> {
     match &report.sgx_quote_status {
         SgxQuoteStatus::OK
         | SgxQuoteStatus::SwHardeningNeeded
@@ -399,15 +399,16 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::GroupOutOfDate => {
             let results = check_advisories(&report.sgx_quote_status, advisories);
 
-            if results.is_err() {
+            if let Err(results) = results {
                 warn!("This platform has vulnerabilities that will not be approved on mainnet");
+                return Ok(results); // Allow in non-production
             }
 
             // if !advisories.contains_lvi_injection() {
             //     return Err(NodeAuthResult::EnclaveQuoteStatus);
             // }
 
-            Ok(())
+            Ok(NodeAuthResult::Success)
         }
         _ => {
             error!(
@@ -477,7 +478,7 @@ pub mod tests {
 
     use super::verify_ra_cert;
 
-// #[cfg(feature = "SGX_MODE_HW")]
+    // #[cfg(feature = "SGX_MODE_HW")]
     // fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
     //     let mut cert = vec![];
     //     let mut f =

@@ -189,6 +189,41 @@ jobs:
           name: secretcli-MacOS-arm64
           path: secretcli-MacOS-arm64
 
+  check-hw-tool:
+    runs-on: ubuntu-20.04
+    env: # Or as an environment variable
+      SPID: ${{ secrets.SPID_MAINNET }}
+      API_KEY: ${{ secrets.API_KEY_MAINNET }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - name: Build check-hw-tool image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          load: true
+          tags: check_hw_tool_build
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_MAINNET }}
+            SPID=${{ secrets.SPID_MAINNET }}
+          build-args: |
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: compile-check-hw-tool
+      - name: Run check-hw-tool image
+        run: |
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
+          cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+      - uses: actions/upload-artifact@v3
+        with:
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+          path: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+
   publish-localsecret:
     runs-on: ubuntu-20.04
     env:
@@ -229,7 +264,13 @@ jobs:
 
   Release:
     needs:
-      [native-build-cli, build-deb-testnet, build-deb-mainnet, MacOS-ARM64-CLI]
+      [
+        native-build-cli,
+        build-deb-testnet,
+        build-deb-mainnet,
+        MacOS-ARM64-CLI,
+        check-hw-tool,
+      ]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -260,6 +301,9 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
+      - uses: actions/download-artifact@v3
+        with:
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
@@ -273,3 +317,4 @@ jobs:
             secretcli-Windows
             secretcli-Linux
             secretcli-MacOS-arm64
+            check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz

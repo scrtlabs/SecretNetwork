@@ -17,6 +17,7 @@ extern "C" {
         retval: *mut sgx_status_t,
         api_key: *const u8,
         api_key_len: u32,
+        dry_run: u8,
     ) -> sgx_status_t;
     pub fn ecall_authenticate_new_node(
         eid: sgx_enclave_id_t,
@@ -138,7 +139,7 @@ pub extern "C" fn ocall_get_update_info(
     unsafe { sgx_report_attestation_status(platform_blob, enclave_trusted, update_info) }
 }
 
-pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
+pub fn create_attestation_report_u(api_key: &[u8], dry_run: bool) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -149,7 +150,13 @@ pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let status = unsafe {
-        ecall_get_attestation_report(eid, &mut retval, api_key.as_ptr(), api_key.len() as u32)
+        ecall_get_attestation_report(
+            eid,
+            &mut retval,
+            api_key.as_ptr(),
+            api_key.len() as u32,
+            dry_run.into(),
+        )
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
@@ -203,9 +210,9 @@ pub fn untrusted_get_encrypted_seed(
 
 #[cfg(test)]
 mod test {
-    use crate::attestation::retry_quote;
-    use crate::esgx::general::init_enclave_wrapper;
-    use crate::instance::init_enclave as init_enclave_wrapper;
+    // use crate::attestation::retry_quote;
+    // use crate::esgx::general::init_enclave_wrapper;
+    // use crate::instance::init_enclave as init_enclave_wrapper;
 
     // isans SPID = "3DDB338BD52EE314B01F1E4E1E84E8AA"
     // victors spid = 68A8730E9ABF1829EA3F7A66321E84D0

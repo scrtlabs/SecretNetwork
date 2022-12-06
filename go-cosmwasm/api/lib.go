@@ -28,6 +28,7 @@ type (
 	u8_ptr = *C.uint8_t
 	usize  = C.uintptr_t
 	cint   = C.int
+	cbool  = C.bool
 )
 
 type Cache struct {
@@ -293,12 +294,12 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(apiKey []byte) (bool, error) {
+func CreateAttestationReport(apiKey []byte, dryRun bool) (bool, error) {
 	errmsg := C.Buffer{}
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.create_attestation_report(apiKeySlice, &errmsg)
+	_, err := C.create_attestation_report(apiKeySlice, &errmsg, cbool(dryRun))
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}
