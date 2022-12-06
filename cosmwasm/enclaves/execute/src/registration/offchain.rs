@@ -140,7 +140,7 @@ pub unsafe extern "C" fn ecall_init_node(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+    let _api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
 
