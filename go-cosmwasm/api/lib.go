@@ -12,7 +12,9 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 )
 
 // nice aliases to the rust names
@@ -56,14 +58,16 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
+func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
 	pkSlice := sendSlice(masterCert)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
 	defer freeAfterSend(seedSlice)
+	apiKeySlice := sendSlice(apiKey)
+	defer freeAfterSend(apiKeySlice)
 	errmsg := C.Buffer{}
 
-	_, err := C.init_node(pkSlice, seedSlice, &errmsg)
+	_, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}
@@ -90,11 +94,11 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
-func InitEnclaveRuntime(ModuleCacheSize uint8) error {
+func InitEnclaveRuntime(moduleCacheSize uint16) error {
 	errmsg := C.Buffer{}
 
 	config := C.EnclaveRuntimeConfig{
-		module_cache_size: u8(ModuleCacheSize),
+		module_cache_size: u32(moduleCacheSize),
 	}
 	_, err := C.configure_enclave_runtime(config, &errmsg)
 	if err != nil {
@@ -159,10 +163,10 @@ func Instantiate(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// This is done in order to ensure that goroutines don't
-	// swap threads between recursive calls to the enclave.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
 
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -183,6 +187,7 @@ func Handle(
 	querier *Querier,
 	gasLimit uint64,
 	sigInfo []byte,
+	handleType types.HandleType,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -204,54 +209,12 @@ func Handle(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// This is done in order to ensure that goroutines don't
-	// swap threads between recursive calls to the enclave.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
 
-	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
-	}
-	return receiveVector(res), uint64(gasUsed), nil
-}
-
-func Migrate(
-	cache Cache,
-	code_id []byte,
-	params []byte,
-	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
-	querier *Querier,
-	gasLimit uint64,
-) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	defer freeAfterSend(id)
-	p := sendSlice(params)
-	defer freeAfterSend(p)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
-
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
-
-	dbState := buildDBState(store, counter)
-	db := buildDB(&dbState, gasMeter)
-	a := buildAPI(api)
-	q := buildQuerier(querier)
-	var gasUsed u64
-	errmsg := C.Buffer{}
-
-	// This is done in order to ensure that goroutines don't
-	// swap threads between recursive calls to the enclave.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, u8(handleType))
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -288,10 +251,10 @@ func Query(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// This is done in order to ensure that goroutines don't
-	// swap threads between recursive calls to the enclave.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
 
 	res, err := C.query(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -299,6 +262,24 @@ func Query(
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
+}
+
+func AnalyzeCode(
+	cache Cache,
+	codeHash []byte,
+) (*v1types.AnalysisReport, error) {
+	cs := sendSlice(codeHash)
+	defer runtime.KeepAlive(codeHash)
+	errMsg := C.Buffer{}
+	report, err := C.analyze_code(cache.ptr, cs, &errMsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errMsg)
+	}
+	res := v1types.AnalysisReport{
+		HasIBCEntryPoints: bool(report.has_ibc_entry_points),
+		RequiredFeatures:  string(receiveVector(report.required_features)),
+	}
+	return &res, nil
 }
 
 // KeyGen Send KeyGen request to enclave
@@ -312,14 +293,12 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
+func CreateAttestationReport(apiKey []byte) (bool, error) {
 	errmsg := C.Buffer{}
-	spidSlice := sendSlice(spid)
-	defer freeAfterSend(spidSlice)
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.create_attestation_report(spidSlice, apiKeySlice, &errmsg)
+	_, err := C.create_attestation_report(apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

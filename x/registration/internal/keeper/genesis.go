@@ -5,11 +5,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 )
 
 // InitGenesis sets supply information for genesis.
-//
 func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	if data.IoMasterCertificate != nil && data.NodeExchMasterCertificate != nil {
 		// keeper.setMasterPublicKey(ctx, data.MasterPublic)

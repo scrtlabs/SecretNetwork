@@ -11,8 +11,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
+	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
 // Keeper will have a reference to Wasmer with it's own data directory.
@@ -40,6 +40,11 @@ func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
+	apiKey, err := types.GetApiKey()
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
 	if !fileExists(seedPath) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
 	}
@@ -47,6 +52,9 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	// get PK from CLI
 	// get encrypted master key
 	byteValue, err := getFile(seedPath)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
 
 	var seedCfg types.SeedConfig
 
@@ -65,12 +73,10 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	_, err = enclave.LoadSeed(cert, enc)
+	_, err = enclave.LoadSeed(cert, enc, apiKey)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
-
-	return
 }
 
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
@@ -154,7 +160,7 @@ func validateSeedParams(config types.SeedConfig) error {
 		return err
 	}
 
-	res, err = ra.VerifyRaCert(res)
+	_, err = ra.VerifyRaCert(res)
 	if err != nil {
 		return err
 	}

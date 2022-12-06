@@ -1,0 +1,49 @@
+run:
+  tests: false
+  #   # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - depguard
+    - dogsled
+    - exportloopref
+    - errcheck
+    - goconst
+    - gocritic
+    - gofumpt
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - staticcheck
+    - stylecheck
+    - revive
+    - typecheck
+    - unconvert
+    - misspell
+    - nolintlint
+
+issues:
+  exclude:
+    - "undeclared name: `Asset`"
+  exclude-rules:
+    - text: "var-naming"
+      linters:
+        - revive
+    - text: "ST1003:"
+      linters:
+        - stylecheck
+    - text: "commentFormatting"
+      linters:
+        - stylecheck
+        - gocritic
+    - text: "dupSubExpr"
+      linters:
+        - gocritic
+    - text: "// nolint` should be written without leading space as `//nolint"
+      linters:
+        - nolintlint

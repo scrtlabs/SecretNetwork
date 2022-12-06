@@ -1,15 +1,18 @@
 package keeper
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"os"
+	"path/filepath"
 
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
 	protoio "github.com/gogo/protobuf/io"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
@@ -51,14 +54,16 @@ type ExtensionSnapshotter interface {
 var _ snapshottypes.ExtensionSnapshotter = (*WasmSnapshotter)(nil)
 
 type WasmSnapshotter struct {
-	cms    storetypes.MultiStore
-	keeper *Keeper
+	cms           storetypes.MultiStore
+	keeper        *Keeper
+	wasmDirectory string
 }
 
-func NewWasmSnapshotter(cms storetypes.MultiStore, keeper *Keeper) *WasmSnapshotter {
+func NewWasmSnapshotter(cms storetypes.MultiStore, keeper *Keeper, wasmDirectory string) *WasmSnapshotter {
 	return &WasmSnapshotter{
-		cms:    cms,
-		keeper: keeper,
+		cms:           cms,
+		keeper:        keeper,
+		wasmDirectory: wasmDirectory,
 	}
 }
 
@@ -102,7 +107,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 		seen[hexHash] = true
 
 		// load code and abort on error
-		wasmBytes, err := ws.keeper.GetByteCode(ctx, id)
+		wasmBytes, err := ws.keeper.GetWasm(ctx, id)
 		if err != nil {
 			rerr = err
 			return true
@@ -143,13 +148,15 @@ func (ws *WasmSnapshotter) Restore(
 			return item, nil
 		}
 
-		wasmCode := payload.Payload
+		wasmBytes := payload.Payload
 
-		// Store the WASM bytes using the existing API
-		// FIXME: check which codeIDs the checksum matches??
-		_, err = ws.keeper.wasmer.Create(wasmCode)
+		codeHash := sha256.Sum256(wasmBytes)
+		wasmFileName := hex.EncodeToString(codeHash[:])
+		wasmFilePath := filepath.Join(ws.wasmDirectory, wasmFileName)
+
+		err = os.WriteFile(wasmFilePath, wasmBytes, 0o600 /* -rw------- */)
 		if err != nil {
-			return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+			return snapshottypes.SnapshotItem{}, sdkerrors.Wrapf(err, "failed to write wasm file '%v' to disk", wasmFilePath)
 		}
 	}
 }

@@ -5,20 +5,21 @@ import (
 	"compress/gzip"
 	"errors"
 	"io"
-	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 func TestUncompress(t *testing.T) {
-	wasmRaw, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmRaw, err := os.ReadFile(filepath.Join(".", contractPath, "test_gzip_contract_raw.wasm"))
 	require.NoError(t, err)
 
-	wasmGzipped, err := ioutil.ReadFile("./testdata/contract.wasm.gzip")
+	wasmGzipped, err := os.ReadFile(filepath.Join(".", contractPath, "test_gzip_contract.wasm.gz"))
 	require.NoError(t, err)
 
 	specs := map[string]struct {

@@ -60,7 +60,7 @@ fn as_base64<S>(key: &[u8], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&base64::encode(&key[..]))
+    serializer.serialize_str(&base64::encode(key))
 }
 
 fn from_base64<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
@@ -532,10 +532,10 @@ impl SgxQuote {
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00615"];
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00615"];
 
 lazy_static! {
     static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
@@ -585,7 +585,7 @@ pub struct AttestationReport {
     /// Content of the quote
     pub sgx_quote_body: SgxQuote,
     pub platform_info_blob: Option<Vec<u8>>,
-    pub advisroy_ids: AdvisoryIDs,
+    pub advisory_ids: AdvisoryIDs,
 }
 
 impl AttestationReport {
@@ -595,8 +595,6 @@ impl AttestationReport {
     // just unused in SW mode
     #[allow(dead_code)]
     pub fn from_cert(cert: &[u8]) -> Result<Self, Error> {
-        // Before we reach here, Webpki already verifed the cert is properly signed.
-
         let payload = get_netscape_comment(cert).map_err(|_err| {
             error!("Failed to get netscape comment");
             Error::ReportParseError
@@ -619,8 +617,7 @@ impl AttestationReport {
             .map(|cert| cert.to_trust_anchor())
             .collect();
 
-        let mut chain: Vec<&[u8]> = Vec::new();
-        chain.push(&ias_cert);
+        let chain: Vec<&[u8]> = vec![&ias_cert];
 
         // set as 04.11.23(dd.mm.yy) - should be valid for the foreseeable future, and not rely on SystemTime
         let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1_699_088_856);
@@ -718,7 +715,7 @@ impl AttestationReport {
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,
-            advisroy_ids: AdvisoryIDs(advisories),
+            advisory_ids: AdvisoryIDs(advisories),
         })
     }
 }

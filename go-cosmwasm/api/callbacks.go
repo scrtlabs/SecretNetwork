@@ -16,7 +16,7 @@ typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t 
 // and api
 typedef GoResult (*humanize_address_fn)(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
 typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
-typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
+typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, uint32_t query_depth, Buffer *result, Buffer *errOut);
 
 // forward declarations (db)
 GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
@@ -29,7 +29,7 @@ GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, 
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
 // and querier
-GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, uint32_t query_depth, Buffer *result, Buffer *errOut);
 
 
 */
@@ -44,7 +44,7 @@ import (
 
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 )
 
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),
@@ -122,9 +122,10 @@ type DBState struct {
 }
 
 // use this to create C.DB in two steps, so the pointer lives as long as the calling stack
-//   state := buildDBState(kv, counter)
-//   db := buildDB(&state, &gasMeter)
-//   // then pass db into some FFI function
+//
+//	state := buildDBState(kv, counter)
+//	db := buildDB(&state, &gasMeter)
+//	// then pass db into some FFI function
 func buildDBState(kv KVStore, counter uint64) DBState {
 	return DBState{
 		Store:           kv,
@@ -393,7 +394,7 @@ func buildQuerier(q *Querier) C.GoQuerier {
 }
 
 //export cQueryExternal
-func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.Buffer, result *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.Buffer, queryDepth C.uint32_t, result *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || usedGas == nil || result == nil {
 		// we received an invalid pointer
@@ -405,7 +406,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 	req := receiveSlice(request)
 
 	gasBefore := querier.GasConsumed()
-	res := types.RustQuery(querier, req, uint64(gasLimit))
+	res := types.RustQuery(querier, req, uint32(queryDepth), uint64(gasLimit))
 	gasAfter := querier.GasConsumed()
 	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 

@@ -3,7 +3,7 @@ package keeper
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,8 +13,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	wasmTypes "github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 type Recurse struct {
@@ -44,14 +44,20 @@ type recurseResponse struct {
 var totalWasmQueryCounter int
 
 func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, ctx sdk.Context, keeper Keeper) {
-	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error)
+	var realWasmQuerier func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error)
 	countingQuerier := &QueryPlugins{
-		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery) ([]byte, error) {
+		Wasm: func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
 			totalWasmQueryCounter++
-			return realWasmQuerier(ctx, request)
+			return realWasmQuerier(ctx, request, queryDepth)
 		},
 	}
-	encoders := DefaultEncoders()
+
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource types.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, countingQuerier)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 	realWasmQuerier = WasmQuerier(&keeper)
@@ -60,7 +66,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	creator, creatorPriv := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// store the code
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
@@ -75,7 +81,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, string(initMsgBz), true, defaultGasForTests)
+	_, _, contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, string(initMsgBz), true, false, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	return contractAddr, creator, ctx, keeper
@@ -124,7 +130,7 @@ func TestGasCostOnQuery(t *testing.T) {
 			expectedGas: 2*GasWork50 + GasReturnHashed,
 		},
 		"recursion 4, some work": {
-			gasLimit: 400_000,
+			gasLimit: 600_000,
 			msg: Recurse{
 				Depth: 4,
 				Work:  50,
@@ -149,9 +155,12 @@ func TestGasCostOnQuery(t *testing.T) {
 			recurse := tc.msg
 			recurse.Contract = contractAddr
 
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
 
-			data, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
+
+			data, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 			require.Empty(t, qErr)
 
 			// check the gas is what we expected
@@ -163,7 +172,7 @@ func TestGasCostOnQuery(t *testing.T) {
 
 			// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
 			var resp recurseResponse
-			err := json.Unmarshal([]byte(data), &resp)
+			err = json.Unmarshal([]byte(data), &resp)
 			require.NoError(t, err)
 			if recurse.Work == 0 {
 				assert.Equal(t, len(resp.Hashed), len(creator.String()))
@@ -194,7 +203,7 @@ func TestGasOnExternalQuery(t *testing.T) {
 		},
 		"recursion 4, plenty gas": {
 			// this uses 244708 gas
-			gasLimit: 400_000,
+			gasLimit: 600_000,
 			msg: Recurse{
 				Depth: 4,
 				Work:  50,
@@ -227,14 +236,18 @@ func TestGasOnExternalQuery(t *testing.T) {
 
 			recurse := tc.msg
 			recurse.Contract = contractAddr
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
+
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
 
 			secretMsg := types.SecretMsg{
-				CodeHash: []byte(hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr))),
+				CodeHash: []byte(hex.EncodeToString(codeHash)),
 				Msg:      msg,
 			}
 
-			msg, err := wasmCtx.Encrypt(secretMsg.Serialize())
+			msg, err = wasmCtx.Encrypt(secretMsg.Serialize())
 			require.NoError(t, err)
 
 			// do the query
@@ -300,14 +313,14 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			expectOOM:                 false,
 			expectRecursionLimit:      false,
 		},
-		"recursion 9, lots of work": {
+		"recursion 11, lots of work": {
 			gasLimit: 4_000_000,
 			msg: Recurse{
-				Depth: 9,
+				Depth: 11,
 				Work:  2000,
 			},
-			expectQueriesFromContract: 9,
-			expectedGas:               GasWork2k + 9*(GasWork2k+GasReturnHashed),
+			expectQueriesFromContract: 11,
+			expectedGas:               GasWork2k + 11*(GasWork2k+GasReturnHashed),
 			expectOutOfGas:            false,
 			expectOOM:                 false,
 			expectRecursionLimit:      true,
@@ -317,7 +330,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 		// however, if we don't charge the cpu gas before sub-dispatching, we can recurse over 20 times
 		// TODO: figure out how to asset how deep it went
 		"deep recursion, should die on 5th level": {
-			gasLimit: 1_200_000,
+			gasLimit: 1_400_000,
 			msg: Recurse{
 				Depth: 50,
 				Work:  2000,
@@ -343,12 +356,16 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			// prepare the query
 			recurse := tc.msg
 			recurse.Contract = contractAddr
-			msg := buildQuery(t, recurse, hex.EncodeToString(keeper.GetContractHash(ctx, contractAddr)))
+
+			codeHash, err := keeper.GetContractHash(ctx, contractAddr)
+			require.NoError(t, err)
+
+			msg := buildQuery(t, recurse, hex.EncodeToString(codeHash))
 
 			// if we expect out of gas, make sure this panics
 			if tc.expectOutOfGas {
 				require.Panics(t, func() {
-					_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+					_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 					t.Logf("Got error not panic: %#v", qErr)
 				})
 				assert.Equal(t, tc.expectQueriesFromContract, totalWasmQueryCounter)
@@ -357,7 +374,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 
 			// if we expect out of memory
 			if tc.expectOOM {
-				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 				require.NotEmpty(t, qErr)
 				require.NotNil(t, qErr.GenericErr)
 				require.Contains(t, qErr.GenericErr.Msg, "Execution error: Enclave: enclave ran out of heap memory")
@@ -365,7 +382,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			}
 
 			if tc.expectRecursionLimit {
-				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+				_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 				require.NotEmpty(t, qErr)
 				require.NotNil(t, qErr.GenericErr)
 				require.Contains(t, qErr.GenericErr.Msg, "Querier system error: Query recursion limit exceeded")
@@ -373,7 +390,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			}
 
 			// otherwise, we expect a successful call
-			_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, tc.gasLimit)
+			_, qErr := queryHelper(t, keeper, ctx, contractAddr, string(msg), true, false, tc.gasLimit)
 			require.Empty(t, qErr)
 			// assert.Equal(t, tc.expectedGas, ctx.GasMeter().GasConsumed())
 

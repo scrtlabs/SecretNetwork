@@ -1,5 +1,0 @@
-chain-id = "secretdev-1"
-#indent = true
-keyring-backend = "test"
-output = "json"
-trust-node = true

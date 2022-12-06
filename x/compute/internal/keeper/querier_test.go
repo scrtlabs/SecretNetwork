@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,11 +16,16 @@ import (
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 func TestQueryContractLabel(t *testing.T) {
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource types.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -29,7 +34,7 @@ func TestQueryContractLabel(t *testing.T) {
 	creator, privCreator := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -43,7 +48,10 @@ func TestQueryContractLabel(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	hash := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	hash := codeInfo.CodeHash
 
 	msg := types.SecretMsg{
 		CodeHash: []byte(hex.EncodeToString(hash)),
@@ -57,7 +65,7 @@ func TestQueryContractLabel(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, contractID, deposit)
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, label, deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, label, deposit, nil)
 	require.NoError(t, err)
 
 	// this gets us full error, not redacted sdk.Error
@@ -116,7 +124,12 @@ func TestQueryContractLabel(t *testing.T) {
 func TestQueryContractState(t *testing.T) {
 	t.SkipNow() // cannot interact directly with state
 
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource types.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -125,7 +138,7 @@ func TestQueryContractState(t *testing.T) {
 	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	contractID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -139,7 +152,10 @@ func TestQueryContractState(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	key := keeper.GetCodeInfo(ctx, contractID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, contractID)
+	require.NoError(t, err)
+
+	key := codeInfo.CodeHash
 	keyStr := hex.EncodeToString(key)
 
 	msg := types.SecretMsg{
@@ -149,7 +165,7 @@ func TestQueryContractState(t *testing.T) {
 
 	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 
-	addr, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, "demo contract to query", deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, "demo contract to query", deposit, nil)
 	require.NoError(t, err)
 
 	contractModel := []types.Model{
@@ -252,7 +268,12 @@ func TestQueryContractState(t *testing.T) {
 }
 
 func TestListContractByCodeOrdering(t *testing.T) {
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource types.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -261,7 +282,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
-	wasmCode, err := ioutil.ReadFile("./testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
 
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
@@ -275,7 +296,10 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	key := keeper.GetCodeInfo(ctx, codeID).CodeHash
+	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
+	require.NoError(t, err)
+
+	key := codeInfo.CodeHash
 	keyStr := hex.EncodeToString(key)
 
 	msg := types.SecretMsg{
@@ -306,8 +330,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		require.NoError(t, err)
 
 		instantiateMsg := types.MsgInstantiateContract{
-			Sender: creator,
-			// Admin:     nil,
+			Sender:    creator,
 			CodeID:    codeID,
 			Label:     fmt.Sprintf("contract %d", i),
 			InitMsg:   initMsgBz,
@@ -320,7 +343,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 		ctx = ctx.WithTxBytes(txBytes)
 
-		_, err = keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
+		_, _, err = keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
 		require.NoError(t, err)
 	}
 
@@ -339,112 +362,9 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	for i, contract := range contracts {
 		require.Equal(t, fmt.Sprintf("contract %d", i), contract.Label)
-		require.NotEmpty(t, contract.Address)
+		require.NotEmpty(t, contract.ContractAddress)
 		// ensure these are not shown
 		// assert.Nil(t, contract.InitMsg)
 		assert.Nil(t, contract.Created)
 	}
 }
-
-/*
-func TestQueryContractHistory(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keepers := CreateTestInput(t, false, tempDir, SupportedFeatures, nil, nil)
-	keeper := keepers.WasmKeeper
-
-	var (
-		otherAddr sdk.AccAddress = bytes.Repeat([]byte{0x2}, sdk.AddrLen)
-	)
-
-	specs := map[string]struct {
-		srcQueryAddr sdk.AccAddress
-		srcHistory   []types.ContractCodeHistoryEntry
-		expContent   []types.ContractCodeHistoryEntry
-	}{
-		"response with internal fields cleared": {
-			srcHistory: []types.ContractCodeHistoryEntry{{
-				Operation: types.GenesisContractCodeHistoryType,
-				CodeID:    1,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"init message"`),
-			}},
-			expContent: []types.ContractCodeHistoryEntry{{
-				Operation: types.GenesisContractCodeHistoryType,
-				CodeID:    1,
-				Msg:       []byte(`"init message"`),
-			}},
-		},
-		"response with multiple entries": {
-			srcHistory: []types.ContractCodeHistoryEntry{{
-				Operation: types.InitContractCodeHistoryType,
-				CodeID:    1,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"init message"`),
-			}, {
-				Operation: types.MigrateContractCodeHistoryType,
-				CodeID:    2,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"migrate message 1"`),
-			}, {
-				Operation: types.MigrateContractCodeHistoryType,
-				CodeID:    3,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"migrate message 2"`),
-			}},
-			expContent: []types.ContractCodeHistoryEntry{{
-				Operation: types.InitContractCodeHistoryType,
-				CodeID:    1,
-				Msg:       []byte(`"init message"`),
-			}, {
-				Operation: types.MigrateContractCodeHistoryType,
-				CodeID:    2,
-				Msg:       []byte(`"migrate message 1"`),
-			}, {
-				Operation: types.MigrateContractCodeHistoryType,
-				CodeID:    3,
-				Msg:       []byte(`"migrate message 2"`),
-			}},
-		},
-		"unknown contract address": {
-			srcQueryAddr: otherAddr,
-			srcHistory: []types.ContractCodeHistoryEntry{{
-				Operation: types.GenesisContractCodeHistoryType,
-				CodeID:    1,
-				Updated:   types.NewAbsoluteTxPosition(ctx),
-				Msg:       []byte(`"init message"`),
-			}},
-			expContent: nil,
-		},
-	}
-	for msg, spec := range specs {
-		t.Run(msg, func(t *testing.T) {
-			_, _, myContractAddr := keyPubAddr()
-			keeper.appendToContractHistory(ctx, myContractAddr, spec.srcHistory...)
-			q := NewQuerier(keeper)
-			queryContractAddr := spec.srcQueryAddr
-			if queryContractAddr == nil {
-				queryContractAddr = myContractAddr
-			}
-
-			// when
-			query := []string{QueryContractHistory, queryContractAddr.String()}
-			data := abci.RequestQuery{}
-			resData, err := q(ctx, query, data)
-
-			// then
-			require.NoError(t, err)
-			if spec.expContent == nil {
-				require.Nil(t, resData)
-				return
-			}
-			var got []types.ContractCodeHistoryEntry
-			err = json.Unmarshal(resData, &got)
-			require.NoError(t, err)
-
-			assert.Equal(t, spec.expContent, got)
-		})
-	}
-}
-*/

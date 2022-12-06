@@ -12,8 +12,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/keeper"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/gorilla/mux"
 )
@@ -23,14 +23,9 @@ func registerQueryRoutes(cliCtx client.Context, r *mux.Router) {
 	r.HandleFunc("/wasm/code/{codeID}", queryCodeHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/wasm/code/{codeID}/contracts", listContractsByCodeHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/wasm/contract/{contractAddr}", queryContractHandlerFn(cliCtx)).Methods("GET")
-	/*
-		r.HandleFunc("/wasm/contract/{contractAddr}/state", queryContractStateAllHandlerFn(cliCtx)).Methods("GET")
-		r.HandleFunc("/wasm/contract/{contractAddr}/raw/{key}", queryContractStateRawHandlerFn(cliCtx)).Queries("encoding", "{encoding}").Methods("GET")
-	*/
 	r.HandleFunc("/wasm/contract/{contractAddr}/query/{query}", queryContractStateHandlerFn(cliCtx)).Queries("encoding", "{encoding}").Methods("GET")
 	r.HandleFunc("/wasm/code/{codeID}/hash", queryCodeHashHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc("/wasm/contract/{contractAddr}/code-hash", queryContractHashHandlerFn(cliCtx)).Methods("GET")
-	// r.HandleFunc("/wasm/contract/{contractAddr}/history", queryContractHistoryFn(cliCtx)).Methods("GET")
 }
 
 func listCodesHandlerFn(cliCtx client.Context) http.HandlerFunc {
@@ -272,12 +267,12 @@ func queryCodeHashHandlerFn(cliCtx client.Context) http.HandlerFunc {
 
 		err = json.Unmarshal(res, &codeResp)
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("cannot parse as CodeResponse: %v", err))
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("cannot parse as CodeResponse: %s", err.Error()))
 			return
 		}
 
 		cliCtx = cliCtx.WithHeight(height)
-		rest.PostProcessResponse(w, cliCtx, hex.EncodeToString(codeResp.DataHash))
+		rest.PostProcessResponse(w, cliCtx, codeResp.CodeHash)
 	}
 }
 
@@ -309,31 +304,6 @@ func queryContractHashHandlerFn(cliCtx client.Context) http.HandlerFunc {
 		rest.PostProcessResponse(w, cliCtx, hex.EncodeToString(res))
 	}
 }
-
-/*
-func queryContractHistoryFn(cliCtx context.CLIContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		addr, err := sdk.AccAddressFromBech32(mux.Vars(r)["contractAddr"])
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
-		if !ok {
-			return
-		}
-
-		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHistory, addr.String())
-		res, height, err := cliCtx.Query(route)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		cliCtx = cliCtx.WithHeight(height)
-		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
-	}
-}
-*/
 
 type argumentDecoder struct {
 	// dec is the default decoder

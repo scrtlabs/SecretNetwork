@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 // magic bytes to identify gzip.
@@ -28,5 +27,5 @@ func uncompress(src []byte) ([]byte, error) {
 	}
 	zr.Multistream(false)
 
-	return ioutil.ReadAll(io.LimitReader(zr, types.MaxWasmSize))
+	return io.ReadAll(io.LimitReader(zr, types.MaxWasmSize))
 }

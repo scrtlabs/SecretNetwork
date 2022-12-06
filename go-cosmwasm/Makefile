@@ -41,7 +41,7 @@ endif
 
 SGX_COMMON_CFLAGS += -fstack-protector
 
-CUSTOM_EDL_PATH := ../third_party/vendor/sgx_edl/edl
+CUSTOM_EDL_PATH := ../third_party/incubator-teaclave-sgx-sdk/sgx_edl/edl
 App_SRC_Files := $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name '*.rs') \
     $(shell find ../cosmwasm/packages/sgx-vm/ -type f -name 'Cargo.toml') \
     $(shell find ./ -type f -name '*.rs') \
@@ -62,7 +62,7 @@ all: build test
 build: build-rust build-go
 
 .PHONY: build-rust
-build-rust: build-enclave build-query-enclave
+build-rust: build-enclave
 	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features "$(FEATURES_U)"
 	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!

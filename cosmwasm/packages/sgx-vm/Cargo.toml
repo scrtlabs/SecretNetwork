@@ -42,13 +42,12 @@ query-node = []
 
 [dependencies]
 # Uses the path when built locally; uses the given version from crates.io when published
-cosmwasm-std = { path = "../std", package = "secret-cosmwasm-std", version = "0.10.0" }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "0.10" }
 serde_json = "1.0"
 # wasmer-runtime-core = "=0.17.0"
 # wasmer-middleware-common = "=0.17.0"
 # wasmer-clif-backend = { version = "=0.17.0", optional = true }
 # wasmer-singlepass-backend = { version = "=0.17.0", optional = true }
-schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = [
     "derive",
     "alloc"
@@ -64,12 +63,12 @@ lazy_static = "1.4"
 enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
     "build_headers"
 ] }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
-sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
+sgx_types = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_urts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_urts" }
 log = "0.4.8"
 base64 = "0.12.0"
 parking_lot = "0.11"
-num_cpus = "1.13.1"
+num_cpus = "1.14.0"
 
 [dev-dependencies]
 tempfile = "3.1.0"

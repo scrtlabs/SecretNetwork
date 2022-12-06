@@ -15,7 +15,7 @@ const MaxGas = 10_000_000_000
 
 // InstanceCost is how much SDK gas we charge each time we load a WASM instance.
 // Creating a new instance is costly, and this helps put a recursion limit to contracts calling contracts.
-const InstanceCost uint64 = 10_000
+const InstanceCost uint64 = 20_000
 
 // CompileCost is how much SDK gas we charge *per byte* for compiling WASM code.
 const CompileCost uint64 = 2

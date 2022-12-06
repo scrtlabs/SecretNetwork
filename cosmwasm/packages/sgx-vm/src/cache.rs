@@ -1,3 +1,4 @@
+use parity_wasm::elements::deserialize_buffer;
 use std::collections::HashSet;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{Read, Write};
@@ -9,8 +10,9 @@ use std::sync::Mutex;
 use crate::backends::{backend, compile};
 */
 use crate::checksum::Checksum;
-use crate::compatability::check_wasm;
+use crate::compatability::{check_wasm, check_wasm_exports, REQUIRED_IBC_EXPORTS};
 use crate::errors::{VmError, VmResult};
+use crate::features::required_features_from_module;
 use crate::instance::Instance;
 /*
 use crate::modules::FileSystemCache;
@@ -22,6 +24,7 @@ const WASM_DIR: &str = "wasm";
 const MODULES_DIR: &str = "modules";
 */
 
+#[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
 struct Stats {
     hits_module: u32,
@@ -43,6 +46,12 @@ pub struct CosmCache<S: Storage + 'static, A: Api + 'static, Q: Querier + 'stati
     type_storage: PhantomData<S>,
     type_api: PhantomData<A>,
     type_querier: PhantomData<Q>,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct AnalysisReport {
+    pub has_ibc_entry_points: bool,
+    pub required_features: HashSet<String>,
 }
 
 impl<S, A, Q> CosmCache<S, A, Q>
@@ -113,6 +122,35 @@ where
         } else {
             Ok(code)
         }
+    }
+
+    /// Performs static anlyzation on this Wasm without compiling or instantiating it.
+    ///
+    /// Once the contract was stored via [`save_wasm`], this can be called at any point in time.
+    /// It does not depend on any caching of the contract.
+    pub fn analyze(&self, checksum: &Checksum) -> VmResult<AnalysisReport> {
+        // Here we could use a streaming deserializer to slightly improve performance. However, this way it is DRYer.
+        let wasm = self.load_wasm(checksum)?;
+
+        let module = match deserialize_buffer(&wasm) {
+            Ok(deserialized) => deserialized,
+            Err(err) => {
+                return Err(VmError::static_validation_err(format!(
+                    "Wasm bytecode could not be deserialized. Deserialization error: \"{}\"",
+                    err
+                )));
+            }
+        };
+
+        let has_ibc_entry_points = match check_wasm_exports(&module, REQUIRED_IBC_EXPORTS) {
+            Ok(_) => true,
+            Err(_) => false,
+        };
+
+        Ok(AnalysisReport {
+            has_ibc_entry_points,
+            required_features: required_features_from_module(&module),
+        })
     }
 
     /// Returns an Instance tied to a previously saved Wasm.

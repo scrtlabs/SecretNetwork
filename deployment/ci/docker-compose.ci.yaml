@@ -2,7 +2,7 @@ version: '3'
 
 services:
   aesm:
-    image: fortanix/aesmd:2.13.103.1-1
+    image: fortanix/aesmd:2.17.100.3
     devices:
       - /dev/sgx/enclave
       - /dev/sgx/provision
@@ -30,11 +30,46 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1"
+          cpus: "2"
+          memory: "4g"
+
+  bench:
+    image: tests-base-image
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/root/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    entrypoint: ["/bin/bash", "go-tests-bench.sh"]
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "4g"
+
+  integration-tests:
+    image: integration-tests
+    depends_on:
+      - bootstrap
+      - node-no-tests
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
           memory: "4g"
 
   bootstrap:
-    image: ci-enigma-sgx-bootstrap
+    image: azcr.io/enigmampc/ci-node-image:latest
     container_name: bootstrap
     depends_on:
       - aesm
@@ -50,12 +85,14 @@ services:
     environment:
       - http_proxy
       - https_proxy
+      - SECRET_LOCAL_NODE_TYPE=BOOTSTRAP
     expose:
       - 26656
       - 26657
+      - 1317
 
-  node:
-    image: ci-enigma-sgx-node
+  node-no-tests:
+    image: azcr.io/enigmampc/ci-node-image:latest
     depends_on:
       - bootstrap
     devices:
@@ -68,8 +105,29 @@ services:
     stdin_open: true
     tty: true
     environment:
+      - NO_TESTS=true
       - http_proxy
       - https_proxy
+      - SECRET_LOCAL_NODE_TYPE=node
+
+  node:
+    image: azcr.io/enigmampc/ci-node-image:latest
+    depends_on:
+      - bootstrap
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/tmp/.secretd
+      - ${PWD}/x/compute/internal/keeper/testdata/erc20.wasm:/root/erc20.wasm
+      # - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - http_proxy
+      - https_proxy
+      - SECRET_LOCAL_NODE_TYPE=node
 
   enclave-test:
     image: rust-enclave-test

@@ -14,11 +14,11 @@ pub extern "C" fn ocall_allocate(buffer: *const u8, length: usize) -> UserSpaceB
     ocall_allocate_impl(buffer, length)
 }
 
-#[cfg(feature = "query-node")]
-#[no_mangle]
-pub extern "C" fn ocall_allocate_qe(buffer: *const u8, length: usize) -> UserSpaceBuffer {
-    ocall_allocate_impl(buffer, length)
-}
+// #[cfg(feature = "query-node")]
+// #[no_mangle]
+// pub extern "C" fn ocall_allocate_qe(buffer: *const u8, length: usize) -> UserSpaceBuffer {
+//     ocall_allocate_impl(buffer, length)
+// }
 
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 fn ocall_allocate_impl(buffer: *const u8, length: usize) -> UserSpaceBuffer {
@@ -60,26 +60,26 @@ pub extern "C" fn ocall_read_db(
     )
 }
 
-#[cfg(feature = "query-node")]
-#[no_mangle]
-pub extern "C" fn ocall_read_db_qe(
-    context: Ctx,
-    vm_error: *mut UntrustedVmError,
-    gas_used: *mut u64,
-    value: *mut EnclaveBuffer,
-    key: *const u8,
-    key_len: usize,
-) -> OcallReturn {
-    ocall_read_db_concrete(
-        super::allocate_enclave_buffer_qe,
-        context,
-        vm_error,
-        gas_used,
-        value,
-        key,
-        key_len,
-    )
-}
+// #[cfg(feature = "query-node")]
+// #[no_mangle]
+// pub extern "C" fn ocall_read_db_qe(
+//     context: Ctx,
+//     vm_error: *mut UntrustedVmError,
+//     gas_used: *mut u64,
+//     value: *mut EnclaveBuffer,
+//     key: *const u8,
+//     key_len: usize,
+// ) -> OcallReturn {
+//     ocall_read_db_concrete(
+//         super::allocate_enclave_buffer_qe,
+//         context,
+//         vm_error,
+//         gas_used,
+//         value,
+//         key,
+//         key_len,
+//     )
+// }
 
 /// Read a key from the contracts key-value store.
 fn ocall_read_db_concrete(
@@ -133,6 +133,7 @@ pub extern "C" fn ocall_query_chain(
     value: *mut EnclaveBuffer,
     query: *const u8,
     query_len: usize,
+    query_depth: u32,
 ) -> OcallReturn {
     ocall_query_chain_concrete(
         super::allocate_enclave_buffer,
@@ -143,31 +144,32 @@ pub extern "C" fn ocall_query_chain(
         value,
         query,
         query_len,
+        query_depth,
     )
 }
 
-#[cfg(feature = "query-node")]
-#[no_mangle]
-pub extern "C" fn ocall_query_chain_qe(
-    context: Ctx,
-    vm_error: *mut UntrustedVmError,
-    gas_used: *mut u64,
-    gas_limit: u64,
-    value: *mut EnclaveBuffer,
-    query: *const u8,
-    query_len: usize,
-) -> OcallReturn {
-    ocall_query_chain_concrete(
-        super::allocate_enclave_buffer_qe,
-        context,
-        vm_error,
-        gas_used,
-        gas_limit,
-        value,
-        query,
-        query_len,
-    )
-}
+// #[cfg(feature = "query-node")]
+// #[no_mangle]
+// pub extern "C" fn ocall_query_chain_qe(
+//     context: Ctx,
+//     vm_error: *mut UntrustedVmError,
+//     gas_used: *mut u64,
+//     gas_limit: u64,
+//     value: *mut EnclaveBuffer,
+//     query: *const u8,
+//     query_len: usize,
+// ) -> OcallReturn {
+//     ocall_query_chain_concrete(
+//         super::allocate_enclave_buffer_qe,
+//         context,
+//         vm_error,
+//         gas_used,
+//         gas_limit,
+//         value,
+//         query,
+//         query_len,
+//     )
+// }
 
 /// Read a key from the contracts key-value store.
 #[allow(clippy::too_many_arguments)]
@@ -180,12 +182,13 @@ fn ocall_query_chain_concrete(
     value: *mut EnclaveBuffer,
     query: *const u8,
     query_len: usize,
+    query_depth: u32,
 ) -> OcallReturn {
     let query = unsafe { std::slice::from_raw_parts(query, query_len) };
 
     let implementation = unsafe { get_implementations_from_context(&context).query_chain };
 
-    std::panic::catch_unwind(|| implementation(context, query, gas_limit))
+    std::panic::catch_unwind(|| implementation(context, query, query_depth, gas_limit))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
         .map(|answer| -> Result<EnclaveBuffer, OcallReturn> {
@@ -250,6 +253,74 @@ pub extern "C" fn ocall_remove_db(
 
 /// Write a value to the contracts key-value store.
 #[no_mangle]
+pub extern "C" fn ocall_multiple_write_db(
+    context: Ctx,
+    vm_error: *mut UntrustedVmError,
+    gas_used: *mut u64,
+    keys: *const u8,
+    keys_len: usize, // keys_capacity: usize,
+                     // values: *const u8,
+                     // values_len: usize,
+                     // values_capacity: usize
+) -> OcallReturn {
+    let from_raw = unsafe { std::slice::from_raw_parts(keys, keys_len) };
+    let x: Vec<(Vec<u8>, Vec<u8>)> = serde_json::from_slice(from_raw).unwrap();
+
+    // let keys_vec: Vec<u8> = unsafe { std::vec::Vec::from_raw_parts(keys, keys_len, keys_capacity) };
+    // let values_vec: Vec<u8> =
+    //     unsafe { std::vec::Vec::from_raw_parts(values, values_len, values_capacity) };
+
+    let implementation = unsafe { get_implementations_from_context(&context).write_multiple_db };
+
+    std::panic::catch_unwind(|| match implementation(context, x) {
+        Ok(gas_cost) => {
+            unsafe { *gas_used = gas_cost };
+            OcallReturn::Success
+        }
+        Err(err) => {
+            unsafe { store_vm_error(err, vm_error) };
+            OcallReturn::Failure
+        }
+    })
+    // This will happen only when `catch_unwind` returns `Err`, which indicates a caught panic
+    .unwrap_or(OcallReturn::Panic)
+
+    // todo: if keys.len != values.len
+
+    // for (key, value) in x.into_iter() {
+    //     //let value = values_vec.get(index).unwrap();
+    //
+    //     // We explicitly ignore this potential panic here because we have no way of handling it at the moment.
+    //     // In the future, if we see that panics do occur here, we should add a way to report this to the enclave.
+    //     // TODO add logging if we fail to write
+    //     let result = std::panic::catch_unwind(|| match implementation(context, &key, &value) {
+    //         Ok(gas_cost) => {
+    //             unsafe { *gas_used += gas_cost };
+    //             OcallReturn::Success
+    //         }
+    //         Err(err) => {
+    //             unsafe { store_vm_error(err, vm_error) };
+    //             OcallReturn::Failure
+    //         }
+    //     })
+    //     // This will happen only when `catch_unwind` returns `Err`, which indicates a caught panic
+    //     .unwrap_or_else(|_| OcallReturn::Panic);
+    //
+    //     match result {
+    //         OcallReturn::Panic => {
+    //             return OcallReturn::Panic;
+    //         }
+    //         OcallReturn::Failure => {
+    //             return OcallReturn::Failure;
+    //         }
+    //         _ => {}
+    //     }
+    // }
+    //
+    // return OcallReturn::Success;
+}
+
+#[no_mangle]
 pub extern "C" fn ocall_write_db(
     context: Ctx,
     vm_error: *mut UntrustedVmError,
@@ -280,7 +351,6 @@ pub extern "C" fn ocall_write_db(
     // This will happen only when `catch_unwind` returns `Err`, which indicates a caught panic
     .unwrap_or(OcallReturn::Panic)
 }
-
 /// Box the error and return a pointer to it.
 /// This box will be recovered on the side that called the enclave.
 ///
@@ -302,10 +372,12 @@ struct ExportImplementations {
     query_chain: fn(
         context: Ctx,
         query: &[u8],
+        query_depth: u32,
         gas_limit: u64,
     ) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>,
     remove_db: fn(context: Ctx, key: &[u8]) -> VmResult<u64>,
     write_db: fn(context: Ctx, key: &[u8], value: &[u8]) -> VmResult<u64>,
+    write_multiple_db: fn(context: Ctx, keys: Vec<(Vec<u8>, Vec<u8>)>) -> VmResult<u64>,
 }
 
 impl ExportImplementations {
@@ -319,6 +391,7 @@ impl ExportImplementations {
             query_chain: ocall_query_chain_impl::<S, Q>,
             remove_db: ocall_remove_db_impl::<S, Q>,
             write_db: ocall_write_db_impl::<S, Q>,
+            write_multiple_db: ocall_write_multiple_db_impl::<S, Q>,
         }
     }
 }
@@ -367,6 +440,7 @@ where
 fn ocall_query_chain_impl<S, Q>(
     mut context: Ctx,
     query: &[u8],
+    query_depth: u32,
     gas_limit: u64,
 ) -> VmResult<(SystemResult<StdResult<Binary>>, u64)>
 where
@@ -374,7 +448,7 @@ where
     Q: Querier,
 {
     with_querier_from_context::<S, Q, _, _>(&mut context, |querier: &mut Q| {
-        let (ffi_result, gas_info) = querier.query_raw(query, gas_limit);
+        let (ffi_result, gas_info) = querier.query_raw(query, query_depth, gas_limit);
         ffi_result
             .map(|system_result| (system_result, gas_info.externally_used))
             .map_err(Into::into)
@@ -404,5 +478,31 @@ where
         ffi_result
             .and(Ok(gas_info.externally_used))
             .map_err(Into::into)
+    })
+}
+
+fn ocall_write_multiple_db_impl<S, Q>(
+    mut context: Ctx,
+    keys: Vec<(Vec<u8>, Vec<u8>)>,
+) -> VmResult<u64>
+where
+    S: Storage,
+    Q: Querier,
+{
+    with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
+        let mut total_gas = 0;
+
+        for (k, v) in keys.into_iter() {
+            let (ffi_result, gas_info) = storage.set(&k, &v);
+            total_gas += gas_info.externally_used;
+
+            if ffi_result.is_err() {
+                return Err(VmError::FfiErr {
+                    source: ffi_result.unwrap_err(),
+                });
+            }
+        }
+
+        Ok(total_gas)
     })
 }

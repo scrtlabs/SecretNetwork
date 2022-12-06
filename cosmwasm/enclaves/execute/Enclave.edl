@@ -33,8 +33,6 @@ enclave {
         );
 
         public sgx_status_t ecall_get_attestation_report(
-            [in, count=spid_len] const uint8_t* spid,
-            uint32_t spid_len,
             [in, count=api_key_len] const uint8_t* api_key,
             uint32_t api_key_len
         );
@@ -49,7 +47,9 @@ enclave {
             [in, count=master_cert_len] const uint8_t* master_cert,
             uintptr_t master_cert_len,
             [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,
-            uintptr_t encrypted_seed_len
+            uintptr_t encrypted_seed_len,
+            [in, count=api_key_len] const uint8_t* api_key,
+            uint32_t api_key_len
         );
 
         public sgx_status_t ecall_configure_runtime(
@@ -81,7 +81,8 @@ enclave {
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len,
             [in, count=sig_info_len] const uint8_t* sig_info,
-            uintptr_t sig_info_len
+            uintptr_t sig_info_len,
+            uint8_t handle_type
         );
 
         public QueryResult ecall_query(
@@ -123,7 +124,8 @@ enclave {
             uint64_t gas_limit,
             [out] EnclaveBuffer* value,
             [in, count=query_len] const uint8_t* query,
-            uintptr_t query_len
+            uintptr_t query_len,
+            uint32_t query_depth
         ) allow (ecall_allocate, ecall_query);
 
         OcallReturn ocall_remove_db(
@@ -132,6 +134,14 @@ enclave {
             [out] uint64_t* gas_used,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
+        );
+
+        OcallReturn ocall_multiple_write_db(
+            Ctx context,
+            [out] UntrustedVmError* vm_error,
+            [out] uint64_t* gas_used,
+            [in, count=keys_len] const uint8_t* keys,
+            uintptr_t keys_len
         );
 
         OcallReturn ocall_write_db(
@@ -150,6 +160,7 @@ enclave {
         );
 
         sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
+        sgx_status_t ocall_get_sn_tss_socket([out] int *ret_fd);
 
         sgx_status_t ocall_get_quote(
             [in, size=sigrl_len] uint8_t * p_sigrl,

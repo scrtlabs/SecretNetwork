@@ -1,9 +1,9 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Secret Network - gRPC Gateway docs",
+    "title": "Secret Network",
     "description": "A REST interface for queries and transactions",
-    "version": "v1.3.1"
+    "version": "v1.5.0"
   },
   "apis": [
     {
@@ -11,6 +11,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -21,6 +22,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -31,8 +33,20 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonUpgradedConsensusState"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
       }
     },
@@ -41,6 +55,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -51,6 +66,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -61,6 +77,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -71,6 +88,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -81,6 +99,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -91,6 +110,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -101,6 +121,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -111,6 +132,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -121,8 +143,20 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonUpgradedConsensusState"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonUpgradedConsensusState"
         }
       }
     },
@@ -131,6 +165,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -141,6 +176,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -151,6 +187,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -161,6 +198,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -171,6 +209,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -181,6 +220,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -191,6 +231,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -201,6 +242,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -211,6 +253,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
@@ -221,6 +264,7 @@
       "operationIds": {
         "rename": {
           "Params": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }

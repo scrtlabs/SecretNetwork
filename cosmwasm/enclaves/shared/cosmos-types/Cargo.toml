@@ -1,6 +1,6 @@
 [package]
 name = "enclave_cosmos_types"
-version = "1.2.4"
+version = "1.6.0"
 authors = ["Cashmaney <itzik@enigma.co>"]
 edition = "2018"
 
@@ -11,7 +11,7 @@ test = []
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
   "backtrace"
 ] }
 
@@ -19,13 +19,15 @@ sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://gi
 cosmos_proto = { path = "../cosmos-proto" }
 enclave-ffi-types = { path = "../../ffi-types" }
 enclave_crypto = { path = "../crypto" }
-enclave_cosmwasm_types = { path = "../cosmwasm-types" }
-
+cw_types_v010 = { path = "../cosmwasm-types/v0.10" }
 log = "0.4.14"
-serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = ["derive"] }
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+  "derive"
+] }
 derive_more = "0.99"
-
 protobuf = "2.25.2"
 sha2 = "0.8.1"
-
-prost = { git = "https://github.com/mesalock-linux/prost-sgx", rev = "cd3103a6d45cf7a43b6c1c5e4223428097d1c547", default-features = false,  features = ["prost-derive"] }
+num_enum = "0.5.7"
+prost = { git = "https://github.com/mesalock-linux/prost-sgx", rev = "cd3103a6d45cf7a43b6c1c5e4223428097d1c547", default-features = false, features = [
+  "prost-derive"
+] }

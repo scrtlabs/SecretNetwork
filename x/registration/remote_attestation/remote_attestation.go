@@ -13,15 +13,14 @@ import (
 )
 
 /*
- Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
+	 Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
 
- We verify that:
-	- the report is valid, that no outstanding issues exist (todo: match enclave hash or something?)
-	- Intel's certificate signed the report
-	- The public key of the enclave/node exists, so we can use that to encrypt the seed
+	 We verify that:
+		- the report is valid, that no outstanding issues exist (todo: match enclave hash or something?)
+		- Intel's certificate signed the report
+		- The public key of the enclave/node exists, so we can use that to encrypt the seed
 
- In software mode this will just return the raw netscape comment, as it is the public key of the signer
-
+	 In software mode this will just return the raw netscape comment, as it is the public key of the signer
 */
 func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	// printCert(rawCert)
@@ -56,6 +55,43 @@ func VerifyRaCert(rawCert []byte) ([]byte, error) {
 	return pubK[0:32], nil
 }
 
+// UNSAFE_VerifyRaCert This function is a variant that should be used in the CLI - since parsing certificates is different in
+// software or hardware modes, this function tries the HW route and goes with Software otherwise. Since there's no verification in
+// SW mode it will return the 32 bytes of the public key it finds.
+// TODO: a more elegant fix for this issue would be to return whether we are in HW or SW when querying for the tx key (although this could fail in offline modes, so maybe not)
+func UNSAFE_VerifyRaCert(rawCert []byte) ([]byte, error) {
+	// printCert(rawCert)
+	// get the pubkey and payload from raw data
+
+	pubK, payload, err := unmarshalCert(rawCert)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load Intel CA, Verify Cert and Signature
+	attnReportRaw, err := verifyCert(payload)
+	if err != nil {
+		pk, err := base64.StdEncoding.DecodeString(string(payload))
+		if err != nil {
+			return nil, err
+		}
+
+		if len(pk) != 32 {
+			return nil, errors.New("Failed to parse certificate. Is node working?")
+		}
+
+		return pk, nil
+	}
+
+	// Verify attestation report
+	pubK, err = verifyAttReport(attnReportRaw, pubK)
+	if err != nil {
+		return nil, err
+	}
+	// verifyAttReport returns all the report_data field, which is 64 bytes - we just want the first 32 of them (rest are 0)
+	return pubK[0:32], nil
+}
+
 func extractAsn1Value(cert []byte, oid []byte) ([]byte, error) {
 	offset := uint(bytes.Index(cert, oid))
 	offset += 12 // 11 + TAG (0x04)
@@ -79,7 +115,7 @@ func extractAsn1Value(cert []byte, oid []byte) ([]byte, error) {
 	}
 
 	// Obtain Netscape Comment
-	offset += 1
+	offset++
 	payload := cert[offset : offset+length]
 
 	return payload, nil
@@ -184,14 +220,14 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 				if err != nil && len(platInfo) != 105 {
 					return nil, errors.New("illegal PlatformInfoBlob")
 				}
-				platInfo = platInfo[4:]
+				// platInfo = platInfo[4:]
 
-				//piBlob := parsePlatform(platInfo)
-				//piBlobJson, err := json.Marshal(piBlob)
-				//if err != nil {
+				// piBlob := parsePlatform(platInfo)
+				// piBlobJson, err := json.Marshal(piBlob)
+				// if err != nil {
 				//	return nil, err
 				//}
-				//fmt.Println("Platform info is: " + string(piBlobJson))
+				// fmt.Println("Platform info is: " + string(piBlobJson))
 			} else {
 				return nil, errors.New("Failed to fetch platformInfoBlob from attestation report")
 			}

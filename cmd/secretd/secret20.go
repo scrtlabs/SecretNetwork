@@ -12,8 +12,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/SecretNetwork/x/compute"
-	"github.com/enigmampc/SecretNetwork/x/compute/client/cli"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -73,6 +73,9 @@ func S20TransferHistoryCmd() *cobra.Command {
 		Args:  cobra.RangeArgs(3, 5),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -89,7 +92,7 @@ func S20TransferHistoryCmd() *cobra.Command {
 				return errors.New("viewing key must not be empty")
 			}
 
-			var page uint64 = 0
+			var page uint64
 			var pageSize uint64 = 10
 
 			if len(args) >= 4 {
@@ -132,6 +135,9 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 		Args: cobra.RangeArgs(3, 5),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -148,7 +154,7 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 				return errors.New("viewing key must not be empty")
 			}
 
-			var page uint64 = 0
+			var page uint64
 			var pageSize uint64 = 10
 
 			if len(args) >= 4 {
@@ -191,6 +197,9 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -248,7 +257,9 @@ func s20TransferCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			////inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
-
+			if err != nil {
+				return err
+			}
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
@@ -289,6 +300,9 @@ This way you can perform balance and transaction history queries without waiting
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -327,6 +341,9 @@ you're doing`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -356,6 +373,9 @@ func s20DepositCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -389,6 +409,9 @@ func s20Redeem() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -425,6 +448,9 @@ If no callback provided, this is identical to 'transfer'.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
@@ -470,6 +496,9 @@ WARNING! This action is irreversible and permanent! use at your own risk`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
 
 			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {

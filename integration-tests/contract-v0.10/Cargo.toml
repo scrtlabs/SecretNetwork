@@ -1,0 +1,42 @@
+[package]
+name = "contract-v010"
+version = "0.0.1"
+authors = ["Enigma <info@enigma.co>"]
+edition = "2018"
+description = "A test contract intended to use in integration tests for the Secret Netowrk"
+license = "MIT"
+exclude = [
+  # Those files are cosmwasm-opt artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[features]
+default = ["backtraces"]
+backtraces = ["cosmwasm-std/backtraces"]
+with_floats = []
+
+[dependencies]
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "0.10.1" }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "0.10.0" }
+schemars = "0.7"
+serde = { version = "1.0.114", default-features = false, features = [
+  "derive",
+  "alloc"
+] }
+serde-json-wasm = "0.2.1"

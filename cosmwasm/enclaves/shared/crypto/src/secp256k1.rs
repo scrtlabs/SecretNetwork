@@ -2,8 +2,16 @@ use log::*;
 
 use crate::traits::VerifyingKey;
 use crate::CryptoError;
+use cosmos_proto::tx::signing::SignMode;
+// use k256::ecdsa::{
+//     signature::{DigestSigner, DigestVerifier},
+//     Signature, SigningKey,
+// };
 use secp256k1::Secp256k1;
+
 use sha2::{Digest as Sha2Digest, Sha256};
+use sha3::Keccak256;
+// use std::time::Instant;
 
 pub const SECP256K1_PREFIX: [u8; 4] = [235, 90, 233, 135];
 
@@ -17,27 +25,72 @@ impl Secp256k1PubKey {
 }
 
 impl VerifyingKey for Secp256k1PubKey {
-    fn verify_bytes(&self, bytes: &[u8], sig: &[u8]) -> Result<(), CryptoError> {
+    fn verify_bytes(
+        &self,
+        bytes: &[u8],
+        sig: &[u8],
+        sign_mode: SignMode,
+    ) -> Result<(), CryptoError> {
         // Signing ref: https://docs.cosmos.network/master/spec/_ics/ics-030-signed-messages.html#preliminary
-        let sign_bytes_hash = Sha256::digest(bytes);
+
+        //let start = Instant::now();
+        let sign_bytes_hash = if sign_mode == SignMode::SIGN_MODE_EIP_191 {
+            Keccak256::digest(bytes)
+        } else {
+            Sha256::digest(bytes)
+        };
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_bytes: Time elapsed in Sha256::digest: {:?}",
+        //     duration
+        // );
+
+        //let start = Instant::now();
+        //let verifying_key = VerifyingKey
         let msg = secp256k1::Message::from_slice(sign_bytes_hash.as_slice()).map_err(|err| {
             warn!("Failed to create a secp256k1 message from tx: {:?}", err);
             CryptoError::VerificationError
         })?;
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_bytes: Time elapsed in Message::from_slice: {:?}",
+        //     duration
+        // );
+
+        //let start = Instant::now();
 
         let verifier = Secp256k1::verification_only();
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_bytes: Time elapsed in Secp256k1::verification_only: {:?}",
+        //     duration
+        // );
 
+        //let start = Instant::now();
         // Create `secp256k1`'s types
         let sec_signature = secp256k1::ecdsa::Signature::from_compact(sig).map_err(|err| {
             warn!("Malformed signature: {:?}", err);
             CryptoError::VerificationError
         })?;
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_bytes: Time elapsed in Signature::from_compact: {:?}",
+        //     duration
+        // );
+
+        //let start = Instant::now();
         let sec_public_key =
             secp256k1::PublicKey::from_slice(self.0.as_slice()).map_err(|err| {
                 warn!("Malformed public key: {:?}", err);
                 CryptoError::VerificationError
             })?;
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_bytes: Time elapsed in PublicKey from_slice: {:?}",
+        //     duration
+        // );
 
+        //let start = Instant::now();
         verifier
             .verify_ecdsa(&msg, &sec_signature, &sec_public_key)
             .map_err(|err| {
@@ -47,7 +100,8 @@ impl VerifyingKey for Secp256k1PubKey {
                 );
                 CryptoError::VerificationError
             })?;
-
+        // let duration = start.elapsed();
+        // trace!("verify_bytes: Time elapsed in verify_ecdsa: {:?}", duration);
         trace!("successfully verified this signature: {:?}", sig);
         Ok(())
     }

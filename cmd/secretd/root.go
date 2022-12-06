@@ -8,21 +8,20 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/codec"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	scrt "github.com/enigmampc/SecretNetwork/types"
-	"github.com/enigmampc/SecretNetwork/x/compute"
 	"github.com/rs/zerolog"
+	scrt "github.com/scrtlabs/SecretNetwork/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	//"github.com/tendermint/tendermint/libs/cli"
 
 	"github.com/cosmos/cosmos-sdk/snapshots"
-	"github.com/enigmampc/SecretNetwork/app"
+	"github.com/scrtlabs/SecretNetwork/app"
 
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
@@ -45,7 +44,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	secretlegacy "github.com/enigmampc/SecretNetwork/app/legacy"
+	secretlegacy "github.com/scrtlabs/SecretNetwork/app/legacy"
 )
 
 // thanks @terra-project for this fix
@@ -68,7 +67,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(f.Name) {
 			val := v.Get(f.Name)
-			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%+v", val))
 		}
 	})
 }
@@ -160,7 +159,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 
 	rootCmd.AddCommand(
 		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
-		// updateTmParamsAndInit(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
 		secretlegacy.MigrateGenesisCmd(),
 		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome),
@@ -307,16 +305,18 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		baseapp.SetSnapshotStore(snapshotStore),
 		baseapp.SetSnapshotInterval(cast.ToUint64(appOpts.Get(server.FlagStateSyncSnapshotInterval))),
 		baseapp.SetSnapshotKeepRecent(cast.ToUint32(appOpts.Get(server.FlagStateSyncSnapshotKeepRecent))),
+		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(server.FlagIAVLCacheSize))),
+		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(server.FlagIAVLFastNode))),
 	)
 }
 
 func exportAppStateAndTMValidators(
-	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailWhiteList []string, appOpts servertypes.AppOptions,
+	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailWhiteList []string, appOpts servertypes.AppOptions, modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
 	bootstrap := viper.GetBool("bootstrap")
 
-	encCfg := app.MakeEncodingConfig()
-	encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
+	// encCfg := app.MakeEncodingConfig()
+	// encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
 	var wasmApp *app.SecretNetworkApp
 	if height != -1 {
 		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), bootstrap, appOpts, compute.DefaultWasmConfig())
@@ -328,7 +328,7 @@ func exportAppStateAndTMValidators(
 		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, true, map[int64]bool{}, "", uint(1), bootstrap, appOpts, compute.DefaultWasmConfig())
 	}
 
-	return wasmApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList)
+	return wasmApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList, modulesToExport)
 }
 
 // writeParamsAndConfigCmd patches the write-params cmd to additionally update the app pruning config.

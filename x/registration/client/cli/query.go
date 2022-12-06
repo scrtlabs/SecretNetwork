@@ -6,16 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	flag "github.com/spf13/pflag"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -56,7 +56,7 @@ func GetCmdEncryptedSeed() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Println(fmt.Sprintf("0x%s", hex.EncodeToString(res)))
+			fmt.Printf("0x%s\n", hex.EncodeToString(res))
 			return nil
 		},
 	}
@@ -90,12 +90,12 @@ func GetCmdMasterParams() *cobra.Command {
 				return err
 			}
 
-			err = ioutil.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate.Bytes, 0o644)
+			err = os.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate.Bytes, 0o600)
 			if err != nil {
 				return err
 			}
 
-			err = ioutil.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate.Bytes, 0o644)
+			err = os.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate.Bytes, 0o600)
 			if err != nil {
 				return err
 			}

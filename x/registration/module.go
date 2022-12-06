@@ -8,9 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
@@ -20,8 +20,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/enigmampc/SecretNetwork/x/registration/client/cli"
-	"github.com/enigmampc/SecretNetwork/x/registration/client/rest"
+	"github.com/scrtlabs/SecretNetwork/x/registration/client/cli"
+	"github.com/scrtlabs/SecretNetwork/x/registration/client/rest"
 )
 
 var (
@@ -37,7 +37,7 @@ func (b AppModuleBasic) RegisterLegacyAminoCodec(amino *codec.LegacyAmino) {
 }
 
 func (b AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, serveMux *runtime.ServeMux) {
-	types.RegisterQueryHandlerClient(context.Background(), serveMux, types.NewQueryClient(clientCtx))
+	types.RegisterQueryHandlerClient(context.Background(), serveMux, types.NewQueryClient(clientCtx)) //nolint:errcheck
 }
 
 // Name returns the compute module's name.
@@ -87,7 +87,7 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	types.RegisterInterfaces(registry)
 }
 
-//____________________________________________________________________________
+// ____________________________________________________________________________
 
 // AppModule implements an application module for the compute module.
 type AppModule struct {
@@ -149,7 +149,7 @@ func (AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.Validato
 	return []abci.ValidatorUpdate{}
 }
 
-//____________________________________________________________________________
+// ____________________________________________________________________________
 
 // AppModuleSimulation functions
 

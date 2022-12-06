@@ -8,11 +8,25 @@ package types
 //
 // Env are json encoded to a byte slice before passing to the wasm contract.
 type Env struct {
-	Block     BlockInfo    `json:"block"`
-	Message   MessageInfo  `json:"message"`
-	Contract  ContractInfo `json:"contract"`
-	Key       ContractKey  `json:"contract_key"`
-	Recursive bool         `json:"recursive"`
+	Block       BlockInfo        `json:"block"`
+	Message     MessageInfo      `json:"message"`
+	Contract    ContractInfo     `json:"contract"`
+	Key         ContractKey      `json:"contract_key"`
+	QueryDepth  uint32           `json:"query_depth"`
+	Transaction *TransactionInfo `json:"transaction,omitempty"`
+}
+
+type TransactionInfo struct {
+	// Position of this transaction in the block.
+	// The first transaction has index 0
+	//
+	// Along with BlockInfo.Height, this allows you to get a unique
+	// transaction identifier for the chain for future queries
+	Index uint32 `json:"index"`
+}
+
+type BaseEnv[T Env] struct {
+	First T
 }
 
 type ContractKey string

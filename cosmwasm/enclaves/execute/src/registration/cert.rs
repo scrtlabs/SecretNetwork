@@ -1,38 +1,30 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
-use std::io::BufReader;
-use std::str;
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::untrusted::time::SystemTimeEx;
-
+use bit_vec::BitVec;
+use chrono::{Duration, TimeZone};
+use chrono::Utc as TzUtc;
+#[cfg(feature = "SGX_MODE_HW")]
+use log::*;
+use num_bigint::BigUint;
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
     sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_status_t,
     sgx_update_info_bit_t, SgxResult,
 };
-
-#[cfg(feature = "SGX_MODE_HW")]
-use log::*;
-
-use bit_vec::BitVec;
-use chrono::Utc as TzUtc;
-use chrono::{Duration, TimeZone};
-use num_bigint::BigUint;
-
+use std::io::BufReader;
+use std::str;
+use std::time::{SystemTime, UNIX_EPOCH};
 use yasna::models::ObjectIdentifier;
 
-use enclave_ffi_types::NodeAuthResult;
-
-use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS};
-
+use enclave_crypto::consts::{CERTEXPIRYDAYS, SigningMethod};
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
-
-#[cfg(feature = "SGX_MODE_HW")]
-use super::attestation::get_mr_enclave;
+use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::report::AdvisoryIDs;
 
+#[cfg(feature = "SGX_MODE_HW")]
+use super::attestation::get_mr_enclave;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
 
@@ -94,7 +86,7 @@ pub fn gen_ecc_cert(
                             writer
                                 .next()
                                 .write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-                            writer.next().write_utf8_string(&ISSUER);
+                            writer.next().write_utf8_string(ISSUER);
                         });
                     });
                 });
@@ -118,7 +110,7 @@ pub fn gen_ecc_cert(
                             writer
                                 .next()
                                 .write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-                            writer.next().write_utf8_string(&SUBJECT);
+                            writer.next().write_utf8_string(SUBJECT);
                         });
                     });
                 });
@@ -162,7 +154,7 @@ pub fn gen_ecc_cert(
             // Signature
             let sig = {
                 let tbs = &writer.buf[4..];
-                ecc_handle.ecdsa_sign_slice(tbs, &prv_k).unwrap()
+                ecc_handle.ecdsa_sign_slice(tbs, prv_k).unwrap()
             };
             let sig_der = yasna::construct_der(|writer| {
                 writer.write_sequence(|writer| {
@@ -268,7 +260,7 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
     let ias_ca_core: &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
     let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD).unwrap();
 
-    let mut ca_reader = BufReader::new(&IAS_REPORT_CA[..]);
+    let mut ca_reader = BufReader::new(IAS_REPORT_CA);
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store
@@ -302,17 +294,18 @@ pub fn verify_ra_cert(
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_ra_cert(
     cert_der: &[u8],
-    override_verify: Option<SigningMethod>,
+    override_verify_type: Option<SigningMethod>,
 ) -> Result<Vec<u8>, NodeAuthResult> {
-    // Before we reach here, Webpki already verifed the cert is properly signed
-
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
 
-    // 2. Verify quote status (mandatory field)
+    // this is a small hack - override_verify_type is only used when verifying the master certificate
+    // and in that case we don't care about checking vulns etc. Master certificate will also have
+    // a bad GID in prod, so there's no reason to verify it
+    if override_verify_type.is_none() {
+        verify_quote_status(&report, &report.advisory_ids)?;
+    }
 
-    verify_quote_status(&report.sgx_quote_status, &report.advisroy_ids)?;
-
-    let signing_method: SigningMethod = match override_verify {
+    let signing_method: SigningMethod = match override_verify_type {
         Some(method) => method,
         None => SIGNING_METHOD,
     };
@@ -320,13 +313,7 @@ pub fn verify_ra_cert(
     // verify certificate
     match signing_method {
         SigningMethod::MRENCLAVE => {
-            let this_mr_enclave = match get_mr_enclave() {
-                Ok(r) => r,
-                Err(_) => {
-                    error!("This should never happen. If you see this, your node isn't working anymore");
-                    return Err(NodeAuthResult::Panic);
-                }
-            };
+            let this_mr_enclave = get_mr_enclave();
 
             if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
                 error!("Got a different mr_enclave than expected. Invalid certificate");
@@ -354,73 +341,128 @@ pub fn verify_ra_cert(
     Ok(report_public_key)
 }
 
+// fn transform_u32_to_array_of_u8(x: u32) -> [u8; 4] {
+//     let b1: u8 = ((x >> 24) & 0xff) as u8;
+//     let b2: u8 = ((x >> 16) & 0xff) as u8;
+//     let b3: u8 = ((x >> 8) & 0xff) as u8;
+//     let b4: u8 = (x & 0xff) as u8;
+//     return [b1, b2, b3, b4];
+// }
+
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 pub fn verify_quote_status(
-    quote_status: &SgxQuoteStatus,
+    report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
-    match quote_status {
-        SgxQuoteStatus::OK => Ok(()),
-        SgxQuoteStatus::SwHardeningNeeded => Ok(()),
-        SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
-            let vulnerable = advisories.vulnerable();
-            if vulnerable.is_empty() {
-                Ok(())
-            } else {
-                error!("Platform is updated but requires further BIOS configuration");
-                error!(
-                    "The following vulnerabilities must be mitigated: {:?}",
-                    vulnerable
-                );
-                Err(NodeAuthResult::from(quote_status))
-            }
+    // info!(
+    //     "Got GID: {:?}",
+    //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
+    // );
+
+    if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
+        error!(
+            "Platform verification error: quote status {:?}",
+            &report.sgx_quote_body.gid
+        );
+        return Err(NodeAuthResult::BadQuoteStatus);
+    }
+
+    match &report.sgx_quote_status {
+        SgxQuoteStatus::OK
+        | SgxQuoteStatus::SwHardeningNeeded
+        | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
+            check_advisories(&report.sgx_quote_status, advisories)?;
+
+            Ok(())
         }
         _ => {
             error!(
                 "Invalid attestation quote status - cannot verify remote node: {:?}",
-                quote_status
+                &report.sgx_quote_status
             );
-            Err(NodeAuthResult::from(quote_status))
+            Err(NodeAuthResult::from(&report.sgx_quote_status))
         }
     }
 }
 
+// the difference here is that we allow GROUP_OUT_OF_DATE for testnet machines to make joining a bit
+// easier
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub fn verify_quote_status(
-    quote_status: &SgxQuoteStatus,
+    report: &AttestationReport,
     advisories: &AdvisoryIDs,
 ) -> Result<(), NodeAuthResult> {
-    match quote_status {
-        SgxQuoteStatus::OK => Ok(()),
-        SgxQuoteStatus::SwHardeningNeeded => Ok(()),
-        SgxQuoteStatus::GroupOutOfDate => {
-            warn!("TCB level of SGX platform service is outdated. You should check for firmware updates");
-            warn!(
-                "The following vulnerabilities must be mitigated: {:?}",
-                advisories.vulnerable()
-            );
-            Ok(())
-        }
-        SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
-            let vulnerable = advisories.vulnerable();
-            if vulnerable.is_empty() {
-                Ok(())
-            } else {
-                error!("Platform is updated but requires further BIOS configuration");
-                error!(
-                    "The following vulnerabilities must be mitigated: {:?}",
-                    vulnerable
-                );
-                Err(NodeAuthResult::from(quote_status))
+    match &report.sgx_quote_status {
+        SgxQuoteStatus::OK
+        | SgxQuoteStatus::SwHardeningNeeded
+        | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded
+        | SgxQuoteStatus::GroupOutOfDate => {
+            let results = check_advisories(&report.sgx_quote_status, advisories);
+
+            if results.is_err() {
+                warn!("This platform has vulnerabilities that will not be approved on mainnet");
             }
+
+            // if !advisories.contains_lvi_injection() {
+            //     return Err(NodeAuthResult::EnclaveQuoteStatus);
+            // }
+
+            Ok(())
         }
         _ => {
             error!(
                 "Invalid attestation quote status - cannot verify remote node: {:?}",
-                quote_status
+                &report.sgx_quote_status
             );
-            Err(NodeAuthResult::from(quote_status))
+            Err(NodeAuthResult::from(&report.sgx_quote_status))
         }
+    }
+}
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
+const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
+
+#[cfg(all(
+    not(all(feature = "SGX_MODE_HW", feature = "production")),
+    feature = "test"
+))]
+const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
+
+#[cfg(any(all(feature = "SGX_MODE_HW", feature = "production"), feature = "test"))]
+fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
+    #[cfg(feature = "epid_whitelist_disabled")]
+    {
+        return true;
+    }
+
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
+    {
+        let decoded = base64::decode(WHITELIST_FROM_FILE).unwrap(); //will never fail since data is constant
+
+        decoded.as_chunks::<4>().0.iter().any(|&arr| {
+            if epid_gid == &u32::from_be_bytes(arr) {
+                return true;
+            }
+            false
+        })
+    }
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+fn check_advisories(
+    quote_status: &SgxQuoteStatus,
+    advisories: &AdvisoryIDs,
+) -> Result<(), NodeAuthResult> {
+    // this checks if there are any vulnerabilities that are not on in the whitelisted list
+    let vulnerable = advisories.vulnerable();
+    if vulnerable.is_empty() {
+        Ok(())
+    } else {
+        error!("Platform is updated but requires further BIOS configuration");
+        error!(
+            "The following vulnerabilities must be mitigated: {:?}",
+            vulnerable
+        );
+        Err(NodeAuthResult::from(quote_status))
     }
 }
 
@@ -435,7 +477,7 @@ pub mod tests {
 
     use super::verify_ra_cert;
 
-    // #[cfg(feature = "SGX_MODE_HW")]
+// #[cfg(feature = "SGX_MODE_HW")]
     // fn tls_ra_cert_der_out_of_date() -> Vec<u8> {
     //     let mut cert = vec![];
     //     let mut f =
@@ -485,10 +527,11 @@ pub mod tests {
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
 
-        let result =
-            verify_ra_cert(&tls_ra_cert, None).expect_err("Certificate should not pass validation");
+        let res = verify_ra_cert(&tls_ra_cert, None);
 
-        assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
+        assert!(res.is_ok());
+
+        // assert_eq!(result, NodeAuthResult::SwHardeningAndConfigurationNeeded)
     }
 
     // #[cfg(not(feature = "SGX_MODE_HW"))]
@@ -505,6 +548,29 @@ pub mod tests {
     //
     //     assert_eq!(result, NodeAuthResult::GroupOutOfDate)
     // }
+
+    pub fn test_epid_whitelist() {
+        // check that we parse this correctly
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
+        assert_eq!(res, true);
+
+        // check that 2nd number works
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x6942 as u32));
+        assert_eq!(res, true);
+
+        // check all kinds of failures that should return false
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x0 as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x120c as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc120000 as u32));
+        assert_eq!(res, false);
+
+        let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0x1242 as u32));
+        assert_eq!(res, false);
+    }
 
     pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();

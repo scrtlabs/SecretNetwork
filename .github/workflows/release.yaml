@@ -7,6 +7,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+" # Push events to matching v*, i.e. v1.0, v20.15.10
       - "v[0-9]+.[0-9]+.[0-9]+-alpha.[0-9]+" # Push events to matching alpha releases
       - "v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+" # Push events to matching beta releases
+      - "v[0-9]+.[0-9]+.[0-9]+-patch.[0-9]+" # Push events to matching beta releases
 
 jobs:
   build-deb-testnet:
@@ -16,65 +17,53 @@ jobs:
         db_backend: [rocksdb, goleveldb]
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
-      SPID_TESTNET: ${{ secrets.SPID_TESTNET }}
-      API_KEY_TESTNET: ${{ secrets.API_KEY_TESTNET }}
+      SPID: ${{ secrets.SPID_TESTNET }}
+      API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Declare Commit Variables
         id: vars
         shell: bash
         run: |
           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      - uses: actions/setup-go@v2
-        with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
-      - name: Install Intel's SGX SDK
-        run: |
-          mkdir -p "$HOME/.sgxsdk"
-          cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.9.101.2.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/"$SDK_BIN"
-          chmod +x "$SDK_BIN"
-          echo yes | ./"$SDK_BIN"
-      - name: Cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache xargo sysroot
-        uses: actions/cache@v1
-        with:
-          path: ~/.xargo
-          key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
-      - run: rustup component add rust-src clippy
-      - name: Install xargo
-        run: |
-          cargo +stable install xargo --version 0.3.25
-          xargo --version
-      - name: Download sccache
-        run: |
-          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
-          tar xf ./sccache-*.tar.gz
-          mv ./sccache*/sccache "$HOME/sccache"
-      - name: Create api keys
-        run: |
-          echo $SPID_TESTNET > spid.txt
-          echo $API_KEY_TESTNET > api_key.txt
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - name: Build testnet
+      - name: Sets env vars for rocksdb
+        if: ${{ matrix.db_backend == 'rocksdb' }}
         run: |
-          source "$HOME/.sgxsdk/sgxsdk/environment"
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES_U=query-node, make build-testnet
+          echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
+
+      - name: Build .deb Package Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          load: true
+          tags: deb_build
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_TESTNET }}
+            SPID=${{ secrets.SPID_TESTNET }}
+          build-args: |
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${{ matrix.db_backend }}
+            CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: build-deb
+      - name: Run .deb Package Image
+        run: |
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
           cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
@@ -86,40 +75,75 @@ jobs:
       matrix:
         db_backend: [goleveldb, rocksdb]
     env: # Or as an environment variable
-      SPID_MAINNET: ${{ secrets.SPID_MAINNET }}
-      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
+      SPID: ${{ secrets.SPID_MAINNET }}
+      API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - uses: actions/setup-go@v2
-        with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
-      - name: Create api keys
-        run: |
-          echo $SPID_MAINNET > spid.txt
-          echo $API_KEY_MAINNET > api_key.txt
-      - name: Build
-        run: |
-          VERSION=${{ steps.get_version.outputs.VERSION }} DB_BACKEND=${{ matrix.db_backend }} FEATURES=production FEATURES_U=query-node, make build-mainnet-upgrade
-          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
-      - uses: actions/upload-artifact@v2
-        with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
-          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
       - name: Log in to the Container registry
         if: ${{ matrix.db_backend == 'goleveldb' }}
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push docker image
+      - name: Build and Push Node Image
         if: ${{ matrix.db_backend == 'goleveldb' }}
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.get_version.outputs.VERSION }}
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_MAINNET }}
+            SPID=${{ secrets.SPID_MAINNET }}
+          build-args: |
+            FEATURES=production
+            FEATURES_U=production
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${{ matrix.db_backend }}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: mainnet-release
+      - name: Sets env vars for rocksdb
+        if: ${{ matrix.db_backend == 'rocksdb' }}
+        run: |
+          echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
+
+      - name: Build .deb Package Image
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          load: true
+          tags: deb_build
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_MAINNET }}
+            SPID=${{ secrets.SPID_MAINNET }}
+          build-args: |
+            FEATURES=production
+            FEATURES_U=production
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${{ matrix.db_backend }}
+            CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: build-deb-mainnet
+      - name: Run .deb Package Image
+        run: |
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+      - uses: actions/upload-artifact@v3
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
 
   native-build-cli:
     runs-on: ${{matrix.os}}
@@ -128,33 +152,36 @@ jobs:
         os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Build CLI
         shell: bash
         run: |
           make build_cli
           cp "secretcli" "secretcli-$RUNNER_OS"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretcli-${{runner.os}}
           path: secretcli-${{runner.os}}
 
-  x-build-cli:
+  MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
-          go-version: "^1.18" # The Go version to download (if necessary) and use.
+          go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
-          go install github.com/crazy-max/xgo@latest
+          go install github.com/crazy-max/xgo@v0.17.0
           xgo || true # check installation
-      - name: Build CLI
+      - name: Build MacOS CLI
         shell: bash
         run: |
           make build_macos_arm64_cli
           cp "secretcli-macos-arm64" "secretcli-MacOS-arm64"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: secretcli-MacOS-arm64
           path: secretcli-MacOS-arm64
@@ -164,70 +191,76 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/localsecret
+      DOCKER_BUILDKIT: 1
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - name: Log in to the Container registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create temp files
-        shell: bash
-        run: |
-          echo "random data" > api_key.txt
-          echo "lol this is ignored" > spid.txt
-      - name: Build dev docker image
-        shell: bash
-        run: |
-          DOCKER_TAG=${{ steps.get_version.outputs.VERSION }} make build-localsecret
-      - name: Push docker image
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
+      - name: Build LocalSecret
+        uses: docker/build-push-action@v3
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}
+          secrets: |
+            API_KEY=00000000000000000000000000000000
+            SPID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+          build-args: |
+            SECRET_NODE_TYPE=BOOTSTRAP
+            CHAIN_ID=secretdev-1
+            FEATURES=debug-print
+            SGX_MODE=SW
+          target: build-localsecret
 
   Release:
-    needs: [native-build-cli, build-deb-testnet, build-deb-mainnet, x-build-cli]
+    needs:
+      [native-build-cli, build-deb-testnet, build-deb-mainnet, MacOS-ARM64-CLI]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - name: Declare Commit Variables
-        id: is_pre_release
-        shell: bash
-        run: |
-          echo "::set-output name=IS_PRE_RELEASE::$(echo "${{ steps.get_version.outputs.VERSION }}" | awk 'BEGIN{prerelease="false"} /beta|alpha/{prerelease="true"} END{print prerelease}')"
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretcli-Linux
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretcli-macOS
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretcli-Windows
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretcli-MacOS-arm64
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          prerelease: ${{ steps.is_pre_release.outputs.IS_PRE_RELEASE }}
+          prerelease: true
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb

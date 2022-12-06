@@ -11,8 +11,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
 
-	wasmUtils "github.com/enigmampc/SecretNetwork/x/compute/client/utils"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 func registerTxRoutes(cliCtx client.Context, r *mux.Router) {
@@ -32,8 +32,7 @@ type storeCodeReq struct {
 type instantiateContractReq struct {
 	BaseReq rest.BaseReq `json:"base_req" yaml:"base_req"`
 	Deposit sdk.Coins    `json:"deposit" yaml:"deposit"`
-	// Admin   sdk.AccAddress `json:"admin,omitempty" yaml:"admin"`
-	InitMsg []byte `json:"init_msg" yaml:"init_msg"`
+	InitMsg []byte       `json:"init_msg" yaml:"init_msg"`
 }
 
 type executeContractReq struct {
@@ -120,7 +119,6 @@ func instantiateContractHandlerFn(cliCtx client.Context) http.HandlerFunc {
 			CallbackCodeHash: "",
 			InitFunds:        req.Deposit,
 			InitMsg:          req.InitMsg,
-			// Admin:            req.Admin,
 		}
 
 		err = msg.ValidateBasic()

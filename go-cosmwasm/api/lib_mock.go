@@ -11,7 +11,8 @@ package api
 // import "C"
 import (
 	//"fmt"
-	"github.com/enigmampc/SecretNetwork/go-cosmwasm/types"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 )
 
 // nice aliases to the rust names
@@ -45,7 +46,7 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
+func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
 	//pkSlice := sendSlice(masterCert)
 	//defer freeAfterSend(pkSlice)
 	//seedSlice := sendSlice(seed)
@@ -79,7 +80,7 @@ func ReleaseCache(cache Cache) {
 	// C.release_cache(cache.ptr)
 }
 
-func InitEnclaveRuntime(ModuleCacheSize uint8) error {
+func InitEnclaveRuntime(ModuleCacheSize uint16) error {
 	return nil
 }
 
@@ -150,6 +151,7 @@ func Handle(
 	querier *Querier,
 	gasLimit uint64,
 	sigInfo []byte,
+	handleType types.HandleType,
 ) ([]byte, uint64, error) {
 	//id := sendSlice(code_id)
 	//defer freeAfterSend(id)
@@ -231,6 +233,26 @@ func Query(
 	return nil, 0, nil
 }
 
+func AnalyzeCode(
+	cache Cache,
+	codeHash []byte,
+) (*v1types.AnalysisReport, error) {
+	//cs := sendSlice(codeHash)
+	//defer runtime.KeepAlive(codeHash)
+	//errMsg := C.Buffer{}
+	//report, err := C.analyze_code(cache.ptr, cs, &errMsg)
+	//
+	//if err != nil {
+	//	return nil, errorWithMessage(err, errMsg)
+	//}
+	//res := v1types.AnalysisReport{
+	//	HasIBCEntryPoints: bool(report.has_ibc_entry_points),
+	//	RequiredFeatures:  string(receiveVector(report.required_features)),
+	//}
+	//return &res, nil
+	return nil, nil
+}
+
 // KeyGen Send KeyGen request to enclave
 func KeyGen() ([]byte, error) {
 	//errmsg := C.Buffer{}
@@ -243,7 +265,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
+func CreateAttestationReport(apiKey []byte) (bool, error) {
 	//errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {

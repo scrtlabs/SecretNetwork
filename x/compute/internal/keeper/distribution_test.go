@@ -3,8 +3,10 @@ package keeper
 import (
 	"encoding/binary"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
+
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +29,12 @@ type Delegator struct {
 // TestDistributionRewards tests querying staking rewards from inside a contract - first testing no rewards, then advancing
 // 1 block and checking the rewards again
 func TestDistributionRewards(t *testing.T) {
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource types.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, stakingKeeper, keeper, distKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.DistKeeper
 
@@ -59,7 +66,7 @@ func TestDistributionRewards(t *testing.T) {
 	distKeeper.AllocateTokensToValidator(ctx, v, sdk.NewDecCoins(sdk.NewDecCoin("stake", sdk.NewInt(100))))
 
 	// upload staking derivates code
-	govCode, err := ioutil.ReadFile("./testdata/dist.wasm")
+	govCode, err := os.ReadFile("./testdata/dist.wasm")
 	require.NoError(t, err)
 	govId, err := keeper.Create(ctx, creator, govCode, "", "")
 	require.NoError(t, err)
@@ -73,7 +80,7 @@ func TestDistributionRewards(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, govId, nil)
-	govAddr, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", nil, nil)
+	govAddr, _, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
 
@@ -86,14 +93,14 @@ func TestDistributionRewards(t *testing.T) {
 	require.NoError(t, err)
 
 	// test what happens if there are no rewards yet
-	res, _, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	_, _, res, _, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, uint64(0), binary.BigEndian.Uint64(res))
 	ctx = nextBlock(ctx, stakingKeeper)
 
 	// test what happens if there are some rewards
-	res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	_, _, res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, uint64(0x59), binary.BigEndian.Uint64(res))

@@ -2,8 +2,10 @@ package keeper
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
+
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +27,12 @@ type MintExecMsgBondedRatio struct {
 
 // TestMintQuerier
 func TestMintQuerier(t *testing.T) {
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource types.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, stakingKeeper, keeper, distKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.DistKeeper
 
@@ -55,7 +62,7 @@ func TestMintQuerier(t *testing.T) {
 	distKeeper.AllocateTokensToValidator(ctx, v, sdk.NewDecCoins(sdk.NewDecCoin(sdk.DefaultBondDenom, sdk.NewInt(100))))
 
 	// upload staking derivates code
-	govCode, err := ioutil.ReadFile("./testdata/mint.wasm")
+	govCode, err := os.ReadFile("./testdata/mint.wasm")
 	require.NoError(t, err)
 	govId, err := keeper.Create(ctx, creator, govCode, "", "")
 	require.NoError(t, err)
@@ -69,7 +76,7 @@ func TestMintQuerier(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, govId, nil)
-	govAddr, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", nil, nil)
+	govAddr, _, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
 
@@ -78,7 +85,7 @@ func TestMintQuerier(t *testing.T) {
 	require.NoError(t, err)
 
 	// test what happens if there are no rewards yet
-	res, _, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, defaultGasForTests, 0)
+	_, _, res, _, _, err := execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, "0.130000000000000000", string(res))
@@ -90,7 +97,7 @@ func TestMintQuerier(t *testing.T) {
 	ctx = nextBlock(ctx, stakingKeeper)
 
 	// test what happens if there are some rewards
-	res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz2), false, defaultGasForTests, 0)
+	_, _, res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz2), false, false, defaultGasForTests, 0)
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, "0.199920047982406077", string(res))

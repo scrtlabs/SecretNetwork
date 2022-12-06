@@ -3,9 +3,9 @@ package keeper
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	// authexported "github.com/cosmos/cosmos-sdk/x/auth/exported"
-	// "github.com/enigmampc/SecretNetwork/x/compute/internal/types"
+	// "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 // InitGenesis sets supply information for genesis.
@@ -58,7 +58,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) *types.GenesisState {
 	// genState.Params = keeper.GetParams(ctx)
 
 	keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
-		bytecode, err := keeper.GetByteCode(ctx, codeID)
+		bytecode, err := keeper.GetWasm(ctx, codeID)
 		if err != nil {
 			panic(err)
 		}

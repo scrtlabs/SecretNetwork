@@ -1,6 +1,6 @@
-use core::sync::atomic::{AtomicBool, Ordering};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(not(feature = "production"))]
 use std::backtrace::{self, PrintFormat};
@@ -90,13 +90,13 @@ fn enable_backtraces() {
     let _ = backtrace::enable_backtrace("librust_cosmwasm_enclave.signed.so", PrintFormat::Full);
 }
 
-#[cfg(all(not(feature = "production"), feature = "query-only"))]
-fn enable_backtraces() {
-    let _ = backtrace::enable_backtrace(
-        "librust_cosmwasm_query_enclave.signed.so",
-        PrintFormat::Full,
-    );
-}
+// #[cfg(all(not(feature = "production"), feature = "query-only"))]
+// fn enable_backtraces() {
+//     let _ = backtrace::enable_backtrace(
+//         "librust_cosmwasm_query_enclave.signed.so",
+//         PrintFormat::Full,
+//     );
+// }
 
 #[cfg(feature = "production")]
 fn enable_backtraces() {}

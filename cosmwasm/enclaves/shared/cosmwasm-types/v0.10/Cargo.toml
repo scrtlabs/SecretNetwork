@@ -1,0 +1,24 @@
+[package]
+name = "cw_types_v010"
+version = "1.6.0"
+authors = ["SCRT Labs <info@scrtlabs.com>"]
+edition = "2018"
+
+# This annotation is here to trick the IDE into showing us type information about this crate.
+# We always compile to the "sgx" target, so this will always be false.
+# when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tstd = { path = "../../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
+  "backtrace"
+] }
+
+[dependencies]
+enclave-ffi-types = { path = "../../../ffi-types" }
+log = "0.4.8"
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+  "derive"
+] }
+serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+derive_more = "0.99"
+bech32 = "0.7.2"
+base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }

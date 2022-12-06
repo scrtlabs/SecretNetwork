@@ -66,3 +66,23 @@ type VerificationInfo struct {
 	Signature         []byte `json:"signature"`
 	CallbackSignature []byte `json:"callback_sig"` // Optional
 }
+
+type HandleType int
+
+const (
+	HandleTypeExecute HandleType = iota
+	HandleTypeReply
+	HandleTypeIbcChannelOpen
+	HandleTypeIbcChannelConnect
+	HandleTypeIbcChannelClose
+	HandleTypeIbcPacketReceive
+	HandleTypeIbcPacketAck
+	HandleTypeIbcPacketTimeout
+)
+
+type CosmosMsgVersion int
+
+const (
+	CosmosMsgVersionV010 CosmosMsgVersion = iota
+	CosmosMsgVersionV1
+)

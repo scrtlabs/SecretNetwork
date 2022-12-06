@@ -1,12 +1,12 @@
 package cli
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +38,7 @@ func AuthenticateNodeCmd() *cobra.Command {
 				return err
 			}
 
-			cert, err := ioutil.ReadFile(args[0])
+			cert, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
 			}

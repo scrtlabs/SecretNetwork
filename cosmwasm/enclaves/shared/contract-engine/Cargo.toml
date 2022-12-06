@@ -1,30 +1,36 @@
 [package]
 name = "enclave_contract_engine"
-version = "1.2.4"
+version = "1.6.0"
 authors = ["Cashmaney <itzik@enigma.co>"]
 edition = "2018"
 
 [features]
+default = ["wasm3"]
 query-only = []
 debug-print = []
 test = []
+wasm3 = []
+wasmi-engine = ["wasmi", "parity-wasm", "pwasm-utils"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
   "backtrace"
 ] }
-sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
 cosmos_proto = { path = "../cosmos-proto" }
 enclave_crypto = { path = "../crypto" }
 enclave_cosmos_types = { path = "../cosmos-types" }
-enclave_cosmwasm_types = { path = "../cosmwasm-types" }
+cw_types_v010 = { path = "../cosmwasm-types/v0.10" }
+cw_types_v1 = { path = "../cosmwasm-types/v1.0" }
+cw_types_generic = { path = "../cosmwasm-types/generic" }
 enclave_utils = { path = "../utils" }
+
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
 ] }
@@ -36,11 +42,15 @@ log = "0.4.14"
 derive_more = "0.99"
 sha2 = "0.8.1"
 bech32 = "0.7.2"
-pwasm-utils = { version = "0.12.0", default-features = false }
-parity-wasm = { version = "0.41.0", default-features = false }
+
+pwasm-utils = { version = "0.12.0", default-features = false, optional = true }
+parity-wasm = { version = "0.41.0", default-features = false, optional = true }
+wasm3 = { git = "https://github.com/scrtlabs/wasm3-rs", rev = "ad1c868" }
+walrus = { version = "0.19.0", git = "https://github.com/scrtlabs/walrus", rev = "c5777d4" }
+
 lru = { version = "0.6", default-features = false }
 hex = "0.4.2"
-secp256k1 = { version = "0.21.3", features = ["recovery"] }
+secp256k1 = { version = "0.24.0", features = ["recovery", "alloc"] }
 ed25519-zebra = { version = "=2.2.0", default-features = false }
 rand_core = "0.5.0"
 rand_chacha = { version = "0.2.1", default-features = false }
@@ -49,4 +59,5 @@ rand_chacha = { version = "0.2.1", default-features = false }
 git = "https://github.com/paritytech/wasmi"
 rev = "84d2764594d80425373bf4949a58fa3df3d624c3"
 default-features = false
+optional = true
 features = ["core"]

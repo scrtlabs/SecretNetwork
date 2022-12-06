@@ -3,10 +3,11 @@ package keeper
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	wasmTypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,6 +46,10 @@ type transferPayload struct {
 	Recipient sdk.Address `json:"recipient"`
 	// uint128 encoded as string
 	Amount string `json:"amount"`
+}
+
+type ownerPayload struct {
+	Owner sdk.Address `json:"owner"`
 }
 
 type unbondPayload struct {
@@ -90,7 +95,12 @@ type InvestmentResponse struct {
 }
 
 func TestInitializeStaking(t *testing.T) {
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource wasmTypes.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, stakingKeeper, keeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper
 
@@ -104,7 +114,7 @@ func TestInitializeStaking(t *testing.T) {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	// upload staking derivates code
-	stakingCode, err := ioutil.ReadFile("./testdata/staking.wasm")
+	stakingCode, err := os.ReadFile("./testdata/staking.wasm")
 	require.NoError(t, err)
 	stakingID, err := keeper.Create(ctx, creator, stakingCode, "", "")
 	require.NoError(t, err)
@@ -125,7 +135,7 @@ func TestInitializeStaking(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
-	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
+	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -145,7 +155,7 @@ func TestInitializeStaking(t *testing.T) {
 	badBz, err := json.Marshal(&badInitMsg)
 	require.NoError(t, err)
 
-	_, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, creatorPrivKey, string(badBz), true, defaultGasForTests)
+	_, _, _, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, creatorPrivKey, string(badBz), true, false, defaultGasForTests)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
 	require.Equal(t, fmt.Sprintf("%s is not in the current validator set", sdk.ValAddress(bob).String()), initErr.GenericErr.Msg)
@@ -171,7 +181,12 @@ type initInfo struct {
 }
 
 func initializeStaking(t *testing.T) initInfo {
-	encoders := DefaultEncoders()
+	encodingConfig := MakeEncodingConfig()
+	var transferPortSource wasmTypes.ICS20TransferPortSource
+	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
+		return "myTransferPort"
+	}}
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, stakingKeeper, keeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper
 
@@ -193,7 +208,7 @@ func initializeStaking(t *testing.T) initInfo {
 	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	// upload staking derivates code
-	stakingCode, err := ioutil.ReadFile("./testdata/staking.wasm")
+	stakingCode, err := os.ReadFile("./testdata/staking.wasm")
 	require.NoError(t, err)
 	stakingID, err := keeper.Create(ctx, creator, stakingCode, "", "")
 	require.NoError(t, err)
@@ -214,7 +229,7 @@ func initializeStaking(t *testing.T) initInfo {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
-	stakingAddr, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
+	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -229,6 +244,22 @@ func initializeStaking(t *testing.T) initInfo {
 		distKeeper:    keepers.DistKeeper,
 		bankKeeper:    keeper.bankKeeper,
 		cleanup:       func() {},
+	}
+}
+
+func checkAccount(t *testing.T, ctx sdk.Context, accKeeper authkeeper.AccountKeeper, bankKeeper bankkeeper.Keeper, addr sdk.AccAddress, expected sdk.Coins) {
+	acct := accKeeper.GetAccount(ctx, addr)
+	if expected == nil {
+		assert.Nil(t, acct)
+	} else {
+		assert.NotNil(t, acct)
+		coins := bankKeeper.GetAllBalances(ctx, acct.GetAddress())
+		if expected.Empty() {
+			// there is confusion between nil and empty slice... let's just treat them the same
+			assert.True(t, coins.Empty())
+		} else {
+			assert.Equal(t, coins, expected)
+		}
 	}
 }
 
@@ -500,7 +531,7 @@ func assertBalance(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Ac
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, false, defaultGasForTests)
 	require.Empty(t, qErr)
 	var balance BalanceResponse
 	err = json.Unmarshal([]byte(res), &balance)
@@ -517,7 +548,7 @@ func assertClaims(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
 
-	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, false, defaultGasForTests)
 	require.Empty(t, qErr)
 	var claims ClaimsResponse
 	err = json.Unmarshal([]byte(res), &claims)
@@ -529,7 +560,7 @@ func assertSupply(t *testing.T, ctx sdk.Context, keeper Keeper, contract sdk.Acc
 	query := StakingQueryMsg{Investment: &struct{}{}}
 	queryBz, err := json.Marshal(query)
 	require.NoError(t, err)
-	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, defaultGasForTests)
+	res, qErr := queryHelper(t, keeper, ctx, contract, string(queryBz), true, false, defaultGasForTests)
 	require.Empty(t, qErr)
 
 	var invest InvestmentResponse

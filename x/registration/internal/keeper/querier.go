@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 )
 
 type GrpcQuerier struct {
@@ -72,8 +72,8 @@ func queryMasterKey(ctx sdk.Context, keeper Keeper) (*types.GenesisState, error)
 		IoMasterCertificate:       ioKey,
 	}
 
-	//asBytes, err := keeper.cdc.Marshal(ioKey)
-	//if err != nil {
+	// asBytes, err := keeper.cdc.Marshal(ioKey)
+	// if err != nil {
 	//	return nil, err
 	//}
 

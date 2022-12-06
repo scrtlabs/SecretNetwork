@@ -9,20 +9,23 @@ use super::traits::WasmiApi;
 
 #[derive(PartialEq, Eq)]
 pub enum HostFunctions {
-    ReadDbIndex = 0,
-    WriteDbIndex = 1,
-    RemoveDbIndex = 2,
+    DbReadIndex = 0,
+    DbWriteIndex = 1,
+    DbRemoveIndex = 2,
     CanonicalizeAddressIndex = 3,
     HumanizeAddressIndex = 4,
     GasIndex = 5,
     QueryChainIndex = 6,
+    AddrValidateIndex = 7,
+    AddrCanonicalizeIndex = 8,
+    AddrHumanizeIndex = 9,
     Secp256k1VerifyIndex = 10,
     Secp256k1RecoverPubkeyIndex = 11,
     Ed25519VerifyIndex = 12,
     Ed25519BatchVerifyIndex = 13,
     Secp256k1SignIndex = 14,
     Ed25519SignIndex = 15,
-    #[cfg(feature = "debug-print")]
+    DebugIndex = 16,
     DebugPrintIndex = 254,
     Unknown,
 }
@@ -30,9 +33,9 @@ pub enum HostFunctions {
 impl From<usize> for HostFunctions {
     fn from(v: usize) -> Self {
         match v {
-            x if x == HostFunctions::ReadDbIndex as usize => HostFunctions::ReadDbIndex,
-            x if x == HostFunctions::WriteDbIndex as usize => HostFunctions::WriteDbIndex,
-            x if x == HostFunctions::RemoveDbIndex as usize => HostFunctions::RemoveDbIndex,
+            x if x == HostFunctions::DbReadIndex as usize => HostFunctions::DbReadIndex,
+            x if x == HostFunctions::DbWriteIndex as usize => HostFunctions::DbWriteIndex,
+            x if x == HostFunctions::DbRemoveIndex as usize => HostFunctions::DbRemoveIndex,
             x if x == HostFunctions::CanonicalizeAddressIndex as usize => {
                 HostFunctions::CanonicalizeAddressIndex
             }
@@ -41,6 +44,12 @@ impl From<usize> for HostFunctions {
             }
             x if x == HostFunctions::GasIndex as usize => HostFunctions::GasIndex,
             x if x == HostFunctions::QueryChainIndex as usize => HostFunctions::QueryChainIndex,
+            x if x == HostFunctions::AddrValidateIndex as usize => HostFunctions::AddrValidateIndex,
+            x if x == HostFunctions::AddrCanonicalizeIndex as usize => {
+                HostFunctions::AddrCanonicalizeIndex
+            }
+            x if x == HostFunctions::AddrHumanizeIndex as usize => HostFunctions::AddrHumanizeIndex,
+            x if x == HostFunctions::DebugIndex as usize => HostFunctions::DebugIndex,
             x if x == HostFunctions::Secp256k1VerifyIndex as usize => {
                 HostFunctions::Secp256k1VerifyIndex
             }
@@ -56,16 +65,14 @@ impl From<usize> for HostFunctions {
             x if x == HostFunctions::Secp256k1SignIndex as usize => {
                 HostFunctions::Secp256k1SignIndex
             }
-            x if x == HostFunctions::Ed25519SignIndex as usize => {
-                HostFunctions::Ed25519SignIndex
-            }
-            #[cfg(feature = "debug-print")]
+            x if x == HostFunctions::Ed25519SignIndex as usize => HostFunctions::Ed25519SignIndex,
             x if x == HostFunctions::DebugPrintIndex as usize => HostFunctions::DebugPrintIndex,
             _ => HostFunctions::Unknown,
         }
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<usize> for HostFunctions {
     fn into(self) -> usize {
         self as usize
@@ -80,49 +87,56 @@ impl Externals for ContractInstance {
         args: RuntimeArgs,
     ) -> Result<Option<RuntimeValue>, Trap> {
         match HostFunctions::from(index) {
-            HostFunctions::ReadDbIndex => {
+            HostFunctions::DbReadIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {
-                    warn!(
-                        "read_db() error reading arguments, stopping wasm: {:?}",
-                        err
-                    );
+                    warn!("read_db() error reading argument, stopping wasm: {:?}", err);
                     err
                 })?;
                 self.read_db(key)
             }
-            HostFunctions::RemoveDbIndex => {
+            HostFunctions::DbRemoveIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {
                     warn!(
-                        "remove_db() error reading arguments, stopping wasm: {:?}",
+                        "remove_db() error reading argument, stopping wasm: {:?}",
                         err
                     );
                     err
                 })?;
                 self.remove_db(key)
             }
-            HostFunctions::WriteDbIndex => {
+            HostFunctions::DbWriteIndex => {
                 let key: i32 = args.nth_checked(0).map_err(|err| {
                     warn!(
-                        "write_db() error reading arguments, stopping wasm: {:?}",
+                        "write_db() error reading 1st arguments, stopping wasm: {:?}",
                         err
                     );
                     err
                 })?;
-                // Get pointer to the region of the value
-                let value: i32 = args.nth_checked(1)?;
+                let value: i32 = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "write_db() error reading 2nd arguments, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
 
                 self.write_db(key, value)
             }
             HostFunctions::CanonicalizeAddressIndex => {
                 let human: i32 = args.nth_checked(0).map_err(|err| {
                     warn!(
-                        "canonicalize_address() error reading arguments, stopping wasm: {:?}",
+                        "canonicalize_address() error reading 1st argument, stopping wasm: {:?}",
                         err
                     );
                     err
                 })?;
-
-                let canonical: i32 = args.nth_checked(1)?;
+                let canonical: i32 = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "canonicalize_address() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
 
                 self.canonicalize_address(human, canonical)
             }
@@ -130,15 +144,14 @@ impl Externals for ContractInstance {
             HostFunctions::HumanizeAddressIndex => {
                 let canonical: i32 = args.nth_checked(0).map_err(|err| {
                     warn!(
-                        "humanize_address() error reading first argument, stopping wasm: {:?}",
+                        "humanize_address() error reading 1st argument, stopping wasm: {:?}",
                         err
                     );
                     err
                 })?;
-
                 let human: i32 = args.nth_checked(1).map_err(|err| {
                     warn!(
-                        "humanize_address() error reading second argument, stopping wasm: {:?}",
+                        "humanize_address() error reading 2nd argument, stopping wasm: {:?}",
                         err
                     );
                     err
@@ -159,10 +172,58 @@ impl Externals for ContractInstance {
             }
             HostFunctions::GasIndex => {
                 let gas_amount: i32 = args.nth_checked(0).map_err(|err| {
-                    warn!("gas() error reading arguments, stopping wasm: {:?}", err);
+                    warn!("gas() error reading argument, stopping wasm: {:?}", err);
                     err
                 })?;
+
                 self.gas(gas_amount)
+            }
+            HostFunctions::AddrValidateIndex => {
+                let human: i32 = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "addr_validate() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.addr_validate(human)
+            }
+            HostFunctions::AddrCanonicalizeIndex => {
+                let human: i32 = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "addr_canonicalize() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let canonical: i32 = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "addr_canonicalize() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.addr_canonicalize(human, canonical)
+            }
+            HostFunctions::AddrHumanizeIndex => {
+                let canonical: i32 = args.nth_checked(0).map_err(|err| {
+                    warn!(
+                        "addr_humanize() error reading 1st argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+                let human: i32 = args.nth_checked(1).map_err(|err| {
+                    warn!(
+                        "addr_humanize() error reading 2nd argument, stopping wasm: {:?}",
+                        err
+                    );
+                    err
+                })?;
+
+                self.addr_humanize(canonical, human)
             }
             HostFunctions::Secp256k1VerifyIndex => {
                 let message_hash = args.nth_checked(0).map_err(|err| {
@@ -264,17 +325,36 @@ impl Externals for ContractInstance {
 
                 self.ed25519_batch_verify(messages, signatures, public_keys)
             }
-            #[cfg(feature = "debug-print")]
-            HostFunctions::DebugPrintIndex => {
-                let message: i32 = args.nth_checked(0).map_err(|err| {
-                    warn!(
-                        "debug_print() error reading argument, stopping wasm: {:?}",
+            HostFunctions::DebugIndex => {
+                #[cfg(feature = "debug-print")]
+                {
+                    // this comment is here to let rustfmt know that it's an idiot
+                    let message: i32 = args.nth_checked(0).map_err(|err| {
+                        warn!("debug() error reading argument, stopping wasm: {:?}", err);
                         err
-                    );
-                    err
-                })?;
+                    })?;
 
-                self.debug_print_index(message)
+                    self.debug_print_index(message)
+                }
+                #[cfg(not(feature = "debug-print"))]
+                Ok(None)
+            }
+            HostFunctions::DebugPrintIndex => {
+                #[cfg(feature = "debug-print")]
+                {
+                    // this comment is here to let rustfmt know that it's an idiot
+                    let message: i32 = args.nth_checked(0).map_err(|err| {
+                        warn!(
+                            "debug_print() error reading argument, stopping wasm: {:?}",
+                            err
+                        );
+                        err
+                    })?;
+
+                    self.debug_print_index(message)
+                }
+                #[cfg(not(feature = "debug-print"))]
+                Ok(None)
             }
             HostFunctions::Unknown => {
                 warn!("unknown function index");

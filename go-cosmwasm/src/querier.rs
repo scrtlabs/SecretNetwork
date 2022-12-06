@@ -15,8 +15,15 @@ pub struct querier_t {
 #[derive(Clone)]
 pub struct Querier_vtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
-    pub query_external:
-        extern "C" fn(*const querier_t, u64, *mut u64, Buffer, *mut Buffer, *mut Buffer) -> i32,
+    pub query_external: extern "C" fn(
+        *const querier_t,
+        u64,
+        *mut u64,
+        Buffer,
+        u32,
+        *mut Buffer,
+        *mut Buffer,
+    ) -> i32,
 }
 
 #[repr(C)]
@@ -33,6 +40,7 @@ impl Querier for GoQuerier {
     fn query_raw(
         &self,
         request: &[u8],
+        query_depth: u32,
         gas_limit: u64,
     ) -> FfiResult<SystemResult<StdResult<Binary>>> {
         let request_buf = Buffer::from_vec(request.to_vec());
@@ -44,6 +52,7 @@ impl Querier for GoQuerier {
             gas_limit,
             &mut used_gas as *mut u64,
             request_buf,
+            query_depth,
             &mut result_buf as *mut Buffer,
             &mut err as *mut Buffer,
         )

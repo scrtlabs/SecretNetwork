@@ -5,8 +5,8 @@ use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
 use crate::enclave::ENCLAVE_DOORBELL;
-#[cfg(feature = "query-node")]
-use crate::enclave::QUERY_ENCLAVE_DOORBELL;
+// #[cfg(feature = "query-node")]
+// use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
 
@@ -106,7 +106,7 @@ where
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
         let enclave_access_token = ENCLAVE_DOORBELL
-            .get_access(false) // This can never be recursive
+            .get_access(1) // This can never be recursive
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
@@ -144,7 +144,13 @@ where
         }
     }
 
-    pub fn handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<HandleSuccess> {
+    pub fn handle(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        handle_type: u8,
+    ) -> VmResult<HandleSuccess> {
         trace!(
             "handle() called with env: {:?} msg: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
@@ -158,7 +164,7 @@ where
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
         let enclave_access_token = ENCLAVE_DOORBELL
-            .get_access(false) // This can never be recursive
+            .get_access(1) // This can never be recursive
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
@@ -177,6 +183,7 @@ where
                 msg.len(),
                 sig_info.as_ptr(),
                 sig_info.len(),
+                handle_type,
             )
         };
 
@@ -206,15 +213,15 @@ where
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
-        #[cfg(not(feature = "query-node"))]
+        // #[cfg(not(feature = "query-node"))]
         let doorbell = &ENCLAVE_DOORBELL;
-        #[cfg(feature = "query-node")]
-        let doorbell = &QUERY_ENCLAVE_DOORBELL;
+        // #[cfg(feature = "query-node")]
+        // let doorbell = &QUERY_ENCLAVE_DOORBELL;
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function
         let enclave_access_token = doorbell
-            .get_access(is_query_recursive(env)?)
+            .get_access(get_query_depth(env)?)
             .ok_or_else(Self::busy_enclave_err)?;
         let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
 
@@ -267,20 +274,21 @@ where
     }
 }
 
-/// This type is used to extract the `recursive` field which is passed down as `true`
-/// when running in a recursive query. We do not include the other fields of the Env here
+/// This type is used to extract the `query_depth` field which starts out at 1
+/// and is incremented every time a recursive query is called.
+/// We do not include the other fields of the Env here
 /// to reduce the need to keep this type in sync with the canonical `Env` type.
 #[derive(Debug, Deserialize)]
 struct Env {
     #[serde(default)]
-    recursive: bool,
+    query_depth: u32,
 }
 
 /// This function parses the `env` parameter using the type above, and extracts the
 /// `recursive` field from it.
-fn is_query_recursive(env: &[u8]) -> VmResult<bool> {
+fn get_query_depth(env: &[u8]) -> VmResult<u32> {
     match serde_json::from_slice::<Env>(env) {
-        Ok(env) => Ok(env.recursive),
+        Ok(env) => Ok(env.query_depth),
         Err(_err) => Err(VmError::generic_err(format!(
             "could not parse the env parameter: {:?}",
             String::from_utf8_lossy(env)

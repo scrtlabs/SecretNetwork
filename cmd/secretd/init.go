@@ -12,7 +12,8 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	cfg "github.com/tendermint/tendermint/config"
+	tmconfig "github.com/tendermint/tendermint/config"
+
 	"github.com/tendermint/tendermint/libs/cli"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmrand "github.com/tendermint/tendermint/libs/rand"
@@ -77,12 +78,14 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			cdc := clientCtx.Codec
 
 			serverCtx := server.GetServerContextFromCmd(cmd)
-			config := serverCtx.Config
-			config.SetRoot(clientCtx.HomeDir)
+
+			// Tendermint config (.secretd/config/config.toml)
+			tmConfig := serverCtx.Config
+			tmConfig.SetRoot(clientCtx.HomeDir)
 
 			chainID, _ := cmd.Flags().GetString(flags.FlagChainID)
 			if chainID == "" {
-				chainID = fmt.Sprintf("test-chain-%v", tmrand.Str(6))
+				chainID = fmt.Sprintf("test-chain-%s", tmrand.Str(6))
 			}
 
 			// only for mainnet
@@ -93,14 +96,14 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 					"9cdaa5856e0245ecd73bd464308fb990fbc53b57@scrt-seed-03.scrtlabs.com:26656", // SCRT Labs 3
 				}
 				// Override default settings in config.toml
-				config.P2P.Seeds = strings.Join(seeds[:], ",")
+				tmConfig.P2P.Seeds = strings.Join(seeds, ",")
 			}
 
-			config.P2P.MaxNumInboundPeers = 320
-			config.P2P.MaxNumOutboundPeers = 40
-			config.Mempool.Size = 10000
-			config.StateSync.TrustPeriod = 112 * time.Hour
-			config.FastSync.Version = "v0"
+			tmConfig.P2P.MaxNumInboundPeers = 320
+			tmConfig.P2P.MaxNumOutboundPeers = 40
+			tmConfig.Mempool.Size = 10000
+			tmConfig.StateSync.TrustPeriod = 112 * time.Hour
+			tmConfig.FastSync.Version = "v0"
 
 			// Get bip39 mnemonic
 			var mnemonic string
@@ -118,18 +121,18 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 				}
 			}
 
-			nodeID, _, err := genutil.InitializeNodeValidatorFilesFromMnemonic(config, mnemonic)
+			nodeID, _, err := genutil.InitializeNodeValidatorFilesFromMnemonic(tmConfig, mnemonic)
 			if err != nil {
 				return err
 			}
 
-			config.Moniker = args[0]
+			tmConfig.Moniker = args[0]
 
-			genFile := config.GenesisFile()
+			genFile := tmConfig.GenesisFile()
 			overwrite, _ := cmd.Flags().GetBool(FlagOverwrite)
 
 			if !overwrite && tmos.FileExists(genFile) {
-				return fmt.Errorf("genesis.json file already exists: %v", genFile)
+				return fmt.Errorf("genesis.json file already exists: %s", genFile)
 			}
 
 			appState, err := json.MarshalIndent(mbm.DefaultGenesis(cdc), "", " ")
@@ -157,9 +160,9 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 				return errors.Wrap(err, "Failed to export gensis file")
 			}
 
-			toPrint := newPrintInfo(config.Moniker, chainID, nodeID, "", appState)
+			toPrint := newPrintInfo(tmConfig.Moniker, chainID, nodeID, "", appState)
 
-			cfg.WriteConfigFile(filepath.Join(config.RootDir, "config", "config.toml"), config)
+			tmconfig.WriteConfigFile(filepath.Join(tmConfig.RootDir, "config", "config.toml"), tmConfig)
 			return displayInfo(toPrint)
 		},
 	}

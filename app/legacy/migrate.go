@@ -3,7 +3,7 @@ package legacy
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/x/authz"
@@ -27,7 +27,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	legacy120 "github.com/enigmampc/SecretNetwork/app/legacy/v120"
+	legacy120 "github.com/scrtlabs/SecretNetwork/app/legacy/v120"
 )
 
 const (
@@ -53,7 +53,7 @@ $ secretd migrate /path/to/genesis.json --chain-id=secret-4 --genesis-time=2019-
 
 			importGenesis := args[0]
 
-			jsonBlob, err := ioutil.ReadFile(importGenesis)
+			jsonBlob, err := os.ReadFile(importGenesis)
 			if err != nil {
 				return errors.Wrap(err, "failed to read provided genesis file")
 			}

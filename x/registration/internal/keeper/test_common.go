@@ -3,7 +3,6 @@ package keeper
 import (
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -17,7 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/gov"
-	//"github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
+
+	// "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
@@ -37,8 +37,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/keeper/mock"
-	regtypes "github.com/enigmampc/SecretNetwork/x/registration/internal/types"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper/mock"
+	regtypes "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
@@ -46,7 +46,7 @@ import (
 
 func CreateTestSeedConfig(t *testing.T) []byte {
 	seed := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	cfg := regtypes.SeedConfig{

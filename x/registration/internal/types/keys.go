@@ -17,7 +17,6 @@ const (
 	RouterKey = ModuleName
 )
 
-// nolint
 var (
 	RegistrationStorePrefix = []byte{0x01}
 	MasterKeyPrefix         = []byte{0x02}

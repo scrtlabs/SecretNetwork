@@ -1,15 +1,14 @@
 package keeper
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	eng "github.com/enigmampc/SecretNetwork/types"
-	"github.com/enigmampc/SecretNetwork/x/registration/internal/types"
-	ra "github.com/enigmampc/SecretNetwork/x/registration/remote_attestation"
+	eng "github.com/scrtlabs/SecretNetwork/types"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
+	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,20 +21,24 @@ func init() {
 }
 
 func TestNewKeeper(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir, err := os.MkdirTemp("", "reg")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 	_, regKeeper := CreateTestInput(t, false, tempDir, true)
 	require.NotNil(t, regKeeper)
 }
 
 func TestNewKeeper_Node(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir, err := os.MkdirTemp("", "reg")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 
 	seedPath := filepath.Join(tempDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
 
-	err := os.MkdirAll(filepath.Join(tempDir, types.SecretNodeCfgFolder), 0o700)
+	err = os.MkdirAll(filepath.Join(tempDir, types.SecretNodeCfgFolder), 0o700)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(seedPath, CreateTestSeedConfig(t), 0o700)
+	err = os.WriteFile(seedPath, CreateTestSeedConfig(t), 0o700)
 	require.NoError(t, err)
 
 	_, regKeeper := CreateTestInput(t, false, tempDir, false)
@@ -43,10 +46,12 @@ func TestNewKeeper_Node(t *testing.T) {
 }
 
 func TestKeeper_RegisterationStore(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{
@@ -67,10 +72,12 @@ func TestKeeper_RegisterationStore(t *testing.T) {
 }
 
 func TestKeeper_RegisterNode(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := ioutil.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{

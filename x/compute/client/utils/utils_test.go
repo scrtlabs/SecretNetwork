@@ -1,14 +1,17 @@
 package utils
 
 import (
-	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 
 	"github.com/stretchr/testify/require"
 )
 
 func GetTestData() ([]byte, []byte, []byte, error) {
-	wasmCode, err := ioutil.ReadFile("../../internal/keeper/testdata/contract.wasm")
+	wasmCode, err := os.ReadFile(filepath.Join("../../internal/keeper", keeper.TestContractPaths["hackatom.wasm"]))
 	if err != nil {
 		return nil, nil, nil, err
 	}

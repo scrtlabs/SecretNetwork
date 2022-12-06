@@ -40,7 +40,7 @@ pub struct RuntimeConfiguration {
     /// The amount of wasmi modules cached in an LRU cache inside the enclave.
     /// This speeds up the execution of recently used modules, but has a significant
     /// memory overhead.
-    pub module_cache_size: u8,
+    pub module_cache_size: u32,
 }
 
 /// This struct holds a pointer to memory in userspace, that contains the storage
@@ -117,6 +117,9 @@ pub enum EnclaveError {
     /// The contract has run out of space on the stack.
     #[display(fmt = "the contract has run out of space on the stack")]
     ContractPanicStackOverflow,
+    /// The contract performed integer overflow.
+    #[display(fmt = "the contract has run out of space on the stack")]
+    ContractPanicIntegerOverflow,
     /// The contract tried to call a function but expected an incorrect function signature.
     #[display(
         fmt = "the contract tried to call a function but expected an incorrect function signature"
@@ -214,6 +217,8 @@ pub enum NodeAuthResult {
     SeedEncryptionFailed,
     #[display(fmt = "failed to allocate minimal safety buffer")]
     MemorySafetyAllocationError,
+    #[display(fmt = "Enclave quote status does not match expected status")]
+    EnclaveQuoteStatus,
     #[display(
         fmt = "Unexpected panic during node authentication. Certificate may be malformed or invalid"
     )]
@@ -246,7 +251,7 @@ impl Default for HealthCheckResult {
 // into the enclave, and then finally unwrap the `VmError`, which gets propagated up the normal stack.
 //
 // For a more detailed discussion, see:
-// https://github.com/enigmampc/SecretNetwork/pull/307#issuecomment-651157410
+// https://github.com/scrtlabs/SecretNetwork/pull/307#issuecomment-651157410
 #[repr(C)]
 #[derive(Debug, Display)]
 #[display(fmt = "VmError")]

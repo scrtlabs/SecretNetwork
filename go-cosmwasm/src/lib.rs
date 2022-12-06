@@ -3,11 +3,13 @@ mod db;
 mod error;
 mod gas_meter;
 mod iterator;
+mod logger;
 mod memory;
 mod querier;
 
 pub use api::GoApi;
 pub use db::{db_t, DB};
+use logger::get_log_level;
 pub use memory::{free_rust, Buffer};
 pub use querier::GoQuerier;
 
@@ -15,12 +17,11 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use crate::error::{clear_error, handle_c_error, set_error, Error};
+use crate::error::{clear_error, handle_c_error, handle_c_error_default, set_error, Error};
 
 use cosmwasm_sgx_vm::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{
-    call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, features_from_csv, Checksum,
-    CosmCache, Extern,
+    call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
@@ -32,7 +33,8 @@ use log::*;
 
 #[ctor]
 fn init_logger() {
-    simple_logger::init_with_level(log::Level::Info).unwrap();
+    let default_log_level = log::Level::Info;
+    simple_logger::init_with_level(get_log_level(default_log_level)).unwrap();
 }
 
 #[repr(C)]
@@ -56,7 +58,7 @@ pub extern "C" fn get_health_check(err: Option<&mut Buffer>) -> Buffer {
         }
         Ok(res) => {
             clear_error();
-            Buffer::from_vec(format!("{}", res).into_bytes())
+            Buffer::from_vec(format!("{:?}", res).into_bytes())
         }
     }
 }
@@ -130,6 +132,7 @@ pub extern "C" fn init_bootstrap(
 pub extern "C" fn init_node(
     master_cert: Buffer,
     encrypted_seed: Buffer,
+    api_key: Buffer,
     err: Option<&mut Buffer>,
 ) -> bool {
     let pk_slice = match unsafe { master_cert.read() } {
@@ -146,8 +149,15 @@ pub extern "C" fn init_node(
         }
         Some(r) => r,
     };
+    let api_key_slice = match unsafe { api_key.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
 
-    match untrusted_init_node(pk_slice, encrypted_seed_slice) {
+    match untrusted_init_node(pk_slice, encrypted_seed_slice, api_key_slice) {
         Ok(_) => {
             clear_error();
             true
@@ -160,19 +170,7 @@ pub extern "C" fn init_node(
 }
 
 #[no_mangle]
-pub extern "C" fn create_attestation_report(
-    spid: Buffer,
-    api_key: Buffer,
-    err: Option<&mut Buffer>,
-) -> bool {
-    let spid_slice = match unsafe { spid.read() } {
-        None => {
-            set_error(Error::empty_arg("spid"), err);
-            return false;
-        }
-        Some(r) => r,
-    };
-
+pub extern "C" fn create_attestation_report(api_key: Buffer, err: Option<&mut Buffer>) -> bool {
     let api_key_slice = match unsafe { api_key.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
@@ -181,7 +179,7 @@ pub extern "C" fn create_attestation_report(
         Some(r) => r,
     };
 
-    if let Err(status) = create_attestation_report_u(spid_slice, api_key_slice) {
+    if let Err(status) = create_attestation_report_u(api_key_slice) {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }
@@ -262,7 +260,7 @@ pub extern "C" fn release_cache(cache: *mut cache_t) {
 
 #[repr(C)]
 pub struct EnclaveRuntimeConfig {
-    pub module_cache_size: u8,
+    pub module_cache_size: u32,
 }
 
 impl EnclaveRuntimeConfig {
@@ -403,11 +401,22 @@ pub extern "C" fn handle(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
     sig_info: Buffer,
+    handle_type: u8,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_handle(
-                c, code_id, params, msg, db, api, querier, gas_limit, gas_used, sig_info,
+                c,
+                code_id,
+                params,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                gas_used,
+                sig_info,
+                handle_type,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -429,6 +438,7 @@ fn do_handle(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     sig_info: Buffer,
+    handle_type: u8,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
@@ -441,68 +451,7 @@ fn do_handle(
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_handle_raw(&mut instance, params, msg, sig_info);
-    *gas_used = instance.create_gas_report().used_internally;
-    instance.recycle();
-    Ok(res?)
-}
-
-#[no_mangle]
-pub extern "C" fn migrate(
-    cache: *mut cache_t,
-    contract_id: Buffer,
-    params: Buffer,
-    msg: Buffer,
-    db: DB,
-    api: GoApi,
-    querier: GoQuerier,
-    gas_limit: u64,
-    gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
-) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_migrate(
-                c,
-                contract_id,
-                params,
-                msg,
-                db,
-                api,
-                querier,
-                gas_limit,
-                gas_used,
-            )
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_migrate(
-    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
-    code_id: Buffer,
-    params: Buffer,
-    msg: Buffer,
-    db: DB,
-    api: GoApi,
-    querier: GoQuerier,
-    gas_limit: u64,
-    gas_used: Option<&mut u64>,
-) -> Result<Vec<u8>, Error> {
-    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let code_id: Checksum = unsafe { code_id.read() }
-        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
-        .try_into()?;
-    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
-
-    let deps = to_extern(db, api, querier);
-    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
-    // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_migrate_raw(&mut instance, params, msg);
+    let res = call_handle_raw(&mut instance, params, msg, sig_info, handle_type);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
@@ -559,6 +508,58 @@ fn do_query(
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
+}
+
+/// The result type of the FFI function analyze_code.
+///
+/// Please note that the unmanaged vector in `required_features`
+/// has to be destroyed exactly once. When calling `analyze_code`
+/// from Go this is done via `C.destroy_unmanaged_vector`.
+#[repr(C)]
+#[derive(Clone, Default, Debug, PartialEq)]
+pub struct AnalysisReport {
+    pub has_ibc_entry_points: bool,
+    /// An UTF-8 encoded comma separated list of required features.
+    /// This is never None/nil.
+    pub required_features: Buffer,
+}
+
+#[no_mangle]
+pub extern "C" fn analyze_code(
+    cache: *mut cache_t,
+    checksum: Buffer,
+    error_msg: Option<&mut Buffer>,
+) -> AnalysisReport {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+
+    handle_c_error_default(r, error_msg)
+}
+
+fn do_analyze_code(
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
+    checksum: Buffer,
+) -> Result<AnalysisReport, Error> {
+    let checksum: Checksum = unsafe { checksum.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .try_into()?;
+    let report = cache.analyze(&checksum)?;
+    let mut features_vec: Vec<u8> = vec![];
+    for feature in &report.required_features {
+        if features_vec.len() > 0 {
+            features_vec.append(&mut (",".as_bytes().to_vec()))
+        }
+
+        features_vec.append(&mut feature.as_bytes().to_vec())
+    }
+
+    Ok(AnalysisReport {
+        has_ibc_entry_points: report.has_ibc_entry_points,
+        required_features: Buffer::from_vec(features_vec),
+    })
 }
 
 #[no_mangle]
