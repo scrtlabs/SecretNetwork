@@ -3,7 +3,6 @@ package v120
 import (
 	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	v106registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v106"
-	v120ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
 // Migrate accepts exported v1.0.6 x/registration genesis state and
@@ -21,10 +20,10 @@ func Migrate(regGenState v106registration.GenesisState) *v120registration.Genesi
 
 	return &v120registration.GenesisState{
 		Registration: registrations,
-		NodeExchMasterCertificate: &v120registration.MasterCertificate{
+		NodeExchMasterKey: &v120registration.MasterKey{
 			Bytes: regGenState.NodeExchMasterCertificate,
 		},
-		IoMasterCertificate: &v120registration.MasterCertificate{
+		IoMasterKey: &v120registration.MasterKey{
 			Bytes: regGenState.IoMasterCertificate,
 		},
 	}

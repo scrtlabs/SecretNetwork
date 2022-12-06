@@ -28,7 +28,7 @@ func (q GrpcQuerier) TxKey(c context.Context, _ *empty.Empty) (*types.Key, error
 		return nil, types.ErrNotFound
 	}
 	return &types.Key{
-		Key: rsp.IoMasterCertificate.Bytes,
+		Key: rsp.IoMasterKey.Bytes,
 	}, nil
 }
 
@@ -41,7 +41,7 @@ func (q GrpcQuerier) RegistrationKey(c context.Context, _ *empty.Empty) (*types.
 		return nil, types.ErrNotFound
 	}
 	return &types.Key{
-		Key: rsp.NodeExchMasterCertificate.Bytes,
+		Key: rsp.NodeExchMasterKey.Bytes,
 	}, nil
 }
 
@@ -60,22 +60,17 @@ func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedS
 }
 
 func queryMasterKey(ctx sdk.Context, keeper Keeper) (*types.GenesisState, error) {
-	ioKey := keeper.GetMasterCertificate(ctx, types.MasterIoKeyId)
-	nodeKey := keeper.GetMasterCertificate(ctx, types.MasterNodeKeyId)
+	ioKey := keeper.GetMasterKey(ctx, types.MasterIoKeyId)
+	nodeKey := keeper.GetMasterKey(ctx, types.MasterNodeKeyId)
 	if ioKey == nil || nodeKey == nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, "Chain has not been initialized yet")
 	}
 
 	resp := &types.GenesisState{
-		Registration:              nil,
-		NodeExchMasterCertificate: nodeKey,
-		IoMasterCertificate:       ioKey,
+		Registration:      nil,
+		NodeExchMasterKey: nodeKey,
+		IoMasterKey:       ioKey,
 	}
-
-	// asBytes, err := keeper.cdc.Marshal(ioKey)
-	// if err != nil {
-	//	return nil, err
-	//}
 
 	return resp, nil
 }
