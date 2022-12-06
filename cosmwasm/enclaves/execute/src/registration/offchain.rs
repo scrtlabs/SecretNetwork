@@ -155,20 +155,20 @@ pub unsafe extern "C" fn ecall_init_node(
     // validate this node is patched and updated
 
     // generate temporary key for attestation
-    let temp_key_result = KeyPair::new();
+    // let temp_key_result = KeyPair::new();
+    //
+    // if temp_key_result.is_err() {
+    //     error!("Failed to generate temporary key for attestation");
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
 
-    if temp_key_result.is_err() {
-        error!("Failed to generate temporary key for attestation");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    // this validates the cert and handles the "what if it fails" inside as well
-    let res =
-        create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
-    if res.is_err() {
-        error!("Error starting node, might not be updated",);
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    // // this validates the cert and handles the "what if it fails" inside as well
+    // let res =
+    //     create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
+    // if res.is_err() {
+    //     error!("Error starting node, might not be updated",);
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
 
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
