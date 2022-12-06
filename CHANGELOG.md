@@ -4,7 +4,7 @@
 
 - Fixed issue causing registrations to fail
 - Changed internal WASM engine to Wasm3 from Wasmi. Contract performance increased greatly
-~~- Added seed rotation. On upgrade the network will fetch a new seed and use it for derivation of keys and encryption
+- ~~Added seed rotation. On upgrade the network will fetch a new seed and use it for derivation of keys and encryption~~
 - Seed rotation has been delayed to the next network upgrade
 - Changed default grpc-concurrency to false (from true). For nodes that serve API requests, we highly recommend setting this manually to true as described in the release notes for version 1.5.1
 
