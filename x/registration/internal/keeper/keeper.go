@@ -68,22 +68,14 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 	var seedCfg types.SeedConfig
 
-	err = json.Unmarshal(byteValue, &seedCfg)
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
-	err = validateSeedParams(seedCfg)
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
-	cert, enc, err := seedCfg.Decode()
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
 	if wasLegacySeedPathUsed {
+		var legacySeedCfg types.LegacySeedConfig
+		err = json.Unmarshal(byteValue, &legacySeedCfg)
+		cert, enc, err := legacySeedCfg.Decode()
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
 		newEnc := make([]byte, len(enc)+1)
 
 		tmp := make([]byte, 2)
@@ -92,18 +84,40 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 		copy(newEnc[1:], enc)
 
-		enc = newEnc
+		seedCfg.MasterKey, err = fetchPubKeyFromLegacyConfig(cert)
+		seedCfg.EncryptedKey = hex.EncodeToString(newEnc)
+	} else {
+		err = json.Unmarshal(byteValue, &seedCfg)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
 	}
 
-	seed, err := enclave.LoadSeed(cert, enc, apiKey)
+	err = validateSeedParams(seedCfg)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	pk, enc, err := seedCfg.Decode()
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	seed, err := enclave.LoadSeed(pk, enc, apiKey)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	if wasLegacySeedPathUsed {
+		// ecall_initialize_node will rewrite the new key (If such) to types.NodeExchMasterKeyPath
+		masterKey, err := os.ReadFile(filepath.Join(homeDir, types.NodeExchMasterKeyPath))
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
 		cfg := types.SeedConfig{
 			EncryptedKey: hex.EncodeToString(seed),
-			MasterCert:   seedCfg.MasterCert,
+			MasterKey:    string(masterKey),
 		}
 
 		cfgBytes, err := json.Marshal(&cfg)
@@ -195,17 +209,16 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	return nil
 }
 
+func fetchPubKeyFromLegacyConfig(cert []byte) (string, error) {
+	pk, err := ra.VerifyRaCert(cert)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.RawStdEncoding.EncodeToString(pk), nil
+}
+
 func validateSeedParams(config types.SeedConfig) error {
-	res, err := base64.StdEncoding.DecodeString(config.MasterCert)
-	if err != nil {
-		return err
-	}
-
-	_, err = ra.VerifyRaCert(res)
-	if err != nil {
-		return err
-	}
-
 	lenKey := len(config.EncryptedKey)
 
 	if (lenKey != types.EncryptedKeyLength && lenKey != types.LegacyEncryptedKeyLength) || !IsHexString(config.EncryptedKey) {

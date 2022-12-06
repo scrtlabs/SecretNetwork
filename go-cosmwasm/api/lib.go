@@ -59,7 +59,7 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 }
 
 func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) ([]byte, error) {
-	pkSlice := sendSlice(masterCert)
+	pkSlice := sendSlice(masterKey)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
 	defer freeAfterSend(seedSlice)

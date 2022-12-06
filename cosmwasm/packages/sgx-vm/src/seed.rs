@@ -12,8 +12,8 @@ extern "C" {
     pub fn ecall_init_node(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
-        master_cert: *const u8,
-        master_cert_len: u32,
+        master_key: *const u8,
+        master_key_len: u32,
         encrypted_seed: *const u8,
         encrypted_seed_len: u32,
         api_key: *const u8,
@@ -69,7 +69,7 @@ pub fn untrusted_health_check() -> SgxResult<HealthCheckResult> {
 }
 
 pub fn untrusted_init_node(
-    master_cert: &[u8],
+    master_key: &[u8],
     encrypted_seed: &[u8],
     api_key: &[u8],
 ) -> SgxResult<[u8; ENCRYPTED_SEED_SIZE as usize]> {
@@ -116,8 +116,8 @@ pub fn untrusted_init_node(
         ecall_init_node(
             eid,
             &mut ret,
-            master_cert.as_ptr(),
-            master_cert.len() as u32,
+            master_key.as_ptr(),
+            master_key.len() as u32,
             seed_to_enclave.as_ptr(),
             seed_to_enclave.len() as u32,
             api_key.as_ptr(),

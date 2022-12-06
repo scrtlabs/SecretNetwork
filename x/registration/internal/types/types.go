@@ -31,6 +31,19 @@ func (c SeedConfig) Decode() ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	pk, err := base64.StdEncoding.DecodeString(c.MasterKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return pk, enc, nil
+}
+
+func (c LegacySeedConfig) Decode() ([]byte, []byte, error) {
+	enc, err := hex.DecodeString(c.EncryptedKey)
+	if err != nil {
+		return nil, nil, err
+	}
 	pk, err := base64.StdEncoding.DecodeString(c.MasterCert)
 	if err != nil {
 		return nil, nil, err

@@ -21,7 +21,6 @@ use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
 use super::attestation::create_attestation_certificate;
-use super::cert::verify_ra_cert;
 
 use super::seed_service::get_next_consensus_seed_from_service;
 
@@ -170,8 +169,8 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn ecall_init_node(
-    master_cert: *const u8,
-    master_cert_len: u32,
+    master_key: *const u8,
+    master_key_len: u32,
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
     api_key: *const u8,
@@ -180,8 +179,8 @@ pub unsafe extern "C" fn ecall_init_node(
     seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_status_t {
     validate_const_ptr!(
-        master_cert,
-        master_cert_len as usize,
+        master_key,
+        master_key_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
@@ -199,7 +198,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
-    let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
+    let key_slice = slice::from_raw_parts(master_key, master_key_len as usize);
 
     if encrypted_seed_len != ENCRYPTED_SEED_SIZE {
         error!("Encrypted seed bad length");
@@ -233,22 +232,11 @@ pub unsafe extern "C" fn ecall_init_node(
     // public keys in certificates don't have 0x04, so we'll copy it here
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
-    // validate master certificate - basically test that we're on the correct network
-    let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
-        Err(e) => {
-            debug!("Error validating master certificate - {:?}", e);
-            error!("Error validating network parameters. Are you on the correct network? (error code 0x01)");
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-        Ok(res) => res,
-    };
+    let pk = key_slice.to_vec();
 
     // just make sure the of the public key isn't messed up
     if pk.len() != PUBLIC_KEY_SIZE {
-        error!(
-            "Got public key from certificate with the wrong size: {:?}",
-            pk.len()
-        );
+        error!("Got public key with the wrong size: {:?}", pk.len());
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
     target_public_key.copy_from_slice(&pk);
