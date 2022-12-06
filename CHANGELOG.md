@@ -3,7 +3,7 @@
 # 1.6.0 - Unreleased
 
 - Fixed issue causing registrations to fail
-- Changed internal WASM enginer to Wasm3 from Wasmi. Contract performance increased greatly
+- Changed internal WASM engine to Wasm3 from Wasmi. Contract performance increased greatly
 - Added seed rotation. On upgrade the network will fetch a new seed and use it for derivation of keys and encryption
   * Note: This will change the keys that are used during tx encryption (i.e. the one returned from /registration/v1beta1/tx-key)
 
