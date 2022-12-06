@@ -19,6 +19,7 @@ jobs:
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
+      ALLOWLIST: ${{ secrets.ALLOWLIST }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -37,11 +38,13 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - name: Create allowlist
+        run: |
+          echo $ALLOWLIST > cosmwasm/enclaves/execute/whitelist.txt
       - name: Sets env vars for rocksdb
         if: ${{ matrix.db_backend == 'rocksdb' }}
         run: |
           echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
-
       - name: Build .deb Package Image
         uses: docker/build-push-action@v3
         with:
