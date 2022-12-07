@@ -176,7 +176,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				return fmt.Errorf("invalid certificate for master public key")
 			}
 
-			regGenState.NodeExchMasterCertificate.Bytes = cert
+			regGenState.NodeExchMasterKey.Bytes = key
 
 			// Load consensus_io_exchange_pubkey
 			if len(args) == 2 {
@@ -191,7 +191,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			regGenState.IoMasterCertificate.Bytes = cert
+			regGenState.IoMasterKey.Bytes = key
 
 			// Create genesis state from certificates
 			regGenStateBz, err := cdc.MarshalJSON(&regGenState)
@@ -521,7 +521,7 @@ Please report any issues with this command
 
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
-				MasterCert:   regPublicKey,
+				MasterKey:    regPublicKey,
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)

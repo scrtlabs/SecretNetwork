@@ -84,7 +84,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 		copy(newEnc[1:], enc)
 
-		seedCfg.MasterKey, err = fetchPubKeyFromLegacyConfig(cert)
+		seedCfg.MasterKey, err = fetchPubKeyFromLegacyCert(cert)
 		seedCfg.EncryptedKey = hex.EncodeToString(newEnc)
 	} else {
 		err = json.Unmarshal(byteValue, &seedCfg)
@@ -209,7 +209,7 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	return nil
 }
 
-func fetchPubKeyFromLegacyConfig(cert []byte) (string, error) {
+func fetchPubKeyFromLegacyCert(cert []byte) (string, error) {
 	pk, err := ra.VerifyRaCert(cert)
 	if err != nil {
 		return "", err

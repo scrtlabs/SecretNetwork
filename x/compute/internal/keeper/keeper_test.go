@@ -48,9 +48,9 @@ func init() {
 		panic(fmt.Sprintf("Error initializing the enclave: %v", err))
 	}
 
-	wasmCtx.TestMasterIOCert.Bytes, err = os.ReadFile(filepath.Join(".", reg.IoExchMasterKeyPath))
+	wasmCtx.TestMasterIOKey.Bytes, err = os.ReadFile(filepath.Join(".", reg.IoExchMasterKeyPath))
 	if err != nil {
-		panic(fmt.Sprintf("Error reading 'io-master-cert.der': %v", err))
+		panic(fmt.Sprintf("Error reading 'io-master-key.txt': %v", err))
 	}
 }
 

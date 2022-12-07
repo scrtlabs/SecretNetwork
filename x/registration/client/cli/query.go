@@ -77,25 +77,25 @@ func GetCmdMasterParams() *cobra.Command {
 				return err
 			}
 
-			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterCertificate)
+			route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterKey)
 			res, _, err := clientCtx.Query(route)
 			if err != nil {
 				return err
 			}
 
-			var certs types.GenesisState
+			var keys types.GenesisState
 
-			err = json.Unmarshal(res, &certs)
+			err = json.Unmarshal(res, &keys)
 			if err != nil {
 				return err
 			}
 
-			err = os.WriteFile(types.IoExchMasterCertPath, certs.IoMasterCertificate.Bytes, 0o600)
+			err = os.WriteFile(types.IoExchMasterKeyPath, keys.IoMasterKey.Bytes, 0o600)
 			if err != nil {
 				return err
 			}
 
-			err = os.WriteFile(types.NodeExchMasterCertPath, certs.NodeExchMasterCertificate.Bytes, 0o600)
+			err = os.WriteFile(types.NodeExchMasterKeyPath, keys.NodeExchMasterKey.Bytes, 0o600)
 			if err != nil {
 				return err
 			}

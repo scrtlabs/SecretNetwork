@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"os"
 	"testing"
@@ -49,9 +48,12 @@ func CreateTestSeedConfig(t *testing.T) []byte {
 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
+	key, err := fetchPubKeyFromLegacyCert(cert)
+	require.NoError(t, err)
+
 	cfg := regtypes.SeedConfig{
 		EncryptedKey: seed,
-		MasterCert:   base64.StdEncoding.EncodeToString(cert),
+		MasterKey:    key,
 	}
 
 	cfgBytes, err := json.Marshal(&cfg)

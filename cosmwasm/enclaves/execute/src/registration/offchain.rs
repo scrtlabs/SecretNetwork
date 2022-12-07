@@ -8,8 +8,8 @@ use sgx_types::{sgx_status_t, SgxResult};
 use std::slice;
 
 use enclave_crypto::consts::{
-    SigningMethod, ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, ENCRYPTED_SEED_SIZE,
-    IO_KEY_SAVE_PATH, SEED_EXCH_KEY_SAVE_PATH, SIGNATURE_TYPE,
+    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, ENCRYPTED_SEED_SIZE, IO_KEY_SAVE_PATH,
+    SEED_EXCH_KEY_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
