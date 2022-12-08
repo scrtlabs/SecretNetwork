@@ -71,6 +71,10 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	if wasLegacySeedPathUsed {
 		var legacySeedCfg types.LegacySeedConfig
 		err = json.Unmarshal(byteValue, &legacySeedCfg)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
 		cert, enc, err := legacySeedCfg.Decode()
 		if err != nil {
 			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
@@ -85,6 +89,10 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 		copy(newEnc[1:], enc)
 
 		seedCfg.MasterKey, err = fetchPubKeyFromLegacyCert(cert)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
 		seedCfg.EncryptedKey = hex.EncodeToString(newEnc)
 	} else {
 		err = json.Unmarshal(byteValue, &seedCfg)
@@ -215,7 +223,7 @@ func fetchPubKeyFromLegacyCert(cert []byte) (string, error) {
 		return "", err
 	}
 
-	return base64.RawStdEncoding.EncodeToString(pk), nil
+	return base64.StdEncoding.EncodeToString(pk), nil
 }
 
 func FetchRawPubKeyFromLegacyCert(cert []byte) ([]byte, error) {
