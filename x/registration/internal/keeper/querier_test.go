@@ -44,9 +44,9 @@ func TestNewQuerier(t *testing.T) {
 	}
 
 	expectedSecretParams, _ := json.Marshal(types.GenesisState{
-		Registration:              nil,
-		NodeExchMasterCertificate: &types.MasterCertificate{Bytes: regInfo.Certificate},
-		IoMasterCertificate:       &types.MasterCertificate{Bytes: regInfo.Certificate},
+		Registration:      nil,
+		NodeExchMasterKey: &types.MasterKey{Bytes: publicKey},
+		IoMasterKey:       &types.MasterKey{Bytes: publicKey},
 	})
 
 	specs := map[string]struct {
@@ -76,8 +76,8 @@ func TestNewQuerier(t *testing.T) {
 			nil,
 			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		},
-		"query master cert fail": {
-			[]string{QueryMasterCertificate},
+		"query master key fail": {
+			[]string{QueryMasterKey},
 			abci.RequestQuery{Data: []byte("")},
 			sdkErrors.ErrUnknownAddress,
 			"",

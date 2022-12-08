@@ -1,6 +1,7 @@
 package v170
 
 import (
+	v170rk "github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	v170registration "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v120"
 	v170ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
@@ -19,13 +20,23 @@ func Migrate(regGenState v120registration.GenesisState) *v170registration.Genesi
 		}
 	}
 
+	nodeExchMasterKey, err := v170rk.FetchRawPubKeyFromLegacyCert(regGenState.NodeExchMasterCertificate.Bytes)
+	if err != nil {
+		return nil
+	}
+
+	iohMasterKey, err := v170rk.FetchRawPubKeyFromLegacyCert(regGenState.IoMasterCertificate.Bytes)
+	if err != nil {
+		return nil
+	}
+
 	return &v170registration.GenesisState{
 		Registration: registrations,
 		NodeExchMasterKey: &v170registration.MasterKey{
-			Bytes: regGenState.NodeExchMasterCertificate.Bytes,
+			Bytes: nodeExchMasterKey,
 		},
 		IoMasterKey: &v170registration.MasterKey{
-			Bytes: regGenState.IoMasterCertificate.Bytes,
+			Bytes: iohMasterKey,
 		},
 	}
 }

@@ -176,7 +176,10 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				return fmt.Errorf("invalid certificate for master public key")
 			}
 
-			regGenState.NodeExchMasterKey.Bytes = key
+			regGenState.NodeExchMasterKey.Bytes, err = base64.StdEncoding.DecodeString(string(key))
+			if err != nil {
+				return err
+			}
 
 			// Load consensus_io_exchange_pubkey
 			if len(args) == 2 {
@@ -191,7 +194,10 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			regGenState.IoMasterKey.Bytes = key
+			regGenState.IoMasterKey.Bytes, err = base64.StdEncoding.DecodeString(string(key))
+			if err != nil {
+				return err
+			}
 
 			// Create genesis state from certificates
 			regGenStateBz, err := cdc.MarshalJSON(&regGenState)

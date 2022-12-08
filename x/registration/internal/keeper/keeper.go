@@ -210,12 +210,21 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 }
 
 func fetchPubKeyFromLegacyCert(cert []byte) (string, error) {
-	pk, err := ra.VerifyRaCert(cert)
+	pk, err := FetchRawPubKeyFromLegacyCert(cert)
 	if err != nil {
 		return "", err
 	}
 
 	return base64.RawStdEncoding.EncodeToString(pk), nil
+}
+
+func FetchRawPubKeyFromLegacyCert(cert []byte) ([]byte, error) {
+	pk, err := ra.VerifyRaCert(cert)
+	if err != nil {
+		return nil, err
+	}
+
+	return pk, nil
 }
 
 func validateSeedParams(config types.SeedConfig) error {
