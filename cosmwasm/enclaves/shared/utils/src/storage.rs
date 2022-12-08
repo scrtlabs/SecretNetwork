@@ -13,10 +13,7 @@ pub fn write_to_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<()> {
 }
 
 pub fn rewrite_on_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<()> {
-    let is_path_exists = match fs::try_exists(filepath) {
-        Ok(b) => b,
-        Err(_) => false,
-    };
+    let is_path_exists = fs::try_exists(filepath).unwrap_or(false);
 
     if is_path_exists {
         fs::remove_file(filepath)
