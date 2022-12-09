@@ -116,29 +116,29 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	if wasLegacySeedPathUsed {
-		// ecall_initialize_node will rewrite the new key (If such) to types.NodeExchMasterKeyPath
-		masterKey, err := os.ReadFile(filepath.Join(homeDir, types.NodeExchMasterKeyPath))
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		cfg := types.SeedConfig{
-			EncryptedKey: hex.EncodeToString(seed),
-			MasterKey:    string(masterKey),
-		}
-
-		cfgBytes, err := json.Marshal(&cfg)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		seedFilePath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
-		err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
+	// ecall_initialize_node will rewrite the new key (If such) to types.NodeExchMasterKeyPath
+	masterKey, err := os.ReadFile(types.NodeExchMasterKeyPath)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
+
+	cfg := types.SeedConfig{
+		EncryptedKey: hex.EncodeToString(seed),
+		MasterKey:    string(masterKey),
+	}
+
+	cfgBytes, err := json.Marshal(&cfg)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	seedFilePath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
+	err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	
 }
 
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {

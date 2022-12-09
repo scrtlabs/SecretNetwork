@@ -90,12 +90,12 @@ func GetCmdMasterParams() *cobra.Command {
 				return err
 			}
 
-			err = os.WriteFile(types.IoExchMasterKeyPath, keys.IoMasterKey.Bytes, 0o600)
+			err = os.WriteFile(types.IoExchMasterKeyPath, []byte(base64.StdEncoding.EncodeToString(keys.IoMasterKey.Bytes)), 0o600)
 			if err != nil {
 				return err
 			}
 
-			err = os.WriteFile(types.NodeExchMasterKeyPath, keys.NodeExchMasterKey.Bytes, 0o600)
+			err = os.WriteFile(types.NodeExchMasterKeyPath, []byte(base64.StdEncoding.EncodeToString(keys.NodeExchMasterKey.Bytes)), 0o600)
 			if err != nil {
 				return err
 			}
