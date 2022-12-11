@@ -233,6 +233,7 @@ clean:
 	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/enclaves/test clean
+	$(MAKE) -C check-hw clean
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
@@ -353,6 +354,21 @@ build-mainnet:
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
+build-check-hw-tool:
+	@mkdir build 2>&3 || true
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="${FEATURES}" \
+                 --build-arg FEATURES_U=${FEATURES_U} \
+                 --build-arg BUILDKIT_INLINE_CACHE=1 \
+                 --secret id=API_KEY,src=api_key.txt \
+                 --secret id=SPID,src=spid.txt \
+                 --build-arg SECRET_NODE_TYPE=NODE \
+                 --build-arg BUILD_VERSION=${VERSION} \
+                 --build-arg SGX_MODE=HW \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
+                 -f deployment/dockerfiles/Dockerfile \
+                 -t compile-check-hw-tool \
+                 --target compile-check-hw-tool .
+
 # while developing:
 build-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) enclave
@@ -368,6 +384,10 @@ clippy-enclave:
 # while developing:
 clean-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) clean
+
+# while developing:
+clippy: clippy-enclave
+	$(MAKE) -C check-hw clippy
 
 sanity-test:
 	SGX_MODE=SW $(MAKE) build-linux
@@ -517,3 +537,7 @@ proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
 
 .PHONY: proto-all proto-gen proto-format proto-lint proto-check-breaking
+
+.PHONY: check-hw
+check-hw: build-linux
+	$(MAKE) -C check-hw

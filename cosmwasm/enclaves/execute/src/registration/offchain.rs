@@ -140,7 +140,7 @@ pub unsafe extern "C" fn ecall_init_node(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+    let _api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
 
@@ -155,20 +155,20 @@ pub unsafe extern "C" fn ecall_init_node(
     // validate this node is patched and updated
 
     // generate temporary key for attestation
-    let temp_key_result = KeyPair::new();
+    // let temp_key_result = KeyPair::new();
+    //
+    // if temp_key_result.is_err() {
+    //     error!("Failed to generate temporary key for attestation");
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
 
-    if temp_key_result.is_err() {
-        error!("Failed to generate temporary key for attestation");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    // this validates the cert and handles the "what if it fails" inside as well
-    let res =
-        create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
-    if res.is_err() {
-        error!("Error starting node, might not be updated",);
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    // // this validates the cert and handles the "what if it fails" inside as well
+    // let res =
+    //     create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
+    // if res.is_err() {
+    //     error!("Error starting node, might not be updated",);
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
 
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
@@ -247,6 +247,7 @@ pub unsafe extern "C" fn ecall_init_node(
 pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
+    dry_run: u8,
 ) -> sgx_status_t {
     // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
@@ -257,8 +258,22 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+    let dry_run = dry_run != 0; // u8 => bool
 
-    let kp = KEY_MANAGER.get_registration_key().unwrap();
+    let kp: KeyPair = if dry_run {
+        match KeyPair::new() {
+            Ok(new_kp) => new_kp,
+            Err(e) => {
+                error!(
+                    "Failed to generate temporary key for attestation: {}",
+                    e.to_string()
+                );
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        }
+    } else {
+        KEY_MANAGER.get_registration_key().unwrap()
+    };
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
@@ -273,8 +288,10 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         };
 
     //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH) {
-        return status;
+    if !dry_run {
+        if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH) {
+            return status;
+        }
     }
 
     print_local_report_info(cert.as_slice());
@@ -345,7 +362,7 @@ fn print_local_report_info(cert: &[u8]) {
     let node_auth_result = NodeAuthResult::from(&report.sgx_quote_status);
     // print
     match verify_quote_status(&report, &report.advisory_ids) {
-        Err(status) => match status {
+        Err(status) | Ok(status) if status != NodeAuthResult::Success => match status {
             NodeAuthResult::SwHardeningAndConfigurationNeeded => {
                 println!("Platform status is SW_HARDENING_AND_CONFIGURATION_NEEDED. This means is updated but requires further BIOS configuration");
             }
