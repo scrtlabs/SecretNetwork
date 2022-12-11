@@ -1,12 +1,7 @@
 // use serde::Serialize;
 use std::collections::BTreeMap;
 
-const PSEUDO_GAS_STORE_PER_BYTE: u64 = 1_000;
-// #[derive(Serialize, Clone, Debug, PartialEq)]
-// pub struct MultiKv {
-//     keys: Vec<Vec<u8>>,
-//     values: Vec<Vec<u8>>,
-// }
+const PSEUDO_GAS_STORE_PER_BYTE: u64 = 5_000;
 
 #[derive(Default, Clone)]
 pub struct KvCache {
@@ -14,7 +9,7 @@ pub struct KvCache {
     readable_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     /// used to track pseudo gas for inserts - this helps avoid situations where the write cache gets
     /// so big that the flush to chain state goes OOM instead of out of gas
-    gas_tracker: u64
+    gas_tracker: u64,
 }
 
 impl KvCache {
@@ -25,7 +20,11 @@ impl KvCache {
     /// this is used to store data that needs to be written to chain state at the end of execution
     pub fn write(&mut self, k: &[u8], v: &[u8]) -> (Option<Vec<u8>>, u64) {
         self.gas_tracker += PSEUDO_GAS_STORE_PER_BYTE * v.len() as u64;
-        (self.writeable_cache.insert(k.to_vec(), v.to_vec()), PSEUDO_GAS_STORE_PER_BYTE * v.len() as u64)
+
+        (
+            self.writeable_cache.insert(k.to_vec(), v.to_vec()),
+            PSEUDO_GAS_STORE_PER_BYTE * v.len() as u64,
+        )
     }
 
     /// this is used to store data that is read often, but not modified - for example contract settings
@@ -44,25 +43,14 @@ impl KvCache {
     }
 
     pub fn drain_gas_tracker(&mut self) -> u64 {
-       let gas_used = self.gas_tracker;
+        let gas_used = self.gas_tracker;
         self.gas_tracker = 0;
         gas_used
     }
 
     pub fn flush(&mut self) -> Vec<(Vec<u8>, Vec<u8>)> {
-        // let mut keys = vec![];
-        // let mut values = vec![];
-        //
-        // for (k, v) in self.0 {
-        //     keys.push(k);
-        //     values.push(v);
-        // }
-        //
-        // &self.0.clear();
-        //
-        // MultiKv { keys, values }
-
-        let items: Vec<(Vec<u8>, Vec<u8>)> = self.writeable_cache.drain_filter(|_k, _v| true).collect();
+        let items: Vec<(Vec<u8>, Vec<u8>)> =
+            self.writeable_cache.drain_filter(|_k, _v| true).collect();
 
         self.readable_cache.clear();
 
