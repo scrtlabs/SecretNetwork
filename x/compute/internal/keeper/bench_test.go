@@ -177,11 +177,6 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 		params     []ParamKeyValue
 		callbackfn func() uint64
 	}{
-		//"warmup": {
-		//	gasLimit: 1_000_000,
-		//	bench:    Noop,
-		//	loops:    1,
-		//},
 		"Empty execution (contract startup time)": {
 			gasLimit: 1_000_000,
 			bench:    Noop,
@@ -305,6 +300,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
+			contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
 			timer := NewBenchTimer(name, tc.bench)
 			timer.SetBaselineValues(AvgGasBase, time.Duration(math.Floor(AvgTimeBase)))
 			// make sure we set a limit before calling

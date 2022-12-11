@@ -524,12 +524,16 @@ impl Engine {
     }
 
     #[cfg(feature = "query-only")]
-    pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
-        Ok(())
+    pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
+        Ok(0)
     }
 
     #[cfg(not(feature = "query-only"))]
-    pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
+    pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
+        // here we refund all the pseudo gas charged for writes to cache
+        // todo: optimize to only charge for writes that change chain state
+        let total_gas_to_refund = self.context.kv_cache.drain_gas_tracker();
+
         let keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .context
             .kv_cache
@@ -541,21 +545,9 @@ impl Engine {
 
                 (enc_key.to_vec(), enc_v)
             })
-            // todo: fix
-            // .map_err(|_|
-            //     {
-            //         debug!(
-            //         "addr_validate() error while trying to parse human address from bytes to string: {:?}",
-            //         err
-            //     );
-            //         return Ok(Some(RuntimeValue::I32(
-            //             self.write_to_memory(b"Input is not valid UTF-8")? as i32,
-            //         )));
-            //     }
-            // )?
             .collect();
 
-        let used_gas = write_multiple_keys(&self.context.context, keys).map_err(|err| {
+        write_multiple_keys(&self.context.context, keys).map_err(|err| {
             debug!(
                 "write_db() error while trying to write the value to state: {:?}",
                 err
@@ -564,12 +556,7 @@ impl Engine {
             EnclaveError::from(err)
         })?;
 
-        self.with_instance(|instance, _context| {
-            use_gas(instance, used_gas)?;
-            Ok(vec![])
-        })?;
-
-        Ok(())
+        Ok(total_gas_to_refund)
     }
 }
 
@@ -883,18 +870,12 @@ fn host_write_db(
 
     use_gas(instance, WRITE_BASE_GAS)?;
 
-    // let start = Instant::now();
     let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
     )?;
     let value = read_from_memory(instance, value_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
     )?;
-    // let duration = start.elapsed();
-    // trace!(
-    //     "host_write_db: Time elapsed in read_from_memory x2: {:?}",
-    //     duration
-    // );
 
     debug!(
         "db_write writing key: {}, value: {}",
@@ -902,16 +883,8 @@ fn host_write_db(
         show_bytes(&value)
     );
 
-    context.kv_cache.write(&state_key_name, &value);
-
-    // let used_gas = write_encrypted_key(
-    //     &state_key_name,
-    //     &value,
-    //     &context.context,
-    //     &context.contract_key,
-    // )
-    // .map_err(debug_err!("db_write failed to write key to storage",))?;
-    // use_gas(instance, used_gas)?;
+    let (_, pseudo_cost_for_write) = context.kv_cache.write(&state_key_name, &value);
+    use_gas(instance, pseudo_cost_for_write)?; // Use gas now, refund later
 
     Ok(())
 }

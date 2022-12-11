@@ -275,6 +275,12 @@ impl ContractInstance {
         self.check_gas_usage()
     }
 
+    /// Gas used by external services. This is tracked separately so we don't double-charge for external services later.
+    fn refund_gas_externally(&mut self, gas_amount: u64)  {
+        self.gas_used_externally = self.gas_used_externally.saturating_sub(gas_amount);
+    }
+
+
     fn check_gas_usage(&self) -> Result<(), WasmEngineError> {
         // Check if new amount is bigger than gas limit
         // If is above the limit, halt execution
@@ -474,7 +480,9 @@ impl WasmiApi for ContractInstance {
 
         self.use_gas(OCALL_BASE_GAS)?;
 
-        self.kv_cache.write(&state_key_name, &value);
+        let (_, pseudo_gas) = self.kv_cache.write(&state_key_name, &value);
+
+        self.use_gas_externally(pseudo_gas)?;
 
         // let used_gas_by_storage =
         //     write_encrypted_key(&state_key_name, &value, &self.context, &self.contract_key)
@@ -497,6 +505,13 @@ impl WasmiApi for ContractInstance {
 
     //#[cfg(not(feature = "query-only"))]
     fn flush_cache(&mut self) -> Result<Option<RuntimeValue>, Trap> {
+
+        // here we refund all the pseudo gas charged for writes to cache
+        // todo: optimize to only charge for writes that change chain state
+        let total_gas_to_refund = self.kv_cache.drain_gas_tracker();
+
+        self.refund_gas_externally(total_gas_to_refund);
+
         let keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .kv_cache
             .flush()
