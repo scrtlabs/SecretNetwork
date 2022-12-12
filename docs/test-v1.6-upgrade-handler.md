@@ -99,11 +99,11 @@ yarn test
 Copy binaries from v1.6 chain to v1.5 chain.
 
 ```bash
-# Start a v1.5 chain and wait a bit for it to setup
+# Start a v1.6 chain and wait a bit for it to setup
 docker run -it -d --name localsecret-1.6 ghcr.io/scrtlabs/localsecret:v1.6.0-rc.1
 sleep 5
 
-# Copy binaries from v1.5 chain to host (a limitation of `docker cp`)
+# Copy binaries from v1.6 chain to host (a limitation of `docker cp`)
 
 rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin
 docker cp localsecret-1.6:/usr/bin/secretcli                                /tmp/upgrade-bin
@@ -111,10 +111,10 @@ docker cp localsecret-1.6:/usr/bin/secretd                                  /tmp
 docker cp localsecret-1.6:/usr/lib/librust_cosmwasm_enclave.signed.so       /tmp/upgrade-bin
 docker cp localsecret-1.6:/usr/lib/libgo_cosmwasm.so                        /tmp/upgrade-bin
 
-# Can kill localsecret-1.5 at this point
+# Can kill localsecret-1.6 at this point
 docker rm -f localsecret-1.6
 
-# Copy binaries from host to current v1.4 chain
+# Copy binaries from host to current v1.5 chain
 
 docker exec localsecret bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 
@@ -124,9 +124,9 @@ docker cp /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       localsecret:
 docker cp /tmp/upgrade-bin/libgo_cosmwasm.so                        localsecret:/tmp/upgrade-bin
 
 # Overwrite v1.4 binaries with v1.5 binaries without affecting file permissions
-# v1.4 chain is still running at this point
-# we assume v1.4 binaries are loaded to RAM
-# so overwriting them with v1.5 binraies won't take effect until a process restart
+# v1.5 chain is still running at this point
+# we assume v1.5 binaries are loaded to RAM
+# so overwriting them with v1.6 binraies won't take effect until a process restart
 
 docker exec localsecret bash -c 'cat /tmp/upgrade-bin/secretcli                                > /usr/bin/secretcli'
 docker exec localsecret bash -c 'cat /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       > /usr/lib/librust_cosmwasm_enclave.signed.so'
@@ -138,7 +138,7 @@ docker exec localsecret bash -c 'cat /tmp/upgrade-bin/libgo_cosmwasm.so         
 # don't setup secretcli
 docker exec localsecret bash -c $'perl -i -pe \'s/^.*?secretcli.*$//\' bootstrap_init.sh'
 
-# point script to the v1.5 secretd file
+# point script to the v1.6 secretd file
 docker exec localsecret bash -c $'perl -i -pe \'s;secretd start;/tmp/upgrade-bin/secretd start;\' bootstrap_init.sh'
 ```
 
