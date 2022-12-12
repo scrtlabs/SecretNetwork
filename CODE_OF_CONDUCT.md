@@ -61,7 +61,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement by emailing 
-info@enigma.co or contacting one of the [Enigma Core Developers](https://github.com/orgs/enigmampc/people).
+info@scrtlabs.com or contacting one of the [SCRT Labs Core Developers](https://github.com/orgs/scrtlabs/people).
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
