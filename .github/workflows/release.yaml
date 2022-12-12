@@ -189,8 +189,8 @@ jobs:
   check-hw-tool:
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
-      SPID: ${{ secrets.SPID_MAINNET }}
-      API_KEY: ${{ secrets.API_KEY_MAINNET }}
+      SPID: ${{ secrets.SPID_TESTNET }}
+      API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
       - uses: actions/checkout@v3
         with:
