@@ -95,8 +95,8 @@ func TestNewQuerier(t *testing.T) {
 		})
 	}
 
-	keeper.setMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterNodeKeyId)
-	keeper.setMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterIoKeyId)
+	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterNodeKeyId)
+	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterIoKeyId)
 
 	binResult, err := querier(ctx, []string{QueryMasterKey}, abci.RequestQuery{Data: []byte("")})
 	require.NoError(t, err)

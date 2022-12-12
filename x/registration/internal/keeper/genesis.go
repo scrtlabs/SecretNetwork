@@ -11,8 +11,8 @@ import (
 // InitGenesis sets supply information for genesis.
 func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 	if data.IoMasterKey != nil && data.NodeExchMasterKey != nil {
-		keeper.setMasterKey(ctx, *data.IoMasterKey, types.MasterIoKeyId)
-		keeper.setMasterKey(ctx, *data.NodeExchMasterKey, types.MasterNodeKeyId)
+		keeper.SetMasterKey(ctx, *data.IoMasterKey, types.MasterIoKeyId)
+		keeper.SetMasterKey(ctx, *data.NodeExchMasterKey, types.MasterNodeKeyId)
 		for _, storedRegInfo := range data.Registration {
 			keeper.SetRegistrationInfo(ctx, *storedRegInfo)
 		}

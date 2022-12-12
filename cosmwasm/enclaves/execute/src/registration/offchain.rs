@@ -8,8 +8,8 @@ use sgx_types::{sgx_status_t, SgxResult};
 use std::slice;
 
 use enclave_crypto::consts::{
-    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, ENCRYPTED_SEED_SIZE, IO_KEY_SAVE_PATH,
-    SEED_EXCH_KEY_SAVE_PATH, SIGNATURE_TYPE,
+    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, IO_KEY_SAVE_PATH,
+    OUTPUT_ENCRYPTED_SEED_SIZE, SEED_EXCH_KEY_SAVE_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -30,6 +30,14 @@ pub fn write_public_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
     if let Err(status) =
         rewrite_on_untrusted(base64::encode(&kp.get_pubkey()).as_bytes(), save_path)
     {
+        return Err(status);
+    }
+
+    Ok(())
+}
+
+pub fn write_seed(seed: &[u8], save_path: &str) -> SgxResult<()> {
+    if let Err(status) = rewrite_on_untrusted(base64::encode(seed).as_bytes(), save_path) {
         return Err(status);
     }
 
@@ -176,7 +184,6 @@ pub unsafe extern "C" fn ecall_init_node(
     api_key: *const u8,
     api_key_len: u32,
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
-    seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_status_t {
     validate_const_ptr!(
         master_key,
@@ -200,7 +207,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
     let key_slice = slice::from_raw_parts(master_key, master_key_len as usize);
 
-    if encrypted_seed_len != ENCRYPTED_SEED_SIZE {
+    if encrypted_seed_len != INPUT_ENCRYPTED_SEED_SIZE {
         error!("Encrypted seed bad length");
         return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     }
@@ -323,9 +330,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
 
-        seed[0] = res.len() as u8;
-        seed[1..].copy_from_slice(&res);
-        trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
+        write_seed(&res, SEED_UPDATE_SAVE_PATH);
     }
 
     // this initializes the key manager with all the keys we need for computations

@@ -18,7 +18,7 @@ func (k Keeper) GetMasterKey(ctx sdk.Context, keyType string) *types.MasterKey {
 	return &key
 }
 
-func (k Keeper) setMasterKey(ctx sdk.Context, key types.MasterKey, keyType string) {
+func (k Keeper) SetMasterKey(ctx sdk.Context, key types.MasterKey, keyType string) {
 	store := ctx.KVStore(k.storeKey)
 
 	store.Set(types.MasterKeyPrefix(keyType), k.cdc.MustMarshal(&key))

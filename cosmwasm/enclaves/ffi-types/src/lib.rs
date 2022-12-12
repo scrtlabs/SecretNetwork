@@ -9,7 +9,9 @@ pub use types::{
 };
 
 // 1 byte for length, 48 bytes for each potential encrypted seed
-pub const ENCRYPTED_SEED_SIZE: u32 = 97;
+pub const INPUT_ENCRYPTED_SEED_SIZE: u32 = 97;
+// 48 bytes for each potential encrypted seed
+pub const OUTPUT_ENCRYPTED_SEED_SIZE: u32 = 96;
 
 pub const SINGLE_ENCRYPTED_SEED_SIZE: usize = 48;
 pub const NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE: usize = SINGLE_ENCRYPTED_SEED_SIZE + 1;

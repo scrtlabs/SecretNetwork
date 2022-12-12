@@ -7,7 +7,7 @@ use log::*;
 use sgx_types::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
-use enclave_ffi_types::{NodeAuthResult, ENCRYPTED_SEED_SIZE};
+use enclave_ffi_types::{NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -23,7 +23,7 @@ extern "C" {
         retval: *mut NodeAuthResult,
         cert: *const u8,
         cert_len: u32,
-        seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
+        seed: &mut [u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize],
     ) -> sgx_status_t;
 }
 
@@ -165,7 +165,7 @@ pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
 
 pub fn untrusted_get_encrypted_seed(
     cert: &[u8],
-) -> SgxResult<Result<[u8; ENCRYPTED_SEED_SIZE as usize], NodeAuthResult>> {
+) -> SgxResult<Result<[u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize], NodeAuthResult>> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -175,7 +175,7 @@ pub fn untrusted_get_encrypted_seed(
     let eid = enclave.geteid();
     let mut retval = NodeAuthResult::Success;
 
-    let mut seed = [0u8; ENCRYPTED_SEED_SIZE as usize];
+    let mut seed = [0u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize];
     let status = unsafe {
         ecall_authenticate_new_node(
             eid,

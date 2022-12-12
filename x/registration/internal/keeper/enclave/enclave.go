@@ -6,7 +6,7 @@ import (
 
 type Api struct{}
 
-func (Api) LoadSeed(masterKey []byte, seed []byte, apiKey []byte) ([]byte, error) {
+func (Api) LoadSeed(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
 	return api.LoadSeedToEnclave(masterKey, seed, apiKey)
 }
 

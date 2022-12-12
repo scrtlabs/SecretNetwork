@@ -134,37 +134,37 @@ pub extern "C" fn init_node(
     encrypted_seed: Buffer,
     api_key: Buffer,
     err: Option<&mut Buffer>,
-) -> Buffer {
+) -> bool {
     let pk_slice = match unsafe { master_key.read() } {
         None => {
             set_error(Error::empty_arg("master_key"), err);
-            return Buffer::default();
+            return false;
         }
         Some(r) => r,
     };
     let encrypted_seed_slice = match unsafe { encrypted_seed.read() } {
         None => {
             set_error(Error::empty_arg("encrypted_seed"), err);
-            return Buffer::default();
+            return false;
         }
         Some(r) => r,
     };
     let api_key_slice = match unsafe { api_key.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
-            return Buffer::default();
+            return false;
         }
         Some(r) => r,
     };
 
     match untrusted_init_node(pk_slice, encrypted_seed_slice, api_key_slice) {
-        Ok(seed) => {
+        Ok(()) => {
             clear_error();
-            Buffer::from_vec(seed.to_vec())
+            true
         }
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
+            false
         }
     }
 }

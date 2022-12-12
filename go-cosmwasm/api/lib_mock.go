@@ -46,8 +46,8 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) ([]byte, error) {
-	return nil, nil
+func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+	return true, nil
 }
 
 type Querier = types.Querier
