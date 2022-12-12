@@ -206,8 +206,8 @@ jobs:
           load: true
           tags: check_hw_tool_build
           secrets: |
-            API_KEY=${{ secrets.API_KEY_MAINNET }}
-            SPID=${{ secrets.SPID_MAINNET }}
+            API_KEY=${{ secrets.API_KEY_TESTNET }}
+            SPID=${{ secrets.SPID_TESTNET }}
           build-args: |
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
