@@ -437,7 +437,7 @@ fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
 
     #[cfg(not(feature = "epid_whitelist_disabled"))]
     {
-        let decoded = base64::decode(WHITELIST_FROM_FILE).unwrap(); //will never fail since data is constant
+        let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
 
         decoded.as_chunks::<4>().0.iter().any(|&arr| {
             if epid_gid == &u32::from_be_bytes(arr) {
