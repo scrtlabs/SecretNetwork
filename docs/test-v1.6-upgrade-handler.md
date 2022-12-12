@@ -2,7 +2,7 @@
 
 ## Step 1
 
-Start a v1.6 chain.
+Start a v1.5 chain.
 
 - Port 9091 open for secret.js tests
 - Port 26657 open for cw20-ics20 tests
