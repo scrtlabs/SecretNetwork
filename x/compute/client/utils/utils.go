@@ -137,9 +137,9 @@ var hkdfSalt = []byte{
 }
 
 func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
-	var masterIoKey []byte
+	var masterIoKey regtypes.Key
 	if ctx.TestMasterIOKey.Bytes != nil { // TODO check length?
-		masterIoKey = ctx.TestMasterIOKey.Bytes
+		masterIoKey.Key = ctx.TestMasterIOKey.Bytes
 	} else {
 		res, _, err := ctx.CLIContext.Query("/secret.registration.v1beta1.Query/TxKey")
 		if err != nil {
@@ -152,13 +152,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 		}
 	}
 
-	ioPubkey, err := base64.StdEncoding.DecodeString(string(masterIoKey))
-	if err != nil {
-		println(string(masterIoKey))
-		return nil, err
-	}
-
-	return ioPubkey, nil
+	return masterIoKey.Key, nil
 }
 
 func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {

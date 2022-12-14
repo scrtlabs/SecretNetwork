@@ -43,6 +43,7 @@ docker exec -it node bash
 ### Instantiate a contract and interact with him
 
 ```bash
+secretd config node http://0.0.0.0:26657
 secretd tx compute store contract.wasm --from a --gas 5000000 -y
 sleep 5
 INIT='{"counter":{"counter":10, "expires":100000}}'

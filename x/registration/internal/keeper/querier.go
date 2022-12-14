@@ -27,6 +27,7 @@ func (q GrpcQuerier) TxKey(c context.Context, _ *empty.Empty) (*types.Key, error
 	case rsp == nil:
 		return nil, types.ErrNotFound
 	}
+
 	return &types.Key{
 		Key: rsp.IoMasterKey.Bytes,
 	}, nil

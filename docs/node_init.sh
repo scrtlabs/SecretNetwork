@@ -57,7 +57,7 @@ echo "SEED: $SEED"
 
 SGX_MODE=SW secretd q register secret-network-params
 
-SGX_MODE=SW secretd configure-secret node-master-key.txt "$SEED"
+SGX_MODE=SW secretd configure-secret node-master-cert.der "$SEED"
 
 cp /tmp/.secretd/config/genesis.json /root/.secretd/config/genesis.json
 

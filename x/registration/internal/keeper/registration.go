@@ -15,6 +15,7 @@ func (k Keeper) GetMasterKey(ctx sdk.Context, keyType string) *types.MasterKey {
 		return nil
 	}
 	k.cdc.MustUnmarshal(certBz, &key)
+
 	return &key
 }
 
