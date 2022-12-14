@@ -17,7 +17,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
-const upgradeName = "v1.6"
+const upgradeName = "v1.7"
 
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
@@ -35,7 +35,7 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		ctx.Logger().Info(`| |__| | |    | |__| | | \ \  / ____ \| |__| | |____ `)
 		ctx.Logger().Info(` \____/|_|     \_____|_|  \_\/_/    \_\_____/|______|`)
 
-		ctx.Logger().Info("Running module migrations for v1.6...")
+		ctx.Logger().Info("Running module migrations for v1.7...")
 
 		seedb64, err := os.ReadFile(reg.SeedPath)
 		if err != nil {
