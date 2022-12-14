@@ -20,6 +20,8 @@ if [ ! -e "$file" ]; then
   perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
   perl -i -pe 's/"172800000000000"/"90000000000"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
 
+  perl -i -pe 's/concurrency = false/concurrency = true/' ~/.secretd/config/app.toml
+
   secretd keys add a
   echo $b_mnemonic | secretd keys add b --recover
   secretd keys add c

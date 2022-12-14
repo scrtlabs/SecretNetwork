@@ -8,6 +8,12 @@ set -euv
 
 # init the node
 # rm -rf ~/.secret*
+FORCE_SYNC=${FORCE_SYNC:-}
+
+CHAINID="${CHAINID:-confidential-1}"
+MONIKER="${MONIKER:-default}"
+STATE_SYNC1="${STATE_SYNC1:-http://bootstrap:26657}"
+STATE_SYNC2="${STATE_SYNC2:-${STATE_SYNC1:-http://bootstrap:26657}}"
 
 # rm -rf ~/.secretd
 file=/root/.secretd/config/attestation_cert.der
@@ -40,6 +46,7 @@ then
 
   # Open P2P port to all interfaces
   perl -i -pe 's/laddr = .+?26656"/laddr = "tcp:\/\/0.0.0.0:26656"/' ~/.secretd/config/config.toml
+  perl -i -pe 's/concurrency = false/concurrency = true/' ~/.secretd/config/app.toml
 
   echo "Waiting for bootstrap to start..."
   sleep 10
@@ -77,6 +84,29 @@ then
 
   # this is here to make sure that the node doesn't resync
   cp /opt/secret/.sgx_secrets/attestation_cert.der /root/.secretd/config/
+
+  if [ ! -z "$STATE_SYNC1" ] && [ ! -z "$STATE_SYNC2" ];
+  then
+
+    echo "Syncing with state sync"
+
+    LATEST_HEIGHT=$(curl -s $STATE_SYNC1/block | jq -r .result.block.header.height); \
+    BLOCK_HEIGHT=$((LATEST_HEIGHT - 2000)); \
+    TRUST_HASH=$(curl -s "$STATE_SYNC1/block?height=$BLOCK_HEIGHT" | jq -r .result.block_id.hash)
+
+    echo "State sync node: $STATE_SYNC1,$STATE_SYNC2"
+    echo "Trust hash: $TRUST_HASH; Block height: $BLOCK_HEIGHT"
+
+    # enable state sync (this is the only line in the config that uses enable = false. This could change and break everything
+    perl -i -pe 's/enable = false/enable = true/' /root/.secretd/config/config.toml
+
+    sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1true| ; \
+    s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$STATE_SYNC1,$STATE_SYNC2\"| ; \
+    s|^(trust_height[[:space:]]+=[[:space:]]+).*$|\1$BLOCK_HEIGHT| ; \
+    s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"|" $HOME/.secretd/config/config.toml
+  else
+    echo "Syncing with block sync"
+  fi
 
 fi
 secretd start
