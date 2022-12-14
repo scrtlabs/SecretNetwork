@@ -1,6 +1,6 @@
 # CHANGELOG
 
-# 1.6.0 - Unreleased
+# 1.6.0
 
 - Fixed issue causing registrations to fail
 - Changed internal WASM engine to Wasm3 from Wasmi. Contract performance increased greatly
