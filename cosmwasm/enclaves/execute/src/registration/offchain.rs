@@ -9,7 +9,7 @@ use std::slice;
 
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, IO_KEY_SAVE_PATH,
-    OUTPUT_ENCRYPTED_SEED_SIZE, SEED_EXCH_KEY_SAVE_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    SEED_EXCH_KEY_SAVE_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -330,7 +330,9 @@ pub unsafe extern "C" fn ecall_init_node(
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
 
-        write_seed(&res, SEED_UPDATE_SAVE_PATH);
+        if let Err(_e) = write_seed(&res, SEED_UPDATE_SAVE_PATH) {
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     }
 
     // this initializes the key manager with all the keys we need for computations
