@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -48,7 +49,12 @@ func init() {
 		panic(fmt.Sprintf("Error initializing the enclave: %v", err))
 	}
 
-	wasmCtx.TestMasterIOKey.Bytes, err = os.ReadFile(filepath.Join(".", reg.IoExchMasterKeyPath))
+	b64Bz, err := os.ReadFile(filepath.Join(".", reg.IoExchMasterKeyPath))
+	if err != nil {
+		panic(fmt.Sprintf("Error reading 'io-master-key.txt': %v", err))
+	}
+
+	wasmCtx.TestMasterIOKey.Bytes, err = base64.StdEncoding.DecodeString(string(b64Bz))
 	if err != nil {
 		panic(fmt.Sprintf("Error reading 'io-master-key.txt': %v", err))
 	}
