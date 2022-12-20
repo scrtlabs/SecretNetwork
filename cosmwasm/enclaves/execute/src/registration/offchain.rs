@@ -5,7 +5,7 @@
 use log::*;
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t, SgxResult};
+use sgx_types::{sgx_status_t, SgxResult};
 use std::slice;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -13,7 +13,7 @@ use enclave_ffi_types::NodeAuthResult;
 
 use enclave_crypto::consts::{
     SigningMethod, ATTESTATION_CERT_PATH, ENCRYPTED_SEED_SIZE, IO_CERTIFICATE_SAVE_PATH,
-    SEED_EXCH_CERTIFICATE_SAVE_PATH,
+    SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 use enclave_utils::pointers::validate_mut_slice;
@@ -54,7 +54,6 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     );
 
     validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
     validate_const_ptr!(
         api_key,
@@ -78,17 +77,12 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
     }
 
     let kp = key_manager.seed_exchange_key().unwrap();
-    if let Err(status) = attest_from_key(
-        &kp,
-        SEED_EXCH_CERTIFICATE_SAVE_PATH,
-        spid_slice,
-        api_key_slice,
-    ) {
+    if let Err(status) = attest_from_key(&kp, SEED_EXCH_CERTIFICATE_SAVE_PATH, api_key_slice) {
         return status;
     }
 
     let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    if let Err(status) = attest_from_key(&kp, IO_CERTIFICATE_SAVE_PATH, spid_slice, api_key_slice) {
+    if let Err(status) = attest_from_key(&kp, IO_CERTIFICATE_SAVE_PATH, api_key_slice) {
         return status;
     }
 
@@ -114,6 +108,8 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 /// This function happens off-chain, so if we panic for some reason it _can_ be acceptable,
 ///  though probably not recommended
 ///
+/// 15/10/22 - this is now called during node startup and will evaluate whether or not a node is valid
+///
 /// # Safety
 ///  Something should go here
 ///
@@ -123,6 +119,8 @@ pub unsafe extern "C" fn ecall_init_node(
     master_cert_len: u32,
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
+    api_key: *const u8,
+    api_key_len: u32,
 ) -> sgx_status_t {
     validate_const_ptr!(
         master_cert,
@@ -136,6 +134,14 @@ pub unsafe extern "C" fn ecall_init_node(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
+
+    let _api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
     let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
 
     if (encrypted_seed_len as usize) != ENCRYPTED_SEED_SIZE {
@@ -146,6 +152,24 @@ pub unsafe extern "C" fn ecall_init_node(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
+    // validate this node is patched and updated
+
+    // generate temporary key for attestation
+    // let temp_key_result = KeyPair::new();
+    //
+    // if temp_key_result.is_err() {
+    //     error!("Failed to generate temporary key for attestation");
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
+
+    // // this validates the cert and handles the "what if it fails" inside as well
+    // let res =
+    //     create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
+    // if res.is_err() {
+    //     error!("Error starting node, might not be updated",);
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
+
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
     let mut encrypted_seed = [0u8; ENCRYPTED_SEED_SIZE];
@@ -154,11 +178,11 @@ pub unsafe extern "C" fn ecall_init_node(
     // public keys in certificates don't have 0x04, so we'll copy it here
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
-    // validate certificate w/ attestation report
-    // testing only
+    // validate master certificate - basically test that we're on the correct network
     let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
         Err(e) => {
-            error!("Error in validating certificate: {:?}", e);
+            debug!("Error validating master certificate - {:?}", e);
+            error!("Error validating network parameters. Are you on the correct network? (error code 0x01)");
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
         Ok(res) => res,
@@ -175,6 +199,20 @@ pub unsafe extern "C" fn ecall_init_node(
     target_public_key.copy_from_slice(&pk);
 
     let mut key_manager = Keychain::new();
+
+    // even though key is overwritten later we still want to explicitly remove it in case we increase the security version
+    // to make sure that it is resealed using the new svn
+    if let Err(_e) = key_manager.reseal_registration_key() {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
+
+    let delete_res = key_manager.delete_consensus_seed();
+    if delete_res {
+        debug!("Successfully removed consensus seed");
+    } else {
+        debug!("Failed to remove consensus seed. Didn't exist?");
+    }
+
     let seed = match decrypt_seed(&key_manager, target_public_key, encrypted_seed) {
         Ok(result) => result,
         Err(status) => return status,
@@ -207,13 +245,12 @@ pub unsafe extern "C" fn ecall_init_node(
  * Something should go here
  */
 pub unsafe extern "C" fn ecall_get_attestation_report(
-    spid: *const u8,
-    spid_len: u32,
     api_key: *const u8,
     api_key_len: u32,
+    dry_run: u8,
 ) -> sgx_status_t {
-    validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
+    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
+    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
     validate_const_ptr!(
         api_key,
@@ -221,28 +258,40 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+    let dry_run = dry_run != 0; // u8 => bool
 
-    let kp = KEY_MANAGER.get_registration_key().unwrap();
+    let kp: KeyPair = if dry_run {
+        match KeyPair::new() {
+            Ok(new_kp) => new_kp,
+            Err(e) => {
+                error!(
+                    "Failed to generate temporary key for attestation: {}",
+                    e.to_string()
+                );
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        }
+    } else {
+        KEY_MANAGER.get_registration_key().unwrap()
+    };
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
     );
-    let (_private_key_der, cert) = match create_attestation_certificate(
-        &kp,
-        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-        spid_slice,
-        api_key_slice,
-    ) {
-        Err(e) => {
-            warn!("Error in create_attestation_certificate: {:?}", e);
-            return e;
-        }
-        Ok(res) => res,
-    };
+    let (_private_key_der, cert) =
+        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice) {
+            Err(e) => {
+                warn!("Error in create_attestation_certificate: {:?}", e);
+                return e;
+            }
+            Ok(res) => res,
+        };
 
     //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH) {
-        return status;
+    if !dry_run {
+        if let Err(status) = write_to_untrusted(cert.as_slice(), &ATTESTATION_CERT_PATH) {
+            return status;
+        }
     }
 
     print_local_report_info(cert.as_slice());
@@ -281,18 +330,8 @@ pub unsafe extern "C" fn ecall_key_gen(
     sgx_status_t::SGX_SUCCESS
 }
 
-pub fn attest_from_key(
-    kp: &KeyPair,
-    save_path: &str,
-    spid: &[u8],
-    api_key: &[u8],
-) -> SgxResult<()> {
-    let (_, cert) = match create_attestation_certificate(
-        kp,
-        sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-        spid,
-        api_key,
-    ) {
+pub fn attest_from_key(kp: &KeyPair, save_path: &str, api_key: &[u8]) -> SgxResult<()> {
+    let (_, cert) = match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key) {
         Err(e) => {
             error!("Error in create_attestation_certificate: {:?}", e);
             return Err(e);
@@ -322,8 +361,8 @@ fn print_local_report_info(cert: &[u8]) {
 
     let node_auth_result = NodeAuthResult::from(&report.sgx_quote_status);
     // print
-    match verify_quote_status(&report.sgx_quote_status, &report.advisroy_ids) {
-        Err(status) => match status {
+    match verify_quote_status(&report, &report.advisory_ids) {
+        Err(status) | Ok(status) if status != NodeAuthResult::Success => match status {
             NodeAuthResult::SwHardeningAndConfigurationNeeded => {
                 println!("Platform status is SW_HARDENING_AND_CONFIGURATION_NEEDED. This means is updated but requires further BIOS configuration");
             }

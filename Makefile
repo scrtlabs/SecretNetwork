@@ -31,6 +31,13 @@ TEST_COMPUTE_MODULE_PATH = ./x/compute/internal/keeper/testdata/
 ENCLAVE_PATH = cosmwasm/enclaves/
 EXECUTE_ENCLAVE_PATH = $(ENCLAVE_PATH)/execute/
 QUERY_ENCLAVE_PATH = $(ENCLAVE_PATH)/query/
+DOCKER_BUILD_ARGS ?=
+
+DOCKER_BUILDX_CHECK = $(@shell docker build --load test)
+
+ifeq (Building,$(findstring Building,$(DOCKER_BUILDX_CHECK)))
+	DOCKER_BUILD_ARGS += "--load"
+endif
 
 ifeq ($(SGX_MODE), HW)
 	ext := hw
@@ -134,9 +141,6 @@ LD_FLAGS := $(ldflags)
 
 all: build_all
 
-vendor:
-	cargo vendor third_party/vendor --manifest-path third_party/build/Cargo.toml
-
 go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
@@ -154,11 +158,11 @@ build_local_no_rust: bin-data-$(IAS_BUILD)
 build-secret: build-linux
 
 build-linux: _build-linux build_local_no_rust build_cli
-_build-linux: vendor
+_build-linux:
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
 build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
-_build-linux-with-query: vendor
+_build-linux-with-query:
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-node,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
 build_windows_cli:
@@ -229,86 +233,144 @@ clean:
 	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/enclaves/test clean
+	$(MAKE) -C check-hw clean
 
-build-rocksdb-image:
-	docker build --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/db-compile.Dockerfile -t enigmampc/rocksdb:${VERSION}-1.1.5 .
-
-localsecret: _localsecret-compile
-	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/release.Dockerfile -t build-release .
-	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP --build-arg CHAIN_ID=secretdev-1 -f deployment/dockerfiles/dev-image.Dockerfile -t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
-
-_localsecret-compile:
-	docker build \
-				--build-arg BUILD_VERSION=${VERSION} \
-				--build-arg FEATURES="${FEATURES},debug-print" \
-				--build-arg FEATURES_U=${FEATURES_U} \
-				--secret id=API_KEY,src=.env.local \
-				--secret id=SPID,src=.env.local \
-				--build-arg SGX_MODE=SW \
-				-f deployment/dockerfiles/base.Dockerfile \
-				-t rust-go-base-image \
-				.
+localsecret:
+	DOCKER_BUILDKIT=1 docker build \
+			--build-arg FEATURES="${FEATURES},debug-print" \
+			--build-arg FEATURES_U=${FEATURES_U} \
+			--secret id=API_KEY,src=.env.local \
+			--secret id=SPID,src=.env.local \
+			--build-arg SGX_MODE=SW \
+			$(DOCKER_BUILD_ARGS) \
+ 			--build-arg SECRET_NODE_TYPE=BOOTSTRAP \
+ 			--build-arg CHAIN_ID=secretdev-1 \
+ 			-f deployment/dockerfiles/Dockerfile \
+ 			--target build-localsecret \
+ 			-t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
 build-ibc-hermes:
-	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc
+	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc --load
 
-build-custom-dev-image:
-    # .dockerignore excludes .so files so we rename these so that the dockerfile can find them
-	cd go-cosmwasm/api && cp libgo_cosmwasm.so libgo_cosmwasm.so.x
-	cd cosmwasm/enclaves/execute && cp librust_cosmwasm_enclave.signed.so librust_cosmwasm_enclave.signed.so.x
-	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-bootstrap:${DOCKER_TAG} .
-	docker build --build-arg SGX_MODE=SW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/custom-node.Dockerfile -t enigmampc/secret-network-sw-dev-custom-node:${DOCKER_TAG} .
-    # delete the copies created above
-	rm go-cosmwasm/api/libgo_cosmwasm.so.x $(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so.x
-
-build-testnet: _docker_base
+build-testnet-bootstrap:
 	@mkdir build 2>&3 || true
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-testnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-testnet .
-	docker build --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
+	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg SGX_MODE=HW \
+				 $(DOCKER_BUILD_ARGS) \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
+				 --build-arg SECRET_NODE_TYPE=BOOTSTRAP \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t ghcr.io/scrtlabs/secret-network-bootstrap-testnet:v$(VERSION) \
+				 --target release-image .
+
+build-testnet:
+	@mkdir build 2>&3 || true
+	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg SGX_MODE=HW \
+				 $(DOCKER_BUILD_ARGS) \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
+				 --build-arg SECRET_NODE_TYPE=NODE \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
+				 --target release-image .
+	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg SGX_MODE=HW \
+				 $(DOCKER_BUILD_ARGS) \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
+				 --cache-from ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t deb_build \
+				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-build-mainnet-upgrade: _docker_base
+build-mainnet-upgrade:
 	@mkdir build 2>&3 || true
-	docker build --secret API_KEY=${API_KEY} --secret SPID=${SPID} --build-arg BUILD_VERSION=${VERSION} -f deployment/dockerfiles/mainnet-upgrade-release.Dockerfile -t build-release:latest .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb-mainnet.Dockerfile -t deb_build .
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
+                 --build-arg FEATURES_U=${FEATURES_U} \
+                 --build-arg BUILDKIT_INLINE_CACHE=1 \
+                 --secret id=API_KEY,src=api_key.txt \
+                 --secret id=SPID,src=spid.txt \
+                 --build-arg SECRET_NODE_TYPE=NODE \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
+                 --build-arg BUILD_VERSION=${VERSION} \
+                 --build-arg SGX_MODE=HW \
+                 -f deployment/dockerfiles/Dockerfile \
+                 $(DOCKER_BUILD_ARGS) \
+                 -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
+                 --target mainnet-release .
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
+				 --build-arg FEATURES_U=${FEATURES_U} \
+				 --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg SGX_MODE=HW \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t deb_build \
+				 --target build-deb-mainnet .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
-	docker tag build-release ghcr.io/scrtlabs/secret-network-node:$(VERSION)
 
-build-mainnet: _docker_base
+build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-bootstrap:v$(VERSION)-mainnet .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/release.Dockerfile -t enigmampc/secret-network-node:v$(VERSION)-mainnet .
-	docker build --build-arg BUILD_VERSION=${VERSION} --build-arg SGX_MODE=HW -f deployment/dockerfiles/build-deb.Dockerfile -t deb_build .
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
+                 --build-arg FEATURES_U=${FEATURES_U} \
+                 --build-arg BUILDKIT_INLINE_CACHE=1 \
+                 --secret id=API_KEY,src=api_key.txt \
+                 --secret id=SPID,src=spid.txt \
+                 --build-arg SECRET_NODE_TYPE=NODE \
+                 --build-arg BUILD_VERSION=${VERSION} \
+                 --build-arg SGX_MODE=HW \
+                 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
+                 $(DOCKER_BUILD_ARGS) \
+                 -f deployment/dockerfiles/Dockerfile \
+                 -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
+                 --target release-image .
+	docker build --build-arg FEATURES="production, ${FEATURES}" \
+				 --build-arg FEATURES_U=${FEATURES_U} \
+				 --build-arg BUILDKIT_INLINE_CACHE=1 \
+				 --secret id=API_KEY,src=api_key.txt \
+				 --secret id=SPID,src=spid.txt \
+				 --build-arg BUILD_VERSION=${VERSION} \
+				 --build-arg DB_BACKEND=${DB_BACKEND} \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
+				 --build-arg SGX_MODE=HW \
+				 -f deployment/dockerfiles/Dockerfile \
+				 -t deb_build \
+				 $(DOCKER_BUILD_ARGS) \
+				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
-docker_bootstrap: _docker_base
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-bootstrap-${ext}:${DOCKER_TAG} .
-
-docker_node: _docker_base
-	docker build --build-arg SGX_MODE=${SGX_MODE} --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t enigmampc/secret-network-node-${ext}:${DOCKER_TAG} .
-
-docker_local_azure_hw: _docker_base
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=NODE -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-node .
-	docker build --build-arg SGX_MODE=HW --build-arg SECRET_NODE_TYPE=BOOTSTRAP -f deployment/dockerfiles/local-node.Dockerfile -t ci-enigma-sgx-bootstrap .
-
-docker_enclave_test:
-	docker build --build-arg FEATURES="test ${FEATURES}" --build-arg SGX_MODE=${SGX_MODE} -f deployment/dockerfiles/enclave-test.Dockerfile -t rust-enclave-test .
-
-_docker_base:
-	docker build \
-				--build-arg BUILD_VERSION=${VERSION} \
-				--build-arg FEATURES=${FEATURES} \
-				--build-arg FEATURES_U=${FEATURES_U} \
-				--build-arg SGX_MODE=${SGX_MODE} \
-				--secret id=API_KEY,src=api_key.txt \
-				--secret id=SPID,src=spid.txt \
-				-f deployment/dockerfiles/base.Dockerfile \
-				-t rust-go-base-image \
-				.
+build-check-hw-tool:
+	@mkdir build 2>&3 || true
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="${FEATURES}" \
+                 --build-arg FEATURES_U=${FEATURES_U} \
+                 --build-arg BUILDKIT_INLINE_CACHE=1 \
+                 --secret id=API_KEY,src=api_key.txt \
+                 --secret id=SPID,src=spid.txt \
+                 --build-arg SECRET_NODE_TYPE=NODE \
+                 --build-arg BUILD_VERSION=${VERSION} \
+                 --build-arg SGX_MODE=HW \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
+                 -f deployment/dockerfiles/Dockerfile \
+                 -t compile-check-hw-tool \
+                 --target compile-check-hw-tool .
 
 # while developing:
-build-enclave: vendor
+build-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) enclave
 
 # while developing:
@@ -322,6 +384,10 @@ clippy-enclave:
 # while developing:
 clean-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) clean
+
+# while developing:
+clippy: clippy-enclave
+	$(MAKE) -C check-hw clippy
 
 sanity-test:
 	SGX_MODE=SW $(MAKE) build-linux
@@ -338,6 +404,10 @@ callback-sanity-test:
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 	SGX_MODE=SW ./cosmwasm/testing/callback-test.sh
 
+build-bench-contract:
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/bench-contract
+	cp $(TEST_CONTRACT_V1_PATH)/bench-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+
 build-test-contract:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update
@@ -349,12 +419,12 @@ build-test-contract:
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/ibc-test-contract
 	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 
-prep-go-tests: build-test-contract
+prep-go-tests: build-test-contract bin-data-sw
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 
-go-tests: build-test-contract
+go-tests: build-test-contract bin-data-sw
 	SGX_MODE=SW $(MAKE) build-linux-with-query
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
@@ -362,7 +432,7 @@ go-tests: build-test-contract
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
-go-tests-hw: build-test-contract
+go-tests-hw: build-test-contract bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=HW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
@@ -410,13 +480,13 @@ build-erc20-contract: build-test-contract
 bin-data: bin-data-sw bin-data-develop bin-data-production
 
 bin-data-sw:
-	cd ./cmd/secretd && go-bindata -o ias_bin_sw.go -prefix "../../ias_keys/sw_dummy/" -tags "!hw" ../../ias_keys/sw_dummy/...
+	cd ./x/registration/internal/types && go-bindata -o ias_bin_sw.go -pkg types -prefix "../../../../ias_keys/sw_dummy/" -tags "!hw" ../../../../ias_keys/sw_dummy/...
 
 bin-data-develop:
-	cd ./cmd/secretd && go-bindata -o ias_bin_dev.go -prefix "../../ias_keys/develop/" -tags "develop,hw" ../../ias_keys/develop/...
+	cd ./x/registration/internal/types && go-bindata -o ias_bin_dev.go -pkg types -prefix "../../../../ias_keys/develop/" -tags "develop,hw" ../../../../ias_keys/develop/...
 
 bin-data-production:
-	cd ./cmd/secretd && go-bindata -o ias_bin_prod.go -prefix "../../ias_keys/production/" -tags "production,hw" ../../ias_keys/production/...
+	cd ./x/registration/internal/types && go-bindata -o ias_bin_prod.go -pkg types -prefix "../../../../ias_keys/production/" -tags "production,hw" ../../../../ias_keys/production/...
 
 # Before running this you might need to do:
 # 1. sudo docker login -u ABC -p XYZ
@@ -467,3 +537,7 @@ proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
 
 .PHONY: proto-all proto-gen proto-format proto-lint proto-check-breaking
+
+.PHONY: check-hw
+check-hw: build-linux
+	$(MAKE) -C check-hw

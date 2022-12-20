@@ -2,7 +2,7 @@ version: '3'
 
 services:
   aesm:
-    image: fortanix/aesmd:2.13.103.1-1
+    image: fortanix/aesmd:2.17.100.3
     devices:
       - /dev/sgx/enclave
       - /dev/sgx/provision
@@ -30,7 +30,42 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1"
+          cpus: "2"
+          memory: "4g"
+
+  bench:
+    image: tests-base-image
+    depends_on:
+      - aesm
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/root/.secretd
+      - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    entrypoint: ["/bin/bash", "go-tests-bench.sh"]
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "4g"
+
+  integration-tests:
+    image: integration-tests
+    depends_on:
+      - bootstrap
+      - node-no-tests
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
           memory: "4g"
 
   bootstrap:
@@ -54,6 +89,26 @@ services:
     expose:
       - 26656
       - 26657
+      - 1317
+
+  node-no-tests:
+    image: azcr.io/enigmampc/ci-node-image:latest
+    depends_on:
+      - bootstrap
+    devices:
+      - /dev/sgx/enclave
+      - /dev/sgx/provision
+    volumes:
+      - /tmp/aesmd:/var/run/aesmd
+      - /tmp/secretd:/tmp/.secretd
+      # - /tmp/secretcli:/root/.secretcli
+    stdin_open: true
+    tty: true
+    environment:
+      - NO_TESTS=true
+      - http_proxy
+      - https_proxy
+      - SECRET_LOCAL_NODE_TYPE=node
 
   node:
     image: azcr.io/enigmampc/ci-node-image:latest

@@ -1,0 +1,45 @@
+(cors) {
+  @cors_preflight method OPTIONS
+  @cors header Origin *
+
+  handle @cors_preflight {
+    header Access-Control-Allow-Origin "*"
+    header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE"
+    header Access-Control-Max-Age "3600"
+    respond "" 204
+  }
+
+  handle @cors {
+#    header Access-Control-Allow-Origin "*"
+    header Access-Control-Expose-Headers "Link"
+  }
+}
+
+testnet.private.scrtlabs.com
+
+
+reverse_proxy 127.0.0.1:5000
+
+
+handle_path /lcd/* {
+
+ reverse_proxy 127.0.0.1:1337
+}
+
+handle_path /grpc/* {
+reverse_proxy 127.0.0.1:9090
+}
+handle_path /grpc-web/* {
+import cors https://testnet.private.scrtlabs.com
+ reverse_proxy 127.0.0.1:9091
+}
+
+handle_path /rpc/* {
+import cors https://testnet.private.scrtlabs.com
+ reverse_proxy 127.0.0.1:26657
+}
+header {
+        Access-Control-Allow-Methods *
+        Access-Control-Allow-Headers *
+        Access-Control-Allow-Origin *
+}

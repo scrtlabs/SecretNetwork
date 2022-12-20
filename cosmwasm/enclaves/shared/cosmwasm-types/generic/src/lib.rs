@@ -13,11 +13,14 @@ use enclave_ffi_types::EnclaveError;
 pub const CONTRACT_KEY_LENGTH: usize = 64;
 
 /// CosmwasmApiVersion is used to decide how to handle contract inputs and outputs
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
 pub enum CosmWasmApiVersion {
     /// CosmWasm v0.10 API
     V010,
     /// CosmWasm v1 API
     V1,
+    /// CosmWasm version invalid
+    Invalid,
 }
 
 pub type BaseAddr = HumanAddr;
@@ -67,6 +70,7 @@ impl BaseEnv {
         match api_version {
             CosmWasmApiVersion::V010 => self.into_v010(),
             CosmWasmApiVersion::V1 => self.into_v1(),
+            CosmWasmApiVersion::Invalid => panic!("Can't parse invalid env"),
         }
     }
 

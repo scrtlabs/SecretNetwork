@@ -14,6 +14,11 @@ services:
       - "5000:5000"
     environment:
       LOG_LEVEL: "TRACE"
+    healthcheck:
+      test: [ "CMD-SHELL", "secretd status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   localsecret-2:
     image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
     # ports are only here in case interaction
@@ -29,7 +34,11 @@ services:
     environment:
       CHAINID: "secretdev-2"
       LOG_LEVEL: "TRACE"
-
+    healthcheck:
+      test: [ "CMD-SHELL", "secretd status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   relayer:
     image: "hermes:v0.0.0"
     depends_on:

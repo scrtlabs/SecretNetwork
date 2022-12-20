@@ -300,8 +300,10 @@ type KVStore interface {
 //	}
 //
 // /***** GoAPI *******/
-type HumanAddress func([]byte) (string, uint64, error)
-type CanonicalAddress func(string) ([]byte, uint64, error)
+type (
+	HumanAddress     func([]byte) (string, uint64, error)
+	CanonicalAddress func(string) ([]byte, uint64, error)
+)
 
 type GoAPI struct {
 	HumanAddress     HumanAddress

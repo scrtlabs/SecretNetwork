@@ -8,10 +8,51 @@ use enclave_crypto::{sha_256, AESKey, Kdf, SIVEncryptable, KEY_MANAGER};
 
 use crate::external::{ecalls, ocalls};
 
+use enclave_utils::kv_cache::KvCache;
+
 use super::contract_validation::ContractKey;
 use super::errors::WasmEngineError;
 
+//#[cfg(not(feature = "query-only"))]
+pub fn write_multiple_keys(
+    context: &Ctx,
+    keys: Vec<(Vec<u8>, Vec<u8>)>,
+) -> Result<u64, WasmEngineError> {
+    let mut ocall_return = OcallReturn::Success;
+
+    if keys.is_empty() {
+        return Ok(0);
+    }
+
+    let x = serde_json::to_vec(&keys).unwrap();
+    let len = x.len();
+    let ptr = x.as_ptr();
+
+    let mut vm_err = UntrustedVmError::default();
+    let mut gas_used = 0_u64;
+    match unsafe {
+        ocalls::ocall_multiple_write_db(
+            (&mut ocall_return) as *mut _,
+            context.unsafe_clone(),
+            (&mut vm_err) as *mut _,
+            (&mut gas_used) as *mut _,
+            ptr,
+            len,
+        )
+    } {
+        sgx_status_t::SGX_SUCCESS => { /* continue */ }
+        _err_status => return Err(WasmEngineError::FailedOcall(vm_err)),
+    }
+
+    match ocall_return {
+        OcallReturn::Success => Ok(gas_used),
+        OcallReturn::Failure => Err(WasmEngineError::FailedOcall(vm_err)),
+        OcallReturn::Panic => Err(WasmEngineError::Panic),
+    }
+}
+
 // #[cfg(not(feature = "query-only"))]
+#[allow(dead_code)]
 pub fn write_encrypted_key(
     key: &[u8],
     value: &[u8],
@@ -20,19 +61,8 @@ pub fn write_encrypted_key(
 ) -> Result<u64, WasmEngineError> {
     // Get the state key from the key manager
 
-    let scrambled_field_name = field_name_digest(key, contract_key);
-
-    debug!(
-        "Writing to scrambled field name: {:?}",
-        scrambled_field_name
-    );
-
-    let (ad, ad_used_gas) = derive_ad_for_field(&scrambled_field_name, context)?;
-
-    let encrypted_value = encrypt_key(&scrambled_field_name, value, contract_key, &ad)?;
-
-    let mut db_data: Vec<u8> = ad.to_vec();
-    db_data.extend_from_slice(encrypted_value.as_slice());
+    let (scrambled_field_name, ad_used_gas, db_data) =
+        encrypt_key(key, value, context, contract_key)?;
 
     // Write the new data as concat(ad, encrypted_val)
     let write_used_gas = write_db(context, &scrambled_field_name, &db_data).map_err(|err| {
@@ -46,10 +76,35 @@ pub fn write_encrypted_key(
     Ok(ad_used_gas + write_used_gas)
 }
 
+#[cfg(not(feature = "query-only"))]
+pub fn encrypt_key(
+    key: &[u8],
+    value: &[u8],
+    context: &Ctx,
+    contract_key: &ContractKey,
+) -> Result<([u8; 32], u64, Vec<u8>), WasmEngineError> {
+    let scrambled_field_name = field_name_digest(key, contract_key);
+
+    debug!(
+        "Writing to scrambled field name: {:?}",
+        scrambled_field_name
+    );
+
+    let (ad, ad_used_gas) = derive_ad_for_field(&scrambled_field_name, context)?;
+
+    let encrypted_value = encrypt_key_inner(&scrambled_field_name, value, contract_key, &ad)?;
+
+    let mut db_data: Vec<u8> = ad.to_vec();
+    db_data.extend_from_slice(encrypted_value.as_slice());
+
+    Ok((scrambled_field_name, ad_used_gas, db_data))
+}
+
 pub fn read_encrypted_key(
     key: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
+    kv_cache: &mut KvCache,
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let scrambled_field_name = field_name_digest(key, contract_key);
 
@@ -63,7 +118,10 @@ pub fn read_encrypted_key(
     match read_db(context, &scrambled_field_name) {
         Ok((value, gas_used)) => match value {
             Some(value) => match decrypt_key(&scrambled_field_name, &value, contract_key) {
-                Ok(decrypted) => Ok((Some(decrypted), gas_used)),
+                Ok(decrypted) => {
+                    let _ = kv_cache.store_in_ro_cache(key, &decrypted);
+                    Ok((Some(decrypted), gas_used))
+                }
                 // This error case is why we have all the matches here.
                 // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
                 Err(err) => Err(err),
@@ -109,6 +167,7 @@ fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngi
     let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
+
     let value = unsafe {
         let status = ocalls::ocall_read_db(
             (&mut ocall_return) as *mut _,
@@ -173,7 +232,8 @@ fn remove_db(context: &Ctx, key: &[u8]) -> Result<u64, WasmEngineError> {
 }
 
 /// Safe wrapper around writes to the contract storage
-// #[cfg(not(feature = "query-only"))]
+//#[cfg(not(feature = "query-only"))]
+#[allow(dead_code)]
 fn write_db(context: &Ctx, key: &[u8], value: &[u8]) -> Result<u64, WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut vm_err = UntrustedVmError::default();
@@ -219,7 +279,7 @@ fn derive_ad_for_field(
 }
 
 // #[cfg(not(feature = "query-only"))]
-fn encrypt_key(
+fn encrypt_key_inner(
     field_name: &[u8],
     value: &[u8],
     contract_key: &ContractKey,

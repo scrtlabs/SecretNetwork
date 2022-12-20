@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 
 	"github.com/stretchr/testify/require"
 )

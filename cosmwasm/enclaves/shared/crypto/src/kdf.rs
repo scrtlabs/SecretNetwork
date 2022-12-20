@@ -46,7 +46,7 @@ fn derive_key(input_bytes: &[u8], info: &[&[u8]]) -> AESKey {
 /// Generic newtype wrapper that lets us implement traits for externally-defined
 /// types.
 #[derive(Debug, PartialEq)]
-struct My<T: core::fmt::Debug + PartialEq>(T);
+struct My<T: std::fmt::Debug + PartialEq>(T);
 
 impl hkdf::KeyType for My<usize> {
     fn len(&self) -> usize {

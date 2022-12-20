@@ -28,6 +28,7 @@ type (
 	u8_ptr = *C.uint8_t
 	usize  = C.uintptr_t
 	cint   = C.int
+	cbool  = C.bool
 )
 
 type Cache struct {
@@ -58,14 +59,16 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte) (bool, error) {
+func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
 	pkSlice := sendSlice(masterCert)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
 	defer freeAfterSend(seedSlice)
+	apiKeySlice := sendSlice(apiKey)
+	defer freeAfterSend(apiKeySlice)
 	errmsg := C.Buffer{}
 
-	_, err := C.init_node(pkSlice, seedSlice, &errmsg)
+	_, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}
@@ -92,11 +95,11 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
-func InitEnclaveRuntime(moduleCacheSize uint8) error {
+func InitEnclaveRuntime(moduleCacheSize uint16) error {
 	errmsg := C.Buffer{}
 
 	config := C.EnclaveRuntimeConfig{
-		module_cache_size: u8(moduleCacheSize),
+		module_cache_size: u32(moduleCacheSize),
 	}
 	_, err := C.configure_enclave_runtime(config, &errmsg)
 	if err != nil {
@@ -291,14 +294,12 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(spid []byte, apiKey []byte) (bool, error) {
+func CreateAttestationReport(apiKey []byte, dryRun bool) (bool, error) {
 	errmsg := C.Buffer{}
-	spidSlice := sendSlice(spid)
-	defer freeAfterSend(spidSlice)
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.create_attestation_report(spidSlice, apiKeySlice, &errmsg)
+	_, err := C.create_attestation_report(apiKeySlice, &errmsg, cbool(dryRun))
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

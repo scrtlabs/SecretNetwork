@@ -1,6 +1,7 @@
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
+// use std::time::Instant;
 
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
@@ -286,17 +287,29 @@ pub fn verify_params(
 ) -> Result<(), EnclaveError> {
     debug!("Verifying message signatures for: {:?}", sig_info);
 
+    //let start = Instant::now();
     // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
     if let Some(callback_sig) = &sig_info.callback_sig {
         return verify_callback_sig(callback_sig.as_slice(), sender, msg, sent_funds);
     }
+    // let duration = start.elapsed();
+    // trace!(
+    //     "verify_params: Time elapsed in verify_callback_sig: {:?}",
+    //     duration
+    // );
 
     trace!(
         "Sign bytes are: {:?}",
         String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
     );
 
+    //let start = Instant::now();
     let (sender_public_key, messages) = get_signer_and_messages(sig_info, sender)?;
+    // let duration = start.elapsed();
+    // trace!(
+    //     "verify_params: Time elapsed in get_signer_and_messages: {:?}",
+    //     duration
+    // );
 
     trace!(
         "sender canonical address is: {:?}",
@@ -305,6 +318,7 @@ pub fn verify_params(
     trace!("sender signature is: {:?}", sig_info.signature);
     trace!("sign bytes are: {:?}", sig_info.sign_bytes);
 
+    //let start = Instant::now();
     sender_public_key
         .verify_bytes(
             sig_info.sign_bytes.as_slice(),
@@ -315,7 +329,13 @@ pub fn verify_params(
             warn!("Signature verification failed: {:?}", err);
             EnclaveError::FailedTxVerification
         })?;
+    // let duration = start.elapsed();
+    // trace!(
+    //     "verify_params: Time elapsed in verify_bytes: {:?}",
+    //     duration
+    // );
 
+    // let start = Instant::now();
     if verify_message_params(
         &messages,
         sender,
@@ -327,7 +347,11 @@ pub fn verify_params(
         info!("Parameters verified successfully");
         return Ok(());
     }
-
+    // let duration = start.elapsed();
+    // trace!(
+    //     "verify_params: Time elapsed in verify_message_params: {:?}",
+    //     duration
+    // );
     warn!("Parameter verification failed");
 
     Err(EnclaveError::FailedTxVerification)
@@ -468,8 +492,9 @@ fn verify_callback_sig_impl(
 
     if callback_signature != callback_sig {
         trace!(
-            "Contract signature does not match with the one sent: {:?}",
-            callback_signature
+            "Contract signature does not match with the one sent: {:?}. Expected message to be signed: {:?}",
+            callback_signature,
+            String::from_utf8_lossy(msg.msg.as_slice())
         );
 
         return false;

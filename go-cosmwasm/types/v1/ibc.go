@@ -159,8 +159,10 @@ type IBCPacketTimeoutMsg struct {
 type IBCOrder = string
 
 // These are the only two valid values for IbcOrder
-const Unordered = "ORDER_UNORDERED"
-const Ordered = "ORDER_ORDERED"
+const (
+	Unordered = "ORDER_UNORDERED"
+	Ordered   = "ORDER_ORDERED"
+)
 
 // IBCTimeoutBlock Height is a monotonically increasing data type
 // that can be compared against another Height for the purposes of updating and

@@ -1,5 +1,81 @@
 # CHANGELOG
 
+# 1.6.0
+
+- Fixed issue causing registrations to fail
+- Changed internal WASM engine to Wasm3 from Wasmi. Contract performance increased greatly
+- ~~Added seed rotation. On upgrade the network will fetch a new seed and use it for derivation of keys and encryption~~
+- Seed rotation has been delayed to the next network upgrade
+- Changed default grpc-concurrency to false (from true). For nodes that serve API requests, we highly recommend setting this manually to true as described in the release notes for version 1.5.1
+
+- Changed peer rejected tendermint log to debug so it's hidden by default (from info)
+- Increased tendermint query limit to 1000 (from 100)
+- Bumped to tendermint 0.34.24
+- Bumped to cosmos-sdk 0.45.11
+- Changed base gas prices:
+  * Default instruction cost 1 -> 2
+  * Div instruction cost 16 -> 2
+  * Mul instruction cost 4 -> 2
+  * Mem instruction cost 2 -> 2
+  * Contract Entry cost 100,000 -> 20,000
+  * Read from storage base cost 1,000 -> 10
+  * Write to storage base cost 2,000 -> 20
+
+ - SecretJS 1.5 has been released, and uses GRPC-Gateway endpoints. Check it out: https://www.npmjs.com/package/secretjs or https://github.com/scrtlabs/secret.js
+ - Add check-hw tool that returns patch-level and compatibility information for hardware
+
+# 1.5.1
+
+29/11/2022 - Startup fix due to TCB recovery - startup validation on 1.5.1 does not account for SW_HARDENING_NEEDED including INTEL-SA-00615 in it's response. Registering using this binary will not work, however restarting your node can be done using the _startup_bypass packages.
+
+Fix for GRPC-gateway concurrency. This will greatly improve performance on nodes serving queries to GRPC-gateway requests (REST requests going to v1beta1/blah/blah)
+
+Note that concurrency is toggled from the "concurrency" flag under GRPC in app.toml - see an example below.
+(max-send-msg-size and max-recv-msg-size are also new, but are less important)
+
+In this version the default is set to true for ease of deployment - We currently recommend for validators to not update to this version, or if you do, manually set concurrency to false. This update is for node runners that provide API services to increase performance of nodes that serve queries.
+
+In this release we also include a special version for nodes that serve queries from legacy apps (those that use secretjs 0.x, for example Keplr) - this version contains an unstable patch that serves legacy LCD and rpc requests much faster. This fix has been found to be unstable at scale, and should be used sparingly until secretjs 1.5 is released and apps upgrade to the latest version
+
+```toml
+[grpc]
+
+# Enable defines if the gRPC server should be enabled.
+enable = true
+
+# Address defines the gRPC server address to bind to.
+address = "0.0.0.0:9090"
+
+# The default value is math.MaxInt32.
+max-recv-msg-size = "10485760"
+
+# The default value is math.MaxInt32.
+max-send-msg-size = "2147483647"
+
+# Concurrency defines if node queries should be done in parallel.
+# This is experimental and has led to node failures, so enable with caution.
+# The default value is true.
+concurrency = true
+```
+
+# 1.5.0
+
+- Fix IBC contracts bug ([#1199](https://github.com/scrtlabs/SecretNetwork/pull/1199))
+- Fix creating accounts using ICA ([#1215](https://github.com/scrtlabs/SecretNetwork/pull/1215))
+- Fix node registration ([#1221](https://github.com/scrtlabs/SecretNetwork/pull/1221))
+- Fix nested attributes in contracts reply ([#1241](https://github.com/scrtlabs/SecretNetwork/pull/1241))
+- Fix state sync ([#1243](https://github.com/scrtlabs/SecretNetwork/pull/1243))
+- Fix some protobuf type names ([256d9b](https://github.com/scrtlabs/SecretNetwork/commit/256d9b2184d923d5493b6ede3c89980d3028ce8f))
+- Update cosmos-sdk from v0.45.9 to v0.45.10
+- Update Tendermint from v0.34.21 to v0.34.22
+- Update ibc-go from v3.3.0 to v3.3.1
+
+# 1.4.1-patch.3
+
+- Patch againt the IBC Dragonberry vulnerability
+- Update cosmos-sdk from v0.45.5 to v0.45.9
+- Update Tendermint from v0.34.19 to v0.34.21
+
 # 1.4.0
 
 - CosmWasm v1
@@ -9,7 +85,7 @@
 - Support MetaMask pretty signing
 - Ledger support for x/authz & x/feegrant
 - Revert Chain of Secrets tombstone state and restore slashed funds
-- Updated ibc-go from v3.0.0 to v3.3.0
+- Update ibc-go from v3.0.0 to v3.3.0
 
 # 1.3.1
 
@@ -17,19 +93,19 @@
 - Mainnet docker image with automatic node registration & state sync ([docs](https://docs.scrt.network/node-guides/full-node-docker.html)).
 - Mempool optimizations (Thanks @ValarDragon!). For more info see [this](https://github.com/scrtlabs/cosmos-sdk/pull/141#issuecomment-1136767411).
 - Fix missing `libsnappy1v5` dependency for rocksdb deb package.
-- Updated `${LCD_URL}/swagger/` for v1.3 and added `${LCD_URL}/openapi/`.
+- Update `${LCD_URL}/swagger/` for v1.3 and add `${LCD_URL}/openapi/`.
 
 # 1.3.0
 
 - Bug fix when calculating gas prices caused by queries. This is will increase gas prices for contracts that use external queries, and will more accurately reflect resources used
-- Updated cosmos-sdk from v0.44.5 to v0.45.4
+- Update cosmos-sdk from v0.44.5 to v0.45.4
   - Add the `secretd rollback` command
   - Add the `~/.secretd/.compute` directory to state sync
   - Full changelog: [`cosmos-sdk/v0.44.5...v0.45.4`](https://github.com/cosmos/cosmos-sdk/compare/v0.44.5...v0.45.4)
-- Updated tendermint from v0.34.16 to v0.34.19
+- Update tendermint from v0.34.16 to v0.34.19
 - Fix registration failure for Intel Xeon 23xx-series processors (icelake still unsupported)
 - Floating point checks no longer ran on execute (only on init)
-- Upgraded ibc-go from v1.1.5 to v3
+- Update ibc-go from v1.1.5 to v3.0.0
   - Added support for ICS27 - default host messages include voting, delegate/undelegate and voting
   - Full changelog: [`ibc-go/v1.1.5...v1.3.0`](https://github.com/cosmos/ibc-go/compare/v1.1.5...v1.3.0)
 - Backport API from CosmWasm v1:
