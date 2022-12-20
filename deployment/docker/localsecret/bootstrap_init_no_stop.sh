@@ -27,7 +27,7 @@ then
     .app_state.staking.params.unbonding_time = "90s" | 
     .app_state.gov.voting_params.voting_period = "90s" |
     .app_state.crisis.constant_fee.denom = "uscrt" |
-    .app_state.gov.deposit_params.min_deposit.denom = "uscrt" |
+    .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
     .app_state.mint.params.mint_denom = "uscrt" |
     .app_state.staking.params.bond_denom = "uscrt"
   ' ~/.secretd/config/genesis.json > ~/.secretd/config/genesis.json.tmp && mv ~/.secretd/config/genesis.json{.tmp,}
