@@ -3,7 +3,9 @@ package keeper
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
 
@@ -77,7 +79,12 @@ func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecr
 
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 
+	fmt.Println("***** BENCHMARK LOGS *****")
+	start := time.Now()
 	response, err := q.keeper.QuerySmart(ctx, contractAddress, req.Query, false)
+	end := time.Now()
+	fmt.Printf("query took: %dms", end.UnixMilli()-start.UnixMilli())
+	fmt.Println("***** BENCHMARK LOGS *****")
 	switch {
 	case err != nil:
 		return nil, err

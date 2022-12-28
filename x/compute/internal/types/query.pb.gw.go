@@ -12,6 +12,8 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
+	"fmt"
 
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
@@ -145,6 +147,7 @@ var (
 )
 
 func request_Query_QuerySecretContract_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	start := time.Now()
 	var protoReq QuerySecretContractRequest
 	var metadata runtime.ServerMetadata
 
@@ -174,6 +177,7 @@ func request_Query_QuerySecretContract_0(ctx context.Context, marshaler runtime.
 	}
 
 	msg, err := client.QuerySecretContract(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	fmt.Printf("-------------------------------------------------------- request_Query_QuerySecretContract_0 took: %dms\n", time.Now().UnixMilli() - start.UnixMilli())
 	return msg, metadata, err
 
 }
@@ -768,7 +772,9 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 	})
 
 	mux.Handle("GET", pattern_Query_QuerySecretContract_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		start := time.Now()
 		ctx, cancel := context.WithCancel(req.Context())
+		defer fmt.Printf("################################################ mux.Handle took 1: %dms\n", time.Now().UnixMilli() - start.UnixMilli())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		rctx, err := runtime.AnnotateContext(ctx, mux, req)
@@ -782,6 +788,8 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
+
+		fmt.Printf("################################################ Invoke took 2: %dms\n", time.Now().UnixMilli() - start.UnixMilli())
 
 		forward_Query_QuerySecretContract_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 

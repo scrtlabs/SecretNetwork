@@ -7,6 +7,11 @@ import (
 	bytes "bytes"
 	context "context"
 	fmt "fmt"
+	io "io"
+	math "math"
+	math_bits "math/bits"
+	"time"
+
 	types "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/gogo/protobuf/gogoproto"
 	grpc1 "github.com/gogo/protobuf/grpc"
@@ -16,9 +21,6 @@ import (
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
-	io "io"
-	math "math"
-	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1176,8 +1178,10 @@ func (c *queryClient) ContractsByCodeId(ctx context.Context, in *QueryByCodeIdRe
 }
 
 func (c *queryClient) QuerySecretContract(ctx context.Context, in *QuerySecretContractRequest, opts ...grpc.CallOption) (*QuerySecretContractResponse, error) {
+	start := time.Now()
 	out := new(QuerySecretContractResponse)
 	err := c.cc.Invoke(ctx, "/secret.compute.v1beta1.Query/QuerySecretContract", in, out, opts...)
+	fmt.Printf("======================================================= Invoke took: %dms\n", time.Now().UnixMilli() - start.UnixMilli())
 	if err != nil {
 		return nil, err
 	}

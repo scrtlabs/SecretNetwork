@@ -5,8 +5,11 @@ go 1.19
 replace (
 	// dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221129100248-e5f7eddfd405
+	// github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221129100248-e5f7eddfd405
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221227184505-c128f4b4ae4d
+
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	github.com/grpc-ecosystem/grpc-gateway => github.com/scrtlabs/grpc-gateway v1.16.1-0.20221227184400-5ed6a883daf0
 	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.34.23-secret
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
@@ -71,7 +74,6 @@ require (
 	github.com/dvsekhvalnov/jose2go v0.0.0-20200901110807-248326c1351b // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/go-kit/kit v0.12.0 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
