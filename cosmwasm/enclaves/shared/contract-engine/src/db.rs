@@ -287,15 +287,13 @@ fn encrypt_key_inner(
 ) -> Result<Vec<u8>, WasmEngineError> {
     let encryption_key = get_symmetrical_key(field_name, contract_key);
 
-    encryption_key
-        .encrypt_siv(value, Some(&[ad]))
-        .map_err(|err| {
-            warn!(
-                "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
-                String::from_utf8_lossy(value),
-                err
-            );
-            WasmEngineError::EncryptionError
+    encryption_key.encrypt_siv(value, Some(ad)).map_err(|err| {
+        warn!(
+            "write_db() got an error while trying to encrypt the value {:?}, stopping wasm: {:?}",
+            String::from_utf8_lossy(value),
+            err
+        );
+        WasmEngineError::EncryptionError
     })
 }
 
@@ -309,7 +307,7 @@ fn decrypt_key(
     // Slice ad from `value`
     let (ad, encrypted_value) = value.split_at(32);
 
-    decryption_key.decrypt_siv(encrypted_value, Some(&[ad])).map_err(|err| {
+    decryption_key.decrypt_siv(encrypted_value, Some(ad)).map_err(|err| {
         warn!(
             "read_db() got an error while trying to decrypt the value for key {:?}, stopping wasm: {:?}",
             String::from_utf8_lossy(field_name),

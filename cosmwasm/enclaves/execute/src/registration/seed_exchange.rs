@@ -13,12 +13,12 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE]) -> SgxResult<Vec<u8>> {
         .unwrap()
         .diffie_hellman(&new_node_pk);
 
-    let authenticated_data: Vec<&[u8]> = vec![&new_node_pk];
+    // let authenticated_data: Vec<u8> = new_node_pk;
 
     // encrypt the seed using the symmetric key derived in the previous stage
     let res = match AESKey::new_from_slice(&shared_enc_key).encrypt_siv(
         KEY_MANAGER.get_consensus_seed().unwrap().as_slice() as &[u8],
-        Some(&authenticated_data),
+        Some(&new_node_pk),
     ) {
         Ok(r) => {
             if r.len() != ENCRYPTED_SEED_SIZE {
@@ -57,12 +57,12 @@ pub fn decrypt_seed(
 
     // Create AD of encryption
     let my_public_key = key_manager.get_registration_key().unwrap().get_pubkey();
-    let authenticated_data: Vec<&[u8]> = vec![&my_public_key];
+    //let authenticated_data: Vec<&[u8]> = vec![&my_public_key];
 
     // decrypt
     seed.as_mut()
         .copy_from_slice(&match AESKey::new_from_slice(&shared_enc_key)
-            .decrypt_siv(&encrypted_seed, Some(&authenticated_data))
+            .decrypt_siv(&encrypted_seed, Some(&my_public_key))
         {
             Ok(r) => {
                 if r.len() != SEED_KEY_SIZE {

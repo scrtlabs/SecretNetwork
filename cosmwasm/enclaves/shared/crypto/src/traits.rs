@@ -12,8 +12,8 @@ pub trait Encryptable {
 }
 
 pub trait SIVEncryptable {
-    fn encrypt_siv(&self, plaintext: &[u8], ad: Option<&[&[u8]]>) -> Result<Vec<u8>, CryptoError>;
-    fn decrypt_siv(&self, plaintext: &[u8], ad: Option<&[&[u8]]>) -> Result<Vec<u8>, CryptoError>;
+    fn encrypt_siv(&self, plaintext: &[u8], ad: Option<&[u8]>) -> Result<Vec<u8>, CryptoError>;
+    fn decrypt_siv(&self, plaintext: &[u8], ad: Option<&[u8]>) -> Result<Vec<u8>, CryptoError>;
 }
 
 pub trait SealedKey
