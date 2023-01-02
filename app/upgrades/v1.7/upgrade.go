@@ -56,6 +56,7 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		cfg := reg.SeedConfig{
 			EncryptedKey: hex.EncodeToString(seed),
 			MasterKey:    string(masterKeyB64),
+			Version:      reg.SeedConfigVersion,
 		}
 
 		cfgBytes, err := json.Marshal(&cfg)

@@ -269,6 +269,7 @@ func ConfigureSecret() *cobra.Command {
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
 				MasterKey:    string(masterKey),
+				Version:      reg.SeedConfigVersion,
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)
@@ -528,6 +529,7 @@ Please report any issues with this command
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
 				MasterKey:    regPublicKey,
+				Version:      reg.SeedConfigVersion,
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)

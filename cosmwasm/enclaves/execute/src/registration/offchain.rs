@@ -4,18 +4,17 @@
 ///
 use log::*;
 
-use sgx_types::{sgx_status_t, SgxResult};
+use sgx_types::sgx_status_t;
 use std::slice;
 
 use enclave_crypto::consts::{
-    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, IO_KEY_SAVE_PATH,
-    SEED_EXCH_KEY_SAVE_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
+    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::{rewrite_on_untrusted, write_to_untrusted};
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
@@ -24,35 +23,9 @@ use super::attestation::create_attestation_certificate;
 
 use super::seed_service::get_next_consensus_seed_from_service;
 
+use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
-
-pub fn write_public_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
-    if let Err(status) =
-        rewrite_on_untrusted(base64::encode(&kp.get_pubkey()).as_bytes(), save_path)
-    {
-        return Err(status);
-    }
-
-    Ok(())
-}
-
-pub fn write_seed(seed: &[u8], save_path: &str) -> SgxResult<()> {
-    if let Err(status) = rewrite_on_untrusted(base64::encode(seed).as_bytes(), save_path) {
-        return Err(status);
-    }
-
-    Ok(())
-}
-
-pub fn write_master_pub_keys(key_manager: &Keychain) -> SgxResult<()> {
-    let kp = key_manager.seed_exchange_key().unwrap();
-    write_public_key(&kp.current, SEED_EXCH_KEY_SAVE_PATH)?;
-
-    let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    write_public_key(&kp.current, IO_KEY_SAVE_PATH)?;
-
-    Ok(())
-}
+use enclave_utils::storage::write_to_untrusted;
 
 ///
 /// `ecall_init_bootstrap`

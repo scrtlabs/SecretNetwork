@@ -20,6 +20,7 @@ const (
 	NodeExchMasterKeyPath = "node-master-key.txt"
 	IoExchMasterKeyPath   = "io-master-key.txt"
 	SeedPath              = "seed.txt"
+	SeedConfigVersion     = 2
 )
 
 const AttestationCertPath = "attestation_cert.der"

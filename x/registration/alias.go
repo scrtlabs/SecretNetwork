@@ -29,6 +29,7 @@ const (
 	SeedPath                 = types.SeedPath
 	MasterIoKeyId            = types.MasterIoKeyId
 	MasterNodeKeyId          = types.MasterNodeKeyId
+	SeedConfigVersion        = types.SeedConfigVersion
 )
 
 var (

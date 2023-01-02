@@ -54,6 +54,7 @@ func CreateTestSeedConfig(t *testing.T) []byte {
 	cfg := regtypes.SeedConfig{
 		EncryptedKey: seed,
 		MasterKey:    key,
+		Version:      regtypes.SeedConfigVersion,
 	}
 
 	cfgBytes, err := json.Marshal(&cfg)
