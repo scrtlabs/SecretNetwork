@@ -1,4 +1,4 @@
-# How to test the v1.6 upgrade with LocalSecret
+# How to test the v1.7 upgrade with LocalSecret
 
 Always work in docs directory
 
