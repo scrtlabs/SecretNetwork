@@ -11,22 +11,25 @@ import (
 )
 
 const (
-	ModuleName                 = types.ModuleName
-	StoreKey                   = types.StoreKey
-	TStoreKey                  = types.TStoreKey
-	QuerierRoute               = types.QuerierRoute
-	RouterKey                  = types.RouterKey
-	EnclaveRegistrationKey     = types.EnclaveRegistrationKey
-	QueryEncryptedSeed         = keeper.QueryEncryptedSeed
-	QueryMasterCertificate     = keeper.QueryMasterCertificate
-	SecretNodeSeedConfig       = types.SecretNodeSeedConfig
-	LegacySecretNodeSeedConfig = types.LegacySecretNodeSeedConfig
-	SecretNodeCfgFolder        = types.SecretNodeCfgFolder
-	EncryptedKeyLength         = types.EncryptedKeyLength
-	LegacyEncryptedKeyLength   = types.LegacyEncryptedKeyLength
-	AttestationCertPath        = types.AttestationCertPath
-	IoExchMasterCertPath       = types.IoExchMasterCertPath
-	NodeExchMasterCertPath     = types.NodeExchMasterCertPath
+	ModuleName               = types.ModuleName
+	StoreKey                 = types.StoreKey
+	TStoreKey                = types.TStoreKey
+	QuerierRoute             = types.QuerierRoute
+	RouterKey                = types.RouterKey
+	EnclaveRegistrationKey   = types.EnclaveRegistrationKey
+	QueryEncryptedSeed       = keeper.QueryEncryptedSeed
+	QueryMasterKey           = keeper.QueryMasterKey
+	SecretNodeSeedConfig     = types.SecretNodeSeedConfig
+	SecretNodeCfgFolder      = types.SecretNodeCfgFolder
+	EncryptedKeyLength       = types.EncryptedKeyLength
+	LegacyEncryptedKeyLength = types.LegacyEncryptedKeyLength
+	AttestationCertPath      = types.AttestationCertPath
+	IoExchMasterKeyPath      = types.IoExchMasterKeyPath
+	NodeExchMasterKeyPath    = types.NodeExchMasterKeyPath
+	SeedPath                 = types.SeedPath
+	MasterIoKeyId            = types.MasterIoKeyId
+	MasterNodeKeyId          = types.MasterNodeKeyId
+	SeedConfigVersion        = types.SeedConfigVersion
 )
 
 var (
@@ -53,11 +56,13 @@ var (
 )
 
 type (
-	MsgRaAuthenticate = types.RaAuthenticate
-	GenesisState      = types.GenesisState
-	Keeper            = keeper.Keeper
-	SeedConfig        = types.SeedConfig
-	EnclaveApi        = enclave.Api
-	MasterCertificate = types.MasterCertificate
-	Key               = types.Key
+	MsgRaAuthenticate    = types.RaAuthenticate
+	GenesisState         = types.GenesisState
+	Keeper               = keeper.Keeper
+	SeedConfig           = types.SeedConfig
+	LegacySeedConfig     = types.LegacySeedConfig
+	EnclaveApi           = enclave.Api
+	MasterKey            = types.MasterKey
+	Key                  = types.Key
+	RegistrationNodeInfo = types.RegistrationNodeInfo
 )

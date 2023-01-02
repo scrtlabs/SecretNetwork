@@ -46,18 +46,8 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) ([]byte, error) {
-	//pkSlice := sendSlice(masterCert)
-	//defer freeAfterSend(pkSlice)
-	//seedSlice := sendSlice(seed)
-	//defer freeAfterSend(seedSlice)
-	//errmsg := C.Buffer{}
-	//
-	//_, err := C.init_node(pkSlice, seedSlice, &errmsg)
-	//if err != nil {
-	//	return false, errorWithMessage(err, errmsg)
-	//}
-	return nil, nil
+func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+	return true, nil
 }
 
 type Querier = types.Querier

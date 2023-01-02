@@ -1,13 +1,13 @@
-# How to test the v1.6 upgrade with LocalSecret
+# How to test the v1.7 upgrade with LocalSecret
 
 Always work in docs directory
 
 ## Step 1
 
-Start a v1.5 chain.
+Start a v1.6 chain.
 
 ```bash
- docker compose -f docker-compose-16.yml up -d
+ docker compose -f docker-compose-17.yml up -d
  docker cp node_init.sh node:/root/
 ```
 
@@ -43,6 +43,7 @@ docker exec -it node bash
 ### Instantiate a contract and interact with him
 
 ```bash
+secretd config node http://0.0.0.0:26657
 secretd tx compute store contract.wasm --from a --gas 5000000 -y
 sleep 5
 INIT='{"counter":{"counter":10, "expires":100000}}'
@@ -122,14 +123,14 @@ yarn test
 
 ## Step 4
 
-Propose a software upgrade on the v1.5 chain.
+Propose a software upgrade on the v1.6 chain.
 
 ```bash
 # 30 blocks (30 minutes) until upgrade block
 UPGRADE_BLOCK="$(docker exec node bash -c 'secretd status | jq "(.SyncInfo.latest_block_height | tonumber) + 30"')"
 
 # Propose upgrade
-PROPOSAL_ID="$(docker exec node bash -c "secretd tx gov submit-proposal software-upgrade v1.6 --upgrade-height $UPGRADE_BLOCK --title blabla --description yolo --deposit 100000000uscrt --from a -y -b block | jq '.logs[0].events[] | select(.type == \"submit_proposal\") | .attributes[] | select(.key == \"proposal_id\") | .value | tonumber'")"
+PROPOSAL_ID="$(docker exec node bash -c "secretd tx gov submit-proposal software-upgrade v1.7 --upgrade-height $UPGRADE_BLOCK --title blabla --description yolo --deposit 100000000uscrt --from a -y -b block | jq '.logs[0].events[] | select(.type == \"submit_proposal\") | .attributes[] | select(.key == \"proposal_id\") | .value | tonumber'")"
 
 # Vote yes (voting period is 90 seconds)
 docker exec node bash -c "secretd tx gov vote ${PROPOSAL_ID} yes --from a -y -b block"
@@ -142,15 +143,15 @@ echo "UPGRADE_BLOCK = ${UPGRADE_BLOCK}"
 
 Apply the upgrade.
 
-Wait until you see `ERR CONSENSUS FAILURE!!! err="UPGRADE \"v1.6\" NEEDED at height` in BOTH of the logs, then run:
+Wait until you see `ERR CONSENSUS FAILURE!!! err="UPGRADE \"v1.7\" NEEDED at height` in BOTH of the logs, then run:
 
-Copy binaries from v1.6 chain to v1.5 chain.
+Copy binaries from v1.7 chain to v1.6 chain.
 
 ```bash
-# Start a v1.6 chain and wait a bit for it to setup
+# Start a v1.7 chain and wait a bit for it to setup
 SGX_MODE=SW make build_linux
 
-# Copy binaries from host to current v1.5 chain
+# Copy binaries from host to current v1.6 chain
 
 docker exec bootstrap bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 docker exec node bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
@@ -177,7 +178,7 @@ docker exec node bash -c 'source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG
 
 ```
 
-You should see `INF applying upgrade "v1.6" at height` in the logs, following by blocks continute to stream.
+You should see `INF applying upgrade "v1.7" at height` in the logs, following by blocks continute to stream.
 
 ## Step 6 (Test seed rotation)
 

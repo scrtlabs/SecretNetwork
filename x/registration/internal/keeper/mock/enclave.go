@@ -4,8 +4,8 @@ package mock
 
 type MockEnclaveApi struct{} //nolint:revive
 
-func (MockEnclaveApi) LoadSeed(masterCert []byte, seed []byte, apiKey []byte) ([]byte, error) {
-	return nil, nil
+func (MockEnclaveApi) LoadSeed(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
+	return true, nil
 }
 
 func (MockEnclaveApi) GetEncryptedSeed(masterCert []byte) ([]byte, error) {

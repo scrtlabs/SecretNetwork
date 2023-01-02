@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -41,22 +40,13 @@ func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, 
 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
-	wasLegacySeedPathUsed := false
-
 	apiKey, err := types.GetApiKey()
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	if !fileExists(seedPath) {
-		wasLegacySeedPathUsed = true
-
-		// In case we don't find the new seed file we will try to load the lagacy seed file
-		seedPath = filepath.Join(homeDir, types.SecretNodeCfgFolder, types.LegacySecretNodeSeedConfig)
-
-		if !fileExists(seedPath) {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
-		}
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
 	}
 
 	// get PK from CLI
@@ -67,55 +57,55 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	}
 
 	var seedCfg types.SeedConfig
-
-	err = json.Unmarshal(byteValue, &seedCfg)
+	var legacySeedCfg types.LegacySeedConfig
+	err = json.Unmarshal(byteValue, &legacySeedCfg)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
+
+	if len(legacySeedCfg.MasterCert) != 0 {
+		cert, _, err := legacySeedCfg.Decode()
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
+		seedCfg.MasterKey, err = fetchPubKeyFromLegacyCert(cert)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+
+		seedCfg.EncryptedKey = legacySeedCfg.EncryptedKey
+	} else {
+		err = json.Unmarshal(byteValue, &seedCfg)
+
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		}
+	}
+
+	pk, enc, err := seedCfg.Decode()
+	if err != nil {
+		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	newEnc := make([]byte, len(enc)+1)
+
+	tmp := make([]byte, 2)
+	binary.LittleEndian.PutUint16(tmp, uint16(len(enc)))
+	newEnc[0] = tmp[0]
+
+	copy(newEnc[1:], enc)
+
+	seedCfg.EncryptedKey = hex.EncodeToString(newEnc)
 
 	err = validateSeedParams(seedCfg)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
-	cert, enc, err := seedCfg.Decode()
+	_, err = enclave.LoadSeed(pk, newEnc, apiKey)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
-	if wasLegacySeedPathUsed {
-		newEnc := make([]byte, len(enc)+1)
-
-		tmp := make([]byte, 2)
-		binary.LittleEndian.PutUint16(tmp, uint16(len(enc)))
-		newEnc[0] = tmp[0]
-
-		copy(newEnc[1:], enc)
-
-		enc = newEnc
-	}
-
-	seed, err := enclave.LoadSeed(cert, enc, apiKey)
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
-	if wasLegacySeedPathUsed {
-		cfg := types.SeedConfig{
-			EncryptedKey: hex.EncodeToString(seed),
-			MasterCert:   seedCfg.MasterCert,
-		}
-
-		cfgBytes, err := json.Marshal(&cfg)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
-
-		seedFilePath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
-		err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
-		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-		}
 	}
 }
 
@@ -195,18 +185,26 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	return nil
 }
 
+func fetchPubKeyFromLegacyCert(cert []byte) (string, error) {
+	pk, err := FetchRawPubKeyFromLegacyCert(cert)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(pk), nil
+}
+
+func FetchRawPubKeyFromLegacyCert(cert []byte) ([]byte, error) {
+	pk, err := ra.VerifyRaCert(cert)
+	if err != nil {
+		return nil, err
+	}
+
+	return pk, nil
+}
+
 func validateSeedParams(config types.SeedConfig) error {
-	res, err := base64.StdEncoding.DecodeString(config.MasterCert)
-	if err != nil {
-		return err
-	}
-
-	_, err = ra.VerifyRaCert(res)
-	if err != nil {
-		return err
-	}
-
-	lenKey := len(config.EncryptedKey)
+	lenKey := len(config.EncryptedKey) - 2
 
 	if (lenKey != types.EncryptedKeyLength && lenKey != types.LegacyEncryptedKeyLength) || !IsHexString(config.EncryptedKey) {
 		return sdkerrors.Wrap(types.ErrSeedValidationParams, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")

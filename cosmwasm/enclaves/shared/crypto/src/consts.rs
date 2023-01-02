@@ -1,7 +1,7 @@
 use std::env;
 use std::path;
 
-pub use enclave_ffi_types::ENCRYPTED_SEED_SIZE;
+pub use enclave_ffi_types::{INPUT_ENCRYPTED_SEED_SIZE, OUTPUT_ENCRYPTED_SEED_SIZE};
 use lazy_static::lazy_static;
 use sgx_types::sgx_quote_sign_type_t;
 
@@ -17,8 +17,9 @@ pub enum SigningMethod {
 
 pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
 
-pub const SEED_EXCH_CERTIFICATE_SAVE_PATH: &str = "node-master-cert.der";
-pub const IO_CERTIFICATE_SAVE_PATH: &str = "io-master-cert.der";
+pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
+pub const IO_KEY_SAVE_PATH: &str = "io-master-key.txt";
+pub const SEED_UPDATE_SAVE_PATH: &str = "seed.txt";
 
 pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed";
 pub const NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE: &str = "consensus_seed.sealed";

@@ -4,7 +4,7 @@ version: "3"
 
 services:
   bootstrap:
-    image: ghcr.io/scrtlabs/localsecret:v1.5.1-patch.3
+    image: ghcr.io/scrtlabs/localsecret:v1.6.0
     container_name: bootstrap
     volumes:
       - /tmp/secretd:/root/.secretd
@@ -26,7 +26,7 @@ services:
     entrypoint: /bin/bash
 
   node:
-    image: ghcr.io/scrtlabs/localsecret:v1.5.1-patch.3
+    image: ghcr.io/scrtlabs/localsecret:v1.6.0
     container_name: node
     depends_on:
       - bootstrap

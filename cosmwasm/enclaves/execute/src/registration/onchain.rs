@@ -7,7 +7,7 @@ use std::panic;
 use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::seed_exchange::SeedType;
-use enclave_crypto::consts::ENCRYPTED_SEED_SIZE;
+use enclave_crypto::consts::OUTPUT_ENCRYPTED_SEED_SIZE;
 use enclave_crypto::PUBLIC_KEY_SIZE;
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     cert: *const u8,
     cert_len: u32,
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
-    seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
+    seed: &mut [u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize],
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
@@ -88,8 +88,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             Ok(res) => {
                 trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
 
-                seed[0] = res.len() as u8;
-                seed[1..].copy_from_slice(&res);
+                seed.copy_from_slice(&res);
                 trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
                 NodeAuthResult::Success
             }

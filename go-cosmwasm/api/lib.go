@@ -58,8 +58,8 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) ([]byte, error) {
-	pkSlice := sendSlice(masterCert)
+func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+	pkSlice := sendSlice(masterKey)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
 	defer freeAfterSend(seedSlice)
@@ -67,11 +67,11 @@ func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) ([]byte, e
 	defer freeAfterSend(apiKeySlice)
 	errmsg := C.Buffer{}
 
-	res, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
+	_, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return false, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), nil
+	return true, nil
 }
 
 type Querier = types.Querier

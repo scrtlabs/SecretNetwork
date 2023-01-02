@@ -24,8 +24,8 @@ use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_seed,
-    untrusted_health_check, untrusted_init_node, untrusted_key_gen,
+    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
+    untrusted_init_node, untrusted_key_gen,
 };
 
 use ctor::ctor;
@@ -130,41 +130,41 @@ pub extern "C" fn init_bootstrap(
 
 #[no_mangle]
 pub extern "C" fn init_node(
-    master_cert: Buffer,
+    master_key: Buffer,
     encrypted_seed: Buffer,
     api_key: Buffer,
     err: Option<&mut Buffer>,
-) -> Buffer {
-    let pk_slice = match unsafe { master_cert.read() } {
+) -> bool {
+    let pk_slice = match unsafe { master_key.read() } {
         None => {
-            set_error(Error::empty_arg("master_cert"), err);
-            return Buffer::default();
+            set_error(Error::empty_arg("master_key"), err);
+            return false;
         }
         Some(r) => r,
     };
     let encrypted_seed_slice = match unsafe { encrypted_seed.read() } {
         None => {
             set_error(Error::empty_arg("encrypted_seed"), err);
-            return Buffer::default();
+            return false;
         }
         Some(r) => r,
     };
     let api_key_slice = match unsafe { api_key.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
-            return Buffer::default();
+            return false;
         }
         Some(r) => r,
     };
 
     match untrusted_init_node(pk_slice, encrypted_seed_slice, api_key_slice) {
-        Ok(seed) => {
+        Ok(()) => {
             clear_error();
-            Buffer::from_vec(seed.to_vec())
+            true
         }
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
+            false
         }
     }
 }

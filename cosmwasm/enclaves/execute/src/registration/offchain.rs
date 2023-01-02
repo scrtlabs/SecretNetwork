@@ -4,28 +4,28 @@
 ///
 use log::*;
 
-use sgx_types::{sgx_status_t, SgxResult};
+use sgx_types::sgx_status_t;
 use std::slice;
 
 use enclave_crypto::consts::{
-    SigningMethod, ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, ENCRYPTED_SEED_SIZE,
-    IO_CERTIFICATE_SAVE_PATH, SEED_EXCH_CERTIFICATE_SAVE_PATH, SIGNATURE_TYPE,
+    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
+    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::write_to_untrusted;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
 use super::attestation::create_attestation_certificate;
-use super::cert::verify_ra_cert;
 
 use super::seed_service::get_next_consensus_seed_from_service;
 
+use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
+use enclave_utils::storage::write_to_untrusted;
 
 ///
 /// `ecall_init_bootstrap`
@@ -58,7 +58,6 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         api_key_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let mut key_manager = Keychain::new();
 
@@ -68,6 +67,8 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 
     #[cfg(feature = "use_seed_service_on_bootstrap")]
     {
+        let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
         let temp_keypair = match KeyPair::new() {
             Ok(kp) => kp,
             Err(e) => {
@@ -109,17 +110,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    let kp = key_manager.seed_exchange_key().unwrap();
-    if let Err(status) =
-        create_certificate_from_key(&kp.current, SEED_EXCH_CERTIFICATE_SAVE_PATH, api_key_slice)
-    {
-        return status;
-    }
-
-    let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
-    if let Err(status) =
-        create_certificate_from_key(&kp.current, IO_CERTIFICATE_SAVE_PATH, api_key_slice)
-    {
+    if let Err(status) = write_master_pub_keys(&key_manager) {
         return status;
     }
 
@@ -159,18 +150,17 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn ecall_init_node(
-    master_cert: *const u8,
-    master_cert_len: u32,
+    master_key: *const u8,
+    master_key_len: u32,
     encrypted_seed: *const u8,
     encrypted_seed_len: u32,
     api_key: *const u8,
     api_key_len: u32,
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
-    seed: &mut [u8; ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_status_t {
     validate_const_ptr!(
-        master_cert,
-        master_cert_len as usize,
+        master_key,
+        master_key_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
@@ -188,9 +178,9 @@ pub unsafe extern "C" fn ecall_init_node(
 
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
-    let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
+    let key_slice = slice::from_raw_parts(master_key, master_key_len as usize);
 
-    if encrypted_seed_len != ENCRYPTED_SEED_SIZE {
+    if encrypted_seed_len != INPUT_ENCRYPTED_SEED_SIZE {
         error!("Encrypted seed bad length");
         return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     }
@@ -222,22 +212,11 @@ pub unsafe extern "C" fn ecall_init_node(
     // public keys in certificates don't have 0x04, so we'll copy it here
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
-    // validate master certificate - basically test that we're on the correct network
-    let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
-        Err(e) => {
-            debug!("Error validating master certificate - {:?}", e);
-            error!("Error validating network parameters. Are you on the correct network? (error code 0x01)");
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-        Ok(res) => res,
-    };
+    let pk = key_slice.to_vec();
 
     // just make sure the of the public key isn't messed up
     if pk.len() != PUBLIC_KEY_SIZE {
-        error!(
-            "Got public key from certificate with the wrong size: {:?}",
-            pk.len()
-        );
+        error!("Got public key with the wrong size: {:?}", pk.len());
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
     target_public_key.copy_from_slice(&pk);
@@ -324,14 +303,18 @@ pub unsafe extern "C" fn ecall_init_node(
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
 
-        seed[0] = res.len() as u8;
-        seed[1..].copy_from_slice(&res);
-        trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
+        if let Err(_e) = write_seed(&res, SEED_UPDATE_SAVE_PATH) {
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     }
 
     // this initializes the key manager with all the keys we need for computations
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    if let Err(status) = write_master_pub_keys(&key_manager) {
+        return status;
     }
 
     sgx_status_t::SGX_SUCCESS
@@ -422,22 +405,4 @@ pub unsafe extern "C" fn ecall_key_gen(
     public_key.clone_from_slice(&pubkey);
     trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
-}
-
-/// create_certificate_from_key takes a keypair and uses IAS to create a signed certificate with the
-/// public key of the keypair in the payload
-pub fn create_certificate_from_key(kp: &KeyPair, save_path: &str, api_key: &[u8]) -> SgxResult<()> {
-    let (_, cert) = match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key, None) {
-        Err(e) => {
-            error!("Error in create_attestation_certificate: {:?}", e);
-            return Err(e);
-        }
-        Ok(res) => res,
-    };
-
-    if let Err(status) = write_to_untrusted(cert.as_slice(), save_path) {
-        return Err(status);
-    }
-
-    Ok(())
 }
