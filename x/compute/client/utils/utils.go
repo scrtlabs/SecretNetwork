@@ -22,9 +22,11 @@ import (
 	regtypes "github.com/scrtlabs/SecretNetwork/x/registration"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 
-	"github.com/miscreant/miscreant.go"
+	// "github.com/miscreant/miscreant.go"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
+
+	siv "github.com/secure-io/siv-go"
 )
 
 var (
@@ -259,12 +261,14 @@ func (ctx WASMContext) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) 
 		return nil, err
 	}
 
-	cipher, err := miscreant.NewAESCMACSIV(txEncryptionKey)
+	cipher, err := siv.NewGCM(txEncryptionKey)
+	//cipher, err := miscreant.NewAESCMACSIV(txEncryptionKey)
 	if err != nil {
 		return nil, err
 	}
-
-	return cipher.Open(nil, ciphertext, []byte{})
+	decNonce := make([]byte, cipher.NonceSize())
+	return cipher.Open(nil, decNonce, ciphertext, []byte{})
+	//return cipher.Open(nil, ciphertext, []byte{})
 }
 
 var re = regexp.MustCompile("encrypted: (.+?):")
@@ -290,17 +294,20 @@ func (ctx WASMContext) DecryptError(errString string, nonce []byte) (json.RawMes
 }
 
 func encryptData(aesEncryptionKey []byte, txSenderPubKey []byte, plaintext []byte, nonce []byte) ([]byte, error) {
-	cipher, err := miscreant.NewAESCMACSIV(aesEncryptionKey)
+	//cipher, err := miscreant.NewAESCMACSIV(aesEncryptionKey)
+	cipher, err := siv.NewGCM(aesEncryptionKey)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	ciphertext, err := cipher.Seal(nil, plaintext, []byte{})
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
+	encNonce := make([]byte, cipher.NonceSize())
+
+	ciphertext := cipher.Seal(nil, encNonce, plaintext, []byte{})
+	//if err != nil {
+	//	log.Println(err)
+	//	return nil, err
+	//}
 
 	// ciphertext = nonce(32) || wallet_pubkey(32) || ciphertext
 	ciphertext = append(nonce, append(txSenderPubKey, ciphertext...)...) //nolint:gocritic
