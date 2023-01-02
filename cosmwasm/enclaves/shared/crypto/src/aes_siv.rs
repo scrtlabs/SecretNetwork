@@ -18,8 +18,8 @@ use crate::keys::{AESKey, SymmetricKey};
 use crate::traits::SIVEncryptable;
 use crate::CryptoError;
 use aes_gcm_siv::aead::generic_array::GenericArray;
-use aes_gcm_siv::aead::Aead;
-use aes_gcm_siv::{Aes256GcmSiv, KeyInit};
+use aes_gcm_siv::aead::{Aead, Payload};
+use aes_gcm_siv::{Aes256GcmSiv, KeyInit, Nonce};
 use log::*;
 
 impl SIVEncryptable for AESKey {
@@ -39,10 +39,14 @@ fn aes_siv_encrypt(
 ) -> Result<Vec<u8>, CryptoError> {
     // let ad = ad.unwrap_or(&[&[]]);
 
-    let ad = GenericArray::from_slice(ad.unwrap_or(&[]));
+    let payload = Payload {
+        msg: plaintext,
+        aad: ad.unwrap_or_default(),
+    };
+    let nonce = Nonce::default();
 
     let cipher = Aes256GcmSiv::new(GenericArray::from_slice(key));
-    cipher.encrypt(ad, plaintext).map_err(|e| {
+    cipher.encrypt(&nonce, payload).map_err(|e| {
         warn!("aes_siv_encrypt error: {:?}", e);
         CryptoError::EncryptionError
     })
@@ -53,11 +57,14 @@ fn aes_siv_decrypt(
     ad: Option<&[u8]>,
     key: &SymmetricKey,
 ) -> Result<Vec<u8>, CryptoError> {
-    //let ad = ad.unwrap_or(&[&[]]);
-    let ad = GenericArray::from_slice(ad.unwrap_or(&[]));
+    let payload = Payload {
+        msg: ciphertext,
+        aad: ad.unwrap_or_default(),
+    };
+    let nonce = Nonce::default();
 
     let cipher = Aes256GcmSiv::new(GenericArray::from_slice(key));
-    cipher.decrypt(ad, ciphertext).map_err(|e| {
+    cipher.decrypt(&nonce, payload).map_err(|e| {
         warn!("aes_siv_decrypt error: {:?}", e);
         CryptoError::DecryptionError
     })
