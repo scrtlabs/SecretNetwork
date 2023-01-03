@@ -21,13 +21,16 @@ then
   # export SECRET_NETWORK_KEYRING_BACKEND=test
   secretd init banana --chain-id "$chain_id"
 
-
   cp ~/node_key.json ~/.secretd/config/node_key.json
-  perl -i -pe 's/"stake"/"uscrt"/g' ~/.secretd/config/genesis.json
-  perl -i -pe 's/"172800s"/"90s"/g' ~/.secretd/config/genesis.json # voting period 2 days -> 90 seconds
-  perl -i -pe 's/"1814400s"/"80s"/g' ~/.secretd/config/genesis.json # unbonding period 21 days -> 80 seconds
-
-  perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/g' ~/.secretd/config/app.toml # enable cors
+  jq '
+    .consensus_params.block.time_iota_ms = "10" | 
+    .app_state.staking.params.unbonding_time = "90s" | 
+    .app_state.gov.voting_params.voting_period = "90s" |
+    .app_state.crisis.constant_fee.denom = "uscrt" |
+    .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
+    .app_state.mint.params.mint_denom = "uscrt" |
+    .app_state.staking.params.bond_denom = "uscrt"
+  ' ~/.secretd/config/genesis.json > ~/.secretd/config/genesis.json.tmp && mv ~/.secretd/config/genesis.json{.tmp,}
 
   a_mnemonic="grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
   b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
