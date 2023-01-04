@@ -15,6 +15,7 @@ services:
     environment:
       - http_proxy
       - https_proxy
+
   bootstrap:
     image: ghcr.io/scrtlabs/secret-network-bootstrap-testnet:v1.6.0-alpha.4
     container_name: bootstrap
