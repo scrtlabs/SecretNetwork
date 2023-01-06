@@ -92,6 +92,8 @@ impl BaseEnv {
                     // v0.10 env.block.time is seconds since unix epoch
                     time: v1types::Timestamp::from_nanos(self.0.block.time).seconds(),
                     chain_id: self.0.block.chain_id,
+                    //#[cfg(feature = "lol")]
+                    random: self.0.block.random,
                 },
                 message: v010types::MessageInfo {
                     sender: self.0.message.sender,
@@ -117,6 +119,8 @@ impl BaseEnv {
                     // v1 env.block.time is nanoseconds since unix epoch
                     time: v1types::Timestamp::from_nanos(self.0.block.time),
                     chain_id: self.0.block.chain_id,
+                    //#[cfg(feature = "lol")]
+                    random: self.0.block.random,
                 },
                 contract: v1types::ContractInfo {
                     address: v1types::Addr::unchecked(self.0.contract.address.0),

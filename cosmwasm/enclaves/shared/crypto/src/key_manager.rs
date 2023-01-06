@@ -12,6 +12,8 @@ pub struct Keychain {
     consensus_seed_exchange_keypair: Option<KeyPair>,
     consensus_io_exchange_keypair: Option<KeyPair>,
     consensus_callback_secret: Option<AESKey>,
+    pub random_encryption_key: Option<AESKey>,
+    pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
 }
 
@@ -36,6 +38,8 @@ impl Keychain {
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
             consensus_callback_secret: None,
+            initial_randomness_seed: None,
+            random_encryption_key: None,
         };
 
         let _ = x.generate_consensus_master_keys();
@@ -237,13 +241,32 @@ impl Keychain {
             .unwrap()
             .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
 
+        let rek = self
+            .consensus_seed
+            .unwrap()
+            .derive_key_from_this(&RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes());
+
+        let irs = self
+            .consensus_seed
+            .unwrap()
+            .derive_key_from_this(&INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes());
+
+        self.initial_randomness_seed = Some(irs);
+        self.random_encryption_key = Some(rek);
+
         trace!(
             "consensus_state_ikm: {:?}",
             hex::encode(consensus_state_ikm.get())
         );
         self.set_consensus_callback_secret(consensus_callback_secret);
+        self.write_randomness_keys();
 
         Ok(())
+    }
+
+    pub fn write_randomness_keys(&self) {
+        self.random_encryption_key.unwrap().seal(&REK_PATH);
+        self.initial_randomness_seed.unwrap().seal(&IRS_PATH);
     }
 }
 

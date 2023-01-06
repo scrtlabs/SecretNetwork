@@ -101,6 +101,20 @@ enclave {
         public HealthCheckResult ecall_health_check();
 
         public uint32_t ecall_run_tests();
+
+        public sgx_status_t ecall_submit_block_signatures(
+            [in, count=in_header_len] const uint8_t* in_header,
+            uintptr_t in_header_len,
+            [in, count=in_commit_len] const uint8_t* in_commit,
+            uintptr_t in_commit_len,
+            [in, count=in_encrypted_random_len] const uint8_t* in_encrypted_random,
+            uintptr_t in_encrypted_random_len,
+            [out, count=32] uint8_t* decrypted
+      //      [in, count=in_validator_set_len] const uint8_t* in_validator_set,
+    //        uintptr_t in_validator_set_len,
+  //          [in, count=in_next_validator_set_len] const uint8_t* in_next_validator_set,
+//            uintptr_t in_next_validator_set_len
+        );
     };
 
     untrusted {

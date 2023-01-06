@@ -168,7 +168,7 @@ func (w *Wasmer) Instantiate(
 		return nil, nil, gasUsed, fmt.Errorf("instantiate: cannot parse response from json: %w", err)
 	}
 
-	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
+	isOutputAddressedToReply := len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0
 
 	// init v0.10 response
 	if respV010orV1.V010 != nil {
@@ -267,7 +267,7 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
-	isOutputAddressedToReply := (len(resp.InternaReplyEnclaveSig) > 0 && len(resp.InternalMsgId) > 0)
+	isOutputAddressedToReply := len(resp.InternaReplyEnclaveSig) > 0 && len(resp.InternalMsgId) > 0
 
 	// handle v0.10 response
 	if resp.V010 != nil {

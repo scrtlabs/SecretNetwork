@@ -214,3 +214,5 @@ Buffer query(cache_t *cache,
  * and cannot be called on any other pointer.
  */
 void release_cache(cache_t *cache);
+
+Buffer submit_block_signatures(Buffer header, Buffer commit, Buffer random, Buffer *err);

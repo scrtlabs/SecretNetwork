@@ -24,6 +24,8 @@ mod enclave_config;
 mod seed;
 mod wasmi;
 
+mod random;
+
 #[cfg(feature = "enclave-tests")]
 pub mod enclave_tests;
 
@@ -52,3 +54,5 @@ pub use crate::attestation::{create_attestation_report_u, untrusted_get_encrypte
 pub use crate::seed::{
     untrusted_health_check, untrusted_init_bootstrap, untrusted_init_node, untrusted_key_gen,
 };
+
+pub use crate::random::untrusted_submit_block_signatures;

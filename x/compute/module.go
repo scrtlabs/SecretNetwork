@@ -3,6 +3,7 @@ package compute
 import (
 	"context"
 	"encoding/json"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"math/rand"
 
 	"github.com/gorilla/mux"
@@ -151,7 +152,28 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 }
 
 // BeginBlock returns the begin blocker for the compute module.
-func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
+func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBlock) {
+
+	header, err := beginBlock.Header.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	commit, err := beginBlock.Commit.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	random, err := api.SubmitBlockSignatures(header, commit, beginBlock.Header.EncryptedRandom.Random)
+	if err != nil {
+		println("Failed to submit block signtures")
+		panic(err)
+	}
+
+	am.keeper.SetRandomSeed(ctx, random)
+
+	println("successfully submitted random for height ", beginBlock.Header.Height)
+}
 
 // EndBlock returns the end blocker for the compute module. It returns no validator
 // updates.

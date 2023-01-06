@@ -63,6 +63,9 @@ endif
 CUR_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 build_tags = netgo
+
+build_tags += sgx
+
 ifeq ($(LEDGER_ENABLED),true)
   ifeq ($(OS),Windows_NT)
     GCCEXE = $(shell where gcc.exe 2> NUL)
@@ -528,7 +531,7 @@ proto-gen:
 	cp go.mod /tmp/go.mod.bak
 	cp go.sum /tmp/go.sum.bak
 	@echo "Generating Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	$(DOCKER) run --rm -v /mnt/c/Users/Itzik/GolandProjects/SecretNetwork:/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 	cp /tmp/go.mod.bak go.mod
 	cp /tmp/go.sum.bak go.sum
 	go mod tidy

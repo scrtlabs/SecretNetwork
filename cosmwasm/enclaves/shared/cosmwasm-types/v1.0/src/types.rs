@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 pub use super::addresses::Addr;
 pub use super::coins::Coin;
 pub use super::timestamp::Timestamp;
+pub use cw_types_v010::encoding::Binary;
 pub use cw_types_v010::types::TransactionInfo;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -62,6 +63,8 @@ pub struct BlockInfo {
     /// ```
     pub time: Timestamp,
     pub chain_id: String,
+    //#[cfg(feature = "random")]
+    pub random: Binary,
 }
 
 /// Additional information from [MsgInstantiateContract] and [MsgExecuteContract], which is passed

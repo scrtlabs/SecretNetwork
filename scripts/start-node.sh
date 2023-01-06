@@ -48,4 +48,4 @@ perl -i -pe 's/rpc-write-timeout = 600/rpc-read-timeout = 5/' $SECRETD_HOME/conf
 perl -i -pe 's/"stake"/ "uscrt"/g' $SECRETD_HOME/config/genesis.json
 
 # Start the secretd
-LOG_LEVEL=info $SECRETD start --pruning=nothing --bootstrap --home $SECRETD_HOME
+LOG_LEVEL=trace $SECRETD start --pruning=nothing --bootstrap --home $SECRETD_HOME
