@@ -302,8 +302,14 @@ pub enum StdCosmWasmMsg {
         label: String,
         callback_sig: Option<Vec<u8>>,
     },
-    #[serde(other)]
+    #[serde(other, deserialize_with = "deserialize_ignore_any")]
     Other,
+}
+
+pub fn deserialize_ignore_any<'de, D: serde::Deserializer<'de>, T: Default>(
+    deserializer: D,
+) -> Result<T, D::Error> {
+    serde::de::IgnoredAny::deserialize(deserializer).map(|_| T::default())
 }
 
 impl StdCosmWasmMsg {

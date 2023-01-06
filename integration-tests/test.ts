@@ -19,6 +19,7 @@ import {
   QueryBalanceResponse,
 } from "secretjs//dist/protobuf_stuff/cosmos/bank/v1beta1/query";
 import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
+import { MsgSend as MsgSendMsg } from "secretjs/dist/tx/bank";
 import { AminoWallet } from "secretjs/dist/wallet_amino";
 import {
   ibcDenom,
@@ -512,6 +513,45 @@ describe("CustomMsg", () => {
     }
     expect(tx.code).toBe(10 /* WASM ErrInvalidMsg */);
     expect(tx.rawLog).toContain("invalid CosmosMsg from the contract");
+  });
+});
+
+describe("tx broadcast multi", () => {
+  test("Send Multiple Messages Amino", async () => {
+    const { validators } = await readonly.query.staking.validators({});
+    const validator = validators[0].operatorAddress;
+
+    let tx = await accounts[0].secretjs.tx.broadcast(
+        [
+          new MsgSendMsg({
+            fromAddress: accounts[0].address,
+            toAddress: accounts[0].address,
+            amount: [{ denom: "uscrt", amount: "1" }],
+          }),
+
+          new MsgExecuteContract({
+            sender: accounts[0].address,
+            contractAddress: contracts["secretdev-1"].v1.address,
+            codeHash: contracts["secretdev-1"].v1.codeHash,
+            msg: {
+              staking_msg_delegate: {
+                validator: validator,
+                amount: { amount: "1", denom: "uscrt" },
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
+          }),
+        ],
+        {
+          broadcastCheckIntervalMs: 100,
+          gasLimit: 5_000_000,
+        },
+    );
+    if (tx.code !== TxResultCode.Success) {
+      console.error(tx.rawLog);
+    }
+
+    expect(tx.code).toBe(TxResultCode.Success);
   });
 });
 
