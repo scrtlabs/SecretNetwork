@@ -31,8 +31,8 @@ backtraces = ["cosmwasm-std/backtraces"]
 with_floats = []
 
 [dependencies]
-cosmwasm-std = { path = "../../../../../../../CLionProjects/cosmwasm/packages/std", package = "secret-cosmwasm-std" }
-cosmwasm-storage = { path = "../../../../../../../CLionProjects/cosmwasm/packages/storage", package = "secret-cosmwasm-storage" }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.0.0" }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.0.0" }
 schemars = "0.8.1"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",
