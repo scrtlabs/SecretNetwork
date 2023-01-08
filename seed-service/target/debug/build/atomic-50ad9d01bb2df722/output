@@ -1,0 +1,16 @@
+cargo:rustc-cfg=has_atomic_u8
+cargo:rustc-cfg=has_atomic_i8
+cargo:rustc-cfg=has_atomic_u16
+cargo:rustc-cfg=has_atomic_i16
+cargo:rustc-cfg=has_atomic_u32
+cargo:rustc-cfg=has_atomic_i32
+cargo:rustc-cfg=has_atomic_u64
+cargo:rustc-cfg=has_atomic_i64
+cargo:rustc-cfg=has_atomic_u8
+cargo:rustc-cfg=has_atomic_i8
+cargo:rustc-cfg=has_atomic_u16
+cargo:rustc-cfg=has_atomic_i16
+cargo:rustc-cfg=has_atomic_u32
+cargo:rustc-cfg=has_atomic_i32
+cargo:rustc-cfg=has_atomic_u64
+cargo:rustc-cfg=has_atomic_i64

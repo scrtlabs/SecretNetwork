@@ -1,0 +1,15 @@
+/home/lior/work/SingularitySeedService/target/release/deps/chrono_tz-048c36f424335bbe.rmeta: /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/lib.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/binary_search.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/directory.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/timezone_impl.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/timezones.rs /home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out/directory.rs /home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out/timezones.rs
+
+/home/lior/work/SingularitySeedService/target/release/deps/libchrono_tz-048c36f424335bbe.rlib: /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/lib.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/binary_search.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/directory.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/timezone_impl.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/timezones.rs /home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out/directory.rs /home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out/timezones.rs
+
+/home/lior/work/SingularitySeedService/target/release/deps/chrono_tz-048c36f424335bbe.d: /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/lib.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/binary_search.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/directory.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/timezone_impl.rs /home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/timezones.rs /home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out/directory.rs /home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out/timezones.rs
+
+/home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/lib.rs:
+/home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/binary_search.rs:
+/home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/directory.rs:
+/home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/timezone_impl.rs:
+/home/lior/.cargo/registry/src/github.com-1ecc6299db9ec823/chrono-tz-0.6.3/src/timezones.rs:
+/home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out/directory.rs:
+/home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out/timezones.rs:
+
+# env-dep:OUT_DIR=/home/lior/work/SingularitySeedService/target/release/build/chrono-tz-28acff0799ba4b5e/out
