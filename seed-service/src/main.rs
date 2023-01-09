@@ -44,10 +44,7 @@ impl TlsStream {
     }
 }
 
-const GID_WHITELIST: [u32; 21] = [
-    0xc7f, 0xc80, 0xc7e, 0xc4b, 0xc41, 0xc55, 0xc15, 0xc13, 0xc40, 0xc4f, 0xc12, 0xc14, 0xc45,
-    0xc42, 0xc16, 0xc1e, 0xc47, 0xc4e, 0x0c11, 0x0c33, 0xc92,
-];
+const WHITELIST_FROM_FILE: &str = include_str!("../../cosmwasm/enclaves/execute/whitelist.txt");
 
 impl AsyncRead for TlsStream {
     fn poll_read(
@@ -379,7 +376,14 @@ fn error(err: String) -> io::Error {
 }
 
 fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
-    GID_WHITELIST.contains(epid_gid)
+    let decoded = base64::decode(WHITELIST_FROM_FILE).unwrap(); //will never fail since data is constant
+
+    decoded.as_chunks::<4>().0.iter().any(|&arr| {
+        if epid_gid == &u32::from_be_bytes(arr) {
+            return true;
+        }
+        false
+    })
 }
 
 // Load public certificate from file.
