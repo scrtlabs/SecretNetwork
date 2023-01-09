@@ -325,16 +325,16 @@ jobs:
         run: |
           docker load --input /tmp/localsecret.tar
           docker load --input /tmp/hermes.tar
-      # - name: Run integration tests
-      #   run: |
-      #     cd integration-tests
-      #     yarn
-      #     docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
-      #     yarn test
-      #     make kill-localsecret # next step needs the localsecret ports
+      - name: Run integration tests
+        run: |
+          cd integration-tests
+          yarn
+          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
+          yarn test
+          make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
-          git clone --depth 1 --branch v17-changes https://github.com/scrtlabs/secret.js
+          git clone --depth 1 --branch master https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*
