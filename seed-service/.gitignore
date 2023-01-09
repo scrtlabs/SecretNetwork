@@ -3,4 +3,5 @@ singularity_seed_service.manifest
 singularity_seed_service.manifest.sgx_sk
 singularity_seed_service.sig
 singularity_seed_service.token
+seeds.csv
 
