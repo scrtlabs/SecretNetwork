@@ -1183,12 +1183,14 @@ fn host_debug_print(
     instance: &wasm3::Instance<Context>,
     message_region_ptr: i32,
 ) -> WasmEngineResult<()> {
-    let message_buffer = read_from_memory(instance, message_region_ptr as u32)?;
-    let message =
-        String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
+    #[cfg(feature = "debug-print")]
+    {
+        let message_buffer = read_from_memory(instance, message_region_ptr as u32)?;
+        let message =
+            String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
 
-    info!("debug_print: {:?}", message);
-
+        info!("debug_print: {:?}", message);
+    }
     Ok(())
 }
 
