@@ -19,7 +19,7 @@ fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
 
     let mut addr: Option<SocketAddr> = None;
 
-    const SERVICE_PORT: u16 = 3000;
+    const SERVICE_PORT: u16 = 4487;
     let addrs = (host_name, SERVICE_PORT).to_socket_addrs().map_err(|err| {
         trace!("Error while trying to convert to socket addrs {:?}", err);
         CryptoError::SocketCreationError

@@ -414,25 +414,6 @@ fn load_private_key(filename: &str) -> io::Result<rustls::PrivateKey> {
     Ok(rustls::PrivateKey(keys[0].clone()))
 }
 
-// pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-//     let addr: SocketAddr = ([127, 0, 0, 1], 3000).into();
-
-//     let listener = TcpListener::bind(addr).await?;
-//     println!("Listening on http://{}", addr);
-//     loop {
-//         let (stream, _) = listener.accept().await?;
-
-//         tokio::task::spawn(async move {
-//             if let Err(err) = http1::Builder::new()
-//                 .serve_connection(stream, service_fn(hello))
-//                 .await
-//             {
-//                 println!("Error serving connection: {:?}", err);
-//             }
-//         });
-//     }
-// }
-
 fn main() {
     if let Err(e) = run_server() {
         eprintln!("FAILED: {}", e);
@@ -442,7 +423,7 @@ fn main() {
 
 #[tokio::main(worker_threads = 4)]
 async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let port = "3000";
+    let port = "4487";
     let addr = format!("0.0.0.0:{}", port).parse()?;
     unsafe {
         DB_RW_LOCK = Some(RwLock::new(0));
