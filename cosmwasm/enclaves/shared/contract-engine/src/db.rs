@@ -175,7 +175,7 @@ pub fn read_from_encrypted_state(
     }?;
 
     let mut gas_used_write: u64 = 0;
-    if !has_write_permissions {
+    if has_write_permissions {
         if let Some(ref plaintext_value) = maybe_plaintext_value {
             // Key exists with the old format, rewriting with the new format
             gas_used_write =
