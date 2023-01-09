@@ -1178,6 +1178,7 @@ fn host_query_chain(
     write_to_memory(instance, &answer).map(|region_ptr| region_ptr as i32)
 }
 
+#[cfg(feature = "debug-print")]
 fn host_debug_print(
     _context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -1189,6 +1190,16 @@ fn host_debug_print(
 
     info!("debug_print: {:?}", message);
 
+    Ok(())
+}
+
+#[cfg(not(feature = "debug-print"))]
+fn host_debug_print(
+    _context: &mut Context,
+    _instance: &wasm3::Instance<Context>,
+    _message_region_ptr: i32,
+) -> WasmEngineResult<()> {
+    // Nothing to do here when the feature is off
     Ok(())
 }
 
