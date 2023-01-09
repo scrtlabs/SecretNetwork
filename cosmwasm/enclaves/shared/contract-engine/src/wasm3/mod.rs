@@ -1178,19 +1178,25 @@ fn host_query_chain(
     write_to_memory(instance, &answer).map(|region_ptr| region_ptr as i32)
 }
 
+#[cfg(feature = "debug-print")]
 fn host_debug_print(
     _context: &mut Context,
     instance: &wasm3::Instance<Context>,
     message_region_ptr: i32,
 ) -> WasmEngineResult<()> {
-    #[cfg(feature = "debug-print")]
-    {
-        let message_buffer = read_from_memory(instance, message_region_ptr as u32)?;
-        let message =
-            String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
+    let message_buffer = read_from_memory(instance, message_region_ptr as u32)?;
+    let message =
+        String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
 
-        info!("debug_print: {:?}", message);
-    }
+    info!("debug_print: {:?}", message);
+}
+
+#[cfg(not(feature = "debug-print"))]
+fn host_debug_print(
+    _context: &mut Context,
+    _instance: &wasm3::Instance<Context>,
+    _message_region_ptr: i32,
+) -> WasmEngineResult<()> {
     Ok(())
 }
 
