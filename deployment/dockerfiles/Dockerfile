@@ -68,6 +68,9 @@ RUN git clone https://github.com/scrtlabs/tm-secret-enclave.git
 
 WORKDIR tm-secret-enclave
 
+RUN git submodule init
+RUN git submodule update --remote
+
 RUN . /opt/sgxsdk/environment && env && SGX_MODE=${SGX_MODE} make build
 
 # ***************** COMPILE SECRETD ************** #
@@ -178,8 +181,8 @@ WORKDIR /root
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
-COPY --from=compile-tendermint-enclave /tm-secret-enclave/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
-COPY --from=compile-tendermint-enclave /tm-secret-enclave/api/librandom_api.so /usr/lib/librandom_api.so
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/api/librandom_api.so /usr/lib/librandom_api.so
 
 
 COPY deployment/docker/testnet/bootstrap_init.sh .
