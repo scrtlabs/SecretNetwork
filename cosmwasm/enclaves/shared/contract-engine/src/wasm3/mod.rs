@@ -1189,6 +1189,8 @@ fn host_debug_print(
         String::from_utf8(message_buffer).unwrap_or_else(|err| hex::encode(err.into_bytes()));
 
     info!("debug_print: {:?}", message);
+
+    Ok(())
 }
 
 #[cfg(not(feature = "debug-print"))]
@@ -1197,6 +1199,7 @@ fn host_debug_print(
     _instance: &wasm3::Instance<Context>,
     _message_region_ptr: i32,
 ) -> WasmEngineResult<()> {
+    // Nothing to do here when the feature is off
     Ok(())
 }
 
