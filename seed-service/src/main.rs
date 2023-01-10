@@ -286,11 +286,10 @@ fn get_challenge_for_report(cert: String) -> Result<String, String> {
     OsRng.fill_bytes(&mut random_challenge);
 
     let serialized_challenge = base64::encode(&random_challenge);
-    //let report = parse_attestation_report(cert)?;
+    let report = parse_attestation_report(cert)?;
     println!(
         "Challenged {:?} with {:?}",
-        "hi",
-        //get_pub_key_from_report(&report),
+        get_pub_key_from_report(&report),
         random_challenge.clone()
     );
 
@@ -345,7 +344,6 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Infallible> {
                         .unwrap()
                 }
                 Ok(seed) => {
-                    println!("Seed is: {:?}", seed);
                     Response::new(Body::from(base64::encode(&seed)))
                 }
             },

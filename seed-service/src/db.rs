@@ -11,8 +11,6 @@ use std::{
     io::{BufReader, SeekFrom},
 };
 
-// TODO: encrypt
-
 const DB_PATH: &str = "/home/bob/enc/seed.csv";
 
 fn error(err: String) -> io::Error {
