@@ -172,7 +172,7 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 
 	am.keeper.SetRandomSeed(ctx, random)
 
-	println("successfully submitted random for height ", beginBlock.Header.Height)
+	// println("successfully submitted random for height ", beginBlock.Header.Height)
 }
 
 // EndBlock returns the end blocker for the compute module. It returns no validator

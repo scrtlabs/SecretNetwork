@@ -18,6 +18,7 @@ mod gas;
 mod io;
 mod message;
 mod query_chain;
+mod random;
 pub(crate) mod types;
 #[cfg(feature = "wasmi-engine")]
 mod wasm;

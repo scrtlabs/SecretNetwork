@@ -16,6 +16,7 @@ use crate::cosmwasm_config::ContractOperation;
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
+use crate::random::derive_random;
 
 use super::contract_validation::{
     generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -129,6 +130,16 @@ pub fn init(
 
     versioned_env.set_contract_hash(&contract_hash);
 
+    debug!("Old random: {:?}", versioned_env.get_random());
+
+    versioned_env.set_random(derive_random(
+        &versioned_env.get_random(),
+        &contract_key,
+        block_height,
+    ));
+
+    debug!("New random: {:?}", versioned_env.get_random());
+
     //let start = Instant::now();
     let result = engine.init(&versioned_env, validated_msg);
     // let duration = start.elapsed();
@@ -195,7 +206,7 @@ pub fn handle(
     let base_env: BaseEnv = extract_base_env(env)?;
     let query_depth = extract_query_depth(env)?;
 
-    let (sender, contract_address, _, sent_funds) = base_env.get_verification_params();
+    let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
@@ -271,6 +282,16 @@ pub fn handle(
     let mut versioned_env = base_env
         .clone()
         .into_versioned_env(&engine.get_api_version());
+
+    debug!("Old random: {:?}", versioned_env.get_random());
+
+    versioned_env.set_random(derive_random(
+        &versioned_env.get_random(),
+        &contract_key,
+        block_height,
+    ));
+
+    debug!("New random: {:?}", versioned_env.get_random());
 
     versioned_env.set_contract_hash(&contract_hash);
 

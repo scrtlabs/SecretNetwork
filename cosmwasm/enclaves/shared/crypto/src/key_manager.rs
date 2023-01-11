@@ -265,8 +265,11 @@ impl Keychain {
     }
 
     pub fn write_randomness_keys(&self) {
-        self.random_encryption_key.unwrap().seal(&REK_PATH);
-        self.initial_randomness_seed.unwrap().seal(&IRS_PATH);
+        self.random_encryption_key.unwrap().seal(&REK_PATH).unwrap();
+        self.initial_randomness_seed
+            .unwrap()
+            .seal(&IRS_PATH)
+            .unwrap();
     }
 }
 

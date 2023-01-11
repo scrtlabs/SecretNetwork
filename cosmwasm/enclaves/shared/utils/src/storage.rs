@@ -6,6 +6,9 @@ use std::sgxfs::SgxFile;
 use sgx_types::*;
 use std::untrusted::fs::File;
 
+pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
+pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
+
 pub fn write_to_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<()> {
     let mut f = File::create(filepath)
         .sgx_error_with_log(&format!("Creating file '{}' failed", filepath))?;

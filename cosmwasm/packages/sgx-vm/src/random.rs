@@ -1,6 +1,6 @@
 use sgx_types::*;
 
-use log::debug;
+use log::{debug, error, warn};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -26,11 +26,46 @@ pub fn untrusted_submit_block_signatures(
     header: &[u8],
     commit: &[u8],
     encrypted_random: &[u8],
-    // val_set: &[u8],
-    // next_val_set: &[u8],
 ) -> SgxResult<[u8; 32]> {
     debug!("Hello from just before - untrusted_submit_block_signatures");
 
+    const RETRY_LIMIT: i32 = 3;
+
+    let mut retry_count = 0;
+
+    // this is here so we can
+    loop {
+        let (retval, decrypted, status) =
+            submit_block_signature_impl(header, commit, encrypted_random)?;
+        if status != sgx_status_t::SGX_SUCCESS {
+            return Err(status);
+        } else if retval != sgx_status_t::SGX_SUCCESS {
+            if retval == sgx_status_t::SGX_ERROR_FILE_RECOVERY_NEEDED {
+                warn!(
+                    "Validator set read by enclave was mismatched with current height.. retrying"
+                );
+                // retry with
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                retry_count += 1;
+
+                if retry_count == RETRY_LIMIT {
+                    error!("Validator timed out while waiting for correct validator set");
+                    return Err(retval);
+                }
+            } else {
+                return Err(retval);
+            }
+        } else {
+            return Ok(decrypted);
+        }
+    }
+}
+
+fn submit_block_signature_impl(
+    header: &[u8],
+    commit: &[u8],
+    encrypted_random: &[u8],
+) -> SgxResult<(sgx_status_t, [u8; 32], sgx_status_t)> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -63,14 +98,5 @@ pub fn untrusted_submit_block_signatures(
             // next_val_set.len() as u32,
         )
     };
-
-    if status != sgx_status_t::SGX_SUCCESS {
-        return Err(status);
-    }
-
-    if retval != sgx_status_t::SGX_SUCCESS {
-        return Err(retval);
-    }
-
-    Ok(decrypted)
+    Ok((retval, decrypted, status))
 }

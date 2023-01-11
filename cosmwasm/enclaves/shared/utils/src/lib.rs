@@ -3,6 +3,7 @@
 extern crate sgx_trts;
 extern crate sgx_types;
 
+extern crate core;
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -14,3 +15,4 @@ pub mod pointers;
 pub mod recursion_depth;
 mod results;
 pub mod storage;
+pub mod validator_set;

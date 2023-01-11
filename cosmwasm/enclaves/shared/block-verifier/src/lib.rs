@@ -13,11 +13,11 @@ use tendermint_light_client_verifier::{ProdVerifier, Verdict};
 
 //
 lazy_static! {
-    static ref verifier: ProdVerifier = ProdVerifier::default();
+    static ref VERIFIER: ProdVerifier = ProdVerifier::default();
 }
 
 pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
-    match verifier.verify_commit(untrusted_block) {
+    match VERIFIER.verify_commit(untrusted_block) {
         Verdict::Success => true,
         Verdict::NotEnoughTrust(_) => false,
         Verdict::Invalid(_) => false,

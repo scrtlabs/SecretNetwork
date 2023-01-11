@@ -5,7 +5,6 @@ use tendermint_proto::Protobuf;
 
 use sgx_types::sgx_status_t;
 
-use crate::r#const::VALIDATOR_SET_SEALING_PATH;
 use crate::verify_block;
 use enclave_crypto::SIVEncryptable;
 use enclave_crypto::KEY_MANAGER;
@@ -13,6 +12,8 @@ use log::{debug, error};
 
 use tendermint::block::signed_header::SignedHeader;
 use tendermint::validator::Set;
+
+use enclave_utils::validator_set::ValidatorSetForHeight;
 
 #[no_mangle]
 pub unsafe extern "C" fn ecall_submit_block_signatures(
@@ -23,26 +24,17 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     in_encrypted_random: *const u8,
     in_encrypted_random_len: u32,
     decrypted_random: &mut [u8; 32],
-    // in_validator_set: *const u8,
-    // in_validator_set_len: u32,
-    // in_next_validator_set: *const u8,
-    // in_next_validator_set_len: u32,
 ) -> sgx_status_t {
     let block_header_slice = slice::from_raw_parts(in_header, in_header_len as usize);
     let block_commit_slice = slice::from_raw_parts(in_commit, in_commit_len as usize);
     let encrypted_random_slice =
         slice::from_raw_parts(in_encrypted_random, in_encrypted_random_len as usize);
-    // let validator_set_slice =
-    //     slice::from_raw_parts(in_validator_set, in_validator_set_len as usize);
-    // let next_validator_set_slice =
-    //     slice::from_raw_parts(in_next_validator_set, in_next_validator_set_len as usize);
 
-    let validator_set_result = enclave_utils::storage::unseal(&VALIDATOR_SET_SEALING_PATH);
-
+    let validator_set_result = ValidatorSetForHeight::unseal();
     if validator_set_result.is_err() {
         return validator_set_result.unwrap_err();
     }
-    let validator_set_slice = validator_set_result.unwrap();
+    let validator_set_for_height: ValidatorSetForHeight = validator_set_result.unwrap();
 
     // As of now this is not working because of a difference in behavior between tendermint and tendermint-rs
     // Ref: https://github.com/informalsystems/tendermint-rs/issues/1255
@@ -62,25 +54,20 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         return sgx_status_t::SGX_SUCCESS;
     };
 
-    let validator_set = if let Ok(r) = Set::decode(validator_set_slice.as_slice()) {
-        r
-    } else {
-        error!("Error parsing header from proto");
-        return sgx_status_t::SGX_SUCCESS;
-    };
+    if header.height.value() != validator_set_for_height.height {
+        error!("Validator set height does not match stored validator set");
+        // we use this error code to signal that the validator set is not synced with the current block
+        return sgx_status_t::SGX_ERROR_FILE_RECOVERY_NEEDED;
+    }
 
-    // let next_validator_set = if let Ok(r) = Set::decode(next_validator_set_slice) {
-    //     r
-    // } else {
-    //     error!("Error parsing header from proto");
-    //     return sgx_status_t::SGX_SUCCESS;
-    // };
-    // let commit = if let Ok(r) = Commit::decode(block_commit_slice) {
-    //     r
-    // } else {
-    //     error!("Error parsing commit from proto");
-    //     return sgx_status_t::SGX_SUCCESS;
-    // };
+    let validator_set =
+        if let Ok(r) = Set::decode(validator_set_for_height.validator_set.as_slice()) {
+            r
+        } else {
+            error!("Error parsing header from proto");
+            return sgx_status_t::SGX_SUCCESS;
+        };
+
     let validator_hash = validator_set.hash();
 
     let signed_header = SignedHeader::new(header, commit).unwrap();

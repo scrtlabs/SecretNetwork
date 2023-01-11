@@ -693,10 +693,10 @@ github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71e
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
 github.com/scrtlabs/cosmos-sdk v0.45.11-0.20230107000730-6c3cf2623cd1 h1:h9PR/2NsdwuAFBdKVscyro/SGI+u68+YqW4os+ltDX8=
 github.com/scrtlabs/cosmos-sdk v0.45.11-0.20230107000730-6c3cf2623cd1/go.mod h1:Ac4tZxP/WI8l+pCtOX2iY4cNeJZ9vERl7i+E+vmEFpY=
-github.com/scrtlabs/tendermint v0.34.23-0.20230108184122-dfb6a6d6b728 h1:kklaqx/rk1g5t5HvEggCpFe42blRX/cUI0+/pKCvBJc=
-github.com/scrtlabs/tendermint v0.34.23-0.20230108184122-dfb6a6d6b728/go.mod h1:mQI4Yg3NlrlbsP7hStHjvXNcVikIzDKRv+76euz0WeU=
-github.com/scrtlabs/tm-secret-enclave v0.0.0-20230107000306-69cfb1fb0e4c h1:WkUd+ocEa5/OTLRYxLg6OgzTYiarnTImzvSycDoW9pQ=
-github.com/scrtlabs/tm-secret-enclave v0.0.0-20230107000306-69cfb1fb0e4c/go.mod h1:qdFKkARpxJArJ6QiJiJFDu2LWl88hcSPuz6oOgq+cKQ=
+github.com/scrtlabs/tendermint v0.34.23-0.20230111155429-8875596a4e85 h1:HOS98eNmW7BkMxkwlUOGrlhd+mo5vEQL0aqSrpesK3M=
+github.com/scrtlabs/tendermint v0.34.23-0.20230111155429-8875596a4e85/go.mod h1:mQI4Yg3NlrlbsP7hStHjvXNcVikIzDKRv+76euz0WeU=
+github.com/scrtlabs/tm-secret-enclave v0.0.0-20230111155603-c7e8299677a7 h1:iqb+xXnl15yz4OsEsaQ1HC0ltV32e8NXavAFobAsh3I=
+github.com/scrtlabs/tm-secret-enclave v0.0.0-20230111155603-c7e8299677a7/go.mod h1:qdFKkARpxJArJ6QiJiJFDu2LWl88hcSPuz6oOgq+cKQ=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/shirou/gopsutil v2.20.5+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
