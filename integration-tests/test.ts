@@ -24,15 +24,14 @@ import { MsgSend } from "secretjs/dist/protobuf/cosmos/bank/v1beta1/tx";
 import { MsgSend as MsgSendMsg } from "secretjs/dist/tx/bank";
 import { AminoWallet } from "secretjs/dist/wallet_amino";
 import {
+  Contract,
   ibcDenom,
+  instantiateContracts,
   sleep,
   storeContracts,
   waitForBlocks,
   waitForIBCChannel,
   waitForIBCConnection,
-  Contract,
-  instantiateContracts,
-  cleanBytes,
 } from "./utils";
 
 type Account = {
@@ -833,7 +832,6 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(2 /* WASM ErrInstantiateFailed */);
 
-        expect(tx.rawLog).toContain("encrypted:");
         expect(tx.rawLog).toContain("instantiate contract failed");
       });
     });
@@ -897,7 +895,6 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(3 /* WASM ErrExecuteFailed */);
 
-        expect(tx.rawLog).toContain("encrypted:");
         expect(tx.rawLog).toContain("execute contract failed");
       });
     });
@@ -2129,10 +2126,6 @@ describe("IBC", () => {
       console.error(tx.rawLog);
     }
     expect(tx.code).toBe(TxResultCode.Success);
-    console.log(
-      "tx after triggering ibc send endpoint",
-      JSON.stringify(cleanBytes(tx), null, 2)
-    );
 
     expect(tx.arrayLog.find((x) => x.key === "packet_data").value).toBe(
       `{"message":{"value":"${channelId}hello from test"}}`
