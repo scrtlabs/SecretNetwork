@@ -249,7 +249,7 @@ test("/cosmos/base/node/v1beta1/config", async () => {
     {}
   );
 
-  expect(minimum_gas_price).toBe("0.1uscrt");
+  expect(minimum_gas_price).toBe("0.012500000000000000uscrt");
 });
 
 describe("BankMsg", () => {
