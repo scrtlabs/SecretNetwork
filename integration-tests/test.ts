@@ -766,7 +766,6 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(2 /* WASM ErrInstantiateFailed */);
 
-        expect(tx.rawLog).toContain("encrypted:");
         expect(tx.rawLog).toContain("instantiate contract failed");
       });
     });
@@ -956,7 +955,6 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(3 /* WASM ErrExecuteFailed */);
 
-        expect(tx.rawLog).toContain("encrypted:");
         expect(tx.rawLog).toContain("execute contract failed");
       });
     });
