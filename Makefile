@@ -244,7 +244,7 @@ localsecret:
 			--build-arg SGX_MODE=SW \
 			$(DOCKER_BUILD_ARGS) \
  			--build-arg SECRET_NODE_TYPE=BOOTSTRAP \
- 			--build-arg CHAIN_ID=secretdev-1 \
+			--build-arg CHAINID=secretdev-1 \
  			-f deployment/dockerfiles/Dockerfile \
  			--target build-localsecret \
  			-t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
