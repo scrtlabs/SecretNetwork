@@ -245,9 +245,9 @@ beforeAll(async () => {
 });
 
 test("/cosmos/base/node/v1beta1/config", async () => {
-  const { minimum_gas_price } = await accounts[0].secretjs.query.node.config(
-    {}
-  );
+  const { secretjs } = accounts[0];
+
+  const { minimum_gas_price } = await secretjs.query.node.config({});
 
   expect(minimum_gas_price).toBe("0.012500000000000000uscrt");
 });
