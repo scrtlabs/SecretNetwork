@@ -122,7 +122,11 @@ var (
 )
 
 // Verify app interface at compile time
-var _ simapp.App = (*SecretNetworkApp)(nil)
+var (
+	_ simapp.App                          = (*SecretNetworkApp)(nil)
+	_ servertypes.Application             = (*SecretNetworkApp)(nil)
+	_ servertypes.ApplicationQueryService = (*SecretNetworkApp)(nil)
+)
 
 // SecretNetworkApp extended ABCI application
 type SecretNetworkApp struct {
