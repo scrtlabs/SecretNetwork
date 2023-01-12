@@ -7,18 +7,20 @@ import {
   MsgExecuteContract,
   ProposalType,
   SecretNetworkClient,
+  stringToCoin,
+  stringToCoins,
   toBase64,
   toHex,
   toUtf8,
-  Tx,
+  TxResponse,
   TxResultCode,
   Wallet,
 } from "secretjs";
 import {
   QueryBalanceRequest,
   QueryBalanceResponse,
-} from "secretjs//dist/protobuf_stuff/cosmos/bank/v1beta1/query";
-import { MsgSend } from "secretjs/dist/protobuf_stuff/cosmos/bank/v1beta1/tx";
+} from "secretjs//dist/protobuf/cosmos/bank/v1beta1/query";
+import { MsgSend } from "secretjs/dist/protobuf/cosmos/bank/v1beta1/tx";
 import { MsgSend as MsgSendMsg } from "secretjs/dist/tx/bank";
 import { AminoWallet } from "secretjs/dist/wallet_amino";
 import {
@@ -86,8 +88,8 @@ beforeAll(async () => {
       mnemonic: mnemonic,
       walletAmino,
       walletProto: new Wallet(mnemonic),
-      secretjs: await SecretNetworkClient.create({
-        grpcWebUrl: "http://localhost:9091",
+      secretjs: new SecretNetworkClient({
+        url: "http://localhost:1317",
         wallet: walletAmino,
         walletAddress: walletAmino.address,
         chainId: "secretdev-1",
@@ -104,8 +106,8 @@ beforeAll(async () => {
       mnemonic: mnemonic,
       walletAmino,
       walletProto: new Wallet(mnemonic),
-      secretjs: await SecretNetworkClient.create({
-        grpcWebUrl: "http://localhost:9391",
+      secretjs: new SecretNetworkClient({
+        url: "http://localhost:2317",
         wallet: walletAmino,
         walletAddress: walletAmino.address,
         chainId: "secretdev-2",
@@ -124,8 +126,8 @@ beforeAll(async () => {
       mnemonic: wallet.mnemonic,
       walletAmino: wallet,
       walletProto: walletProto,
-      secretjs: await SecretNetworkClient.create({
-        grpcWebUrl: "http://localhost:9091",
+      secretjs: new SecretNetworkClient({
+        url: "http://localhost:1317",
         chainId: "secretdev-1",
         wallet: wallet,
         walletAddress: address,
@@ -137,24 +139,19 @@ beforeAll(async () => {
 
   const { secretjs } = accounts[0];
 
-  let t: Tx;
+  let t: TxResponse;
   try {
     t = await secretjs.tx.bank.multiSend(
       {
         inputs: [
           {
             address: secretjs.address,
-            coins: [
-              {
-                denom: "uscrt",
-                amount: String(100_000 * 1e6 * (accountsCount - 1)),
-              },
-            ],
+            coins: stringToCoins(`${100_000 * 1e6 * (accountsCount - 1)}uscrt`),
           },
         ],
         outputs: accounts.slice(1).map(({ address }) => ({
           address,
-          coins: [{ denom: "uscrt", amount: String(100_000 * 1e6) }],
+          coins: stringToCoins(`${100_000 * 1e6}uscrt`),
         })),
       },
       {
@@ -170,14 +167,14 @@ beforeAll(async () => {
     throw new Error("Failed to multisend coins to initial accounts");
   }
 
-  readonly = await SecretNetworkClient.create({
+  readonly = new SecretNetworkClient({
     chainId: "secretdev-1",
-    grpcWebUrl: "http://localhost:9091",
+    url: "http://localhost:1317",
   });
 
-  readonly2 = await SecretNetworkClient.create({
+  readonly2 = new SecretNetworkClient({
     chainId: "secretdev-2",
-    grpcWebUrl: "http://localhost:9391",
+    url: "http://localhost:2317",
   });
   await waitForBlocks("secretdev-1");
 
@@ -192,7 +189,10 @@ beforeAll(async () => {
   contracts["secretdev-1"].v010.codeHash = toHex(sha256(v010Wasm));
 
   console.log("Storing contracts on secretdev-1...");
-  let tx: Tx = await storeContracts(accounts[0].secretjs, [v1Wasm, v010Wasm]);
+  let tx: TxResponse = await storeContracts(accounts[0].secretjs, [
+    v1Wasm,
+    v010Wasm,
+  ]);
 
   contracts["secretdev-1"].v1.codeId = Number(
     tx.arrayLog.find((x) => x.key === "code_id").value
@@ -222,22 +222,22 @@ beforeAll(async () => {
   if (validators.length === 1) {
     tx = await accounts[1].secretjs.tx.staking.createValidator(
       {
-        selfDelegatorAddress: accounts[1].address,
+        delegator_address: accounts[1].address,
         commission: {
-          maxChangeRate: 0.01,
-          maxRate: 0.1,
+          max_change_rate: 0.01,
+          max_rate: 0.1,
           rate: 0.05,
         },
         description: {
           moniker: "banana",
           identity: "papaya",
           website: "watermelon.com",
-          securityContact: "info@watermelon.com",
+          security_contact: "info@watermelon.com",
           details: "We are the banana papaya validator",
         },
         pubkey: toBase64(new Uint8Array(32).fill(1)),
-        minSelfDelegation: "1",
-        initialDelegation: { amount: "1", denom: "uscrt" },
+        min_self_delegation: "1",
+        initial_delegation: stringToCoin("1uscrt"),
       },
       { gasLimit: 100_000 }
     );
@@ -251,15 +251,15 @@ describe("BankMsg", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: contracts["secretdev-1"].v1.address,
-          codeHash: contracts["secretdev-1"].v1.codeHash,
+          contract_address: contracts["secretdev-1"].v1.address,
+          code_hash: contracts["secretdev-1"].v1.codeHash,
           msg: {
             bank_msg_send: {
               to_address: accounts[1].address,
-              amount: [{ amount: "1", denom: "uscrt" }],
+              amount: stringToCoins("1uscrt"),
             },
           },
-          sentFunds: [{ amount: "1", denom: "uscrt" }],
+          sent_funds: stringToCoins("1uscrt"),
         },
         { gasLimit: 250_000 }
       );
@@ -308,15 +308,15 @@ describe("BankMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               bank_msg_send: {
                 to_address: accounts[1].address,
-                amount: [{ amount: "1", denom: "uscrt" }],
+                amount: stringToCoins("1uscrt"),
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           },
           { gasLimit: 250_000 }
         );
@@ -372,14 +372,12 @@ describe("BankMsg", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               bank_msg_send: {
                 to_address: accounts[1].address,
-                amount: [
-                  { amount: String(contractBalance + 1), denom: "uscrt" },
-                ],
+                amount: stringToCoins(`${contractBalance + 1}uscrt`),
               },
             },
           },
@@ -399,11 +397,11 @@ describe("BankMsg", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: contracts["secretdev-1"].v1.address,
-          codeHash: contracts["secretdev-1"].v1.codeHash,
+          contract_address: contracts["secretdev-1"].v1.address,
+          code_hash: contracts["secretdev-1"].v1.codeHash,
           msg: {
             bank_msg_burn: {
-              amount: [{ amount: "100000000", denom: "uscrt" }],
+              amount: stringToCoins("100000000uscrt"),
             },
           },
         },
@@ -420,7 +418,7 @@ describe("Env", () => {
     describe("TxCount", () => {
       test("execute", async () => {
         jest.setTimeout(10 * 60 * 1_000);
-        let txProm: Promise<Tx>[] = new Array(2);
+        let txProm: Promise<TxResponse>[] = new Array(2);
         let success: boolean;
         let shouldBreak: boolean = false;
         for (let j = 0; j < 20 && !shouldBreak; j += 2) {
@@ -431,12 +429,11 @@ describe("Env", () => {
             txProm[i] = accounts[walletID].secretjs.tx.compute.executeContract(
               {
                 sender: accounts[walletID].address,
-                contractAddress: contracts["secretdev-1"].v1.address,
-                codeHash: contracts["secretdev-1"].v1.codeHash,
+                contract_address: contracts["secretdev-1"].v1.address,
+                code_hash: contracts["secretdev-1"].v1.codeHash,
                 msg: {
                   get_tx_id: {},
                 },
-                sentFunds: [],
               },
               { gasLimit: 250_000 }
             );
@@ -481,8 +478,8 @@ describe("CustomMsg", () => {
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
         sender: accounts[0].address,
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         msg: {
           custom_msg: {},
         },
@@ -500,8 +497,8 @@ describe("CustomMsg", () => {
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
         sender: accounts[0].address,
-        contractAddress: contracts["secretdev-1"].v010.address,
-        codeHash: contracts["secretdev-1"].v010.codeHash,
+        contract_address: contracts["secretdev-1"].v010.address,
+        code_hash: contracts["secretdev-1"].v010.codeHash,
         msg: {
           custom_msg: {},
         },
@@ -519,33 +516,33 @@ describe("CustomMsg", () => {
 describe("tx broadcast multi", () => {
   test("Send Multiple Messages Amino", async () => {
     const { validators } = await readonly.query.staking.validators({});
-    const validator = validators[0].operatorAddress;
+    const validator = validators[0].operator_address;
 
     let tx = await accounts[0].secretjs.tx.broadcast(
-        [
-          new MsgSendMsg({
-            fromAddress: accounts[0].address,
-            toAddress: accounts[0].address,
-            amount: [{ denom: "uscrt", amount: "1" }],
-          }),
+      [
+        new MsgSendMsg({
+          from_address: accounts[0].address,
+          to_address: accounts[0].address,
+          amount: stringToCoins("1uscrt"),
+        }),
 
-          new MsgExecuteContract({
-            sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
-            msg: {
-              staking_msg_delegate: {
-                validator: validator,
-                amount: { amount: "1", denom: "uscrt" },
-              },
+        new MsgExecuteContract({
+          sender: accounts[0].address,
+          contract_address: contracts["secretdev-1"].v1.address,
+          code_hash: contracts["secretdev-1"].v1.codeHash,
+          msg: {
+            staking_msg_delegate: {
+              validator: validator,
+              amount: stringToCoin("1uscrt"),
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
-          }),
-        ],
-        {
-          broadcastCheckIntervalMs: 100,
-          gasLimit: 5_000_000,
-        },
+          },
+          sent_funds: stringToCoins("1uscrt"),
+        }),
+      ],
+      {
+        broadcastCheckIntervalMs: 100,
+        gasLimit: 5_000_000,
+      }
     );
     if (tx.code !== TxResultCode.Success) {
       console.error(tx.rawLog);
@@ -564,7 +561,7 @@ describe("GovMsgVote", () => {
         type: ProposalType.TextProposal,
         proposer: accounts[0].address,
         // on localsecret min deposit is 10 SCRT
-        initialDeposit: [{ amount: String(10_000_000), denom: "uscrt" }],
+        initial_deposit: stringToCoins("10000000uscrt"),
         content: {
           title: "Hi",
           description: "Hello",
@@ -593,8 +590,8 @@ describe("GovMsgVote", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: contracts["secretdev-1"].v010.address,
-          codeHash: contracts["secretdev-1"].v010.codeHash,
+          contract_address: contracts["secretdev-1"].v010.address,
+          code_hash: contracts["secretdev-1"].v010.codeHash,
           msg: {
             gov_msg_vote: {
               proposal: proposalId,
@@ -626,8 +623,8 @@ describe("GovMsgVote", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: contracts["secretdev-1"].v010.address,
-          codeHash: contracts["secretdev-1"].v010.codeHash,
+          contract_address: contracts["secretdev-1"].v010.address,
+          code_hash: contracts["secretdev-1"].v010.codeHash,
           msg: {
             gov_msg_vote: {
               proposal: proposalId + 1e6,
@@ -648,8 +645,8 @@ describe("GovMsgVote", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: contracts["secretdev-1"].v1.address,
-          codeHash: contracts["secretdev-1"].v1.codeHash,
+          contract_address: contracts["secretdev-1"].v1.address,
+          code_hash: contracts["secretdev-1"].v1.codeHash,
           msg: {
             gov_msg_vote: {
               proposal: proposalId,
@@ -681,8 +678,8 @@ describe("GovMsgVote", () => {
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: contracts["secretdev-1"].v1.address,
-          codeHash: contracts["secretdev-1"].v1.codeHash,
+          contract_address: contracts["secretdev-1"].v1.address,
+          code_hash: contracts["secretdev-1"].v1.codeHash,
           msg: {
             gov_msg_vote: {
               proposal: proposalId + 1e6,
@@ -706,8 +703,8 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               wasm_msg_instantiate: {
                 code_id: contracts["secretdev-1"].v1.codeId,
@@ -742,8 +739,8 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               wasm_msg_instantiate: {
                 code_id: contracts["secretdev-1"].v1.codeId,
@@ -772,8 +769,8 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_instantiate: {
                 code_id: contracts["secretdev-1"].v010.codeId,
@@ -808,8 +805,8 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_instantiate: {
                 code_id: contracts["secretdev-1"].v010.codeId,
@@ -840,8 +837,8 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               wasm_msg_execute: {
                 contract_addr: contracts["secretdev-1"].v1.address,
@@ -873,8 +870,8 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               wasm_msg_execute: {
                 contract_addr: contracts["secretdev-1"].v1.address,
@@ -902,8 +899,8 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_execute: {
                 contract_addr: contracts["secretdev-1"].v010.address,
@@ -935,8 +932,8 @@ describe("Wasm", () => {
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               wasm_msg_execute: {
                 contract_addr: contracts["secretdev-1"].v010.address,
@@ -983,20 +980,20 @@ describe("StakingMsg", () => {
 
       test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               staking_msg_delegate: {
                 validator: validator + "garbage",
-                amount: { amount: "1", denom: "uscrt" },
+                amount: stringToCoin("1uscrt"),
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           },
           { gasLimit: 250_000 }
         );
@@ -1028,20 +1025,20 @@ describe("StakingMsg", () => {
 
       test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_delegate: {
                 validator: validator + "garbage",
-                amount: { amount: "1", denom: "uscrt" },
+                amount: stringToCoin("1uscrt"),
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           },
           { gasLimit: 250_000 }
         );
@@ -1057,33 +1054,33 @@ describe("StakingMsg", () => {
   describe("Undelegate", () => {
     test("success", async () => {
       const { validators } = await readonly.query.staking.validators({});
-      const validator = validators[0].operatorAddress;
+      const validator = validators[0].operator_address;
 
       const tx = await accounts[0].secretjs.tx.broadcast(
         [
           new MsgExecuteContract({
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               staking_msg_delegate: {
                 validator,
-                amount: { amount: "1", denom: "uscrt" },
+                amount: stringToCoin("1uscrt"),
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           }),
           new MsgExecuteContract({
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               staking_msg_undelegate: {
                 validator,
-                amount: { amount: "1", denom: "uscrt" },
+                amount: stringToCoin("1uscrt"),
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           }),
         ],
         { gasLimit: 350_000 }
@@ -1105,20 +1102,20 @@ describe("StakingMsg", () => {
 
     test("error", async () => {
       const { validators } = await readonly.query.staking.validators({});
-      const validator = validators[0].operatorAddress;
+      const validator = validators[0].operator_address;
 
       const tx = await accounts[0].secretjs.tx.compute.executeContract(
         {
           sender: accounts[0].address,
-          contractAddress: contracts["secretdev-1"].v010.address,
-          codeHash: contracts["secretdev-1"].v010.codeHash,
+          contract_address: contracts["secretdev-1"].v010.address,
+          code_hash: contracts["secretdev-1"].v010.codeHash,
           msg: {
             staking_msg_undelegate: {
               validator: validator + "garbage",
-              amount: { amount: "1", denom: "uscrt" },
+              amount: stringToCoin("1uscrt"),
             },
           },
-          sentFunds: [{ amount: "1", denom: "uscrt" }],
+          sent_funds: stringToCoins("1uscrt"),
         },
         { gasLimit: 250_000 }
       );
@@ -1130,33 +1127,33 @@ describe("StakingMsg", () => {
     describe("v0.10", () => {
       test("success", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v010.address,
-              codeHash: contracts["secretdev-1"].v010.codeHash,
+              contract_address: contracts["secretdev-1"].v010.address,
+              code_hash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v010.address,
-              codeHash: contracts["secretdev-1"].v010.codeHash,
+              contract_address: contracts["secretdev-1"].v010.address,
+              code_hash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_undelegate: {
                   validator,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
           ],
           { gasLimit: 350_000 }
@@ -1178,20 +1175,20 @@ describe("StakingMsg", () => {
 
       test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_undelegate: {
                 validator: validator + "garbage",
-                amount: { amount: "1", denom: "uscrt" },
+                amount: stringToCoin("1uscrt"),
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           },
           { gasLimit: 250_000 }
         );
@@ -1208,35 +1205,35 @@ describe("StakingMsg", () => {
     describe("v1", () => {
       test("success", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validatorA = validators[0].operatorAddress;
-        const validatorB = validators[1].operatorAddress;
+        const validatorA = validators[0].operator_address;
+        const validatorB = validators[1].operator_address;
 
         const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v1.address,
-              codeHash: contracts["secretdev-1"].v1.codeHash,
+              contract_address: contracts["secretdev-1"].v1.address,
+              code_hash: contracts["secretdev-1"].v1.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validatorA,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v1.address,
-              codeHash: contracts["secretdev-1"].v1.codeHash,
+              contract_address: contracts["secretdev-1"].v1.address,
+              code_hash: contracts["secretdev-1"].v1.codeHash,
               msg: {
                 staking_msg_redelegate: {
                   src_validator: validatorA,
                   dst_validator: validatorB,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
           ],
           { gasLimit: 350_000 }
@@ -1262,21 +1259,21 @@ describe("StakingMsg", () => {
 
       test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               staking_msg_redelegate: {
                 src_validator: validator,
                 dst_validator: validator + "garbage",
-                amount: { amount: "1", denom: "uscrt" },
+                amount: stringToCoin("1uscrt"),
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           },
           { gasLimit: 250_000 }
         );
@@ -1291,35 +1288,35 @@ describe("StakingMsg", () => {
     describe("v0.10", () => {
       test("success", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validatorA = validators[0].operatorAddress;
-        const validatorB = validators[1].operatorAddress;
+        const validatorA = validators[0].operator_address;
+        const validatorB = validators[1].operator_address;
 
         const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v010.address,
-              codeHash: contracts["secretdev-1"].v010.codeHash,
+              contract_address: contracts["secretdev-1"].v010.address,
+              code_hash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validatorA,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v010.address,
-              codeHash: contracts["secretdev-1"].v010.codeHash,
+              contract_address: contracts["secretdev-1"].v010.address,
+              code_hash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_redelegate: {
                   src_validator: validatorA,
                   dst_validator: validatorB,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
           ],
           { gasLimit: 350_000 }
@@ -1345,21 +1342,21 @@ describe("StakingMsg", () => {
 
       test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_redelegate: {
                 src_validator: validator,
                 dst_validator: validator + "garbage",
-                amount: { amount: "1", denom: "uscrt" },
+                amount: stringToCoin("1uscrt"),
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           },
           { gasLimit: 250_000 }
         );
@@ -1376,32 +1373,32 @@ describe("StakingMsg", () => {
     describe("v1", () => {
       test("success", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v1.address,
-              codeHash: contracts["secretdev-1"].v1.codeHash,
+              contract_address: contracts["secretdev-1"].v1.address,
+              code_hash: contracts["secretdev-1"].v1.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validator,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v1.address,
-              codeHash: contracts["secretdev-1"].v1.codeHash,
+              contract_address: contracts["secretdev-1"].v1.address,
+              code_hash: contracts["secretdev-1"].v1.codeHash,
               msg: {
                 staking_msg_withdraw: {
                   validator: validator,
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
           ],
           { gasLimit: 250_000 }
@@ -1422,32 +1419,32 @@ describe("StakingMsg", () => {
 
       test("set_withdraw_address", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v1.address,
-              codeHash: contracts["secretdev-1"].v1.codeHash,
+              contract_address: contracts["secretdev-1"].v1.address,
+              code_hash: contracts["secretdev-1"].v1.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validator,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v1.address,
-              codeHash: contracts["secretdev-1"].v1.codeHash,
+              contract_address: contracts["secretdev-1"].v1.address,
+              code_hash: contracts["secretdev-1"].v1.codeHash,
               msg: {
                 set_withdraw_address: {
                   address: accounts[1].address,
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
           ],
           { gasLimit: 250_000 }
@@ -1468,20 +1465,20 @@ describe("StakingMsg", () => {
 
       test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v1.address,
-            codeHash: contracts["secretdev-1"].v1.codeHash,
+            contract_address: contracts["secretdev-1"].v1.address,
+            code_hash: contracts["secretdev-1"].v1.codeHash,
             msg: {
               staking_msg_withdraw: {
                 validator: validator + "garbage",
                 recipient: accounts[0].address,
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           },
           { gasLimit: 250_000 }
         );
@@ -1493,33 +1490,33 @@ describe("StakingMsg", () => {
     describe("v0.10", () => {
       test("success", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.broadcast(
           [
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v010.address,
-              codeHash: contracts["secretdev-1"].v010.codeHash,
+              contract_address: contracts["secretdev-1"].v010.address,
+              code_hash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_delegate: {
                   validator: validator,
-                  amount: { amount: "1", denom: "uscrt" },
+                  amount: stringToCoin("1uscrt"),
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
             new MsgExecuteContract({
               sender: accounts[0].address,
-              contractAddress: contracts["secretdev-1"].v010.address,
-              codeHash: contracts["secretdev-1"].v010.codeHash,
+              contract_address: contracts["secretdev-1"].v010.address,
+              code_hash: contracts["secretdev-1"].v010.codeHash,
               msg: {
                 staking_msg_withdraw: {
                   validator: validator,
                   recipient: accounts[0].address,
                 },
               },
-              sentFunds: [{ amount: "1", denom: "uscrt" }],
+              sent_funds: stringToCoins("1uscrt"),
             }),
           ],
           { gasLimit: 250_000 }
@@ -1540,20 +1537,20 @@ describe("StakingMsg", () => {
 
       test("error", async () => {
         const { validators } = await readonly.query.staking.validators({});
-        const validator = validators[0].operatorAddress;
+        const validator = validators[0].operator_address;
 
         const tx = await accounts[0].secretjs.tx.compute.executeContract(
           {
             sender: accounts[0].address,
-            contractAddress: contracts["secretdev-1"].v010.address,
-            codeHash: contracts["secretdev-1"].v010.codeHash,
+            contract_address: contracts["secretdev-1"].v010.address,
+            code_hash: contracts["secretdev-1"].v010.codeHash,
             msg: {
               staking_msg_withdraw: {
                 validator: validator + "garbage",
                 recipient: accounts[0].address,
               },
             },
-            sentFunds: [{ amount: "1", denom: "uscrt" }],
+            sent_funds: stringToCoins("1uscrt"),
           },
           { gasLimit: 250_000 }
         );
@@ -1572,21 +1569,21 @@ describe("StargateMsg", () => {
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
         sender: accounts[0].address,
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         msg: {
           stargate_msg: {
             type_url: "/cosmos.bank.v1beta1.MsgSend",
             value: toBase64(
               MsgSend.encode({
-                fromAddress: contracts["secretdev-1"].v1.address,
-                toAddress: accounts[1].address,
-                amount: [{ amount: "1", denom: "uscrt" }],
+                from_address: contracts["secretdev-1"].v1.address,
+                to_address: accounts[1].address,
+                amount: stringToCoins("1uscrt"),
               }).finish()
             ),
           },
         },
-        sentFunds: [{ amount: "1", denom: "uscrt" }],
+        sent_funds: stringToCoins("1uscrt"),
       },
       { gasLimit: 250_000 }
     );
@@ -1634,8 +1631,8 @@ describe("StargateMsg", () => {
 describe("StargateQuery", () => {
   test("v1", async () => {
     const result: any = await readonly.query.compute.queryContract({
-      contractAddress: contracts["secretdev-1"].v1.address,
-      codeHash: contracts["secretdev-1"].v1.codeHash,
+      contract_address: contracts["secretdev-1"].v1.address,
+      code_hash: contracts["secretdev-1"].v1.codeHash,
       query: {
         stargate: {
           path: "/cosmos.bank.v1beta1.Query/Balance",
@@ -1659,8 +1656,8 @@ describe("BankQuery", () => {
   describe("Balance", () => {
     test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           bank_balance: {
             address: accounts[0].address,
@@ -1674,8 +1671,8 @@ describe("BankQuery", () => {
 
     test("v0.10", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v010.address,
-        codeHash: contracts["secretdev-1"].v010.codeHash,
+        contract_address: contracts["secretdev-1"].v010.address,
+        code_hash: contracts["secretdev-1"].v010.codeHash,
         query: {
           bank_balance: {
             address: accounts[0].address,
@@ -1691,8 +1688,8 @@ describe("BankQuery", () => {
   describe("AllBalances", () => {
     test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           bank_all_balances: {
             address: accounts[0].address,
@@ -1710,22 +1707,22 @@ describe("BankQuery", () => {
 async function delegate_for_test(
   account: Account,
   contract: Contract
-): Promise<[boolean, Tx, string]> {
+): Promise<[boolean, TxResponse, string]> {
   const { validators } = await readonly.query.staking.validators({});
-  const validator = validators[0].operatorAddress;
+  const validator = validators[0].operator_address;
 
   const tx = await account.secretjs.tx.compute.executeContract(
     {
       sender: account.address,
-      contractAddress: contract.address,
-      codeHash: contract.codeHash,
+      contract_address: contract.address,
+      code_hash: contract.codeHash,
       msg: {
         staking_msg_delegate: {
           validator,
-          amount: { amount: "1", denom: "uscrt" },
+          amount: stringToCoin("1uscrt"),
         },
       },
-      sentFunds: [{ amount: "1", denom: "uscrt" }],
+      sent_funds: stringToCoins("1uscrt"),
     },
     { gasLimit: 250_000 }
   );
@@ -1744,15 +1741,15 @@ async function undelegate_for_test(
   const tx = await account.secretjs.tx.compute.executeContract(
     {
       sender: account.address,
-      contractAddress: contract.address,
-      codeHash: contract.codeHash,
+      contract_address: contract.address,
+      code_hash: contract.codeHash,
       msg: {
         staking_msg_undelegate: {
           validator,
-          amount: { amount: "1", denom: "uscrt" },
+          amount: stringToCoin("1uscrt"),
         },
       },
-      sentFunds: [{ amount: "1", denom: "uscrt" }],
+      sent_funds: stringToCoins("1uscrt"),
     },
     { gasLimit: 250_000 }
   );
@@ -1767,8 +1764,8 @@ describe("StakingQuery", () => {
   describe("BondedDemon", () => {
     test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           staking_bonded_denom: {
             address: accounts[0].address,
@@ -1788,8 +1785,8 @@ describe("StakingQuery", () => {
       );
       expect(delegationStatus).toBeTruthy();
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           staking_all_delegations: {
             delegator: accounts[1].address,
@@ -1821,8 +1818,8 @@ describe("StakingQuery", () => {
       );
       expect(delegationStatus).toBeTruthy();
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           staking_delegation: {
             delegator: accounts[1].address,
@@ -1849,8 +1846,8 @@ describe("StakingQuery", () => {
   describe("AllValidators", () => {
     test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           staking_all_validators: {},
         },
@@ -1863,11 +1860,11 @@ describe("StakingQuery", () => {
   describe("Validator", () => {
     test("v1", async () => {
       const { validators } = await readonly.query.staking.validators({});
-      const validator = validators[0].operatorAddress;
+      const validator = validators[0].operator_address;
 
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           staking_validator: { address: validator },
         },
@@ -1882,8 +1879,8 @@ describe("IBCQuery", () => {
   describe("PortID", () => {
     test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           ibc_port_id: {},
         },
@@ -1901,8 +1898,8 @@ describe("WasmQuery", () => {
       const b64encode = (str: string): string =>
         Buffer.from(str, "binary").toString("base64");
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           wasm_smart: {
             contract_addr: contracts["secretdev-1"].v010.address,
@@ -1927,8 +1924,8 @@ describe("WasmQuery", () => {
   describe("ContractInfo", () => {
     test("v1", async () => {
       const result: any = await readonly.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           wasm_contract_info: {
             contract_addr: contracts["secretdev-1"].v010.address,
@@ -1948,7 +1945,7 @@ describe("IBC", () => {
   beforeAll(async () => {
     console.log("Storing contracts on secretdev-2...");
 
-    let tx: Tx = await storeContracts(accounts2[0].secretjs, [
+    let tx: TxResponse = await storeContracts(accounts2[0].secretjs, [
       v1Wasm,
       v010Wasm,
     ]);
@@ -1990,17 +1987,17 @@ describe("IBC", () => {
       .find((x) => x.key === "contract_address").value;
 
     console.log("Waiting for IBC to set up...");
-    await waitForIBCConnection("secretdev-1", "http://localhost:9091");
-    await waitForIBCConnection("secretdev-2", "http://localhost:9391");
+    await waitForIBCConnection("secretdev-1", "http://localhost:1317");
+    await waitForIBCConnection("secretdev-2", "http://localhost:2317");
 
     await waitForIBCChannel(
       "secretdev-1",
-      "http://localhost:9091",
+      "http://localhost:1317",
       "channel-0"
     );
     await waitForIBCChannel(
       "secretdev-2",
-      "http://localhost:9391",
+      "http://localhost:2317",
       "channel-0"
     );
   }, 180_000 /* 3 minutes */);
@@ -2024,13 +2021,10 @@ describe("IBC", () => {
     const result = await accounts[0].secretjs.tx.ibc.transfer({
       receiver: accounts[0].address,
       sender: accounts[0].address,
-      sourceChannel: "channel-0",
-      sourcePort: "transfer",
-      token: {
-        denom: "uscrt",
-        amount: "1",
-      },
-      timeoutTimestampSec: String(Math.floor(Date.now() / 1000 + 30)),
+      source_channel: "channel-0",
+      source_port: "transfer",
+      token: stringToCoin("1uscrt"),
+      timeout_timestamp: String(Math.floor(Date.now() / 1000 + 30)),
     });
     if (result.code !== TxResultCode.Success) {
       console.error(result.rawLog);
@@ -2075,13 +2069,13 @@ describe("IBC", () => {
     const myRegexp = /ChannelId\("(channel-\d+)"/g;
     const channelId = myRegexp.exec(trimmedResult)[1];
 
-    await waitForIBCChannel("secretdev-1", "http://localhost:9091", channelId);
+    await waitForIBCChannel("secretdev-1", "http://localhost:1317", channelId);
 
-    await waitForIBCChannel("secretdev-2", "http://localhost:9391", channelId);
+    await waitForIBCChannel("secretdev-2", "http://localhost:2317", channelId);
 
     const res: any = await readonly.query.compute.queryContract({
-      contractAddress: contracts["secretdev-1"].v1.address,
-      codeHash: contracts["secretdev-1"].v1.codeHash,
+      contract_address: contracts["secretdev-1"].v1.address,
+      code_hash: contracts["secretdev-1"].v1.codeHash,
       query: {
         ibc_list_channels: {
           port_id: "wasm." + contracts["secretdev-1"].v1.address,
@@ -2095,8 +2089,8 @@ describe("IBC", () => {
     expect(res?.channels[0]?.endpoint?.channel_id).toBe(channelId);
 
     const res2: any = await readonly.query.compute.queryContract({
-      contractAddress: contracts["secretdev-1"].v1.address,
-      codeHash: contracts["secretdev-1"].v1.codeHash,
+      contract_address: contracts["secretdev-1"].v1.address,
+      code_hash: contracts["secretdev-1"].v1.codeHash,
       query: {
         ibc_channel: {
           port_id: "wasm." + contracts["secretdev-1"].v1.address,
@@ -2112,8 +2106,8 @@ describe("IBC", () => {
     const tx = await accounts[0].secretjs.tx.compute.executeContract(
       {
         sender: accounts[0].address,
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         msg: {
           send_ibc_packet: {
             message: "hello from test",
@@ -2172,8 +2166,8 @@ describe("IBC", () => {
 
     let queryResult: any =
       await accounts[0].secretjs.query.compute.queryContract({
-        contractAddress: contracts["secretdev-1"].v1.address,
-        codeHash: contracts["secretdev-1"].v1.codeHash,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
         query: {
           last_ibc_ack: {},
         },
@@ -2184,8 +2178,8 @@ describe("IBC", () => {
     expect(ack).toBe(`recv${channelId}hello from test`);
 
     queryResult = await accounts2[0].secretjs.query.compute.queryContract({
-      contractAddress: contracts["secretdev-2"].v1.address,
-      codeHash: contracts["secretdev-2"].v1.codeHash,
+      contract_address: contracts["secretdev-2"].v1.address,
+      code_hash: contracts["secretdev-2"].v1.codeHash,
       query: {
         last_ibc_ack: {},
       },
@@ -2194,8 +2188,8 @@ describe("IBC", () => {
     expect(queryResult).toBe(`no ack yet`);
 
     queryResult = await accounts[0].secretjs.query.compute.queryContract({
-      contractAddress: contracts["secretdev-1"].v1.address,
-      codeHash: contracts["secretdev-1"].v1.codeHash,
+      contract_address: contracts["secretdev-1"].v1.address,
+      code_hash: contracts["secretdev-1"].v1.codeHash,
       query: {
         last_ibc_receive: {},
       },
@@ -2204,8 +2198,8 @@ describe("IBC", () => {
     expect(queryResult).toBe(`no receive yet`);
 
     queryResult = await accounts2[0].secretjs.query.compute.queryContract({
-      contractAddress: contracts["secretdev-2"].v1.address,
-      codeHash: contracts["secretdev-2"].v1.codeHash,
+      contract_address: contracts["secretdev-2"].v1.address,
+      code_hash: contracts["secretdev-2"].v1.codeHash,
       query: {
         last_ibc_receive: {},
       },
