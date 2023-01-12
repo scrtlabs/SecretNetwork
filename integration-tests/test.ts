@@ -245,6 +245,14 @@ beforeAll(async () => {
   }
 });
 
+test("/cosmos/base/node/v1beta1/config", async () => {
+  const { minimum_gas_price } = await accounts[0].secretjs.query.node.config(
+    {}
+  );
+
+  expect(minimum_gas_price).toBe("0.1uscrt");
+});
+
 describe("BankMsg", () => {
   describe("Send", () => {
     test("v1", async () => {
