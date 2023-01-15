@@ -157,9 +157,9 @@ async fn get_seed(idx: u64) -> io::Result<[u8; 32]> {
         if let Some(rw_lock) = &DB_RW_LOCK {
             let _ = rw_lock
                 .read()
-                .map_err(|e| error(format!("Failed to aquire read lock {}", e)))?;
+                .map_err(|e| error(format!("Failed to acquire read lock {}", e)))?;
         } else {
-            return Err(error("Failed to aquire lock".to_string()));
+            return Err(error("Failed to acquire lock".to_string()));
         }
 
         get_seed_from_db(idx)
@@ -171,15 +171,15 @@ async fn generate_seeds(count: u8) -> io::Result<()> {
         if let Some(rw_lock) = &DB_RW_LOCK {
             let _ = rw_lock
                 .write()
-                .map_err(|e| error(format!("Failed to aquire write lock {}", e)))?;
-        } else {
-            return Err(error("Failed to aquire lock".to_string()));
-        }
+                .map_err(|e| error(format!("Failed to acquire write lock {}", e)))?;
 
-        for _ in 1..count + 1 {
-            let mut seed = [0u8; 32];
-            OsRng.fill_bytes(&mut seed);
-            write_seed(seed)?;
+            for _ in 1..count + 1 {
+                let mut seed = [0u8; 32];
+                OsRng.fill_bytes(&mut seed);
+                write_seed(seed)?;
+            }
+        } else {
+            return Err(error("Failed to acquire lock".to_string()));
         }
     }
 
@@ -240,7 +240,7 @@ fn validate_attestation_report(cert: String) -> Result<AttestationReport, String
         if let Some(rw_lock) = &CR_RW_LOCK {
             let _ = rw_lock
                 .read()
-                .map_err(|e| format!("Failed to aquire read lock {}", e))?;
+                .map_err(|e| format!("Failed to acquire read lock {}", e))?;
 
             match CR_STORE
                 .as_ref()
@@ -257,7 +257,7 @@ fn validate_attestation_report(cert: String) -> Result<AttestationReport, String
                 }
             }
         } else {
-            return Err("Failed to aquire lock".to_string());
+            return Err("Failed to acquire lock".to_string());
         }
     }
 
@@ -297,13 +297,13 @@ fn get_challenge_for_report(cert: String) -> Result<String, String> {
         if let Some(rw_lock) = &CR_RW_LOCK {
             let _ = rw_lock
                 .write()
-                .map_err(|e| format!("Failed to aquire write lock {}", e))?;
+                .map_err(|e| format!("Failed to acquire write lock {}", e))?;
             CR_STORE
                 .as_mut()
                 .unwrap()
                 .insert(vec![], serialized_challenge.clone());
         } else {
-            return Err("Failed to aquire lock".to_string());
+            return Err("Failed to acquire lock".to_string());
         }
     }
 

@@ -28,7 +28,7 @@ chmod 0777 node_init.sh
 
 ## Step 2 (Test seed rotation)
 
-### Copy the suplied contract to the docker
+### Copy the supplied contract to the docker
 
 ```bash
 docker cp ./contract.wasm node:/root/

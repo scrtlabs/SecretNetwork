@@ -241,6 +241,7 @@ pub unsafe extern "C" fn ecall_init_node(
         debug!("Failed to remove consensus seed. Didn't exist?");
     }
 
+    // Skip the first byte which is the length of the seed
     let mut single_seed_bytes = [0u8; SINGLE_ENCRYPTED_SEED_SIZE];
     single_seed_bytes.copy_from_slice(&encrypted_seed_slice[1..(SINGLE_ENCRYPTED_SEED_SIZE + 1)]);
 
@@ -254,7 +255,7 @@ pub unsafe extern "C" fn ecall_init_node(
     let new_consensus_seed;
 
     if encrypted_seed_len as usize == 2 * SINGLE_ENCRYPTED_SEED_SIZE {
-        debug!("Consensus seed service not active. Loading from registration");
+        debug!("Got both keys from registration");
 
         single_seed_bytes.copy_from_slice(
             &encrypted_seed_slice

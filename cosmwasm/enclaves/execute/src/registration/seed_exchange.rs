@@ -28,7 +28,6 @@ pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE], seed_type: SeedType) -> 
 
     // encrypt the seed using the symmetric key derived in the previous stage
     // genesis seed is passed in registration
-    // TODO get current seed from the seed server
 
     trace!(
         "Public keys on encryption {:?} {:?}",
