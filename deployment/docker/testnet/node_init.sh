@@ -78,6 +78,7 @@ then
 
   if [ "$VALIDATOR" == "true" ]
   then
+    echo "Setting this node up as a validator"
     staking_amount=1000000uscrt
 
     echo "Staking amount: $staking_amount"
