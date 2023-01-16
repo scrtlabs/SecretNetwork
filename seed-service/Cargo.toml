@@ -17,6 +17,7 @@ hyper = "0.14.20"
 tokio-rustls = { version = "0.23", default-features = false }
 rustls-native-certs = { version = "0.6", optional = true }
 futures-util = { version = "0.3.1", default-features = false }
+lazy_static = "1.4.0"
 rustls = { version = "0.20.1", default-features = false, features = ["tls12"] }
 rustls-pemfile = "1.0.0"
 indexed-line-reader = "0.2.1"

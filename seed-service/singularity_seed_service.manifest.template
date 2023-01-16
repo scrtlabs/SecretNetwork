@@ -38,6 +38,9 @@ sgx.remote_attestation = "dcap"
 
 
 sgx.trusted_files = [
+  "file:server.key",
+  "file:serverca.crt",
+  "file:server.crt",
   "file:{{ gramine.libos }}",
   "file:{{ self_exe }}",
   "file:{{ gramine.runtimedir() }}/",

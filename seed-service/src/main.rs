@@ -1,8 +1,10 @@
+#![feature(slice_as_chunks)]
 mod db;
+
 use rand_core::{OsRng, RngCore};
 use std::sync::RwLock;
 
-use crate::db::{create_db, get_seed_count, get_seed_from_db, is_db_exists, to_string, write_seed};
+use crate::db::{create_db, get_seed_count, get_seed_from_db, is_db_exists, write_seed};
 use core::task::{Context, Poll};
 use futures_util::ready;
 use hyper::server::accept::Accept;
@@ -21,10 +23,13 @@ use std::{fs, io, sync};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 //use tokio::net::TcpListener;
 use tokio_rustls::rustls::ServerConfig;
+use lazy_static::lazy_static;
 
-static mut DB_RW_LOCK: Option<RwLock<u8>> = None;
-static mut CR_RW_LOCK: Option<RwLock<u8>> = None;
-static mut CR_STORE: Option<HashMap<Vec<u8>, String>> = None;
+lazy_static! {
+    static ref DB_RW_LOCK: RwLock<u8> = RwLock::new(0);
+    static ref CR_RW_LOCK: RwLock<HashMap<Vec<u8>, String>> = RwLock::new(HashMap::new());
+}
+
 
 enum State {
     Handshaking(tokio_rustls::Accept<AddrStream>),
@@ -153,34 +158,23 @@ async fn get_seed(idx: u64) -> io::Result<[u8; 32]> {
         generate_seeds(10).await?;
     }
 
-    unsafe {
-        if let Some(rw_lock) = &DB_RW_LOCK {
-            let _ = rw_lock
-                .read()
-                .map_err(|e| error(format!("Failed to acquire read lock {}", e)))?;
-        } else {
-            return Err(error("Failed to acquire lock".to_string()));
-        }
+    let _unused = DB_RW_LOCK
+        .read()
+        .map_err(|e| error(format!("Failed to acquire read lock {}", e)))?;
 
-        get_seed_from_db(idx)
-    }
+    // The function that we need the lock for
+    get_seed_from_db(idx)
 }
 
 async fn generate_seeds(count: u8) -> io::Result<()> {
-    unsafe {
-        if let Some(rw_lock) = &DB_RW_LOCK {
-            let _ = rw_lock
-                .write()
-                .map_err(|e| error(format!("Failed to acquire write lock {}", e)))?;
+    let _unused = DB_RW_LOCK
+        .write()
+        .map_err(|e| error(format!("Failed to acquire write lock {}", e)))?;
 
-            for _ in 1..count + 1 {
-                let mut seed = [0u8; 32];
-                OsRng.fill_bytes(&mut seed);
-                write_seed(seed)?;
-            }
-        } else {
-            return Err(error("Failed to acquire lock".to_string()));
-        }
+    for _ in 1..count + 1 {
+        let mut seed = [0u8; 32];
+        OsRng.fill_bytes(&mut seed);
+        write_seed(seed)?;
     }
 
     Ok(())
@@ -209,23 +203,22 @@ pub fn verify_quote_status(
     quote_status: &SgxQuoteStatus,
     advisories: &AdvisoryIDs,
 ) -> Result<(), String> {
-    Ok(())
-    // match quote_status {
-    //     SgxQuoteStatus::OK => Ok(()),
-    //     SgxQuoteStatus::SwHardeningNeeded => Ok(()),
-    //     SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
-    //         let vulnerable = advisories.vulnerable();
-    //         if vulnerable.is_empty() {
-    //             Ok(())
-    //         } else {
-    //             Err(format!("Platform is updated but requires further BIOS configuration. The following vulnerabilities must be mitigated: {:?}", vulnerable))
-    //         }
-    //     }
-    //     _ => Err(format!(
-    //         "Invalid attestation quote status - cannot verify remote node: {:?} Adv {:?}",
-    //         quote_status, advisories
-    //     )),
-    // }
+    match quote_status {
+        SgxQuoteStatus::OK => Ok(()),
+        SgxQuoteStatus::SwHardeningNeeded => Ok(()),
+        SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
+            let vulnerable = advisories.vulnerable();
+            if vulnerable.is_empty() {
+                Ok(())
+            } else {
+                Err(format!("Platform is updated but requires further BIOS configuration. The following vulnerabilities must be mitigated: {:?}", vulnerable))
+            }
+        }
+        _ => Err(format!(
+            "Invalid attestation quote status - cannot verify remote node: {:?} Adv {:?}",
+            quote_status, advisories
+        )),
+    }
 }
 
 fn validate_attestation_report(cert: String) -> Result<AttestationReport, String> {
@@ -236,28 +229,21 @@ fn validate_attestation_report(cert: String) -> Result<AttestationReport, String
     }?;
 
     // Validate challenge
-    unsafe {
-        if let Some(rw_lock) = &CR_RW_LOCK {
-            let _ = rw_lock
-                .read()
-                .map_err(|e| format!("Failed to acquire read lock {}", e))?;
+    {
+        let cr_store = CR_RW_LOCK
+            .read()
+            .map_err(|e| format!("Failed to acquire read lock {}", e))?;
 
-            match CR_STORE
-                .as_ref()
-                .unwrap()
-                .get(&get_pub_key_from_report(&report))
-            {
-                None => {
-                    return Err("Got response when no challenge sent".to_string());
-                }
-                Some(challenge) => {
-                    if challenge != &base64::encode(get_response_from_report(&report).as_slice()) {
-                        return Err("Failed to validate response".to_string());
-                    }
+        match cr_store.get(&get_pub_key_from_report(&report))
+        {
+            None => {
+                return Err("Got response when no challenge sent".to_string());
+            }
+            Some(challenge) => {
+                if challenge != &base64::encode(get_response_from_report(&report).as_slice()) {
+                    return Err("Failed to validate response".to_string());
                 }
             }
-        } else {
-            return Err("Failed to acquire lock".to_string());
         }
     }
 
@@ -281,30 +267,23 @@ fn get_pub_key_from_report(report: &AttestationReport) -> Vec<u8> {
     report.sgx_quote_body.isv_enclave_report.report_data[0..32].to_vec()
 }
 
-fn get_challenge_for_report(cert: String) -> Result<String, String> {
+fn get_challenge_for_report(report: &AttestationReport) -> Result<String, String> {
     let mut random_challenge = [0u8; 4];
     OsRng.fill_bytes(&mut random_challenge);
 
     let serialized_challenge = base64::encode(&random_challenge);
-    let report = parse_attestation_report(cert)?;
     println!(
         "Challenged {:?} with {:?}",
         get_pub_key_from_report(&report),
         random_challenge.clone()
     );
 
-    unsafe {
-        if let Some(rw_lock) = &CR_RW_LOCK {
-            let _ = rw_lock
-                .write()
-                .map_err(|e| format!("Failed to acquire write lock {}", e))?;
-            CR_STORE
-                .as_mut()
-                .unwrap()
-                .insert(vec![], serialized_challenge.clone());
-        } else {
-            return Err("Failed to acquire lock".to_string());
-        }
+    {
+        let mut cr_store = CR_RW_LOCK
+            .write()
+            .map_err(|e| format!("Failed to acquire write lock {}", e))?;
+        
+        cr_store.insert(vec![], serialized_challenge.clone());
     }
 
     Ok(serialized_challenge)
@@ -335,18 +314,28 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Infallible> {
                 .status(403)
                 .body(Body::from(err_str))
                 .unwrap(),
-            Ok(_) => match get_seed(parsed_idx.unwrap()).await {
+            Ok(report) => match validate_attestation_report(report) {
+                Ok(_) => match get_seed(parsed_idx.unwrap()).await {
+                    Err(e) => {
+                        println!("Failed to get a seed: {}", e);
+                        Response::builder()
+                            .status(403)
+                            .body(Body::from(format!("Failed to fetch seed: {}", e)))
+                            .unwrap()
+                    }
+                    Ok(seed) => {
+                        Response::new(Body::from(base64::encode(&seed)))
+                    }
+                },
                 Err(e) => {
-                    println!("Failed to get a seed: {}", e);
-                    Response::builder()
-                        .status(403)
-                        .body(Body::from(format!("Failed to fetch seed: {}", e)))
-                        .unwrap()
+                    println!("Failed to validate attestation report: {}", e);
+                        Response::builder()
+                            .status(403)
+                            .body(Body::from(format!("Failed to validate attestation report: {}", e)))
+                            .unwrap()
                 }
-                Ok(seed) => {
-                    Response::new(Body::from(base64::encode(&seed)))
-                }
-            },
+            }
+            
         }
     } else if path == "/authenticate" {
         match get_body_as_string(req).await {
@@ -354,13 +343,23 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Infallible> {
                 .status(403)
                 .body(Body::from(err_str))
                 .unwrap(),
-            Ok(body) => match get_challenge_for_report(body) {
-                Err(err_str) => Response::builder()
-                    .status(403)
-                    .body(Body::from(err_str))
-                    .unwrap(),
-                Ok(challenge) => Response::new(Body::from(challenge)),
-            },
+            Ok(body) => match validate_attestation_report(body) {
+                Ok(report) => match get_challenge_for_report(&report) {
+                    Err(err_str) => Response::builder()
+                        .status(403)
+                        .body(Body::from(err_str))
+                        .unwrap(),
+                    Ok(challenge) => Response::new(Body::from(challenge)),
+                },
+                Err(e) => {
+                    println!("Failed to validate attestation report: {}", e);
+                        Response::builder()
+                            .status(403)
+                            .body(Body::from(format!("Failed to validate attestation report: {}", e)))
+                            .unwrap()
+                }
+            }
+            
         }
     } else {
         Response::builder().status(404).body(Body::empty()).unwrap()
@@ -427,11 +426,6 @@ fn main() {
 async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = "4487";
     let addr = format!("0.0.0.0:{}", port).parse()?;
-    unsafe {
-        DB_RW_LOCK = Some(RwLock::new(0));
-        CR_RW_LOCK = Some(RwLock::new(1));
-        CR_STORE = Some(HashMap::new());
-    }
 
     if !is_db_exists() {
         create_db()?;

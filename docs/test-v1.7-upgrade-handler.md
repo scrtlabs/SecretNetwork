@@ -28,7 +28,7 @@ chmod 0777 node_init.sh
 
 ## Step 2 (Test seed rotation)
 
-### Copy the supplied contract to the docker
+### Copy the suplied contract to the docker
 
 ```bash
 docker cp ./contract.wasm node:/root/
@@ -126,7 +126,7 @@ yarn test
 Propose a software upgrade on the v1.6 chain.
 
 ```bash
-# 30 blocks (30 minutes) until upgrade block
+# 30 blocks (3 minutes) until upgrade block
 UPGRADE_BLOCK="$(docker exec node bash -c 'secretd status | jq "(.SyncInfo.latest_block_height | tonumber) + 30"')"
 
 # Propose upgrade
@@ -171,6 +171,7 @@ docker exec node bash -c 'cat /tmp/upgrade-bin/secretd                          
 docker exec node bash -c 'cat /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       > /usr/lib/librust_cosmwasm_enclave.signed.so'
 docker exec node bash -c 'cat /tmp/upgrade-bin/libgo_cosmwasm.so                        > /usr/lib/libgo_cosmwasm.so'
 
+rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin
 docker cp bootstrap:/root/.secretd/config/priv_validator_key.json /tmp/upgrade-bin/.
 docker cp /tmp/upgrade-bin/priv_validator_key.json node:/root/.secretd/config/priv_validator_key.json
 
