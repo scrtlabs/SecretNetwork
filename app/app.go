@@ -12,6 +12,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
+	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -121,7 +122,11 @@ var (
 )
 
 // Verify app interface at compile time
-var _ simapp.App = (*SecretNetworkApp)(nil)
+var (
+	_ simapp.App                          = (*SecretNetworkApp)(nil)
+	_ servertypes.Application             = (*SecretNetworkApp)(nil)
+	_ servertypes.ApplicationQueryService = (*SecretNetworkApp)(nil)
+)
 
 // SecretNetworkApp extended ABCI application
 type SecretNetworkApp struct {
@@ -175,6 +180,10 @@ func (app *SecretNetworkApp) RegisterTxService(clientCtx client.Context) {
 
 func (app *SecretNetworkApp) RegisterTendermintService(clientCtx client.Context) {
 	tmservice.RegisterTendermintService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.interfaceRegistry)
+}
+
+func (app *SecretNetworkApp) RegisterNodeService(clientCtx client.Context) {
+	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter())
 }
 
 // WasmWrapper allows us to use namespacing in the config file
@@ -456,6 +465,8 @@ func (app *SecretNetworkApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig con
 	authtx.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 	// Register new tendermint queries routes from grpc-gateway.
 	tmservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+	// Register node gRPC service for grpc-gateway.
+	nodeservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 
 	// Register legacy and grpc-gateway routes for all modules.
 	ModuleBasics().RegisterRESTRoutes(clientCtx, apiSvr.Router)
