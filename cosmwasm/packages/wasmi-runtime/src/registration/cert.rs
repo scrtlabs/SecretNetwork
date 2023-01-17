@@ -1,9 +1,9 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
+use crate::consts::SigningMethod;
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
-use crate::consts::SigningMethod;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
@@ -275,7 +275,10 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -> Result<Vec<u8>, NodeAuthResult> {
+pub fn verify_ra_cert(
+    cert_der: &[u8],
+    override_verify: Option<SigningMethod>,
+) -> Result<Vec<u8>, NodeAuthResult> {
     let payload = get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
     let pk = base64::decode(&payload).map_err(|_err| NodeAuthResult::InvalidCert)?;
@@ -293,7 +296,10 @@ pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -
 /// 5. Verify enclave signature (mr enclave/signer)
 ///
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -> Result<Vec<u8>, NodeAuthResult> {
+pub fn verify_ra_cert(
+    cert_der: &[u8],
+    override_verify: Option<SigningMethod>,
+) -> Result<Vec<u8>, NodeAuthResult> {
     // Before we reach here, Webpki already verifed the cert is properly signed
 
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
@@ -318,7 +324,13 @@ pub fn verify_ra_cert(cert_der: &[u8], override_verify: Option<SigningMethod>) -
                 }
             };
 
-            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
+            let old_mr_enclave = [
+                155, 117, 117, 82, 218, 57, 17, 185, 189, 80, 59, 235, 144, 107, 51, 67, 128, 108,
+                243, 146, 131, 254, 105, 144, 9, 52, 10, 255, 157, 163, 148, 71,
+            ];
+            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave
+                && report.sgx_quote_body.isv_enclave_report.mr_enclave != old_mr_enclave
+            {
                 error!("Got a different mr_enclave than expected. Invalid certificate");
                 warn!(
                     "received: {:?} \n expected: {:?}",
