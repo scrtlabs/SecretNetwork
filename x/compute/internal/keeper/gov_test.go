@@ -84,7 +84,7 @@ func TestGovQueryProposals(t *testing.T) {
 
 	tp := TestProposal
 	// check that gov is working
-	proposal, err := govKeeper.SubmitProposal(ctx, tp)
+	proposal, err := govKeeper.SubmitProposal(ctx, tp, false)
 	require.NoError(t, err)
 	proposalID := proposal.ProposalId
 	gotProposal, ok := govKeeper.GetProposal(ctx, proposalID)
@@ -146,7 +146,7 @@ func TestGovVote(t *testing.T) {
 	require.NoError(t, err)
 
 	// check that gov is working
-	proposal, err := govKeeper.SubmitProposal(ctx, TestProposal)
+	proposal, err := govKeeper.SubmitProposal(ctx, TestProposal, false)
 	require.NoError(t, err)
 	proposalID := proposal.ProposalId
 	gotProposal, ok := govKeeper.GetProposal(ctx, proposalID)
