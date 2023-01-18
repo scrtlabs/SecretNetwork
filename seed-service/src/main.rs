@@ -22,14 +22,13 @@ use std::sync::Arc;
 use std::{fs, io, sync};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 //use tokio::net::TcpListener;
-use tokio_rustls::rustls::ServerConfig;
 use lazy_static::lazy_static;
+use tokio_rustls::rustls::ServerConfig;
 
 lazy_static! {
     static ref DB_RW_LOCK: RwLock<u8> = RwLock::new(0);
     static ref CR_RW_LOCK: RwLock<HashMap<Vec<u8>, String>> = RwLock::new(HashMap::new());
 }
-
 
 enum State {
     Handshaking(tokio_rustls::Accept<AddrStream>),
@@ -234,8 +233,7 @@ fn validate_attestation_report(cert: String) -> Result<AttestationReport, String
             .read()
             .map_err(|e| format!("Failed to acquire read lock {}", e))?;
 
-        match cr_store.get(&get_pub_key_from_report(&report))
-        {
+        match cr_store.get(&get_pub_key_from_report(&report)) {
             None => {
                 return Err("Got response when no challenge sent".to_string());
             }
@@ -267,11 +265,14 @@ fn get_pub_key_from_report(report: &AttestationReport) -> Vec<u8> {
     report.sgx_quote_body.isv_enclave_report.report_data[0..32].to_vec()
 }
 
-fn get_challenge_for_report(report: &AttestationReport) -> Result<String, String> {
+fn get_challenge_for_report(body: String) -> Result<String, String> {
     let mut random_challenge = [0u8; 4];
     OsRng.fill_bytes(&mut random_challenge);
 
     let serialized_challenge = base64::encode(&random_challenge);
+    let report = parse_attestation_report(body)?;
+
+    let pub_key = get_pub_key_from_report(&report);
     println!(
         "Challenged {:?} with {:?}",
         get_pub_key_from_report(&report),
@@ -282,8 +283,8 @@ fn get_challenge_for_report(report: &AttestationReport) -> Result<String, String
         let mut cr_store = CR_RW_LOCK
             .write()
             .map_err(|e| format!("Failed to acquire write lock {}", e))?;
-        
-        cr_store.insert(vec![], serialized_challenge.clone());
+
+        cr_store.insert(pub_key, serialized_challenge.clone());
     }
 
     Ok(serialized_challenge)
@@ -323,19 +324,19 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Infallible> {
                             .body(Body::from(format!("Failed to fetch seed: {}", e)))
                             .unwrap()
                     }
-                    Ok(seed) => {
-                        Response::new(Body::from(base64::encode(&seed)))
-                    }
+                    Ok(seed) => Response::new(Body::from(base64::encode(&seed))),
                 },
                 Err(e) => {
                     println!("Failed to validate attestation report: {}", e);
-                        Response::builder()
-                            .status(403)
-                            .body(Body::from(format!("Failed to validate attestation report: {}", e)))
-                            .unwrap()
+                    Response::builder()
+                        .status(403)
+                        .body(Body::from(format!(
+                            "Failed to validate attestation report: {}",
+                            e
+                        )))
+                        .unwrap()
                 }
-            }
-            
+            },
         }
     } else if path == "/authenticate" {
         match get_body_as_string(req).await {
@@ -343,23 +344,13 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Infallible> {
                 .status(403)
                 .body(Body::from(err_str))
                 .unwrap(),
-            Ok(body) => match validate_attestation_report(body) {
-                Ok(report) => match get_challenge_for_report(&report) {
-                    Err(err_str) => Response::builder()
-                        .status(403)
-                        .body(Body::from(err_str))
-                        .unwrap(),
-                    Ok(challenge) => Response::new(Body::from(challenge)),
-                },
-                Err(e) => {
-                    println!("Failed to validate attestation report: {}", e);
-                        Response::builder()
-                            .status(403)
-                            .body(Body::from(format!("Failed to validate attestation report: {}", e)))
-                            .unwrap()
-                }
-            }
-            
+            Ok(body) => match get_challenge_for_report(body) {
+                Err(err_str) => Response::builder()
+                    .status(403)
+                    .body(Body::from(err_str))
+                    .unwrap(),
+                Ok(challenge) => Response::new(Body::from(challenge)),
+            },
         }
     } else {
         Response::builder().status(404).body(Body::empty()).unwrap()
