@@ -191,9 +191,3 @@ secretd query compute query secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"get
 
 Expected result should be:
 {"get":{"count":23}}
-
-## Step 7
-
-Test that now cw20-ics20 is working:
-
-TODO
