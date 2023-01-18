@@ -482,6 +482,7 @@ pub fn encrypt_output(
         EnclaveError::FailedToDeserialize
     })?;
 
+    trace!("MYPRINT RawWasmoutput: {:?}", output);
     match &mut output {
         RawWasmOutput::Err {
             err,

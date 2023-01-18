@@ -1,6 +1,7 @@
 package cosmwasm
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -161,6 +162,7 @@ func (w *Wasmer) Instantiate(
 	data = data[64:]
 
 	var respV010orV1 V010orV1ContractInitResponse
+	fmt.Println("MYPRINT got data from instantiate that cannot be determined if v1 or v10: %s", hex.EncodeToString(data))
 	err = json.Unmarshal(data, &respV010orV1)
 
 	if err != nil {
