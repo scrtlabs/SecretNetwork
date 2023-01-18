@@ -12,9 +12,6 @@ use sgx_types::{
     sgx_update_info_bit_t, SgxResult,
 };
 
-#[cfg(feature = "SGX_MODE_HW")]
-use log::*;
-
 use std::io::BufReader;
 use std::str;
 use std::time::{SystemTime, UNIX_EPOCH};

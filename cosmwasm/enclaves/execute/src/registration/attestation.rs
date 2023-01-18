@@ -153,17 +153,22 @@ pub fn create_attestation_certificate(
 pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);
-        let _ = SgxFsRemove(CONSENSUS_SEED_SEALING_PATH.as_str());
+        let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
         let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
         let _ = SgxFsRemove(REGISTRATION_KEY_SEALING_PATH.as_str());
         let _ = SgxFsRemove(
             std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-                .join(NODE_ENCRYPTED_SEED_KEY_FILE)
+                .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
                 .as_path(),
         );
         let _ = SgxFsRemove(
             std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-                .join()
+                .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
+                .as_path(),
+        );
+        let _ = SgxFsRemove(
+            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
+                .join(NODE_EXCHANGE_KEY_FILE)
                 .as_path(),
         );
     });
