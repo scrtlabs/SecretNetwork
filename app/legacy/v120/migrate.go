@@ -35,6 +35,7 @@ import (
 	v038staking "github.com/cosmos/cosmos-sdk/x/staking/legacy/v038"
 	v040staking "github.com/cosmos/cosmos-sdk/x/staking/legacy/v040"
 	v038upgrade "github.com/cosmos/cosmos-sdk/x/upgrade/legacy/v038"
+
 	v106registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v106"
 	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v120"
 
@@ -326,7 +327,7 @@ func Migrate(appState types.AppMap, clientCtx client.Context) types.AppMap {
 
 		// Migrate relative source genesis application state and marshal it into
 		// the respective key.
-		appState[v120registration.ModuleName] = v120Codec.MustMarshalJSON(v120registration.Migrate(registerGenState))
+		appState[v120registration.ModuleName] = v106Codec.MustMarshalJSON(v120registration.Migrate(registerGenState))
 	}
 
 	if appState[v106tokenswap.ModuleName] != nil {

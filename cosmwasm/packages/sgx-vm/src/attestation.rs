@@ -7,7 +7,7 @@ use log::*;
 use sgx_types::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
-use enclave_ffi_types::{NodeAuthResult, ENCRYPTED_SEED_SIZE};
+use enclave_ffi_types::{NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -17,13 +17,14 @@ extern "C" {
         retval: *mut sgx_status_t,
         api_key: *const u8,
         api_key_len: u32,
+        dry_run: u8,
     ) -> sgx_status_t;
     pub fn ecall_authenticate_new_node(
         eid: sgx_enclave_id_t,
         retval: *mut NodeAuthResult,
         cert: *const u8,
         cert_len: u32,
-        seed: &mut [u8; ENCRYPTED_SEED_SIZE],
+        seed: &mut [u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize],
     ) -> sgx_status_t;
 }
 
@@ -138,7 +139,7 @@ pub extern "C" fn ocall_get_update_info(
     unsafe { sgx_report_attestation_status(platform_blob, enclave_trusted, update_info) }
 }
 
-pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
+pub fn create_attestation_report_u(api_key: &[u8], dry_run: bool) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -149,7 +150,13 @@ pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let status = unsafe {
-        ecall_get_attestation_report(eid, &mut retval, api_key.as_ptr(), api_key.len() as u32)
+        ecall_get_attestation_report(
+            eid,
+            &mut retval,
+            api_key.as_ptr(),
+            api_key.len() as u32,
+            dry_run.into(),
+        )
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
@@ -165,7 +172,7 @@ pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
 
 pub fn untrusted_get_encrypted_seed(
     cert: &[u8],
-) -> SgxResult<Result<[u8; ENCRYPTED_SEED_SIZE], NodeAuthResult>> {
+) -> SgxResult<Result<[u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize], NodeAuthResult>> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -174,7 +181,8 @@ pub fn untrusted_get_encrypted_seed(
     let enclave = (*enclave_access_token)?;
     let eid = enclave.geteid();
     let mut retval = NodeAuthResult::Success;
-    let mut seed = [0u8; ENCRYPTED_SEED_SIZE];
+
+    let mut seed = [0u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize];
     let status = unsafe {
         ecall_authenticate_new_node(
             eid,
@@ -186,12 +194,16 @@ pub fn untrusted_get_encrypted_seed(
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
+        debug!("Error from authenticate new node");
         return Err(status);
     }
 
     if retval != NodeAuthResult::Success {
+        debug!("Error from authenticate new node, bad NodeAuthResult");
         return Ok(Err(retval));
     }
+
+    debug!("Done auth, got seed: {:?}", seed);
 
     if seed.is_empty() {
         error!("Got empty seed from encryption");
@@ -203,9 +215,9 @@ pub fn untrusted_get_encrypted_seed(
 
 #[cfg(test)]
 mod test {
-    use crate::attestation::retry_quote;
-    use crate::esgx::general::init_enclave_wrapper;
-    use crate::instance::init_enclave as init_enclave_wrapper;
+    // use crate::attestation::retry_quote;
+    // use crate::esgx::general::init_enclave_wrapper;
+    // use crate::instance::init_enclave as init_enclave_wrapper;
 
     // isans SPID = "3DDB338BD52EE314B01F1E4E1E84E8AA"
     // victors spid = 68A8730E9ABF1829EA3F7A66321E84D0

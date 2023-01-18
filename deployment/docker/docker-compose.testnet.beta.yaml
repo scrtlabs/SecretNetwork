@@ -1,6 +1,6 @@
 # docker compose file that sets up a network for beta testing
 
-version: '3'
+version: "3"
 
 services:
   aesm:
@@ -33,7 +33,7 @@ services:
     environment:
       - http_proxy
       - https_proxy
-      - SECRET_LOCAL_NODE_TYPE=BOOTSTRAP
+      - SECRET_NODE_TYPE=BOOTSTRAP
       - CHAINID=confidential-1
     expose:
       - 26656
@@ -57,7 +57,7 @@ services:
     environment:
       - http_proxy
       - https_proxy
-      - SECRET_LOCAL_NODE_TYPE=node
+      - SECRET_NODE_TYPE=node
       - CHAINID=confidential-1
       - RPC_URL=bootstrap:26657
       - PERSISTENT_PEERS=115aa0a629f5d70dd1d464bc7e42799e00f4edae@bootstrap:26656

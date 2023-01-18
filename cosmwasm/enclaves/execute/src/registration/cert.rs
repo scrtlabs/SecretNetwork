@@ -1,9 +1,11 @@
 #![cfg_attr(not(feature = "SGX_MODE_HW"), allow(unused))]
 
-use std::io::BufReader;
-use std::str;
-use std::time::{SystemTime, UNIX_EPOCH};
-
+use bit_vec::BitVec;
+use chrono::Utc as TzUtc;
+use chrono::{Duration, TimeZone};
+#[cfg(feature = "SGX_MODE_HW")]
+use log::*;
+use num_bigint::BigUint;
 use sgx_tcrypto::SgxEccHandle;
 use sgx_types::{
     sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_status_t,
@@ -13,26 +15,20 @@ use sgx_types::{
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 
-use bit_vec::BitVec;
-use chrono::Utc as TzUtc;
-use chrono::{Duration, TimeZone};
-
-use num_bigint::BigUint;
-
+use std::io::BufReader;
+use std::str;
+use std::time::{SystemTime, UNIX_EPOCH};
 use yasna::models::ObjectIdentifier;
 
-use enclave_ffi_types::NodeAuthResult;
-
 use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS};
-
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
-
-#[cfg(feature = "SGX_MODE_HW")]
-use super::attestation::get_mr_enclave;
+use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::report::AdvisoryIDs;
 
+#[cfg(feature = "SGX_MODE_HW")]
+use super::attestation::get_mr_enclave;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
 
@@ -361,7 +357,7 @@ pub fn verify_ra_cert(
 pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
-) -> Result<(), NodeAuthResult> {
+) -> Result<NodeAuthResult, NodeAuthResult> {
     // info!(
     //     "Got GID: {:?}",
     //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
@@ -381,7 +377,7 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::ConfigurationAndSwHardeningNeeded => {
             check_advisories(&report.sgx_quote_status, advisories)?;
 
-            Ok(())
+            Ok(NodeAuthResult::Success)
         }
         _ => {
             error!(
@@ -399,7 +395,7 @@ pub fn verify_quote_status(
 pub fn verify_quote_status(
     report: &AttestationReport,
     advisories: &AdvisoryIDs,
-) -> Result<(), NodeAuthResult> {
+) -> Result<NodeAuthResult, NodeAuthResult> {
     match &report.sgx_quote_status {
         SgxQuoteStatus::OK
         | SgxQuoteStatus::SwHardeningNeeded
@@ -407,15 +403,16 @@ pub fn verify_quote_status(
         | SgxQuoteStatus::GroupOutOfDate => {
             let results = check_advisories(&report.sgx_quote_status, advisories);
 
-            if results.is_err() {
+            if let Err(results) = results {
                 warn!("This platform has vulnerabilities that will not be approved on mainnet");
+                return Ok(results); // Allow in non-production
             }
 
             // if !advisories.contains_lvi_injection() {
             //     return Err(NodeAuthResult::EnclaveQuoteStatus);
             // }
 
-            Ok(())
+            Ok(NodeAuthResult::Success)
         }
         _ => {
             error!(
@@ -444,7 +441,7 @@ fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
 
     #[cfg(not(feature = "epid_whitelist_disabled"))]
     {
-        let decoded = base64::decode(WHITELIST_FROM_FILE).unwrap(); //will never fail since data is constant
+        let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
 
         decoded.as_chunks::<4>().0.iter().any(|&arr| {
             if epid_gid == &u32::from_be_bytes(arr) {

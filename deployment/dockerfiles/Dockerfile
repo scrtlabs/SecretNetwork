@@ -12,9 +12,9 @@ ARG TEST=enigmampc/rocksdb:v6.24.2
 ARG SCRT_BASE_IMAGE_ENCLAVE=enigmampc/rocksdb:v6.24.2-1.1.5
 ARG SCRT_RELEASE_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
 
-# ***************** COMPILE ENCLAVE ************** #
+# ***************** PREPARE COMPILE ENCLAVE ************** #
 
-FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-enclave
+FROM $SCRT_BASE_IMAGE_ENCLAVE AS prepare-compile-enclave
 
 RUN apt-get update &&  \
     apt-get install -y --no-install-recommends \
@@ -25,6 +25,21 @@ ENV PATH="/root/.cargo/bin:$PATH"
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
+
+COPY rust-toolchain rust-toolchain
+RUN rustup component add rust-src
+RUN --mount=type=cache,target=/root/.cargo/registry cargo install xargo --version 0.3.25
+
+# Add submodules
+COPY third_party third_party
+
+# Add source files
+COPY go-cosmwasm go-cosmwasm/
+COPY cosmwasm cosmwasm/
+
+# ***************** COMPILE ENCLAVE ************** #
+
+FROM prepare-compile-enclave AS compile-enclave
 
 ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
@@ -126,7 +141,7 @@ RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} 
 FROM $SCRT_RELEASE_BASE_IMAGE as release-image
 
 # wasmi-sgx-test script requirements
-RUN apt-get update && \
+RUN apt-get update && \ck fixes available
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \
@@ -259,6 +274,50 @@ FROM build-deb as build-deb-mainnet
 COPY --from=mainnet-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
 
 CMD ["/bin/bash", "build_deb.sh"]
+
+# ***************** COMPILE CHECK-HW TOOL ************** #
+
+FROM prepare-compile-enclave as compile-check-hw-tool
+
+ARG BUILD_VERSION="v0.0.0"
+ARG FEATURES
+ARG FEATURES_U
+ARG MITIGATION_CVE_2020_0551=LOAD
+
+ENV VERSION=${BUILD_VERSION}
+ENV FEATURES=${FEATURES}
+ENV FEATURES_U=${FEATURES_U}
+ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
+
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
+
+# Ignore $FEATURES because it should never be `production`
+RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
+    && MITIGATION_CVE_2020_0551={MITIGATION_CVE_2020_0551} VERSION=${VERSION} FEATURES="" FEATURES_U=${FEATURES_U} SGX_MODE=HW make build-rust
+
+# Set working directory for the build
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
+
+# Add source files
+COPY check-hw check-hw/
+RUN cp go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave.so
+
+RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
+RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
+RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production
+
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
+RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
+
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/check-hw
+
+COPY ./deployment/docker/builder/create_check_hw_tar.sh .
+
+RUN --mount=type=cache,target=/root/.cargo/registry . /opt/sgxsdk/environment && env && make
+RUN cp ../go-cosmwasm/librust_cosmwasm_enclave.signed.so ./check_hw_enclave.so
+
+ENTRYPOINT ["/bin/bash", "create_check_hw_tar.sh"]
 
 # ***************** LOCALSECRET ************** #
 FROM release-image as build-localsecret

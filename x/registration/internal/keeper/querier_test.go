@@ -44,9 +44,9 @@ func TestNewQuerier(t *testing.T) {
 	}
 
 	expectedSecretParams, _ := json.Marshal(types.GenesisState{
-		Registration:              nil,
-		NodeExchMasterCertificate: &types.MasterCertificate{Bytes: regInfo.Certificate},
-		IoMasterCertificate:       &types.MasterCertificate{Bytes: regInfo.Certificate},
+		Registration:      nil,
+		NodeExchMasterKey: &types.MasterKey{Bytes: publicKey},
+		IoMasterKey:       &types.MasterKey{Bytes: publicKey},
 	})
 
 	specs := map[string]struct {
@@ -76,8 +76,8 @@ func TestNewQuerier(t *testing.T) {
 			nil,
 			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		},
-		"query master cert fail": {
-			[]string{QueryMasterCertificate},
+		"query master key fail": {
+			[]string{QueryMasterKey},
 			abci.RequestQuery{Data: []byte("")},
 			sdkErrors.ErrUnknownAddress,
 			"",
@@ -95,10 +95,10 @@ func TestNewQuerier(t *testing.T) {
 		})
 	}
 
-	keeper.setMasterCertificate(ctx, types.MasterCertificate{Bytes: regInfo.Certificate}, types.MasterNodeKeyId)
-	keeper.setMasterCertificate(ctx, types.MasterCertificate{Bytes: regInfo.Certificate}, types.MasterIoKeyId)
+	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterNodeKeyId)
+	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterIoKeyId)
 
-	binResult, err := querier(ctx, []string{QueryMasterCertificate}, abci.RequestQuery{Data: []byte("")})
+	binResult, err := querier(ctx, []string{QueryMasterKey}, abci.RequestQuery{Data: []byte("")})
 	require.NoError(t, err)
 	require.Equal(t, string(binResult), string(expectedSecretParams))
 }

@@ -1,5 +1,63 @@
 # CHANGELOG
 
+# 1.6.0
+
+- Fixed issue causing registrations to fail
+- Changed internal WASM engine to Wasm3 from Wasmi. Contract performance increased greatly
+- ~~Added seed rotation. On upgrade the network will fetch a new seed and use it for derivation of keys and encryption~~
+- Seed rotation has been delayed to the next network upgrade
+- Changed default grpc-concurrency to false (from true). For nodes that serve API requests, we highly recommend setting this manually to true as described in the release notes for version 1.5.1
+
+- Changed peer rejected tendermint log to debug so it's hidden by default (from info)
+- Increased tendermint query limit to 1000 (from 100)
+- Bumped to tendermint 0.34.24
+- Bumped to cosmos-sdk 0.45.11
+- Changed base gas prices:
+  * Default instruction cost 1 -> 2
+  * Div instruction cost 16 -> 2
+  * Mul instruction cost 4 -> 2
+  * Mem instruction cost 2 -> 2
+  * Contract Entry cost 100,000 -> 20,000
+  * Read from storage base cost 1,000 -> 10
+  * Write to storage base cost 2,000 -> 20
+
+ - SecretJS 1.5 has been released, and uses GRPC-Gateway endpoints. Check it out: https://www.npmjs.com/package/secretjs or https://github.com/scrtlabs/secret.js
+ - Add check-hw tool that returns patch-level and compatibility information for hardware
+
+# 1.5.1
+
+29/11/2022 - Startup fix due to TCB recovery - startup validation on 1.5.1 does not account for SW_HARDENING_NEEDED including INTEL-SA-00615 in it's response. Registering using this binary will not work, however restarting your node can be done using the _startup_bypass packages.
+
+Fix for GRPC-gateway concurrency. This will greatly improve performance on nodes serving queries to GRPC-gateway requests (REST requests going to v1beta1/blah/blah)
+
+Note that concurrency is toggled from the "concurrency" flag under GRPC in app.toml - see an example below.
+(max-send-msg-size and max-recv-msg-size are also new, but are less important)
+
+In this version the default is set to true for ease of deployment - We currently recommend for validators to not update to this version, or if you do, manually set concurrency to false. This update is for node runners that provide API services to increase performance of nodes that serve queries.
+
+In this release we also include a special version for nodes that serve queries from legacy apps (those that use secretjs 0.x, for example Keplr) - this version contains an unstable patch that serves legacy LCD and rpc requests much faster. This fix has been found to be unstable at scale, and should be used sparingly until secretjs 1.5 is released and apps upgrade to the latest version
+
+```toml
+[grpc]
+
+# Enable defines if the gRPC server should be enabled.
+enable = true
+
+# Address defines the gRPC server address to bind to.
+address = "0.0.0.0:9090"
+
+# The default value is math.MaxInt32.
+max-recv-msg-size = "10485760"
+
+# The default value is math.MaxInt32.
+max-send-msg-size = "2147483647"
+
+# Concurrency defines if node queries should be done in parallel.
+# This is experimental and has led to node failures, so enable with caution.
+# The default value is true.
+concurrency = true
+```
+
 # 1.5.0
 
 - Fix IBC contracts bug ([#1199](https://github.com/scrtlabs/SecretNetwork/pull/1199))

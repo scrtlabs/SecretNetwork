@@ -14,13 +14,11 @@ use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
-#[cfg(not(feature = "query-only"))]
-use crate::db::encrypt_key;
 
 use crate::cosmwasm_config::ContractOperation;
-use crate::db::read_encrypted_key;
+use crate::db::read_from_encrypted_state;
 #[cfg(not(feature = "query-only"))]
-use crate::db::{remove_encrypted_key, write_multiple_keys};
+use crate::db::{remove_from_encrypted_state, write_multiple_keys};
 use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngineResult};
 use crate::gas::{WasmCosts, READ_BASE_GAS, WRITE_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
@@ -524,12 +522,18 @@ impl Engine {
     }
 
     #[cfg(feature = "query-only")]
-    pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
-        Ok(())
+    pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
+        Ok(0)
     }
 
     #[cfg(not(feature = "query-only"))]
-    pub fn flush_cache(&mut self) -> Result<(), EnclaveError> {
+    pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
+        use crate::db::create_encrypted_key;
+
+        // here we refund all the pseudo gas charged for writes to cache
+        // todo: optimize to only charge for writes that change chain state
+        let total_gas_to_refund = self.context.kv_cache.drain_gas_tracker();
+
         let keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .context
             .kv_cache
@@ -537,25 +541,14 @@ impl Engine {
             .into_iter()
             .map(|(k, v)| {
                 let (enc_key, _, enc_v) =
-                    encrypt_key(&k, &v, &self.context.context, &self.context.contract_key).unwrap();
+                    create_encrypted_key(&k, &v, &self.context.context, &self.context.contract_key)
+                        .unwrap();
 
                 (enc_key.to_vec(), enc_v)
             })
-            // todo: fix
-            // .map_err(|_|
-            //     {
-            //         debug!(
-            //         "addr_validate() error while trying to parse human address from bytes to string: {:?}",
-            //         err
-            //     );
-            //         return Ok(Some(RuntimeValue::I32(
-            //             self.write_to_memory(b"Input is not valid UTF-8")? as i32,
-            //         )));
-            //     }
-            // )?
             .collect();
 
-        let used_gas = write_multiple_keys(&self.context.context, keys).map_err(|err| {
+        write_multiple_keys(&self.context.context, keys).map_err(|err| {
             debug!(
                 "write_db() error while trying to write the value to state: {:?}",
                 err
@@ -564,12 +557,7 @@ impl Engine {
             EnclaveError::from(err)
         })?;
 
-        self.with_instance(|instance, _context| {
-            use_gas(instance, used_gas)?;
-            Ok(vec![])
-        })?;
-
-        Ok(())
+        Ok(total_gas_to_refund)
     }
 }
 
@@ -822,10 +810,15 @@ fn host_read_db(
     }
 
     debug!("Missed value in cache");
-    let (value, used_gas) = read_encrypted_key(
+    let (value, used_gas) = read_from_encrypted_state(
         &state_key_name,
         &context.context,
         &context.contract_key,
+        match context.operation {
+            ContractOperation::Init => true,
+            ContractOperation::Handle => true,
+            ContractOperation::Query => false,
+        },
         &mut context.kv_cache,
     )
     .map_err(debug_err!("db_read failed to read key from storage"))?;
@@ -864,7 +857,8 @@ fn host_remove_db(
 
     debug!("db_remove removing key {}", show_bytes(&state_key_name));
 
-    let used_gas = remove_encrypted_key(&state_key_name, &context.context, &context.contract_key)?;
+    let used_gas =
+        remove_from_encrypted_state(&state_key_name, &context.context, &context.contract_key)?;
     context.use_gas_externally(used_gas);
 
     Ok(())
@@ -883,18 +877,12 @@ fn host_write_db(
 
     use_gas(instance, WRITE_BASE_GAS)?;
 
-    // let start = Instant::now();
     let state_key_name = read_from_memory(instance, state_key_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from state_key_region_ptr: {err}"),
     )?;
     let value = read_from_memory(instance, value_region_ptr as u32).map_err(
         debug_err!(err => "db_write failed to extract vector from value_region_ptr: {err}"),
     )?;
-    // let duration = start.elapsed();
-    // trace!(
-    //     "host_write_db: Time elapsed in read_from_memory x2: {:?}",
-    //     duration
-    // );
 
     debug!(
         "db_write writing key: {}, value: {}",
@@ -902,16 +890,8 @@ fn host_write_db(
         show_bytes(&value)
     );
 
-    context.kv_cache.write(&state_key_name, &value);
-
-    // let used_gas = write_encrypted_key(
-    //     &state_key_name,
-    //     &value,
-    //     &context.context,
-    //     &context.contract_key,
-    // )
-    // .map_err(debug_err!("db_write failed to write key to storage",))?;
-    // use_gas(instance, used_gas)?;
+    let (_, pseudo_cost_for_write) = context.kv_cache.write(&state_key_name, &value);
+    use_gas(instance, pseudo_cost_for_write)?; // Use gas now, refund later
 
     Ok(())
 }
@@ -1205,6 +1185,7 @@ fn host_query_chain(
     write_to_memory(instance, &answer).map(|region_ptr| region_ptr as i32)
 }
 
+#[cfg(feature = "debug-print")]
 fn host_debug_print(
     _context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -1216,6 +1197,16 @@ fn host_debug_print(
 
     info!("debug_print: {:?}", message);
 
+    Ok(())
+}
+
+#[cfg(not(feature = "debug-print"))]
+fn host_debug_print(
+    _context: &mut Context,
+    _instance: &wasm3::Instance<Context>,
+    _message_region_ptr: i32,
+) -> WasmEngineResult<()> {
+    // Nothing to do here when the feature is off
     Ok(())
 }
 

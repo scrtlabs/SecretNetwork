@@ -18,7 +18,7 @@ use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
 
 use super::contract_validation::{
-    generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
+    generate_contract_key, validate_contract_key, validate_msg, verify_params, ContractKey,
 };
 use super::gas::WasmCosts;
 use super::io::{
@@ -76,7 +76,7 @@ pub fn init(
 
     let canonical_sender_address = to_canonical(sender)?;
 
-    let contract_key = generate_encryption_key(
+    let contract_key = generate_contract_key(
         &canonical_sender_address,
         &block_height,
         &contract_hash,
@@ -278,9 +278,11 @@ pub fn handle(
     *used_gas = engine.gas_used();
     let mut output = result?;
 
-    engine
+    // This gets refunded because it will get charged later by the sdk
+    let refund_cache_gas = engine
         .flush_cache()
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
+    *used_gas = used_gas.saturating_sub(refund_cache_gas);
 
     debug!(
         "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
