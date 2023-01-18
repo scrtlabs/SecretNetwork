@@ -141,7 +141,7 @@ RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} 
 FROM $SCRT_RELEASE_BASE_IMAGE as release-image
 
 # wasmi-sgx-test script requirements
-RUN apt-get update && \ck fixes available
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \

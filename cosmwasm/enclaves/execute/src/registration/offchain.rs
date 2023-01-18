@@ -4,8 +4,6 @@
 ///
 use log::*;
 use sgx_types::sgx_status_t;
-#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-use sgx_types::{sgx_platform_info_t, sgx_update_info_bit_t};
 use std::slice;
 
 use enclave_crypto::consts::{
