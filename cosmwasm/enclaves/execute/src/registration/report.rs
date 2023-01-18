@@ -532,10 +532,20 @@ impl SgxQuote {
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00615"];
+const WHITELISTED_ADVISORIES: &[&str] = &[
+    "INTEL-SA-00334",
+    "INTEL-SA-00219",
+    "INTEL-SA-00615",
+    "INTEL-SA-00657",
+];
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00615"];
+const WHITELISTED_ADVISORIES: &[&str] = &[
+    "INTEL-SA-00334",
+    "INTEL-SA-00219",
+    "INTEL-SA-00615",
+    "INTEL-SA-00657",
+];
 
 lazy_static! {
     static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [

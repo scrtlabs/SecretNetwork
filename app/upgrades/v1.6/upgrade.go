@@ -28,7 +28,6 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		ctx.Logger().Info(` \____/|_|     \_____|_|  \_\/_/    \_\_____/|______|`)
 
 		ctx.Logger().Info("Running module migrations for v1.6...")
-
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
 }

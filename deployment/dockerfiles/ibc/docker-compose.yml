@@ -9,13 +9,13 @@ services:
       - "26656:26656"
       - "9090:9090"
       - "9091:9091"
-      - "1317:1317"
+      - "1317:1316"
       # faucet
       - "5000:5000"
     environment:
       LOG_LEVEL: "TRACE"
     healthcheck:
-      test: [ "CMD-SHELL", "secretd status" ]
+      test: ["CMD-SHELL", "secretd status"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,14 +28,14 @@ services:
       - "36656:26656"
       - "9391:9091"
       - "9390:9090"
-      - "3317:1317"
+      - "2317:1316"
       # faucet
       - "5300:5000"
     environment:
       CHAINID: "secretdev-2"
       LOG_LEVEL: "TRACE"
     healthcheck:
-      test: [ "CMD-SHELL", "secretd status" ]
+      test: ["CMD-SHELL", "secretd status"]
       interval: 10s
       timeout: 5s
       retries: 5

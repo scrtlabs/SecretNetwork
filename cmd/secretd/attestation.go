@@ -95,7 +95,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			_, err = api.CreateAttestationReport(apiKeyFile)
+			_, err = api.CreateAttestationReport(apiKeyFile, false)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -436,7 +436,7 @@ Please report any issues with this command
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			_, err = api.CreateAttestationReport(apiKeyFile)
+			_, err = api.CreateAttestationReport(apiKeyFile, false)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}

@@ -1,16 +1,15 @@
 import { sha256 } from "@noble/hashes/sha256";
 import {
+  MsgInstantiateContract,
+  MsgStoreCode,
   SecretNetworkClient,
   toHex,
   toUtf8,
-  Wallet,
-  MsgStoreCode,
-  MsgInstantiateContract,
-  Tx,
+  TxResponse,
   TxResultCode,
 } from "secretjs";
-import { State as ConnectionState } from "secretjs/dist/protobuf_stuff/ibc/core/connection/v1/connection";
-import { State as ChannelState } from "secretjs/dist/protobuf_stuff/ibc/core/channel/v1/channel";
+import { State as ChannelState } from "secretjs/dist/grpc_gateway/ibc/core/channel/v1/channel.pb";
+import { State as ConnectionState } from "secretjs/dist/grpc_gateway/ibc/core/connection/v1/connection.pb";
 
 export class Contract {
   address: string;
@@ -45,30 +44,6 @@ const objToKv = (input) => {
   return output;
 };
 
-export const cleanBytes = (tx) => {
-  // console.log("input:", JSON.stringify(testInput, null, 2), "\n\n");
-
-  const events = tx.events.map((e) => {
-    return {
-      ...e,
-      attributes: e.attributes.map((i) => objToKv(i)),
-    };
-  });
-
-  const output = {
-    ...tx,
-    events,
-  };
-
-  // these fields clutter the output too much
-  output.txBytes = "redacted";
-  output.tx.authInfo = "redacted";
-  output.tx.body.messages.forEach((m) => (m.value.wasmByteCode = "redacted"));
-
-  // console.log("output:", JSON.stringify(output, null, 2));
-  return output;
-};
-
 export const ibcDenom = (
   paths: {
     portId: string;
@@ -92,8 +67,8 @@ export async function sleep(ms: number) {
 }
 
 export async function waitForBlocks(chainId: string) {
-  const secretjs = await SecretNetworkClient.create({
-    grpcWebUrl: "http://localhost:9091",
+  const secretjs = new SecretNetworkClient({
+    url: "http://localhost:1317",
     chainId,
   });
 
@@ -113,12 +88,9 @@ export async function waitForBlocks(chainId: string) {
   }
 }
 
-export async function waitForIBCConnection(
-  chainId: string,
-  grpcWebUrl: string
-) {
-  const secretjs = await SecretNetworkClient.create({
-    grpcWebUrl,
+export async function waitForIBCConnection(chainId: string, url: string) {
+  const secretjs = new SecretNetworkClient({
+    url,
     chainId,
   });
 
@@ -145,11 +117,11 @@ export async function waitForIBCConnection(
 
 export async function waitForIBCChannel(
   chainId: string,
-  grpcWebUrl: string,
+  url: string,
   channelId: string
 ) {
-  const secretjs = await SecretNetworkClient.create({
-    grpcWebUrl,
+  const secretjs = new SecretNetworkClient({
+    url,
     chainId,
   });
 
@@ -159,7 +131,7 @@ export async function waitForIBCChannel(
       const { channels } = await secretjs.query.ibc_channel.channels({});
 
       for (const c of channels) {
-        if (c.channelId === channelId && c.state == ChannelState.STATE_OPEN) {
+        if (c.channel_id === channelId && c.state == ChannelState.STATE_OPEN) {
           console.log(`${channelId} is open on ${chainId}`);
           break outter;
         }
@@ -175,17 +147,17 @@ export async function storeContracts(
   account: SecretNetworkClient,
   wasms: Uint8Array[]
 ) {
-  const tx: Tx = await account.tx.broadcast(
+  const tx: TxResponse = await account.tx.broadcast(
     [
       new MsgStoreCode({
         sender: account.address,
-        wasmByteCode: wasms[0],
+        wasm_byte_code: wasms[0],
         source: "",
         builder: "",
       }),
       new MsgStoreCode({
         sender: account.address,
-        wasmByteCode: wasms[1],
+        wasm_byte_code: wasms[1],
         source: "",
         builder: "",
       }),
@@ -205,20 +177,20 @@ export async function instantiateContracts(
   account: SecretNetworkClient,
   contracts: Contract[]
 ) {
-  const tx: Tx = await account.tx.broadcast(
+  const tx: TxResponse = await account.tx.broadcast(
     [
       new MsgInstantiateContract({
         sender: account.address,
-        codeId: contracts[0].codeId,
-        codeHash: contracts[0].codeHash,
-        initMsg: { nop: {} },
+        code_id: contracts[0].codeId,
+        code_hash: contracts[0].codeHash,
+        init_msg: { nop: {} },
         label: `v1-${Date.now()}`,
       }),
       new MsgInstantiateContract({
         sender: account.address,
-        codeId: contracts[1].codeId,
-        codeHash: contracts[1].codeHash,
-        initMsg: { nop: {} },
+        code_id: contracts[1].codeId,
+        code_hash: contracts[1].codeHash,
+        init_msg: { nop: {} },
         label: `v010-${Date.now()}`,
       }),
     ],

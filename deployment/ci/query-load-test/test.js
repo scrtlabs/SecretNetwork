@@ -16,14 +16,13 @@ const c_mnemonic =
 const initializeClient = async (endpoint, chainId) => {
     const wallet = new Wallet(c_mnemonic);
     const accAddress = wallet.address;
-    const client = new SecretNetworkClient({
+    return new SecretNetworkClient({
         // Create a client to interact with the network
         url: endpoint,
         chainId: chainId,
         wallet: wallet,
         walletAddress: accAddress,
     });
-    return client;
 };
 
 async function runContractQueryLoad(

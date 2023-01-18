@@ -278,9 +278,11 @@ pub fn handle(
     *used_gas = engine.gas_used();
     let mut output = result?;
 
-    engine
+    // This gets refunded because it will get charged later by the sdk
+    let refund_cache_gas = engine
         .flush_cache()
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
+    *used_gas = used_gas.saturating_sub(refund_cache_gas);
 
     debug!(
         "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",

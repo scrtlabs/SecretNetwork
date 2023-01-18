@@ -233,6 +233,7 @@ clean:
 	-rm -rf ./cmd/secretd/ias_bin*
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/enclaves/test clean
+	$(MAKE) -C check-hw clean
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
@@ -243,7 +244,7 @@ localsecret:
 			--build-arg SGX_MODE=SW \
 			$(DOCKER_BUILD_ARGS) \
  			--build-arg SECRET_NODE_TYPE=BOOTSTRAP \
- 			--build-arg CHAIN_ID=secretdev-1 \
+			--build-arg CHAINID=secretdev-1 \
  			-f deployment/dockerfiles/Dockerfile \
  			--target build-localsecret \
  			-t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
@@ -278,7 +279,7 @@ build-testnet:
 				 --build-arg SECRET_NODE_TYPE=NODE \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 -f deployment/dockerfiles/Dockerfile \
-				 -t ghcr.io/scrtlabs/testnet:${DOCKER_TAG} \
+				 -t ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
 				 --target release-image .
 	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
@@ -288,7 +289,7 @@ build-testnet:
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
-				 --cache-from ghcr.io/scrtlabs/testnet:${DOCKER_TAG} \
+				 --cache-from ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
 				 --target build-deb .
@@ -332,6 +333,7 @@ build-mainnet:
                  --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg BUILD_VERSION=${VERSION} \
                  --build-arg SGX_MODE=HW \
+                 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
                  --build-arg DB_BACKEND=${DB_BACKEND} \
                  $(DOCKER_BUILD_ARGS) \
                  -f deployment/dockerfiles/Dockerfile \
@@ -344,12 +346,28 @@ build-mainnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
+				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg SGX_MODE=HW \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t deb_build \
 				 $(DOCKER_BUILD_ARGS) \
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
+
+build-check-hw-tool:
+	@mkdir build 2>&3 || true
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="${FEATURES}" \
+                 --build-arg FEATURES_U=${FEATURES_U} \
+                 --build-arg BUILDKIT_INLINE_CACHE=1 \
+                 --secret id=API_KEY,src=api_key.txt \
+                 --secret id=SPID,src=spid.txt \
+                 --build-arg SECRET_NODE_TYPE=NODE \
+                 --build-arg BUILD_VERSION=${VERSION} \
+                 --build-arg SGX_MODE=HW \
+                 --build-arg DB_BACKEND=${DB_BACKEND} \
+                 -f deployment/dockerfiles/Dockerfile \
+                 -t compile-check-hw-tool \
+                 --target compile-check-hw-tool .
 
 # while developing:
 build-enclave:
@@ -366,6 +384,10 @@ clippy-enclave:
 # while developing:
 clean-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) clean
+
+# while developing:
+clippy: clippy-enclave
+	$(MAKE) -C check-hw clippy
 
 sanity-test:
 	SGX_MODE=SW $(MAKE) build-linux
@@ -515,3 +537,7 @@ proto-lint:
 	@$(DOCKER_BUF) lint --error-format=json
 
 .PHONY: proto-all proto-gen proto-format proto-lint proto-check-breaking
+
+.PHONY: check-hw
+check-hw: build-linux
+	$(MAKE) -C check-hw
