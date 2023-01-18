@@ -1023,7 +1023,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 let secp256k1_verifier = Secp256k1::verification_only();
 
                 let secp256k1_signature =
-                    secp256k1::Signature::from_compact(&sig.0).map_err(|err| {
+                    secp256k1::ecdsa::Signature::from_compact(&sig.0).map_err(|err| {
                         StdError::generic_err(format!("Malformed signature: {:?}", err))
                     })?;
                 let secp256k1_pubkey = secp256k1::PublicKey::from_slice(pubkey.0.as_slice())
@@ -1036,7 +1036,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                         ))
                     })?;
 
-                res = match secp256k1_verifier.verify(
+                res = match secp256k1_verifier.verify_ecdsa(
                     &secp256k1_msg,
                     &secp256k1_signature,
                     &secp256k1_pubkey,
