@@ -108,7 +108,7 @@ LD_FLAGS := $(ldflags)
 all: build_all
 
 vendor:
-	cargo vendor third_party/vendor --manifest-path third_party/build/Cargo.toml
+	cargo vendor third_party/incubator-teaclave-sgx-sdk --manifest-path third_party/build/Cargo.toml
 
 go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"

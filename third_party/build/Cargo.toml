@@ -3,10 +3,10 @@ name = "eng_edl"
 version = "0.0.0"
 authors = ["The Teaclave Authors"]
 build = "build.rs"
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "eng_edl"
 
 [dependencies]
-sgx_edl = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_edl = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
