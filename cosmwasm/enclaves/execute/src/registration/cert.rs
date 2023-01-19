@@ -328,7 +328,13 @@ pub fn verify_ra_cert(
                 }
             };
 
-            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
+            let old_mr_enclave = [
+                252, 184, 19, 45, 205, 42, 165, 40, 164, 70, 253, 208, 237, 244, 191, 50, 174, 69,
+                61, 56, 123, 104, 189, 156, 167, 208, 21, 17, 61, 82, 173, 228,
+            ];
+            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave
+                && report.sgx_quote_body.isv_enclave_report.mr_enclave != old_mr_enclave
+            {
                 error!("Got a different mr_enclave than expected. Invalid certificate");
                 warn!(
                     "received: {:?} \n expected: {:?}",
