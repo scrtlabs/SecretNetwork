@@ -55,18 +55,16 @@ then
   secretd collect-gentxs
   secretd validate-genesis
 
-#  secretd init-enclave
   secretd init-bootstrap
-#  cp new_node_seed_exchange_keypair.sealed .sgx_sec rets
   secretd validate-genesis
+
+  # Setup LCD
+  perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' ~/.secretd/config/app.toml
+  perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ~/.secretd/config/app.toml
+  perl -i -pe 's/concurrency = false/concurrency = true/' ~/.secretd/config/app.toml
 fi
 
-# Setup CORS for LCD & gRPC-web
-perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' ~/.secretd/config/app.toml
-perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ~/.secretd/config/app.toml
-perl -i -pe 's/concurrency = false/concurrency = true/' ~/.secretd/config/app.toml
-
-lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
+setsid lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
 
 if [ "${ENABLE_FAUCET}" = "true" ]; then
   # Setup faucet
