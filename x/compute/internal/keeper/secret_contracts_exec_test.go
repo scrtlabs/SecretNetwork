@@ -113,23 +113,18 @@ type ExecuteDetails struct {
 func TestState(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			fmt.Println("MYPRINT fmt")
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
-			fmt.Println("MYPRINT test finished setup")
 
 			// init
 			_, _, contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
-			fmt.Println("MYPRINT contract initialized")
 			require.Empty(t, initErr)
 			require.Equal(t, 1, len(initEvents))
 
 			_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
-			fmt.Println("MYPRINT contract executed")
 			require.Empty(t, execErr)
 			require.Empty(t, data)
 
 			_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
-			fmt.Println("MYPRINT contract executed2")
 			require.Empty(t, execErr)
 
 			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
