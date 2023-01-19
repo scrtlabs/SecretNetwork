@@ -58,8 +58,8 @@ SGX_COMMON_CFLAGS += -fstack-protector
 ######## CUSTOM Settings ########
 
 CUSTOM_LIBRARY_PATH := ./lib
-CUSTOM_EDL_PATH := ../../../third_party/vendor/sgx_edl/edl
-CUSTOM_COMMON_PATH := ../../../third_party/vendor/sgx_edl/common
+CUSTOM_EDL_PATH := ../../../third_party/incubator-teaclave-sgx-sdk/sgx_edl/edl
+CUSTOM_COMMON_PATH := ../../../third_party/incubator-teaclave-sgx-sdk/sgx_edl/common
 
 ######## EDL Settings ########
 
