@@ -229,11 +229,12 @@ fn validate_attestation_report(cert: String) -> Result<AttestationReport, String
 
     // Validate challenge
     {
-        let cr_store = CR_RW_LOCK
-            .read()
+        let pub_key = get_pub_key_from_report(&report);
+        let mut cr_store = CR_RW_LOCK
+            .write()
             .map_err(|e| format!("Failed to acquire read lock {}", e))?;
 
-        match cr_store.get(&get_pub_key_from_report(&report)) {
+        match cr_store.get(&pub_key) {
             None => {
                 return Err("Got response when no challenge sent".to_string());
             }
@@ -243,6 +244,8 @@ fn validate_attestation_report(cert: String) -> Result<AttestationReport, String
                 }
             }
         }
+
+        cr_store.remove(&pub_key);
     }
 
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
