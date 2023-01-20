@@ -36,6 +36,7 @@ import (
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
+	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
@@ -118,7 +119,7 @@ var (
 		distrtypes.ModuleName: true,
 	}
 
-	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade, v1_5.Upgrade, v1_6.Upgrade}
+	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade, v1_5.Upgrade, v1_6.Upgrade, v1_7.Upgrade}
 )
 
 // Verify app interface at compile time
