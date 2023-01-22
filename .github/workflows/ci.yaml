@@ -343,8 +343,3 @@ jobs:
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*
           yarn
           yarn test
-          docker rm -f localsecret # next step needs the localsecret ports
-      - name: Install Requirements
-        run: |
-          chmod +x ./scripts/install-wasm-tools.sh
-          ./scripts/install-wasm-tools.sh
