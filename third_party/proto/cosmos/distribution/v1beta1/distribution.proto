@@ -25,7 +25,7 @@ message Params {
     (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
     (gogoproto.nullable)   = false
   ];
-  bool withdraw_addr_enabled = 4 [(gogoproto.moretags) = "yaml:\"withdraw_addr_enabled\""];
+  bool   withdraw_addr_enabled = 4 [(gogoproto.moretags) = "yaml:\"withdraw_addr_enabled\""];
   string secret_foundation_tax = 5 [
     (gogoproto.moretags)   = "yaml:\"secret_foundation_tax\"",
     (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
@@ -33,6 +33,16 @@ message Params {
   ];
   string secret_foundation_address = 6 [
     (gogoproto.moretags)   = "yaml:\"secret_foundation_address\""
+  ];
+  string minimum_restake_threshold = 7 [
+    (gogoproto.moretags)   = "yaml:\"minimum_restake_threshold\"",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.nullable)   = false
+  ];
+  string restake_period = 8 [
+    (gogoproto.moretags)   = "yaml:\"restake_period\"",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
+    (gogoproto.nullable)   = false
   ];
 }
 
