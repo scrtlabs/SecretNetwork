@@ -9,7 +9,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
@@ -59,7 +58,7 @@ func txPubkeyHandlerFn(cliCtx client.Context) http.HandlerFunc {
 			return
 		}
 
-		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterCertificate)
+		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterKey)
 		res, height, err := cliCtx.Query(route)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -67,22 +66,16 @@ func txPubkeyHandlerFn(cliCtx client.Context) http.HandlerFunc {
 		}
 		cliCtx = cliCtx.WithHeight(height)
 
-		var certs types.GenesisState
+		var keys types.GenesisState
 
-		err = json.Unmarshal(res, &certs)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		ioExchPubkey, err := ra.VerifyRaCert(certs.IoMasterCertificate.Bytes)
+		err = json.Unmarshal(res, &keys)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		// todo: add this to types
-		res = []byte(fmt.Sprintf(`{"TxKey":"%s"}`, base64.StdEncoding.EncodeToString(ioExchPubkey)))
+		res = []byte(fmt.Sprintf(`{"TxKey":"%s"}`, base64.StdEncoding.EncodeToString(keys.IoMasterKey.Bytes)))
 
 		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
 	}
@@ -95,7 +88,7 @@ func seedCertificateHandlerFn(cliCtx client.Context) http.HandlerFunc {
 			return
 		}
 
-		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterCertificate)
+		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, keeper.QueryMasterKey)
 		res, height, err := cliCtx.Query(route)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -103,60 +96,20 @@ func seedCertificateHandlerFn(cliCtx client.Context) http.HandlerFunc {
 		}
 		cliCtx = cliCtx.WithHeight(height)
 
-		var certs types.GenesisState
+		var keys types.GenesisState
 
-		err = json.Unmarshal(res, &certs)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		_, err = ra.VerifyRaCert(certs.NodeExchMasterCertificate.Bytes)
+		err = json.Unmarshal(res, &keys)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		// todo: add this to types
-		res = []byte(fmt.Sprintf(`{"RegistrationKey":"%s"}`, base64.StdEncoding.EncodeToString(certs.NodeExchMasterCertificate.Bytes)))
+		res = []byte(fmt.Sprintf(`{"RegistrationKey":"%s"}`, base64.StdEncoding.EncodeToString(keys.NodeExchMasterKey.Bytes)))
 
 		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
 	}
 }
-
-//
-// func queryCodeHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		codeID, err := strconv.ParseUint(mux.Vars(r)["codeID"], 10, 64)
-//		if err != nil {
-//			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-//			return
-//		}
-//
-//		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
-//		if !ok {
-//			return
-//		}
-//
-//		route := fmt.Sprintf("custom/%s/%s/%d", types.QuerierRoute, keeper.QueryGetCode, codeID)
-//		res, height, err := cliCtx.Query(route)
-//		if err != nil {
-//			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-//			return
-//		}
-//		if len(res) == 0 {
-//			rest.WriteErrorResponse(w, http.StatusNotFound, "contract not found")
-//			return
-//		}
-//
-//		cliCtx = cliCtx.WithHeight(height)
-//		rest.PostProcessResponse(w, cliCtx, json.RawMessage(res))
-//	}
-//}
-
-// type smartResponse struct {
-//	Smart []byte `json:"smart"`
-//}
 
 type argumentDecoder struct {
 	// dec is the default decoder

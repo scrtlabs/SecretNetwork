@@ -264,7 +264,7 @@ build-testnet-bootstrap:
 				 --build-arg SECRET_NODE_TYPE=BOOTSTRAP \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 -f deployment/dockerfiles/Dockerfile \
-				 -t ghcr.io/scrtlabs/secret-network-bootstrap-testnet:v$(VERSION) \
+				 -t ghcr.io/scrtlabs/testnet:${DOCKER_TAG} \
 				 --target release-image .
 
 build-testnet:

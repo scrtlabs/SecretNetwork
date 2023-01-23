@@ -1,0 +1,272 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "basics": [
+      {
+        "name": "announcement",
+        "type": "Microsoft.Common.TextBlock",
+        "visible": true,
+        "options": {
+          "text": "Due to availability of SGX-enabled machines, this offer is only valid in the following regions: East US, UK South and Canada Central"
+        }
+      },
+      {
+        "name": "vmName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Application Name",
+        "defaultValue": "",
+        "toolTip": "Name of the secret node virtual machine",
+        "constraints": {
+          "regex": "^[a-z0-9A-Z-]{1,50}$",
+          "validationMessage": "Only alphanumeric and hyphen characters are allowed, and the value must be 1-50 characters long.",
+          "required": true
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "vmParameters",
+        "label": "VM Parameters",
+        "elements": [
+          {
+            "name": "vmSection",
+            "type": "Microsoft.Common.Section",
+            "label": "Customize your VM",
+            "elements": [
+              {
+                "name": "vmSize",
+                "type": "Microsoft.Compute.SizeSelector",
+                "label": "Size",
+                "toolTip": "Minimum requirement: 1 core. Recommended: 2 cores",
+                "recommendedSizes": [
+                  "Standard_DC1s_v2",
+                  "Standard_DC2s_v2"
+                ],
+                "constraints": {
+                  "allowedSizes": ["Standard_DC1s_v2",
+                    "Standard_DC2s_v2",
+                    "Standard_DC4s_v2",
+                    "Standard_DC8_v2"]
+                },
+                "options": {
+                  "hideDiskTypeFilter": false
+                },
+                "osPlatform": "Linux",
+                "imageReference": {
+                  "offer": "UbuntuServer",
+                  "publisher": "Canonical",
+                  "sku": "18_04-lts-gen2",
+                  "version": "latest"
+                },
+                "count": 2,
+                "visible": true
+              }
+            ],
+            "visible": true
+          },
+          {
+            "name": "adminUsername",
+            "type": "Microsoft.Compute.UserNameTextBox",
+            "label": "Admin Username",
+            "defaultValue": "",
+            "toolTip": "Administrator username",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-z0-9A-Z]{1,30}$",
+              "validationMessage": "Only alphanumeric characters are allowed, and the value must be 1-30 characters long."
+            },
+            "osPlatform": "Linux",
+            "visible": true
+          },
+          {
+            "name": "credentials",
+            "type": "Microsoft.Compute.CredentialsCombo",
+            "label": {
+              "authenticationType": "Authentication type",
+              "sshPublicKey": "SSH public key",
+              "password": "",
+              "confirmPassword": ""
+            },
+            "toolTip": {
+              "authenticationType": "sshPublicKey",
+              "sshPublicKey": ""
+            },
+            "constraints": {
+              "required": true,
+              "customPasswordRegex": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{12,}$",
+              "customValidationMessage": "The password must be alphanumeric, contain at least 12 characters, and have at least 1 letter and 1 number."
+            },
+            "options": {
+              "hideConfirmation": false,
+              "hidePassword": true
+            },
+            "osPlatform": "Linux",
+            "visible": true
+          }
+        ],
+        "subLabel": {
+          "preValidation": "",
+          "postValidation": ""
+        },
+        "bladeTitle": ""
+      },
+      {
+        "name": "networking",
+        "label": "Networking",
+        "elements": [
+          {
+            "name": "sectionNetworking1",
+            "type": "Microsoft.Common.Section",
+            "label": "Public IP Address",
+            "elements": [
+              {
+                "name": "publicIp",
+                "type": "Microsoft.Network.PublicIpAddressCombo",
+                "label": {
+                  "publicIpAddress": "Public IP address",
+                  "domainNameLabel": "Domain name label"
+                },
+                "toolTip": {
+                  "publicIpAddress": "",
+                  "domainNameLabel": ""
+                },
+                "defaultValue": {
+                  "publicIpAddressName": "ip01",
+                  "domainNameLabel": "mydomain"
+                },
+                "constraints": {
+                  "required": {
+                    "domainNameLabel": true
+                  }
+                },
+                "options": {
+                  "hideNone": true,
+                  "hideDomainNameLabel": false,
+                  "hideExisting": false
+                },
+                "visible": true
+              }
+            ],
+            "visible": true
+          }
+        ],
+        "subLabel": {
+          "preValidation": "",
+          "postValidation": ""
+        },
+        "bladeTitle": ""
+      },
+      {
+        "name": "nodeParameters",
+        "label": "Secret Node Parameters",
+        "elements": [
+          {
+            "name": "registrationService",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Network",
+            "defaultValue": "Testnet",
+            "toolTip": "Select whether this node is a testnet or mainnet node",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Testnet",
+                  "value": "register.testnet.enigma.co:16667"
+                },
+                {
+                  "label": "Mainnet",
+                  "value": "register.mainnet.enigma.co:26667"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "chainId",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Chain Id",
+            "toolTip": "Chain ID of the network. Check network documentation if unsure",
+            "defaultValue": "",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-z0-9A-Z-]{1,30}$",
+              "validationMessage": "Only alphanumeric and hyphen characters are allowed, and the value must be 1-30 characters long."
+            }
+          },
+          {
+            "name": "moniker",
+            "type": "Microsoft.Common.TextBox",
+            "toolTip": "Name of the node on the network",
+            "label": "Moniker",
+            "defaultValue": "",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-z0-9A-Z-]{1,30}$",
+              "validationMessage": "Only alphanumeric and hyphen characters are allowed, and the value must be 1-30 characters long."
+            }
+          },
+          {
+            "name": "persistentPeers",
+            "type": "Microsoft.Common.TextBox",
+            "toolTip": "Comma-separated list of peers that will be used to connect to the network",
+            "label": "Persistent Peers",
+            "defaultValue": "",
+            "constraints": {
+              "required": true,
+              "regex": "^([a-f0-9]{40}@[a-z0-9A-Z-:.]{1,200}:[0-9]{2,5},?){1,10}$",
+              "validationMessage": "Requires a comma-separated list of peers in the form <tendermint-id>@<ip-address>:<port>"
+            }
+          },
+          {
+            "name": "rpcAddress",
+            "type": "Microsoft.Common.TextBox",
+            "label": "RPC address",
+            "toolTip": "Address of a secret-network node that exposes RPC services. This is used in node registration and for genesis file extraction",
+            "defaultValue": "",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-z0-9A-Z-:.]{1,200}$",
+              "validationMessage": "Requires a valid address & port in the form <address>:<port>"
+            }
+          }
+          ],
+        "subLabel": {
+          "preValidation": "",
+          "postValidation": ""
+        },
+        "bladeTitle": ""
+      },
+      {
+        "name": "tags",
+        "label": "Tags",
+        "elements": [
+          {
+            "name": "tagsByResource",
+            "type": "Microsoft.Common.TagsByResource",
+            "toolTip": "Resource tags",
+            "resources": [
+              "Microsoft.Storage/storageAccounts",
+              "Microsoft.Compute/virtualMachines"
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "registrationService": "[steps('nodeParameters').registrationService]",
+      "chainId": "[steps('nodeParameters').chainId]",
+      "moniker": "[steps('nodeParameters').moniker]",
+      "persistentPeers": "[steps('nodeParameters').persistentPeers]",
+      "rpcUrl": "[steps('nodeParameters').rpcAddress]",
+      "location": "[location()]",
+      "vmSize": "[steps('vmParameters').vmSection.vmSize]",
+      "adminUsername": "[steps('vmParameters').adminUsername]",
+      "authenticationType": "[steps('vmParameters').credentials.authenticationType]",
+      "adminPasswordOrKey": "[steps('vmParameters').credentials.sshPublicKey]",
+      "vmDnsPrefix": "[steps('networking').sectionNetworking1.publicIp.domainNameLabel]",
+      "applicationResourceName": "[basics('vmName')]"
+    }
+  }
+}

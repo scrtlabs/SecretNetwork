@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	QueryEncryptedSeed     = "seed"
-	QueryMasterCertificate = "master-cert"
+	QueryEncryptedSeed = "seed"
+	QueryMasterKey     = "master-key"
 )
 
 // controls error output on querier - set true when testing/debugging
@@ -37,7 +37,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 				return nil, err
 			}
 			return bz, nil
-		case QueryMasterCertificate:
+		case QueryMasterKey:
 			rsp, err = queryMasterKey(ctx, keeper)
 			if err != nil {
 				return nil, err

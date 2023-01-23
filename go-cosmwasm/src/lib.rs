@@ -130,14 +130,14 @@ pub extern "C" fn init_bootstrap(
 
 #[no_mangle]
 pub extern "C" fn init_node(
-    master_cert: Buffer,
+    master_key: Buffer,
     encrypted_seed: Buffer,
     api_key: Buffer,
     err: Option<&mut Buffer>,
 ) -> bool {
-    let pk_slice = match unsafe { master_cert.read() } {
+    let pk_slice = match unsafe { master_key.read() } {
         None => {
-            set_error(Error::empty_arg("master_cert"), err);
+            set_error(Error::empty_arg("master_key"), err);
             return false;
         }
         Some(r) => r,
@@ -158,7 +158,7 @@ pub extern "C" fn init_node(
     };
 
     match untrusted_init_node(pk_slice, encrypted_seed_slice, api_key_slice) {
-        Ok(_) => {
+        Ok(()) => {
             clear_error();
             true
         }

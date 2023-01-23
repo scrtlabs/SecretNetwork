@@ -47,7 +47,7 @@ echo "SEED: $SEED"
 
 secretd q register secret-network-params 2> /dev/null
 
-secretd configure-secret node-master-cert.der "$SEED"
+secretd configure-secret node-master-key.txt "$SEED"
 
 cp /tmp/.secretd/config/genesis.json /root/.secretd/config/genesis.json
 
