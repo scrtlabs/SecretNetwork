@@ -17,10 +17,10 @@ maintenance = { status = "actively-developed" }
 [features]
 default = ["default-enclave", "staking"]
 # multiple backends may be activated here (available through eg. backends::cranelift::*)
-cranelift = [] # ["wasmer-clif-backend"]
+cranelift = []  # ["wasmer-clif-backend"]
 singlepass = [] # ["wasmer-singlepass-backend"]
 # default selects which *one* is re-exported in backends/mod.rs (available through eg backends::*)
-default-cranelift = [] # ["wasmer-clif-backend"]
+default-cranelift = []  # ["wasmer-clif-backend"]
 default-singlepass = [] # ["wasmer-singlepass-backend"]
 default-enclave = []
 # enable this for better error reporting
@@ -51,7 +51,7 @@ serde_json = "1.0"
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = [
     "derive",
-    "alloc"
+    "alloc",
 ] }
 snafu = { version = "0.6.3" }
 sha2 = "0.9.1"
@@ -62,10 +62,10 @@ parity-wasm = "0.41"
 # requirements specific to Secret Network
 lazy_static = "1.4"
 enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
-    "build_headers"
+    "build_headers",
 ] }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
-sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
+sgx_types = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_urts = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
 log = "0.4.8"
 base64 = "0.12.0"
 parking_lot = "0.11"
