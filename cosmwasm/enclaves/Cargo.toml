@@ -15,6 +15,37 @@ rpath = false
 
 [patch.crates-io]
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [
-  "mesalock_sgx"
+  "mesalock_sgx",
 ] }
-zeroize = { rev = "b8488228e3fdacbfdb3ea8a6117919871637d111", git = "https://github.com/enigmampc/zeroize" }
+# zeroize = { rev = "b8488228e3fdacbfdb3ea8a6117919871637d111", git = "https://github.com/enigmampc/zeroize" }
+
+[patch.'https://github.com/apache/teaclave-sgx-sdk.git']
+sgx_align_struct_attribute = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_alloc = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_backtrace = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_backtrace_sys = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_build_helper = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_cov = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_crypto_helper = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_demangle = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_libc = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_no_tstd = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_rand = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_rand_derive = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_serialize = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_serialize_derive = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_serialize_derive_internals = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tcrypto = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tcrypto_helper = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tdh = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tkey_exchange = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tprotected_fs = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_trts = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tse = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tseal = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tstd = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_tunittest = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_types = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_ucrypto = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_unwind = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
+sgx_urts = { rev = "5bf3100b741851af240a50673e49f89f243e122e", git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk" }
