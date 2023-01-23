@@ -7166,9 +7166,104 @@ paths:
                     type: string
                   secret_foundation_address:
                     type: string
+                  minimum_restake_threshold:
+                    type: string
+                  restake_period:
+                    type: string
             description: >-
               QueryParamsResponse is the response type for the Query/Params RPC
               method.
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      tags:
+        - gRPC Gateway API
+  /cosmos/distribution/v1beta1/restake_entries:
+    get:
+      summary: RestakeThreshold queries the community pool coins.
+      operationId: RestakingEntries
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              validators:
+                type: array
+                items:
+                  type: string
+                title: >-
+                  threshold = minimum amount in uscrt that you need to have
+                  delegated to enable restaking
+            description: >-
+              QueryRestakeThresholdResponse is the request type for the
+              Query/Params RPC method.
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+        - name: delegator
+          in: query
+          required: false
+          type: string
+      tags:
+        - gRPC Gateway API
+  /cosmos/distribution/v1beta1/restake_threshold:
+    get:
+      summary: RestakeThreshold queries the community pool coins.
+      operationId: RestakeThreshold
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              threshold:
+                type: string
+                title: >-
+                  threshold = minimum amount in uscrt that you need to have
+                  delegated to enable restaking
+            description: >-
+              QueryRestakeThresholdResponse is the request type for the
+              Query/Params RPC method.
         default:
           description: An unexpected error response.
           schema:
@@ -50001,6 +50096,10 @@ definitions:
         type: string
       secret_foundation_address:
         type: string
+      minimum_restake_threshold:
+        type: string
+      restake_period:
+        type: string
     description: Params defines the set of params for the distribution module.
   cosmos.distribution.v1beta1.QueryCommunityPoolResponse:
     type: object
@@ -50146,7 +50245,35 @@ definitions:
             type: string
           secret_foundation_address:
             type: string
+          minimum_restake_threshold:
+            type: string
+          restake_period:
+            type: string
     description: QueryParamsResponse is the response type for the Query/Params RPC method.
+  cosmos.distribution.v1beta1.QueryRestakeEntriesResponse:
+    type: object
+    properties:
+      validators:
+        type: array
+        items:
+          type: string
+        title: >-
+          threshold = minimum amount in uscrt that you need to have delegated to
+          enable restaking
+    description: >-
+      QueryRestakeThresholdResponse is the request type for the Query/Params RPC
+      method.
+  cosmos.distribution.v1beta1.QueryRestakeThresholdResponse:
+    type: object
+    properties:
+      threshold:
+        type: string
+        title: >-
+          threshold = minimum amount in uscrt that you need to have delegated to
+          enable restaking
+    description: >-
+      QueryRestakeThresholdResponse is the request type for the Query/Params RPC
+      method.
   cosmos.distribution.v1beta1.QueryValidatorCommissionResponse:
     type: object
     properties:
