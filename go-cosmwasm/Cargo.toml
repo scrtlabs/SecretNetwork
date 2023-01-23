@@ -36,9 +36,11 @@ debug-print = ["cosmwasm-sgx-vm/debug-print"]
 query-node = ["cosmwasm-sgx-vm/query-node"]
 
 [dependencies]
-cosmwasm-std = { path = "../cosmwasm/packages/std", package = "secret-cosmwasm-std", features = ["iterator"] }
+cosmwasm-std = { path = "../cosmwasm/packages/std", package = "secret-cosmwasm-std", features = [
+    "iterator",
+] }
 cosmwasm-sgx-vm = { path = "../cosmwasm/packages/sgx-vm", features = [
-    "iterator"
+    "iterator",
 ] }
 errno = "0.2"
 snafu = "0.6.3"
@@ -53,7 +55,7 @@ tempfile = "3.1.0"
 
 [build-dependencies]
 cbindgen = { version = "0.14" }
-sgx_edl = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269" }
+sgx_edl = { path = "../third_party/vendor/sgx_edl" }
 
 [profile.release]
 opt-level = 3

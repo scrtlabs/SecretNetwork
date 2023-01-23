@@ -3,7 +3,7 @@ name = "eng_edl"
 version = "0.0.0"
 authors = ["The Teaclave Authors"]
 build = "build.rs"
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "eng_edl"
