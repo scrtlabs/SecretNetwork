@@ -50250,24 +50250,24 @@ definitions:
           restake_period:
             type: string
     description: QueryParamsResponse is the response type for the Query/Params RPC method.
-  cosmos.distribution.v1beta1.QueryRestakeEntriesResponse:
+  cosmos.distribution.v1beta1.QueryRestakeThresholdResponse:
     type: object
     properties:
-      validators:
-        type: array
-        items:
-          type: string
+      threshold:
+        type: string
         title: >-
           threshold = minimum amount in uscrt that you need to have delegated to
           enable restaking
     description: >-
       QueryRestakeThresholdResponse is the request type for the Query/Params RPC
       method.
-  cosmos.distribution.v1beta1.QueryRestakeThresholdResponse:
+  cosmos.distribution.v1beta1.QueryRestakingEntriesResponse:
     type: object
     properties:
-      threshold:
-        type: string
+      validators:
+        type: array
+        items:
+          type: string
         title: >-
           threshold = minimum amount in uscrt that you need to have delegated to
           enable restaking
