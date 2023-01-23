@@ -1,4 +1,5 @@
-FROM baiduxlab/sgx-rust:2004-1.1.5
+ARG DB_BASE_IMAGE=enigmampc/sgx-rust:2004-2.18
+FROM $DB_BASE_IMAGE
 
 ### Install rocksdb
 

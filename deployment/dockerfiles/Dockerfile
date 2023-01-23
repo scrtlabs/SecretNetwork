@@ -7,9 +7,8 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG SCRT_BASE_IMAGE_SECRETD=enigmampc/rocksdb:v6.24.2-1.1.5
-ARG TEST=enigmampc/rocksdb:v6.24.2
-ARG SCRT_BASE_IMAGE_ENCLAVE=enigmampc/rocksdb:v6.24.2-1.1.5
+ARG SCRT_BASE_IMAGE_SECRETD=ghcr.io/scrtlabs/sgx-base:20.04-2.18-6.24.2
+ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-base:20.04-2.18-6.24.2
 ARG SCRT_RELEASE_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
@@ -61,7 +60,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment &
 ENTRYPOINT ["/bin/bash"]
 
 # ***************** COMPILE SECRETD ************** #
-FROM $TEST AS compile-secretd
+FROM $SCRT_BASE_IMAGE_SECRETD AS compile-secretd
 
 ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
