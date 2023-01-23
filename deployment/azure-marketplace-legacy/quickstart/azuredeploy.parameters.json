@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmDnsPrefix": {
+      "value": "GEN-UNIQUE-11"
+    },
+    "adminUsername": {
+      "value": "GEN-UNIQUE"
+    },
+    "adminPasswordOrKey": {
+      "value": "GEN-SSH-PUB-KEY"
+    },
+    "chainId": {
+      "value": "secret-testnet-1"
+    },
+    "moniker": {
+      "value": "AzureSecretNodeDefault"
+    },
+    "persistentPeers": {
+      "value": "201cff36d13c6352acfc4a373b60e83211cd3102@51.132.225.152:26657"
+    }
+  }
+}

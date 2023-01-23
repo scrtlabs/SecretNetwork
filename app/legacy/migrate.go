@@ -28,6 +28,7 @@ import (
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	legacy120 "github.com/scrtlabs/SecretNetwork/app/legacy/v120"
+	legacy170 "github.com/scrtlabs/SecretNetwork/app/legacy/v170"
 )
 
 const (
@@ -76,7 +77,10 @@ $ secretd migrate /path/to/genesis.json --chain-id=secret-4 --genesis-time=2019-
 			}
 
 			// Migrate Terra specific state
-			newGenState := legacy120.Migrate(initialState, clientCtx)
+			GenState120 := legacy120.Migrate(initialState, clientCtx)
+
+			// Migrate 120 state to 170 state
+			newGenState := legacy170.Migrate(GenState120, clientCtx)
 
 			var bankGenesis banktypes.GenesisState
 

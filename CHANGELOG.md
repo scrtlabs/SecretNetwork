@@ -1,5 +1,14 @@
 # CHANGELOG
 
+# Unreleased
+
+- Added expedited gov proposals
+  - Initial params (can be amended with a param change proposal):
+    - Minimum deposit: 750 SCRT
+    - Voting time: 24 hours
+    - Voting treshhold: 2/3 yes to pass
+  - If an expedited proposal fails to meet the threshold within the scope of shorter voting duration, the expedited proposal is then converted to a regular proposal and restarts voting under regular voting conditions.
+
 # 1.6.0
 
 - Fixed issue causing registrations to fail
@@ -13,20 +22,21 @@
 - Bumped to tendermint 0.34.24
 - Bumped to cosmos-sdk 0.45.11
 - Changed base gas prices:
-  * Default instruction cost 1 -> 2
-  * Div instruction cost 16 -> 2
-  * Mul instruction cost 4 -> 2
-  * Mem instruction cost 2 -> 2
-  * Contract Entry cost 100,000 -> 20,000
-  * Read from storage base cost 1,000 -> 10
-  * Write to storage base cost 2,000 -> 20
 
- - SecretJS 1.5 has been released, and uses GRPC-Gateway endpoints. Check it out: https://www.npmjs.com/package/secretjs or https://github.com/scrtlabs/secret.js
- - Add check-hw tool that returns patch-level and compatibility information for hardware
+  - Default instruction cost 1 -> 2
+  - Div instruction cost 16 -> 2
+  - Mul instruction cost 4 -> 2
+  - Mem instruction cost 2 -> 2
+  - Contract Entry cost 100,000 -> 20,000
+  - Read from storage base cost 1,000 -> 10
+  - Write to storage base cost 2,000 -> 20
+
+- SecretJS 1.5 has been released, and uses GRPC-Gateway endpoints. Check it out: https://www.npmjs.com/package/secretjs or https://github.com/scrtlabs/secret.js
+- Add check-hw tool that returns patch-level and compatibility information for hardware
 
 # 1.5.1
 
-29/11/2022 - Startup fix due to TCB recovery - startup validation on 1.5.1 does not account for SW_HARDENING_NEEDED including INTEL-SA-00615 in it's response. Registering using this binary will not work, however restarting your node can be done using the _startup_bypass packages.
+29/11/2022 - Startup fix due to TCB recovery - startup validation on 1.5.1 does not account for SW_HARDENING_NEEDED including INTEL-SA-00615 in it's response. Registering using this binary will not work, however restarting your node can be done using the \_startup_bypass packages.
 
 Fix for GRPC-gateway concurrency. This will greatly improve performance on nodes serving queries to GRPC-gateway requests (REST requests going to v1beta1/blah/blah)
 

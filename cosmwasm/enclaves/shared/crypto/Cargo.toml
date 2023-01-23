@@ -35,3 +35,17 @@ x25519-dalek = { version = "=1.2.0", default-features = false, features = [
   "u64_backend"
 ] }
 cosmos_proto = { path = "../cosmos-proto" }
+
+[dependencies.webpki]
+git = "https://github.com/mesalock-linux/webpki"
+branch = "mesalock_sgx"
+
+[dependencies.webpki-roots]
+git = "https://github.com/mesalock-linux/webpki-roots"
+rev = "6ff3be547ac13ccd46ae55605ad6506ce30688ef"
+
+[dependencies.rustls]
+git = "https://github.com/mesalock-linux/rustls"
+rev = "95b5e79dc24b02f3ce424437eb9698509d0baf58"
+default-features = false
+features = ["dangerous_configuration", "mesalock_sgx"]

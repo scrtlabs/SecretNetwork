@@ -52,10 +52,21 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
+COPY rust-toolchain rust-toolchain
+RUN rustup component add rust-src
+RUN --mount=type=cache,target=/root/.cargo/registry cargo install xargo --version 0.3.25
+
+# Add submodules
+COPY third_party third_party
+
+# Add source files
+COPY go-cosmwasm go-cosmwasm/
+COPY cosmwasm cosmwasm/
+
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
 RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
-    && MITIGATION_CVE_2020_0551={MITIGATION_CVE_2020_0551} VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
+    && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
 
 ENTRYPOINT ["/bin/bash"]
 
@@ -270,18 +281,16 @@ FROM prepare-compile-enclave as compile-check-hw-tool
 ARG BUILD_VERSION="v0.0.0"
 ARG FEATURES
 ARG FEATURES_U
-ARG MITIGATION_CVE_2020_0551=LOAD
 
 ENV VERSION=${BUILD_VERSION}
 ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
-ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
 # Ignore $FEATURES because it should never be `production`
 RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
-    && MITIGATION_CVE_2020_0551={MITIGATION_CVE_2020_0551} VERSION=${VERSION} FEATURES="" FEATURES_U=${FEATURES_U} SGX_MODE=HW make build-rust
+    && VERSION=${VERSION} FEATURES="" FEATURES_U=${FEATURES_U} SGX_MODE=HW make build-rust
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
