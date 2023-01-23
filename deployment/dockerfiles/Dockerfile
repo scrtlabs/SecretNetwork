@@ -53,6 +53,17 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
+COPY rust-toolchain rust-toolchain
+RUN rustup component add rust-src
+RUN --mount=type=cache,target=/root/.cargo/registry cargo install xargo --version 0.3.25
+
+# Add submodules
+COPY third_party third_party
+
+# Add source files
+COPY go-cosmwasm go-cosmwasm/
+COPY cosmwasm cosmwasm/
+
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
 RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \

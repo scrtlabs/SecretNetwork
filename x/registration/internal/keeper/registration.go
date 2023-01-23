@@ -7,42 +7,26 @@ import (
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
-// func (k Keeper) MasterCertPrefix(ctx sdk.Context) *types.PublicKey {
-//	store := ctx.KVStore(k.storeKey)
-//	var pkIO types.PublicKey
-//	certBz := store.Get(types.MasterCertPrefix(types.MasterPublicKeyId))
-//	if certBz == nil {
-//		return nil
-//	}
-//	k.cdc.MustUnmarshalBinaryBare(certBz, &pkIO)
-//	return &pkIO
-//}
-//
-// func (k Keeper) setMasterPublicKey(ctx sdk.Context, publicKey types.PublicKey) {
-//	store := ctx.KVStore(k.storeKey)
-//
-//	store.Set(types.MasterCertPrefix(types.MasterPublicKeyId), k.cdc.MustMarshalBinaryBare(publicKey))
-//}
-
-func (k Keeper) GetMasterCertificate(ctx sdk.Context, certType string) *types.MasterCertificate {
+func (k Keeper) GetMasterKey(ctx sdk.Context, keyType string) *types.MasterKey {
 	store := ctx.KVStore(k.storeKey)
-	var cert types.MasterCertificate
-	certBz := store.Get(types.MasterCertPrefix(certType))
+	var key types.MasterKey
+	certBz := store.Get(types.MasterKeyPrefix(keyType))
 	if certBz == nil {
 		return nil
 	}
-	k.cdc.MustUnmarshal(certBz, &cert)
-	return &cert
+	k.cdc.MustUnmarshal(certBz, &key)
+
+	return &key
 }
 
-func (k Keeper) setMasterCertificate(ctx sdk.Context, cert types.MasterCertificate, certType string) {
+func (k Keeper) SetMasterKey(ctx sdk.Context, key types.MasterKey, keyType string) {
 	store := ctx.KVStore(k.storeKey)
 
-	store.Set(types.MasterCertPrefix(certType), k.cdc.MustMarshal(&cert))
+	store.Set(types.MasterKeyPrefix(keyType), k.cdc.MustMarshal(&key))
 }
 
-func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, certType string) bool {
-	regInfo := k.GetMasterCertificate(ctx, certType)
+func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, keyType string) bool {
+	regInfo := k.GetMasterKey(ctx, keyType)
 	return regInfo != nil
 }
 

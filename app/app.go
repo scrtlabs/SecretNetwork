@@ -37,7 +37,6 @@ import (
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
-
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
 	"github.com/cosmos/cosmos-sdk/version"

@@ -7,11 +7,17 @@ mod cert;
 mod hex;
 mod offchain;
 mod onchain;
+mod persistency;
 mod report;
 mod seed_exchange;
 
 #[cfg(feature = "SGX_MODE_HW")]
 mod ocalls;
+
+#[cfg(feature = "SGX_MODE_HW")]
+pub mod print_report;
+
+pub mod seed_service;
 
 #[cfg(feature = "test")]
 pub mod tests {
