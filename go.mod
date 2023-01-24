@@ -5,11 +5,11 @@ go 1.19
 replace (
 	// dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20230123163150-1e11d183162f
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20230124185329-13f68314762d
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.34.23-secret
+	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.34.25-0.20230124183214-ca364e9ab984
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
