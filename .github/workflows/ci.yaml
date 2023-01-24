@@ -103,7 +103,10 @@ jobs:
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/static-too-high-initial-memory.wasm
 
   Go-Tests:
-    runs-on: ubuntu-20.04
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
     needs: [Build-Contracts, Build-LocalSecret]
     steps:
       - uses: actions/checkout@v3
@@ -116,8 +119,8 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.18.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.18.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Download LocalSecret
@@ -188,7 +191,7 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
+          SDK_BIN=sgx_linux_x64_sdk_2.18.101.1.bin
           wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"

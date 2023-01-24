@@ -7,9 +7,9 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG SCRT_BASE_IMAGE_SECRETD=ghcr.io/scrtlabs/sgx-base:20.04-2.18-6.24.2
-ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-base:20.04-2.18-6.24.2
-ARG SCRT_RELEASE_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
+ARG SCRT_BASE_IMAGE_SECRETD=ghcr.io/scrtlabs/sgx-base:22.04-2.18-6.24.2
+ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-base:22.04-2.18-6.24.2
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:22.04-2.18
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
@@ -17,7 +17,7 @@ FROM $SCRT_BASE_IMAGE_ENCLAVE AS prepare-compile-enclave
 
 RUN apt-get update &&  \
     apt-get install -y --no-install-recommends \
-    clang-10 && \
+    clang-14 && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/root/.cargo/bin:$PATH"

@@ -3,9 +3,9 @@ FROM ubuntu:focal as runtime_base
 LABEL maintainer=enigmampc
 
 # SGX version parameters
-ARG SDK_VERSION=2.17.1
-ARG SGX_VERSION=2.17.101.1
-ARG PSW_VERSION=2.17.100.3-focal1
+ARG SDK_VERSION=2.18.1
+ARG SGX_VERSION=2.18.101.1
+ARG PSW_VERSION=2.18.101.1-focal1
 ARG OS_REVESION=focal1
 
 #RUN apt-get update && \
