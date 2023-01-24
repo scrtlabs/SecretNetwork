@@ -693,10 +693,10 @@ github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb
 github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da/go.mod h1:gi+0XIa01GRL2eRQVjQkKGqKF3SF9vZR/HnPullcV2E=
 github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71efZx0=
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
-github.com/scrtlabs/cosmos-sdk v0.45.11-0.20230124170846-10ebe29b01e8 h1:xsVyft9Ji3PgDjx/fiF44UClBHrQaAs7YZbANu6Af+w=
-github.com/scrtlabs/cosmos-sdk v0.45.11-0.20230124170846-10ebe29b01e8/go.mod h1:PlQxpJzXmjeYlFaeyYYRkdTKhPCjD1bcPwp8UjWn/Ng=
-github.com/scrtlabs/tendermint v0.34.25-0.20230124163414-88562cd0420f h1:OHcWvD+ePuey89hykSIqqqlMjN4T469Cw6tJrc4S7CA=
-github.com/scrtlabs/tendermint v0.34.25-0.20230124163414-88562cd0420f/go.mod h1:rXVrl4OYzmIa1I91av3iLv2HS0fGSiucyW9J4aMTpKI=
+github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221129100248-e5f7eddfd405 h1:z8jTo0Kk+bwxrjixvAuIU9gFU+q4pYZIFNK6g4653e4=
+github.com/scrtlabs/cosmos-sdk v0.45.11-0.20221129100248-e5f7eddfd405/go.mod h1:2Fyai0nHYE7xDjCFqNP9U6HC7xfxOVB+HSe6R6fK01s=
+github.com/scrtlabs/tendermint v0.34.23-secret h1:fCcUTs+HfE21wPz/LkwJNrUAWwTZ33rMnPg3lyJvOw8=
+github.com/scrtlabs/tendermint v0.34.23-secret/go.mod h1:rXVrl4OYzmIa1I91av3iLv2HS0fGSiucyW9J4aMTpKI=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/shirou/gopsutil v2.20.5+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=

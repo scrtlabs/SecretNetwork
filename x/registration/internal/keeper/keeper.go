@@ -3,10 +3,7 @@ package keeper
 import (
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"path/filepath"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -38,45 +35,45 @@ func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, 
 }
 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
-	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
+	//seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
+	//
+	//apiKey, err := types.GetApiKey()
+	//if err != nil {
+	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	//}
+	//
+	//if !fileExists(seedPath) {
+	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
+	//}
 
-	apiKey, err := types.GetApiKey()
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
+	//// get PK from CLI
+	//// get encrypted master key
+	//byteValue, err := getFile(seedPath)
+	//if err != nil {
+	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	//}
 
-	if !fileExists(seedPath) {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", seedPath)))
-	}
+	//var seedCfg types.SeedConfig
+	//
+	//err = json.Unmarshal(byteValue, &seedCfg)
+	//if err != nil {
+	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	//}
 
-	// get PK from CLI
-	// get encrypted master key
-	byteValue, err := getFile(seedPath)
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
+	//err = validateSeedParams(seedCfg)
+	//if err != nil {
+	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	//}
 
-	var seedCfg types.SeedConfig
-
-	err = json.Unmarshal(byteValue, &seedCfg)
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
-	err = validateSeedParams(seedCfg)
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
-	cert, enc, err := seedCfg.Decode()
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
-
-	_, err = enclave.LoadSeed(cert, enc, apiKey)
-	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
-	}
+	//cert, enc, err := seedCfg.Decode()
+	//if err != nil {
+	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	//}
+	//
+	//_, err = enclave.LoadSeed(cert, enc, apiKey)
+	//if err != nil {
+	//	panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	//}
 }
 
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
