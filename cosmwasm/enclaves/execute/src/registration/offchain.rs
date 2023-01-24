@@ -140,17 +140,17 @@ pub unsafe extern "C" fn ecall_init_node(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
-    let _api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
-
-    let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
-
-    if (encrypted_seed_len as usize) != ENCRYPTED_SEED_SIZE {
-        warn!(
-            "Got encrypted seed with the wrong size: {:?}",
-            encrypted_seed_len
-        );
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    // let _api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+    //
+    // let cert_slice = slice::from_raw_parts(master_cert, master_cert_len as usize);
+    //
+    // if (encrypted_seed_len as usize) != ENCRYPTED_SEED_SIZE {
+    //     warn!(
+    //         "Got encrypted seed with the wrong size: {:?}",
+    //         encrypted_seed_len
+    //     );
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
 
     // validate this node is patched and updated
 
@@ -170,33 +170,33 @@ pub unsafe extern "C" fn ecall_init_node(
     //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
     // }
 
-    let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
+    // let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
+    //
+    // let mut encrypted_seed = [0u8; ENCRYPTED_SEED_SIZE];
+    // encrypted_seed.copy_from_slice(encrypted_seed_slice);
 
-    let mut encrypted_seed = [0u8; ENCRYPTED_SEED_SIZE];
-    encrypted_seed.copy_from_slice(encrypted_seed_slice);
-
-    // public keys in certificates don't have 0x04, so we'll copy it here
-    let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
-
-    // validate master certificate - basically test that we're on the correct network
-    let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
-        Err(e) => {
-            debug!("Error validating master certificate - {:?}", e);
-            error!("Error validating network parameters. Are you on the correct network? (error code 0x01)");
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-        Ok(res) => res,
-    };
-
-    // just make sure the of the public key isn't messed up
-    if pk.len() != PUBLIC_KEY_SIZE {
-        error!(
-            "Got public key from certificate with the wrong size: {:?}",
-            pk.len()
-        );
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-    target_public_key.copy_from_slice(&pk);
+    // // public keys in certificates don't have 0x04, so we'll copy it here
+    // let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
+    //
+    // // validate master certificate - basically test that we're on the correct network
+    // let pk = match verify_ra_cert(cert_slice, Some(SigningMethod::MRSIGNER)) {
+    //     Err(e) => {
+    //         debug!("Error validating master certificate - {:?}", e);
+    //         error!("Error validating network parameters. Are you on the correct network? (error code 0x01)");
+    //         return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    //     }
+    //     Ok(res) => res,
+    // };
+    //
+    // // just make sure the of the public key isn't messed up
+    // if pk.len() != PUBLIC_KEY_SIZE {
+    //     error!(
+    //         "Got public key from certificate with the wrong size: {:?}",
+    //         pk.len()
+    //     );
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
+    // target_public_key.copy_from_slice(&pk);
 
     let mut key_manager = Keychain::new();
 
