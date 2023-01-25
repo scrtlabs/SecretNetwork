@@ -17,8 +17,8 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.18.101.1.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.18.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -201,7 +201,7 @@ jobs:
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
           SDK_BIN=sgx_linux_x64_sdk_2.18.101.1.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          wget https://download.01.org/intel-sgx/sgx-linux/2.18.1/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
