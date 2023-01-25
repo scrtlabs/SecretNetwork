@@ -48,3 +48,5 @@ x/compute/internal/keeper/testdata/v1-contract.wasm
 third_party/build
 x/compute/internal/keeper/testdata/test-contract/target
 x/compute/internal/keeper/testdata/v1-sanity-contract/target
+check-hw/target
+build
