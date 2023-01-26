@@ -2,8 +2,6 @@
 
 ENABLE_FAUCET=${1:-"true"}
 
-custom_genesis=lol
-
 custom_script_path=${POST_INIT_SCRIPT:-"/root/post_init.sh"}
 
 file=~/.secretd/config/genesis.json
