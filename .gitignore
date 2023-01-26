@@ -47,6 +47,6 @@ x/compute/internal/keeper/testdata/v1-contract.wasm
 /github.com
 third_party/build
 x/compute/internal/keeper/testdata/test-contract/target
-x/compute/internal/keeper/testdata/v1-sanity-contract/targe
+x/compute/internal/keeper/testdata/v1-sanity-contract/target
 build
 check-hw/target
