@@ -242,6 +242,7 @@ localsecret:
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \
 			--build-arg SGX_MODE=SW \
+			--load \
 			$(DOCKER_BUILD_ARGS) \
  			--build-arg SECRET_NODE_TYPE=BOOTSTRAP \
 			--build-arg CHAINID=secretdev-1 \

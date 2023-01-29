@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	icacontrollertypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/controller/types"
 	"os"
 	"path/filepath"
 
@@ -22,7 +23,7 @@ const upgradeName = "v1.7"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades:        store.StoreUpgrades{},
+	StoreUpgrades:        store.StoreUpgrades{Added: []string{icacontrollertypes.StoreKey}}, // we kind of forgot this in 1.3
 }
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
