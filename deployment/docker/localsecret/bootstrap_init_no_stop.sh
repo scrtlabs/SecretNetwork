@@ -2,6 +2,8 @@
 
 ENABLE_FAUCET=${1:-"true"}
 
+custom_script_path=${POST_INIT_SCRIPT:-"/root/post_init.sh"}
+
 file=~/.secretd/config/genesis.json
 if [ ! -e "$file" ]
 then
@@ -11,6 +13,7 @@ then
 
   chain_id=${CHAINID:-secretdev-1}
   LOG_LEVEL=${LOG_LEVEL:-INFO}
+  fast_blocks=${FAST_BLOCKS:-"false"}
 
   mkdir -p ./.sgx_secrets
   secretd config chain-id "$chain_id"
@@ -23,8 +26,8 @@ then
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
   jq '
-    .consensus_params.block.time_iota_ms = "10" | 
-    .app_state.staking.params.unbonding_time = "90s" | 
+    .consensus_params.block.time_iota_ms = "10" |
+    .app_state.staking.params.unbonding_time = "90s" |
     .app_state.gov.voting_params.voting_period = "90s" |
     .app_state.gov.voting_params.expedited_voting_period = "15s" |
     .app_state.crisis.constant_fee.denom = "uscrt" |
@@ -33,6 +36,18 @@ then
     .app_state.mint.params.mint_denom = "uscrt" |
     .app_state.staking.params.bond_denom = "uscrt"
   ' ~/.secretd/config/genesis.json > ~/.secretd/config/genesis.json.tmp && mv ~/.secretd/config/genesis.json{.tmp,}
+
+  if [ "${fast_blocks}" = "true" ]; then
+    sed -E -i '/timeout_(propose|prevote|precommit|commit)/s/[0-9]+m?s/200ms/' ~/.secretd/config/config.toml
+  fi
+
+  if [ ! -e "$custom_script_path" ]; then
+    echo "Custom script not found. Continuing..."
+  else
+    echo "Running custom post init script..."
+    bash $custom_script_path
+    echo "Done running custom script!"
+  fi
 
   a_mnemonic="grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
   b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
