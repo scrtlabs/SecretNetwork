@@ -82,9 +82,7 @@ then
   if [ "$VALIDATOR" == "true" ]
   then
     echo "Setting this node up as a validator"
-    balance=$(secretd q bank balances $(secretd keys show -a a) --output json | jq ".balances[0].amount" -r)
-    fee=5000
-    staking_amount="$((balance-fee))"uscrt
+    staking_amount=1000000uscrt
 
     echo "Staking amount: $staking_amount"
 
