@@ -35,14 +35,14 @@ func (i IBCHandler) OnChanOpenInit(
 	chanCap *capabilitytypes.Capability,
 	counterParty channeltypes.Counterparty,
 	version string,
-) error {
+) (string, error) {
 	// ensure port, version, capability
 	if err := ValidateChannelParams(channelID); err != nil {
-		return err
+		return "", err
 	}
 	contractAddr, err := ContractFromPortID(portID)
 	if err != nil {
-		return sdkerrors.Wrapf(err, "contract port id")
+		return "", sdkerrors.Wrapf(err, "contract port id")
 	}
 
 	msg := v1types.IBCChannelOpenMsg{
@@ -59,13 +59,13 @@ func (i IBCHandler) OnChanOpenInit(
 	}
 	_, err = i.keeper.OnOpenChannel(ctx, contractAddr, msg)
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Claim channel capability passed back by IBC module
 	if err := i.keeper.ClaimCapability(ctx, chanCap, host.ChannelCapabilityPath(portID, channelID)); err != nil {
-		return sdkerrors.Wrap(err, "claim capability")
+		return "", sdkerrors.Wrap(err, "claim capability")
 	}
-	return nil
+	return version, nil
 }
 
 // OnChanOpenTry implements the IBCModule interface
@@ -238,12 +238,12 @@ func (i IBCHandler) OnRecvPacket(
 ) ibcexported.Acknowledgement {
 	contractAddr, err := ContractFromPortID(packet.DestinationPort)
 	if err != nil {
-		return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrapf(err, "contract port id").Error())
+		return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrapf(err, "contract port id"))
 	}
 	msg := v1types.IBCPacketReceiveMsg{Packet: newIBCPacket(packet), Relayer: relayer.String()}
 	ack, err := i.keeper.OnRecvPacket(ctx, contractAddr, msg)
 	if err != nil {
-		return channeltypes.NewErrorAcknowledgement(err.Error())
+		return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrapf(err, "on recv packet"))
 	}
 	return ContractConfirmStateAck(ack)
 }

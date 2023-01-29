@@ -315,7 +315,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	// Create static IBC router, add ibc-tranfer module route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
 
-	icaControllerIBCModule := icacontroller.NewIBCModule(*ak.ICAControllerKeeper, icaAuthIBCModule)
+	icaControllerIBCModule := icacontroller.NewIBCMiddleware(icaAuthIBCModule, *ak.ICAControllerKeeper)
 	icaHostIBCModule := icahost.NewIBCModule(*ak.ICAHostKeeper)
 
 	ibcRouter.AddRoute(compute.ModuleName, compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper)).

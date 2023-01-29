@@ -31,7 +31,7 @@ func (k msgServer) RegisterAccount(goCtx context.Context, msg *types.MsgRegister
 		return nil, err
 	}
 
-	if err := k.RegisterInterchainAccount(ctx, acc, msg.ConnectionId); err != nil {
+	if err := k.RegisterInterchainAccount(ctx, acc, msg.ConnectionId, msg.Version); err != nil {
 		return nil, err
 	}
 
