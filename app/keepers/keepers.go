@@ -1,6 +1,10 @@
 package keepers
 
 import (
+	ibcfee "github.com/cosmos/ibc-go/v4/modules/apps/29-fee"
+	ibcpacketforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
+	ibcpacketforwardkeeper "github.com/strangelove-ventures/packet-forward-middleware/v4/router/keeper"
+	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -56,6 +60,9 @@ import (
 	icaauthkeeper "github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
+
+	ibcfeekeeper "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/keeper"
+	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 )
 
 type SecretAppKeepers struct {
@@ -79,6 +86,10 @@ type SecretAppKeepers struct {
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   *ibctransferkeeper.Keeper
 
+	IbcFeeKeeper ibcfeekeeper.Keeper
+	//IBCHooksKeeper      *ibchookskeeper.Keeper
+	IbcRouterKeeper *ibcpacketforwardkeeper.Keeper
+
 	ICAControllerKeeper *icacontrollerkeeper.Keeper
 	ICAHostKeeper       *icahostkeeper.Keeper
 	ICAAuthKeeper       *icaauthkeeper.Keeper
@@ -90,9 +101,9 @@ type SecretAppKeepers struct {
 	ScopedICAControllerKeeper capabilitykeeper.ScopedKeeper
 	ScopedICAHostKeeper       capabilitykeeper.ScopedKeeper
 	ScopedICAAuthKeeper       capabilitykeeper.ScopedKeeper
+	ScopedIBCProviderKeeper   capabilitykeeper.ScopedKeeper
 
 	ScopedComputeKeeper capabilitykeeper.ScopedKeeper
-
 	//
 
 	// keys to access the substores
@@ -235,6 +246,7 @@ func (ak *SecretAppKeepers) CreateScopedKeepers() {
 	ak.ScopedICAHostKeeper = ak.CapabilityKeeper.ScopeToModule(icahosttypes.SubModuleName)
 	ak.ScopedICAAuthKeeper = ak.CapabilityKeeper.ScopeToModule(icaauthtypes.ModuleName)
 	ak.ScopedComputeKeeper = ak.CapabilityKeeper.ScopeToModule(compute.ModuleName)
+
 	// Applications that wish to enforce statically created ScopedKeepers should call `Seal` after creating
 	// their scoped modules in `NewApp` with `ScopeToModule`
 	ak.CapabilityKeeper.Seal()
@@ -285,6 +297,36 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.ComputeKeeper = &computeKeeper
 
+	// Initialize packet forward middleware router
+	ak.IbcRouterKeeper = ibcpacketforwardkeeper.NewKeeper(
+		appCodec,
+		ak.keys[ibcpacketforwardtypes.StoreKey],
+		ak.GetSubspace(ibcpacketforwardtypes.ModuleName),
+		ak.TransferKeeper,
+		ak.IbcKeeper.ChannelKeeper,
+		ak.DistrKeeper,
+		ak.BankKeeper,
+		ak.IbcKeeper.ChannelKeeper,
+	)
+
+	//	packetForwardMiddleware := packetforward.NewIBCMiddleware(
+	//		transfer.NewIBCModule(*ak.TransferKeeper),
+	//		ak.PacketForwardKeeper,
+	//		0,
+	//		packetforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
+	//		packetforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,
+	//	)
+
+	ak.IbcFeeKeeper = ibcfeekeeper.NewKeeper(
+		appCodec, ak.keys[ibcfeetypes.StoreKey],
+		ak.GetSubspace(ibcfeetypes.ModuleName), // this isn't even used in the keeper but is required?
+		ak.IbcRouterKeeper,                     // replaced with IBC middleware
+		ak.IbcKeeper.ChannelKeeper,
+		&ak.IbcKeeper.PortKeeper,
+		ak.AccountKeeper,
+		ak.BankKeeper,
+	)
+
 	icaControllerKeeper := icacontrollerkeeper.NewKeeper(
 		appCodec, ak.keys[icacontrollertypes.StoreKey], ak.GetSubspace(icacontrollertypes.SubModuleName),
 		ak.IbcKeeper.ChannelKeeper, ak.IbcKeeper.ChannelKeeper, &ak.IbcKeeper.PortKeeper,
@@ -312,14 +354,29 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.TransferKeeper = &transferKeeper
 
+	ak.IbcRouterKeeper.SetTransferKeeper(ak.TransferKeeper)
+
+	var transferStack porttypes.IBCModule
+	transferStack = transfer.NewIBCModule(*ak.TransferKeeper)
+	transferStack = ibcfee.NewIBCMiddleware(transferStack, ak.IbcFeeKeeper)
+	transferStack = ibcpacketforward.NewIBCMiddleware(
+		transferStack,
+		ak.IbcRouterKeeper,
+		0,
+		ibcpacketforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
+		ibcpacketforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,
+	)
+
 	// Create static IBC router, add ibc-tranfer module route, then set and seal it
+	// lol Cosmos naming overloading
 	ibcRouter := porttypes.NewRouter()
 
 	icaControllerIBCModule := icacontroller.NewIBCMiddleware(icaAuthIBCModule, *ak.ICAControllerKeeper)
 	icaHostIBCModule := icahost.NewIBCModule(*ak.ICAHostKeeper)
 
-	ibcRouter.AddRoute(compute.ModuleName, compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper)).
-		AddRoute(ibctransfertypes.ModuleName, transfer.NewIBCModule(*ak.TransferKeeper)).
+	ibcRouter.
+		AddRoute(compute.ModuleName, compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper)).
+		AddRoute(ibctransfertypes.ModuleName, transferStack).
 		AddRoute(icacontrollertypes.SubModuleName, icaControllerIBCModule).
 		AddRoute(icahosttypes.SubModuleName, icaHostIBCModule).
 		AddRoute(icaauthtypes.ModuleName, icaControllerIBCModule)
@@ -349,6 +406,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		feegrant.StoreKey,
 		authzkeeper.StoreKey,
 		icahosttypes.StoreKey,
+		ibcpacketforwardtypes.StoreKey,
 	)
 
 	ak.tKeys = sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -374,6 +432,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
+	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
 
 	return paramsKeeper
 }

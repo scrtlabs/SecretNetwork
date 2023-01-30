@@ -50,6 +50,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
+	packetforwardrouter "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 )
 
 var mbasics = module.NewBasicManager(
@@ -84,6 +85,7 @@ var mbasics = module.NewBasicManager(
 		vesting.AppModuleBasic{},
 		feegrantmodule.AppModuleBasic{},
 		ica.AppModuleBasic{},
+		packetforwardrouter.AppModuleBasic{},
 	},
 		// our stuff
 		customModuleBasics()...,
