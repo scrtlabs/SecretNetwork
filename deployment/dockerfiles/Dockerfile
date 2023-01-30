@@ -64,7 +64,7 @@ FROM prepare-compile-enclave AS compile-tendermint-enclave
 
 ARG SGX_MODE=SW
 
-RUN git clone https://github.com/scrtlabs/tm-secret-enclave.git
+RUN git clone --branch explicit-1.1.5 https://github.com/scrtlabs/tm-secret-enclave.git
 
 WORKDIR tm-secret-enclave
 
