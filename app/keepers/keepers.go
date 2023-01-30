@@ -101,7 +101,6 @@ type SecretAppKeepers struct {
 	ScopedICAControllerKeeper capabilitykeeper.ScopedKeeper
 	ScopedICAHostKeeper       capabilitykeeper.ScopedKeeper
 	ScopedICAAuthKeeper       capabilitykeeper.ScopedKeeper
-	ScopedIBCProviderKeeper   capabilitykeeper.ScopedKeeper
 
 	ScopedComputeKeeper capabilitykeeper.ScopedKeeper
 	//
