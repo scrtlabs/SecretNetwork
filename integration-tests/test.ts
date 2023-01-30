@@ -57,9 +57,6 @@ const contracts = {
   },
 };
 
-// let accounts;
-// let accounts2;
-// let readonly;
 
 let v1Wasm: Uint8Array;
 let v010Wasm: Uint8Array;
@@ -133,17 +130,16 @@ beforeAll(async () => {
     };
   }
 
-  // Send 100k SCRT from account 0 to each of accounts 1-itrations
-
-  const { secretjs } = accounts[0];
+  // Send 100k SCRT from account 0 to each of the other accounts
+  const { secretjs: fundingAccount } = accounts[0];
 
   let t: Tx;
   try {
-    t = await secretjs.tx.bank.multiSend(
+    t = await fundingAccount.tx.bank.multiSend(
       {
         inputs: [
           {
-            address: secretjs.address,
+            address: fundingAccount.address,
             coins: [
               {
                 denom: "uscrt",
@@ -527,6 +523,19 @@ describe("tx broadcast multi", () => {
             fromAddress: accounts[0].address,
             toAddress: accounts[0].address,
             amount: [{ denom: "uscrt", amount: "1" }],
+          }),
+
+          new MsgExecuteContract({
+            sender: accounts[0].address,
+            contractAddress: contracts["secretdev-1"].v1.address,
+            codeHash: contracts["secretdev-1"].v1.codeHash,
+            msg: {
+              staking_msg_delegate: {
+                validator: validator,
+                amount: { amount: "1", denom: "uscrt" },
+              },
+            },
+            sentFunds: [{ amount: "1", denom: "uscrt" }],
           }),
 
           new MsgExecuteContract({
@@ -1628,6 +1637,57 @@ describe("StargateMsg", () => {
         { key: "amount", msg: 0, type: "coin_received", value: "1uscrt" },
       ]
     );
+  });
+});
+
+describe.only("Random Checks", () => {
+  test("v1 - different messages should return different random values", async () => {
+    // upload a second contract to check there's a difference
+    let tx: Tx = await instantiateContracts(accounts[0].secretjs, [
+      contracts["secretdev-1"].v1,
+    ]);
+    expect(tx.code).toBe(TxResultCode.Success);
+
+    let secondContractAddress = tx.arrayLog.find((x) => x.key === "contract_address").value;
+
+    // get the random number from each contract 10 times
+    let sampleCountPerContract = 10;
+
+    let singleMessageParams = {
+      sender: accounts[0].address,
+      contractAddress: contracts["secretdev-1"].v1.address,
+      codeHash: contracts["secretdev-1"].v1.codeHash,
+      sentFunds: [],
+      msg: {
+        get_random: {},
+      },
+    };
+
+    let messages = Array(sampleCountPerContract).fill(1).flatMap(_ => [
+        new MsgExecuteContract(singleMessageParams),
+        new MsgExecuteContract({
+          ...singleMessageParams,
+          contractAddress: secondContractAddress
+        }),
+      ]
+    );
+
+    tx = await accounts[0].secretjs.tx.broadcast(
+        messages,
+        {
+          broadcastCheckIntervalMs: 100,
+          gasLimit: 5_000_000,
+        },
+    );
+
+    if (tx.code !== TxResultCode.Success) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(TxResultCode.Success);
+
+    let randomResults = tx.arrayLog.filter((x) => x.key === "random_value").map(result => result.value);
+    let uniqueRandoms = new Set(randomResults);
+    expect(uniqueRandoms.size).toEqual(sampleCountPerContract * 2);
   });
 });
 
