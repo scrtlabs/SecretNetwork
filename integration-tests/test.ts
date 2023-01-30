@@ -1640,7 +1640,7 @@ describe("StargateMsg", () => {
   });
 });
 
-describe.only("Random Checks", () => {
+describe("Random Checks", () => {
   test("v1 - different messages should return different random values", async () => {
     // upload a second contract to check there's a difference
     let tx: Tx = await instantiateContracts(accounts[0].secretjs, [
