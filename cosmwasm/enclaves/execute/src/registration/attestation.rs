@@ -52,6 +52,7 @@ use enclave_crypto::consts::{
     GENESIS_CONSENSUS_SEED_SEALING_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
     NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
 };
+#[cfg(feature = "SGX_MODE_HW")]
 use enclave_networking::endpoints::Endpoint;
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use std::sgxfs::remove as SgxFsRemove;

@@ -39,18 +39,12 @@ fn make_client_seed_service_config() -> rustls::ClientConfig {
 }
 
 #[allow(dead_code)]
-pub fn make_client_ias_config() -> rustls::ClientConfig {
+pub fn make_ias_client_config() -> rustls::ClientConfig {
     let mut config = rustls::ClientConfig::new();
 
-    pub const SSS_CA: &[u8] = include_bytes!("certs/sss_ca.pem");
-    let mut pem_reader = BufReader::new(SSS_CA);
-
-    let mut root_store = rustls::RootCertStore::empty();
-    root_store
-        .add_pem_file(&mut pem_reader)
-        .expect("Failed to add PEM");
-
-    config.root_store = root_store;
+    config
+        .root_store
+        .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
 
     config
 }
