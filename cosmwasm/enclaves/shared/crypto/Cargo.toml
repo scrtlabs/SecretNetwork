@@ -13,12 +13,11 @@ test = []
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
-  "backtrace"
+  "backtrace",
 ] }
 sgx_types = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
-sgx_trts = { rev = "a37ffb9449ba6d5b6e4a9d586bbab864ae732269", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 enclave-ffi-types = { path = "../../ffi-types" }
 log = "0.4.8"
 derive_more = "0.99"
@@ -31,6 +30,6 @@ ripemd160 = "0.9.1"
 secp256k1 = "0.21.3"
 aes-siv = "=0.6.2"
 x25519-dalek = { version = "=1.2.0", default-features = false, features = [
-  "u64_backend"
+  "u64_backend",
 ] }
 cosmos_proto = { path = "../cosmos-proto" }
