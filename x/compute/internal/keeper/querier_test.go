@@ -311,11 +311,12 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	// manage some realistic block settings
 	var h int64 = 10
-	setBlock := func(ctx sdk.Context, height int64) sdk.Context {
+	setBlock := func(ctx sdk.Context, height int64, wasmKeeper Keeper) sdk.Context {
 		ctx = ctx.WithBlockHeight(height)
 		meter := sdk.NewGasMeter(1000000)
 		ctx = ctx.WithGasMeter(meter)
 		ctx = ctx.WithBlockGasMeter(meter)
+		StoreRandomOnNewBlock(ctx, wasmKeeper)
 		return ctx
 	}
 
@@ -323,7 +324,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	for i := range [10]int{} {
 		// 3 tx per block, so we ensure both comparisons work
 		if i%3 == 0 {
-			ctx = setBlock(ctx, h)
+			ctx = setBlock(ctx, h, keeper)
 			h++
 		}
 		creatorAcc, err := authante.GetSignerAcc(ctx, accKeeper, creator)

@@ -518,7 +518,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 	}
 
-	random := store.Get(types.GetRandomKey(ctx.BlockHeight()))
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, random)
 
@@ -614,13 +614,14 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 	store := ctx.KVStore(k.storeKey)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+
 	params := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* empty because it's unused in queries */
 		sdk.NewCoins(),   /* empty because it's unused in queries */
 		contractAddress,
 		contractKey,
-		nil,
+		[]byte{0}[:], /* empty because it's unused in queries */
 	)
 	params.QueryDepth = queryDepth
 
