@@ -525,6 +525,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "enclave-networking"
+version = "0.1.0"
+dependencies = [
+ "base64 0.13.1",
+ "httparse",
+ "log",
+ "rustls",
+ "sgx_tstd",
+ "sgx_types",
+ "webpki",
+ "webpki-roots",
+ "yasna",
+]
+
+[[package]]
 name = "enclave_contract_engine"
 version = "1.6.0"
 dependencies = [
@@ -1234,6 +1249,7 @@ dependencies = [
  "ctor",
  "derive_more",
  "enclave-ffi-types",
+ "enclave-networking",
  "enclave_contract_engine",
  "enclave_cosmos_types",
  "enclave_crypto",

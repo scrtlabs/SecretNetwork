@@ -1,131 +1,20 @@
 use log::*;
 
+use enclave_networking::http::{HttpResponse, Method};
+use enclave_networking::tls::TlsSession;
+
 use enclave_crypto::{consts::SIGNATURE_TYPE, CryptoError, KeyPair, Keychain, Seed};
 
-use sgx_types::c_int;
-
 use crate::registration::create_attestation_certificate;
+use enclave_networking::endpoints::Endpoint;
 use std::{
-    io::{BufReader, ErrorKind, Read, Write},
-    net::{SocketAddr, TcpStream},
-    os::unix::io::IntoRawFd,
+    io::{ErrorKind, Read, Write},
     str,
-    string::String,
-    sync::Arc,
 };
 
-fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
-    use std::net::ToSocketAddrs;
-
-    let mut addr: Option<SocketAddr> = None;
-
-    const SERVICE_PORT: u16 = 4487;
-    let addrs = (host_name, SERVICE_PORT).to_socket_addrs().map_err(|err| {
-        trace!("Error while trying to convert to socket addrs {:?}", err);
-        CryptoError::SocketCreationError
-    })?;
-
-    for a in addrs {
-        if let SocketAddr::V4(_) = a {
-            addr = Some(a);
-        }
-    }
-
-    if addr.is_none() {
-        trace!("Failed to resolve the IPv4 address of the service");
-        return Err(CryptoError::IPv4LookupError);
-    }
-
-    let sock = TcpStream::connect(&addr.unwrap()).map_err(|err| {
-        trace!(
-            "Error while trying to connect to service with addr: {:?}, err: {:?}",
-            addr,
-            err
-        );
-        CryptoError::SocketCreationError
-    })?;
-
-    Ok(sock.into_raw_fd())
-}
-
-fn make_client_config() -> rustls::ClientConfig {
-    let mut config = rustls::ClientConfig::new();
-
-    pub const SSS_CA: &[u8] = include_bytes!("sss_ca.pem");
-    let mut pem_reader = BufReader::new(SSS_CA);
-
-    let mut root_store = rustls::RootCertStore::empty();
-    root_store
-        .add_pem_file(&mut pem_reader)
-        .expect("Failed to add PEM");
-
-    config.root_store = root_store;
-
-    config
-}
-
-fn get_body_from_response(resp: &[u8]) -> Result<String, CryptoError> {
-    trace!("get_body_from_response");
-    let mut headers = [httparse::EMPTY_HEADER; 16];
-    let mut respp = httparse::Response::new(&mut headers);
-    let result = respp.parse(resp);
-    trace!("parse result {:?}", result);
-
-    match respp.code {
-        Some(200) => info!("Response okay"),
-        Some(401) => {
-            error!("Unauthorized Failed to authenticate or authorize request.");
-            return Err(CryptoError::BadResponse);
-        }
-        Some(404) => {
-            error!("Not Found");
-            return Err(CryptoError::BadResponse);
-        }
-        Some(500) => {
-            error!("Internal error occurred in SSS server");
-            return Err(CryptoError::BadResponse);
-        }
-        Some(503) => {
-            error!(
-                "Service is currently not able to process the request (due to
-            a temporary overloading or maintenance). This is a
-            temporary state – the same request can be repeated after
-            some time. "
-            );
-            return Err(CryptoError::BadResponse);
-        }
-        _ => {
-            error!(
-                "response from SSS server :{} - unknown error or response code",
-                respp.code.unwrap()
-            );
-            return Err(CryptoError::BadResponse);
-        }
-    }
-
-    let mut len_num: u32 = 0;
-    for i in 0..respp.headers.len() {
-        let h = respp.headers[i];
-        //println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
-        if h.name.to_lowercase().as_str() == "content-length" {
-            let len_str = String::from_utf8(h.value.to_vec()).unwrap();
-            len_num = len_str.parse::<u32>().unwrap();
-            trace!("content length = {}", len_num);
-        }
-    }
-
-    let mut body = "".to_string();
-    if len_num != 0 {
-        let header_len = result.unwrap().unwrap();
-        let resp_body = &resp[header_len..];
-        body = str::from_utf8(resp_body).unwrap().to_string();
-    }
-
-    Ok(body)
-}
+const SEED_SERVICE_PORT: u16 = 4478;
 
 fn get_challenge_from_service(
-    fd: c_int,
     host_name: &str,
     api_key: &[u8],
     kp: KeyPair,
@@ -139,30 +28,34 @@ fn get_challenge_from_service(
         Ok(res) => res,
     };
 
-    let serialized_cert = base64::encode(cert);
+    let serialized_cert = base64::encode(serde_json::to_string(&cert).unwrap());
 
-    let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-                      CHALLENGE_ENDPOINT,
-                      host_name,
-                      serialized_cert.len(),
-                      serialized_cert);
+    let req = enclave_networking::http::HttpRequest::new(
+        Method::POST,
+        host_name,
+        CHALLENGE_ENDPOINT,
+        None,
+        None,
+        Some(serialized_cert),
+    )
+    .to_string();
 
     trace!("{}", req);
-    let config = make_client_config();
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(host_name).unwrap();
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::new(fd).map_err(|err| {
-        trace!("Error while trying to create TcpStream {:?}", err);
-        CryptoError::SocketCreationError
-    })?;
-    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
 
-    let _result = tls.write(req.as_bytes());
+    let mut tls: TlsSession = enclave_networking::tls::TlsSession::new(
+        Some(Endpoint::SeedService),
+        host_name,
+        Some(SEED_SERVICE_PORT),
+    )
+    .map_err(|_| CryptoError::SSSCommunicationError)?;
+    let mut stream = tls.new_stream();
+
+    let _result = stream.write(req.as_bytes());
     let mut plaintext = Vec::new();
 
     info!("write complete");
 
-    match tls.read_to_end(&mut plaintext) {
+    match stream.read_to_end(&mut plaintext) {
         Ok(_) => {}
         Err(e) => {
             if e.kind() != ErrorKind::ConnectionAborted {
@@ -174,16 +67,15 @@ fn get_challenge_from_service(
 
     info!("read_to_end complete");
 
-    let challenge = base64::decode(get_body_from_response(&plaintext)?).map_err(|err| {
-        trace!("https response wasn't base64  {:?}", err);
-        CryptoError::SSSCommunicationError
+    let challenge: Vec<u8> = HttpResponse::body_from_response_b64(&plaintext).map_err(|e| {
+        trace!("Error while reading https response: {:?}", e);
+        CryptoError::BadResponse
     })?;
 
     Ok(challenge)
 }
 
 fn get_seed_from_service(
-    fd: c_int,
     host_name: &str,
     api_key: &[u8],
     kp: KeyPair,
@@ -204,30 +96,31 @@ fn get_seed_from_service(
         Ok(res) => res,
     };
 
-    let serialized_cert = base64::encode(cert);
+    let serialized_cert = base64::encode(serde_json::to_string(&cert).unwrap());
+    let req = enclave_networking::http::HttpRequest::new(
+        Method::POST,
+        host_name,
+        &format!("{}{}", SEED_ENDPOINT, id),
+        None,
+        None,
+        Some(serialized_cert),
+    )
+    .to_string();
 
-    let req = format!("GET {}{} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-                      SEED_ENDPOINT, id,
-                      host_name,
-                      serialized_cert.len(),
-                      serialized_cert);
+    let mut tls: TlsSession = enclave_networking::tls::TlsSession::new(
+        Some(Endpoint::SeedService),
+        host_name,
+        Some(SEED_SERVICE_PORT),
+    )
+    .map_err(|_| CryptoError::SSSCommunicationError)?;
+    let mut stream = tls.new_stream();
 
-    trace!("{}", req);
-    let config = make_client_config();
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(host_name).unwrap();
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::new(fd).map_err(|err| {
-        trace!("Error while trying to create TcpStream {:?}", err);
-        CryptoError::SocketCreationError
-    })?;
-    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
-
-    let _result = tls.write(req.as_bytes());
+    let _result = stream.write(req.as_bytes());
     let mut plaintext = Vec::new();
 
-    info!("write complete");
+    debug!("write complete");
 
-    match tls.read_to_end(&mut plaintext) {
+    match stream.read_to_end(&mut plaintext) {
         Ok(_) => {}
         Err(e) => {
             if e.kind() != ErrorKind::ConnectionAborted {
@@ -237,13 +130,11 @@ fn get_seed_from_service(
         }
     }
 
-    info!("read_to_end complete");
-
-    let seed = base64::decode(get_body_from_response(&plaintext)?).map_err(|err| {
-        trace!("https response wasn't base64  {:?}", err);
+    debug!("read_to_end complete");
+    let seed = HttpResponse::body_from_response_b64(&plaintext).map_err(|e| {
+        trace!("Error while reading https response {:?}", e);
         CryptoError::SSSCommunicationError
     })?;
-
     Ok(seed)
 }
 
@@ -257,10 +148,8 @@ fn try_get_consensus_seed_from_service(
     #[cfg(not(feature = "production"))]
     pub const SEED_SERVICE_DNS: &str = "sssd.scrtlabs.com";
 
-    let mut socket = create_socket_to_service(SEED_SERVICE_DNS)?;
-    let challenge = get_challenge_from_service(socket, SEED_SERVICE_DNS, api_key, kp)?;
-    socket = create_socket_to_service(SEED_SERVICE_DNS)?;
-    let s = get_seed_from_service(socket, SEED_SERVICE_DNS, api_key, kp, id, challenge)?;
+    let challenge = get_challenge_from_service(SEED_SERVICE_DNS, api_key, kp)?;
+    let s = get_seed_from_service(SEED_SERVICE_DNS, api_key, kp, id, challenge)?;
     let mut seed = Seed::default();
     seed.as_mut().copy_from_slice(&s);
     Ok(seed)

@@ -81,38 +81,6 @@ pub extern "C" fn ocall_get_quote(
 }
 
 #[no_mangle]
-pub extern "C" fn ocall_get_sn_tss_socket(_ret_fd: *mut c_int) -> sgx_status_t {
-    unimplemented!()
-}
-
-#[no_mangle]
-pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
-    let port = 443;
-    let hostname = "api.trustedservices.intel.com";
-    let addr = lookup_ipv4(hostname, port);
-    let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
-
-    unsafe {
-        *ret_fd = sock.into_raw_fd();
-    }
-
-    sgx_status_t::SGX_SUCCESS
-}
-
-pub fn lookup_ipv4(host: &str, port: u16) -> SocketAddr {
-    use std::net::ToSocketAddrs;
-
-    let addrs = (host, port).to_socket_addrs().unwrap();
-    for addr in addrs {
-        if let SocketAddr::V4(_) = addr {
-            return addr;
-        }
-    }
-
-    unreachable!("Cannot lookup address");
-}
-
-#[no_mangle]
 pub extern "C" fn ocall_sgx_init_quote(
     ret_ti: *mut sgx_target_info_t,
     ret_gid: *mut sgx_epid_group_id_t,

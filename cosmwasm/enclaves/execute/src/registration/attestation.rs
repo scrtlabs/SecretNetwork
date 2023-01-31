@@ -1,5 +1,9 @@
 use enclave_crypto::KeyPair;
-use std::vec::Vec;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_networking::http::{Headers, HttpRequest, Method};
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_networking::tls::TlsSession;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use log::*;
@@ -22,17 +26,15 @@ use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
-    c_int, sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_report_data_t, sgx_report_t, sgx_spid_t,
+    sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_report_data_t, sgx_report_t, sgx_spid_t,
     sgx_target_info_t, SgxResult,
 };
 
 #[cfg(feature = "SGX_MODE_HW")]
 use std::{
     io::{Read, Write},
-    net::TcpStream,
     ptr, str,
     string::String,
-    sync::Arc,
 };
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
@@ -50,11 +52,12 @@ use enclave_crypto::consts::{
     GENESIS_CONSENSUS_SEED_SEALING_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
     NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
 };
+use enclave_networking::endpoints::Endpoint;
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use std::sgxfs::remove as SgxFsRemove;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
+use super::ocalls::{ocall_get_quote, ocall_sgx_init_quote};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
@@ -66,13 +69,6 @@ pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
 #[cfg(feature = "production")]
 pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
-
-// #[cfg(feature = "SGX_MODE_HW")]
-// pub const SN_TSS_HOSTNAME: &str = "secretnetwork.trustedservices.scrtlabs.com";
-// #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-// pub const SN_TSS_GID_LIST: &str = "/dev/get-gids";
-// #[cfg(feature = "production")]
-// pub const SN_TSS_GID_LIST: &str = "/get-gids";
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
@@ -219,24 +215,8 @@ pub fn create_attestation_report(
 
     let eg_num = as_u32_le(eg);
 
-    // (1.5) get sigrl
-    let mut ias_sock: i32 = 0;
-
-    let res =
-        unsafe { ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32) };
-
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
-    trace!("Got ias_sock successfully = {}", ias_sock);
-
-    // Now sigrl_vec is the revocation list, a vec<u8>
-    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_sock, eg_num, api_key_file);
+    // Get revocation list from intel
+    let sigrl_vec: Vec<u8> = get_sigrl_from_intel(eg_num, api_key_file)?;
 
     // (2) Generate the report
     // Fill ecc256 public key into report_data
@@ -387,19 +367,8 @@ pub fn create_attestation_report(
     }
 
     let quote_vec: Vec<u8> = return_quote_buf[..quote_len as usize].to_vec();
-    let res =
-        unsafe { ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32) };
 
-    if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
-    }
-
-    let (attn_report, signature, signing_cert) =
-        get_report_from_intel(ias_sock, quote_vec, api_key_file)?;
+    let (attn_report, signature, signing_cert) = get_report_from_intel(quote_vec, api_key_file)?;
     Ok(EndorsedAttestationReport {
         report: attn_report.into_bytes(),
         signature,
@@ -458,13 +427,35 @@ fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, Vec<u8>, Vec<u8
         //println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
         match h.name {
             "Content-Length" => {
-                let len_str = String::from_utf8(h.value.to_vec()).unwrap();
+                let len_str = String::from_utf8(h.value.to_vec()).map_err(|e| {
+                    error!("Error decoding content length as utf-8: {:?}", e);
+                    sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+                })?;
+
                 len_num = len_str.parse::<u32>().unwrap();
                 trace!("content length = {}", len_num);
             }
-            "X-IASReport-Signature" => sig = str::from_utf8(h.value).unwrap().to_string(),
+            "X-IASReport-Signature" => {
+                sig = str::from_utf8(h.value)
+                    .map_err(|e| {
+                        error!(
+                            "Error decoding X-IASReport-Signature header as utf-8: {:?}",
+                            e
+                        );
+                        sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+                    })?
+                    .to_string()
+            }
             "X-IASReport-Signing-Certificate" => {
-                cert = str::from_utf8(h.value).unwrap().to_string()
+                cert = str::from_utf8(h.value)
+                    .map_err(|e| {
+                        error!(
+                            "Error decoding X-IASReport-Signing-Certificate header as utf-8: {:?}",
+                            e
+                        );
+                        sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+                    })?
+                    .to_string()
             }
             _ => (),
         }
@@ -485,18 +476,29 @@ fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, Vec<u8>, Vec<u8
     if len_num != 0 {
         let header_len = result.unwrap().unwrap();
         let resp_body = &resp[header_len..];
-        attn_report = str::from_utf8(resp_body).unwrap().to_string();
+        attn_report = str::from_utf8(resp_body)
+            .map_err(|e| {
+                error!("Error decoding content length as utf-8: {:?}", e);
+                sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+            })?
+            .to_string();
         info!("Attestation report: {}", attn_report);
     }
 
-    let sig_bytes = base64::decode(&sig).unwrap();
-    let sig_cert_bytes = base64::decode(&sig_cert).unwrap();
+    let sig_bytes = base64::decode(&sig).map_err(|e| {
+        error!("Error decoding sig_bytes ase base64: {:?}", e);
+        sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+    })?;
+    let sig_cert_bytes = base64::decode(&sig_cert).map_err(|e| {
+        error!("Error decoding sig_cert base64: {:?}", e);
+        sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+    })?;
     // len_num == 0
     Ok((attn_report, sig_bytes, sig_cert_bytes))
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
+fn parse_response_sigrl(resp: &[u8]) -> SgxResult<Vec<u8>> {
     trace!("parse_response_sigrl");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut respp = httparse::Response::new(&mut headers);
@@ -535,106 +537,63 @@ fn parse_response_sigrl(resp: &[u8]) -> Vec<u8> {
         let resp_body = &resp[header_len..];
         trace!("Base64-encoded SigRL: {:?}", resp_body);
 
-        return base64::decode(str::from_utf8(resp_body).unwrap()).unwrap();
+        let body_utf_8 = str::from_utf8(resp_body).map_err(|e| {
+            error!("Error decoding response as utf-8: {:?}", e);
+            sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+        })?;
+
+        return Ok(base64::decode(body_utf_8).map_err(|e| {
+            error!("Error decoding response as base64: {:?}", e);
+            sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+        }))?;
     }
 
     // len_num == 0
-    Vec::new()
+    Ok(Vec::new())
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn make_ias_client_config() -> rustls::ClientConfig {
-    let mut config = rustls::ClientConfig::new();
-
-    config
-        .root_store
-        .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-
-    config
-}
-
-#[cfg(feature = "SGX_MODE_HW")]
-#[allow(dead_code)]
-pub fn get_gids_from_sn_tss(_fd: c_int, _cert: Vec<u8>) {
-    // trace!("entered get_gids_from_sn_tss fd = {:?}", fd);
-    // let config = make_ias_client_config();
-    //
-    // let cert_as_base64 = base64::encode(&cert);
-    //
-    // let req = format!(
-    //     "POST {} HTTP/1.1\r\nHOST: {}\r\nConnection: Close\r\nAccept: */*\r\nContent-Type: application/json\r\nContent-Length: {}\r\n{}\r\n\r\n",
-    //     SN_TSS_GID_LIST,
-    //     SN_TSS_HOSTNAME,
-    //     cert_as_base64.len(),
-    //     cert_as_base64
-    // );
-    //
-    // trace!("request to sn tss: {}", req);
-    //
-    // let dns_name = webpki::DNSNameRef::try_from_ascii_str(SN_TSS_HOSTNAME).unwrap();
-    // let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    // let mut sock = TcpStream::new(fd).unwrap();
-    // let mut tls = rustls::Stream::new(&mut sess, &mut sock);
-    //
-    // let _result = tls.write(req.as_bytes());
-    // let mut plaintext = Vec::new();
-    //
-    // info!("write complete");
-    //
-    // match tls.read_to_end(&mut plaintext) {
-    //     Ok(_) => (),
-    //     Err(e) => {
-    //         warn!("get_gids_from_sn_tss tls.read_to_end: {:?}", e);
-    //         panic!("Communication error with SN TSS");
-    //     }
-    // }
-    // info!("read_to_end complete");
-    // let resp_string = String::from_utf8(plaintext.clone()).unwrap();
-    //
-    // trace!("{}", resp_string);
-
-    //resp_string
-
-    //parse_response_sigrl(&plaintext)
-}
-
-#[cfg(feature = "SGX_MODE_HW")]
-pub fn get_sigrl_from_intel(fd: c_int, gid: u32, api_key_file: &[u8]) -> Vec<u8> {
-    trace!("get_sigrl_from_intel fd = {:?}", fd);
-    let config = make_ias_client_config();
+pub fn get_sigrl_from_intel(gid: u32, api_key_file: &[u8]) -> SgxResult<Vec<u8>> {
     let ias_key = String::from_utf8_lossy(api_key_file).trim_end().to_owned();
 
-    let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
-                      SIGRL_SUFFIX,
-                      gid,
-                      DEV_HOSTNAME,
-                      ias_key);
+    let req = HttpRequest::new(
+        Method::GET,
+        DEV_HOSTNAME,
+        &format!("{}{:08x}", SIGRL_SUFFIX, gid),
+        Some(Headers(vec![(
+            "Ocp-Apim-Subscription-Key".to_string(),
+            ias_key,
+        )])),
+        None,
+        None,
+    );
 
     trace!("get_sigrl_from_intel: {}", req);
 
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::new(fd).unwrap();
-    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
-
-    let _result = tls.write(req.as_bytes());
+    let mut tls = TlsSession::new(Some(Endpoint::IntelAttestationService), DEV_HOSTNAME, None)
+        .map_err(|_| sgx_status_t::SGX_ERROR_NETWORK_FAILURE)?;
+    let mut stream = tls.new_stream();
+    let _result = stream.write(req.to_string().as_bytes());
     let mut plaintext = Vec::new();
 
     info!("write complete");
-
-    match tls.read_to_end(&mut plaintext) {
-        Ok(_) => (),
+    match stream.read_to_end(&mut plaintext) {
+        Ok(_) => {
+            info!("read_to_end complete")
+        }
         Err(e) => {
             warn!("get_sigrl_from_intel tls.read_to_end: {:?}", e);
             panic!("Communication error with IAS");
         }
     }
+
     info!("read_to_end complete");
-    let resp_string = String::from_utf8(plaintext.clone()).unwrap();
+    let resp_string = String::from_utf8(plaintext.clone()).map_err(|e| {
+        error!("Error decoding response as utf-8: {}", e);
+        sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+    })?;
 
     trace!("{}", resp_string);
-
-    // resp_string
 
     parse_response_sigrl(&plaintext)
 }
@@ -642,37 +601,48 @@ pub fn get_sigrl_from_intel(fd: c_int, gid: u32, api_key_file: &[u8]) -> Vec<u8>
 // TODO: support pse
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn get_report_from_intel(
-    fd: c_int,
     quote: Vec<u8>,
     api_key_file: &[u8],
 ) -> SgxResult<(String, Vec<u8>, Vec<u8>)> {
-    trace!("get_report_from_intel fd = {:?}", fd);
-    let config = make_ias_client_config();
     let encoded_quote = base64::encode(&quote[..]);
     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
     let ias_key = String::from_utf8_lossy(api_key_file).trim_end().to_owned();
 
-    let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-                      REPORT_SUFFIX,
-                      DEV_HOSTNAME,
-                      ias_key,
-                      encoded_json.len(),
-                      encoded_json);
+    let request = HttpRequest::new(
+        Method::POST,
+        DEV_HOSTNAME,
+        REPORT_SUFFIX,
+        Some(Headers(vec![(
+            "Ocp-Apim-Subscription-Key".to_string(),
+            ias_key,
+        )])),
+        None,
+        Some(encoded_json),
+    );
 
-    trace!("{}", req);
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).unwrap();
-    let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-    let mut sock = TcpStream::new(fd).unwrap();
-    let mut tls = rustls::Stream::new(&mut sess, &mut sock);
+    let mut tls = TlsSession::new(Some(Endpoint::IntelAttestationService), DEV_HOSTNAME, None)
+        .map_err(|_| sgx_status_t::SGX_ERROR_NETWORK_FAILURE)?;
+    let mut stream = tls.new_stream();
 
-    let _result = tls.write(req.as_bytes());
+    let _result = stream.write(request.to_string().as_bytes());
     let mut plaintext = Vec::new();
 
     info!("write complete");
 
-    tls.read_to_end(&mut plaintext).unwrap();
-    info!("read_to_end complete");
-    let resp_string = String::from_utf8(plaintext.clone()).unwrap();
+    match stream.read_to_end(&mut plaintext) {
+        Ok(_) => {
+            info!("read_to_end complete")
+        }
+        Err(e) => {
+            warn!("get_report_from_intel stream.read_to_end: {:?}", e);
+            panic!("Communication error with IAS");
+        }
+    }
+
+    let resp_string = String::from_utf8(plaintext.clone()).map_err(|e| {
+        error!("Error decoding response as utf-8: {}", e);
+        sgx_status_t::SGX_ERROR_NETWORK_FAILURE
+    })?;
 
     trace!("resp_string = {}", resp_string);
 

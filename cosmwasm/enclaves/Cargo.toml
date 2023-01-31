@@ -10,7 +10,8 @@ members = [
   "shared/utils",
   "shared/cosmwasm-types/v1.0",
   "shared/cosmwasm-types/v0.10",
-  "shared/cosmwasm-types/generic"
+  "shared/cosmwasm-types/generic",
+  "shared/net"
 ]
 exclude = ["test"]
 
