@@ -69,6 +69,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 
 [[package]]
+name = "attestation"
+version = "1.7.0"
+dependencies = [
+ "base64 0.13.1",
+ "enclave-ffi-types",
+ "enclave_crypto",
+ "hex",
+ "lazy_static",
+ "log",
+ "secret-attestation-token",
+ "serde 1.0.118",
+ "serde_json 1.0.60",
+ "sgx_tse",
+ "sgx_types",
+ "uuid 1.3.0",
+ "webpki",
+ "webpki-roots",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -115,6 +135,12 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
+
+[[package]]
+name = "base64"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
 
 [[package]]
 name = "bech32"
@@ -1225,6 +1251,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "secret-attestation-token"
+version = "0.1.0"
+dependencies = [
+ "base64 0.20.0",
+ "hex",
+ "serde 1.0.118",
+ "serde_json 1.0.60",
+]
+
+[[package]]
 name = "secret-enclave"
 version = "1.6.0"
 dependencies = [
@@ -1255,7 +1291,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "simple_logger",
- "uuid",
+ "uuid 0.8.2",
  "webpki",
  "webpki-roots",
  "yasna",
@@ -1657,6 +1693,12 @@ name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+
+[[package]]
+name = "uuid"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1674845326ee10d37ca60470760d4288a6f80f304007d92e5c53bab78c9cfd79"
 
 [[package]]
 name = "vec_map"
