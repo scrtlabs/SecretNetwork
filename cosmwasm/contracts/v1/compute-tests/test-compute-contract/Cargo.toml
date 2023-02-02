@@ -39,4 +39,4 @@ serde = { version = "1.0.114", default-features = false, features = [
   "alloc"
 ] }
 serde-json-wasm = "0.2.1"
-secp256k1 = "0.20.3"
+secp256k1 = "0.22.2"

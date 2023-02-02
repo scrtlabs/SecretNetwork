@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Secret Network
   description: A REST interface for queries and transactions
-  version: v1.5.0
+  version: v1.7
 paths:
   /cosmos/auth/v1beta1/accounts:
     get:
@@ -6716,8 +6716,108 @@ paths:
                         type: string
                       secret_foundation_address:
                         type: string
+                      minimum_restake_threshold:
+                        type: string
+                      restake_period:
+                        type: string
                 description: QueryParamsResponse is the response type for the Query/Params RPC
                   method.
+        default:
+          description: An unexpected error response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type_url:
+                          type: string
+                        value:
+                          type: string
+                          format: byte
+      tags:
+        - gRPC Gateway API
+  /cosmos/distribution/v1beta1/restake_entries:
+    get:
+      summary: RestakeThreshold queries the community pool coins.
+      operationId: RestakingEntries
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  validators:
+                    type: array
+                    items:
+                      type: string
+                    title: threshold = minimum amount in uscrt that you need to have delegated to
+                      enable restaking
+                description: QueryRestakeThresholdResponse is the request type for the
+                  Query/Params RPC method.
+        default:
+          description: An unexpected error response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type_url:
+                          type: string
+                        value:
+                          type: string
+                          format: byte
+      parameters:
+        - name: delegator
+          in: query
+          required: false
+          schema:
+            type: string
+      tags:
+        - gRPC Gateway API
+  /cosmos/distribution/v1beta1/restake_threshold:
+    get:
+      summary: RestakeThreshold queries the community pool coins.
+      operationId: RestakeThreshold
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  threshold:
+                    type: string
+                    title: threshold = minimum amount in uscrt that you need to have delegated to
+                      enable restaking
+                description: QueryRestakeThresholdResponse is the request type for the
+                  Query/Params RPC method.
         default:
           description: An unexpected error response.
           content:
@@ -8763,6 +8863,9 @@ paths:
                       voting_period:
                         type: string
                         description: Length of the voting period.
+                      expedited_voting_period:
+                        type: string
+                        description: Length of the expedited voting period.
                   deposit_params:
                     description: deposit_params defines the parameters related to deposit.
                     type: object
@@ -8791,6 +8894,24 @@ paths:
                           Maximum period for Atom holders to deposit on a
                           proposal. Initial value: 2
                            months.
+                      min_expedited_deposit:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            denom:
+                              type: string
+                            amount:
+                              type: string
+                          description: >-
+                            Coin defines a token with a denomination and an
+                            amount.
+
+
+                            NOTE: The amount field is an Int which implements the custom method
+
+                            signatures required by gogoproto.
+                        description: Minimum expedited deposit for a proposal to enter voting period.
                   tally_params:
                     description: tally_params defines the parameters related to tally.
                     type: object
@@ -8814,6 +8935,11 @@ paths:
                           Minimum value of Veto votes to Total votes ratio for
                           proposal to be
                            vetoed. Default value: 1/3.
+                      expedited_threshold:
+                        type: string
+                        format: byte
+                        description: "Minimum proportion of Yes votes for an expedited proposal to pass.
+                          Default value: 0.67."
                 description: QueryParamsResponse is the response type for the Query/Params RPC
                   method.
         default:
@@ -9233,6 +9359,8 @@ paths:
                         voting_end_time:
                           type: string
                           format: date-time
+                        is_expedited:
+                          type: boolean
                       description: Proposal defines the core field members of a governance proposal.
                   pagination:
                     description: pagination defines the pagination in the response.
@@ -9759,6 +9887,8 @@ paths:
                       voting_end_time:
                         type: string
                         format: date-time
+                      is_expedited:
+                        type: boolean
                     description: Proposal defines the core field members of a governance proposal.
                 description: QueryProposalResponse is the response type for the Query/Proposal
                   RPC method.
@@ -46235,6 +46365,10 @@ components:
           type: string
         secret_foundation_address:
           type: string
+        minimum_restake_threshold:
+          type: string
+        restake_period:
+          type: string
       description: Params defines the set of params for the distribution module.
     cosmos.distribution.v1beta1.QueryCommunityPoolResponse:
       type: object
@@ -46385,7 +46519,31 @@ components:
               type: string
             secret_foundation_address:
               type: string
+            minimum_restake_threshold:
+              type: string
+            restake_period:
+              type: string
       description: QueryParamsResponse is the response type for the Query/Params RPC method.
+    cosmos.distribution.v1beta1.QueryRestakeThresholdResponse:
+      type: object
+      properties:
+        threshold:
+          type: string
+          title: threshold = minimum amount in uscrt that you need to have delegated to
+            enable restaking
+      description: QueryRestakeThresholdResponse is the request type for the
+        Query/Params RPC method.
+    cosmos.distribution.v1beta1.QueryRestakingEntriesResponse:
+      type: object
+      properties:
+        validators:
+          type: array
+          items:
+            type: string
+          title: threshold = minimum amount in uscrt that you need to have delegated to
+            enable restaking
+      description: QueryRestakeThresholdResponse is the request type for the
+        Query/Params RPC method.
     cosmos.distribution.v1beta1.QueryValidatorCommissionResponse:
       type: object
       properties:
@@ -47258,6 +47416,23 @@ components:
             Maximum period for Atom holders to deposit on a proposal. Initial
             value: 2
              months.
+        min_expedited_deposit:
+          type: array
+          items:
+            type: object
+            properties:
+              denom:
+                type: string
+              amount:
+                type: string
+            description: >-
+              Coin defines a token with a denomination and an amount.
+
+
+              NOTE: The amount field is an Int which implements the custom method
+
+              signatures required by gogoproto.
+          description: Minimum expedited deposit for a proposal to enter voting period.
       description: DepositParams defines the params for deposits on governance proposals.
     cosmos.gov.v1beta1.Proposal:
       type: object
@@ -47480,6 +47655,8 @@ components:
         voting_end_time:
           type: string
           format: date-time
+        is_expedited:
+          type: boolean
       description: Proposal defines the core field members of a governance proposal.
     cosmos.gov.v1beta1.ProposalStatus:
       type: string
@@ -47603,6 +47780,9 @@ components:
             voting_period:
               type: string
               description: Length of the voting period.
+            expedited_voting_period:
+              type: string
+              description: Length of the expedited voting period.
         deposit_params:
           description: deposit_params defines the parameters related to deposit.
           type: object
@@ -47630,6 +47810,23 @@ components:
                 Maximum period for Atom holders to deposit on a proposal.
                 Initial value: 2
                  months.
+            min_expedited_deposit:
+              type: array
+              items:
+                type: object
+                properties:
+                  denom:
+                    type: string
+                  amount:
+                    type: string
+                description: >-
+                  Coin defines a token with a denomination and an amount.
+
+
+                  NOTE: The amount field is an Int which implements the custom method
+
+                  signatures required by gogoproto.
+              description: Minimum expedited deposit for a proposal to enter voting period.
         tally_params:
           description: tally_params defines the parameters related to tally.
           type: object
@@ -47653,6 +47850,11 @@ components:
                 Minimum value of Veto votes to Total votes ratio for proposal to
                 be
                  vetoed. Default value: 1/3.
+            expedited_threshold:
+              type: string
+              format: byte
+              description: "Minimum proportion of Yes votes for an expedited proposal to pass.
+                Default value: 0.67."
       description: QueryParamsResponse is the response type for the Query/Params RPC method.
     cosmos.gov.v1beta1.QueryProposalResponse:
       type: object
@@ -47878,6 +48080,8 @@ components:
             voting_end_time:
               type: string
               format: date-time
+            is_expedited:
+              type: boolean
           description: Proposal defines the core field members of a governance proposal.
       description: QueryProposalResponse is the response type for the Query/Proposal
         RPC method.
@@ -48107,6 +48311,8 @@ components:
               voting_end_time:
                 type: string
                 format: date-time
+              is_expedited:
+                type: boolean
             description: Proposal defines the core field members of a governance proposal.
         pagination:
           description: pagination defines the pagination in the response.
@@ -48309,6 +48515,11 @@ components:
           description: |-
             Minimum value of Veto votes to Total votes ratio for proposal to be
              vetoed. Default value: 1/3.
+        expedited_threshold:
+          type: string
+          format: byte
+          description: "Minimum proportion of Yes votes for an expedited proposal to pass.
+            Default value: 0.67."
       description: TallyParams defines the params for tallying votes on governance
         proposals.
     cosmos.gov.v1beta1.TallyResult:
@@ -48404,6 +48615,9 @@ components:
         voting_period:
           type: string
           description: Length of the voting period.
+        expedited_voting_period:
+          type: string
+          description: Length of the expedited voting period.
       description: VotingParams defines the params for voting on governance proposals.
     cosmos.gov.v1beta1.WeightedVoteOption:
       type: object

@@ -52,8 +52,8 @@ func (AppModule) ConsensusVersion() uint64 { return 1 }
 // module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(&GenesisState{
-		NodeExchMasterCertificate: &MasterCertificate{},
-		IoMasterCertificate:       &MasterCertificate{},
+		NodeExchMasterKey: &MasterKey{},
+		IoMasterKey:       &MasterKey{},
 	})
 }
 

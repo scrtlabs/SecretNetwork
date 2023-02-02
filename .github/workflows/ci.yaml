@@ -260,7 +260,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build LocalSecret
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -291,7 +291,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v3
       - name: Build Hermes Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/ibc/hermes.Dockerfile
           context: deployment/dockerfiles/ibc
@@ -340,23 +340,8 @@ jobs:
           git clone --depth 1 --branch master https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
-          perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*
-          yarn
-          yarn test
-          docker rm -f localsecret # next step needs the localsecret ports
-      - name: Install Requirements
-        run: |
-          chmod +x ./scripts/install-wasm-tools.sh
-          ./scripts/install-wasm-tools.sh
-      - name: Run cw20-ics20 tests
-        run: |
-          git clone --depth 1 --branch secret https://github.com/scrtlabs/cw-plus
-          cd cw-plus/contracts/cw20-ics20
-          # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
+          yarn
           docker compose -f ./test/docker-compose.yml up -d
-          rustup target add wasm32-unknown-unknown
-          wget -O - 'https://github.com/WebAssembly/binaryen/releases/download/version_110/binaryen-version_110-x86_64-linux.tar.gz' | tar -xzf -
-          sudo cp binaryen-version_110/bin/wasm-opt /bin/wasm-opt
-          sudo chmod +x /bin/wasm-opt
-          make test
+          yarn test-ci
+          make kill-localsecret

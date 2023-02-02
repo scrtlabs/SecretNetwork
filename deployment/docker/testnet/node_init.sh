@@ -30,6 +30,9 @@ then
   secretd keys add a
   echo $b_mnemonic | secretd keys add b --recover
 
+  secretd keys add a
+  echo $b_mnemonic | secretd keys add b --recover
+
   echo "Initializing chain: $CHAINID with node moniker: $MONIKER"
 
   sed -i 's/persistent_peers = ""/persistent_peers = "'"$PERSISTENT_PEERS"'"/g' ~/.secretd/config/config.toml
@@ -65,7 +68,7 @@ then
 
   secretd q register secret-network-params 2> /dev/null
 
-  secretd configure-secret node-master-cert.der "$SEED"
+  secretd configure-secret node-master-key.txt "$SEED"
 
   curl http://"$RPC_URL"/genesis | jq -r .result.genesis > /root/.secretd/config/genesis.json
 
@@ -79,9 +82,7 @@ then
   if [ "$VALIDATOR" == "true" ]
   then
     echo "Setting this node up as a validator"
-    balance=$(secretd q bank balances $(secretd keys show -a a) --output json | jq ".balances[0].amount" -r)
-    fee=5000
-    staking_amount="$((balance-fee))"uscrt
+    staking_amount=1000000uscrt
 
     echo "Staking amount: $staking_amount"
 

@@ -6,7 +6,8 @@ use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
 
-use enclave_crypto::consts::ENCRYPTED_SEED_SIZE;
+use crate::registration::seed_exchange::SeedType;
+use enclave_crypto::consts::OUTPUT_ENCRYPTED_SEED_SIZE;
 use enclave_crypto::PUBLIC_KEY_SIZE;
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
@@ -34,7 +35,8 @@ use super::seed_exchange::encrypt_seed;
 pub unsafe extern "C" fn ecall_authenticate_new_node(
     cert: *const u8,
     cert_len: u32,
-    seed: &mut [u8; ENCRYPTED_SEED_SIZE],
+    // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
+    seed: &mut [u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize],
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
@@ -65,8 +67,13 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             &target_public_key.to_vec()
         );
 
-        let res: Vec<u8> =
-            encrypt_seed(target_public_key).map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+        let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis)
+            .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+
+        let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current)
+            .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
+
+        res.extend(&res_current);
 
         Ok(res)
     });
@@ -79,10 +86,16 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     if let Ok(res) = result {
         match res {
             Ok(res) => {
+                trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
+
                 seed.copy_from_slice(&res);
+                trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
                 NodeAuthResult::Success
             }
-            Err(e) => e,
+            Err(e) => {
+                trace!("error encrypting seed {:?}", e);
+                e
+            }
         }
     } else {
         // There's no real need here to test if oom happened
