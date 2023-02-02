@@ -299,7 +299,7 @@ func CreateAttestationReport(apiKey []byte, dryRun bool) (bool, error) {
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.create_attestation_report(apiKeySlice, &errmsg, cbool(dryRun))
+	_, err := C.create_attestation_report(apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

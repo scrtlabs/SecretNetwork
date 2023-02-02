@@ -18,7 +18,7 @@ use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
-use super::attestation::create_attestation_certificate;
+// use super::attestation::create_attestation_certificate;
 
 use super::seed_service::get_next_consensus_seed_from_service;
 
@@ -184,24 +184,6 @@ pub unsafe extern "C" fn ecall_init_node(
         return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     }
 
-    // validate this node is patched and updated
-
-    // generate temporary key for attestation
-    // let temp_key_result = KeyPair::new();
-    //
-    // if temp_key_result.is_err() {
-    //     error!("Failed to generate temporary key for attestation");
-    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    // }
-
-    // // this validates the cert and handles the "what if it fails" inside as well
-    // let res =
-    //     create_attestation_certificate(&temp_key_result.unwrap(), SIGNATURE_TYPE, api_key_slice);
-    // if res.is_err() {
-    //     error!("Error starting node, might not be updated",);
-    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    // }
-
     let encrypted_seed_slice = slice::from_raw_parts(encrypted_seed, encrypted_seed_len as usize);
 
     // validate this node is patched and updated
@@ -215,16 +197,16 @@ pub unsafe extern "C" fn ecall_init_node(
     }
 
     // this validates the cert and handles the "what if it fails" inside as well
-    let res = create_attestation_certificate(
-        temp_key_result.as_ref().unwrap(),
-        SIGNATURE_TYPE,
-        api_key_slice,
-        None,
-    );
-    if res.is_err() {
-        error!("Error starting node, might not be updated",);
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
+    // let res = create_attestation_certificate(
+    //     temp_key_result.as_ref().unwrap(),
+    //     SIGNATURE_TYPE,
+    //     api_key_slice,
+    //     None,
+    // );
+    // if res.is_err() {
+    //     error!("Error starting node, might not be updated",);
+    //     return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    // }
 
     // public keys in certificates don't have 0x04, so we'll copy it here
     let mut target_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
@@ -335,109 +317,5 @@ pub unsafe extern "C" fn ecall_init_node(
         return status;
     }
 
-    sgx_status_t::SGX_SUCCESS
-}
-
-#[no_mangle]
-/**
- * `ecall_get_attestation_report`
- *
- * Creates the attestation report to be used to authenticate with the blockchain. The output of this
- * function is an X.509 certificate signed by the enclave, which contains the report signed by Intel.
- *
- * Verifying functions will verify the public key bytes sent in the extra data of the __report__ (which
- * may or may not match the public key of the __certificate__ -- depending on implementation choices)
- *
- * This x509 certificate can be used in the future for mutual-RA cross-enclave TLS channels, or for
- * other creative usages.
- * # Safety
- * Something should go here
- */
-pub unsafe extern "C" fn ecall_get_attestation_report(
-    api_key: *const u8,
-    api_key_len: u32,
-    dry_run: u8,
-) -> sgx_status_t {
-    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
-
-    validate_const_ptr!(
-        api_key,
-        api_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
-    let dry_run = dry_run != 0; // u8 => bool
-
-    let kp: KeyPair = if dry_run {
-        match KeyPair::new() {
-            Ok(new_kp) => new_kp,
-            Err(e) => {
-                error!(
-                    "Failed to generate temporary key for attestation: {}",
-                    e.to_string()
-                );
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        }
-    } else {
-        KEY_MANAGER.get_registration_key().unwrap()
-    };
-    trace!(
-        "ecall_get_attestation_report key pk: {:?}",
-        &kp.get_pubkey().to_vec()
-    );
-    let (_private_key_der, cert) =
-        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice, None) {
-            Err(e) => {
-                warn!("Error in create_attestation_certificate: {:?}", e);
-                return e;
-            }
-            Ok(res) => res,
-        };
-
-    //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if !dry_run {
-        if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
-            return status;
-        }
-    }
-
-    #[cfg(feature = "SGX_MODE_HW")]
-    {
-        crate::registration::print_report::print_local_report_info(cert.as_slice());
-    }
-
-    sgx_status_t::SGX_SUCCESS
-}
-
-///
-/// This function generates the registration_key, which is used in the attestation and registration
-/// process
-///
-#[no_mangle]
-pub unsafe extern "C" fn ecall_key_gen(
-    public_key: &mut [u8; PUBLIC_KEY_SIZE],
-) -> sgx_types::sgx_status_t {
-    if let Err(_e) = validate_mut_slice(public_key) {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    let mut key_manager = Keychain::new();
-    if let Err(_e) = key_manager.create_registration_key() {
-        error!("Failed to create registration key");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    };
-
-    let reg_key = key_manager.get_registration_key();
-
-    if reg_key.is_err() {
-        error!("Failed to unlock node key. Please make sure the file is accessible or reinitialize the node");
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    let pubkey = reg_key.unwrap().get_pubkey();
-    public_key.clone_from_slice(&pubkey);
-    trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
 }

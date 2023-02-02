@@ -7,7 +7,7 @@ use log::*;
 use lazy_static::lazy_static;
 
 #[cfg(all(feature = "verify", feature = "sgx"))]
-use sgx_tse::{rsgx_create_report, rsgx_self_report, rsgx_verify_report};
+use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 
 #[cfg(all(feature = "verify", feature = "sgx"))]
 use sgx_types::{

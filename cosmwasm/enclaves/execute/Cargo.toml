@@ -34,6 +34,12 @@ sgx_rand = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://gi
 sgx_tcrypto = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 enclave-ffi-types = { path = "../ffi-types" }
+secret-attestation-token = { path = "../../packages/secret-attestation-token", features = ["sgx"] }
+
+attestation = { path = "../shared/attestation" }
+epid = { path = "../shared/epid" }
+dcap = { path = "../shared/dcap" }
+
 
 enclave_contract_engine = { path = "../shared/contract-engine" }
 enclave_crypto = { path = "../shared/crypto" }

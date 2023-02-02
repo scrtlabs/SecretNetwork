@@ -14,3 +14,4 @@ pub mod pointers;
 pub mod recursion_depth;
 mod results;
 pub mod storage;
+pub mod sgx_errors;

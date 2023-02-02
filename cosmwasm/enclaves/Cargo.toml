@@ -11,7 +11,10 @@ members = [
   "shared/cosmwasm-types/v1.0",
   "shared/cosmwasm-types/v0.10",
   "shared/cosmwasm-types/generic",
-  "shared/attestation"
+  "shared/attestation",
+  "shared/epid",
+  "shared/dcap",
+  "shared/net"
 ]
 exclude = ["test"]
 

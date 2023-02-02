@@ -18,7 +18,7 @@ pub mod testing;
 mod traits;
 
 // Secret Network specific modules
-mod attestation;
+pub mod attestation;
 mod enclave;
 mod enclave_config;
 mod seed;
@@ -48,8 +48,13 @@ pub use crate::traits::{Api, Extern, Querier, Storage};
 pub use crate::traits::StorageIterator;
 
 // Secret Network specific exports
-pub use crate::attestation::{create_attestation_report_u, untrusted_get_encrypted_seed};
+pub use crate::attestation::sgx::epid::create_attestation_token;
 pub use crate::seed::{
-    untrusted_health_check, untrusted_init_bootstrap,
+    untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_bootstrap,
     untrusted_init_node, untrusted_key_gen,
 };
+// pub use crate::attestation::sgx::{create_attestation_report_u, untrusted_get_encrypted_seed};
+// pub use crate::seed::{
+//     untrusted_health_check, untrusted_init_bootstrap,
+//     untrusted_init_node, untrusted_key_gen,
+// };

@@ -1,7 +1,4 @@
-use enclave_ffi_types::{
-    HealthCheckResult, INPUT_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE,
-    NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE,
-};
+use enclave_ffi_types::{HealthCheckResult, INPUT_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE, NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE};
 use sgx_types::*;
 
 use log::{error, info};
@@ -30,7 +27,7 @@ extern "C" {
         api_key_len: u32,
     ) -> sgx_status_t;
 
-    pub fn ecall_key_gen(
+    pub fn ecall_generate_registration_key(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,
         public_key: &mut [u8; 32],
@@ -146,7 +143,7 @@ pub fn untrusted_key_gen() -> SgxResult<[u8; 32]> {
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let mut public_key = [0u8; 32];
     // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
-    let status = unsafe { ecall_key_gen(eid, &mut retval, &mut public_key) };
+    let status = unsafe { ecall_generate_registration_key(eid, &mut retval, &mut public_key) };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);
@@ -196,4 +193,42 @@ pub fn untrusted_init_bootstrap(spid: &[u8], api_key: &[u8]) -> SgxResult<[u8; 3
     }
 
     Ok(public_key)
+}
+
+pub fn untrusted_get_encrypted_seed(
+    cert: &[u8],
+) -> SgxResult<Result<[u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize], NodeAuthResult>> {
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+    let eid = enclave.geteid();
+    let mut retval = NodeAuthResult::Success;
+    let mut seed = [0u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize];
+    let status = unsafe {
+        crate::attestation::sgx::epid::ecall_legacy_verify_node_on_chain(
+            eid,
+            &mut retval,
+            cert.as_ptr(),
+            cert.len() as u32,
+            &mut seed,
+        )
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if retval != NodeAuthResult::Success {
+        return Ok(Err(retval));
+    }
+
+    if seed.is_empty() {
+        error!("Got empty seed from encryption");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
+
+    Ok(Ok(seed))
 }

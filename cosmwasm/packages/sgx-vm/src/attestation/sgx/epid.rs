@@ -1,29 +1,21 @@
-use std::net::{SocketAddr, TcpStream};
-use std::os::unix::io::IntoRawFd;
-
-use std::{self};
-
 use log::*;
 use sgx_types::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
+use crate::attestation::sgx::ecall_generate_authentication_material;
 use enclave_ffi_types::{NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE};
+
+use secret_attestation_token::AttestationType;
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
 extern "C" {
-    pub fn ecall_get_attestation_report(
-        eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
-        api_key: *const u8,
-        api_key_len: u32,
-        dry_run: u8,
-    ) -> sgx_status_t;
-    pub fn ecall_authenticate_new_node(
+
+    pub fn ecall_legacy_verify_node_on_chain(
         eid: sgx_enclave_id_t,
         retval: *mut NodeAuthResult,
-        cert: *const u8,
-        cert_len: u32,
+        auth_material: *const u8,
+        auth_material_len: u32,
         seed: &mut [u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize],
     ) -> sgx_status_t;
 }
@@ -37,49 +29,8 @@ pub extern "C" fn ocall_sgx_init_quote(
     unsafe { sgx_init_quote(ret_ti, ret_gid) }
 }
 
-pub fn lookup_ipv4(host: &str, port: u16) -> SocketAddr {
-    use std::net::ToSocketAddrs;
-
-    let addrs = (host, port).to_socket_addrs().unwrap();
-    for addr in addrs {
-        if let SocketAddr::V4(_) = addr {
-            return addr;
-        }
-    }
-
-    unreachable!("Cannot lookup address");
-}
-
 #[no_mangle]
-pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
-    let port = 443;
-    let hostname = "api.trustedservices.intel.com";
-    let addr = lookup_ipv4(hostname, port);
-    let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
-
-    unsafe {
-        *ret_fd = sock.into_raw_fd();
-    }
-
-    sgx_status_t::SGX_SUCCESS
-}
-
-#[no_mangle]
-pub extern "C" fn ocall_get_sn_tss_socket(ret_fd: *mut c_int) -> sgx_status_t {
-    let port = 443;
-    let hostname = "secretnetwork.trustedservices.scrtlabs.com";
-    let addr = lookup_ipv4(hostname, port);
-    let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
-
-    unsafe {
-        *ret_fd = sock.into_raw_fd();
-    }
-
-    sgx_status_t::SGX_SUCCESS
-}
-
-#[no_mangle]
-pub extern "C" fn ocall_get_quote(
+pub extern "C" fn ocall_get_quote_epid(
     p_sigrl: *const u8,
     sigrl_len: u32,
     p_report: *const sgx_report_t,
@@ -139,7 +90,7 @@ pub extern "C" fn ocall_get_update_info(
     unsafe { sgx_report_attestation_status(platform_blob, enclave_trusted, update_info) }
 }
 
-pub fn create_attestation_report_u(api_key: &[u8], dry_run: bool) -> SgxResult<()> {
+pub fn create_attestation_token(api_key: &[u8]) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -149,13 +100,20 @@ pub fn create_attestation_report_u(api_key: &[u8], dry_run: bool) -> SgxResult<(
 
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
+
+    #[cfg(feature = "epid")]
+    let auth_type = AttestationType::SgxEpid; // epid
+
+    #[cfg(not(feature = "epid"))]
+    let auth_type = AttestationType::SgxSw; // sw
+
     let status = unsafe {
-        ecall_get_attestation_report(
+        ecall_generate_authentication_material(
             eid,
             &mut retval,
             api_key.as_ptr(),
             api_key.len() as u32,
-            dry_run.into(),
+            auth_type.into(),
         )
     };
 
@@ -168,49 +126,6 @@ pub fn create_attestation_report_u(api_key: &[u8], dry_run: bool) -> SgxResult<(
     }
 
     Ok(())
-}
-
-pub fn untrusted_get_encrypted_seed(
-    cert: &[u8],
-) -> SgxResult<Result<[u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize], NodeAuthResult>> {
-    // Bind the token to a local variable to ensure its
-    // destructor runs in the end of the function
-    let enclave_access_token = ENCLAVE_DOORBELL
-        .get_access(1) // This can never be recursive
-        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
-    let enclave = (*enclave_access_token)?;
-    let eid = enclave.geteid();
-    let mut retval = NodeAuthResult::Success;
-
-    let mut seed = [0u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize];
-    let status = unsafe {
-        ecall_authenticate_new_node(
-            eid,
-            &mut retval,
-            cert.as_ptr(),
-            cert.len() as u32,
-            &mut seed,
-        )
-    };
-
-    if status != sgx_status_t::SGX_SUCCESS {
-        debug!("Error from authenticate new node");
-        return Err(status);
-    }
-
-    if retval != NodeAuthResult::Success {
-        debug!("Error from authenticate new node, bad NodeAuthResult");
-        return Ok(Err(retval));
-    }
-
-    debug!("Done auth, got seed: {:?}", seed);
-
-    if seed.is_empty() {
-        error!("Got empty seed from encryption");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-    }
-
-    Ok(Ok(seed))
 }
 
 #[cfg(test)]

@@ -466,6 +466,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dcap"
+version = "0.1.0"
+dependencies = [
+ "attestation",
+ "enclave_crypto",
+ "enclave_utils",
+ "log",
+ "secret-attestation-token",
+ "sgx_tcrypto",
+ "sgx_tse",
+ "sgx_types",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -548,6 +562,21 @@ dependencies = [
  "cbindgen",
  "derive_more",
  "thiserror",
+]
+
+[[package]]
+name = "enclave-networking"
+version = "0.1.0"
+dependencies = [
+ "base64 0.13.1",
+ "httparse",
+ "log",
+ "rustls",
+ "sgx_tstd",
+ "sgx_types",
+ "webpki",
+ "webpki-roots",
+ "yasna",
 ]
 
 [[package]]
@@ -652,6 +681,34 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
+]
+
+[[package]]
+name = "epid"
+version = "0.1.0"
+dependencies = [
+ "attestation",
+ "base64 0.13.1",
+ "enclave-ffi-types",
+ "enclave-networking",
+ "enclave_crypto",
+ "enclave_utils",
+ "hex",
+ "httparse",
+ "log",
+ "rustls",
+ "secret-attestation-token",
+ "serde 1.0.118",
+ "serde_json 1.0.60",
+ "sgx_rand",
+ "sgx_tcrypto",
+ "sgx_tse",
+ "sgx_tstd",
+ "sgx_types",
+ "uuid 1.3.0",
+ "webpki",
+ "webpki-roots",
+ "yasna",
 ]
 
 [[package]]
@@ -1264,16 +1321,19 @@ dependencies = [
 name = "secret-enclave"
 version = "1.6.0"
 dependencies = [
+ "attestation",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bit-vec",
  "chrono",
  "ctor",
+ "dcap",
  "derive_more",
  "enclave-ffi-types",
  "enclave_contract_engine",
  "enclave_cosmos_types",
  "enclave_crypto",
  "enclave_utils",
+ "epid",
  "hex",
  "httparse",
  "itertools",
@@ -1283,6 +1343,7 @@ dependencies = [
  "parity-wasm",
  "pwasm-utils",
  "rustls",
+ "secret-attestation-token",
  "serde 1.0.118",
  "serde_json 1.0.60",
  "sgx_rand",
