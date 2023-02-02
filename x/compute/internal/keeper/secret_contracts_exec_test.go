@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	"golang.org/x/exp/slices"
 	"math"
 	"os"
 	"strings"
@@ -162,10 +164,19 @@ func TestAddrValidateFunction(t *testing.T) {
 func TestEnv(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+			type ReturnedV1MessageInfo struct {
+				Sender    cosmwasm.HumanAddress `json:"sender"`
+				SentFunds cosmwasm.Coins        `json:"funds"`
+				Random    string                `json:"random"`
+			}
+
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
 			_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
 			require.Empty(t, initErr)
+			require.Len(t, initEvents, 1)
+
+			var firstRandom string
 
 			expectedV1Env := fmt.Sprintf(
 				`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
@@ -176,13 +187,10 @@ func TestEnv(t *testing.T) {
 				contractAddress.String(),
 				calcCodeHash(testContract.WasmFilePath),
 			)
-			expectedV1MsgInfo := fmt.Sprintf(
-				`{"sender":"%s","funds":[{"denom":"denom","amount":"1"}]}`,
-				walletA.String(),
-			)
 
 			if testContract.IsCosmWasmV1 {
-				requireEvents(t,
+				requireEventsInclude(t,
+					initEvents,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -190,14 +198,21 @@ func TestEnv(t *testing.T) {
 								Key:   "env",
 								Value: expectedV1Env,
 							},
-							{
-								Key:   "info",
-								Value: expectedV1MsgInfo,
-							},
 						},
 					},
-					initEvents,
 				)
+
+				initEvent := initEvents[0]
+				infoLogAttributeIndex := slices.IndexFunc(initEvent, func(c v010types.LogAttribute) bool { return c.Key == "info" })
+				infoLogAttribute := initEvent[infoLogAttributeIndex]
+
+				var actualMessageInfo ReturnedV1MessageInfo
+				json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
+
+				require.Equal(t, walletA.String(), actualMessageInfo.Sender)
+				require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
+				require.Len(t, actualMessageInfo.Random, 44)
+				firstRandom = actualMessageInfo.Random
 			} else {
 				requireEvents(t,
 					[]ContractEvent{
@@ -225,7 +240,8 @@ func TestEnv(t *testing.T) {
 			require.Empty(t, execErr)
 
 			if testContract.IsCosmWasmV1 {
-				requireEvents(t,
+				requireEventsInclude(t,
+					execEvents,
 					[]ContractEvent{
 						{
 							{Key: "contract_address", Value: contractAddress.String()},
@@ -233,14 +249,21 @@ func TestEnv(t *testing.T) {
 								Key:   "env",
 								Value: expectedV1Env,
 							},
-							{
-								Key:   "info",
-								Value: expectedV1MsgInfo,
-							},
 						},
 					},
-					execEvents,
 				)
+
+				execEvent := execEvents[0]
+				infoLogAttributeIndex := slices.IndexFunc(execEvent, func(c v010types.LogAttribute) bool { return c.Key == "info" })
+				infoLogAttribute := execEvent[infoLogAttributeIndex]
+
+				var actualMessageInfo ReturnedV1MessageInfo
+				json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
+
+				require.Equal(t, walletA.String(), actualMessageInfo.Sender)
+				require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
+				require.Len(t, actualMessageInfo.Random, 44)
+				require.NotEqual(t, firstRandom, actualMessageInfo.Random)
 			} else {
 				requireEvents(t,
 					[]ContractEvent{
