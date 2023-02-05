@@ -15,6 +15,10 @@ use tendermint::validator::Set;
 
 use enclave_utils::validator_set::ValidatorSetForHeight;
 
+/// # Safety
+///  This function reads buffers which must be correctly initialized by the caller,
+/// see safety section of slice::[from_raw_parts](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html#safety)
+///
 #[no_mangle]
 pub unsafe extern "C" fn ecall_submit_block_signatures(
     in_header: *const u8,
@@ -31,8 +35,8 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         slice::from_raw_parts(in_encrypted_random, in_encrypted_random_len as usize);
 
     let validator_set_result = ValidatorSetForHeight::unseal();
-    if validator_set_result.is_err() {
-        return validator_set_result.unwrap_err();
+    if let Err(validator_set_error) = validator_set_result {
+        return validator_set_error;
     }
     let validator_set_for_height: ValidatorSetForHeight = validator_set_result.unwrap();
 

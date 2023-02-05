@@ -29,12 +29,12 @@ pub fn derive_random(seed: &Binary, contract_key: &ContractKey, height: u64) -> 
     let counter_bytes = counter.counter.to_be_bytes();
     let data = vec![
         height_bytes.as_slice(),
-        &contract_key.as_slice(),
+        contract_key.as_slice(),
         counter_bytes.as_slice()
     ];
 
     Binary(
-        enclave_crypto::hkdf_sha_256(&seed.0.as_slice(), data.as_slice())
+        enclave_crypto::hkdf_sha_256(seed.0.as_slice(), data.as_slice())
             .get()
             .to_vec(),
     )
