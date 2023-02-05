@@ -95,7 +95,13 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         }
     };
 
-    decrypted_random.copy_from_slice(&*decrypted);
+    // this is here so that the decrypted randomness is a function of the validator hash
+    // that way an attempt to fuck with the block verification by submitting a fake validator set and signatures
+    // will result in different random values
+    let decrypted_randomness =
+        enclave_crypto::hkdf_sha_256(decrypted, &[validator_hash.as_bytes()]);
+
+    decrypted_random.copy_from_slice(&*decrypted_randomness);
 
     debug!("Done verifying block: {:?}", result);
 
