@@ -38,7 +38,6 @@ fn make_client_seed_service_config() -> rustls::ClientConfig {
     config
 }
 
-#[allow(dead_code)]
 pub fn make_ias_client_config() -> rustls::ClientConfig {
     let mut config = rustls::ClientConfig::new();
 
@@ -64,7 +63,7 @@ impl TlsSession {
         let config = if let Some(ep) = endpoint {
             match ep {
                 Endpoint::SeedService => make_client_seed_service_config(),
-                Endpoint::IntelAttestationService => make_client_ias_config(),
+                Endpoint::IntelAttestationService => make_ias_client_config(),
             }
         } else {
             make_client_ias_config()
