@@ -66,7 +66,7 @@ impl TlsSession {
                 Endpoint::IntelAttestationService => make_ias_client_config(),
             }
         } else {
-            make_client_ias_config()
+            make_ias_client_config()
         };
 
         let dns_name = webpki::DNSNameRef::try_from_ascii_str(host_name)
