@@ -10,9 +10,6 @@ jobs:
         with:
           submodules: recursive
         name: Pull git submodules
-      - name: Update submodules
-        id: update
-        run: git submodule update --remote --recursive
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -115,9 +112,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Update submodules
-        id: update
-        run: git submodule update --remote --recursive
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
@@ -193,9 +187,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Update submodules
-        id: update
-        run: git submodule update --remote --recursive
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -251,9 +242,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Update submodules
-        id: update
-        run: git submodule update --remote --recursive
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
@@ -274,9 +262,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Update submodules
-        id: update
-        run: git submodule update --remote --recursive
       - name: Build LocalSecret
         uses: docker/build-push-action@v3
         with:
@@ -332,9 +317,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Update submodules
-        id: update
-        run: git submodule update --remote --recursive
       - name: Download Hermes
         uses: actions/download-artifact@v3
         with:
