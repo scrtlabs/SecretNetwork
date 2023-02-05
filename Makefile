@@ -274,6 +274,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg FEATURES_U=${FEATURES_U} \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \

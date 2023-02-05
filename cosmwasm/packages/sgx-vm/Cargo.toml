@@ -39,6 +39,7 @@ debug-print = []
 # This feature compiles a query optimized node with a second enclave used exclusively for queries.
 # Putting this functionality in a separate enclave allows improving query performace without hard forks.
 query-node = []
+epid = []
 
 [dependencies]
 # Uses the path when built locally; uses the given version from crates.io when published
