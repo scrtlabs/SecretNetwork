@@ -39,25 +39,25 @@ ifeq (Building,$(findstring Building,$(DOCKER_BUILDX_CHECK)))
 	DOCKER_BUILD_ARGS += "--load"
 endif
 
-ifeq ($(SGX_MODE), HW)
-	ext := hw
-else ifeq ($(SGX_MODE), SW)
-	ext := sw
-else
-$(error SGX_MODE must be either HW or SW)
-endif
-
 ifeq ($(DB_BACKEND), rocksdb)
 	DB_BACKEND = rocksdb
-	DOCKER_CGO_LDFLAGS = "-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy"
+	DOCKER_CGO_LDFLAGS = -L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy
 	DOCKER_CGO_FLAGS = "-I/opt/rocksdb/include"
 else ifeq ($(DB_BACKEND), cleveldb)
 	DB_BACKEND = cleveldb
 else ifeq ($(DB_BACKEND), goleveldb)
 	DB_BACKEND = goleveldb
-	DOCKER_CGO_LDFLAGS = ""
 else
 $(error DB_BACKEND must be one of: rocksdb/cleveldb/goleveldb)
+endif
+
+ifeq ($(SGX_MODE), HW)
+	ext := hw
+#	DOCKER_CGO_LDFLAGS := "$(DOCKER_CGO_LDFLAGS) -lsgx_uae_service"
+else ifeq ($(SGX_MODE), SW)
+	ext := sw
+else
+$(error SGX_MODE must be either HW or SW)
 endif
 
 CUR_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
@@ -130,6 +130,10 @@ ifeq ($(DB_BACKEND),rocksdb)
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=rocksdb
   ldflags += -extldflags "-lrocksdb -llz4"
 endif
+#
+ifeq ($(SGX_MODE), HW)
+	CGO_LDFLAGS += -lsgx_uae_service
+endif
 
 ldflags += -s -w
 ldflags += $(LDFLAGS)
@@ -153,7 +157,7 @@ xgo_build_secretcli: go.sum
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	CGO_LDFLAGS=$(CGO_LDFLAGS) go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build-secret: build-linux
 
@@ -280,7 +284,7 @@ build-testnet:
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 -f deployment/dockerfiles/Dockerfile \
 				 -t ghcr.io/scrtlabs/secret-network-node-testnet:v$(VERSION) \
-				 --target release-image .
+				 --target compile-secretd .
 	DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
