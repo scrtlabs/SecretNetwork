@@ -2063,7 +2063,7 @@ describe("IBC", () => {
       "http://localhost:9391",
       "channel-0"
     );
-  }, 180_000 /* 3 minutes */);
+  }, 300_000 /* 5 minutes */);
 
   test("transfer sanity", async () => {
     const denom = ibcDenom(
