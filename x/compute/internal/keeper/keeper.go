@@ -621,7 +621,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 		sdk.NewCoins(),   /* empty because it's unused in queries */
 		contractAddress,
 		contractKey,
-		[]byte{0}[:], /* empty because it's unused in queries */
+		[]byte{0}, /* empty because it's unused in queries */
 	)
 	params.QueryDepth = queryDepth
 
