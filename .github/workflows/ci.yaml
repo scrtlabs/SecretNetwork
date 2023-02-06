@@ -238,7 +238,7 @@ jobs:
           SGX_MODE=HW make clippy
 
   MacOS-ARM64-CLI:
-    runs-on: macos-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
         with:
