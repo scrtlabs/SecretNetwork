@@ -60,12 +60,13 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 }
 
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(codeID uint64, creator sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
+func NewContractInfo(codeID uint64, creator sdk.AccAddress, admin sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
 	return ContractInfo{
 		CodeID:  codeID,
 		Creator: creator,
 		Label:   label,
 		Created: createdAt,
+		Admin:   admin,
 	}
 }
 

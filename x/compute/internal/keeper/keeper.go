@@ -314,7 +314,7 @@ func V010MsgsToV1SubMsgs(contractAddr string, msgs []v010wasmTypes.CosmosMsg) ([
 }
 
 // Instantiate creates an instance of a WASM contract
-func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, []byte, error) {
+func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddress, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, []byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "instantiate")
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: init")
@@ -415,7 +415,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 		// persist instance
 		createdAt := types.NewAbsoluteTxPosition(ctx)
-		contractInfo := types.NewContractInfo(codeID, creator, label, createdAt)
+		contractInfo := types.NewContractInfo(codeID, creator, admin, label, createdAt)
 		store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(&contractInfo))
 
 		store.Set(types.GetContractEnclaveKey(contractAddress), key)
@@ -435,7 +435,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	case *v1wasmTypes.Response:
 		// persist instance first
 		createdAt := types.NewAbsoluteTxPosition(ctx)
-		contractInfo := types.NewContractInfo(codeID, creator, label, createdAt)
+		contractInfo := types.NewContractInfo(codeID, creator, admin, label, createdAt)
 
 		// check for IBC flag
 		report, err := k.wasmer.AnalyzeCode(codeInfo.CodeHash)
