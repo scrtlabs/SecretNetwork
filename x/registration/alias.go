@@ -11,25 +11,26 @@ import (
 )
 
 const (
-	ModuleName               = types.ModuleName
-	StoreKey                 = types.StoreKey
-	TStoreKey                = types.TStoreKey
-	QuerierRoute             = types.QuerierRoute
-	RouterKey                = types.RouterKey
-	EnclaveRegistrationKey   = types.EnclaveRegistrationKey
-	QueryEncryptedSeed       = keeper.QueryEncryptedSeed
-	QueryMasterKey           = keeper.QueryMasterKey
-	SecretNodeSeedConfig     = types.SecretNodeSeedConfig
-	SecretNodeCfgFolder      = types.SecretNodeCfgFolder
-	EncryptedKeyLength       = types.EncryptedKeyLength
-	LegacyEncryptedKeyLength = types.LegacyEncryptedKeyLength
-	AttestationCertPath      = types.AttestationCertPath
-	IoExchMasterKeyPath      = types.IoExchMasterKeyPath
-	NodeExchMasterKeyPath    = types.NodeExchMasterKeyPath
-	SeedPath                 = types.SeedPath
-	MasterIoKeyId            = types.MasterIoKeyId
-	MasterNodeKeyId          = types.MasterNodeKeyId
-	SeedConfigVersion        = types.SeedConfigVersion
+	ModuleName                 = types.ModuleName
+	StoreKey                   = types.StoreKey
+	TStoreKey                  = types.TStoreKey
+	QuerierRoute               = types.QuerierRoute
+	RouterKey                  = types.RouterKey
+	EnclaveRegistrationKey     = types.EnclaveRegistrationKey
+	QueryEncryptedSeed         = keeper.QueryEncryptedSeed
+	QueryMasterKey             = keeper.QueryMasterKey
+	SecretNodeSeedConfig       = types.SecretNodeSeedConfig
+	SecretNodeSeedBackupConfig = types.SecretNodeSeedBackupConfig
+	SecretNodeCfgFolder        = types.SecretNodeCfgFolder
+	EncryptedKeyLength         = types.EncryptedKeyLength
+	LegacyEncryptedKeyLength   = types.LegacyEncryptedKeyLength
+	AttestationCertPath        = types.AttestationCertPath
+	IoExchMasterKeyPath        = types.IoExchMasterKeyPath
+	NodeExchMasterKeyPath      = types.NodeExchMasterKeyPath
+	SeedPath                   = types.SeedPath
+	MasterIoKeyId              = types.MasterIoKeyId
+	MasterNodeKeyId            = types.MasterNodeKeyId
+	SeedConfigVersion          = types.SeedConfigVersion
 )
 
 var (

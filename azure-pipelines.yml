@@ -40,7 +40,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --target compile-secretd
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --target compile-secretd
       dockerfile: '$(dockerfilePath)'
 
   - script: |
@@ -57,7 +57,7 @@ steps:
       repository: '$(nodeImageRepository)'
       tags: latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
+      arguments: --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
       Dockerfile: deployment/dockerfiles/Dockerfile
 
   - task: Docker@2

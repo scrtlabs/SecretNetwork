@@ -15,7 +15,6 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
-	"github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
 const upgradeName = "v1.7"
@@ -69,7 +68,9 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		homeDir := filepath.Dir(keepers.ComputeKeeper.HomeDir[:len(keepers.ComputeKeeper.HomeDir)-1])
 
 		seedFilePath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-		prevSeedFileBz, err := os.ReadFile(seedFilePath)
+		seedFileBackupPath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedBackupConfig)
+
+		err = os.Rename(seedFilePath, seedFileBackupPath)
 		if err != nil {
 			return nil, err
 		}
@@ -99,24 +100,6 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 
 		keepers.RegKeeper.SetMasterKey(ctx, ioMasterKey, reg.MasterIoKeyId)
 		keepers.RegKeeper.SetMasterKey(ctx, masterKey, reg.MasterNodeKeyId)
-
-		var prevSeedCfg reg.LegacySeedConfig
-		err = json.Unmarshal(prevSeedFileBz, &prevSeedCfg)
-		if err != nil {
-			return nil, err
-		}
-
-		cert, err := base64.StdEncoding.DecodeString(prevSeedCfg.MasterCert)
-		if err != nil {
-			return nil, err
-		}
-
-		regInfo := reg.RegistrationNodeInfo{
-			Certificate:   remote_attestation.Certificate(cert),
-			EncryptedSeed: seed,
-		}
-
-		keepers.RegKeeper.SetRegistrationInfo(ctx, regInfo)
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
