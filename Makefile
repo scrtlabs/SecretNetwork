@@ -147,10 +147,12 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 build_cli:
-	go build -o secretcli -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	FINAL_GO_BUILD_TAGS := $(filter-out sgx, $(GO_TAGS))
+	go build -o secretcli -mod=readonly -tags "$(FINAL_GO_BUILD_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
-	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
+	FINAL_GO_BUILD_TAGS := $(filter-out sgx, $(GO_TAGS))
+	xgo --targets $(XGO_TARGET) -tags="$(FINAL_GO_BUILD_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
