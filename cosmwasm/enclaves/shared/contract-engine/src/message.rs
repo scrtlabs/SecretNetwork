@@ -69,7 +69,7 @@ pub fn get_secret_msg(message: &[u8]) -> SecretMessage {
         Err(_) => {
             trace!(
                 "Msg is not SecretMessage (probably plaintext): {:?}",
-                base64::encode(&message)
+                base64::encode(message)
             );
 
             SecretMessage {
@@ -102,7 +102,7 @@ pub fn parse_message(
             Some(decrypted_secret_msg) => {
                 trace!(
                     "execute input before decryption: {:?}",
-                    base64::encode(&message)
+                    base64::encode(message)
                 );
 
                 Ok(ParsedMessage {
@@ -117,7 +117,7 @@ pub fn parse_message(
             None => {
                 trace!(
                     "execute input was plaintext: {:?}",
-                    base64::encode(&message)
+                    base64::encode(message)
                 );
 
                 let secret_msg = SecretMessage {
@@ -153,7 +153,7 @@ pub fn parse_message(
             if !parsed_reply.is_encrypted {
                 trace!(
                     "reply input is not encrypted: {:?}",
-                    base64::encode(&message)
+                    base64::encode(message)
                 );
 
                 let msg_id =
@@ -214,7 +214,7 @@ pub fn parse_message(
 
             trace!(
                 "reply input before decryption: {:?}",
-                base64::encode(&message)
+                base64::encode(message)
             );
 
             match parsed_reply.result.clone() {
@@ -454,7 +454,7 @@ pub fn parse_message(
             trace!(
                 "parsing {} msg (Should always be plaintext): {:?}",
                 HandleType::get_export_name(handle_type),
-                base64::encode(&message)
+                base64::encode(message)
             );
 
             let scrt_msg = SecretMessage {
@@ -497,7 +497,7 @@ pub fn parse_message(
 
                     trace!(
                         "ibc_packet_receive data before decryption: {:?}",
-                        base64::encode(&message)
+                        base64::encode(message)
                     );
 
                     parsed_encrypted_ibc_packet.packet.data = decrypted_msg.as_slice().into();
@@ -508,7 +508,7 @@ pub fn parse_message(
 
                     trace!(
                         "ibc_packet_receive data was plaintext: {:?}",
-                        base64::encode(&message)
+                        base64::encode(message)
                     );
 
                     orig_secret_msg = SecretMessage {

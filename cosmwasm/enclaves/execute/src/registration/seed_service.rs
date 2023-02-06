@@ -36,7 +36,7 @@ fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
         return Err(CryptoError::IPv4LookupError);
     }
 
-    let sock = TcpStream::connect(&addr.unwrap()).map_err(|err| {
+    let sock = TcpStream::connect(addr.unwrap()).map_err(|err| {
         trace!(
             "Error while trying to connect to service with addr: {:?}, err: {:?}",
             addr,
@@ -306,10 +306,6 @@ pub fn get_next_consensus_seed_from_service(
             }
         }
     };
-
-    if let Err(e) = opt_seed {
-        return Err(e);
-    }
 
     let mut seed = opt_seed?;
 
