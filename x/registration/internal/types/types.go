@@ -12,8 +12,8 @@ const (
 	LegacyEncryptedKeyLength   = 96  // hex encoded length
 	MasterNodeKeyId            = "NodeExchMasterKey"
 	MasterIoKeyId              = "IoExchMasterKey"
-	SecretNodeSeedConfig       = "seed.json"
-	SecretNodeSeedBackupConfig = "seed.json.backup"
+	SecretNodeSeedLegacyConfig = "seed.json"
+	SecretNodeSeedNewConfig    = "new_seed.json"
 	SecretNodeCfgFolder        = ".node"
 )
 
