@@ -19,6 +19,8 @@ pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
 
 pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
 pub const IO_KEY_SAVE_PATH: &str = "io-master-key.txt";
+pub const SEED_EXCH_CERT_SAVE_PATH: &str = "node-master-cert.der";
+pub const IO_CERT_SAVE_PATH: &str = "io-master-cert.der";
 pub const SEED_UPDATE_SAVE_PATH: &str = "seed.txt";
 
 pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed";

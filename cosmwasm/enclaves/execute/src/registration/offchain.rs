@@ -57,6 +57,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         api_key_len as usize,
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
+    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let mut key_manager = Keychain::new();
 
@@ -109,7 +110,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    if let Err(status) = write_master_pub_keys(&key_manager) {
+    if let Err(status) = write_master_pub_keys(&key_manager, api_key_slice) {
         return status;
     }
 
@@ -331,7 +332,7 @@ pub unsafe extern "C" fn ecall_init_node(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    if let Err(status) = write_master_pub_keys(&key_manager) {
+    if let Err(status) = write_master_pub_keys(&key_manager, api_key_slice) {
         return status;
     }
 
