@@ -69,6 +69,7 @@ then
   secretd q register secret-network-params 2> /dev/null
 
   secretd configure-secret node-master-key.txt "$SEED"
+  secretd configure-old-secret node-master-cert.der "$SEED"
 
   curl http://"$RPC_URL"/genesis | jq -r .result.genesis > /root/.secretd/config/genesis.json
 

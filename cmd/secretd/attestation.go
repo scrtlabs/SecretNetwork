@@ -259,11 +259,10 @@ func ConfigureSecret() *cobra.Command {
 				return err
 			}
 
-			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
 			seed := args[1]
 			println(seed)
 			if (len(seed) != reg.LegacyEncryptedKeyLength && len(seed) != reg.EncryptedKeyLength) || !reg.IsHexString(seed) {
-				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length of at least 96 bytes without 0x prefix)")
 			}
 
 			cfg := reg.SeedConfig{
@@ -289,7 +288,65 @@ func ConfigureSecret() *cobra.Command {
 				return err
 			}
 
-			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedConfig)
+			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedNewConfig)
+
+			err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func CreateOldSecret() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "configure-old-secret [master-cert] [seed]",
+		Short: "After registration is successful, configure the old secrets for full-sync ",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			// Create .secretd/.node directory if it doesn't exist
+			nodeDir := filepath.Join(homeDir, reg.SecretNodeCfgFolder)
+			err = os.MkdirAll(nodeDir, os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedLegacyConfig)
+			if _, err := os.Stat(seedFilePath); err == nil {
+				return fmt.Errorf("old secrets are already in place")
+			}
+
+			cert, err := os.ReadFile(args[0])
+			if err != nil {
+				return err
+			}
+
+			combinedSeed := args[1]
+			if len(combinedSeed) != reg.EncryptedKeyLength || !reg.IsHexString(combinedSeed) {
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 192 without 0x prefix)")
+			}
+
+			seed := combinedSeed[0:reg.LegacyEncryptedKeyLength]
+			println(seed)
+
+			cfg := reg.LegacySeedConfig{
+				EncryptedKey: seed,
+				MasterCert:   base64.StdEncoding.EncodeToString(cert),
+			}
+
+			cfgBytes, err := json.Marshal(&cfg)
+			if err != nil {
+				return err
+			}
 
 			err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
 			if err != nil {
@@ -337,7 +394,7 @@ func ResetEnclave() *cobra.Command {
 			}
 
 			// Remove .secretd/.node/seed.json
-			path := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			path := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedNewConfig)
 			if _, err := os.Stat(path); !os.IsNotExist(err) {
 				fmt.Printf("Removing %s\n", path)
 				err = os.Remove(path)
@@ -542,7 +599,7 @@ Please report any issues with this command
 				return err
 			}
 
-			seedCfgFile := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			seedCfgFile := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedNewConfig)
 			seedCfgDir := filepath.Join(homeDir, reg.SecretNodeCfgFolder)
 
 			// create seed directory if it doesn't exist

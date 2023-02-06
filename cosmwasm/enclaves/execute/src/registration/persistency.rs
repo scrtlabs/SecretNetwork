@@ -5,6 +5,7 @@ use enclave_crypto::consts::{
 };
 use enclave_crypto::{KeyPair, Keychain};
 use enclave_utils::storage::rewrite_on_untrusted;
+use log::*;
 use sgx_types::SgxResult;
 
 pub fn write_public_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
@@ -36,11 +37,11 @@ pub fn write_seed(seed: &[u8], save_path: &str) -> SgxResult<()> {
 pub fn write_master_pub_keys(key_manager: &Keychain, api_key: &[u8]) -> SgxResult<()> {
     let kp = key_manager.seed_exchange_key().unwrap();
     write_public_key(&kp.current, SEED_EXCH_KEY_SAVE_PATH)?;
-    write_cert_for_public_key(&kp.genesis, SEED_EXCH_CERT_SAVE_PATH, api_key_slice)?;
+    write_cert_for_public_key(&kp.genesis, SEED_EXCH_CERT_SAVE_PATH, api_key)?;
 
     let kp = key_manager.get_consensus_io_exchange_keypair().unwrap();
     write_public_key(&kp.current, IO_KEY_SAVE_PATH)?;
-    write_cert_for_public_key(&kp.genesis, SEED_EXCH_CERT_SAVE_PATH, api_key_slice)?;
+    write_cert_for_public_key(&kp.genesis, IO_CERT_SAVE_PATH, api_key)?;
 
     Ok(())
 }
