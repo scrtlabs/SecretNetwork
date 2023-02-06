@@ -24,6 +24,8 @@ SHA256SUMS*
 *.der
 io-master-key.txt
 node-master-key.txt
+node-master-cert.der
+io-master-cert.der
 __debug_bin
 id_tx_io.json
 .idea
