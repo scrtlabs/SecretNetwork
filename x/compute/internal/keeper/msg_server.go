@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -87,4 +88,95 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	return &types.MsgExecuteContractResponse{
 		Data: data.Data,
 	}, nil
+}
+
+func (m msgServer) MigrateContract(goCtx context.Context, msg *types.MsgMigrateContract) (*types.MsgMigrateContractResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "sender")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "contract")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	data, err := m.keeper.Migrate(ctx, contractAddr, senderAddr, msg.CodeID, msg.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgMigrateContractResponse{
+		Data: data,
+	}, nil
+}
+
+func (m msgServer) UpdateAdmin(goCtx context.Context, msg *types.MsgUpdateAdmin) (*types.MsgUpdateAdminResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "sender")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "contract")
+	}
+	newAdminAddr, err := sdk.AccAddressFromBech32(msg.NewAdmin)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "new admin")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	if err := m.keeper.UpdateContractAdmin(ctx, contractAddr, senderAddr, newAdminAddr); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgUpdateAdminResponse{}, nil
+}
+
+func (m msgServer) ClearAdmin(goCtx context.Context, msg *types.MsgClearAdmin) (*types.MsgClearAdminResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "sender")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "contract")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	if err := m.keeper.UpdateContractAdmin(ctx, contractAddr, senderAddr, nil); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgClearAdminResponse{}, nil
 }

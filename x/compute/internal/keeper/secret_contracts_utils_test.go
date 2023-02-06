@@ -539,7 +539,7 @@ func initHelperImpl(
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, sentFunds)
 	// make the label a random base64 string, because why not?
-	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sentFunds, nil)
+	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sentFunds, nil)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happened

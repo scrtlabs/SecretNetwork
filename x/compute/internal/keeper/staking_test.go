@@ -135,7 +135,7 @@ func TestInitializeStaking(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
-	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
+	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -229,7 +229,7 @@ func initializeStaking(t *testing.T) initInfo {
 	require.NoError(t, err)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
-	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
+	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 

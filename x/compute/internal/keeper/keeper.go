@@ -1052,3 +1052,19 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }
+
+func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, newAdmin sdk.AccAddress) error {
+	contractInfo := k.GetContractInfo(ctx, contractAddress)
+	if contractInfo == nil {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown contract")
+	}
+	contractInfo.Admin = newAdmin
+	k.setContractInfo(ctx, contractAddress, contractInfo)
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeUpdateContractAdmin,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyNewAdmin, newAdmin.String()),
+	))
+
+	return nil
+}

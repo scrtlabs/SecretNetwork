@@ -289,3 +289,28 @@ contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
 # The WASM VM memory cache size in number of cached modules. Can safely go up to 15, but not recommended for validators
 contract-memory-enclave-cache-size = "{{ .WASMConfig.EnclaveCacheSize }}"
 `
+
+func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
+	return ContractCodeHistoryEntry{
+		Operation: ContractCodeHistoryOperationTypeInit,
+		CodeID:    c.CodeID,
+		Updated:   c.Created,
+		Msg:       initMsg,
+	}
+}
+
+func (c *ContractInfo) AddMigration(ctx sdk.Context, codeID uint64, msg []byte) ContractCodeHistoryEntry {
+	h := ContractCodeHistoryEntry{
+		Operation: ContractCodeHistoryOperationTypeMigrate,
+		CodeID:    codeID,
+		Updated:   NewAbsoluteTxPosition(ctx),
+		Msg:       msg,
+	}
+	c.CodeID = codeID
+	return h
+}
+
+// AdminAddr convert into sdk.AccAddress or nil when not set
+func (c *ContractInfo) AdminAddr() sdk.AccAddress {
+	return c.Admin
+}

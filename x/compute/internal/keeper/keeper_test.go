@@ -286,7 +286,7 @@ func TestInstantiate(t *testing.T) {
 	ctx = ctx.WithTxBytes(txBytes)
 
 	// create with no balance is also legal
-	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
+	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.NoError(t, err)
 	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
 
@@ -303,7 +303,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, info.Label, "demo contract 1")
 
 	// test that creating again with the same label will fail
-	_, _, err = keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
+	_, _, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.Error(t, err)
 }
 
@@ -402,7 +402,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	addr, _, err := keeper.Instantiate(ctx, nonExistingCodeID, creator /* , nil */, initMsgBz, "demo contract 2", nil, nil)
+	addr, _, err := keeper.Instantiate(ctx, nonExistingCodeID, creator, nil, initMsgBz, "demo contract 2", nil, nil)
 	require.True(t, types.ErrNotFound.Is(err), err)
 	require.Nil(t, addr)
 }
@@ -452,7 +452,7 @@ func TestExecute(t *testing.T) {
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, contractID, deposit)
 	// create with no balance is also legal
-	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", deposit, nil)
 
 	require.NoError(t, err)
 
@@ -751,7 +751,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, msgBz, "demo contract 5", deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, msgBz, "demo contract 5", deposit, nil)
 	require.NoError(t, err)
 
 	// make sure we set a limit before calling
