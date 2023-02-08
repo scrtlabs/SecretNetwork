@@ -16,7 +16,7 @@ use crate::cosmwasm_config::ContractOperation;
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
-use crate::random::derive_random;
+use crate::random::{derive_random, update_msg_counter};
 
 use super::contract_validation::{
     generate_encryption_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -145,7 +145,9 @@ pub fn init(
     // let duration = start.elapsed();
     // trace!("Time elapsed in engine.init: {:?}", duration);
 
+    update_msg_counter(block_height);
     *used_gas = engine.gas_used();
+
     let output = result?;
 
     engine
@@ -296,7 +298,10 @@ pub fn handle(
     versioned_env.set_contract_hash(&contract_hash);
 
     let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
+
     *used_gas = engine.gas_used();
+    update_msg_counter(block_height);
+
     let mut output = result?;
 
     // This gets refunded because it will get charged later by the sdk

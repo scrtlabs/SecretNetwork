@@ -159,8 +159,8 @@ jobs:
           find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-          cp librandom_api.so ./librandom_api.so
-          cp tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
+          # cp /opt/mount/librandom_api.so /usr/lib/librandom_api.so
+          # cp /opt/mount/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
           cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
           cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm

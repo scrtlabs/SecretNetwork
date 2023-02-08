@@ -176,20 +176,14 @@ export async function storeContracts(
   wasms: Uint8Array[]
 ) {
   const tx: Tx = await account.tx.broadcast(
-    [
+    wasms.map(wasm =>
       new MsgStoreCode({
         sender: account.address,
-        wasmByteCode: wasms[0],
+        wasmByteCode: wasm,
         source: "",
         builder: "",
       }),
-      new MsgStoreCode({
-        sender: account.address,
-        wasmByteCode: wasms[1],
-        source: "",
-        builder: "",
-      }),
-    ],
+    ),
     { gasLimit: 5_000_000 }
   );
 
@@ -206,22 +200,15 @@ export async function instantiateContracts(
   contracts: Contract[]
 ) {
   const tx: Tx = await account.tx.broadcast(
-    [
+    contracts.map((contract, index) =>
       new MsgInstantiateContract({
         sender: account.address,
-        codeId: contracts[0].codeId,
-        codeHash: contracts[0].codeHash,
+        codeId: contract.codeId,
+        codeHash: contract.codeHash,
         initMsg: { nop: {} },
-        label: `v1-${Date.now()}`,
+        label: `v1-${Date.now()}-${index}`,
       }),
-      new MsgInstantiateContract({
-        sender: account.address,
-        codeId: contracts[1].codeId,
-        codeHash: contracts[1].codeHash,
-        initMsg: { nop: {} },
-        label: `v010-${Date.now()}`,
-      }),
-    ],
+    ),
     { gasLimit: 300_000 }
   );
   if (tx.code !== TxResultCode.Success) {

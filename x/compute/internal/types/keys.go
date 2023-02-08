@@ -51,7 +51,7 @@ func GetContractAddressKey(addr sdk.AccAddress) []byte {
 	return append(ContractKeyPrefix, addr...)
 }
 
-// GetContractAddressKey returns the key for the WASM contract instance
+// GetRandomKey returns the key for the random seed for each block
 func GetRandomKey(height int64) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(height))

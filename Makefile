@@ -63,9 +63,6 @@ endif
 CUR_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 build_tags = netgo
-
-build_tags += sgx
-
 ifeq ($(LEDGER_ENABLED),true)
   ifeq ($(OS),Windows_NT)
     GCCEXE = $(shell where gcc.exe 2> NUL)
@@ -99,6 +96,7 @@ ifeq ($(SGX_MODE), HW)
   endif
 
   build_tags += hw
+  build_tags += sgx
 endif
 
 build_tags += $(IAS_BUILD)
@@ -149,10 +147,10 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 build_cli:
-	go build -o secretcli -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -o secretcli -mod=readonly -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
-	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
+	xgo --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
@@ -531,7 +529,7 @@ proto-gen:
 	cp go.mod /tmp/go.mod.bak
 	cp go.sum /tmp/go.sum.bak
 	@echo "Generating Protobuf files"
-	$(DOCKER) run --rm -v /mnt/c/Users/Itzik/GolandProjects/SecretNetwork:/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
+	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
 	cp /tmp/go.mod.bak go.mod
 	cp /tmp/go.sum.bak go.sum
 	go mod tidy

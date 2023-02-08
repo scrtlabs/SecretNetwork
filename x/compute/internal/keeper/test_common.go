@@ -91,6 +91,7 @@ import (
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
+	"math/rand"
 )
 
 const (
@@ -501,6 +502,10 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 
+	random := make([]byte, 32)
+	rand.Read(random)
+	keeper.SetRandomSeed(ctx, random)
+
 	am := module.NewManager( // minimal module set that we use for message/ query tests
 		bank.NewAppModule(encodingConfig.Marshaler, bankKeeper, authKeeper),
 		staking.NewAppModule(encodingConfig.Marshaler, stakingKeeper, authKeeper, bankKeeper),
@@ -710,6 +715,14 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 
 	fundAccounts(ctx, am, bk, addr, coins)
 	return addr, priv
+}
+
+// StoreRandomOnNewBlock is used when height is incremented in tests, the random value for the new block needs to be
+// generated too (to pass as env)
+func StoreRandomOnNewBlock(ctx sdk.Context, wasmKeeper Keeper) {
+	random := make([]byte, 32)
+	rand.Read(random)
+	wasmKeeper.SetRandomSeed(ctx, random)
 }
 
 const faucetAccountName = "faucet"
