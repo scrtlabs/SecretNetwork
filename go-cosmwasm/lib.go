@@ -396,3 +396,120 @@ func (w *Wasmer) AnalyzeCode(
 ) (*v1types.AnalysisReport, error) {
 	return api.AnalyzeCode(w.cache, codeHash)
 }
+
+// Migrate will migrate an existing contract to a new code binary.
+// This takes storage of the data from the original contract and the CodeID of the new contract that should
+// replace it. This allows it to run a migration step if needed, or return an error if unable to migrate
+// the given data.
+//
+// MigrateMsg has some data on how to perform the migration.
+func (w *Wasmer) Migrate(
+	newCodeId CodeID,
+	env types.Env,
+	migrateMsg []byte,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	sigInfo types.VerificationInfo,
+) (interface{}, uint64, error) {
+	paramBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	sigInfoBin, err := json.Marshal(sigInfo)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	data, gasUsed, err := api.Handle(w.cache, newCodeId, paramBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, types.HandleTypeMigrate)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	var resp ContractExecResponse
+	err = json.Unmarshal(data, &resp)
+
+	if err != nil {
+		// unidentified response 🤷
+		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
+	}
+
+	isOutputAddressedToReply := (len(resp.InternaReplyEnclaveSig) > 0 && len(resp.InternalMsgId) > 0)
+
+	// handle v0.10 response
+	if resp.V010 != nil {
+		if resp.V010.Err != nil { //nolint:gocritic
+			return v1types.DataWithInternalReplyInfo{
+				InternalMsgId:          resp.InternalMsgId,
+				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
+				Data:                   []byte(resp.V010.Err.GenericErr.Msg),
+			}, gasUsed, fmt.Errorf("%+v", resp.V010.Err)
+		} else if resp.V010.Ok != nil {
+			if isOutputAddressedToReply {
+				resp.V010.Ok.Data, err = AppendReplyInternalDataToData(resp.V010.Ok.Data, resp.InternaReplyEnclaveSig, resp.InternalMsgId)
+				if err != nil {
+					return nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
+				}
+			}
+			return resp.V010.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse v0.10 handle response: %+v", resp)
+		}
+	}
+
+	// handle v1 response
+	if resp.V1 != nil {
+		if resp.V1.Err != nil { //nolint:gocritic
+			return v1types.DataWithInternalReplyInfo{
+				InternalMsgId:          resp.InternalMsgId,
+				InternaReplyEnclaveSig: resp.InternaReplyEnclaveSig,
+				Data:                   []byte(resp.V1.Err.GenericErr.Msg),
+			}, gasUsed, fmt.Errorf("%+v", resp.V1.Err)
+		} else if resp.V1.Ok != nil {
+			if isOutputAddressedToReply {
+				resp.V1.Ok.Data, err = AppendReplyInternalDataToData(resp.V1.Ok.Data, resp.InternaReplyEnclaveSig, resp.InternalMsgId)
+				if err != nil {
+					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
+				}
+			}
+			return resp.V1.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse v1 handle response: %+v", resp)
+		}
+	}
+
+	if resp.IBCBasic != nil {
+		if resp.IBCBasic.Err != nil { //nolint:gocritic
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCBasic.Err)
+		} else if resp.IBCBasic.Ok != nil {
+			return resp.IBCBasic.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCBasic response: %+v", resp)
+		}
+	}
+
+	if resp.IBCPacketReceive != nil {
+		if resp.IBCPacketReceive.Err != nil { //nolint:gocritic
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCPacketReceive.Err)
+		} else if resp.IBCPacketReceive.Ok != nil {
+			return resp.IBCPacketReceive.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCPacketReceive response: %+v", resp)
+		}
+	}
+
+	if resp.IBCChannelOpen != nil {
+		if resp.IBCChannelOpen.Err != nil { //nolint:gocritic
+			return nil, gasUsed, fmt.Errorf("%+v", resp.IBCChannelOpen.Err)
+		} else if resp.IBCChannelOpen.Ok != nil {
+			// ibc_channel_open actually returns no data
+			return resp.IBCChannelOpen.Ok, gasUsed, nil
+		} else {
+			return nil, gasUsed, fmt.Errorf("cannot parse IBCChannelOpen response: %+v", resp)
+		}
+	}
+
+	return nil, gasUsed, fmt.Errorf("handle: cannot detect response type (v0.10 or v1)")
+}

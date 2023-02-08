@@ -1068,3 +1068,82 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 
 	return nil
 }
+
+func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "migrate")
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: migrate")
+
+	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetSignerInfo(ctx, caller)
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	}
+
+	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+
+	contractInfo, _, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, sdkerrors.Wrap(err, "unknown contract").Error())
+	}
+
+	newCodeInfo, err := k.GetCodeInfo(ctx, newCodeID)
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, sdkerrors.Wrap(err, "unknown code").Error())
+	}
+
+	// check for IBC flag
+	switch report, err := k.wasmer.AnalyzeCode(newCodeInfo.CodeHash); {
+	case err != nil:
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
+	case !report.HasIBCEntryPoints && contractInfo.IBCPortID != "":
+		// prevent update of ibc contract to non ibc contract
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, "requires ibc callbacks")
+	case report.HasIBCEntryPoints && contractInfo.IBCPortID == "":
+		// add ibc port
+		ibcPort, err := k.ensureIbcPort(ctx, contractAddress)
+		if err != nil {
+			return nil, err
+		}
+		contractInfo.IBCPortID = ibcPort
+	}
+
+	store := ctx.KVStore(k.storeKey)
+	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+
+	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey)
+
+	// prepare querier
+	querier := QueryHandler{
+		Ctx:     ctx,
+		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
+	}
+
+	// instantiate wasm contract
+	gas := gasForContract(ctx)
+
+	res, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, &prefixStore, cosmwasmAPI, &querier, gasMeter(ctx), gas, verificationInfo)
+	consumeGas(ctx, gasUsed)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
+	}
+	// delete old secondary index entry
+	k.removeFromContractCodeSecondaryIndex(ctx, contractAddress, k.getLastContractHistoryEntry(ctx, contractAddress))
+	// persist migration updates
+	historyEntry := contractInfo.AddMigration(ctx, newCodeID, msg)
+	k.appendToContractHistory(ctx, contractAddress, historyEntry)
+	k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
+	k.storeContractInfo(ctx, contractAddress, contractInfo)
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeMigrate,
+		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(newCodeID, 10)),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	))
+
+	data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, res.Events)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "dispatch")
+	}
+
+	return data, nil
+}
