@@ -1,4 +1,6 @@
-use enclave_crypto::consts::{CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES};
+use enclave_crypto::consts::{
+    CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES, STATE_ENCRYPTION_VERSION,
+};
 use enclave_crypto::key_manager::SeedsHolder;
 use log::*;
 
@@ -60,30 +62,33 @@ pub fn write_to_encrypted_state(
     plaintext_value: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
+    salt: u64,
 ) -> Result<u64, WasmEngineError> {
     // Get the state key from the key manager
 
-    let (scrambled_field_name, used_gas_for_key_creation, db_data) =
-        create_encrypted_key(plaintext_key, plaintext_value, context, contract_key)?;
+    let (encrypted_key, used_gas_for_key_creation, encrypted_value) =
+        create_encrypted_key_value(plaintext_key, plaintext_value, context, contract_key, salt)?;
 
     // Write the new data as concat(ad, encrypted_val)
-    let used_gas_for_write = write_db(context, &scrambled_field_name, &db_data).map_err(|err| {
-        warn!(
-            "write_db() go an error from ocall_write_db, stopping wasm: {:?}",
+    let used_gas_for_write =
+        write_db(context, &encrypted_key, &encrypted_value).map_err(|err| {
+            warn!(
+                "write_db() go an error from ocall_write_db, stopping wasm: {:?}",
+                err
+            );
             err
-        );
-        err
-    })?;
+        })?;
 
     Ok(used_gas_for_key_creation + used_gas_for_write)
 }
 
 #[cfg(not(feature = "query-only"))]
-pub fn create_encrypted_key(
+pub fn create_encrypted_key_value(
     plaintext_key: &[u8],
     plaintext_value: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
+    salt: u64,
 ) -> Result<(Vec<u8>, u64, Vec<u8>), WasmEngineError> {
     let scrambled_field_name = field_name_digest(plaintext_key, contract_key);
     let gas_used_remove = remove_db(context, &scrambled_field_name).map_err(|err| {
@@ -95,19 +100,28 @@ pub fn create_encrypted_key(
     })?;
 
     let encrypted_key = encrypt_key_new(plaintext_key, contract_key)?;
-    let encrypted_value = encrypt_value_new(&encrypted_key, plaintext_value, contract_key)?;
+    let encrypted_value = encrypt_value_new(&encrypted_key, plaintext_value, contract_key, salt)?;
 
     let mut encrypted_key_with_header: Vec<u8> = vec![];
     encrypted_key_with_header.extend_from_slice(ENCRYPTED_KEY_MAGIC_BYTES);
     encrypted_key_with_header.extend_from_slice(&CONSENSUS_SEED_VERSION.to_be_bytes());
+    encrypted_key_with_header.extend_from_slice(&STATE_ENCRYPTION_VERSION.to_be_bytes());
     encrypted_key_with_header.extend_from_slice(&encrypted_key);
 
+    let mut encrypted_value_with_salt: Vec<u8> = vec![];
+    encrypted_value_with_salt.extend_from_slice(&salt.to_be_bytes());
+    encrypted_value_with_salt.extend_from_slice(&encrypted_value);
+
     debug!(
-        "Removed scrambled field name: {:?} and created new key with magic: {:?}",
+        "Removed old field name: {:?} and created new field name: {:?}",
         scrambled_field_name, encrypted_key_with_header
     );
 
-    Ok((encrypted_key_with_header, gas_used_remove, encrypted_value))
+    Ok((
+        encrypted_key_with_header,
+        gas_used_remove,
+        encrypted_value_with_salt,
+    ))
 }
 
 pub fn read_from_encrypted_state(
@@ -116,6 +130,7 @@ pub fn read_from_encrypted_state(
     contract_key: &ContractKey,
     has_write_permissions: bool,
     kv_cache: &mut KvCache,
+    write_salt: u64,
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     // Try reading with the new encryption format
     let encrypted_key = encrypt_key_new(plaintext_key, contract_key)?;
@@ -123,6 +138,7 @@ pub fn read_from_encrypted_state(
     let mut encrypted_key_with_header: Vec<u8> = vec![];
     encrypted_key_with_header.extend_from_slice(ENCRYPTED_KEY_MAGIC_BYTES);
     encrypted_key_with_header.extend_from_slice(&CONSENSUS_SEED_VERSION.to_be_bytes());
+    encrypted_key_with_header.extend_from_slice(&STATE_ENCRYPTION_VERSION.to_be_bytes());
     encrypted_key_with_header.extend_from_slice(&encrypted_key);
 
     let mut maybe_plaintext_value: Option<Vec<u8>>;
@@ -130,8 +146,12 @@ pub fn read_from_encrypted_state(
     (maybe_plaintext_value, gas_used_first_read) =
         match read_db(context, &encrypted_key_with_header) {
             Ok((maybe_encrypted_value, gas_used)) => match maybe_encrypted_value {
-                Some(encrypted_value) => {
-                    match decrypt_value_new(&encrypted_key, &encrypted_value, contract_key) {
+                Some(encrypted_value_with_salt) => {
+                    match decrypt_value_new(
+                        &encrypted_key,
+                        &encrypted_value_with_salt,
+                        contract_key,
+                    ) {
                         Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
                         // This error case is why we have all the matches here.
                         // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
@@ -178,8 +198,13 @@ pub fn read_from_encrypted_state(
     if has_write_permissions {
         if let Some(ref plaintext_value) = maybe_plaintext_value {
             // Key exists with the old format, rewriting with the new format
-            gas_used_write =
-                write_to_encrypted_state(plaintext_key, plaintext_value, context, contract_key)?;
+            gas_used_write = write_to_encrypted_state(
+                plaintext_key,
+                plaintext_value,
+                context,
+                contract_key,
+                write_salt,
+            )?;
         }
     }
 
@@ -216,6 +241,7 @@ pub fn remove_from_encrypted_state(
     let mut encrypted_key_with_header: Vec<u8> = vec![];
     encrypted_key_with_header.extend_from_slice(ENCRYPTED_KEY_MAGIC_BYTES);
     encrypted_key_with_header.extend_from_slice(&CONSENSUS_SEED_VERSION.to_be_bytes());
+    encrypted_key_with_header.extend_from_slice(&STATE_ENCRYPTION_VERSION.to_be_bytes());
     encrypted_key_with_header.extend_from_slice(&encrypted_key);
 
     let gas_used_second_remove = remove_db(context, &encrypted_key_with_header).map_err(|err| {
@@ -377,11 +403,12 @@ fn encrypt_value_new(
     encrypted_state_key: &[u8],
     plaintext_state_value: &[u8],
     contract_key: &ContractKey,
+    salt: u64,
 ) -> Result<Vec<u8>, WasmEngineError> {
     let encryption_key = get_symmetrical_key_new(contract_key);
 
     encryption_key
-        .encrypt_siv(plaintext_state_value, Some(&[encrypted_state_key]))
+        .encrypt_siv(plaintext_state_value, Some(&[encrypted_state_key, &salt.to_be_bytes()]))
         .map_err(|err| {
             warn!(
                 "write_db() got an error while trying to encrypt_value_new the value '{:?}', stopping wasm: {:?}",
@@ -392,18 +419,31 @@ fn encrypt_value_new(
     })
 }
 
-/// encrypted_state_key without the header
+/// encrypted_state_key is without the header
 fn decrypt_value_new(
     encrypted_state_key: &[u8],
-    encrypted_state_value: &[u8],
+    encrypted_state_value_with_salt: &[u8],
     contract_key: &ContractKey,
 ) -> Result<Vec<u8>, WasmEngineError> {
     let decryption_key = get_symmetrical_key_new(contract_key);
 
-    decryption_key.decrypt_siv(encrypted_state_value, Some(&[encrypted_state_key])).map_err(|err| {
+    if encrypted_state_value_with_salt.len() < 8 {
+        warn!(
+            "read_db() got an error while trying to decrypt_value_new the value {:?} for key {:?}, stopping wasm: value too small ({} < 8) to extract salt",
+            encrypted_state_value_with_salt,
+            encrypted_state_key,
+            encrypted_state_value_with_salt.len()
+        );
+        return Err(WasmEngineError::DecryptionError);
+    }
+
+    let salt_as_bytes = &encrypted_state_value_with_salt[0..8];
+    let encrypted_state_value = &encrypted_state_value_with_salt[8..];
+
+    decryption_key.decrypt_siv(encrypted_state_value, Some(&[encrypted_state_key, salt_as_bytes])).map_err(|err| {
         warn!(
             "read_db() got an error while trying to decrypt_value_new the value {:?} for key {:?}, stopping wasm: {:?}",
-            encrypted_state_value,
+            encrypted_state_value_with_salt,
             encrypted_state_key,
             err
         );

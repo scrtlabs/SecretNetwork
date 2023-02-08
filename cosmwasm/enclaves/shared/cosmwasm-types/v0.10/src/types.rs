@@ -119,6 +119,7 @@ pub struct TransactionInfo {
 pub struct BlockInfo {
     pub height: u64,
     /// Absolute time of the block creation in seconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
+    /// Assaf: Since we added CosmWasm v1 this is in NANOseconds
     pub time: u64,
     pub chain_id: String,
     #[cfg(feature = "random")]

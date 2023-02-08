@@ -99,6 +99,7 @@ pub struct Context {
     user_public_key: Ed25519PublicKey,
     kv_cache: KvCache,
     last_error: Option<WasmEngineError>,
+    timestamp: u64,
 }
 
 impl Context {
@@ -197,6 +198,7 @@ impl Engine {
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
         query_depth: u32,
+        timestamp: u64,
     ) -> Result<Engine, EnclaveError> {
         let versioned_code = create_module_instance(contract_code, &gas_costs, operation)?;
         let kv_cache = KvCache::new();
@@ -212,6 +214,7 @@ impl Engine {
             user_public_key,
             kv_cache,
             last_error: None,
+            timestamp,
         };
 
         debug!("setting up runtime");
@@ -528,7 +531,7 @@ impl Engine {
 
     #[cfg(not(feature = "query-only"))]
     pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
-        use crate::db::create_encrypted_key;
+        use crate::db::create_encrypted_key_value;
 
         // here we refund all the pseudo gas charged for writes to cache
         // todo: optimize to only charge for writes that change chain state
@@ -540,9 +543,14 @@ impl Engine {
             .flush()
             .into_iter()
             .map(|(k, v)| {
-                let (enc_key, _, enc_v) =
-                    create_encrypted_key(&k, &v, &self.context.context, &self.context.contract_key)
-                        .unwrap();
+                let (enc_key, _, enc_v) = create_encrypted_key_value(
+                    &k,
+                    &v,
+                    &self.context.context,
+                    &self.context.contract_key,
+                    self.context.timestamp,
+                )
+                .unwrap();
 
                 (enc_key.to_vec(), enc_v)
             })
@@ -820,6 +828,7 @@ fn host_read_db(
             ContractOperation::Query => false,
         },
         &mut context.kv_cache,
+        context.timestamp,
     )
     .map_err(debug_err!("db_read failed to read key from storage"))?;
     context.use_gas_externally(used_gas);
