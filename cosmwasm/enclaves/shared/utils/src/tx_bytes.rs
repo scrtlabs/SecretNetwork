@@ -33,7 +33,7 @@ pub struct Tx {
     pub  tx: Vec<u8>
 }
 
-impl SignedBlockForHeight {
+impl TxBytesForHeight {
     pub fn unseal() -> SgxResult<Self> {
         let val_set_from_storage: Self = serde_json::from_slice(
             unseal(&TX_BYTES_SEALING_PATH)?.as_slice(),

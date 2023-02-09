@@ -9,7 +9,7 @@ pub mod ecalls;
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
 pub mod validator_whitelist;
 pub mod storage;
-mod cosmos;
+pub mod cosmos;
 
 use lazy_static::lazy_static;
 use log::debug;
@@ -43,11 +43,39 @@ pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
 }
 
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+#[cfg(feature = "test")]
+pub mod tests {
+    /// Catch failures like the standard test runner, and print similar information per test.
+    /// Tests can only fail by panicking, not by returning a `Result` type.
+    #[macro_export]
+    macro_rules! count_failures {
+        ( $counter: ident, { $($test: expr;)* } ) => {
+            $(
+                print!("test {} ... ", std::stringify!($test));
+                match std::panic::catch_unwind(|| $test) {
+                    Ok(_) => println!("ok"),
+                    Err(_) => {
+                        $counter += 1;
+                        println!("FAILED");
+                    }
+                }
+            )*
+        }
+    }
+
+    pub fn run_tests() {
+        println!();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            // kdf::tests::test_derive_key();
+            // storage::tests::test_open();
+            // storage::tests::test_seal();
+            crate::cosmos::tests::it_works();
+        });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
     }
 }

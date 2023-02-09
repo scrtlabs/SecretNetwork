@@ -23,6 +23,7 @@
 /// of protobuf runtime.
 // const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_25_2;
 
+
 #[derive(PartialEq,Clone,Default)]
 pub struct Tx {
     // message fields

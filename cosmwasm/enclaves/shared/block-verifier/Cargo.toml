@@ -5,6 +5,7 @@ edition = "2018"
 
 [features]
 default = ["random"]
+test = ["hex", "protobuf"]
 random = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -24,4 +25,12 @@ log = "0.4.17"
 enclave_crypto = {path ="../crypto"}
 enclave_utils = {path ="../utils"}
 
-cosmrs = { version = "0.11.0", default-features = false }
+cosmos_proto = {path="../cosmos-proto"}
+
+protobuf = { version = "2.25.2", optional = true }
+
+# cosmrs = { version = "0.11.0", default-features = false }
+hex = { version = "0.4.3", optional = true }
+
+
+

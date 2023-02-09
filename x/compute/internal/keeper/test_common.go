@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -603,6 +604,9 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
+
+	println("************************** HELLLLLLLLLLLLLLLLLOOOOOOOOOOOOOOOOOO ")
+	println(fmt.Sprintf("***************** TX raw bytes: %s", hex.EncodeToString(txBytes)))
 
 	return ctx.WithTxBytes(txBytes)
 }

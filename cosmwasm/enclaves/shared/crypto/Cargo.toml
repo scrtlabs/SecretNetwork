@@ -30,8 +30,9 @@ sha3 = "0.10.6"
 ripemd160 = "0.9.1"
 secp256k1 = { version = "0.26.0", features = ["recovery", "alloc"] }
 # k256
-aes-siv = "0.7.0"
-x25519-dalek = { version = "2.0.0-pre.1", default-features = false, features = [
+# aes-siv = { version = "0.7.0", default-features = false }
+aes-siv = "0.6.2"
+x25519-dalek = { version = "=1.2.0", default-features = false, features = [
   "u64_backend"
 ] }
 cosmos_proto = { path = "../cosmos-proto" }
