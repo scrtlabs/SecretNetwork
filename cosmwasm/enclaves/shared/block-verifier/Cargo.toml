@@ -3,6 +3,10 @@ name = "block-verifier"
 version = "0.1.0"
 edition = "2018"
 
+[features]
+default = ["random"]
+random = []
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
@@ -19,3 +23,5 @@ log = "0.4.17"
 
 enclave_crypto = {path ="../crypto"}
 enclave_utils = {path ="../utils"}
+
+cosmrs = { version = "0.11.0", default-features = false }

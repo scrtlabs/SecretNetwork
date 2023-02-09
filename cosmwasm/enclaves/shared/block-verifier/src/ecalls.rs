@@ -31,6 +31,8 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
 ) -> sgx_status_t {
     let block_header_slice = slice::from_raw_parts(in_header, in_header_len as usize);
     let block_commit_slice = slice::from_raw_parts(in_commit, in_commit_len as usize);
+
+    #[cfg(feature = "random")]
     let encrypted_random_slice =
         slice::from_raw_parts(in_encrypted_random, in_encrypted_random_len as usize);
 
@@ -83,25 +85,30 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     let result = verify_block(&untrusted_block);
 
     if !result {
-        error!("Error verifying encrypted random!");
+        error!("Error verifying block header!");
         return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
     }
 
-    let decrypted = match KEY_MANAGER
-        .random_encryption_key
-        .unwrap()
-        .decrypt_siv(encrypted_random_slice, Some(&[validator_hash.as_bytes()]))
+    #[cfg(feature = "random")]
     {
-        Ok(res) => res,
-        Err(_) => {
-            error!("Error decrypting random slice");
-            return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
-        }
-    };
+        let decrypted = match KEY_MANAGER
+            .random_encryption_key
+            .unwrap()
+            .decrypt_siv(encrypted_random_slice, Some(&[validator_hash.as_bytes()]))
+        {
+            Ok(res) => res,
+            Err(_) => {
+                error!("Error decrypting random slice");
+                return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
+            }
+        };
 
-    decrypted_random.copy_from_slice(&*decrypted);
+        decrypted_random.copy_from_slice(&*decrypted);
+    }
 
-    debug!("Done verifying block: {:?}", result);
+
+
+    debug!("Done verifying block height: {:?}", validator_set_for_height.height);
 
     sgx_status_t::SGX_SUCCESS
 }

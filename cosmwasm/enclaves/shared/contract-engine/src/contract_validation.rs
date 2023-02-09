@@ -298,6 +298,8 @@ pub fn verify_params(
     //     duration
     // );
 
+    // check if sign_bytes are in approved tx list
+
     trace!(
         "Sign bytes are: {:?}",
         String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
