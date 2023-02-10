@@ -10,7 +10,7 @@ replace (
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/scrtlabs/tm-secret-enclave => github.com/scrtlabs/tm-secret-enclave v0.0.0-20230210205208-8db87d314f3b
-	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.34.23-0.20230210205312-f78eda911a03
+	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.34.23-0.20230210232722-8c54bcbfcf31
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )

@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   Enclave-Unit-Tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04-16core
     steps:
       - uses: actions/checkout@v3
         with:
@@ -254,7 +254,7 @@ jobs:
         run: make build_macos_arm64_cli
 
   Build-LocalSecret:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04-32core
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -276,7 +276,7 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES=debug-print
+            FEATURES=light-client-validation,debug-print
             SGX_MODE=SW
           target: build-localsecret
           cache-from: type=gha

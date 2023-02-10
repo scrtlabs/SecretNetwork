@@ -59,11 +59,6 @@ pub fn init(
 ) -> Result<InitSuccess, EnclaveError> {
     trace!("Starting init");
 
-    #[cfg(feature = "light-client-validation")]
-    if !check_msg_matches_state(msg) {
-        return Err(EnclaveError::ValidationFailure);
-    }
-
     //let start = Instant::now();
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();
@@ -103,6 +98,7 @@ pub fn init(
         &canonical_sender_address,
         contract_address,
         &secret_msg,
+        msg,
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -210,11 +206,6 @@ pub fn handle(
 ) -> Result<HandleSuccess, EnclaveError> {
     trace!("Starting handle");
 
-    #[cfg(feature = "light-client-validation")]
-    if !check_msg_matches_state(msg) {
-        return Err(EnclaveError::ValidationFailure);
-    }
-
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();
 
@@ -264,6 +255,7 @@ pub fn handle(
             &canonical_sender_address,
             contract_address,
             &secret_msg,
+            msg,
         )?;
     }
 

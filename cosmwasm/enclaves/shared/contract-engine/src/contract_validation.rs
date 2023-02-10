@@ -302,12 +302,14 @@ pub fn validate_basic_msg(
 }
 
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.
+#[allow(unused_variables)]
 pub fn verify_params(
     sig_info: &SigInfo,
     sent_funds: &[Coin],
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
     msg: &SecretMessage,
+    og_msg: &[u8],
 ) -> Result<(), EnclaveError> {
     debug!("Verifying message signatures for: {:?}", sig_info);
 
@@ -321,7 +323,10 @@ pub fn verify_params(
     //     "verify_params: Time elapsed in verify_callback_sig: {:?}",
     //     duration
     // );
-
+    #[cfg(feature = "light-client-validation")]
+    if !check_msg_matches_state(og_msg) {
+        return Err(EnclaveError::ValidationFailure);
+    }
     // check if sign_bytes are in approved tx list
 
     trace!(
