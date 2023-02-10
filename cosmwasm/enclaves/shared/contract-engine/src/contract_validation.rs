@@ -16,12 +16,27 @@ use crate::io::create_callback_signature;
 use crate::message::is_ibc_msg;
 use crate::types::SecretMessage;
 
+#[cfg(feature = "light-client-validation")]
+use block_verifier::VERIFIED_MESSAGES;
+
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
 pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 
 const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
 const SIZE_OF_U64: usize = 8;
+
+#[cfg(feature = "light-client-validation")]
+pub fn check_msg_matches_state(msg: &[u8]) -> bool {
+    let expected_msg = VERIFIED_MESSAGES.lock().unwrap().get_next().unwrap();
+
+    if expected_msg.as_slice() != msg {
+        error!("Failed to validate message, error 0x3255");
+        return false;
+    }
+
+    return true;
+}
 
 pub fn generate_encryption_key(
     sender: &CanonicalAddr,

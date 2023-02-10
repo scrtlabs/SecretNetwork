@@ -11,6 +11,7 @@ debug-print = []
 test = []
 wasm3 = []
 wasmi-engine = ["wasmi", "parity-wasm", "pwasm-utils"]
+light-client-validation = ["block-verifier"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
@@ -54,6 +55,8 @@ secp256k1 = { version = "0.24.0", features = ["recovery", "alloc"] }
 ed25519-zebra = { version = "=2.2.0", default-features = false }
 rand_core = "0.5.0"
 rand_chacha = { version = "0.2.1", default-features = false }
+
+block-verifier = {path = "../block-verifier", optional = true }
 
 [dependencies.wasmi]
 git = "https://github.com/paritytech/wasmi"

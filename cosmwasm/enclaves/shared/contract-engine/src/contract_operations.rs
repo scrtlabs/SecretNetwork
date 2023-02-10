@@ -13,6 +13,9 @@ use log::*;
 
 use crate::cosmwasm_config::ContractOperation;
 
+#[cfg(feature = "light-client-validation")]
+use crate::contract_validation::check_msg_matches_state;
+
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
@@ -55,6 +58,11 @@ pub fn init(
     sig_info: &[u8],    // info about signature verification
 ) -> Result<InitSuccess, EnclaveError> {
     trace!("Starting init");
+
+    #[cfg(feature = "light-client-validation")]
+    if !check_msg_matches_state(msg) {
+        return Err(EnclaveError::ValidationFailure);
+    }
 
     //let start = Instant::now();
     let contract_code = ContractCode::new(contract);
@@ -201,6 +209,11 @@ pub fn handle(
     handle_type: u8,
 ) -> Result<HandleSuccess, EnclaveError> {
     trace!("Starting handle");
+
+    #[cfg(feature = "light-client-validation")]
+    if !check_msg_matches_state(msg) {
+        return Err(EnclaveError::ValidationFailure);
+    }
 
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();

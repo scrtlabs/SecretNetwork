@@ -6,10 +6,13 @@ extern crate sgx_types;
 pub mod r#const;
 pub mod ecalls;
 
+pub mod storage;
+pub mod tx_parser;
+
+pub use tx_parser::VERIFIED_MESSAGES;
+
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
 pub mod validator_whitelist;
-pub mod storage;
-pub mod cosmos;
 
 use lazy_static::lazy_static;
 use log::debug;
@@ -22,7 +25,6 @@ lazy_static! {
 }
 
 pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
-
     #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
     if !whitelisted_validators_in_block(untrusted_block) {
         debug!("Error verifying validators in block");
@@ -34,14 +36,13 @@ pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
         Verdict::NotEnoughTrust(_) => {
             debug!("Error verifying header - not enough trust");
             false
-        },
+        }
         Verdict::Invalid(e) => {
             debug!("Error verifying header - invalid block header: {:?}", e);
             false
-        },
+        }
     }
 }
-
 
 #[cfg(feature = "test")]
 pub mod tests {
@@ -71,7 +72,13 @@ pub mod tests {
             // kdf::tests::test_derive_key();
             // storage::tests::test_open();
             // storage::tests::test_seal();
-            crate::cosmos::tests::it_works();
+            crate::tx_parser::tests::parse_tx_basic();
+            crate::tx_parser::tests::parse_tx_multiple_msg();
+            crate::tx_parser::tests::parse_tx_multiple_msg_non_wasm();
+            crate::tx_parser::tests::check_message_is_wasm();
+            crate::tx_parser::tests::test_check_message_not_wasm();
+            crate::tx_parser::tests::test_wasm_msg_tracker();
+            crate::tx_parser::tests::test_wasm_msg_tracker_multiple_msgs();
         });
 
         if failures != 0 {
