@@ -17,6 +17,8 @@ production = ["SGX_MODE_HW", "enclave_crypto/production", "enclave_utils/product
 debug-print = ["enclave_contract_engine/debug-print"]
 test = ["enclave_contract_engine/test", "enclave_crypto/test", "enclave_cosmos_types/test", "block-verifier/test"]
 epid_whitelist_disabled = []
+light-client-validation = ["enclave_contract_engine/light-client-validation", "block-verifier/light-client-validation"]
+
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive

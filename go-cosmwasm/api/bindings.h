@@ -215,4 +215,8 @@ Buffer query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
-Buffer submit_block_signatures(Buffer header, Buffer commit, Buffer random, Buffer *err);
+Buffer submit_block_signatures(Buffer header,
+                               Buffer commit,
+                               Buffer txs,
+                               Buffer random,
+                               Buffer *err);

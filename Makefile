@@ -20,6 +20,8 @@ BRANCH ?= develop
 DEBUG ?= 0
 DOCKER_TAG ?= latest
 
+TM_SGX ?= true
+
 CW_CONTRACTS_V010_PATH = ./cosmwasm/contracts/v010/
 CW_CONTRACTS_V1_PATH = ./cosmwasm/contracts/v1/
 
@@ -97,6 +99,10 @@ ifeq ($(SGX_MODE), HW)
 
   build_tags += hw
   build_tags += sgx
+else
+  ifeq ($(TM_SGX), true)
+    build_tags += sgx
+  endif
 endif
 
 build_tags += $(IAS_BUILD)
@@ -431,7 +437,7 @@ go-tests: build-test-contract bin-data-sw
 	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	TM_SGX=false GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster

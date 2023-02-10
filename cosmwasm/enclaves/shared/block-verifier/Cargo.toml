@@ -5,8 +5,9 @@ edition = "2018"
 
 [features]
 default = ["random"]
-test = ["hex", "protobuf"]
+test = []
 random = []
+light-client-validation = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
@@ -27,10 +28,10 @@ enclave_utils = {path ="../utils"}
 
 cosmos_proto = {path="../cosmos-proto"}
 
-protobuf = { version = "2.25.2", optional = true }
+protobuf = { version = "2.25.2" }
+hex = { version = "0.4.3" }
 
 # cosmrs = { version = "0.11.0", default-features = false }
-hex = { version = "0.4.3", optional = true }
 
 
 

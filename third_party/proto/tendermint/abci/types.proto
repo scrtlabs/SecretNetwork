@@ -80,6 +80,7 @@ message RequestBeginBlock {
   LastCommitInfo          last_commit_info     = 3 [(gogoproto.nullable) = false];
   repeated Evidence       byzantine_validators = 4 [(gogoproto.nullable) = false];
   tendermint.types.Commit                  commit = 5;
+  repeated bytes txs = 6;
 }
 
 enum CheckTxType {

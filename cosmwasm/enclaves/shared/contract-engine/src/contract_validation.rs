@@ -30,10 +30,19 @@ const SIZE_OF_U64: usize = 8;
 pub fn check_msg_matches_state(msg: &[u8]) -> bool {
     let expected_msg = VERIFIED_MESSAGES.lock().unwrap().get_next().unwrap();
 
-    if expected_msg.as_slice() != msg {
+    let len_diff = expected_msg.len() - msg.len();
+
+    if &expected_msg[len_diff..] != msg {
         error!("Failed to validate message, error 0x3255");
+        trace!(
+            "Expected: {:?}, vs: {:?}",
+            expected_msg[len_diff..].to_vec(),
+            msg.to_vec()
+        );
         return false;
     }
+
+    trace!("Successfully validated that this message was in the block!");
 
     return true;
 }

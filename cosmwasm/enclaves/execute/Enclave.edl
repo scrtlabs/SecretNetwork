@@ -107,6 +107,8 @@ enclave {
             uintptr_t in_header_len,
             [in, count=in_commit_len] const uint8_t* in_commit,
             uintptr_t in_commit_len,
+            [in, count=in_txs_len] const uint8_t* in_txs,
+            uintptr_t in_txs_len,
             [in, count=in_encrypted_random_len] const uint8_t* in_encrypted_random,
             uintptr_t in_encrypted_random_len,
             [out, count=32] uint8_t* decrypted

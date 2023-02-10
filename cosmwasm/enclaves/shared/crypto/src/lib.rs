@@ -5,6 +5,7 @@ extern crate sgx_trts;
 extern crate sgx_types;
 
 // Trick to get the IDE to use sgx_tstd even when it doesn't know we're targeting SGX
+extern crate alloc;
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -37,3 +38,36 @@ pub use hash::sha::{sha_256, HASH_SIZE};
 pub use traits::{Encryptable, Hmac, Kdf, SIVEncryptable, SealedKey, HMAC_SIGNATURE_SIZE};
 
 pub use kdf::hkdf_sha_256;
+
+#[cfg(feature = "test")]
+pub mod tests {
+    /// Catch failures like the standard test runner, and print similar information per test.
+    /// Tests can only fail by panicking, not by returning a `Result` type.
+    #[macro_export]
+    macro_rules! count_failures {
+        ( $counter: ident, { $($test: expr;)* } ) => {
+            $(
+                print!("test {} ... ", std::stringify!($test));
+                match std::panic::catch_unwind(|| $test) {
+                    Ok(_) => println!("ok"),
+                    Err(_) => {
+                        $counter += 1;
+                        println!("FAILED");
+                    }
+                }
+            )*
+        }
+    }
+
+    pub fn run_tests() {
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            // todo: add encryption and other tests here
+        });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
+    }
+}

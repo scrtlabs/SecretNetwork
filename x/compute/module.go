@@ -164,7 +164,12 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 		panic(err)
 	}
 
-	random, err := api.SubmitBlockSignatures(header, commit, beginBlock.Header.EncryptedRandom.Random)
+	data, err := beginBlock.Data.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	random, err := api.SubmitBlockSignatures(header, commit, data, beginBlock.Header.EncryptedRandom.Random)
 	if err != nil {
 		println("Failed to submit block signtures")
 		panic(err)

@@ -12,6 +12,8 @@ extern "C" {
         in_header_len: u32,
         in_commit: *const u8,
         in_commit_len: u32,
+        in_txs: *const u8,
+        in_txs_len: u32,
         in_encrypted_random: *const u8,
         in_encrypted_random_len: u32,
         decrypted_random: &mut [u8; 32],
@@ -25,6 +27,7 @@ extern "C" {
 pub fn untrusted_submit_block_signatures(
     header: &[u8],
     commit: &[u8],
+    txs: &[u8],
     encrypted_random: &[u8],
 ) -> SgxResult<[u8; 32]> {
     debug!("Hello from just before - untrusted_submit_block_signatures");
@@ -36,7 +39,7 @@ pub fn untrusted_submit_block_signatures(
     // this is here so we can
     loop {
         let (retval, decrypted, status) =
-            submit_block_signature_impl(header, commit, encrypted_random)?;
+            submit_block_signature_impl(header, commit, txs, encrypted_random)?;
         if status != sgx_status_t::SGX_SUCCESS {
             return Err(status);
         } else if retval != sgx_status_t::SGX_SUCCESS {
@@ -64,6 +67,7 @@ pub fn untrusted_submit_block_signatures(
 fn submit_block_signature_impl(
     header: &[u8],
     commit: &[u8],
+    txs: &[u8],
     encrypted_random: &[u8],
 ) -> SgxResult<(sgx_status_t, [u8; 32], sgx_status_t)> {
     // Bind the token to a local variable to ensure its
@@ -89,6 +93,8 @@ fn submit_block_signature_impl(
             header.len() as u32,
             commit.as_ptr(),
             commit.len() as u32,
+            txs.as_ptr(),
+            txs.len() as u32,
             encrypted_random.as_ptr(),
             encrypted_random.len() as u32,
             &mut decrypted

@@ -34,28 +34,29 @@ use std::sync::SgxMutex;
 // }
 //
 // lazy_static! {
-//     static ref CURRENT_TX: SgxMutex = SgxMutex::new(MsgCounter::default());
+//   static ref CURRENT_TX: SgxMutex = SgxMutex::new(MsgCounter::default());
 // }
+
 pub fn message_is_wasm(msg: &protobuf::well_known_types::Any) -> bool {
-    match msg.type_url.as_str() {
+    matches!(
+        msg.type_url.as_str(),
         "/secret.compute.v1beta1.MsgExecuteContract"
-        | "/secret.compute.v1beta1.MsgInstantiateContract" => true,
-        _ => false,
-    }
+            | "/secret.compute.v1beta1.MsgInstantiateContract"
+    )
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct VerifiedMessages {
+pub struct VerifiedWasmMessages {
     messages: Vec<Vec<u8>>,
 }
 
-impl VerifiedMessages {
+impl VerifiedWasmMessages {
     pub fn get_next(&mut self) -> Option<Vec<u8>> {
-        return self.messages.pop();
+        self.messages.pop()
     }
 
     pub fn remaining(&self) -> usize {
-        return self.messages.len();
+        self.messages.len()
     }
 
     pub fn append_wasm_from_tx(&mut self, mut tx: Tx) {
@@ -68,8 +69,8 @@ impl VerifiedMessages {
 }
 
 lazy_static! {
-    pub static ref VERIFIED_MESSAGES: SgxMutex<VerifiedMessages> =
-        SgxMutex::new(VerifiedMessages::default());
+    pub static ref VERIFIED_MESSAGES: SgxMutex<VerifiedWasmMessages> =
+        SgxMutex::new(VerifiedWasmMessages::default());
 }
 
 #[cfg(feature = "test")]

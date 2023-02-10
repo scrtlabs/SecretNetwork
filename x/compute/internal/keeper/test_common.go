@@ -634,33 +634,30 @@ func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKe
 	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
 
-func PrepareMultipleExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
-	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
-	require.NoError(t, err)
-
-	executeMsg := wasmtypes.MsgExecuteContract{
-		Sender:    sender,
-		Contract:  contract,
-		Msg:       encMsg,
-		SentFunds: funds,
-	}
-
-	bankMsg := banktypes.MsgSend{
-		FromAddress: sender.String(),
-		ToAddress:   sender.String(),
-		Amount:      funds,
-	}
-
-	tx := NewTestTxMultiple([]sdk.Msg{&executeMsg, &executeMsg, &bankMsg}, []authtypes.AccountI{creatorAcc, creatorAcc, creatorAcc}, []crypto.PrivKey{privKey, privKey, privKey})
-
-	txBytes, err := tx.Marshal()
-	require.NoError(t, err)
-
-	println("************************** HELLLLLLLLLLLLLLLLLOOOOOOOOOOOOOOOOOO222222222222222222222222222 ")
-	println(fmt.Sprintf("***************** TX raw bytes: %s", hex.EncodeToString(txBytes)))
-
-	return ctx.WithTxBytes(txBytes)
-}
+//func PrepareMultipleExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
+//	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+//	require.NoError(t, err)
+//
+//	executeMsg := wasmtypes.MsgExecuteContract{
+//		Sender:    sender,
+//		Contract:  contract,
+//		Msg:       encMsg,
+//		SentFunds: funds,
+//	}
+//
+//	bankMsg := banktypes.MsgSend{
+//		FromAddress: sender.String(),
+//		ToAddress:   sender.String(),
+//		Amount:      funds,
+//	}
+//
+//	tx := NewTestTxMultiple([]sdk.Msg{&executeMsg, &executeMsg, &bankMsg}, []authtypes.AccountI{creatorAcc, creatorAcc, creatorAcc}, []crypto.PrivKey{privKey, privKey, privKey})
+//
+//	txBytes, err := tx.Marshal()
+//	require.NoError(t, err)
+//
+//	return ctx.WithTxBytes(txBytes)
+//}
 
 func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {

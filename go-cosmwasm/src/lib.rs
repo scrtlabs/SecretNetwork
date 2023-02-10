@@ -225,6 +225,7 @@ pub extern "C" fn init_cache(
 pub extern "C" fn submit_block_signatures(
     header: Buffer,
     commit: Buffer,
+    txs:    Buffer,
     random: Buffer,
     // val_set: Buffer,
     // next_val_set: Buffer,
@@ -243,6 +244,14 @@ pub extern "C" fn submit_block_signatures(
     let commit_slice = match unsafe { commit.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let txs_slice = match unsafe { txs.read() } {
+        None => {
+            set_error(Error::empty_arg("txs"), err);
             return Buffer::default();
         }
         Some(r) => r,
@@ -274,6 +283,7 @@ pub extern "C" fn submit_block_signatures(
     match cosmwasm_sgx_vm::untrusted_submit_block_signatures(
         header_slice,
         commit_slice,
+        txs_slice,
         random_slice,
         // val_set_slice,
         // next_val_set_slice,

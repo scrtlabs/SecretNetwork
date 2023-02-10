@@ -1,16 +1,17 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate core;
 extern crate sgx_types;
 
 pub mod r#const;
 pub mod ecalls;
 
-pub mod storage;
-pub mod tx_parser;
+pub mod wasm_messages;
 
-pub use tx_parser::VERIFIED_MESSAGES;
+pub use wasm_messages::VERIFIED_MESSAGES;
 
+mod txs;
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
 pub mod validator_whitelist;
 
@@ -72,13 +73,13 @@ pub mod tests {
             // kdf::tests::test_derive_key();
             // storage::tests::test_open();
             // storage::tests::test_seal();
-            crate::tx_parser::tests::parse_tx_basic();
-            crate::tx_parser::tests::parse_tx_multiple_msg();
-            crate::tx_parser::tests::parse_tx_multiple_msg_non_wasm();
-            crate::tx_parser::tests::check_message_is_wasm();
-            crate::tx_parser::tests::test_check_message_not_wasm();
-            crate::tx_parser::tests::test_wasm_msg_tracker();
-            crate::tx_parser::tests::test_wasm_msg_tracker_multiple_msgs();
+            crate::wasm_messages::tests::parse_tx_basic();
+            crate::wasm_messages::tests::parse_tx_multiple_msg();
+            crate::wasm_messages::tests::parse_tx_multiple_msg_non_wasm();
+            crate::wasm_messages::tests::check_message_is_wasm();
+            crate::wasm_messages::tests::test_check_message_not_wasm();
+            crate::wasm_messages::tests::test_wasm_msg_tracker();
+            crate::wasm_messages::tests::test_wasm_msg_tracker_multiple_msgs();
         });
 
         if failures != 0 {

@@ -37,6 +37,8 @@ mod test {
             crate::registration::tests::run_tests();
             block_verifier::tests::run_tests();
 
+            enclave_crypto::tests::run_tests();
+
             // example failing tests:
             // panic!("AAAAA");
             // panic!("BBBBB");
