@@ -244,7 +244,7 @@ clean:
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
-			--build-arg FEATURES="${FEATURES},light-client-validation,debug-print" \
+			--build-arg FEATURES="${FEATURES},debug-print" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \
@@ -437,7 +437,7 @@ go-tests: build-test-contract bin-data-sw
 	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	TM_SGX=false GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
