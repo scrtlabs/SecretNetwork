@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 
 use sgx_types::*;
+use std::untrusted::fs;
 use std::untrusted::fs::File;
 
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
@@ -33,4 +34,15 @@ pub fn unseal(filepath: &str) -> SgxResult<Vec<u8>> {
         .sgx_error_with_log(&format!("Reading sealed file '{}' failed", filepath))?;
 
     Ok(output)
+}
+
+pub fn rewrite_on_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<()> {
+    let is_path_exists = fs::try_exists(filepath).unwrap_or(false);
+
+    if is_path_exists {
+        fs::remove_file(filepath)
+            .sgx_error_with_log(&format!("Removing existing file '{}' failed", filepath))?;
+    }
+
+    write_to_untrusted(bytes, filepath)
 }

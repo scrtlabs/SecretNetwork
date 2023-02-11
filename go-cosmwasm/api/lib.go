@@ -81,8 +81,8 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return receiveVector(res), nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
-	pkSlice := sendSlice(masterCert)
+func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
+	pkSlice := sendSlice(masterKey)
 	defer freeAfterSend(pkSlice)
 	seedSlice := sendSlice(seed)
 	defer freeAfterSend(seedSlice)

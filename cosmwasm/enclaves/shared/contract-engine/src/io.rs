@@ -125,7 +125,7 @@ pub struct WasmOutput {
 pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) -> AESKey {
     let enclave_io_key = KEY_MANAGER.get_consensus_io_exchange_keypair().unwrap();
 
-    let tx_encryption_ikm = enclave_io_key.diffie_hellman(user_public_key);
+    let tx_encryption_ikm = enclave_io_key.current.diffie_hellman(user_public_key);
 
     let tx_encryption_key = AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce);
 
@@ -973,6 +973,7 @@ pub fn create_callback_signature(
     let mut callback_sig_bytes = KEY_MANAGER
         .get_consensus_callback_secret()
         .unwrap()
+        .current
         .get()
         .to_vec();
 

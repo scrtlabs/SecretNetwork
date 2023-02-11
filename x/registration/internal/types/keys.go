@@ -18,14 +18,14 @@ const (
 )
 
 var (
-	RegistrationStorePrefix = []byte{0x01}
-	MasterKeyPrefix         = []byte{0x02}
+	RegistrationStorePrefix     = []byte{0x01}
+	RegistrationMasterKeyPrefix = []byte{0x02}
 )
 
 func RegistrationKeyPrefix(key []byte) []byte {
 	return append(RegistrationStorePrefix, key...)
 }
 
-func MasterCertPrefix(key string) []byte {
-	return append(MasterKeyPrefix, []byte(key)...)
+func MasterKeyPrefix(key string) []byte {
+	return append(RegistrationMasterKeyPrefix, []byte(key)...)
 }

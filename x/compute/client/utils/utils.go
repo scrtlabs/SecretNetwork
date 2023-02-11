@@ -16,11 +16,9 @@ import (
 	"regexp"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	regtypes "github.com/scrtlabs/SecretNetwork/x/registration"
 	"google.golang.org/grpc/encoding"
 	"google.golang.org/grpc/encoding/proto"
-
-	regtypes "github.com/scrtlabs/SecretNetwork/x/registration"
-	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 
 	"github.com/miscreant/miscreant.go"
 	"golang.org/x/crypto/curve25519"
@@ -61,9 +59,9 @@ func GzipIt(input []byte) ([]byte, error) {
 
 // WASMContext wraps github.com/cosmos/cosmos-sdk/client/client.Context
 type WASMContext struct {
-	CLIContext       client.Context
-	TestKeyPairPath  string
-	TestMasterIOCert regtypes.MasterCertificate
+	CLIContext      client.Context
+	TestKeyPairPath string
+	TestMasterIOKey regtypes.MasterKey
 }
 
 type keyPair struct {
@@ -140,8 +138,8 @@ var hkdfSalt = []byte{
 
 func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 	var masterIoKey regtypes.Key
-	if ctx.TestMasterIOCert.Bytes != nil { // TODO check length?
-		masterIoKey.Key = ctx.TestMasterIOCert.Bytes
+	if ctx.TestMasterIOKey.Bytes != nil { // TODO check length?
+		masterIoKey.Key = ctx.TestMasterIOKey.Bytes
 	} else {
 		res, _, err := ctx.CLIContext.Query("/secret.registration.v1beta1.Query/TxKey")
 		if err != nil {
@@ -154,13 +152,7 @@ func (ctx WASMContext) getConsensusIoPubKey() ([]byte, error) {
 		}
 	}
 
-	ioPubkey, err := ra.UNSAFE_VerifyRaCert(masterIoKey.Key)
-	if err != nil {
-		println(masterIoKey.Key)
-		return nil, err
-	}
-
-	return ioPubkey, nil
+	return masterIoKey.Key, nil
 }
 
 func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) ([]byte, error) {
@@ -188,12 +180,12 @@ func (ctx WASMContext) getTxEncryptionKey(txSenderPrivKey []byte, nonce []byte) 
 
 func (ctx WASMContext) OfflineEncrypt(plaintext []byte, pathToMasterIoKey string) ([]byte, error) {
 	// parse coins trying to be sent
-	cert, err := os.ReadFile(pathToMasterIoKey)
+	key, err := os.ReadFile(pathToMasterIoKey)
 	if err != nil {
 		return nil, err
 	}
 
-	pubkey, err := ra.UNSAFE_VerifyRaCert(cert)
+	pubkey, err := base64.StdEncoding.DecodeString(string(key))
 	if err != nil {
 		return nil, err
 	}

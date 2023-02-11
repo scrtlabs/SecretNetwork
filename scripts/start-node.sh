@@ -35,7 +35,7 @@ fi
 $SECRETD gentx validator 5000000000uscrt --keyring-backend="test" --chain-id $CHAINID --home $SECRETD_HOME
 $SECRETD collect-gentxs --home $SECRETD_HOME
 
-$SECRETD init-bootstrap node-master-cert.der io-master-cert.der --home $SECRETD_HOME
+$SECRETD init-bootstrap node-master-key.txt io-master-key.txt --home $SECRETD_HOME
 
 # Set proper defaults and change ports
 sed -i 's#"tcp://127.0.0.1:26657"#"tcp://0.0.0.0:26657"#g' $SECRETD_HOME/config/config.toml

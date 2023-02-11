@@ -11,6 +11,7 @@ use sgx_types::{
     sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_status_t,
     sgx_update_info_bit_t, SgxResult,
 };
+
 use std::io::BufReader;
 use std::str;
 use std::time::{SystemTime, UNIX_EPOCH};

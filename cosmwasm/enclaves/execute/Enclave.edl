@@ -41,12 +41,12 @@ enclave {
         public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
             uintptr_t cert_len,
-            [out, count=48] uint8_t* seed
+            [out, count=96] uint8_t* seed
         );
 
         public sgx_status_t ecall_init_node(
-            [in, count=master_cert_len] const uint8_t* master_cert,
-            uintptr_t master_cert_len,
+            [in, count=master_key_len] const uint8_t* master_key,
+            uintptr_t master_key_len,
             [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,
             uintptr_t encrypted_seed_len,
             [in, count=api_key_len] const uint8_t* api_key,

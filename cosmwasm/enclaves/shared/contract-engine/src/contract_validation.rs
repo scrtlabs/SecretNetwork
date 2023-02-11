@@ -59,7 +59,7 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
     return true;
 }
 
-pub fn generate_encryption_key(
+pub fn generate_contract_key(
     sender: &CanonicalAddr,
     block_height: &u64,
     contract_hash: &[u8; HASH_SIZE],
@@ -69,21 +69,27 @@ pub fn generate_encryption_key(
 
     let sender_id = generate_sender_id(&(sender.0).0, block_height);
 
-    let mut encryption_key = [0u8; 64];
+    let mut contract_key = [0u8; 64];
 
     let authenticated_contract_id = generate_contract_id(
-        &consensus_state_ikm,
+        // contract_key is public and used as a salt to differentiate state of different contracts
+        // there's no reason not to use consensus_state_ikm.genesis
+        // otherwise we'd have to migrate all the contract_keys every time we rotate the seed
+        // which is doable but requires one more ecall & just unnecessary
+        // actually using consensus_state_ikm might be entirely unnecessary here but it's too
+        // painful at this point to change the protocol to remove it
+        &consensus_state_ikm.genesis,
         &sender_id,
         contract_hash,
         &(contract_address.0).0,
     );
 
-    encryption_key[0..32].copy_from_slice(&sender_id);
-    encryption_key[32..].copy_from_slice(&authenticated_contract_id);
+    contract_key[0..32].copy_from_slice(&sender_id);
+    contract_key[32..].copy_from_slice(&authenticated_contract_id);
 
-    trace!("contract key: {:?}", hex::encode(encryption_key));
+    trace!("contract key: {:?}", hex::encode(contract_key));
 
-    Ok(encryption_key)
+    Ok(contract_key)
 }
 
 pub fn generate_sender_id(msg_sender: &[u8], block_height: &u64) -> [u8; HASH_SIZE] {
@@ -125,7 +131,8 @@ pub fn validate_contract_key(
             error!("Error extracting consensus_state_key");
             false
         })
-        .unwrap();
+        .unwrap()
+        .genesis;
 
     // calculate the authentication_id
     let calculated_authentication_id = generate_contract_id(
