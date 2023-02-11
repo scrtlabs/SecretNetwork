@@ -13,6 +13,9 @@ use tendermint::block::signed_header::SignedHeader;
 use tendermint::validator::Set;
 use tendermint::Hash::Sha256;
 
+#[cfg(feature = "random")]
+use enclave_crypto::{SIVEncryptable, KEY_MANAGER};
+
 use crate::txs::txs_hash;
 
 #[cfg(feature = "light-client-validation")]
