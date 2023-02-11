@@ -244,7 +244,7 @@ clean:
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
-			--build-arg FEATURES="${FEATURES},debug-print" \
+			--build-arg FEATURES="${FEATURES},light-client-validation,debug-print" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \
@@ -257,7 +257,7 @@ localsecret:
  			-t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
 build-ibc-hermes:
-	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc --load
+	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc
 
 build-testnet-bootstrap:
 	@mkdir build 2>&3 || true

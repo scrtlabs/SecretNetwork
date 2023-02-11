@@ -1,3 +1,4 @@
+use alloc::collections::VecDeque;
 use cosmos_proto::tx::tx::Tx;
 use lazy_static::lazy_static;
 
@@ -47,12 +48,12 @@ pub fn message_is_wasm(msg: &protobuf::well_known_types::Any) -> bool {
 
 #[derive(Debug, Clone, Default)]
 pub struct VerifiedWasmMessages {
-    messages: Vec<Vec<u8>>,
+    messages: VecDeque<Vec<u8>>,
 }
 
 impl VerifiedWasmMessages {
     pub fn get_next(&mut self) -> Option<Vec<u8>> {
-        self.messages.pop()
+        self.messages.pop_front()
     }
 
     pub fn remaining(&self) -> usize {
@@ -62,9 +63,13 @@ impl VerifiedWasmMessages {
     pub fn append_wasm_from_tx(&mut self, mut tx: Tx) {
         for msg in tx.take_body().messages {
             if message_is_wasm(&msg) {
-                self.messages.push(msg.value);
+                self.messages.push_back(msg.value);
             }
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.messages.clear()
     }
 }
 

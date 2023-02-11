@@ -1,6 +1,7 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate alloc;
 extern crate core;
 extern crate sgx_types;
 

@@ -46,6 +46,11 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
             expected_msg[len_diff..].to_vec(),
             msg.to_vec()
         );
+
+        // if this message fails to verify we have to fail the rest of the TX, so we won't get any
+        // other messages
+        VERIFIED_MESSAGES.lock().unwrap().clear();
+
         return false;
     }
 

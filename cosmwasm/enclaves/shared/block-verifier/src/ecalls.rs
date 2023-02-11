@@ -177,8 +177,24 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
 
     #[cfg(feature = "light-client-validation")]
     {
+        //debug to make sure it doesn't go out of sync
+        if VERIFIED_MESSAGES.lock().unwrap().remaining() != 0 {
+            error!(
+                "Wasm verified out of sync?? Adding new messages but old one is not empty?? - remaining: {}",
+                VERIFIED_MESSAGES.lock().unwrap().remaining()
+            );
+
+            // new tx, so messages should always be empty
+            VERIFIED_MESSAGES.lock().unwrap().clear();
+        }
+
         for tx in txs.tx.iter() {
+            if tx.len() < 100_000 {
+                debug!("Got tx: {:?}", hex::encode(tx.as_slice()));
+            }
+
             let parsed_tx = tx_from_bytes(tx.as_slice()).unwrap();
+
             VERIFIED_MESSAGES
                 .lock()
                 .unwrap()
