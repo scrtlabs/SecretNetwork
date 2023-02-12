@@ -26,7 +26,7 @@ func getSignBytes(
 ) []byte {
 	sig := sdksigning.SignatureV2{
 		PubKey:   signer.public,
-		Sequence: multisigAccount.acct.GetSequence(),
+		Sequence: multisigAccount.acct.GetSequence() - 1,
 		Data: &sdksigning.SingleSignatureData{
 			SignMode:  sdksigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON,
 			Signature: nil,
@@ -35,9 +35,9 @@ func getSignBytes(
 	err := builder.SetSignatures(sig)
 	require.NoError(t, err)
 	signerData := authsigning.SignerData{
-		ChainID:       "",
+		ChainID:       TestConfig.ChainID,
 		AccountNumber: signer.acct.GetAccountNumber(),
-		Sequence:      signer.acct.GetSequence(),
+		Sequence:      signer.acct.GetSequence() - 1,
 	}
 	bytesToSign, err := signModeHandler.GetSignBytes(sdksigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON, signerData, builder.GetTx())
 	require.NoError(t, err)
@@ -101,7 +101,7 @@ func multisigTxCreatorForExisting(
 	multiSignature := generateSignatures(t, signmodeHandler, builder, multisigAccount, signers, actualSigners)
 	signature := sdksigning.SignatureV2{
 		PubKey:   multisigAccount.public,
-		Sequence: multisigAccount.acct.GetSequence(),
+		Sequence: multisigAccount.acct.GetSequence() - 1,
 		Data:     multiSignature,
 	}
 	err := builder.SetSignatures(signature)
@@ -321,18 +321,17 @@ func TestMultiSig(t *testing.T) {
 		for j := 0; j <= i; j++ {
 			label := fmt.Sprintf("demo contract %d %d", i, j)
 			sdkMsg := types.MsgInstantiateContract{
-				// Admin:     nil,
 				CodeID:    codeID,
 				Label:     label,
 				InitMsg:   initMsgBz,
-				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
+				InitFunds: nil,
 			}
 
 			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, &sdkMsg)
 
-			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address /* nil, */, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
-				err = extractInnerError(t, err, nonce, true, false)
+				err = extractInnerError(t, err, nonce, false, false)
 			}
 			require.NoError(t, err)
 
@@ -621,7 +620,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, multimultisigAccount.address.Bytes())
 	signature := sdksigning.SignatureV2{
 		PubKey:   multimultisigAccount.public,
-		Sequence: multimultisigAcc.GetSequence(),
+		Sequence: multimultisigAcc.GetSequence() - 1,
 		Data:     multimultiSig,
 	}
 	err = builder.SetSignatures(signature)
@@ -725,7 +724,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	multimultisigAcc := keeper.accountKeeper.GetAccount(ctx, multimultisigAccount.address.Bytes())
 	signature := sdksigning.SignatureV2{
 		PubKey:   multimultisigAccount.public,
-		Sequence: multimultisigAcc.GetSequence(),
+		Sequence: multimultisigAcc.GetSequence() - 1,
 		Data:     multimultiSig,
 	}
 	err = builder.SetSignatures(signature)
@@ -873,7 +872,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	multisigAcc := keeper.accountKeeper.GetAccount(ctx, multisigPubkey.address.Bytes())
 	signature := sdksigning.SignatureV2{
 		PubKey:   multisigPubkey.public,
-		Sequence: multisigAcc.GetSequence(),
+		Sequence: multisigAcc.GetSequence() - 1,
 		Data:     multiSignature,
 	}
 	err = builder.SetSignatures(signature)
