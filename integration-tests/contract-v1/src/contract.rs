@@ -181,12 +181,12 @@ fn handle_msg(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResult
                 ))
             }
         },
-        Msg::GetRandom {} => {
-            return Ok(
-                Response::new()
-                    .add_attribute_plaintext("random_value", format!("{:?}", info.random))
-            )
-        }
+        // Msg::GetRandom {} => {
+        //     return Ok(
+        //         Response::new()
+        //             .add_attribute_plaintext("random_value", format!("{:?}", info.random))
+        //     )
+        // }
     }
 }
 
