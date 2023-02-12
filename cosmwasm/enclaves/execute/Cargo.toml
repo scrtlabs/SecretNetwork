@@ -13,7 +13,16 @@ crate-type = ["staticlib"]
 default = ["SGX_MODE_SW"]
 SGX_MODE_SW = []
 SGX_MODE_HW = []
-production = ["SGX_MODE_HW", "use_seed_service_on_bootstrap", "enclave_crypto/production", "enclave_utils/production", "log/max_level_warn", "log/release_max_level_warn"]
+production = [
+  "SGX_MODE_HW",
+  "use_seed_service_on_bootstrap",
+  "enclave_crypto/production",
+  "enclave_utils/production",
+  "log/max_level_warn",
+  "log/release_max_level_warn",
+  "block-verifier/production",
+  "block-verifier/verify-validator-whitelist"
+]
 debug-print = ["enclave_contract_engine/debug-print"]
 test = ["enclave_contract_engine/test", "enclave_crypto/test", "enclave_cosmos_types/test", "block-verifier/test"]
 use_seed_service_on_bootstrap = []

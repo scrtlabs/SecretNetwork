@@ -13,7 +13,8 @@ pub mod wasm_messages;
 pub use wasm_messages::VERIFIED_MESSAGES;
 
 mod txs;
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
+
+#[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
 pub mod validator_whitelist;
 
 use lazy_static::lazy_static;
@@ -27,7 +28,8 @@ lazy_static! {
 }
 
 pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
-    #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
+
+    #[cfg(feature = "verify-validator-whitelist")]
     if !whitelisted_validators_in_block(untrusted_block) {
         debug!("Error verifying validators in block");
         return false;
@@ -77,10 +79,12 @@ pub mod tests {
             crate::wasm_messages::tests::parse_tx_basic();
             crate::wasm_messages::tests::parse_tx_multiple_msg();
             crate::wasm_messages::tests::parse_tx_multiple_msg_non_wasm();
+            crate::wasm_messages::tests::parse_tx_multisig();
             crate::wasm_messages::tests::check_message_is_wasm();
             crate::wasm_messages::tests::test_check_message_not_wasm();
             crate::wasm_messages::tests::test_wasm_msg_tracker();
             crate::wasm_messages::tests::test_wasm_msg_tracker_multiple_msgs();
+            crate::validator_whitelist::tests::test_parse_validators();
         });
 
         if failures != 0 {

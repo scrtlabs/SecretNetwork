@@ -8,6 +8,8 @@ default = []
 test = []
 random = []
 light-client-validation = []
+production = []
+verify-validator-whitelist = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [target.'cfg(not(target_env = "sgx"))'.dependencies]

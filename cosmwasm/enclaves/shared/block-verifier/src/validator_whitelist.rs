@@ -1,14 +1,52 @@
 use tendermint_light_client_verifier::types::UntrustedBlockState;
 
-const WHITELIST_FROM_FILE: &str = include_str!("../../validator_list.txt");
-const VALIDATOR_THRESHOLD: usize = 3;
+#[cfg(not(feature = "production"))]
+const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist.txt");
+#[cfg(feature = "production")]
+const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist_prod.txt");
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg(not(feature = "production"))]
+const VALIDATOR_THRESHOLD: usize = 1;
+
+#[cfg(feature = "production")]
+const VALIDATOR_THRESHOLD: usize = 5;
+
+lazy_static::lazy_static! {
+    static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str(WHITELIST_FROM_FILE);
+}
+
+#[derive(Debug, Clone)]
 struct ValidatorList(pub Vec<String>);
 
-// todo: add test & decode properly
-fn whitelisted_validators_in_block(untrusted_block: &UntrustedBlockState) -> bool {
-    let decoded: ValidatorList = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
+impl ValidatorList {
+    fn from_str(list: &str) -> Self {
+        let addresses: Vec<String> = list.split(',').map(|s| s.to_string()).collect();
+        Self(addresses)
+    }
 
-    untrusted_block.validators.validators().iter().filter(|&a| {decoded.0.contains(&a.address.to_string())}).count() >= VALIDATOR_THRESHOLD
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn contains(&self, input: &String) -> bool {
+        self.0.contains(input)
+    }
+}
+
+fn whitelisted_validators_in_block(untrusted_block: &UntrustedBlockState) -> bool {
+    untrusted_block.validators.validators().iter().filter(|&a| {VALIDATOR_WHITELIST.contains(&a.address.to_string())}).count() >= VALIDATOR_THRESHOLD
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+
+    use super::ValidatorList;
+
+    const VALIDATOR_LIST_TEST: &str = "61D6833562A2EAFB0F7D9FDD8AD9F2BA0A1A7F86,A3F845F5D93356584BF276FCBB8F119BEB5DAE2A,40998CBE01E892CC9BFDB2BEF5B662AD954F3787,455DDE08C93C002F0356792BCA72AD3AAB75C096";
+
+    pub fn test_parse_validators() {
+        let validator_list = ValidatorList::from_str(VALIDATOR_LIST_TEST);
+
+        assert_eq!(validator_list.len(), 4);
+    }
 }
