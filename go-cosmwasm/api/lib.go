@@ -55,10 +55,10 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 	defer freeAfterSend(encRandomSlice)
 	txsSlice := sendSlice(txs)
 	defer freeAfterSend(txsSlice)
-	//valSetSlice := sendSlice(valSet)
-	//defer freeAfterSend(apiKeySlice)
-	//nextValSetSlice := sendSlice(nextValSet)
-	//defer freeAfterSend(apiKeySlice)
+	// valSetSlice := sendSlice(valSet)
+	// defer freeAfterSend(apiKeySlice)
+	// nextValSetSlice := sendSlice(nextValSet)
+	// defer freeAfterSend(apiKeySlice)
 
 	res, err := C.submit_block_signatures(spidSlice, apiKeySlice, txsSlice, encRandomSlice /* valSetSlice, nextValSetSlice,*/, &errmsg)
 	if err != nil {

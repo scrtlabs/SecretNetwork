@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -91,7 +92,6 @@ import (
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
-	"math/rand"
 )
 
 const (

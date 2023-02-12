@@ -3,8 +3,9 @@ package compute
 import (
 	"context"
 	"encoding/json"
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"math/rand"
+
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -153,7 +154,6 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // BeginBlock returns the begin blocker for the compute module.
 func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBlock) {
-
 	header, err := beginBlock.Header.Marshal()
 	if err != nil {
 		panic(err)

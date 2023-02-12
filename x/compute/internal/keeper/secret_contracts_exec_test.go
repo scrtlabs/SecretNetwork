@@ -7,13 +7,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
-	"golang.org/x/exp/slices"
 	"math"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	"golang.org/x/exp/slices"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/stretchr/testify/require"
