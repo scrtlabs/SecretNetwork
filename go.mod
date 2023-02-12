@@ -5,8 +5,8 @@ go 1.19
 replace (
 	// dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20230107000730-6c3cf2623cd1
-	// github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.10-secret-1.7
+	// github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.11-0.20230107000730-6c3cf2623cd1
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.10-secret-1.7
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1

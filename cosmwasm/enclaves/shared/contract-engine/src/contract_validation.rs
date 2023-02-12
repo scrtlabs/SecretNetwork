@@ -27,6 +27,22 @@ const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
 const SIZE_OF_U64: usize = 8;
 
 #[cfg(feature = "light-client-validation")]
+fn is_subslice(larger: &Vec<u8>, smaller: &[u8]) -> bool {
+    if smaller.is_empty() {
+        return true;
+    }
+    if larger.len() < smaller.len() {
+        return false;
+    }
+    for window in larger.windows(smaller.len()) {
+        if window == smaller {
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(feature = "light-client-validation")]
 pub fn check_msg_matches_state(msg: &[u8]) -> bool {
     let mut verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
     let remaining_msgs = verified_msgs.remaining();
@@ -37,16 +53,9 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
     }
 
     return if let Some(expected_msg) = verified_msgs.get_next() {
-        let len_diff = expected_msg.len() - msg.len();
-
-        if !expected_msg.ends_with(msg) && !expected_msg.starts_with(msg) {
+        if !is_subslice(&expected_msg, msg) {
             error!("Failed to validate message, error 0x3255");
-            trace!(
-                "Expected: {:?}, vs: {:?} (len diff: {:?})",
-                expected_msg,
-                msg,
-                len_diff
-            );
+            trace!("Expected: {:?}, vs: {:?}", expected_msg, msg);
 
             // if this message fails to verify we have to fail the rest of the TX, so we won't get any
             // other messages
