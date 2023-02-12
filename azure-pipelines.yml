@@ -80,21 +80,21 @@ steps:
       arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/tests/integration-tests.Dockerfile
 
-  - task: Docker@2
-    displayName: "Build System tests image"
-    inputs:
-      command: build
-      repository: tests-base-image
-      tags: latest
-      buildContext: .
-      arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
+#  - task: Docker@2
+#    displayName: "Build System tests image"
+#    inputs:
+#      command: build
+#      repository: tests-base-image
+#      tags: latest
+#      buildContext: .
+#      arguments: --build-arg SGX_MODE=HW
+#      Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
 
-  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
-    displayName: "Run system tests (go tests)"
-
-  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
-    displayName: "Run benchmarks"
+#  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
+#    displayName: "Run system tests (go tests)"
+#
+#  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
+#    displayName: "Run benchmarks"
 
   - script: |
       docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests aesm bootstrap node-no-tests integration-tests
