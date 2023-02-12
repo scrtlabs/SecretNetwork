@@ -28,35 +28,39 @@ const SIZE_OF_U64: usize = 8;
 
 #[cfg(feature = "light-client-validation")]
 pub fn check_msg_matches_state(msg: &[u8]) -> bool {
-    let remaining_msgs = VERIFIED_MESSAGES.lock().unwrap().remaining();
+    let mut verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
+    let remaining_msgs = verified_msgs.remaining();
 
     if remaining_msgs == 0 {
         error!("Failed to validate message, error 0x3555");
         return false;
     }
 
-    let expected_msg = VERIFIED_MESSAGES.lock().unwrap().get_next().unwrap();
+    return if let Some(expected_msg) = verified_msgs.get_next() {
+        let len_diff = expected_msg.len() - msg.len();
 
-    let len_diff = expected_msg.len() - msg.len();
+        if !expected_msg.ends_with(msg) && !expected_msg.starts_with(msg) {
+            error!("Failed to validate message, error 0x3255");
+            trace!(
+                "Expected: {:?}, vs: {:?} (len diff: {:?})",
+                expected_msg,
+                msg,
+                len_diff
+            );
 
-    if &expected_msg[len_diff..] != msg {
-        error!("Failed to validate message, error 0x3255");
-        trace!(
-            "Expected: {:?}, vs: {:?}",
-            expected_msg[len_diff..].to_vec(),
-            msg.to_vec()
-        );
+            // if this message fails to verify we have to fail the rest of the TX, so we won't get any
+            // other messages
+            verified_msgs.clear();
 
-        // if this message fails to verify we have to fail the rest of the TX, so we won't get any
-        // other messages
-        VERIFIED_MESSAGES.lock().unwrap().clear();
+            return false;
+        }
 
-        return false;
-    }
-
-    trace!("Successfully validated that this message was in the block!");
-
-    return true;
+        trace!("Successfully validated that this message was in the block!");
+        true
+    } else {
+        error!("Failed to get expected message, error 0x1234");
+        false
+    };
 }
 
 pub fn generate_contract_key(

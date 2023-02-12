@@ -419,7 +419,6 @@ impl Keychain {
             "consensus_callback_secret_current: {:?}",
             hex::encode(consensus_state_ikm_current.get())
         );
-        self.set_consensus_callback_secret(consensus_callback_secret);
         self.write_randomness_keys();
 
         self.set_consensus_callback_secret(
