@@ -1,14 +1,14 @@
-use cw_types_v010::encoding::Binary;
 use log::warn;
 use serde::{Deserialize, Serialize};
 
-use cw_types_v010::types::{Env as V010Env, HumanAddr};
-use cw_types_v1::types::Env as V1Env;
-use cw_types_v1::types::MessageInfo as V1MessageInfo;
+#[cfg(feature = "random")]
+use cw_types_v010::encoding::Binary;
 
+use cw_types_v010::types::{Env as V010Env, HumanAddr};
 use cw_types_v010::types as v010types;
 use cw_types_v1::types as v1types;
-
+use cw_types_v1::types::Env as V1Env;
+use cw_types_v1::types::MessageInfo as V1MessageInfo;
 use enclave_ffi_types::EnclaveError;
 
 pub const CONTRACT_KEY_LENGTH: usize = 64;
@@ -93,7 +93,7 @@ impl BaseEnv {
                     // v0.10 env.block.time is seconds since unix epoch
                     time: v1types::Timestamp::from_nanos(self.0.block.time).seconds(),
                     chain_id: self.0.block.chain_id,
-                    //#[cfg(feature = "lol")]
+                    #[cfg(feature = "random")]
                     random: self.0.block.random,
                 },
                 message: v010types::MessageInfo {
@@ -136,7 +136,7 @@ impl BaseEnv {
                     .into_iter()
                     .map(|x| x.into())
                     .collect(),
-                //#[cfg(feature = "random")]
+                #[cfg(feature = "random")]
                 random: self.0.block.random,
             },
         }
@@ -169,7 +169,7 @@ impl CwEnv {
         }
     }
 
-    //#[cfg(feature = "random")]
+    #[cfg(feature = "random")]
     pub fn set_random(&mut self, random: Binary) {
         match self {
             CwEnv::V010Env { env } => {
@@ -181,7 +181,7 @@ impl CwEnv {
         }
     }
 
-    //#[cfg(feature = "random")]
+    #[cfg(feature = "random")]
     pub fn get_random(&self) -> Binary {
         match self {
             CwEnv::V010Env { env } => env.block.random.clone(),

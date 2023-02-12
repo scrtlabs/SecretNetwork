@@ -121,7 +121,7 @@ pub struct BlockInfo {
     /// Absolute time of the block creation in seconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
     pub time: u64,
     pub chain_id: String,
-    // #[cfg(feature = "lol")]
+    #[cfg(feature = "random")]
     pub random: Binary,
 }
 

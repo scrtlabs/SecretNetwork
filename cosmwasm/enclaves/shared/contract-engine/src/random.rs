@@ -1,5 +1,9 @@
+#[cfg(feature = "random")]
 use crate::contract_validation::ContractKey;
+
+#[cfg(feature = "random")]
 use cw_types_v010::encoding::Binary;
+
 use lazy_static::lazy_static;
 use log::trace;
 
@@ -15,6 +19,7 @@ lazy_static! {
     static ref MSG_COUNTER: SgxMutex<MsgCounter> = SgxMutex::new(MsgCounter::default());
 }
 
+#[cfg(feature = "random")]
 pub fn derive_random(seed: &Binary, contract_key: &ContractKey, height: u64) -> Binary {
     let mut counter = MSG_COUNTER.lock().unwrap();
 

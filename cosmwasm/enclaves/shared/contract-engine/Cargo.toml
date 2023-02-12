@@ -12,6 +12,7 @@ test = []
 wasm3 = []
 wasmi-engine = ["wasmi", "parity-wasm", "pwasm-utils"]
 light-client-validation = ["block-verifier"]
+random = ["cw_types_generic/random", "cw_types_v1/random", "cw_types_v010/random"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.

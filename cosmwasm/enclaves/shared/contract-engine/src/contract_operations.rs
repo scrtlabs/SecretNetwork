@@ -16,7 +16,11 @@ use crate::cosmwasm_config::ContractOperation;
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
-use crate::random::{derive_random, update_msg_counter};
+
+use crate::random::update_msg_counter;
+
+#[cfg(feature = "random")]
+use crate::random::derive_random;
 
 use super::contract_validation::{
     generate_contract_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -131,15 +135,19 @@ pub fn init(
 
     versioned_env.set_contract_hash(&contract_hash);
 
-    debug!("Old random: {:?}", versioned_env.get_random());
+    #[cfg(feature = "random")]
+    {
+        debug!("Old random: {:?}", versioned_env.get_random());
 
-    versioned_env.set_random(derive_random(
-        &versioned_env.get_random(),
-        &contract_key,
-        block_height,
-    ));
+        versioned_env.set_random(derive_random(
+            &versioned_env.get_random(),
+            &contract_key,
+            block_height,
+        ));
 
-    debug!("New random: {:?}", versioned_env.get_random());
+        debug!("New random: {:?}", versioned_env.get_random());
+    }
+
 
     //let start = Instant::now();
     let result = engine.init(&versioned_env, validated_msg);
@@ -287,15 +295,18 @@ pub fn handle(
         .clone()
         .into_versioned_env(&engine.get_api_version());
 
-    debug!("Old random: {:?}", versioned_env.get_random());
+    #[cfg(feature = "random")]
+    {
+        debug!("Old random: {:?}", versioned_env.get_random());
 
-    versioned_env.set_random(derive_random(
-        &versioned_env.get_random(),
-        &contract_key,
-        block_height,
-    ));
+        versioned_env.set_random(derive_random(
+            &versioned_env.get_random(),
+            &contract_key,
+            block_height,
+        ));
 
-    debug!("New random: {:?}", versioned_env.get_random());
+        debug!("New random: {:?}", versioned_env.get_random());
+    }
 
     versioned_env.set_contract_hash(&contract_hash);
 

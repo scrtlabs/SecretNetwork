@@ -88,7 +88,7 @@ pub struct MessageInfo {
     /// or `MsgExecuteContract`. The transfer is processed in bank before the contract
     /// is executed such that the new balance is visible during contract execution.
     pub funds: Vec<Coin>,
-    //#[cfg(feature = "random")]
+    #[cfg(feature = "random")]
     pub random: Binary,
 }
 
