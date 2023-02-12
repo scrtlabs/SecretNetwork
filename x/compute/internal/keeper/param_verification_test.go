@@ -189,7 +189,6 @@ func prepareInitSignedTxMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, codeID uint64,
 ) sdk.Context {
-	t.SkipNow() // skipping till multisig is fixed
 	accounts := make([]authtypes.AccountI, len(creators))
 	for i, acc := range creators {
 		account, err := authante.GetSignerAcc(ctx, keeper.accountKeeper, acc)
@@ -205,8 +204,6 @@ func prepareInitSignedTxMultipleMsgs(
 }
 
 func TestMultipleSigners(t *testing.T) {
-	//
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	initMsg := `{"nop":{}}`
@@ -284,7 +281,6 @@ func TestMultipleSigners(t *testing.T) {
 }
 
 func TestWrongSigner(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, _, walletA, _, walletB, privKeyB := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	initMsg := `{"nop":{}}`
@@ -312,7 +308,6 @@ func TestWrongSigner(t *testing.T) {
 }
 
 func TestMultiSig(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	initMsg := `{"nop":{}}`
@@ -360,7 +355,6 @@ func TestMultiSig(t *testing.T) {
 }
 
 func TestMultiSigThreshold(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	initMsg := `{"nop":{}}`
@@ -412,7 +406,6 @@ func TestMultiSigThreshold(t *testing.T) {
 }
 
 func TestMultiSigThresholdNotMet(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	initMsg := `{"nop":{}}`
@@ -444,7 +437,6 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 }
 
 func TestMultiSigExecute(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, _, _, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm", sdk.Coins{})
 
 	accounts, multisigAccount := generateMultisigAccount(ctx, keeper, 5, 4)
@@ -501,7 +493,6 @@ func TestMultiSigExecute(t *testing.T) {
 }
 
 func TestMultiSigCallbacks(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	// init
@@ -567,7 +558,6 @@ func TestMultiSigCallbacks(t *testing.T) {
 }
 
 func TestMultiSigInMultiSig(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	accounts, multisigAccount := generateMultisigAccount(ctx, keeper, 5, 3)
@@ -672,7 +662,6 @@ func TestMultiSigInMultiSig(t *testing.T) {
 }
 
 func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	accounts, multisigAccount := generateMultisigAccount(ctx, keeper, 5, 3)
@@ -777,7 +766,6 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 }
 
 func TestInvalidKeyType(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	edKey := ed25519.GenPrivKey()
@@ -822,7 +810,6 @@ func TestInvalidKeyType(t *testing.T) {
 }
 
 func TestInvalidKeyTypeInMultisig(t *testing.T) {
-	t.SkipNow() // skipping till multisig is fixed
 	ctx, keeper, codeID, codeHash, _, privKeyA, _, privKeyB := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	edKey := ed25519.GenPrivKey()
@@ -912,7 +899,6 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 }
 
 func TestWrongFundsNoFunds(t *testing.T) {
-	t.SkipNow()
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	initMsg := `{"nop":{}}`
@@ -937,7 +923,6 @@ func TestWrongFundsNoFunds(t *testing.T) {
 }
 
 func TestWrongFundsSomeFunds(t *testing.T) {
-	t.SkipNow()
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	initMsg := `{"nop":{}}`
@@ -962,7 +947,6 @@ func TestWrongFundsSomeFunds(t *testing.T) {
 }
 
 func TestWrongMessage(t *testing.T) {
-	t.SkipNow()
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "../../../../cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm", sdk.Coins{})
 
 	initMsg := `{"nop":{}}`
@@ -997,7 +981,6 @@ func TestWrongMessage(t *testing.T) {
 }
 
 func TestWrongContractAddress(t *testing.T) {
-	t.SkipNow()
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, walletB, privKeyB := setupTest(t, "./testdata/erc20.wasm", sdk.Coins{})
 
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
