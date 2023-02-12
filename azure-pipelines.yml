@@ -57,7 +57,7 @@ steps:
       repository: '$(nodeImageRepository)'
       tags: latest
       buildContext: .
-      arguments: --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
       Dockerfile: deployment/dockerfiles/Dockerfile
 
   - task: Docker@2
