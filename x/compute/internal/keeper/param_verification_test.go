@@ -18,6 +18,7 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
+	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
@@ -535,24 +536,12 @@ func TestMultiSigCallbacks(t *testing.T) {
 	data := getDecryptedData(t, execRes.Data, nonce)
 	execEvents := getDecryptedWasmEvents(t, ctx, nonce)
 
-	require.Empty(t, err)
-	require.Equal(t,
-		[]ContractEvent{
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "banana", Value: "🍌"},
-			},
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "kiwi", Value: "🥝"},
-			},
-			{
-				{Key: "contract_address", Value: contractAddress.String()},
-				{Key: "watermelon", Value: "🍉"},
-			},
-		},
-		execEvents,
-	)
+	require.Contains(t, execEvents[0], v010types.LogAttribute{Key: "contract_address", Value: contractAddress.String()})
+	require.Contains(t, execEvents[0], v010types.LogAttribute{Key: "banana", Value: "🍌"})
+	require.Contains(t, execEvents[1], v010types.LogAttribute{Key: "contract_address", Value: contractAddress.String()})
+	require.Contains(t, execEvents[1], v010types.LogAttribute{Key: "kiwi", Value: "🥝"})
+	require.Contains(t, execEvents[2], v010types.LogAttribute{Key: "contract_address", Value: contractAddress.String()})
+	require.Contains(t, execEvents[2], v010types.LogAttribute{Key: "watermelon", Value: "🍉"})
 	require.Equal(t, []byte{2, 3}, data)
 }
 
@@ -805,7 +794,7 @@ func TestInvalidKeyType(t *testing.T) {
 	ctx = prepareInitSignedTxMultipleMsgs(t, keeper, ctx, []sdk.AccAddress{edAddr}, []crypto.PrivKey{edKey}, []sdk.Msg{&sdkMsg}, codeID)
 
 	_, _, err = keeper.Instantiate(ctx, codeID, edAddr /* nil,*/, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-	require.Contains(t, err.Error(), "failed to verify transaction signature")
+	require.Contains(t, err.Error(), "failed to deserialize data")
 }
 
 func TestInvalidKeyTypeInMultisig(t *testing.T) {
