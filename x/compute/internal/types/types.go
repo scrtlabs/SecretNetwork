@@ -108,6 +108,20 @@ func NewAbsoluteTxPosition(ctx sdk.Context) *AbsoluteTxPosition {
 	}
 }
 
+// AbsoluteTxPositionLen number of elements in byte representation
+const AbsoluteTxPositionLen = 16
+
+// Bytes encodes the object into a 16 byte representation with big endian block height and tx index.
+func (a *AbsoluteTxPosition) Bytes() []byte {
+	if a == nil {
+		panic("object must not be nil")
+	}
+	r := make([]byte, AbsoluteTxPositionLen)
+	copy(r[0:], sdk.Uint64ToBigEndian(uint64(a.BlockHeight)))
+	copy(r[8:], sdk.Uint64ToBigEndian(a.TxIndex))
+	return r
+}
+
 // NewEnv initializes the environment for a contract instance
 func NewEnv(ctx sdk.Context, caller sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte) wasmTypes.Env {
 	// safety checks before casting below

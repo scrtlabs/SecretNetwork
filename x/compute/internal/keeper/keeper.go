@@ -416,8 +416,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		// persist instance
 		createdAt := types.NewAbsoluteTxPosition(ctx)
 		contractInfo := types.NewContractInfo(codeID, creator, admin, label, createdAt)
-		store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(&contractInfo))
 
+		k.storeContractInfo(ctx, contractAddress, &contractInfo)
 		store.Set(types.GetContractEnclaveKey(contractAddress), key)
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
@@ -458,9 +458,8 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		))
 
 		// persist instance
-		store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(&contractInfo))
+		k.storeContractInfo(ctx, contractAddress, &contractInfo)
 		store.Set(types.GetContractEnclaveKey(contractAddress), key)
-
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
@@ -1121,18 +1120,29 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	res, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, &prefixStore, cosmwasmAPI, &querier, gasMeter(ctx), gas, verificationInfo)
+	response, gasUsed, err := k.wasmer.Execute(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, wasmTypes.HandleTypeMigrate)
 	consumeGas(ctx, gasUsed)
+
 	if err != nil {
-		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
+		var result []byte
+		switch res := response.(type) { //nolint:gocritic
+		case v1wasmTypes.DataWithInternalReplyInfo:
+			result, err = json.Marshal(res)
+			if err != nil {
+				return nil, sdkerrors.Wrap(err, "couldn't marshal internal reply info")
+			}
+		}
+
+		return result, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
 	}
+
 	// delete old secondary index entry
 	k.removeFromContractCodeSecondaryIndex(ctx, contractAddress, k.getLastContractHistoryEntry(ctx, contractAddress))
 	// persist migration updates
 	historyEntry := contractInfo.AddMigration(ctx, newCodeID, msg)
 	k.appendToContractHistory(ctx, contractAddress, historyEntry)
 	k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
-	k.storeContractInfo(ctx, contractAddress, contractInfo)
+	k.storeContractInfo(ctx, contractAddress, &contractInfo)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeMigrate,
@@ -1140,10 +1150,97 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 	))
 
-	data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, res.Events)
-	if err != nil {
-		return nil, sdkerrors.Wrap(err, "dispatch")
-	}
+	switch res := response.(type) {
+	case *v010wasmTypes.HandleResponse:
+		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
+		}
 
-	return data, nil
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, verificationInfo, wasmTypes.CosmosMsgVersionV010)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "dispatch")
+		}
+
+		return data, nil
+	case *v1wasmTypes.Response:
+		ctx.EventManager().EmitEvent(sdk.NewEvent(
+			types.EventTypeExecute,
+			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		))
+
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "dispatch")
+		}
+
+		return data, nil
+	default:
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot detect response type: %+v", res))
+	}
+}
+
+// getLastContractHistoryEntry returns the last element from history. To be used internally only as it panics when none exists
+func (k Keeper) getLastContractHistoryEntry(ctx sdk.Context, contractAddr sdk.AccAddress) types.ContractCodeHistoryEntry {
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.GetContractCodeHistoryElementPrefix(contractAddr))
+	iter := prefixStore.ReverseIterator(nil, nil)
+	defer iter.Close()
+
+	var r types.ContractCodeHistoryEntry
+	if !iter.Valid() {
+		// all contracts have a history
+		panic(fmt.Sprintf("no history for %s", contractAddr.String()))
+	}
+	k.cdc.MustUnmarshal(iter.Value(), &r)
+	return r
+}
+
+// removeFromContractCodeSecondaryIndex removes element to the index for contracts-by-codeid queries
+func (k Keeper) removeFromContractCodeSecondaryIndex(ctx sdk.Context, contractAddress sdk.AccAddress, entry types.ContractCodeHistoryEntry) {
+	ctx.KVStore(k.storeKey).Delete(types.GetContractByCreatedSecondaryIndexKey(contractAddress, entry))
+}
+
+func (k Keeper) appendToContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress, newEntries ...types.ContractCodeHistoryEntry) {
+	store := ctx.KVStore(k.storeKey)
+	// find last element position
+	var pos uint64
+	prefixStore := prefix.NewStore(store, types.GetContractCodeHistoryElementPrefix(contractAddr))
+	iter := prefixStore.ReverseIterator(nil, nil)
+	defer iter.Close()
+
+	if iter.Valid() {
+		pos = sdk.BigEndianToUint64(iter.Key())
+	}
+	// then store with incrementing position
+	for _, e := range newEntries {
+		pos++
+		key := types.GetContractCodeHistoryElementKey(contractAddr, pos)
+		store.Set(key, k.cdc.MustMarshal(&e)) //nolint:gosec
+	}
+}
+
+func (k Keeper) GetContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress) []types.ContractCodeHistoryEntry {
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.GetContractCodeHistoryElementPrefix(contractAddr))
+	r := make([]types.ContractCodeHistoryEntry, 0)
+	iter := prefixStore.Iterator(nil, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		var e types.ContractCodeHistoryEntry
+		k.cdc.MustUnmarshal(iter.Value(), &e)
+		r = append(r, e)
+	}
+	return r
+}
+
+// addToContractCodeSecondaryIndex adds element to the index for contracts-by-codeid queries
+func (k Keeper) addToContractCodeSecondaryIndex(ctx sdk.Context, contractAddress sdk.AccAddress, entry types.ContractCodeHistoryEntry) {
+	store := ctx.KVStore(k.storeKey)
+	store.Set(types.GetContractByCreatedSecondaryIndexKey(contractAddress, entry), []byte{})
+}
+
+// storeContractInfo persists the ContractInfo. No secondary index updated here.
+func (k Keeper) storeContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
+	store := ctx.KVStore(k.storeKey)
+	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(contract))
 }
