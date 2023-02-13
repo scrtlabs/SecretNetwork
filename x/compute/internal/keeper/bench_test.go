@@ -25,20 +25,22 @@ type Bench string
 
 // Available benches
 const (
-	Noop                          Bench = "noop"
-	NoopQuery                     Bench = "noop_query"
-	BenchCPU                            = "bench_c_p_u"
-	BenchReadStorage                    = "bench_read_storage"
-	BenchReadStorageMultipleKeys        = "bench_read_storage_multiple_keys"
-	BenchWriteStorage                   = "bench_write_storage"
-	BenchAllocate                       = "bench_allocate"
-	BenchReadLargeItemFromStorage       = "bench_read_large_item_from_storage"
-	BenchCreateViewingKey               = "bench_create_viewing_key"
-	BenchSetViewingKey                  = "bench_set_viewing_key"
-	BenchGetBalanceWithPermit           = "bench_with_permit"
-	BenchGetBalanceWithViewingKey       = "bench_get_balance_with_viewing_key"
-	SetupReadLargeItemFromStorage       = "setup_read_large_item"
-	BenchWriteLargeItemToStorage  Bench = "bench_write_large_item_to_storage"
+	Noop                           Bench = "noop"
+	NoopQuery                      Bench = "noop_query"
+	BenchCPU                             = "bench_c_p_u"
+	BenchReadStorage                     = "bench_read_storage"
+	BenchReadStorageMultipleKeys         = "bench_read_storage_multiple_keys"
+	BenchWriteStorage                    = "bench_write_storage"
+	BenchAllocate                        = "bench_allocate"
+	BenchReadLargeItemFromStorage        = "bench_read_large_item_from_storage"
+	BenchReadLargeItemsFromStorage       = "bench_read_large_items_from_storage"
+	BenchCreateViewingKey                = "bench_create_viewing_key"
+	BenchSetViewingKey                   = "bench_set_viewing_key"
+	BenchGetBalanceWithPermit            = "bench_with_permit"
+	BenchGetBalanceWithViewingKey        = "bench_get_balance_with_viewing_key"
+	SetupReadLargeItemFromStorage        = "setup_read_large_item"
+	SetupReadLargeItemsFromStorage       = "setup_read_large_items"
+	BenchWriteLargeItemToStorage   Bench = "bench_write_large_item_to_storage"
 )
 
 func buildBenchMessage(bench Bench, params []ParamKeyValue) []byte {
@@ -207,10 +209,22 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 			bench:    BenchReadLargeItemFromStorage,
 			loops:    10,
 		},
+		"Read large items from storage": {
+			gasLimit: 10_000_000,
+			bench:    BenchReadLargeItemsFromStorage,
+			loops:    10,
+		},
 		"Write large item to storage": {
 			gasLimit: 100_000_000,
 			bench:    BenchWriteLargeItemToStorage,
 			loops:    10,
+			params:   []ParamKeyValue{{key: "chunks", value: "1"}},
+		},
+		"Write large items to storage": {
+			gasLimit: 200_000_000,
+			bench:    BenchWriteLargeItemToStorage,
+			loops:    10,
+			params:   []ParamKeyValue{{key: "chunks", value: "2"}},
 		},
 		"Bench read storage multiple keys": {
 			gasLimit: 10_000_000,
@@ -263,6 +277,23 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 		0,
 		false,
 	)
+
+	msg = buildBenchMessage(SetupReadLargeItemsFromStorage, nil)
+	_, _, _, _, _, _ = execHelper(
+		t,
+		keeper,
+		ctx,
+		contractAddr,
+		creator,
+		creatorPriv,
+		string(msg),
+		false,
+		true,
+		20_000_000,
+		0,
+		false,
+	)
+
 	// *** Measure baseline
 	timer := NewBenchTimer("base contract execution", Noop)
 	// make sure we set a limit before calling

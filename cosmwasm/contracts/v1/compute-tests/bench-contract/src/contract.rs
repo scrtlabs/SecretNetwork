@@ -5,7 +5,8 @@ use crate::benches::allocate::do_allocate_large_memory;
 
 use crate::benches::read_storage::{
     bench_read_large_key_from_storage, bench_read_storage_different_key,
-    bench_read_storage_same_key, setup_read_large_from_storage,
+    bench_read_storage_same_key, setup_read_large_from_storage, READ_LARGE_STORAGE_KEY,
+    READ_LARGE_STORAGE_KEYS,
 };
 use crate::benches::write_storage::{
     bench_write_large_storage_key, bench_write_storage_different_key,
@@ -53,11 +54,21 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::BenchReadStorageMultipleKeys {} => bench_read_storage_different_key(deps, 100),
         ExecuteMsg::BenchAllocate {} => do_allocate_large_memory(),
         // start with running large item bench once, otherwise cache will skew performance numbers
-        ExecuteMsg::BenchWriteLargeItemToStorage { .. } => bench_write_large_storage_key(deps, 1),
-        ExecuteMsg::BenchReadLargeItemFromStorage { .. } => {
-            bench_read_large_key_from_storage(deps, 1)
+        ExecuteMsg::BenchWriteLargeItemToStorage { chunks } => {
+            bench_write_large_storage_key(deps, 1, chunks)
         }
-        ExecuteMsg::SetupReadLargeItem { .. } => setup_read_large_from_storage(deps),
+        ExecuteMsg::BenchReadLargeItemFromStorage { .. } => {
+            bench_read_large_key_from_storage(deps, READ_LARGE_STORAGE_KEY, 1)
+        }
+        ExecuteMsg::SetupReadLargeItem { .. } => {
+            setup_read_large_from_storage(deps, READ_LARGE_STORAGE_KEY, 1)
+        }
+        ExecuteMsg::BenchReadLargeItemsFromStorage { .. } => {
+            bench_read_large_key_from_storage(deps, READ_LARGE_STORAGE_KEYS, 1)
+        }
+        ExecuteMsg::SetupReadLargeItems { .. } => {
+            setup_read_large_from_storage(deps, READ_LARGE_STORAGE_KEYS, 2)
+        }
         ExecuteMsg::BenchCreateViewingKey {} => {
             create_key(deps, env, info);
             Ok(())

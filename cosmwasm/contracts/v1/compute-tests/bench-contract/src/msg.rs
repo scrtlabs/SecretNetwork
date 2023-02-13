@@ -30,13 +30,17 @@ pub enum ExecuteMsg {
     BenchReadStorageMultipleKeys {},
     BenchAllocate {},
     BenchReadLargeItemFromStorage {},
-    BenchWriteLargeItemToStorage {},
+    BenchReadLargeItemsFromStorage {},
+    BenchWriteLargeItemToStorage {
+        chunks: String,
+    },
     BenchCreateViewingKey {},
     BenchSetViewingKey {
         key: String,
         padding: Option<String>,
     },
     SetupReadLargeItem {},
+    SetupReadLargeItems {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
