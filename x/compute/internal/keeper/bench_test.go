@@ -279,7 +279,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 	)
 
 	msg = buildBenchMessage(SetupReadLargeItemsFromStorage, nil)
-	_, _, _, _, _, _ = execHelper(
+	_, _, _, _, _, err := execHelper(
 		t,
 		keeper,
 		ctx,
@@ -287,12 +287,13 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 		creator,
 		creatorPriv,
 		string(msg),
-		false,
 		true,
-		20_000_000,
+		true,
+		40_000_000,
 		0,
 		false,
 	)
+	require.Empty(t, err)
 
 	// *** Measure baseline
 	timer := NewBenchTimer("base contract execution", Noop)
@@ -351,7 +352,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 					creator,
 					creatorPriv,
 					string(msg),
-					false,
+					true,
 					true,
 					tc.gasLimit,
 					0,

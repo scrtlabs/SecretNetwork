@@ -282,11 +282,11 @@ var contractErrorRegex = regexp.MustCompile(`.*encrypted: (.+): (?:instantiate|e
 func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool, isV1Contract bool) cosmwasm.StdError {
 	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
 	if match == nil {
-		require.True(t, !isEncrypted, fmt.Sprintf("Error message should be plaintext but was: %v", err))
+		require.True(t, !isEncrypted, fmt.Sprintf("Error message should be encrypted but was: %v", err))
 		return cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	require.True(t, isEncrypted, "Error message should be encrypted")
+	require.True(t, isEncrypted, "Error message should be plaintext but was: %v", err)
 	require.NotEmpty(t, match)
 	require.Equal(t, 1, len(match))
 	require.Equal(t, 2, len(match[0]))

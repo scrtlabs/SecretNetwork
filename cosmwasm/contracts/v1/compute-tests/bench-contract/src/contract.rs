@@ -28,6 +28,7 @@ pub const BALANCE_QUERY_RESULT: u32 = 42;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 
 #[entry_point]
+
 pub fn instantiate(
     deps: DepsMut,
     env: Env,

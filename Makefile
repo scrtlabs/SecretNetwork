@@ -424,7 +424,7 @@ prep-go-tests: build-test-contract bin-data-sw
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 
-go-tests: build-test-contract bin-data-sw
+go-tests: build-test-contract build-bench-contract bin-data-sw
 	SGX_MODE=SW $(MAKE) build-linux-with-query
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
@@ -432,7 +432,7 @@ go-tests: build-test-contract bin-data-sw
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
-go-tests-hw: build-test-contract bin-data
+go-tests-hw: build-test-contract build-becnh-contract bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=HW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
