@@ -65,7 +65,6 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
     }
 
     error!("Failed to validate message, error 0x3255");
-    trace!("Expected: {:?}, vs: {:?}", expected_msg, msg);
 
     // if this message fails to verify we have to fail the rest of the TX, so we won't get any
     // other messages
