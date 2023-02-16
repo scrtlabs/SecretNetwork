@@ -2,7 +2,7 @@
 name = "go-cosmwasm"
 version = "0.10.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
-edition = "2018"
+edition = "2021"
 description = "Go bindings for cosmwasm contracts"
 repository = "https://github.com/CosmWasm/go-cosmwasm"
 license = "Apache-2.0"

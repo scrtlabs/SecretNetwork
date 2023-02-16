@@ -32,7 +32,6 @@ backtraces = ["snafu/backtraces"]
 # we keep this optional, to allow possible future integration (or different Cosmos Backends)
 iterator = ["cosmwasm-std/iterator"]
 staking = ["cosmwasm-std/staking"]
-enclave-tests = []
 production = []
 # This flag enales storing contracts that require the debug-print function
 debug-print = []
