@@ -176,13 +176,12 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 		encryptedRandom = []byte{}
 	}
 
-	random, err := api.SubmitBlockSignatures(header, commit, data, encryptedRandom)
+	_, err = api.SubmitBlockSignatures(header, commit, data, encryptedRandom)
 	if err != nil {
-		println("Failed to submit block signtures")
 		panic(err)
 	}
 
-	am.keeper.SetRandomSeed(ctx, random)
+	// am.keeper.SetRandomSeed(ctx, random)
 
 	// println("successfully submitted random for height ", beginBlock.Header.Height)
 }
