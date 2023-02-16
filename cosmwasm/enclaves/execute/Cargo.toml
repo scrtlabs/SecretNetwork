@@ -78,6 +78,8 @@ simple_logger = { version = "2.3.0", default-features = false, features = ["stde
 
 block-verifier = { path = "../shared/block-verifier", default-features = false }
 
+time = "=0.3.17"
+
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"
 branch = "mesalock_sgx"

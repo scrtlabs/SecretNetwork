@@ -52,24 +52,26 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
         return false;
     }
 
-    return if let Some(expected_msg) = verified_msgs.get_next() {
-        if !is_subslice(&expected_msg, msg) {
-            error!("Failed to validate message, error 0x3255");
-            trace!("Expected: {:?}, vs: {:?}", expected_msg, msg);
 
-            // if this message fails to verify we have to fail the rest of the TX, so we won't get any
-            // other messages
-            verified_msgs.clear();
-
-            return false;
+    // Msgs might fail in the sdk before they reach the enclave. In this case we need to run through
+    // all the messages available before we can determine that there has been a failure
+    // this isn't an attack vector since this can happen anyway by manipulating the state between executions
+    while verified_msgs.remaining() > 0 {
+        if let Some(expected_msg) = verified_msgs.get_next() {
+            if is_subslice(&expected_msg, msg) {
+                return true;
+            }
         }
+    }
 
-        trace!("Successfully validated that this message was in the block!");
-        true
-    } else {
-        error!("Failed to get expected message, error 0x1234");
-        false
-    };
+    error!("Failed to validate message, error 0x3255");
+    trace!("Expected: {:?}, vs: {:?}", expected_msg, msg);
+
+    // if this message fails to verify we have to fail the rest of the TX, so we won't get any
+    // other messages
+    verified_msgs.clear();
+
+    return false;
 }
 
 pub fn generate_contract_key(
