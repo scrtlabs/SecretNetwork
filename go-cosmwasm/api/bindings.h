@@ -190,7 +190,8 @@ Buffer instantiate(cache_t *cache,
                    uint64_t gas_limit,
                    uint64_t *gas_used,
                    Buffer *err,
-                   Buffer sig_info);
+                   Buffer sig_info,
+                   Buffer admin);
 
 Buffer key_gen(Buffer *err);
 

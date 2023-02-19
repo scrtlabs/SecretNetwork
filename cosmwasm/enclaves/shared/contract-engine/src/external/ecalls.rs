@@ -160,6 +160,8 @@ pub unsafe extern "C" fn ecall_init(
     msg_len: usize,
     sig_info: *const u8,
     sig_info_len: usize,
+    admin: *const u8,
+    admin_len: usize,
 ) -> InitResult {
     // let _recursion_guard = match recursion_depth::guard() {
     //     Ok(rg) => rg,
@@ -190,6 +192,7 @@ pub unsafe extern "C" fn ecall_init(
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
     let sig_info = std::slice::from_raw_parts(sig_info, sig_info_len);
+    let admin = std::slice::from_raw_parts(admin, admin_len);
     let result = panic::catch_unwind(|| {
         let mut local_used_gas = *used_gas;
         let result = crate::contract_operations::init(
@@ -200,6 +203,7 @@ pub unsafe extern "C" fn ecall_init(
             env,
             msg,
             sig_info,
+            admin,
         );
         *used_gas = local_used_gas;
         result_init_success_to_initresult(result)

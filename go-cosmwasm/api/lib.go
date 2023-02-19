@@ -142,6 +142,7 @@ func Instantiate(
 	querier *Querier,
 	gasLimit uint64,
 	sigInfo []byte,
+	admin []byte,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -164,12 +165,15 @@ func Instantiate(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+	adminBuffer := sendSlice(admin)
+	defer freeAfterSend(adminBuffer)
+
 	//// This is done in order to ensure that goroutines don't
 	//// swap threads between recursive calls to the enclave.
 	//runtime.LockOSThread()
 	//defer runtime.UnlockOSThread()
 
-	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
+	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

@@ -32,6 +32,8 @@ extern "C" {
         msg_len: usize,
         sig_info: *const u8,
         sig_info_len: usize,
+        admin: *const u8,
+        admin_len: usize,
     ) -> sgx_status_t;
 
     /// Trigger a handle method in a wasm contract

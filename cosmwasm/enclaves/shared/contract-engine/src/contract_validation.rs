@@ -23,7 +23,7 @@ pub const CONTRACT_KEY_LENGTH: usize = HASH_SIZE + HASH_SIZE;
 const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
 const SIZE_OF_U64: usize = 8;
 
-pub fn generate_encryption_key(
+pub fn generate_contract_key(
     sender: &CanonicalAddr,
     block_height: &u64,
     contract_hash: &[u8; HASH_SIZE],

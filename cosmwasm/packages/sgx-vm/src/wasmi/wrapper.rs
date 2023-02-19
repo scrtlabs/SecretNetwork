@@ -92,7 +92,13 @@ where
         VmError::generic_err("The enclave is too busy and can not respond to this query")
     }
 
-    pub fn init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<InitSuccess> {
+    pub fn init(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+    ) -> VmResult<InitSuccess> {
         trace!(
             "init() called with env: {:?} msg: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
@@ -125,6 +131,8 @@ where
                 msg.len(),
                 sig_info.as_ptr(),
                 sig_info.len(),
+                admin.as_ptr(),
+                admin.len(),
             )
         };
 
