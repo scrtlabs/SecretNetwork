@@ -530,7 +530,6 @@ Please report any issues with this command
 
 			if resp.StatusCode != http.StatusOK {
 				errDetails := ErrorResponse{}
-				fmt.Println(string(body))
 				err := json.Unmarshal(body, &errDetails)
 				if err != nil {
 					return fmt.Errorf(fmt.Sprintf("Registration TX was not successful - %s", err))
