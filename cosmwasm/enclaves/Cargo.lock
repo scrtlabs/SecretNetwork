@@ -1484,6 +1484,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "simple_logger",
+ "time",
  "uuid",
  "webpki",
  "webpki-roots",
@@ -1929,6 +1930,7 @@ version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a561bf4617eebd33bca6434b988f39ed798e527f51a1e797d0ee4f61c0a38376"
 dependencies = [
+ "serde 1.0.147",
  "time-core",
  "time-macros",
 ]

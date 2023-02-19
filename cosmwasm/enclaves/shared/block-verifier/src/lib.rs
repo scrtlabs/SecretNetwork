@@ -28,7 +28,6 @@ lazy_static! {
 }
 
 pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
-
     #[cfg(feature = "verify-validator-whitelist")]
     if !whitelisted_validators_in_block(untrusted_block) {
         debug!("Error verifying validators in block");

@@ -9,7 +9,9 @@ use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
-// use std::time::Instant;
+
+#[cfg(feature = "light-client-validation")]
+use block_verifier::VERIFIED_MESSAGES;
 
 use crate::cosmwasm_config::ContractOperation;
 
@@ -30,9 +32,7 @@ use super::io::{
     encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
     set_all_logs_to_plaintext,
 };
-//use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
-// use super::wasm::{ContractInstance, Engine};
 
 /*
 Each contract is compiled with these functions already implemented in wasm:
@@ -68,6 +68,16 @@ pub fn init(
 
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
+
+    #[cfg(feature = "light-client-validation")]
+    {
+        let verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
+        if verified_msgs.height() != base_env.0.block.height {
+            error!("wrong height for this block - 0xF6AC");
+            return Err(EnclaveError::ValidationFailure);
+        }
+    }
+
     // let duration = start.elapsed();
     // trace!("Time elapsed in extract_base_env is: {:?}", duration);
     let query_depth = extract_query_depth(env)?;
@@ -147,7 +157,6 @@ pub fn init(
 
         debug!("New random: {:?}", versioned_env.get_random());
     }
-
 
     //let start = Instant::now();
     let result = engine.init(&versioned_env, validated_msg);

@@ -28,6 +28,9 @@ use enclave_utils::validator_set::ValidatorSetForHeight;
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
 const MAX_TXS_LENGTH: u32 = 10 * 1024 * 1024;
 
+#[cfg(feature = "light-client-validation")]
+const TX_THRESHOLD: usize = 100_000;
+
 macro_rules! validate_input_length {
     ($input:expr, $var_name:expr, $constant:expr) => {
         if $input > $constant {
@@ -93,7 +96,7 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     let block_header_slice = slice::from_raw_parts(in_header, in_header_len as usize);
     let block_commit_slice = slice::from_raw_parts(in_commit, in_commit_len as usize);
 
-    let txs_slice = if !in_txs.is_null() {
+    let txs_slice = if in_txs_len != 0 && !in_txs.is_null() {
         validate_const_ptr!(
             in_txs,
             in_txs_len as usize,
@@ -114,18 +117,16 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     }
     let validator_set_for_height: ValidatorSetForHeight = validator_set_result.unwrap();
 
-    // As of now this is not working because of a difference in behavior between tendermint and tendermint-rs
-    // Ref: https://github.com/informalsystems/tendermint-rs/issues/1255
     let header = if let Ok(r) = Header::decode(block_header_slice) {
         r
     } else {
         error!("Error parsing header from proto");
-        return sgx_status_t::SGX_SUCCESS;
+        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     };
 
     let commit = if let Ok(res) = Commit::decode(block_commit_slice).map_err(|e| {
         error!("Error parsing commit from proto: {:?}", e);
-        sgx_status_t::SGX_SUCCESS
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     }) {
         res
     } else {
@@ -177,29 +178,43 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
 
     #[cfg(feature = "light-client-validation")]
     {
+        let mut message_verifier = VERIFIED_MESSAGES.lock().unwrap();
         //debug to make sure it doesn't go out of sync
-        if VERIFIED_MESSAGES.lock().unwrap().remaining() != 0 {
+        if message_verifier.remaining() != 0 {
             error!(
                 "Wasm verified out of sync?? Adding new messages but old one is not empty?? - remaining: {}",
-                VERIFIED_MESSAGES.lock().unwrap().remaining()
+                message_verifier.remaining()
             );
 
             // new tx, so messages should always be empty
-            VERIFIED_MESSAGES.lock().unwrap().clear();
+            message_verifier.clear();
         }
 
         for tx in txs.tx.iter() {
-            if tx.len() < 100_000 {
-                debug!("Got tx: {:?}", hex::encode(tx.as_slice()));
+            // doing this a different way makes the code unreadable or requires creating a copy of
+            // tx. Feel free to change this if someone finds a better way
+            log::trace!(
+                "Got tx: {}",
+                if tx.len() < TX_THRESHOLD {
+                    format!("{:?}", hex::encode(tx))
+                } else {
+                    String::new()
+                }
+            );
+
+            let parsed_tx = tx_from_bytes(tx.as_slice()).map_err(|_| {
+                error!("Unable to parse tx bytes from proto");
+                sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+            });
+
+            if let Ok(result) = parsed_tx {
+                message_verifier.append_wasm_from_tx(result);
+            } else {
+                return parsed_tx.unwrap_err();
             }
-
-            let parsed_tx = tx_from_bytes(tx.as_slice()).unwrap();
-
-            VERIFIED_MESSAGES
-                .lock()
-                .unwrap()
-                .append_wasm_from_tx(parsed_tx);
         }
+
+        message_verifier.set_height(signed_header.header.height.value());
     }
 
     #[cfg(feature = "random")]

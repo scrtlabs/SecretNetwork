@@ -29,9 +29,6 @@ linters:
 
 issues:
   exclude-rules:
-    - path: 'x/registration/internal/types/reg_keys.go'
-      linters:
-        - typecheck
     - text: "var-naming"
       linters:
         - revive

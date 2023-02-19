@@ -27,7 +27,7 @@ const HEX_ENCODED_HASH_SIZE: usize = HASH_SIZE * 2;
 const SIZE_OF_U64: usize = 8;
 
 #[cfg(feature = "light-client-validation")]
-fn is_subslice(larger: &Vec<u8>, smaller: &[u8]) -> bool {
+fn is_subslice(larger: &[u8], smaller: &[u8]) -> bool {
     if smaller.is_empty() {
         return true;
     }
@@ -52,7 +52,6 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
         return false;
     }
 
-
     // Msgs might fail in the sdk before they reach the enclave. In this case we need to run through
     // all the messages available before we can determine that there has been a failure
     // this isn't an attack vector since this can happen anyway by manipulating the state between executions
@@ -70,7 +69,7 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
     // other messages
     verified_msgs.clear();
 
-    return false;
+    false
 }
 
 pub fn generate_contract_key(

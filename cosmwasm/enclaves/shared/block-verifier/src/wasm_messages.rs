@@ -49,6 +49,7 @@ pub fn message_is_wasm(msg: &protobuf::well_known_types::Any) -> bool {
 #[derive(Debug, Clone, Default)]
 pub struct VerifiedWasmMessages {
     messages: VecDeque<Vec<u8>>,
+    height: u64,
 }
 
 impl VerifiedWasmMessages {
@@ -66,6 +67,14 @@ impl VerifiedWasmMessages {
                 self.messages.push_back(msg.value);
             }
         }
+    }
+
+    pub fn set_height(&mut self, height: u64) {
+        self.height = height;
+    }
+
+    pub fn height(&self) -> u64 {
+        self.height
     }
 
     pub fn clear(&mut self) {
