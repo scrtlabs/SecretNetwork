@@ -77,20 +77,6 @@ func ConfigureSecret() *cobra.Command {
 	return cmd
 }
 
-func CreateOldSecret() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "configure-old-secret [master-cert] [seed]",
-		Short: "After registration is successful, configure the old secrets for full-sync ",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			println("This is a secretd only function, yo")
-			return nil
-		},
-	}
-
-	return cmd
-}
-
 func HealthCheck() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check-enclave",

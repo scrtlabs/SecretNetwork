@@ -295,6 +295,8 @@ func ConfigureSecret() *cobra.Command {
 				return err
 			}
 
+			createOldSecret(seed, nodeDir)
+
 			return nil
 		},
 	}
@@ -302,62 +304,35 @@ func ConfigureSecret() *cobra.Command {
 	return cmd
 }
 
-func CreateOldSecret() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "configure-old-secret [master-cert] [seed]",
-		Short: "After registration is successful, configure the old secrets for full-sync ",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
-			if err != nil {
-				return err
-			}
-
-			// Create .secretd/.node directory if it doesn't exist
-			nodeDir := filepath.Join(homeDir, reg.SecretNodeCfgFolder)
-			err = os.MkdirAll(nodeDir, os.ModePerm)
-			if err != nil {
-				return err
-			}
-
-			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedLegacyConfig)
-			if _, err := os.Stat(seedFilePath); err == nil {
-				return fmt.Errorf("old secrets are already in place")
-			}
-
-			cert, err := os.ReadFile(args[0])
-			if err != nil {
-				return err
-			}
-
-			combinedSeed := args[1]
-			if len(combinedSeed) != reg.EncryptedKeyLength || !reg.IsHexString(combinedSeed) {
-				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 192 without 0x prefix)")
-			}
-
-			seed := combinedSeed[0:reg.LegacyEncryptedKeyLength]
-			println(seed)
-
-			cfg := reg.LegacySeedConfig{
-				EncryptedKey: seed,
-				MasterCert:   base64.StdEncoding.EncodeToString(cert),
-			}
-
-			cfgBytes, err := json.Marshal(&cfg)
-			if err != nil {
-				return err
-			}
-
-			err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		},
+func createOldSecret(combinedSeed string, nodeDir string) error {
+	seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedLegacyConfig)
+	if _, err := os.Stat(seedFilePath); err == nil {
+		return nil
 	}
 
-	return cmd
+	if len(combinedSeed) != reg.EncryptedKeyLength || !reg.IsHexString(combinedSeed) {
+		return fmt.Errorf("invalid encrypted seed format (requires hex string of length 192 without 0x prefix)")
+	}
+
+	seed := combinedSeed[0:reg.LegacyEncryptedKeyLength]
+	println(seed)
+
+	cfg := reg.LegacySeedConfig{
+		EncryptedKey: seed,
+		MasterCert:   reg.LegacyIoMasterCertificate,
+	}
+
+	cfgBytes, err := json.Marshal(&cfg)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func HealthCheck() *cobra.Command {
@@ -555,6 +530,7 @@ Please report any issues with this command
 
 			if resp.StatusCode != http.StatusOK {
 				errDetails := ErrorResponse{}
+				fmt.Println(string(body))
 				err := json.Unmarshal(body, &errDetails)
 				if err != nil {
 					return fmt.Errorf(fmt.Sprintf("Registration TX was not successful - %s", err))
@@ -629,6 +605,8 @@ Please report any issues with this command
 					return fmt.Errorf("failed to create file '%s': %w", seedCfgFile, err)
 				}
 			}
+
+			createOldSecret(seed, seedCfgDir)
 
 			fmt.Println("Done registering! Ready to start...")
 			return nil

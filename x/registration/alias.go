@@ -26,6 +26,7 @@ const (
 	LegacyEncryptedKeyLength   = types.LegacyEncryptedKeyLength
 	AttestationCertPath        = types.AttestationCertPath
 	IoExchMasterKeyPath        = types.IoExchMasterKeyPath
+	LegacyIoMasterCertificate  = types.LegacyIoMasterCertificate
 	NodeExchMasterKeyPath      = types.NodeExchMasterKeyPath
 	SeedPath                   = types.SeedPath
 	MasterIoKeyId              = types.MasterIoKeyId
