@@ -295,7 +295,11 @@ func ConfigureSecret() *cobra.Command {
 				return err
 			}
 
-			createOldSecret(seed, nodeDir)
+			err = createOldSecret(seed, nodeDir)
+			if err != nil {
+				fmt.Println("failed to create legacy secrets")
+				return err
+			}
 
 			return nil
 		},
@@ -605,7 +609,11 @@ Please report any issues with this command
 				}
 			}
 
-			createOldSecret(seed, seedCfgDir)
+			err = createOldSecret(seed, seedCfgDir)
+			if err != nil {
+				fmt.Println("failed to create legacy secrets")
+				return err
+			}
 
 			fmt.Println("Done registering! Ready to start...")
 			return nil
