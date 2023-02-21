@@ -10,12 +10,9 @@ use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 
-#[cfg(feature = "light-client-validation")]
-use block_verifier::VERIFIED_MESSAGES;
-
 use crate::cosmwasm_config::ContractOperation;
 
-use crate::contract_validation::{ReplyParams, ValidatedMessage};
+use crate::contract_validation::{ReplyParams, ValidatedMessage, verify_block_info};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
 
@@ -71,11 +68,7 @@ pub fn init(
 
     #[cfg(feature = "light-client-validation")]
     {
-        let verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
-        if verified_msgs.height() != base_env.0.block.height {
-            error!("wrong height for this block - 0xF6AC");
-            return Err(EnclaveError::ValidationFailure);
-        }
+        verify_block_info(&base_env)?;
     }
 
     // let duration = start.elapsed();
@@ -224,6 +217,12 @@ pub fn handle(
     let contract_hash = contract_code.hash();
 
     let base_env: BaseEnv = extract_base_env(env)?;
+
+    #[cfg(feature = "light-client-validation")]
+    {
+        verify_block_info(&base_env)?;
+    }
+
     let query_depth = extract_query_depth(env)?;
 
     let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();

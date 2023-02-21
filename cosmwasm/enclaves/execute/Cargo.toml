@@ -29,6 +29,7 @@ use_seed_service_on_bootstrap = []
 epid_whitelist_disabled = []
 light-client-validation = ["enclave_contract_engine/light-client-validation", "block-verifier/light-client-validation"]
 random = ["enclave_contract_engine/random"]
+verify-validator-whitelist = ["block-verifier/verify-validator-whitelist"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.

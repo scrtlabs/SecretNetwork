@@ -214,7 +214,7 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
             }
         }
 
-        message_verifier.set_height(signed_header.header.height.value());
+        message_verifier.set_block_info(signed_header.header.height.value(), signed_header.header.time.unix_timestamp_nanos());
     }
 
     #[cfg(feature = "random")]

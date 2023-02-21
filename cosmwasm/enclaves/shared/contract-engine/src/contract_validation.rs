@@ -1,7 +1,9 @@
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
-// use std::time::Instant;
+
+#[cfg(feature = "light-client-validation")]
+use cw_types_generic::BaseEnv;
 
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
@@ -40,6 +42,22 @@ fn is_subslice(larger: &[u8], smaller: &[u8]) -> bool {
         }
     }
     false
+}
+
+#[cfg(feature = "light-client-validation")]
+pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
+    let verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
+    if verified_msgs.height() != base_env.0.block.height {
+        error!("wrong height for this block - 0xF6AC");
+        return Err(EnclaveError::ValidationFailure);
+    }
+
+    if verified_msgs.time() != base_env.0.block.time as i128 {
+        error!("wrong height for this block - 0xF6AF");
+        return Err(EnclaveError::ValidationFailure);
+    }
+
+    Ok(())
 }
 
 #[cfg(feature = "light-client-validation")]

@@ -33,7 +33,9 @@ pub struct Keychain {
     consensus_seed_exchange_keypair: Option<SeedsHolder<KeyPair>>,
     consensus_io_exchange_keypair: Option<SeedsHolder<KeyPair>>,
     consensus_callback_secret: Option<SeedsHolder<AESKey>>,
+    #[cfg(feature = "random")]
     pub random_encryption_key: Option<AESKey>,
+    #[cfg(feature = "random")]
     pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
 }
@@ -83,7 +85,9 @@ impl Keychain {
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
             consensus_callback_secret: None,
+            #[cfg(feature = "random")]
             initial_randomness_seed: None,
+            #[cfg(feature = "random")]
             random_encryption_key: None,
         };
 
@@ -400,35 +404,41 @@ impl Keychain {
             .current
             .derive_key_from_this(&CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER.to_be_bytes());
 
-        let rek = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes());
-
-        let irs = self
-            .consensus_seed
-            .unwrap()
-            .current
-            .derive_key_from_this(&INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes());
-
-        self.initial_randomness_seed = Some(irs);
-        self.random_encryption_key = Some(rek);
-
         trace!(
             "consensus_callback_secret_current: {:?}",
             hex::encode(consensus_state_ikm_current.get())
         );
-        self.write_randomness_keys();
 
         self.set_consensus_callback_secret(
             consensus_callback_secret_genesis,
             consensus_callback_secret_current,
         );
 
+        #[cfg(feature = "random")]
+        {
+            let rek = self
+                .consensus_seed
+                .unwrap()
+                .current
+                .derive_key_from_this(&RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes());
+
+            let irs = self
+                .consensus_seed
+                .unwrap()
+                .current
+                .derive_key_from_this(&INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes());
+
+            self.initial_randomness_seed = Some(irs);
+            self.random_encryption_key = Some(rek);
+
+            #[cfg(feature = "random")]
+            self.write_randomness_keys();
+        }
+
         Ok(())
     }
 
+    #[cfg(feature = "random")]
     pub fn write_randomness_keys(&self) {
         self.random_encryption_key.unwrap().seal(&REK_PATH).unwrap();
         self.initial_randomness_seed

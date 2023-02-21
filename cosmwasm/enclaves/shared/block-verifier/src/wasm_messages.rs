@@ -50,6 +50,7 @@ pub fn message_is_wasm(msg: &protobuf::well_known_types::Any) -> bool {
 pub struct VerifiedWasmMessages {
     messages: VecDeque<Vec<u8>>,
     height: u64,
+    time: i128,
 }
 
 impl VerifiedWasmMessages {
@@ -69,12 +70,16 @@ impl VerifiedWasmMessages {
         }
     }
 
-    pub fn set_height(&mut self, height: u64) {
+    pub fn set_block_info(&mut self, height: u64, time: i128) {
         self.height = height;
+        self.time = time;
     }
 
     pub fn height(&self) -> u64 {
         self.height
+    }
+    pub fn time(&self) -> i128 {
+        self.time
     }
 
     pub fn clear(&mut self) {

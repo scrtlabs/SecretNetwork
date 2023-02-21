@@ -24,6 +24,8 @@ impl ValidatorList {
         Self(addresses)
     }
 
+    // use for tests
+    #[allow(dead_code)]
     fn len(&self) -> usize {
         self.0.len()
     }
@@ -33,7 +35,7 @@ impl ValidatorList {
     }
 }
 
-fn whitelisted_validators_in_block(untrusted_block: &UntrustedBlockState) -> bool {
+pub fn whitelisted_validators_in_block(untrusted_block: &UntrustedBlockState) -> bool {
     untrusted_block.validators.validators().iter().filter(|&a| {VALIDATOR_WHITELIST.contains(&a.address.to_string())}).count() >= VALIDATOR_THRESHOLD
 }
 
