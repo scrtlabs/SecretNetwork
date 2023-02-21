@@ -10,8 +10,8 @@ replace (
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/scrtlabs/tm-secret-enclave => github.com/scrtlabs/tm-secret-enclave v0.0.0-20230210205208-8db87d314f3b
-	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.34.23-0.20230210232722-8c54bcbfcf31
+	github.com/scrtlabs/tm-secret-enclave => github.com/scrtlabs/tm-secret-enclave v1.7.1
+	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v1.7.1-secret
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
@@ -126,7 +126,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rs/cors v1.8.2 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
-	github.com/scrtlabs/tm-secret-enclave v0.0.0-20230210205208-8db87d314f3b // indirect
+	github.com/scrtlabs/tm-secret-enclave v0.0.0-20230221113259-1bb4b95467c8 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
