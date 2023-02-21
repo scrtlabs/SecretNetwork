@@ -12,7 +12,10 @@ use log::*;
 
 use crate::cosmwasm_config::ContractOperation;
 
-use crate::contract_validation::{ReplyParams, ValidatedMessage, verify_block_info};
+#[cfg(feature = "light-client-validation")]
+use crate::contract_validation::verify_block_info;
+
+use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
 

@@ -686,18 +686,18 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 	return contractKey
 }
 
-func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
-	store := ctx.KVStore(k.storeKey)
+// func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
+//	store := ctx.KVStore(k.storeKey)
+//
+//	random := store.Get(types.GetRandomKey(height))
+//
+//	return random
+// }
 
-	random := store.Get(types.GetRandomKey(height))
-
-	return random
-}
-
-func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
-	store := ctx.KVStore(k.storeKey)
-	store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
-}
+// func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
+//	store := ctx.KVStore(k.storeKey)
+//	store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
+// }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {
 	store := ctx.KVStore(k.storeKey)

@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -502,9 +501,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 
-	random := make([]byte, 32)
-	rand.Read(random)
-	keeper.SetRandomSeed(ctx, random)
+	//random := make([]byte, 32)
+	//rand.Read(random)
+	//keeper.SetRandomSeed(ctx, random)
 
 	am := module.NewManager( // minimal module set that we use for message/ query tests
 		bank.NewAppModule(encodingConfig.Marshaler, bankKeeper, authKeeper),
@@ -744,11 +743,11 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 
 // StoreRandomOnNewBlock is used when height is incremented in tests, the random value for the new block needs to be
 // generated too (to pass as env)
-func StoreRandomOnNewBlock(ctx sdk.Context, wasmKeeper Keeper) {
-	random := make([]byte, 32)
-	rand.Read(random)
-	wasmKeeper.SetRandomSeed(ctx, random)
-}
+//func StoreRandomOnNewBlock(ctx sdk.Context, wasmKeeper Keeper) {
+//	random := make([]byte, 32)
+//	rand.Read(random)
+//	wasmKeeper.SetRandomSeed(ctx, random)
+//}
 
 const faucetAccountName = "faucet"
 
