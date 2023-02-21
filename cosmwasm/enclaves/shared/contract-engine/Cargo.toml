@@ -6,7 +6,6 @@ edition = "2018"
 
 [features]
 default = ["wasm3"]
-query-only = []
 debug-print = []
 test = []
 wasm3 = []

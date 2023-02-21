@@ -17,7 +17,6 @@ use crate::contract_validation::ContractKey;
 
 use crate::cosmwasm_config::ContractOperation;
 use crate::db::read_from_encrypted_state;
-#[cfg(not(feature = "query-only"))]
 use crate::db::{remove_from_encrypted_state, write_multiple_keys};
 use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngineResult};
 use crate::gas::{WasmCosts, READ_BASE_GAS, WRITE_BASE_GAS};
@@ -92,7 +91,6 @@ pub struct Context {
     gas_used_externally: u64,
     gas_costs: WasmCosts,
     query_depth: u32,
-    #[cfg_attr(feature = "query-only", allow(unused))]
     operation: ContractOperation,
     contract_key: ContractKey,
     user_nonce: IoNonce,
@@ -524,12 +522,6 @@ impl Engine {
         })
     }
 
-    #[cfg(feature = "query-only")]
-    pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
-        Ok(0)
-    }
-
-    #[cfg(not(feature = "query-only"))]
     pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
         use crate::db::create_encrypted_key_value;
 
@@ -849,7 +841,6 @@ fn host_read_db(
     Ok(region_ptr as i32)
 }
 
-#[cfg(not(feature = "query-only"))]
 fn host_remove_db(
     context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -873,7 +864,6 @@ fn host_remove_db(
     Ok(())
 }
 
-#[cfg(not(feature = "query-only"))]
 fn host_write_db(
     context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -903,24 +893,6 @@ fn host_write_db(
     use_gas(instance, pseudo_cost_for_write)?; // Use gas now, refund later
 
     Ok(())
-}
-
-#[cfg(feature = "query-only")]
-fn host_remove_db(
-    _context: &mut Context,
-    _instance: &wasm3::Instance<Context>,
-    _state_key_region_ptr: i32,
-) -> WasmEngineResult<()> {
-    Err(WasmEngineError::UnauthorizedWrite)
-}
-
-#[cfg(feature = "query-only")]
-fn host_write_db(
-    _context: &mut Context,
-    _instance: &wasm3::Instance<Context>,
-    (_state_key_region_ptr, _value_region_ptr): (i32, i32),
-) -> WasmEngineResult<()> {
-    Err(WasmEngineError::UnauthorizedWrite)
 }
 
 fn host_canonicalize_address(

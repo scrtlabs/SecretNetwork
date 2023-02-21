@@ -17,7 +17,7 @@ use enclave_utils::kv_cache::KvCache;
 use super::contract_validation::ContractKey;
 use super::errors::WasmEngineError;
 
-#[cfg(not(feature = "query-only"))]
+
 pub fn write_multiple_keys(
     context: &Ctx,
     keys: Vec<(Vec<u8>, Vec<u8>)>,
@@ -55,7 +55,6 @@ pub fn write_multiple_keys(
     }
 }
 
-#[cfg(not(feature = "query-only"))]
 #[allow(dead_code)]
 pub fn write_to_encrypted_state(
     plaintext_key: &[u8],
@@ -82,7 +81,6 @@ pub fn write_to_encrypted_state(
     Ok(used_gas_for_key_creation + used_gas_for_write)
 }
 
-#[cfg(not(feature = "query-only"))]
 pub fn create_encrypted_key_value(
     plaintext_key: &[u8],
     plaintext_value: &[u8],
@@ -332,7 +330,6 @@ fn remove_db(context: &Ctx, key: &[u8]) -> Result<u64, WasmEngineError> {
 }
 
 /// Safe wrapper around writes to the contract storage
-#[cfg(not(feature = "query-only"))]
 #[allow(dead_code)]
 fn write_db(context: &Ctx, key: &[u8], value: &[u8]) -> Result<u64, WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
