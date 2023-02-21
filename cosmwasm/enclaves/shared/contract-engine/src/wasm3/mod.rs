@@ -540,7 +540,7 @@ impl Engine {
                     &v,
                     &self.context.context,
                     &self.context.contract_key,
-                    self.context.timestamp,
+                    &self.context.timestamp.to_be_bytes(),
                 )
                 .unwrap();
 
@@ -820,7 +820,7 @@ fn host_read_db(
             ContractOperation::Query => false,
         },
         &mut context.kv_cache,
-        context.timestamp,
+        &context.timestamp.to_be_bytes(),
     )
     .map_err(debug_err!("db_read failed to read key from storage"))?;
     context.use_gas_externally(used_gas);
