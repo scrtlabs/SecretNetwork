@@ -501,7 +501,7 @@ func nextBlock(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, wasmKeeper K
 	staking.EndBlocker(ctx, stakingKeeper)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
 	staking.BeginBlocker(ctx, stakingKeeper)
-	//StoreRandomOnNewBlock(ctx, wasmKeeper)
+	// StoreRandomOnNewBlock(ctx, wasmKeeper)
 
 	return ctx
 }

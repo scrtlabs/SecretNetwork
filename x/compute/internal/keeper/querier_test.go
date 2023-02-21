@@ -316,7 +316,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		meter := sdk.NewGasMeter(1000000)
 		ctx = ctx.WithGasMeter(meter)
 		ctx = ctx.WithBlockGasMeter(meter)
-		//StoreRandomOnNewBlock(ctx, wasmKeeper)
+		// StoreRandomOnNewBlock(ctx, wasmKeeper)
 		return ctx
 	}
 

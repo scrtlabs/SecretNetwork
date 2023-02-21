@@ -501,9 +501,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 
-	//random := make([]byte, 32)
-	//rand.Read(random)
-	//keeper.SetRandomSeed(ctx, random)
+	// random := make([]byte, 32)
+	// rand.Read(random)
+	// keeper.SetRandomSeed(ctx, random)
 
 	am := module.NewManager( // minimal module set that we use for message/ query tests
 		bank.NewAppModule(encodingConfig.Marshaler, bankKeeper, authKeeper),
