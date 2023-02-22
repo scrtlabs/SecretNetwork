@@ -118,8 +118,9 @@ pub struct TransactionInfo {
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct BlockInfo {
     pub height: u64,
-    /// Absolute time of the block creation in seconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
-    /// Assaf: Since we added CosmWasm v1 this is in NANOseconds
+    /// Absolute time of the block creation in nanoseconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
+    /// Note: when passed down to the enclave from Go this field is in nanoseconds, when passed down to a v0.10 contract this field is in seconds
+    /// For more context: https://github.com/scrtlabs/SecretNetwork/pull/1331#discussion_r1113526524
     pub time: u64,
     pub chain_id: String,
     #[cfg(feature = "random")]
