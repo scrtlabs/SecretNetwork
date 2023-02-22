@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 pub use super::addresses::Addr;
 pub use super::coins::Coin;
 pub use super::timestamp::Timestamp;
+pub use cw_types_v010::encoding::Binary;
 pub use cw_types_v010::types::TransactionInfo;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -87,6 +88,8 @@ pub struct MessageInfo {
     /// or `MsgExecuteContract`. The transfer is processed in bank before the contract
     /// is executed such that the new balance is visible during contract execution.
     pub funds: Vec<Coin>,
+    #[cfg(feature = "random")]
+    pub random: Binary,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

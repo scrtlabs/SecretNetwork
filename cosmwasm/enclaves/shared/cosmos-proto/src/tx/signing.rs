@@ -1156,7 +1156,7 @@ pub enum SignMode {
     SIGN_MODE_DIRECT = 1,
     SIGN_MODE_TEXTUAL = 2,
     SIGN_MODE_LEGACY_AMINO_JSON = 127,
-    SIGN_MODE_EIP_191 = 191
+    SIGN_MODE_EIP_191 = 191,
 }
 
 impl ::protobuf::ProtobufEnum for SignMode {
@@ -1226,11 +1226,11 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x20\x01(\x0cR\tsignature\x1a\xa9\x01\n\x05Multi\x12K\n\x08bitarray\x18\
     \x01\x20\x01(\x0b2/.cosmos.crypto.multisig.v1beta1.CompactBitArrayR\x08b\
     itarray\x12S\n\nsignatures\x18\x02\x20\x03(\x0b23.cosmos.tx.signing.v1be\
-    ta1.SignatureDescriptor.DataR\nsignaturesB\x05\n\x03sum*s\n\x08SignMode\
-    \x12\x19\n\x15SIGN_MODE_UNSPECIFIED\x10\0\x12\x14\n\x10SIGN_MODE_DIRECT\
-    \x10\x01\x12\x15\n\x11SIGN_MODE_TEXTUAL\x10\x02\x12\x1f\n\x1bSIGN_MODE_L\
-    EGACY_AMINO_JSON\x10\x7fB/Z-github.com/cosmos/cosmos-sdk/types/tx/signin\
-    gb\x06proto3\
+    ta1.SignatureDescriptor.DataR\nsignaturesB\x05\n\x03sum*\x8b\x01\n\x08Si\
+    gnMode\x12\x19\n\x15SIGN_MODE_UNSPECIFIED\x10\0\x12\x14\n\x10SIGN_MODE_D\
+    IRECT\x10\x01\x12\x15\n\x11SIGN_MODE_TEXTUAL\x10\x02\x12\x1f\n\x1bSIGN_M\
+    ODE_LEGACY_AMINO_JSON\x10\x7f\x12\x16\n\x11SIGN_MODE_EIP_191\x10\xbf\x01\
+    B/Z-github.com/cosmos/cosmos-sdk/types/tx/signingb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

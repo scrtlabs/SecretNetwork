@@ -377,8 +377,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(bz, &codeInfo)
 
+	// random := k.GetRandomSeed(ctx, ctx.BlockHeight())
+
 	// prepare env for contract instantiate call
-	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil)
+	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil /*, random*/)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -518,8 +520,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 	}
 
+	// random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
+	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey /* random */)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -613,12 +616,14 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 	store := ctx.KVStore(k.storeKey)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+
 	params := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* empty because it's unused in queries */
 		sdk.NewCoins(),   /* empty because it's unused in queries */
 		contractAddress,
 		contractKey,
+		// []byte{0}, /* empty because it's unused in queries */
 	)
 	params.QueryDepth = queryDepth
 
@@ -680,6 +685,19 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 
 	return contractKey
 }
+
+// func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
+//	store := ctx.KVStore(k.storeKey)
+//
+//	random := store.Get(types.GetRandomKey(height))
+//
+//	return random
+// }
+
+// func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
+//	store := ctx.KVStore(k.storeKey)
+//	store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
+// }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {
 	store := ctx.KVStore(k.storeKey)
@@ -1008,7 +1026,9 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	store := ctx.KVStore(k.storeKey)
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
-	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey)
+	// random := k.GetRandomSeed(ctx, ctx.BlockHeight())
+
+	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey /* random */)
 
 	// prepare querier
 	querier := QueryHandler{

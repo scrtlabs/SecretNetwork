@@ -36,13 +36,10 @@ func HealthCheck() ([]byte, error) {
 }
 
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
-	//errmsg := C.Buffer{}
-	//
-	//res, err := C.init_bootstrap(&errmsg)
-	//if err != nil {
-	//	return nil, errorWithMessage(err, errmsg)
-	//}
-	//return receiveVector(res), nil
+	return nil, nil
+}
+
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []byte /* valSet []byte, nextValSet []byte*/) ([]byte, error) {
 	return nil, nil
 }
 

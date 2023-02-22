@@ -70,6 +70,19 @@ RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment &
 
 ENTRYPOINT ["/bin/bash"]
 
+FROM prepare-compile-enclave AS compile-tendermint-enclave
+
+ARG SGX_MODE=SW
+
+RUN git clone --branch explicit-1.1.5 https://github.com/scrtlabs/tm-secret-enclave.git
+
+WORKDIR tm-secret-enclave
+
+RUN git submodule init
+RUN git submodule update --remote
+
+RUN . /opt/sgxsdk/environment && env && SGX_MODE=${SGX_MODE} make build
+
 # ***************** COMPILE SECRETD ************** #
 FROM $TEST AS compile-secretd
 
@@ -161,8 +174,8 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
 
-ARG SECRET_NODE_TYPE=NODE
-ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
+#ARG SECRET_NODE_TYPE=NODE
+#ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
 
 ENV PKG_CONFIG_PATH=""
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
@@ -178,6 +191,9 @@ WORKDIR /root
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/api/librandom_api.so /usr/lib/librandom_api.so
+
 
 COPY deployment/docker/testnet/bootstrap_init.sh .
 COPY deployment/docker/testnet/node_init.sh .
@@ -192,7 +208,7 @@ RUN chmod +x node_init.sh
 
 RUN secretd completion > /root/secretd_completion
 
-RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
+# RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
 RUN echo 'source /root/secretd_completion' >> ~/.bashrc
 
 RUN mkdir -p /root/.secretd/.compute/
@@ -255,6 +271,8 @@ COPY Makefile .
 # Copy over binaries from the build-env
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so ./go-cosmwasm/tendermint_enclave.signed.so
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/api/librandom_api.so ./go-cosmwasm/librandom_api.so
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/secretd secretd
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/secretcli secretcli
 
@@ -271,6 +289,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 FROM build-deb as build-deb-mainnet
 
 COPY --from=mainnet-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so ./go-cosmwasm/tendermint_enclave.signed.so
 
 CMD ["/bin/bash", "build_deb.sh"]
 
