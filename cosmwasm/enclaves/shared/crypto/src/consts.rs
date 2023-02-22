@@ -115,6 +115,8 @@ pub const INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER: u32 = 6;
 
 pub const ENCRYPTED_KEY_MAGIC_BYTES: &[u8; 6] = b"secret";
 pub const CONSENSUS_SEED_VERSION: u16 = 2;
+/// STATE_ENCRYPTION_VERSION is bumped every time we change anything in the state encryption protocol
+pub const STATE_ENCRYPTION_VERSION: u32 = 3;
 
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 

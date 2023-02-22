@@ -133,6 +133,7 @@ pub fn init(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        base_env.0.block.time,
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in start_engine: {:?}", duration);
@@ -264,7 +265,6 @@ pub fn handle(
     //  Reply (that is not WASM reply)
     if should_validate_sig_info {
         // Verify env parameters against the signed tx
-
         verify_params(
             &parsed_sig_info,
             sent_funds,
@@ -300,6 +300,7 @@ pub fn handle(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        base_env.0.block.time,
     )?;
 
     let mut versioned_env = base_env
@@ -423,6 +424,7 @@ pub fn query(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        base_env.0.block.time,
     )?;
 
     let mut versioned_env = base_env
@@ -459,6 +461,7 @@ fn start_engine(
     query_depth: u32,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+    timestamp: u64,
 ) -> Result<crate::wasm3::Engine, EnclaveError> {
     crate::wasm3::Engine::new(
         context,
@@ -470,6 +473,7 @@ fn start_engine(
         nonce,
         user_public_key,
         query_depth,
+        timestamp,
     )
 }
 

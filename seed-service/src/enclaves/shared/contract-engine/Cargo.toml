@@ -5,7 +5,6 @@ authors = ["Cashmaney <itzik@enigma.co>"]
 edition = "2021"
 
 [features]
-query-only = []
 debug-print = []
 test = []
 
