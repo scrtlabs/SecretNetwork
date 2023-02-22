@@ -10,13 +10,13 @@ use log::trace;
 use std::sync::SgxMutex;
 
 #[derive(Default, Clone, Copy, Debug)]
-struct MsgCounter {
-    height: u64,
-    counter: u64,
+pub struct MsgCounter {
+    pub height: u64,
+    pub counter: u64,
 }
 
 lazy_static! {
-    static ref MSG_COUNTER: SgxMutex<MsgCounter> = SgxMutex::new(MsgCounter::default());
+    pub static ref MSG_COUNTER: SgxMutex<MsgCounter> = SgxMutex::new(MsgCounter::default());
 }
 
 #[cfg(feature = "random")]
@@ -28,14 +28,18 @@ pub fn derive_random(seed: &Binary, contract_key: &ContractKey, height: u64) -> 
         counter.counter = 0;
     }
 
-    trace!("counter used to derive random for height {}: {:?}", height, counter);
+    trace!(
+        "counter used to derive random for height {}: {:?}",
+        height,
+        counter
+    );
 
     let height_bytes = height.to_be_bytes();
     let counter_bytes = counter.counter.to_be_bytes();
     let data = vec![
         height_bytes.as_slice(),
         contract_key.as_slice(),
-        counter_bytes.as_slice()
+        counter_bytes.as_slice(),
     ];
 
     Binary(

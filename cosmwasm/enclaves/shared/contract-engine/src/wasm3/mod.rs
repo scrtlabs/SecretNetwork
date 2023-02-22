@@ -21,6 +21,7 @@ use crate::db::{remove_from_encrypted_state, write_multiple_keys};
 use crate::errors::{ToEnclaveError, ToEnclaveResult, WasmEngineError, WasmEngineResult};
 use crate::gas::{WasmCosts, READ_BASE_GAS, WRITE_BASE_GAS};
 use crate::query_chain::encrypt_and_query_chain;
+use crate::random::MSG_COUNTER;
 use crate::types::IoNonce;
 
 use gas::{get_exhausted_amount, get_remaining_gas, use_gas};
@@ -540,7 +541,7 @@ impl Engine {
                     &v,
                     &self.context.context,
                     &self.context.contract_key,
-                    &self.context.timestamp.to_be_bytes(),
+                    &get_write_salt(self.context.timestamp),
                 )
                 .unwrap();
 
@@ -820,7 +821,7 @@ fn host_read_db(
             ContractOperation::Query => false,
         },
         &mut context.kv_cache,
-        &context.timestamp.to_be_bytes(),
+        &get_write_salt(context.timestamp),
     )
     .map_err(debug_err!("db_read failed to read key from storage"))?;
     context.use_gas_externally(used_gas);
@@ -1740,4 +1741,17 @@ fn host_ed25519_sign(
 
     // Return pointer to the allocated buffer with the value written to it
     Ok(to_low_half(ptr_to_region_in_wasm_vm) as i64)
+}
+
+fn get_write_salt(timestamp: u64) -> Vec<u8> {
+    let mut write_salt: Vec<u8> = vec![];
+
+    write_salt.extend(&timestamp.to_be_bytes());
+
+    let msg_counter = MSG_COUNTER.lock().unwrap();
+
+    write_salt.extend(&msg_counter.height.to_be_bytes());
+    write_salt.extend(&msg_counter.counter.to_be_bytes());
+
+    write_salt
 }

@@ -76,7 +76,7 @@ pub fn write_multiple_keys(
 }
 
 #[allow(dead_code)]
-pub fn write_to_encrypted_state(
+fn write_to_encrypted_state(
     plaintext_key: &[u8],
     plaintext_value: &[u8],
     context: &Ctx,
@@ -106,7 +106,7 @@ pub fn create_encrypted_key_value(
     plaintext_value: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
-    salt: &[u8],
+    write_salt: &[u8],
 ) -> Result<(Vec<u8>, u64, Vec<u8>), WasmEngineError> {
     let scrambled_field_name = field_name_digest(plaintext_key, contract_key);
     let gas_used_remove = remove_db(context, &scrambled_field_name).map_err(|err| {
@@ -126,8 +126,13 @@ pub fn create_encrypted_key_value(
     let encrypted_key_bytes = bincode2::serialize(&encrypted_key).unwrap();
 
     let encrypted_value = EncryptedValue {
-        salt: salt.to_vec(),
-        data: encrypt_value_new(&encrypted_key.data, plaintext_value, contract_key, salt)?,
+        salt: write_salt.to_vec(),
+        data: encrypt_value_new(
+            &encrypted_key.data,
+            plaintext_value,
+            contract_key,
+            write_salt,
+        )?,
     };
     let encrypted_value_bytes = bincode2::serialize(&encrypted_value).unwrap();
 
@@ -280,7 +285,7 @@ pub fn remove_from_encrypted_state(
     Ok(gas_used_first_remove + gas_used_second_remove)
 }
 
-pub fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {
+fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {
     let mut data = field_name.to_vec();
     data.extend_from_slice(contract_key);
 
