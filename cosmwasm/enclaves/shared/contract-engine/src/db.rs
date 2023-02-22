@@ -81,12 +81,17 @@ fn write_to_encrypted_state(
     plaintext_value: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
-    salt: &[u8],
+    encryption_salt: &[u8],
 ) -> Result<u64, WasmEngineError> {
     // Get the state key from the key manager
 
-    let (encrypted_key, used_gas_for_key_creation, encrypted_value) =
-        create_encrypted_key_value(plaintext_key, plaintext_value, context, contract_key, salt)?;
+    let (encrypted_key, used_gas_for_key_creation, encrypted_value) = create_encrypted_key_value(
+        plaintext_key,
+        plaintext_value,
+        context,
+        contract_key,
+        encryption_salt,
+    )?;
 
     // Write the new data as concat(ad, encrypted_val)
     let used_gas_for_write =
@@ -106,7 +111,7 @@ pub fn create_encrypted_key_value(
     plaintext_value: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
-    write_salt: &[u8],
+    encryption_salt: &[u8],
 ) -> Result<(Vec<u8>, u64, Vec<u8>), WasmEngineError> {
     let scrambled_field_name = field_name_digest(plaintext_key, contract_key);
     let gas_used_remove = remove_db(context, &scrambled_field_name).map_err(|err| {
@@ -126,12 +131,12 @@ pub fn create_encrypted_key_value(
     let encrypted_key_bytes = bincode2::serialize(&encrypted_key).unwrap();
 
     let encrypted_value = EncryptedValue {
-        salt: write_salt.to_vec(),
+        salt: encryption_salt.to_vec(),
         data: encrypt_value_new(
             &encrypted_key.data,
             plaintext_value,
             contract_key,
-            write_salt,
+            encryption_salt,
         )?,
     };
     let encrypted_value_bytes = bincode2::serialize(&encrypted_value).unwrap();
@@ -150,7 +155,7 @@ pub fn read_from_encrypted_state(
     contract_key: &ContractKey,
     has_write_permissions: bool,
     kv_cache: &mut KvCache,
-    write_salt: &[u8],
+    encryption_salt: &[u8],
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     // Try reading with the new encryption format
     let encrypted_key = EncryptedKey {
@@ -233,7 +238,7 @@ pub fn read_from_encrypted_state(
                 plaintext_value,
                 context,
                 contract_key,
-                write_salt,
+                encryption_salt,
             )?;
         }
     }
@@ -432,12 +437,12 @@ fn encrypt_value_new(
     encrypted_state_key: &[u8],
     plaintext_state_value: &[u8],
     contract_key: &ContractKey,
-    salt: &[u8],
+    encryption_salt: &[u8],
 ) -> Result<Vec<u8>, WasmEngineError> {
     let encryption_key = get_symmetrical_key_new(contract_key);
 
     encryption_key
-        .encrypt_siv(plaintext_state_value, Some(&[encrypted_state_key, salt]))
+        .encrypt_siv(plaintext_state_value, Some(&[encrypted_state_key, encryption_salt]))
         .map_err(|err| {
             warn!(
                 "write_db() got an error while trying to encrypt_value_new the value '{:?}', stopping wasm: {:?}",
@@ -453,11 +458,11 @@ fn decrypt_value_new(
     encrypted_key: &[u8],
     encrypted_value: &[u8],
     contract_key: &ContractKey,
-    salt: &[u8],
+    encryption_salt: &[u8],
 ) -> Result<Vec<u8>, WasmEngineError> {
     let decryption_key = get_symmetrical_key_new(contract_key);
 
-    decryption_key.decrypt_siv(encrypted_value, Some(&[encrypted_key, salt])).map_err(|err| {
+    decryption_key.decrypt_siv(encrypted_value, Some(&[encrypted_key, encryption_salt])).map_err(|err| {
         warn!(
             "read_db() got an error while trying to decrypt_value_new the value {:?} for key {:?}, stopping wasm: {:?}",
             encrypted_value,
