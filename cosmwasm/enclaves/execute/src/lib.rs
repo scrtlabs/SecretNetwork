@@ -4,10 +4,13 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate sgx_trts;
 extern crate sgx_types;
 
 use ctor::*;
 use enclave_utils::logger::get_log_level;
+
+pub use block_verifier::ecalls::ecall_submit_block_signatures;
 
 // Force linking to all the ecalls/ocalls in this package
 pub use enclave_contract_engine;

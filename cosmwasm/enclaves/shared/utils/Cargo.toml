@@ -6,7 +6,6 @@ edition = "2018"
 
 [features]
 production = []
-query-only = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
@@ -17,11 +16,15 @@ sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd
 ] }
 sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 sgx_trts = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_trts" }
+
 #sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 #sgx_trts = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 #sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
 log = "0.4.17"
 lazy_static = "1.4"
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+  "derive"
+] }
+serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }

@@ -9,6 +9,11 @@ import "google/protobuf/any.proto";
 
 option go_package = "github.com/cosmos/cosmos-sdk/types/tx";
 
+// Txs is an array of Tx, used to generate the code needed for the enclave to unpack txs and validate them
+message Txs {
+  repeated bytes tx = 1;
+}
+
 // Tx is the standard type used for broadcasting transactions.
 message Tx {
   // body is the processable content of the transaction

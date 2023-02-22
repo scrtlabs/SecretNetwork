@@ -1,0 +1,39 @@
+[package]
+name = "block-verifier"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+default = []
+test = []
+random = []
+light-client-validation = []
+production = []
+verify-validator-whitelist = []
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tstd = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
+] }
+sgx_trts = {rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+[dependencies]
+tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", branch = "fix-val-set-parsing", default-features = false }
+tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", branch = "fix-val-set-parsing", default-features = false }
+tendermint-light-client-verifier = { git = "https://github.com/scrtlabs/tendermint-rs", branch = "fix-val-set-parsing", default-features = false }
+lazy_static = "1.4.0"
+log = "0.4.17"
+
+enclave_crypto = {path ="../crypto"}
+enclave_utils = {path ="../utils"}
+
+cosmos_proto = {path="../cosmos-proto"}
+
+protobuf = { version = "2.25.2" }
+hex = { version = "0.4.3" }
+
+# cosmrs = { version = "0.11.0", default-features = false }
+
+
+

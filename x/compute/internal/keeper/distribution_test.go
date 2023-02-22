@@ -39,7 +39,7 @@ func TestDistributionRewards(t *testing.T) {
 	accKeeper, stakingKeeper, keeper, distKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.DistKeeper
 
 	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin("stake", 100))
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
 	v, found := stakingKeeper.GetValidator(ctx, valAddr)
 	assert.True(t, found)
@@ -97,7 +97,7 @@ func TestDistributionRewards(t *testing.T) {
 	require.Empty(t, err)
 	// returns the rewards
 	require.Equal(t, uint64(0), binary.BigEndian.Uint64(res))
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
 	// test what happens if there are some rewards
 	_, _, res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz), false, false, defaultGasForTests, 0)
