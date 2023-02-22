@@ -25,7 +25,7 @@ struct EncryptedKey {
     pub consensus_seed_version: u16,
     pub state_encryption_version: u32,
 
-    // encrypted  data
+    // encrypted data
     pub data: Vec<u8>,
 }
 

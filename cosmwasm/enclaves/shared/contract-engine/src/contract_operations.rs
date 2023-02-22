@@ -265,7 +265,6 @@ pub fn handle(
     //  Reply (that is not WASM reply)
     if should_validate_sig_info {
         // Verify env parameters against the signed tx
-
         verify_params(
             &parsed_sig_info,
             sent_funds,

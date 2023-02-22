@@ -325,33 +325,6 @@ pub unsafe extern "C" fn ecall_query(
     )
 }
 
-// /// # Safety
-// /// Always use protection
-// #[no_mangle]
-// pub unsafe extern "C" fn ecall_query_qe(
-//     context: Ctx,
-//     gas_limit: u64,
-//     used_gas: *mut u64,
-//     contract: *const u8,
-//     contract_len: usize,
-//     env: *const u8,
-//     env_len: usize,
-//     msg: *const u8,
-//     msg_len: usize,
-// ) -> QueryResult {
-//     ecall_query_impl(
-//         context,
-//         gas_limit,
-//         used_gas,
-//         contract,
-//         contract_len,
-//         env,
-//         env_len,
-//         msg,
-//         msg_len,
-//     )
-// }
-
 /// # Safety
 /// Always use protection
 #[allow(clippy::too_many_arguments)]
