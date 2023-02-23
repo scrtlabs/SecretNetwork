@@ -149,7 +149,7 @@ Copy binaries from v1.7 chain to v1.6 chain.
 
 ```bash
 # Start a v1.7 chain and wait a bit for it to setup
-SGX_MODE=SW make build_linux
+SGX_MODE=SW make build-linux
 
 # Copy binaries from host to current v1.6 chain
 

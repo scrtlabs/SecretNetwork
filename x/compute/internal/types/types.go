@@ -122,6 +122,7 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 			Height:  uint64(ctx.BlockHeight()),
 			Time:    uint64(nano),
 			ChainID: ctx.ChainID(),
+			// Random:  random,
 		},
 		Message: wasmTypes.MessageInfo{
 			Sender:    creator.String(),

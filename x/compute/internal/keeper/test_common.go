@@ -501,6 +501,10 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 
+	// random := make([]byte, 32)
+	// rand.Read(random)
+	// keeper.SetRandomSeed(ctx, random)
+
 	am := module.NewManager( // minimal module set that we use for message/ query tests
 		bank.NewAppModule(encodingConfig.Marshaler, bankKeeper, authKeeper),
 		staking.NewAppModule(encodingConfig.Marshaler, stakingKeeper, authKeeper, bankKeeper),
@@ -625,6 +629,31 @@ func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKe
 	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
 
+//func PrepareMultipleExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
+//	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+//	require.NoError(t, err)
+//
+//	executeMsg := wasmtypes.MsgExecuteContract{
+//		Sender:    sender,
+//		Contract:  contract,
+//		Msg:       encMsg,
+//		SentFunds: funds,
+//	}
+//
+//	bankMsg := banktypes.MsgSend{
+//		FromAddress: sender.String(),
+//		ToAddress:   sender.String(),
+//		Amount:      funds,
+//	}
+//
+//	tx := NewTestTxMultiple([]sdk.Msg{&executeMsg, &executeMsg, &bankMsg}, []authtypes.AccountI{creatorAcc, creatorAcc, creatorAcc}, []crypto.PrivKey{privKey, privKey, privKey})
+//
+//	txBytes, err := tx.Marshal()
+//	require.NoError(t, err)
+//
+//	return ctx.WithTxBytes(txBytes)
+//}
+
 func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
 		panic("length of `msgs` `creatorAccs` and `privKeys` must be the same")
@@ -711,6 +740,14 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 	fundAccounts(ctx, am, bk, addr, coins)
 	return addr, priv
 }
+
+// StoreRandomOnNewBlock is used when height is incremented in tests, the random value for the new block needs to be
+// generated too (to pass as env)
+//func StoreRandomOnNewBlock(ctx sdk.Context, wasmKeeper Keeper) {
+//	random := make([]byte, 32)
+//	rand.Read(random)
+//	wasmKeeper.SetRandomSeed(ctx, random)
+//}
 
 const faucetAccountName = "faucet"
 

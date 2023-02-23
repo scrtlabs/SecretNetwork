@@ -25,19 +25,10 @@ lazy_static! {
 
 /// # Safety
 /// Always use protection
-// #[cfg(not(feature = "query-only"))]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_allocate(buffer: *const u8, length: usize) -> EnclaveBuffer {
     ecall_allocate_impl(buffer, length)
 }
-
-// /// # Safety
-// /// Always use protection
-// #[cfg(feature = "query-only")]
-// #[no_mangle]
-// pub unsafe extern "C" fn ecall_allocate_qe(buffer: *const u8, length: usize) -> EnclaveBuffer {
-//     ecall_allocate_impl(buffer, length)
-// }
 
 /// Allocate a buffer in the enclave and return a pointer to it. This is useful for ocalls that
 /// want to return a response of unknown length to the enclave. Instead of pre-allocating it on the
@@ -89,19 +80,10 @@ pub struct BufferRecoveryError;
 
 /// # Safety
 /// Always use protection
-// #[cfg(not(feature = "query-only"))]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_configure_runtime(config: RuntimeConfiguration) -> sgx_status_t {
     ecall_configure_runtime_impl(config)
 }
-
-// /// # Safety
-// /// Always use protection
-// #[cfg(feature = "query-only")]
-// #[no_mangle]
-// pub unsafe extern "C" fn ecall_configure_runtime_qe(config: RuntimeConfiguration) -> sgx_status_t {
-//     ecall_configure_runtime_impl(config)
-// }
 
 /// This function sets up any components of the contract runtime
 /// that should be set up once when the node starts.
@@ -318,7 +300,6 @@ pub unsafe extern "C" fn ecall_handle(
 
 /// # Safety
 /// Always use protection
-// #[cfg(not(feature = "query-only"))]
 #[no_mangle]
 pub unsafe extern "C" fn ecall_query(
     context: Ctx,
@@ -343,34 +324,6 @@ pub unsafe extern "C" fn ecall_query(
         msg_len,
     )
 }
-
-// /// # Safety
-// /// Always use protection
-// #[cfg(feature = "query-only")]
-// #[no_mangle]
-// pub unsafe extern "C" fn ecall_query_qe(
-//     context: Ctx,
-//     gas_limit: u64,
-//     used_gas: *mut u64,
-//     contract: *const u8,
-//     contract_len: usize,
-//     env: *const u8,
-//     env_len: usize,
-//     msg: *const u8,
-//     msg_len: usize,
-// ) -> QueryResult {
-//     ecall_query_impl(
-//         context,
-//         gas_limit,
-//         used_gas,
-//         contract,
-//         contract_len,
-//         env,
-//         env_len,
-//         msg,
-//         msg_len,
-//     )
-// }
 
 /// # Safety
 /// Always use protection

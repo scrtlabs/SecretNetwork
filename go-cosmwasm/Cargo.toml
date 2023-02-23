@@ -35,6 +35,11 @@ debug-print = ["cosmwasm-sgx-vm/debug-print"]
 # Putting this functionality in a separate enclave allows improving query performace without hard forks.
 query-node = ["cosmwasm-sgx-vm/query-node"]
 
+# features that do nothing here but are just here for compatability with enclave
+light-client-validation = []
+random = []
+verify-validator-whitelist = []
+
 [dependencies]
 cosmwasm-std = { package = "secret-cosmwasm-std", features = ["iterator"], version = "0.10.1"}
 cosmwasm-sgx-vm = { path = "../cosmwasm/packages/sgx-vm", features = [

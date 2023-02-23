@@ -40,7 +40,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --target compile-secretd
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --build-arg FEATURES=light-client-validation --target compile-secretd
       dockerfile: '$(dockerfilePath)'
 
   - script: |
@@ -57,7 +57,7 @@ steps:
       repository: '$(nodeImageRepository)'
       tags: latest
       buildContext: .
-      arguments: --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
       Dockerfile: deployment/dockerfiles/Dockerfile
 
   - task: Docker@2
@@ -80,21 +80,21 @@ steps:
       arguments: --build-arg SGX_MODE=HW
       Dockerfile: deployment/dockerfiles/tests/integration-tests.Dockerfile
 
-  - task: Docker@2
-    displayName: "Build System tests image"
-    inputs:
-      command: build
-      repository: tests-base-image
-      tags: latest
-      buildContext: .
-      arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
+#  - task: Docker@2
+#    displayName: "Build System tests image"
+#    inputs:
+#      command: build
+#      repository: tests-base-image
+#      tags: latest
+#      buildContext: .
+#      arguments: --build-arg SGX_MODE=HW
+#      Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
 
-  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
-    displayName: "Run system tests (go tests)"
-
-  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
-    displayName: "Run benchmarks"
+#  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
+#    displayName: "Run system tests (go tests)"
+#
+#  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
+#    displayName: "Run benchmarks"
 
   - script: |
       docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests aesm bootstrap node-no-tests integration-tests

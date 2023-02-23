@@ -9,13 +9,20 @@ use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
 use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
-// use std::time::Instant;
 
 use crate::cosmwasm_config::ContractOperation;
+
+#[cfg(feature = "light-client-validation")]
+use crate::contract_validation::verify_block_info;
 
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
+
+use crate::random::update_msg_counter;
+
+#[cfg(feature = "random")]
+use crate::random::derive_random;
 
 use super::contract_validation::{
     generate_contract_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -25,9 +32,7 @@ use super::io::{
     encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
     set_all_logs_to_plaintext,
 };
-//use super::module_cache::create_module_instance;
 use super::types::{IoNonce, SecretMessage};
-// use super::wasm::{ContractInstance, Engine};
 
 /*
 Each contract is compiled with these functions already implemented in wasm:
@@ -63,6 +68,12 @@ pub fn init(
 
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
+
+    #[cfg(feature = "light-client-validation")]
+    {
+        verify_block_info(&base_env)?;
+    }
+
     // let duration = start.elapsed();
     // trace!("Time elapsed in extract_base_env is: {:?}", duration);
     let query_depth = extract_query_depth(env)?;
@@ -94,6 +105,7 @@ pub fn init(
         &canonical_sender_address,
         contract_address,
         &secret_msg,
+        msg,
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -121,6 +133,7 @@ pub fn init(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        base_env.0.block.time,
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in start_engine: {:?}", duration);
@@ -129,12 +142,27 @@ pub fn init(
 
     versioned_env.set_contract_hash(&contract_hash);
 
+    #[cfg(feature = "random")]
+    {
+        debug!("Old random: {:?}", versioned_env.get_random());
+
+        versioned_env.set_random(derive_random(
+            &versioned_env.get_random(),
+            &contract_key,
+            block_height,
+        ));
+
+        debug!("New random: {:?}", versioned_env.get_random());
+    }
+
     //let start = Instant::now();
     let result = engine.init(&versioned_env, validated_msg);
     // let duration = start.elapsed();
     // trace!("Time elapsed in engine.init: {:?}", duration);
 
+    update_msg_counter(block_height);
     *used_gas = engine.gas_used();
+
     let output = result?;
 
     engine
@@ -193,9 +221,15 @@ pub fn handle(
     let contract_hash = contract_code.hash();
 
     let base_env: BaseEnv = extract_base_env(env)?;
+
+    #[cfg(feature = "light-client-validation")]
+    {
+        verify_block_info(&base_env)?;
+    }
+
     let query_depth = extract_query_depth(env)?;
 
-    let (sender, contract_address, _, sent_funds) = base_env.get_verification_params();
+    let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
@@ -231,13 +265,13 @@ pub fn handle(
     //  Reply (that is not WASM reply)
     if should_validate_sig_info {
         // Verify env parameters against the signed tx
-
         verify_params(
             &parsed_sig_info,
             sent_funds,
             &canonical_sender_address,
             contract_address,
             &secret_msg,
+            msg,
         )?;
     }
 
@@ -266,16 +300,33 @@ pub fn handle(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        base_env.0.block.time,
     )?;
 
     let mut versioned_env = base_env
         .clone()
         .into_versioned_env(&engine.get_api_version());
 
+    #[cfg(feature = "random")]
+    {
+        debug!("Old random: {:?}", versioned_env.get_random());
+
+        versioned_env.set_random(derive_random(
+            &versioned_env.get_random(),
+            &contract_key,
+            block_height,
+        ));
+
+        debug!("New random: {:?}", versioned_env.get_random());
+    }
+
     versioned_env.set_contract_hash(&contract_hash);
 
     let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
+
     *used_gas = engine.gas_used();
+    update_msg_counter(block_height);
+
     let mut output = result?;
 
     // This gets refunded because it will get charged later by the sdk
@@ -373,6 +424,7 @@ pub fn query(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        base_env.0.block.time,
     )?;
 
     let mut versioned_env = base_env
@@ -409,6 +461,7 @@ fn start_engine(
     query_depth: u32,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+    timestamp: u64,
 ) -> Result<crate::wasm3::Engine, EnclaveError> {
     crate::wasm3::Engine::new(
         context,
@@ -420,6 +473,7 @@ fn start_engine(
         nonce,
         user_public_key,
         query_depth,
+        timestamp,
     )
 }
 

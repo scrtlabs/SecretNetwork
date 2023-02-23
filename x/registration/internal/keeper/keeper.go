@@ -39,7 +39,7 @@ func NewKeeper(cdc codec.BinaryCodec, storeKey sdk.StoreKey, router sdk.Router, 
 }
 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
-	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
+	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedNewConfig)
 	apiKey, err := types.GetApiKey()
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))

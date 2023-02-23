@@ -25,6 +25,11 @@ pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed"
 pub const NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE: &str = "consensus_seed.sealed";
 pub const NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE: &str = "consensus_seed_current.sealed";
 
+#[cfg(feature = "random")]
+pub const REK_SEALED_FILE_NAME: &str = "rek.sealed";
+#[cfg(feature = "random")]
+pub const IRS_SEALED_FILE_NAME: &str = "irs.sealed";
+
 #[cfg(feature = "production")]
 pub const MRSIGNER: [u8; 32] = [
     132, 92, 243, 72, 20, 244, 85, 149, 199, 32, 248, 31, 116, 121, 77, 120, 89, 49, 72, 79, 68, 5,
@@ -83,13 +88,35 @@ lazy_static! {
     .to_string();
 }
 
+#[cfg(feature = "random")]
+lazy_static! {
+    pub static ref REK_PATH: String = path::Path::new(
+        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
+    )
+    .join(REK_SEALED_FILE_NAME)
+    .to_str()
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
+    .to_string();
+    pub static ref IRS_PATH: String = path::Path::new(
+        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
+    )
+    .join(IRS_SEALED_FILE_NAME)
+    .to_str()
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
+    .to_string();
+}
+
 pub const CONSENSUS_SEED_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 1;
 pub const CONSENSUS_IO_EXCHANGE_KEYPAIR_DERIVE_ORDER: u32 = 2;
 pub const CONSENSUS_STATE_IKM_DERIVE_ORDER: u32 = 3;
 pub const CONSENSUS_CALLBACK_SECRET_DERIVE_ORDER: u32 = 4;
+pub const RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER: u32 = 5;
+pub const INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER: u32 = 6;
 
 pub const ENCRYPTED_KEY_MAGIC_BYTES: &[u8; 6] = b"secret";
 pub const CONSENSUS_SEED_VERSION: u16 = 2;
+/// STATE_ENCRYPTION_VERSION is bumped every time we change anything in the state encryption protocol
+pub const STATE_ENCRYPTION_VERSION: u32 = 3;
 
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 

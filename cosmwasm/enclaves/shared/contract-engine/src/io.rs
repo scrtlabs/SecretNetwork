@@ -482,6 +482,8 @@ pub fn encrypt_output(
         EnclaveError::FailedToDeserialize
     })?;
 
+    info!("Output after serialization: {:?}", output);
+
     match &mut output {
         RawWasmOutput::Err {
             err,

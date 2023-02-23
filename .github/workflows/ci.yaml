@@ -131,6 +131,8 @@ jobs:
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/bin/secretd /opt/mount/secretd
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/libgo_cosmwasm.so /opt/mount/libgo_cosmwasm.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librandom_api.so /opt/mount/librandom_api.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/tendermint_enclave.signed.so /opt/mount/tendermint_enclave.signed.so
 
       - uses: actions/download-artifact@v3
         with:
@@ -157,6 +159,8 @@ jobs:
           find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
+          # cp /opt/mount/librandom_api.so /usr/lib/librandom_api.so
+          # cp /opt/mount/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
           cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
           cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
@@ -260,7 +264,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build LocalSecret
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -291,7 +295,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v3
       - name: Build Hermes Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/ibc/hermes.Dockerfile
           context: deployment/dockerfiles/ibc

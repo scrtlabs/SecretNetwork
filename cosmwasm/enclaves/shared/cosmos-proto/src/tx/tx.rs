@@ -24,6 +24,164 @@
 // const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_25_2;
 
 #[derive(PartialEq,Clone,Default)]
+pub struct Txs {
+    // message fields
+    pub tx: ::protobuf::RepeatedField<::std::vec::Vec<u8>>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Txs {
+    fn default() -> &'a Txs {
+        <Txs as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Txs {
+    pub fn new() -> Txs {
+        ::std::default::Default::default()
+    }
+
+    // repeated bytes tx = 1;
+
+
+    pub fn get_tx(&self) -> &[::std::vec::Vec<u8>] {
+        &self.tx
+    }
+    pub fn clear_tx(&mut self) {
+        self.tx.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_tx(&mut self, v: ::protobuf::RepeatedField<::std::vec::Vec<u8>>) {
+        self.tx = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_tx(&mut self) -> &mut ::protobuf::RepeatedField<::std::vec::Vec<u8>> {
+        &mut self.tx
+    }
+
+    // Take field
+    pub fn take_tx(&mut self) -> ::protobuf::RepeatedField<::std::vec::Vec<u8>> {
+        ::std::mem::replace(&mut self.tx, ::protobuf::RepeatedField::new())
+    }
+}
+
+impl ::protobuf::Message for Txs {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_repeated_bytes_into(wire_type, is, &mut self.tx)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        for value in &self.tx {
+            my_size += ::protobuf::rt::bytes_size(1, &value);
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        for v in &self.tx {
+            os.write_bytes(1, &v)?;
+        };
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Txs {
+        Txs::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "tx",
+                |m: &Txs| { &m.tx },
+                |m: &mut Txs| { &mut m.tx },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Txs>(
+                "Txs",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Txs {
+        static instance: ::protobuf::rt::LazyV2<Txs> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Txs::new)
+    }
+}
+
+impl ::protobuf::Clear for Txs {
+    fn clear(&mut self) {
+        self.tx.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Txs {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Txs {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct Tx {
     // message fields
     pub body: ::protobuf::SingularPtrField<TxBody>,
@@ -2587,41 +2745,42 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x1acosmos/tx/v1beta1/tx.proto\x12\x11cosmos.tx.v1beta1\x1a\x14gogopro\
     to/gogo.proto\x1a-cosmos/crypto/multisig/v1beta1/multisig.proto\x1a\x1ec\
     osmos/base/v1beta1/coin.proto\x1a'cosmos/tx/signing/v1beta1/signing.prot\
-    o\x1a\x19google/protobuf/any.proto\"\x8d\x01\n\x02Tx\x12-\n\x04body\x18\
-    \x01\x20\x01(\x0b2\x19.cosmos.tx.v1beta1.TxBodyR\x04body\x128\n\tauth_in\
-    fo\x18\x02\x20\x01(\x0b2\x1b.cosmos.tx.v1beta1.AuthInfoR\x08authInfo\x12\
-    \x1e\n\nsignatures\x18\x03\x20\x03(\x0cR\nsignatures\"n\n\x05TxRaw\x12\
-    \x1d\n\nbody_bytes\x18\x01\x20\x01(\x0cR\tbodyBytes\x12&\n\x0fauth_info_\
-    bytes\x18\x02\x20\x01(\x0cR\rauthInfoBytes\x12\x1e\n\nsignatures\x18\x03\
-    \x20\x03(\x0cR\nsignatures\"\x92\x01\n\x07SignDoc\x12\x1d\n\nbody_bytes\
-    \x18\x01\x20\x01(\x0cR\tbodyBytes\x12&\n\x0fauth_info_bytes\x18\x02\x20\
-    \x01(\x0cR\rauthInfoBytes\x12\x19\n\x08chain_id\x18\x03\x20\x01(\tR\x07c\
-    hainId\x12%\n\x0eaccount_number\x18\x04\x20\x01(\x04R\raccountNumber\"\
-    \x95\x02\n\x06TxBody\x120\n\x08messages\x18\x01\x20\x03(\x0b2\x14.google\
-    .protobuf.AnyR\x08messages\x12\x12\n\x04memo\x18\x02\x20\x01(\tR\x04memo\
-    \x12%\n\x0etimeout_height\x18\x03\x20\x01(\x04R\rtimeoutHeight\x12B\n\
-    \x11extension_options\x18\xff\x07\x20\x03(\x0b2\x14.google.protobuf.AnyR\
-    \x10extensionOptions\x12Z\n\x1enon_critical_extension_options\x18\xff\
-    \x0f\x20\x03(\x0b2\x14.google.protobuf.AnyR\x1bnonCriticalExtensionOptio\
-    ns\"v\n\x08AuthInfo\x12@\n\x0csigner_infos\x18\x01\x20\x03(\x0b2\x1d.cos\
-    mos.tx.v1beta1.SignerInfoR\x0bsignerInfos\x12(\n\x03fee\x18\x02\x20\x01(\
-    \x0b2\x16.cosmos.tx.v1beta1.FeeR\x03fee\"\x97\x01\n\nSignerInfo\x123\n\n\
-    public_key\x18\x01\x20\x01(\x0b2\x14.google.protobuf.AnyR\tpublicKey\x12\
-    8\n\tmode_info\x18\x02\x20\x01(\x0b2\x1b.cosmos.tx.v1beta1.ModeInfoR\x08\
-    modeInfo\x12\x1a\n\x08sequence\x18\x03\x20\x01(\x04R\x08sequence\"\xe0\
-    \x02\n\x08ModeInfo\x12<\n\x06single\x18\x01\x20\x01(\x0b2\".cosmos.tx.v1\
-    beta1.ModeInfo.SingleH\0R\x06single\x129\n\x05multi\x18\x02\x20\x01(\x0b\
-    2!.cosmos.tx.v1beta1.ModeInfo.MultiH\0R\x05multi\x1aA\n\x06Single\x127\n\
-    \x04mode\x18\x01\x20\x01(\x0e2#.cosmos.tx.signing.v1beta1.SignModeR\x04m\
-    ode\x1a\x90\x01\n\x05Multi\x12K\n\x08bitarray\x18\x01\x20\x01(\x0b2/.cos\
-    mos.crypto.multisig.v1beta1.CompactBitArrayR\x08bitarray\x12:\n\nmode_in\
-    fos\x18\x02\x20\x03(\x0b2\x1b.cosmos.tx.v1beta1.ModeInfoR\tmodeInfosB\
-    \x05\n\x03sum\"\xb7\x01\n\x03Fee\x12c\n\x06amount\x18\x01\x20\x03(\x0b2\
-    \x19.cosmos.base.v1beta1.CoinR\x06amountB0\xaa\xdf\x1f(github.com/cosmos\
-    /cosmos-sdk/types.Coins\xc8\xde\x1f\0\x12\x1b\n\tgas_limit\x18\x02\x20\
-    \x01(\x04R\x08gasLimit\x12\x14\n\x05payer\x18\x03\x20\x01(\tR\x05payer\
-    \x12\x18\n\x07granter\x18\x04\x20\x01(\tR\x07granterB'Z%github.com/cosmo\
-    s/cosmos-sdk/types/txb\x06proto3\
+    o\x1a\x19google/protobuf/any.proto\"\x15\n\x03Txs\x12\x0e\n\x02tx\x18\
+    \x01\x20\x03(\x0cR\x02tx\"\x8d\x01\n\x02Tx\x12-\n\x04body\x18\x01\x20\
+    \x01(\x0b2\x19.cosmos.tx.v1beta1.TxBodyR\x04body\x128\n\tauth_info\x18\
+    \x02\x20\x01(\x0b2\x1b.cosmos.tx.v1beta1.AuthInfoR\x08authInfo\x12\x1e\n\
+    \nsignatures\x18\x03\x20\x03(\x0cR\nsignatures\"n\n\x05TxRaw\x12\x1d\n\n\
+    body_bytes\x18\x01\x20\x01(\x0cR\tbodyBytes\x12&\n\x0fauth_info_bytes\
+    \x18\x02\x20\x01(\x0cR\rauthInfoBytes\x12\x1e\n\nsignatures\x18\x03\x20\
+    \x03(\x0cR\nsignatures\"\x92\x01\n\x07SignDoc\x12\x1d\n\nbody_bytes\x18\
+    \x01\x20\x01(\x0cR\tbodyBytes\x12&\n\x0fauth_info_bytes\x18\x02\x20\x01(\
+    \x0cR\rauthInfoBytes\x12\x19\n\x08chain_id\x18\x03\x20\x01(\tR\x07chainI\
+    d\x12%\n\x0eaccount_number\x18\x04\x20\x01(\x04R\raccountNumber\"\x95\
+    \x02\n\x06TxBody\x120\n\x08messages\x18\x01\x20\x03(\x0b2\x14.google.pro\
+    tobuf.AnyR\x08messages\x12\x12\n\x04memo\x18\x02\x20\x01(\tR\x04memo\x12\
+    %\n\x0etimeout_height\x18\x03\x20\x01(\x04R\rtimeoutHeight\x12B\n\x11ext\
+    ension_options\x18\xff\x07\x20\x03(\x0b2\x14.google.protobuf.AnyR\x10ext\
+    ensionOptions\x12Z\n\x1enon_critical_extension_options\x18\xff\x0f\x20\
+    \x03(\x0b2\x14.google.protobuf.AnyR\x1bnonCriticalExtensionOptions\"v\n\
+    \x08AuthInfo\x12@\n\x0csigner_infos\x18\x01\x20\x03(\x0b2\x1d.cosmos.tx.\
+    v1beta1.SignerInfoR\x0bsignerInfos\x12(\n\x03fee\x18\x02\x20\x01(\x0b2\
+    \x16.cosmos.tx.v1beta1.FeeR\x03fee\"\x97\x01\n\nSignerInfo\x123\n\npubli\
+    c_key\x18\x01\x20\x01(\x0b2\x14.google.protobuf.AnyR\tpublicKey\x128\n\t\
+    mode_info\x18\x02\x20\x01(\x0b2\x1b.cosmos.tx.v1beta1.ModeInfoR\x08modeI\
+    nfo\x12\x1a\n\x08sequence\x18\x03\x20\x01(\x04R\x08sequence\"\xe0\x02\n\
+    \x08ModeInfo\x12<\n\x06single\x18\x01\x20\x01(\x0b2\".cosmos.tx.v1beta1.\
+    ModeInfo.SingleH\0R\x06single\x129\n\x05multi\x18\x02\x20\x01(\x0b2!.cos\
+    mos.tx.v1beta1.ModeInfo.MultiH\0R\x05multi\x1aA\n\x06Single\x127\n\x04mo\
+    de\x18\x01\x20\x01(\x0e2#.cosmos.tx.signing.v1beta1.SignModeR\x04mode\
+    \x1a\x90\x01\n\x05Multi\x12K\n\x08bitarray\x18\x01\x20\x01(\x0b2/.cosmos\
+    .crypto.multisig.v1beta1.CompactBitArrayR\x08bitarray\x12:\n\nmode_infos\
+    \x18\x02\x20\x03(\x0b2\x1b.cosmos.tx.v1beta1.ModeInfoR\tmodeInfosB\x05\n\
+    \x03sum\"\xb7\x01\n\x03Fee\x12c\n\x06amount\x18\x01\x20\x03(\x0b2\x19.co\
+    smos.base.v1beta1.CoinR\x06amountB0\xaa\xdf\x1f(github.com/cosmos/cosmos\
+    -sdk/types.Coins\xc8\xde\x1f\0\x12\x1b\n\tgas_limit\x18\x02\x20\x01(\x04\
+    R\x08gasLimit\x12\x14\n\x05payer\x18\x03\x20\x01(\tR\x05payer\x12\x18\n\
+    \x07granter\x18\x04\x20\x01(\tR\x07granterB'Z%github.com/cosmos/cosmos-s\
+    dk/types/txb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;
