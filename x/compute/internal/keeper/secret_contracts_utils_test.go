@@ -575,6 +575,18 @@ func requireEvents(t *testing.T, a, b []ContractEvent) {
 	}
 }
 
+// requireEventsInclude checks that "b" "a" contains the log attributes specified in the respective  events,
+// but "a"'s events may have additional log attributes that are not specified
+func requireEventsInclude(t *testing.T, a, b []ContractEvent) {
+	require.Equal(t, len(a), len(b))
+
+	for i := range b {
+		for j := range b[i] {
+			require.Contains(t, a[i], b[i][j])
+		}
+	}
+}
+
 // requireLogAttributes checks events output
 // Events are now sorted (since wasmd v0.28),
 // but for us they're sorted while encrypted so when testing with random encryption keys

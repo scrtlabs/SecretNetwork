@@ -5,7 +5,6 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
-extern crate core;
 extern crate sgx_types;
 
 mod contract_operations;
@@ -18,6 +17,7 @@ mod gas;
 mod io;
 mod message;
 mod query_chain;
+mod random;
 pub(crate) mod types;
 #[cfg(feature = "wasmi-engine")]
 mod wasm;

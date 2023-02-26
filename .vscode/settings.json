@@ -18,7 +18,10 @@
   ],
   "rust-analyzer.diagnostics.experimental.enable": true,
   "rust-analyzer.rustfmt.rangeFormatting.enable": true,
-  "rust-analyzer.diagnostics.disabled": ["unresolved-macro-call"],
+  "rust-analyzer.diagnostics.disabled": [
+    "unresolved-macro-call",
+    "unresolved-proc-macro"
+  ],
   "[rust]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
