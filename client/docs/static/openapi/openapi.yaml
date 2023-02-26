@@ -3686,6 +3686,16 @@ paths:
                           proposer_address:
                             type: string
                             format: byte
+                          encrypted_random:
+                            title: encrypted random
+                            type: object
+                            properties:
+                              random:
+                                type: string
+                                format: byte
+                              proof:
+                                type: string
+                                format: byte
                         description: Header defines the structure of a Tendermint block header.
                       data:
                         type: object
@@ -3925,6 +3935,16 @@ paths:
                                                 proposer_address:
                                                   type: string
                                                   format: byte
+                                                encrypted_random:
+                                                  title: encrypted random
+                                                  type: object
+                                                  properties:
+                                                    random:
+                                                      type: string
+                                                      format: byte
+                                                    proof:
+                                                      type: string
+                                                      format: byte
                                               description: Header defines the structure of a Tendermint block header.
                                             commit:
                                               type: object
@@ -4395,6 +4415,16 @@ paths:
                           proposer_address:
                             type: string
                             format: byte
+                          encrypted_random:
+                            title: encrypted random
+                            type: object
+                            properties:
+                              random:
+                                type: string
+                                format: byte
+                              proof:
+                                type: string
+                                format: byte
                         description: Header defines the structure of a Tendermint block header.
                       data:
                         type: object
@@ -4634,6 +4664,16 @@ paths:
                                                 proposer_address:
                                                   type: string
                                                   format: byte
+                                                encrypted_random:
+                                                  title: encrypted random
+                                                  type: object
+                                                  properties:
+                                                    random:
+                                                      type: string
+                                                      format: byte
+                                                    proof:
+                                                      type: string
+                                                      format: byte
                                               description: Header defines the structure of a Tendermint block header.
                                             commit:
                                               type: object
@@ -13998,6 +14038,16 @@ paths:
                           proposer_address:
                             type: string
                             format: byte
+                          encrypted_random:
+                            title: encrypted random
+                            type: object
+                            properties:
+                              random:
+                                type: string
+                                format: byte
+                              proof:
+                                type: string
+                                format: byte
                         description: Header defines the structure of a Tendermint block header.
                       valset:
                         type: array
@@ -20946,6 +20996,16 @@ paths:
                           proposer_address:
                             type: string
                             format: byte
+                          encrypted_random:
+                            title: encrypted random
+                            type: object
+                            properties:
+                              random:
+                                type: string
+                                format: byte
+                              proof:
+                                type: string
+                                format: byte
                         description: Header defines the structure of a Tendermint block header.
                       data:
                         type: object
@@ -21185,6 +21245,16 @@ paths:
                                                 proposer_address:
                                                   type: string
                                                   format: byte
+                                                encrypted_random:
+                                                  title: encrypted random
+                                                  type: object
+                                                  properties:
+                                                    random:
+                                                      type: string
+                                                      format: byte
+                                                    proof:
+                                                      type: string
+                                                      format: byte
                                               description: Header defines the structure of a Tendermint block header.
                                             commit:
                                               type: object
@@ -42373,6 +42443,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             data:
               type: object
@@ -42610,6 +42690,16 @@ components:
                                       proposer_address:
                                         type: string
                                         format: byte
+                                      encrypted_random:
+                                        title: encrypted random
+                                        type: object
+                                        properties:
+                                          random:
+                                            type: string
+                                            format: byte
+                                          proof:
+                                            type: string
+                                            format: byte
                                     description: Header defines the structure of a Tendermint block header.
                                   commit:
                                     type: object
@@ -42902,6 +42992,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             data:
               type: object
@@ -43139,6 +43239,16 @@ components:
                                       proposer_address:
                                         type: string
                                         format: byte
+                                      encrypted_random:
+                                        title: encrypted random
+                                        type: object
+                                        properties:
+                                          random:
+                                            type: string
+                                            format: byte
+                                          proof:
+                                            type: string
+                                            format: byte
                                     description: Header defines the structure of a Tendermint block header.
                                   commit:
                                     type: object
@@ -44148,6 +44258,16 @@ components:
             proposer_address:
               type: string
               format: byte
+            encrypted_random:
+              title: encrypted random
+              type: object
+              properties:
+                random:
+                  type: string
+                  format: byte
+                proof:
+                  type: string
+                  format: byte
           description: Header defines the structure of a Tendermint block header.
         data:
           type: object
@@ -44384,6 +44504,16 @@ components:
                                   proposer_address:
                                     type: string
                                     format: byte
+                                  encrypted_random:
+                                    title: encrypted random
+                                    type: object
+                                    properties:
+                                      random:
+                                        type: string
+                                        format: byte
+                                      proof:
+                                        type: string
+                                        format: byte
                                 description: Header defines the structure of a Tendermint block header.
                               commit:
                                 type: object
@@ -44817,6 +44947,16 @@ components:
           format: date-time
       description: DuplicateVoteEvidence contains evidence of a validator signed two
         conflicting votes.
+    tendermint.types.EncryptedRandom:
+      type: object
+      properties:
+        random:
+          type: string
+          format: byte
+        proof:
+          type: string
+          format: byte
+      title: Data contains the set of transactions included in the block
     tendermint.types.Evidence:
       type: object
       properties:
@@ -45030,6 +45170,16 @@ components:
                         proposer_address:
                           type: string
                           format: byte
+                        encrypted_random:
+                          title: encrypted random
+                          type: object
+                          properties:
+                            random:
+                              type: string
+                              format: byte
+                            proof:
+                              type: string
+                              format: byte
                       description: Header defines the structure of a Tendermint block header.
                     commit:
                       type: object
@@ -45390,6 +45540,16 @@ components:
                               proposer_address:
                                 type: string
                                 format: byte
+                              encrypted_random:
+                                title: encrypted random
+                                type: object
+                                properties:
+                                  random:
+                                    type: string
+                                    format: byte
+                                  proof:
+                                    type: string
+                                    format: byte
                             description: Header defines the structure of a Tendermint block header.
                           commit:
                             type: object
@@ -45605,6 +45765,16 @@ components:
         proposer_address:
           type: string
           format: byte
+        encrypted_random:
+          title: encrypted random
+          type: object
+          properties:
+            random:
+              type: string
+              format: byte
+            proof:
+              type: string
+              format: byte
       description: Header defines the structure of a Tendermint block header.
     tendermint.types.LightBlock:
       type: object
@@ -45687,6 +45857,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             commit:
               type: object
@@ -45876,6 +46056,16 @@ components:
                     proposer_address:
                       type: string
                       format: byte
+                    encrypted_random:
+                      title: encrypted random
+                      type: object
+                      properties:
+                        random:
+                          type: string
+                          format: byte
+                        proof:
+                          type: string
+                          format: byte
                   description: Header defines the structure of a Tendermint block header.
                 commit:
                   type: object
@@ -46104,6 +46294,16 @@ components:
             proposer_address:
               type: string
               format: byte
+            encrypted_random:
+              title: encrypted random
+              type: object
+              properties:
+                random:
+                  type: string
+                  format: byte
+                proof:
+                  type: string
+                  format: byte
           description: Header defines the structure of a Tendermint block header.
         commit:
           type: object
@@ -49163,6 +49363,16 @@ components:
             proposer_address:
               type: string
               format: byte
+            encrypted_random:
+              title: encrypted random
+              type: object
+              properties:
+                random:
+                  type: string
+                  format: byte
+                proof:
+                  type: string
+                  format: byte
           description: Header defines the structure of a Tendermint block header.
         valset:
           type: array
@@ -50259,6 +50469,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             valset:
               type: array
@@ -54041,6 +54261,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             data:
               type: object
@@ -54278,6 +54508,16 @@ components:
                                       proposer_address:
                                         type: string
                                         format: byte
+                                      encrypted_random:
+                                        title: encrypted random
+                                        type: object
+                                        properties:
+                                          random:
+                                            type: string
+                                            format: byte
+                                          proof:
+                                            type: string
+                                            format: byte
                                     description: Header defines the structure of a Tendermint block header.
                                   commit:
                                     type: object
