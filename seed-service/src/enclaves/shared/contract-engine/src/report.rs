@@ -559,7 +559,13 @@ impl SgxQuote {
 #[derive(Debug)]
 pub struct AdvisoryIDs(pub Vec<String>);
 
-const WHITELISTED_ADVISORIES: &[&str] = &["INTEL-SA-00334", "INTEL-SA-00219"];
+const WHITELISTED_ADVISORIES: &[&str] = &[
+    "INTEL-SA-00334",
+    "INTEL-SA-00219",
+    "INTEL-SA-00615",
+    "INTEL-SA-00657",
+    "INTEL-SA-00767",
+];
 
 lazy_static! {
     static ref ADVISORY_DESC: HashMap<&'static str, &'static str> = [
