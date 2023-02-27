@@ -492,7 +492,9 @@ pub fn encrypt_output(
         } => {
             let encrypted_err = encrypt_serializable(&encryption_key, err, &reply_params, false)?;
             *err = json!({"generic_err":{"msg":encrypted_err}});
-            let msg_id = match reply_params {
+
+            let (msg_id, reply_enclave_sig) = match reply_params {
+                None => (None, None), // not a reply, no need for message_id or enclave sig
                 Some(ref r) => {
                     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
                         &encryption_key,
@@ -501,21 +503,13 @@ pub fn encrypt_output(
                         true,
                     )?)?;
 
-                    Some(encrypted_id)
-                }
-                None => None,
-            };
-
-            *internal_msg_id = msg_id.clone();
-
-            *internal_reply_enclave_sig = match reply_params {
-                Some(_) => {
                     let reply = Reply {
-                        id: msg_id.unwrap(),
+                        id: encrypted_id.clone(),
                         result: SubMsgResult::Err(encrypted_err),
                         was_orig_msg_encrypted: true,
                         is_encrypted: true,
                     };
+
                     let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
                         warn!(
                             "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
@@ -523,6 +517,7 @@ pub fn encrypt_output(
                         );
                         EnclaveError::FailedToSerialize
                     })?;
+
                     let tmp_secret_msg = SecretMessage {
                         nonce: secret_msg.nonce,
                         user_public_key: secret_msg.user_public_key,
@@ -539,10 +534,12 @@ pub fn encrypt_output(
                         sig
                     );
 
-                    Some(sig)
+                    (Some(encrypted_id), Some(sig))
                 }
-                None => None, // Not a reply, we don't need enclave sig
-            }
+            };
+
+            *internal_msg_id = msg_id;
+            *internal_reply_enclave_sig = reply_enclave_sig;
         }
 
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
