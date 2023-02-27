@@ -465,8 +465,8 @@ pub fn encrypt_output(
     is_query_output: bool,
     is_ibc_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
-    // When encrypting an output we might encrypt an output that is a reply to a caller contract (Via "Reply" endpoint).
-    // Therefore if reply_recipient_contract_hash is not "None" we append it to any encrypted data besided submessages that are irrelevant for replies.
+    // The output we receive from a contract could be a reply to a caller contract (via the "reply" endpoint).
+    // Therefore if reply_recipient_contract_hash is "Some", we append it to any encrypted data besided submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
     info!(
@@ -477,12 +477,12 @@ pub fn encrypt_output(
     );
 
     let mut output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
-        warn!("got an error while trying to deserialize output bytes into json");
+        warn!("got an error while trying to deserialize output bytes from json");
         trace!("output: {:?} error: {:?}", output, err);
         EnclaveError::FailedToDeserialize
     })?;
 
-    info!("Output after serialization: {:?}", output);
+    info!("Output after deserialization: {:?}", output);
 
     match &mut output {
         RawWasmOutput::Err {
