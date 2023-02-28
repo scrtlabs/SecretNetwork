@@ -73,6 +73,7 @@ ENTRYPOINT ["/bin/bash"]
 FROM prepare-compile-enclave AS compile-tendermint-enclave
 
 ARG SGX_MODE=SW
+ENV FEATURES_U=${FEATURES_U}
 
 RUN git clone --branch main https://github.com/scrtlabs/tm-secret-enclave.git
 
