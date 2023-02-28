@@ -149,7 +149,7 @@ Copy binaries from v1.7 chain to v1.6 chain.
 
 ```bash
 # Start a v1.7 chain and wait a bit for it to setup
-SGX_MODE=SW make build-linux
+FEATURES="verify-validator-whitelist,light-client-validation" SGX_MODE=SW make build-linux
 
 # Copy binaries from host to current v1.6 chain
 
@@ -162,6 +162,8 @@ docker cp go-cosmwasm/api/libgo_cosmwasm.so                        bootstrap:/tm
 docker cp secretd                                                  node:/tmp/upgrade-bin
 docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           node:/tmp/upgrade-bin
 docker cp go-cosmwasm/api/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
+docker cp docs/librandom_api.so                                    node:/usr/lib
+docker cp docs/tendermint_enclave.signed.so                        node:/usr/lib
 
 docker exec node bash -c 'pkill -9 secretd'
 
@@ -171,11 +173,12 @@ docker exec node bash -c 'cat /tmp/upgrade-bin/secretd                          
 docker exec node bash -c 'cat /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       > /usr/lib/librust_cosmwasm_enclave.signed.so'
 docker exec node bash -c 'cat /tmp/upgrade-bin/libgo_cosmwasm.so                        > /usr/lib/libgo_cosmwasm.so'
 
+
 rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin
 docker cp bootstrap:/root/.secretd/config/priv_validator_key.json /tmp/upgrade-bin/.
 docker cp /tmp/upgrade-bin/priv_validator_key.json node:/root/.secretd/config/priv_validator_key.json
 
-docker exec node bash -c 'source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG_LEVEL="trace" secretd start --rpc.laddr tcp://0.0.0.0:26657'
+source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG_LEVEL="trace" secretd start --rpc.laddr tcp://0.0.0.0:26657
 
 ```
 
