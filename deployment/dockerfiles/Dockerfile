@@ -82,7 +82,7 @@ WORKDIR tm-secret-enclave
 RUN git submodule init
 RUN git submodule update --remote
 
-RUN . /opt/sgxsdk/environment && env && SGX_MODE=${SGX_MODE} make build
+RUN . /opt/sgxsdk/environment && env && SGX_MODE=${SGX_MODE} FEATURES_U=${FEATURES_U} make build
 
 # ***************** COMPILE SECRETD ************** #
 FROM $TEST AS compile-secretd
