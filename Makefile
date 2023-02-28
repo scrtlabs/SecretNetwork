@@ -306,7 +306,7 @@ build-testnet:
 
 build-mainnet-upgrade:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
+	docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
                  --secret id=API_KEY,src=api_key.txt \
@@ -319,7 +319,7 @@ build-mainnet-upgrade:
                  $(DOCKER_BUILD_ARGS) \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target mainnet-release .
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
+	docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
 				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
@@ -334,7 +334,7 @@ build-mainnet-upgrade:
 
 build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
+	docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
                  --secret id=API_KEY,src=api_key.txt \
@@ -348,7 +348,7 @@ build-mainnet:
                  -f deployment/dockerfiles/Dockerfile \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target release-image .
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
+	docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
 				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
