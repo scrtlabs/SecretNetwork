@@ -293,7 +293,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 FROM build-deb as build-deb-mainnet
 
 COPY --from=mainnet-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
-COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so ./go-cosmwasm/tendermint_enclave.signed.so
+COPY --from=mainnet-release /usr/lib/tendermint_enclave.signed.so ./go-cosmwasm/
 
 CMD ["/bin/bash", "build_deb.sh"]
 
