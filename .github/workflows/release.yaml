@@ -189,8 +189,8 @@ jobs:
   check-hw-tool:
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
-      SPID: ${{ secrets.SPID_TESTNET }}
-      API_KEY: ${{ secrets.API_KEY_TESTNET }}
+      SPID: ${{ secrets.SPID_MAINNET }}
+      API_KEY: ${{ secrets.API_KEY_MAINNET }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -206,11 +206,12 @@ jobs:
           load: true
           tags: check_hw_tool_build
           secrets: |
-            API_KEY=${{ secrets.API_KEY_TESTNET }}
-            SPID=${{ secrets.SPID_TESTNET }}
+            API_KEY=${{ secrets.API_KEY_MAINNET }}
+            SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
+            FEATURES=production
           target: compile-check-hw-tool
       - name: Run check-hw-tool image
         run: |

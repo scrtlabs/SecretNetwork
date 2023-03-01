@@ -317,7 +317,7 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
 # Ignore $FEATURES because it should never be `production`
 RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
-    && VERSION=${VERSION} FEATURES="" FEATURES_U=${FEATURES_U} SGX_MODE=HW make build-rust
+    && VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=HW make build-rust
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
