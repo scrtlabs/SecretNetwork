@@ -54,7 +54,7 @@ pub fn update_msg_counter(height: u64) {
 
     if counter.height != height {
         counter.height = height;
-        counter.counter = 1;
+        counter.counter = 0;
     } else {
         counter.counter += 1;
     }
