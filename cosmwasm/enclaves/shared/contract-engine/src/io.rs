@@ -481,7 +481,6 @@ pub fn encrypt_output(
         trace!("output: {:?} error: {:?}", output, err);
         EnclaveError::FailedToDeserialize
     })?;
-
     info!("Output after deserialization: {:?}", output);
 
     match &mut output {
@@ -493,59 +492,19 @@ pub fn encrypt_output(
             let encrypted_err = encrypt_serializable(&encryption_key, err, &reply_params, false)?;
             *err = json!({"generic_err":{"msg":encrypted_err}});
 
-            let (msg_id, reply_enclave_sig) = match reply_params {
-                None => (None, None), // not a reply, no need for message_id or enclave sig
-                Some(ref r) => {
-                    let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
-                        &encryption_key,
-                        &r[0].sub_msg_id.to_string(),
-                        &reply_params,
-                        true,
-                    )?)?;
-
-                    let reply = Reply {
-                        id: encrypted_id.clone(),
-                        result: SubMsgResult::Err(encrypted_err),
-                        was_orig_msg_encrypted: true,
-                        is_encrypted: true,
-                    };
-
-                    let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
-                        warn!(
-                            "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
-                            reply, err
-                        );
-                        EnclaveError::FailedToSerialize
-                    })?;
-
-                    let tmp_secret_msg = SecretMessage {
-                        nonce: secret_msg.nonce,
-                        user_public_key: secret_msg.user_public_key,
-                        msg: reply_as_vec,
-                    };
-
-                    let sig = Binary::from(
-                        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
-                    );
-
-                    trace!(
-                        "Generated internal callback signature for msg {:?} signatire is: {:?}",
-                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
-                        sig
-                    );
-
-                    (Some(encrypted_id), Some(sig))
-                }
-            };
-
-            *internal_msg_id = msg_id;
-            *internal_reply_enclave_sig = reply_enclave_sig;
+            create_replies(
+                reply_params,
+                encryption_key,
+                SubMsgResult::Err(encrypted_err),
+                secret_msg,
+                sender_addr,
+                internal_reply_enclave_sig,
+                internal_msg_id,
+            )?;
         }
-
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
             *ok = encrypt_serializable(&encryption_key, ok, &reply_params, false)?;
         }
-
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
         RawWasmOutput::OkV010 {
             ok,
@@ -579,73 +538,26 @@ pub fn encrypt_output(
                 )?)?;
             }
 
-            let msg_id = match reply_params {
-                Some(ref r) => {
-                    let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
-                        &encryption_key,
-                        &r[0].sub_msg_id.to_string(),
-                        &reply_params,
-                        false,
-                    )?)?;
+            // todo: why is this one false as opposed to all the other ones of msg_id?
+            //  let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
+            //      &encryption_key,
+            //      &r[0].sub_msg_id.to_string(),
+            //      &reply_params,
+            //      should_append_all_reply_params: false,
+            //  )?)?;
 
-                    Some(encrypted_id)
-                }
-                None => None,
-            };
-
-            *internal_msg_id = msg_id.clone();
-
-            *internal_reply_enclave_sig = match reply_params {
-                Some(_) => {
-                    // let events = match ok.log.len() {
-                    //     0 => vec![],
-                    //     _ => {
-                    //         let mut logs = ok.log.clone();
-                    //         logs.sort_by(|a, b| a.key.cmp(&b.key));
-                    //         vec![Event {
-                    //             ty: "wasm".to_string(),
-                    //             attributes: logs,
-                    //         }]
-                    //     }
-                    // };
-
-                    let reply = Reply {
-                        id: msg_id.unwrap(),
-                        result: SubMsgResult::Ok(SubMsgResponse {
-                            events: vec![],
-                            data: ok.data.clone(),
-                        }),
-                        was_orig_msg_encrypted: true,
-                        is_encrypted: true,
-                    };
-
-                    let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
-                        warn!(
-                            "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
-                            reply, err
-                        );
-                        EnclaveError::FailedToSerialize
-                    })?;
-                    let tmp_secret_msg = SecretMessage {
-                        nonce: secret_msg.nonce,
-                        user_public_key: secret_msg.user_public_key,
-                        msg: reply_as_vec,
-                    };
-
-                    let sig = Binary::from(
-                        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
-                    );
-
-                    trace!(
-                        "Generated internal callback signature for msg {:?} signatire is: {:?}",
-                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
-                        sig
-                    );
-
-                    Some(sig)
-                }
-                None => None, // Not a reply, we don't need enclave sig
-            }
+            create_replies(
+                reply_params,
+                encryption_key,
+                SubMsgResult::Ok(SubMsgResponse {
+                    events: vec![],
+                    data: ok.data.clone(),
+                }),
+                secret_msg,
+                sender_addr,
+                internal_reply_enclave_sig,
+                internal_msg_id,
+            )?;
         }
         RawWasmOutput::OkV1 {
             ok,
@@ -704,81 +616,37 @@ pub fn encrypt_output(
                 )?)?;
             }
 
-            let msg_id = match reply_params {
-                Some(ref r) => {
-                    let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
-                        &encryption_key,
-                        &r[0].sub_msg_id.to_string(),
-                        &reply_params,
-                        true,
-                    )?)?;
+            let events: Vec<Event> = vec![];
 
-                    Some(encrypted_id)
-                }
-                None => None,
-            };
+            // if !ok.attributes.is_empty() {
+            //     events.push(Event {
+            //         ty: "wasm".to_string(),
+            //         attributes: ok.attributes.clone(),
+            //     })
+            // }
 
-            *internal_msg_id = msg_id.clone();
+            // events.extend_from_slice(ok.events.clone().as_slice());
+            // let custom_contract_event_prefix: String = "wasm-".to_string();
+            // for event in events.iter_mut() {
+            //     if event.ty != "wasm" {
+            //         event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
+            //     }
 
-            *internal_reply_enclave_sig = match reply_params {
-                Some(_) => {
-                    let events: Vec<Event> = vec![];
+            //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
+            // }
 
-                    // if !ok.attributes.is_empty() {
-                    //     events.push(Event {
-                    //         ty: "wasm".to_string(),
-                    //         attributes: ok.attributes.clone(),
-                    //     })
-                    // }
-
-                    // events.extend_from_slice(ok.events.clone().as_slice());
-                    // let custom_contract_event_prefix: String = "wasm-".to_string();
-                    // for event in events.iter_mut() {
-                    //     if event.ty != "wasm" {
-                    //         event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
-                    //     }
-
-                    //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
-                    // }
-
-                    let reply = Reply {
-                        id: msg_id.unwrap(),
-                        result: SubMsgResult::Ok(SubMsgResponse {
-                            events,
-                            data: ok.data.clone(),
-                        }),
-                        was_orig_msg_encrypted: true,
-                        is_encrypted: true,
-                    };
-
-                    let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
-                        warn!(
-                            "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
-                            reply, err
-                        );
-                        EnclaveError::FailedToSerialize
-                    })?;
-
-                    let tmp_secret_msg = SecretMessage {
-                        nonce: secret_msg.nonce,
-                        user_public_key: secret_msg.user_public_key,
-                        msg: reply_as_vec,
-                    };
-
-                    let sig = Binary::from(
-                        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
-                    );
-
-                    trace!(
-                        "Generated internal callback signature for msg {:?} signatire is: {:?}",
-                        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
-                        sig
-                    );
-
-                    Some(sig)
-                }
-                None => None, // Not a reply, we don't need enclave sig
-            }
+            create_replies(
+                reply_params,
+                encryption_key,
+                SubMsgResult::Ok(SubMsgResponse {
+                    events,
+                    data: ok.data.clone(),
+                }),
+                secret_msg,
+                sender_addr,
+                internal_reply_enclave_sig,
+                internal_msg_id,
+            )?;
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
             for sub_msg in &mut ok.messages {
@@ -834,13 +702,72 @@ pub fn encrypt_output(
 
     let encrypted_output = serde_json::to_vec(&final_output).map_err(|err| {
         debug!(
-            "got an error while trying to serialize output json into bytes {:?}: {}",
+            "got an error while trying to serialize output into json bytes {:?}: {}",
             final_output, err
         );
         EnclaveError::FailedToSerialize
     })?;
 
     Ok(encrypted_output)
+}
+
+fn create_replies(
+    reply_params: Option<Vec<ReplyParams>>,
+    encryption_key: AESKey,
+    reply_result: SubMsgResult,
+    secret_msg: &SecretMessage,
+    sender_addr: &CanonicalAddr,
+    msg_id_to_set: &mut Option<Binary>,
+    reply_enclave_sig_to_set: &mut Option<Binary>,
+) -> Result<(), EnclaveError> {
+    if let None = reply_params {
+        *msg_id_to_set = None;
+        *reply_enclave_sig_to_set = None;
+        return Ok(())
+    }
+
+    let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
+        &encryption_key,
+        &reply_params.as_ref().unwrap()[0].sub_msg_id.to_string(),
+        &reply_params,
+        true,
+    )?)?;
+
+    let reply = Reply {
+        id: encrypted_id.clone(),
+        result: reply_result,
+        was_orig_msg_encrypted: true,
+        is_encrypted: true,
+    };
+
+    let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
+        warn!(
+            "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
+            reply, err
+        );
+        EnclaveError::FailedToSerialize
+    })?;
+
+    let tmp_secret_msg = SecretMessage {
+        nonce: secret_msg.nonce,
+        user_public_key: secret_msg.user_public_key,
+        msg: reply_as_vec,
+    };
+
+    let sig = Binary::from(
+        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
+    );
+
+    trace!(
+        "Generated internal callback signature for msg {:?} signatire is: {:?}",
+        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
+        sig
+    );
+
+    *msg_id_to_set = Some(encrypted_id);
+    *reply_enclave_sig_to_set = Some(sig);
+
+    Ok(())
 }
 
 fn encrypt_v010_wasm_msg(
