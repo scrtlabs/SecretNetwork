@@ -52,8 +52,12 @@ pub fn derive_random(seed: &Binary, contract_key: &ContractKey, height: u64) -> 
 pub fn update_msg_counter(height: u64) {
     let mut counter = MSG_COUNTER.lock().unwrap();
 
-    counter.height = height;
-    counter.counter += 1;
+    if counter.height != height {
+        counter.height = height;
+        counter.counter = 1;
+    } else {
+        counter.counter += 1;
+    }
 
     trace!("counter incremented to: {:?}", counter);
 }
