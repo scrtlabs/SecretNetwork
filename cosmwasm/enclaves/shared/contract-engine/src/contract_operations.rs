@@ -155,12 +155,12 @@ pub fn init(
         debug!("New random: {:?}", versioned_env.get_random());
     }
 
+    update_msg_counter(block_height);
     //let start = Instant::now();
     let result = engine.init(&versioned_env, validated_msg);
     // let duration = start.elapsed();
     // trace!("Time elapsed in engine.init: {:?}", duration);
 
-    update_msg_counter(block_height);
     *used_gas = engine.gas_used();
 
     let output = result?;
@@ -322,10 +322,10 @@ pub fn handle(
 
     versioned_env.set_contract_hash(&contract_hash);
 
+    update_msg_counter(block_height);
     let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
 
     *used_gas = engine.gas_used();
-    update_msg_counter(block_height);
 
     let mut output = result?;
 
