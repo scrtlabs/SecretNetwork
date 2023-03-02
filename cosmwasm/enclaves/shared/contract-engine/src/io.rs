@@ -500,6 +500,7 @@ pub fn encrypt_output(
                 sender_addr,
                 internal_reply_enclave_sig,
                 internal_msg_id,
+                true,
             )?;
         }
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
@@ -557,6 +558,7 @@ pub fn encrypt_output(
                 sender_addr,
                 internal_reply_enclave_sig,
                 internal_msg_id,
+                false,
             )?;
         }
         RawWasmOutput::OkV1 {
@@ -615,38 +617,6 @@ pub fn encrypt_output(
                     false,
                 )?)?;
             }
-
-            let events: Vec<Event> = vec![];
-
-            // if !ok.attributes.is_empty() {
-            //     events.push(Event {
-            //         ty: "wasm".to_string(),
-            //         attributes: ok.attributes.clone(),
-            //     })
-            // }
-
-            // events.extend_from_slice(ok.events.clone().as_slice());
-            // let custom_contract_event_prefix: String = "wasm-".to_string();
-            // for event in events.iter_mut() {
-            //     if event.ty != "wasm" {
-            //         event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
-            //     }
-
-            //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
-            // }
-
-            create_replies(
-                reply_params,
-                encryption_key,
-                SubMsgResult::Ok(SubMsgResponse {
-                    events,
-                    data: ok.data.clone(),
-                }),
-                secret_msg,
-                sender_addr,
-                internal_reply_enclave_sig,
-                internal_msg_id,
-            )?;
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
             for sub_msg in &mut ok.messages {
@@ -719,10 +689,9 @@ fn create_replies(
     sender_addr: &CanonicalAddr,
     msg_id_to_set: &mut Option<Binary>,
     reply_enclave_sig_to_set: &mut Option<Binary>,
+    should_append_all_reply_params: bool,
 ) -> Result<(), EnclaveError> {
     if let None = reply_params {
-        *msg_id_to_set = None;
-        *reply_enclave_sig_to_set = None;
         return Ok(())
     }
 
@@ -730,7 +699,7 @@ fn create_replies(
         &encryption_key,
         &reply_params.as_ref().unwrap()[0].sub_msg_id.to_string(),
         &reply_params,
-        true,
+        should_append_all_reply_params,
     )?)?;
 
     let reply = Reply {
