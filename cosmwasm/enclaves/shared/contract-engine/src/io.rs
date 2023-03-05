@@ -498,8 +498,8 @@ pub fn encrypt_output(
                 SubMsgResult::Err(encrypted_err),
                 secret_msg,
                 sender_addr,
-                internal_reply_enclave_sig,
                 internal_msg_id,
+                internal_reply_enclave_sig,
                 true,
             )?;
         }
@@ -556,8 +556,8 @@ pub fn encrypt_output(
                 }),
                 secret_msg,
                 sender_addr,
-                internal_reply_enclave_sig,
                 internal_msg_id,
+                internal_reply_enclave_sig,
                 false,
             )?;
         }
