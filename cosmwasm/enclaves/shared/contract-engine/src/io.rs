@@ -617,6 +617,39 @@ pub fn encrypt_output(
                     false,
                 )?)?;
             }
+
+            let events: Vec<Event> = vec![];
+
+            // if !ok.attributes.is_empty() {
+            //     events.push(Event {
+            //         ty: "wasm".to_string(),
+            //         attributes: ok.attributes.clone(),
+            //     })
+            // }
+
+            // events.extend_from_slice(ok.events.clone().as_slice());
+            // let custom_contract_event_prefix: String = "wasm-".to_string();
+            // for event in events.iter_mut() {
+            //     if event.ty != "wasm" {
+            //         event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
+            //     }
+
+            //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
+            // }
+
+            create_replies(
+                reply_params,
+                encryption_key,
+                SubMsgResult::Ok(SubMsgResponse {
+                    events,
+                    data: ok.data.clone(),
+                }),
+                secret_msg,
+                sender_addr,
+                internal_msg_id,
+                internal_reply_enclave_sig,
+                true,
+            )?;
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
             for sub_msg in &mut ok.messages {
