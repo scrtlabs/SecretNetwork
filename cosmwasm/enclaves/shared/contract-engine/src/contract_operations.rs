@@ -261,8 +261,8 @@ pub fn handle(
 
     // There is no signature to verify when the input isn't signed.
     // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
-    // All of these functions go through handle but the data isn't signed:
-    //  Reply (that is not WASM reply)
+    // The following messages go through handle but the data isn't signed:
+    //  * Replies from other sdk modules (WASM replies are signed)
     if should_validate_sig_info {
         // Verify env parameters against the signed tx
         verify_params(
