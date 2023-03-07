@@ -466,6 +466,7 @@ pub fn encrypt_output(
     is_ibc_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
     // The output we receive from a contract could be a reply to a caller contract (via the "reply" endpoint).
+
     // Therefore if reply_recipient_contract_hash is "Some", we append it to any encrypted data besided submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
@@ -725,6 +726,8 @@ fn create_replies(
     should_append_all_reply_params: bool,
 ) -> Result<(), EnclaveError> {
     if let None = reply_params {
+        // This message was not called from another contract,
+        // no need to create reply messages
         return Ok(())
     }
 
@@ -742,7 +745,7 @@ fn create_replies(
         is_encrypted: true,
     };
 
-    let reply_as_vec = serde_json::to_vec(&reply).map_err(|err| {
+    let reply_json = serde_json::to_vec(&reply).map_err(|err| {
         warn!(
             "got an error while trying to serialize reply into bytes for internal_reply_enclave_sig  {:?}: {}",
             reply, err
@@ -753,7 +756,7 @@ fn create_replies(
     let tmp_secret_msg = SecretMessage {
         nonce: secret_msg.nonce,
         user_public_key: secret_msg.user_public_key,
-        msg: reply_as_vec,
+        msg: reply_json,
     };
 
     let sig = Binary::from(
@@ -761,7 +764,7 @@ fn create_replies(
     );
 
     trace!(
-        "Generated internal callback signature for msg {:?} signatire is: {:?}",
+        "Generated internal callback signature for msg {:?} signature is: {:?}",
         String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
         sig
     );
