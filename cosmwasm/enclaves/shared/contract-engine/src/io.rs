@@ -466,7 +466,6 @@ pub fn encrypt_output(
     is_ibc_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
     // The output we receive from a contract could be a reply to a caller contract (via the "reply" endpoint).
-
     // Therefore if reply_recipient_contract_hash is "Some", we append it to any encrypted data besided submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
@@ -704,7 +703,7 @@ pub fn encrypt_output(
     let final_output = finalize_raw_output(output, is_query_output, is_ibc_output, true);
     trace!("WasmOutput: {:?}", final_output);
 
-    let encrypted_output = serde_json::to_vec(&final_output).map_err(|err| {
+    let serialized_output = serde_json::to_vec(&final_output).map_err(|err| {
         debug!(
             "got an error while trying to serialize output into json bytes {:?}: {}",
             final_output, err
@@ -712,7 +711,7 @@ pub fn encrypt_output(
         EnclaveError::FailedToSerialize
     })?;
 
-    Ok(encrypted_output)
+    Ok(serialized_output)
 }
 
 fn create_replies(
@@ -841,12 +840,12 @@ fn encrypt_v1_wasm_msg(
             funds,
             ..
         } => {
-            // On cosmwasm v1 submessages' outputs can be sent back to the original caller by using "Reply"
-            // The output is encrypted but the historically wasn't meant to be  sent back to the enclave as an input of another contract
-            // To support "sending back" behavior, the enclave expects every encrypted input to be prepended with the recipient wasm hash.
-            // In this context, we prepend the message with both hashes to signal to the next wasm call that its output is going to be an input to this contract as a "Reply"
-            // On the other side when decrypting the input, the enclave will try to parse the message as usual, if the message (After reading the first code-hash) can't be parsed into json,
-            // it will treat the next 64 bytes as a recipient code-hash and prepend this code-hash to its output.
+            // On cosmwasm v1, submessages  contracts whose results are sent back to the original caller by using "Reply".
+            // Such submessages should be encrypted, but they weren't initially meant to be sent back to the enclave as an input of another contract.
+            // To support "sending back" behavior, the enclave expects every encrypted input to be prepended by the recipient's contract hash.
+            // In this context, we prepend the message with both hashes to signal to the next wasm call that its output is going to be an input to this contract as a "Reply".
+            // When decrypting the input, the enclave will try to parse the message as usual, but if the message (after reading the first code-hash) can't be parsed into json,
+            // then it will treat the next 64 bytes as a recipient code-hash and prepend this code-hash to its output.
             let mut hash_appended_msg = code_hash.as_bytes().to_vec();
             if *reply_on != ReplyOn::Never {
                 hash_appended_msg
