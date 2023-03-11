@@ -200,8 +200,8 @@ pub fn finalize_raw_output(
     is_query_output: bool,
     is_ibc: bool,
     is_msg_encrypted: bool,
-) -> WasmOutput {
-    match raw_output {
+) -> Result <Vec<u8>, EnclaveError> {
+    let wasm_output = match raw_output {
         RawWasmOutput::Err {
             err,
             internal_msg_id,
@@ -335,7 +335,19 @@ pub fn finalize_raw_output(
             internal_reply_enclave_sig: None,
             internal_msg_id: None,
         },
-    }
+    };
+
+    trace!("WasmOutput: {:?}", wasm_output);
+
+    let serialized_output = serde_json::to_vec(&wasm_output).map_err(|err| {
+        debug!(
+            "got an error while trying to serialize output into json bytes {:?}: {}",
+            wasm_output, err
+        );
+        EnclaveError::FailedToSerialize
+    })?;
+
+    Ok(serialized_output)
 }
 
 pub fn manipulate_callback_sig_for_plaintext(
@@ -700,18 +712,9 @@ pub fn encrypt_output(
         RawWasmOutput::OkIBCOpenChannel { ok: _ } => {}
     };
 
-    let final_output = finalize_raw_output(output, is_query_output, is_ibc_output, true);
-    trace!("WasmOutput: {:?}", final_output);
+    let final_output = finalize_raw_output(output, is_query_output, is_ibc_output, true)?;
 
-    let serialized_output = serde_json::to_vec(&final_output).map_err(|err| {
-        debug!(
-            "got an error while trying to serialize output into json bytes {:?}: {}",
-            final_output, err
-        );
-        EnclaveError::FailedToSerialize
-    })?;
-
-    Ok(serialized_output)
+    Ok(final_output)
 }
 
 fn create_replies(
