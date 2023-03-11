@@ -315,6 +315,8 @@ impl Engine {
         link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
 
+        link_fn(instance, "gas_evaporate", host_gas_evaporate)?;
+
         //    DbReadIndex = 0,
         //     DbWriteIndex = 1,
         //     DbRemoveIndex = 2,
@@ -1754,4 +1756,31 @@ fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     encryption_salt.extend(&msg_counter.counter.to_be_bytes());
 
     encryption_salt
+}
+
+fn host_gas_evaporate(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+    evaporate_ptr: i32,
+) -> WasmEngineResult<i64> {
+    let evaporate_data = read_from_memory(instance, evaporate_ptr as u32)
+        .map_err(debug_err!(err => "evaporate failed to extract vector from evaporate_ptr: {err}"))?;
+
+    let evaporate = match u64::from_ne_bytes(&evaporate_data) {
+        Err(err) => {
+            debug!(
+                "evaporate_gas failed to create a u64 from evaporate: {:?}",
+                err
+            );
+            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
+            return Ok(WasmApiCryptoError::GenericErr as i32);
+        }
+        Ok(x) => x
+    }
+
+    use_gas(instance, evaporate)?;
+
+    // return 0 == success
+    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
+    Ok(0)
 }
