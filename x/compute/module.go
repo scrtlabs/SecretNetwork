@@ -159,6 +159,14 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 		panic(err)
 	}
 
+	// There is a possiblity, specificly was found on upgrade block, when there are no pre-commits at all (beginBlock.Commit == nil)
+	// In this case Marshal will fail with a Seg Fault.
+	// The fix below it a temporary fix until we will investigate the issue in tendermint.
+	if beginBlock.Commit == nil {
+		ctx.Logger().Info("skipping commit submition to the enlave for block %d\n", beginBlock.Header.Height)
+		return
+	}
+
 	commit, err := beginBlock.Commit.Marshal()
 	if err != nil {
 		panic(err)
@@ -182,8 +190,6 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 	}
 
 	// am.keeper.SetRandomSeed(ctx, random)
-
-	// println("successfully submitted random for height ", beginBlock.Header.Height)
 }
 
 // EndBlock returns the end blocker for the compute module. It returns no validator
