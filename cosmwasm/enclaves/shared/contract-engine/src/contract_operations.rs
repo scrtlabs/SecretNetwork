@@ -355,20 +355,8 @@ pub fn handle(
             manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
         set_all_logs_to_plaintext(&mut raw_output);
 
-        let finalized_output =
-            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false);
-        trace!(
-            "Wasm output for plaintext message is: {:?}",
-            finalized_output
-        );
-
-        output = serde_json::to_vec(&finalized_output).map_err(|err| {
-            debug!(
-                "got an error while trying to serialize output json into bytes {:?}: {}",
-                finalized_output, err
-            );
-            EnclaveError::FailedToSerialize
-        })?;
+        output =
+            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false)?;
     }
 
     Ok(HandleSuccess { output })
