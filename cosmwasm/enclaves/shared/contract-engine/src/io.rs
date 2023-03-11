@@ -474,9 +474,8 @@ pub fn encrypt_output(
     contract_hash: &str,
     reply_params: Option<Vec<ReplyParams>>,
     sender_addr: &CanonicalAddr,
-    is_query_output: bool,
     is_ibc_output: bool,
-) -> Result<Vec<u8>, EnclaveError> {
+) -> Result<RawWasmOutput, EnclaveError> {
     // The output we receive from a contract could be a reply to a caller contract (via the "reply" endpoint).
     // Therefore if reply_recipient_contract_hash is "Some", we append it to any encrypted data besided submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
@@ -712,9 +711,7 @@ pub fn encrypt_output(
         RawWasmOutput::OkIBCOpenChannel { ok: _ } => {}
     };
 
-    let final_output = finalize_raw_output(output, is_query_output, is_ibc_output, true)?;
-
-    Ok(final_output)
+    Ok(output)
 }
 
 fn create_replies(
