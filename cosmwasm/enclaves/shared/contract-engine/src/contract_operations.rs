@@ -481,7 +481,7 @@ fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
     serde_json::from_slice(env)
         .map_err(|err| {
             warn!(
-                "error while deserializing env into json {:?}: {}",
+                "error while deserializing env from json {:?}: {}",
                 String::from_utf8_lossy(env),
                 err
             );
