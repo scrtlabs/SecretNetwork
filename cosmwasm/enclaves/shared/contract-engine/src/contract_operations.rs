@@ -29,7 +29,7 @@ use super::contract_validation::{
 };
 use super::gas::WasmCosts;
 use super::io::{
-    attach_reply_headers_to_submsgs, deserialize_output, encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    post_process_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
     set_all_logs_to_plaintext,
 };
 use super::types::{IoNonce, SecretMessage};
@@ -173,21 +173,18 @@ pub fn init(
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
     //let start = Instant::now();
-    let contract_hash = versioned_env.get_contract_hash();
 
-    let wasm_output = deserialize_output(output)?;
-    let wasm_output = attach_reply_headers_to_submsgs(wasm_output, &secret_msg, &canonical_contract_address, contract_hash, &reply_params)?;
-    let wasm_output = encrypt_output(
-        wasm_output,
+    let output = post_process_output(
+        output,
         &secret_msg,
         &canonical_contract_address,
-        contract_hash,
+        versioned_env.get_contract_hash(),
         reply_params,
         &canonical_sender_address,
         false,
+        false,
     )?;
 
-    let output = finalize_raw_output(wasm_output, false, false, true)?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in encrypt_output: {:?}", duration);
 
@@ -345,22 +342,16 @@ pub fn handle(
         secret_msg.nonce, secret_msg.user_public_key
     );
     if should_encrypt_output {
-        let is_ibc_msg = is_ibc_msg(parsed_handle_type);
-        let contract_hash = versioned_env.get_contract_hash();
-
-        let wasm_output = deserialize_output(output)?;
-        // todo: not clone
-        let wasm_output = attach_reply_headers_to_submsgs(wasm_output, &secret_msg, &canonical_contract_address, contract_hash, &reply_params)?;
-        let wasm_output = encrypt_output(
-            wasm_output,
+        output = post_process_output(
+            output,
             &secret_msg,
             &canonical_contract_address,
             versioned_env.get_contract_hash(),
             reply_params,
             &canonical_sender_address,
-            is_ibc_msg,
+            false,
+            is_ibc_msg(parsed_handle_type),
         )?;
-        output = finalize_raw_output(wasm_output, false, is_ibc_msg, true)?
     } else {
         let mut raw_output =
             manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
@@ -436,18 +427,16 @@ pub fn query(
     *used_gas = engine.gas_used();
     let output = result?;
 
-    let wasm_output = deserialize_output(output)?;
-    let wasm_output = encrypt_output(
-        wasm_output,
+    let output = post_process_output(
+        output,
         &secret_msg,
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
         "",   // Not used for queries (can't call a sub-message from a query),
         None, // Not used for queries (Query response is not replied to the caller),
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (used only for replies)
+        true,
         false,
     )?;
-
-    let output = finalize_raw_output(wasm_output, true, false, true)?;
 
     Ok(QuerySuccess { output })
 }

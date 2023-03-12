@@ -195,6 +195,31 @@ fn b64_encode(data: &[u8]) -> String {
     base64::encode(data)
 }
 
+pub fn post_process_output(
+    mut output: Vec<u8>,
+    secret_msg: &SecretMessage,
+    contract_addr: &CanonicalAddr,
+    contract_hash: &str,
+    reply_params: Option<Vec<ReplyParams>>,
+    sender_addr: &CanonicalAddr,
+    is_query_output: bool,
+    is_ibc_output: bool,
+) -> Result<Vec<u8>, EnclaveError> {
+    let wasm_output = deserialize_output(output)?;
+    let wasm_output = attach_reply_headers_to_submsgs(wasm_output, &secret_msg, contract_addr, contract_hash, &reply_params)?;
+    let wasm_output = encrypt_output(
+        wasm_output,
+        &secret_msg,
+        contract_addr,
+        reply_params,
+        sender_addr,
+        is_ibc_output,
+    )?;
+    output = finalize_raw_output(wasm_output, is_query_output, is_ibc_output, true)?;
+
+    Ok(output)
+}
+
 pub fn finalize_raw_output(
     raw_output: RawWasmOutput,
     is_query_output: bool,
@@ -466,7 +491,7 @@ pub fn set_all_logs_to_plaintext(raw_output: &mut RawWasmOutput) {
     }
 }
 
-pub fn deserialize_output(
+fn deserialize_output(
     output: Vec<u8>
 ) -> Result<RawWasmOutput, EnclaveError> {
     info!("output as received from contract: {:?}", String::from_utf8_lossy(&output));
@@ -483,11 +508,10 @@ pub fn deserialize_output(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn encrypt_output(
+fn encrypt_output(
     mut output: RawWasmOutput,
     secret_msg: &SecretMessage,
     contract_addr: &CanonicalAddr,
-    contract_hash: &str,
     reply_params: Option<Vec<ReplyParams>>,
     sender_addr: &CanonicalAddr,
     is_ibc_output: bool,
@@ -684,7 +708,7 @@ pub fn encrypt_output(
     Ok(output)
 }
 
-pub fn attach_reply_headers_to_submsgs(
+fn attach_reply_headers_to_submsgs(
     mut output: RawWasmOutput,
     secret_msg: &SecretMessage,
     contract_addr: &CanonicalAddr,
