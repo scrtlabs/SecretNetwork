@@ -541,11 +541,7 @@ fn encrypt_output(
             *ok = encrypt_serializable(&encryption_key, ok, reply_params, false)?;
         }
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
-        RawWasmOutput::OkV010 {
-            ok,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => {
+        RawWasmOutput::OkV010 { ok, .. } => {
             for msg in &mut ok.messages {
                 if let cw_types_v010::types::CosmosMsg::Wasm(wasm_msg) = msg {
                     encrypt_v010_wasm_msg(
@@ -581,18 +577,6 @@ fn encrypt_output(
             //      should_append_all_reply_params: false,
             //  )?)?;
 
-            create_replies(
-                reply_params,
-                encryption_key,
-                SubMsgResult::Ok(SubMsgResponse {
-                    events: vec![],
-                    data: ok.data.clone(),
-                }),
-                sender_addr,
-                internal_msg_id,
-                internal_reply_enclave_sig,
-                false,
-            )?;
         }
         RawWasmOutput::OkV1 { ok, .. } => {
             for sub_msg in ok.messages.iter_mut() {
@@ -776,6 +760,20 @@ fn adapt_output_for_reply(
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
 
     match &mut output {
+        RawWasmOutput::OkV010 { ok, internal_msg_id, internal_reply_enclave_sig } => {
+            create_replies(
+                reply_params,
+                encryption_key,
+                SubMsgResult::Ok(SubMsgResponse {
+                    events: vec![],
+                    data: ok.data.clone(),
+                }),
+                sender_addr,
+                internal_msg_id,
+                internal_reply_enclave_sig,
+                false,
+            )?;
+        },
         RawWasmOutput::OkV1 { ok, internal_msg_id, internal_reply_enclave_sig } => {
             let events: Vec<Event> = vec![];
 
