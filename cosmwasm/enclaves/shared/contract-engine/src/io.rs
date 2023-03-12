@@ -404,15 +404,9 @@ pub fn manipulate_callback_sig_for_plaintext(
                             funds,
                             ..
                         } => {
-                            let msg_to_sign = SecretMessage {
-                                nonce: [0; 32],
-                                user_public_key: [0; 32],
-                                msg: msg.as_slice().to_vec(),
-                            };
-
                             *callback_sig = Some(create_callback_signature(
                                 contract_addr,
-                                &msg_to_sign,
+                                &msg.as_slice().to_vec(),
                                 &funds
                                     .iter()
                                     .map(|coin| cw_types_v010::types::Coin {
@@ -442,21 +436,16 @@ pub fn manipulate_callback_sig_for_plaintext(
                             funds,
                             ..
                         } => {
-                            let msg_to_sign = SecretMessage {
-                                nonce: [0; 32],
-                                user_public_key: [0; 32],
-                                msg: msg.as_slice().to_vec(),
-                            };
                             *callback_sig = Some(create_callback_signature(
                                 contract_addr,
-                                &msg_to_sign,
+                                &msg.as_slice().to_vec(),
                                 &funds
                                     .iter()
-                                    .map(|coin| cw_types_v010::types::Coin {
+                                    .map(|coin| Coin {
                                         denom: coin.denom.clone(),
                                         amount: cw_types_v010::math::Uint128(coin.amount.u128()),
                                     })
-                                    .collect::<Vec<cw_types_v010::types::Coin>>()[..],
+                                    .collect::<Vec<Coin>>()[..],
                             ));
                         }
                     }
@@ -541,7 +530,6 @@ fn encrypt_output(
                 reply_params,
                 encryption_key,
                 SubMsgResult::Err(encrypted_err),
-                secret_msg,
                 sender_addr,
                 internal_msg_id,
                 internal_reply_enclave_sig,
@@ -599,7 +587,6 @@ fn encrypt_output(
                     events: vec![],
                     data: ok.data.clone(),
                 }),
-                secret_msg,
                 sender_addr,
                 internal_msg_id,
                 internal_reply_enclave_sig,
@@ -670,7 +657,6 @@ fn encrypt_output(
                     events,
                     data: ok.data.clone(),
                 }),
-                secret_msg,
                 sender_addr,
                 internal_msg_id,
                 internal_reply_enclave_sig,
@@ -772,7 +758,7 @@ fn create_callback_sig_for_submsgs(
                 | cw_types_v1::results::WasmMsg::Instantiate { msg, callback_sig, funds, .. } => {
                     *callback_sig = Some(create_callback_signature(
                         contract_addr,
-                        &SecretMessage::from_slice(msg.as_slice())?,
+                        &SecretMessage::from_slice(msg.as_slice())?.msg,
                         &funds
                             .iter()
                             .map(|coin| Coin {
@@ -793,7 +779,6 @@ fn create_replies(
     reply_params: Option<Vec<ReplyParams>>,
     encryption_key: AESKey,
     reply_result: SubMsgResult,
-    secret_msg: &SecretMessage,
     sender_addr: &CanonicalAddr,
     msg_id_to_set: &mut Option<Binary>,
     reply_enclave_sig_to_set: &mut Option<Binary>,
@@ -827,19 +812,13 @@ fn create_replies(
         EnclaveError::FailedToSerialize
     })?;
 
-    let tmp_secret_msg = SecretMessage {
-        nonce: secret_msg.nonce,
-        user_public_key: secret_msg.user_public_key,
-        msg: reply_json,
-    };
-
     let sig = Binary::from(
-        create_callback_signature(sender_addr, &tmp_secret_msg, &[]).as_slice(),
+        create_callback_signature(sender_addr, &reply_json, &[]).as_slice(),
     );
 
     trace!(
         "Generated internal callback signature for msg {:?} signature is: {:?}",
-        String::from_utf8_lossy(tmp_secret_msg.msg.as_slice()),
+        String::from_utf8_lossy(reply_json.as_slice()),
         sig
     );
 
@@ -882,7 +861,7 @@ fn encrypt_v010_wasm_msg(
             msg_to_pass.encrypt_in_place()?;
             *msg = Binary::from(msg_to_pass.to_vec().as_slice());
 
-            *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass, send));
+            *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass.msg, send));
         }
     }
 
@@ -952,7 +931,7 @@ fn encrypt_v1_wasm_msg(
 
 pub fn create_callback_signature(
     _contract_addr: &CanonicalAddr,
-    msg_to_sign: &SecretMessage,
+    msg_to_sign: &Vec<u8>,
     funds_to_send: &[Coin],
 ) -> Vec<u8> {
     // Hash(Enclave_secret | sender(current contract) | msg_to_pass | sent_funds)
@@ -964,7 +943,7 @@ pub fn create_callback_signature(
         .to_vec();
 
     //callback_sig_bytes.extend(contract_addr.as_slice());
-    callback_sig_bytes.extend(msg_to_sign.msg.as_slice());
+    callback_sig_bytes.extend(msg_to_sign.as_slice());
     callback_sig_bytes.extend(serde_json::to_vec(funds_to_send).unwrap());
 
     sha2::Sha256::digest(callback_sig_bytes.as_slice()).to_vec()
