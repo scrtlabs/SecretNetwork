@@ -7,7 +7,7 @@ use crate::contract_validation::ReplyParams;
 use super::types::{IoNonce, SecretMessage};
 use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::{CanonicalAddr, Coin, LogAttribute};
-use cw_types_v1::results::{Event, Reply, ReplyOn, SubMsgResponse, SubMsgResult};
+use cw_types_v1::results::{Reply, ReplyOn, SubMsgResponse, SubMsgResult};
 
 use enclave_ffi_types::EnclaveError;
 
@@ -740,73 +740,49 @@ fn adapt_output_for_reply(
 
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
 
-    match &mut output {
-        RawWasmOutput::Err {
-            err,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => {
+    let output_result;
+    let should_append_reply_params;
+
+    match &output {
+        RawWasmOutput::Err { err, .. } => {
             let mut encrypted_error_message = err["generic_err"]["msg"].clone().to_string();
 
-            // remove quotes:
+            // remove surrounding quotes
             encrypted_error_message.pop();
             encrypted_error_message.remove(0);
 
-            let (msg_id, callback_sig) = get_reply_info_for_output(
-                SubMsgResult::Err(encrypted_error_message),
-                reply_params,
-                encryption_key,
-                sender_addr,
-                true,
-            )?;
-
-            *internal_msg_id = Some(msg_id);
-            *internal_reply_enclave_sig = Some(callback_sig);
+            output_result = SubMsgResult::Err(encrypted_error_message);
+            should_append_reply_params = true;
         }
-        RawWasmOutput::OkV010 { ok, internal_msg_id, internal_reply_enclave_sig } => {
-            let (msg_id, callback_sig) = get_reply_info_for_output(
-                SubMsgResult::Ok(SubMsgResponse {
-                    events: vec![],
-                    data: ok.data.clone(),
-                }),
-                reply_params,
-                encryption_key,
-                sender_addr,
-                false,
-            )?;
+        RawWasmOutput::OkV010 { ok, .. } => {
+            output_result = SubMsgResult::Ok(SubMsgResponse {
+                events: vec![],
+                data: ok.data.clone(),
+            });
 
-            *internal_msg_id = Some(msg_id);
-            *internal_reply_enclave_sig = Some(callback_sig);
+            should_append_reply_params = false;
         },
-        RawWasmOutput::OkV1 { ok, internal_msg_id, internal_reply_enclave_sig } => {
-            let events: Vec<Event> = vec![];
+        RawWasmOutput::OkV1 { ok, .. } => {
+            output_result = SubMsgResult::Ok(SubMsgResponse {
+                events: vec![],
+                data: ok.data.clone(),
+            });
 
-            // if !ok.attributes.is_empty() {
-            //     events.push(Event {
-            //         ty: "wasm".to_string(),
-            //         attributes: ok.attributes.clone(),
-            //     })
-            // }
+            should_append_reply_params = true;
+        },
+        _ => return Ok(output)
+    }
 
-            // events.extend_from_slice(ok.events.clone().as_slice());
-            // let custom_contract_event_prefix: String = "wasm-".to_string();
-            // for event in events.iter_mut() {
-            //     if event.ty != "wasm" {
-            //         event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
-            //     }
-
-            //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
-            // }
-
+    match &mut output {
+        RawWasmOutput::Err { internal_msg_id, internal_reply_enclave_sig, .. } |
+        RawWasmOutput::OkV010 { internal_msg_id, internal_reply_enclave_sig, .. } |
+        RawWasmOutput::OkV1 { internal_msg_id, internal_reply_enclave_sig, .. } => {
             let (msg_id, callback_sig) = get_reply_info_for_output(
-                 SubMsgResult::Ok(SubMsgResponse {
-                    events,
-                    data: ok.data.clone(),
-                }),
+                output_result,
                 reply_params,
                 encryption_key,
                 sender_addr,
-                true,
+                should_append_reply_params,
             )?;
 
             *internal_msg_id = Some(msg_id);
