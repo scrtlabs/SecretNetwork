@@ -212,7 +212,6 @@ pub fn post_process_output(
         &secret_msg,
         contract_addr,
         &reply_params,
-        sender_addr,
         is_ibc_output,
     )?;
     raw_output = create_callback_sig_for_submsgs(raw_output, contract_addr)?;
@@ -505,7 +504,6 @@ fn encrypt_output(
     secret_msg: &SecretMessage,
     contract_addr: &CanonicalAddr,
     reply_params: &Option<Vec<ReplyParams>>,
-    sender_addr: &CanonicalAddr,
     is_ibc_output: bool,
 ) -> Result<RawWasmOutput, EnclaveError> {
     // The output we receive from a contract could be a reply to a caller contract (via the "reply" endpoint).
@@ -519,23 +517,9 @@ fn encrypt_output(
     );
 
     match &mut output {
-        RawWasmOutput::Err {
-            err,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => {
+        RawWasmOutput::Err { err, .. } => {
             let encrypted_err = encrypt_serializable(&encryption_key, err, reply_params, false)?;
-            *err = json!({"generic_err":{"msg":encrypted_err}});
-
-            create_replies(
-                reply_params,
-                encryption_key,
-                SubMsgResult::Err(encrypted_err),
-                sender_addr,
-                internal_msg_id,
-                internal_reply_enclave_sig,
-                true,
-            )?;
+            *err = Value::String(encrypted_err);
         }
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
             *ok = encrypt_serializable(&encryption_key, ok, reply_params, false)?;
@@ -757,17 +741,45 @@ fn adapt_output_for_reply(
     secret_msg: &SecretMessage,
     sender_addr: &CanonicalAddr,
 ) -> Result<RawWasmOutput, EnclaveError> {
+    if let None = reply_params {
+        // This message was not called from another contract,
+        // no need to adapt output as a reply
+        return Ok(output)
+    }
+
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
 
     match &mut output {
-        RawWasmOutput::OkV010 { ok, internal_msg_id, internal_reply_enclave_sig } => {
-            create_replies(
+        RawWasmOutput::Err {
+            err,
+            internal_reply_enclave_sig,
+            internal_msg_id,
+        } => {
+            let mut encrypted_error = err.to_string();
+            // remove quotes:
+            encrypted_error.pop();
+            encrypted_error.remove(0);
+
+            *err = json!({"generic_err":{"msg":encrypted_error}});
+
+            get_reply_info_for_output(
+                SubMsgResult::Err(encrypted_error),
                 reply_params,
                 encryption_key,
+                sender_addr,
+                internal_msg_id,
+                internal_reply_enclave_sig,
+                true,
+            )?;
+        }
+        RawWasmOutput::OkV010 { ok, internal_msg_id, internal_reply_enclave_sig } => {
+            get_reply_info_for_output(
                 SubMsgResult::Ok(SubMsgResponse {
                     events: vec![],
                     data: ok.data.clone(),
                 }),
+                reply_params,
+                encryption_key,
                 sender_addr,
                 internal_msg_id,
                 internal_reply_enclave_sig,
@@ -794,13 +806,13 @@ fn adapt_output_for_reply(
             //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
             // }
 
-            create_replies(
-                reply_params,
-                encryption_key,
-                SubMsgResult::Ok(SubMsgResponse {
+            get_reply_info_for_output(
+                 SubMsgResult::Ok(SubMsgResponse {
                     events,
                     data: ok.data.clone(),
                 }),
+                reply_params,
+                encryption_key,
                 sender_addr,
                 internal_msg_id,
                 internal_reply_enclave_sig,
@@ -813,21 +825,15 @@ fn adapt_output_for_reply(
     Ok(output)
 }
 
-fn create_replies(
+fn get_reply_info_for_output(
+    output_result: SubMsgResult,
     reply_params: &Option<Vec<ReplyParams>>,
     encryption_key: AESKey,
-    reply_result: SubMsgResult,
     sender_addr: &CanonicalAddr,
     msg_id_to_set: &mut Option<Binary>,
     reply_enclave_sig_to_set: &mut Option<Binary>,
     should_append_all_reply_params: bool,
 ) -> Result<(), EnclaveError> {
-    if let None = reply_params {
-        // This message was not called from another contract,
-        // no need to create reply messages
-        return Ok(())
-    }
-
     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
         &encryption_key,
         &reply_params.as_ref().unwrap()[0].sub_msg_id.to_string(),
@@ -837,7 +843,7 @@ fn create_replies(
 
     let reply = Reply {
         id: encrypted_id.clone(),
-        result: reply_result,
+        result: output_result,
         was_orig_msg_encrypted: true,
         is_encrypted: true,
     };
