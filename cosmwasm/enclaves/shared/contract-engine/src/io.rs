@@ -196,6 +196,7 @@ fn b64_encode(data: &[u8]) -> String {
     base64::encode(data)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn post_process_output(
     mut output: Vec<u8>,
     secret_msg: &SecretMessage,
@@ -210,13 +211,13 @@ pub fn post_process_output(
     raw_output = attach_reply_headers_to_submsgs(raw_output, contract_hash, &reply_params)?;
     raw_output = encrypt_output(
         raw_output,
-        &secret_msg,
+        secret_msg,
         contract_addr,
         &reply_params,
         is_ibc_output,
     )?;
     raw_output = create_callback_sig_for_submsgs(raw_output, contract_addr)?;
-    raw_output = adapt_output_for_reply(raw_output, &reply_params, &secret_msg, sender_addr)?;
+    raw_output = adapt_output_for_reply(raw_output, &reply_params, secret_msg, sender_addr)?;
 
     output = finalize_raw_output(raw_output, is_query_output, is_ibc_output, true)?;
 
@@ -499,7 +500,6 @@ fn deserialize_output(
     Ok(output)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn encrypt_output(
     mut output: RawWasmOutput,
     secret_msg: &SecretMessage,
@@ -555,7 +555,7 @@ fn encrypt_output(
             }
         }
         RawWasmOutput::OkV1 { ok, .. } => {
-            encrypt_v1_non_result_fields(&mut ok.messages, &mut ok.attributes, &mut ok.events, &secret_msg)?;
+            encrypt_v1_non_result_fields(&mut ok.messages, &mut ok.attributes, &mut ok.events, secret_msg)?;
             if let Some(data) = &mut ok.data {
                 if is_ibc_output {
                     warn!("IBC output should not contain any data");
@@ -571,7 +571,7 @@ fn encrypt_output(
             }
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
-            encrypt_v1_non_result_fields(&mut ok.messages, &mut ok.attributes, &mut ok.events, &secret_msg)?;
+            encrypt_v1_non_result_fields(&mut ok.messages, &mut ok.attributes, &mut ok.events, secret_msg)?;
 
             ok.acknowledgement = Binary::from_base64(&encrypt_serializable(
                 &encryption_key,
@@ -587,15 +587,15 @@ fn encrypt_output(
 }
 
 fn encrypt_v1_non_result_fields<T: Clone + fmt::Debug + PartialEq>(
-    messages: &mut Vec<SubMsg<T>>,
-    attributes: &mut Vec<LogAttribute>,
-    events: &mut Vec<Event>,
+    messages: &mut [SubMsg<T>],
+    attributes: &mut [LogAttribute],
+    events: &mut [Event],
     secret_msg: &SecretMessage,
 ) -> Result<(), EnclaveError> {
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
 
     for sub_msg in messages.iter_mut() {
-        encrypt_wasm_submsg(sub_msg, &secret_msg)?;
+        encrypt_wasm_submsg(sub_msg, secret_msg)?;
     }
 
     // v1: The attributes that will be emitted as part of a "wasm" event.
@@ -646,13 +646,12 @@ fn attach_reply_headers_to_submsgs(
     contract_hash: &str,
     reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<RawWasmOutput, EnclaveError> {
-    let sub_msgs;
-    match &mut output {
+    let sub_msgs = match &mut output {
         RawWasmOutput::OkV1 { ok, .. } => {
-            sub_msgs = &mut ok.messages;
+            &mut ok.messages
         },
         RawWasmOutput::OkIBCPacketReceive { ok } => {
-            sub_msgs = &mut ok.messages;
+            &mut ok.messages
         },
         _ => return Ok(output)
     };
