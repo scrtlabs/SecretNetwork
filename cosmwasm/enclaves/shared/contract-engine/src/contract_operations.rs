@@ -29,7 +29,7 @@ use super::contract_validation::{
 };
 use super::gas::WasmCosts;
 use super::io::{
-    deserialize_output, encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    attach_reply_headers_to_submsgs, deserialize_output, encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
     set_all_logs_to_plaintext,
 };
 use super::types::{IoNonce, SecretMessage};
@@ -173,12 +173,15 @@ pub fn init(
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
     //let start = Instant::now();
+    let contract_hash = versioned_env.get_contract_hash();
+
     let wasm_output = deserialize_output(output)?;
+    let wasm_output = attach_reply_headers_to_submsgs(wasm_output, &secret_msg, &canonical_contract_address, contract_hash, &reply_params)?;
     let wasm_output = encrypt_output(
         wasm_output,
         &secret_msg,
         &canonical_contract_address,
-        versioned_env.get_contract_hash(),
+        contract_hash,
         reply_params,
         &canonical_sender_address,
         false,
@@ -343,7 +346,11 @@ pub fn handle(
     );
     if should_encrypt_output {
         let is_ibc_msg = is_ibc_msg(parsed_handle_type);
+        let contract_hash = versioned_env.get_contract_hash();
+
         let wasm_output = deserialize_output(output)?;
+        // todo: not clone
+        let wasm_output = attach_reply_headers_to_submsgs(wasm_output, &secret_msg, &canonical_contract_address, contract_hash, &reply_params)?;
         let wasm_output = encrypt_output(
             wasm_output,
             &secret_msg,
