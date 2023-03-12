@@ -568,7 +568,7 @@ fn verify_callback_sig_impl(
         return false;
     }
 
-    let callback_sig = create_callback_signature(sender, msg, sent_funds);
+    let callback_sig = create_callback_signature(sender, &msg.msg, sent_funds);
 
     if callback_signature != callback_sig {
         trace!(
