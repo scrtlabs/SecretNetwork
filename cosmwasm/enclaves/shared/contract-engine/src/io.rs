@@ -519,7 +519,7 @@ fn encrypt_output(
     match &mut output {
         RawWasmOutput::Err { err, .. } => {
             let encrypted_err = encrypt_serializable(&encryption_key, err, reply_params, false)?;
-            *err = Value::String(encrypted_err);
+            *err = json!({"generic_err":{"msg":encrypted_err}});
         }
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
             *ok = encrypt_serializable(&encryption_key, ok, reply_params, false)?;
@@ -552,15 +552,6 @@ fn encrypt_output(
                     false,
                 )?)?;
             }
-
-            // todo: why is this one false as opposed to all the other ones of msg_id?
-            //  let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
-            //      &encryption_key,
-            //      &r[0].sub_msg_id.to_string(),
-            //      reply_params,
-            //      should_append_all_reply_params: false,
-            //  )?)?;
-
         }
         RawWasmOutput::OkV1 { ok, .. } => {
             for sub_msg in ok.messages.iter_mut() {
@@ -755,25 +746,25 @@ fn adapt_output_for_reply(
             internal_reply_enclave_sig,
             internal_msg_id,
         } => {
-            let mut encrypted_error = err.to_string();
+            let mut encrypted_error_message = err["generic_err"]["msg"].clone().to_string();
+
             // remove quotes:
-            encrypted_error.pop();
-            encrypted_error.remove(0);
+            encrypted_error_message.pop();
+            encrypted_error_message.remove(0);
 
-            *err = json!({"generic_err":{"msg":encrypted_error}});
-
-            get_reply_info_for_output(
-                SubMsgResult::Err(encrypted_error),
+            let (msg_id, callback_sig) = get_reply_info_for_output(
+                SubMsgResult::Err(encrypted_error_message),
                 reply_params,
                 encryption_key,
                 sender_addr,
-                internal_msg_id,
-                internal_reply_enclave_sig,
                 true,
             )?;
+
+            *internal_msg_id = Some(msg_id);
+            *internal_reply_enclave_sig = Some(callback_sig);
         }
         RawWasmOutput::OkV010 { ok, internal_msg_id, internal_reply_enclave_sig } => {
-            get_reply_info_for_output(
+            let (msg_id, callback_sig) = get_reply_info_for_output(
                 SubMsgResult::Ok(SubMsgResponse {
                     events: vec![],
                     data: ok.data.clone(),
@@ -781,10 +772,11 @@ fn adapt_output_for_reply(
                 reply_params,
                 encryption_key,
                 sender_addr,
-                internal_msg_id,
-                internal_reply_enclave_sig,
                 false,
             )?;
+
+            *internal_msg_id = Some(msg_id);
+            *internal_reply_enclave_sig = Some(callback_sig);
         },
         RawWasmOutput::OkV1 { ok, internal_msg_id, internal_reply_enclave_sig } => {
             let events: Vec<Event> = vec![];
@@ -806,7 +798,7 @@ fn adapt_output_for_reply(
             //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
             // }
 
-            get_reply_info_for_output(
+            let (msg_id, callback_sig) = get_reply_info_for_output(
                  SubMsgResult::Ok(SubMsgResponse {
                     events,
                     data: ok.data.clone(),
@@ -814,12 +806,13 @@ fn adapt_output_for_reply(
                 reply_params,
                 encryption_key,
                 sender_addr,
-                internal_msg_id,
-                internal_reply_enclave_sig,
                 true,
             )?;
+
+            *internal_msg_id = Some(msg_id);
+            *internal_reply_enclave_sig = Some(callback_sig);
         },
-        _ => return Ok(output)
+        _ => {}
     }
 
     Ok(output)
@@ -830,10 +823,8 @@ fn get_reply_info_for_output(
     reply_params: &Option<Vec<ReplyParams>>,
     encryption_key: AESKey,
     sender_addr: &CanonicalAddr,
-    msg_id_to_set: &mut Option<Binary>,
-    reply_enclave_sig_to_set: &mut Option<Binary>,
     should_append_all_reply_params: bool,
-) -> Result<(), EnclaveError> {
+) -> Result<(Binary, Binary), EnclaveError> {
     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
         &encryption_key,
         &reply_params.as_ref().unwrap()[0].sub_msg_id.to_string(),
@@ -866,10 +857,7 @@ fn get_reply_info_for_output(
         sig
     );
 
-    *msg_id_to_set = Some(encrypted_id);
-    *reply_enclave_sig_to_set = Some(sig);
-
-    Ok(())
+    Ok((encrypted_id, sig))
 }
 
 fn encrypt_v010_wasm_msg(
