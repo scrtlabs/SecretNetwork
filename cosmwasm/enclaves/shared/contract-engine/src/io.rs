@@ -205,19 +205,20 @@ pub fn post_process_output(
     is_query_output: bool,
     is_ibc_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
-    let wasm_output = deserialize_output(output)?;
-    let wasm_output = attach_reply_headers_to_submsgs(wasm_output, contract_hash, &reply_params)?;
-    let wasm_output = encrypt_output(
-        wasm_output,
+    let mut raw_output = deserialize_output(output)?;
+    raw_output = attach_reply_headers_to_submsgs(raw_output, contract_hash, &reply_params)?;
+    raw_output = encrypt_output(
+        raw_output,
         &secret_msg,
         contract_addr,
-        reply_params,
+        &reply_params,
         sender_addr,
         is_ibc_output,
     )?;
-    let wasm_output = create_callback_sig_for_submsgs(wasm_output, contract_addr)?;
+    raw_output = create_callback_sig_for_submsgs(raw_output, contract_addr)?;
+    raw_output = adapt_output_for_reply(raw_output, &reply_params, &secret_msg, sender_addr)?;
 
-    output = finalize_raw_output(wasm_output, is_query_output, is_ibc_output, true)?;
+    output = finalize_raw_output(raw_output, is_query_output, is_ibc_output, true)?;
 
     Ok(output)
 }
@@ -503,7 +504,7 @@ fn encrypt_output(
     mut output: RawWasmOutput,
     secret_msg: &SecretMessage,
     contract_addr: &CanonicalAddr,
-    reply_params: Option<Vec<ReplyParams>>,
+    reply_params: &Option<Vec<ReplyParams>>,
     sender_addr: &CanonicalAddr,
     is_ibc_output: bool,
 ) -> Result<RawWasmOutput, EnclaveError> {
@@ -523,7 +524,7 @@ fn encrypt_output(
             internal_reply_enclave_sig,
             internal_msg_id,
         } => {
-            let encrypted_err = encrypt_serializable(&encryption_key, err, &reply_params, false)?;
+            let encrypted_err = encrypt_serializable(&encryption_key, err, reply_params, false)?;
             *err = json!({"generic_err":{"msg":encrypted_err}});
 
             create_replies(
@@ -537,7 +538,7 @@ fn encrypt_output(
             )?;
         }
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
-            *ok = encrypt_serializable(&encryption_key, ok, &reply_params, false)?;
+            *ok = encrypt_serializable(&encryption_key, ok, reply_params, false)?;
         }
         // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
         RawWasmOutput::OkV010 {
@@ -567,7 +568,7 @@ fn encrypt_output(
                 *data = Binary::from_base64(&encrypt_serializable(
                     &encryption_key,
                     data,
-                    &reply_params,
+                    reply_params,
                     false,
                 )?)?;
             }
@@ -576,7 +577,7 @@ fn encrypt_output(
             //  let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
             //      &encryption_key,
             //      &r[0].sub_msg_id.to_string(),
-            //      &reply_params,
+            //      reply_params,
             //      should_append_all_reply_params: false,
             //  )?)?;
 
@@ -593,11 +594,7 @@ fn encrypt_output(
                 false,
             )?;
         }
-        RawWasmOutput::OkV1 {
-            ok,
-            internal_reply_enclave_sig,
-            internal_msg_id,
-        } => {
+        RawWasmOutput::OkV1 { ok, .. } => {
             for sub_msg in ok.messages.iter_mut() {
                 if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
                     match wasm_msg {
@@ -641,42 +638,10 @@ fn encrypt_output(
                 *data = Binary::from_base64(&encrypt_serializable(
                     &encryption_key,
                     data,
-                    &reply_params,
+                    reply_params,
                     false,
                 )?)?;
             }
-
-            let events: Vec<Event> = vec![];
-
-            // if !ok.attributes.is_empty() {
-            //     events.push(Event {
-            //         ty: "wasm".to_string(),
-            //         attributes: ok.attributes.clone(),
-            //     })
-            // }
-
-            // events.extend_from_slice(ok.events.clone().as_slice());
-            // let custom_contract_event_prefix: String = "wasm-".to_string();
-            // for event in events.iter_mut() {
-            //     if event.ty != "wasm" {
-            //         event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
-            //     }
-
-            //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
-            // }
-
-            create_replies(
-                reply_params,
-                encryption_key,
-                SubMsgResult::Ok(SubMsgResponse {
-                    events,
-                    data: ok.data.clone(),
-                }),
-                sender_addr,
-                internal_msg_id,
-                internal_reply_enclave_sig,
-                true,
-            )?;
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
             for sub_msg in ok.messages.iter_mut() {
@@ -716,7 +681,7 @@ fn encrypt_output(
             ok.acknowledgement = Binary::from_base64(&encrypt_serializable(
                 &encryption_key,
                 &ok.acknowledgement,
-                &reply_params,
+                reply_params,
                 false,
             )?)?;
         }
@@ -802,8 +767,56 @@ fn create_callback_sig_for_submsgs(
     Ok(output)
 }
 
+fn adapt_output_for_reply(
+    mut output: RawWasmOutput,
+    reply_params: &Option<Vec<ReplyParams>>,
+    secret_msg: &SecretMessage,
+    sender_addr: &CanonicalAddr,
+) -> Result<RawWasmOutput, EnclaveError> {
+    let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
+
+    match &mut output {
+        RawWasmOutput::OkV1 { ok, internal_msg_id, internal_reply_enclave_sig } => {
+            let events: Vec<Event> = vec![];
+
+            // if !ok.attributes.is_empty() {
+            //     events.push(Event {
+            //         ty: "wasm".to_string(),
+            //         attributes: ok.attributes.clone(),
+            //     })
+            // }
+
+            // events.extend_from_slice(ok.events.clone().as_slice());
+            // let custom_contract_event_prefix: String = "wasm-".to_string();
+            // for event in events.iter_mut() {
+            //     if event.ty != "wasm" {
+            //         event.ty = custom_contract_event_prefix.clone() + event.ty.as_str();
+            //     }
+
+            //     event.attributes.sort_by(|a, b| a.key.cmp(&b.key));
+            // }
+
+            create_replies(
+                reply_params,
+                encryption_key,
+                SubMsgResult::Ok(SubMsgResponse {
+                    events,
+                    data: ok.data.clone(),
+                }),
+                sender_addr,
+                internal_msg_id,
+                internal_reply_enclave_sig,
+                true,
+            )?;
+        },
+        _ => return Ok(output)
+    }
+
+    Ok(output)
+}
+
 fn create_replies(
-    reply_params: Option<Vec<ReplyParams>>,
+    reply_params: &Option<Vec<ReplyParams>>,
     encryption_key: AESKey,
     reply_result: SubMsgResult,
     sender_addr: &CanonicalAddr,
