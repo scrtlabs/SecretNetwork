@@ -29,7 +29,7 @@ use super::contract_validation::{
 };
 use super::gas::WasmCosts;
 use super::io::{
-    encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    deserialize_output, encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
     set_all_logs_to_plaintext,
 };
 use super::types::{IoNonce, SecretMessage};
@@ -173,8 +173,9 @@ pub fn init(
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
     //let start = Instant::now();
+    let wasm_output = deserialize_output(output)?;
     let wasm_output = encrypt_output(
-        output,
+        wasm_output,
         &secret_msg,
         &canonical_contract_address,
         versioned_env.get_contract_hash(),
@@ -342,8 +343,9 @@ pub fn handle(
     );
     if should_encrypt_output {
         let is_ibc_msg = is_ibc_msg(parsed_handle_type);
+        let wasm_output = deserialize_output(output)?;
         let wasm_output = encrypt_output(
-            output,
+            wasm_output,
             &secret_msg,
             &canonical_contract_address,
             versioned_env.get_contract_hash(),
@@ -427,8 +429,9 @@ pub fn query(
     *used_gas = engine.gas_used();
     let output = result?;
 
+    let wasm_output = deserialize_output(output)?;
     let wasm_output = encrypt_output(
-        output,
+        wasm_output,
         &secret_msg,
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
         "",   // Not used for queries (can't call a sub-message from a query),
