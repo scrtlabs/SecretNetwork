@@ -901,11 +901,11 @@ fn encrypt_v1_wasm_msg(
 
             hash_appended_msg.extend_from_slice(msg.as_slice());
 
-            let mut msg_to_pass = SecretMessage::from_base64(
-                Binary(hash_appended_msg).to_base64(),
+            let mut msg_to_pass = SecretMessage {
+                msg: hash_appended_msg,
                 nonce,
                 user_public_key,
-            )?;
+            };
 
             msg_to_pass.encrypt_in_place()?;
 
