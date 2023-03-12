@@ -206,7 +206,7 @@ pub fn post_process_output(
     is_ibc_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
     let wasm_output = deserialize_output(output)?;
-    let wasm_output = attach_reply_headers_to_submsgs(wasm_output, &secret_msg, contract_addr, contract_hash, &reply_params)?;
+    let wasm_output = attach_reply_headers_to_submsgs(wasm_output, &secret_msg, contract_hash, &reply_params)?;
     let wasm_output = encrypt_output(
         wasm_output,
         &secret_msg,
@@ -215,7 +215,7 @@ pub fn post_process_output(
         sender_addr,
         is_ibc_output,
     )?;
-    let wasm_output = create_callback_sig_for_submsgs(wasm_output, &secret_msg, contract_addr, contract_hash)?;
+    let wasm_output = create_callback_sig_for_submsgs(wasm_output, contract_addr)?;
 
     output = finalize_raw_output(wasm_output, is_query_output, is_ibc_output, true)?;
 
@@ -713,7 +713,6 @@ fn encrypt_output(
 fn attach_reply_headers_to_submsgs(
     mut output: RawWasmOutput,
     secret_msg: &SecretMessage,
-    contract_addr: &CanonicalAddr,
     contract_hash: &str,
     reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<RawWasmOutput, EnclaveError> {
@@ -736,7 +735,6 @@ fn attach_reply_headers_to_submsgs(
                 sub_msg.id,
                 secret_msg.nonce,
                 secret_msg.user_public_key,
-                contract_addr,
                 contract_hash,
                 reply_params,
             )?;
@@ -754,9 +752,7 @@ fn attach_reply_headers_to_submsgs(
 
 fn create_callback_sig_for_submsgs(
     mut output: RawWasmOutput,
-    secret_msg: &SecretMessage,
     contract_addr: &CanonicalAddr,
-    contract_hash: &str,
 ) -> Result<RawWasmOutput, EnclaveError> {
     let sub_msgs;
     match &mut output {
@@ -900,7 +896,6 @@ fn encrypt_v1_wasm_msg(
     msg_id: u64, // In every submessage there is a field called "id", currently used only by "reply".
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
-    contract_addr: &CanonicalAddr,
     reply_recipient_contract_hash: &str,
     reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<(), EnclaveError> {
@@ -908,15 +903,11 @@ fn encrypt_v1_wasm_msg(
         cw_types_v1::results::WasmMsg::Execute {
             msg,
             code_hash,
-            callback_sig,
-            funds,
             ..
         }
         | cw_types_v1::results::WasmMsg::Instantiate {
             msg,
             code_hash,
-            callback_sig,
-            funds,
             ..
         } => {
             // On cosmwasm v1, submessages execute contracts whose results are sent back to the original caller by using "Reply".
