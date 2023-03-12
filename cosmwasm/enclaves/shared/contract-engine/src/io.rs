@@ -598,7 +598,22 @@ fn encrypt_output(
             internal_reply_enclave_sig,
             internal_msg_id,
         } => {
-            // todo: submsgs were already encrypted but should be encrypted here
+            for sub_msg in ok.messages.iter_mut() {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+                    match wasm_msg {
+                        cw_types_v1::results::WasmMsg::Instantiate { msg, .. } |
+                        cw_types_v1::results::WasmMsg::Execute { msg, .. } => {
+                            let mut msg_to_encrypt = SecretMessage {
+                                msg: msg.as_slice().to_vec(),
+                                nonce: secret_msg.nonce,
+                                user_public_key: secret_msg.user_public_key,
+                            };
+                            msg_to_encrypt.encrypt_in_place()?;
+                            *msg = Binary::from(msg_to_encrypt.to_vec().as_slice());
+                        }
+                    }
+                }
+            }
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
@@ -664,7 +679,22 @@ fn encrypt_output(
             )?;
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
-            // todo: submsgs were already encrypted but should be encrypted here
+            for sub_msg in ok.messages.iter_mut() {
+                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+                    match wasm_msg {
+                        cw_types_v1::results::WasmMsg::Instantiate { msg, .. } |
+                        cw_types_v1::results::WasmMsg::Execute { msg, .. } => {
+                            let mut msg_to_encrypt = SecretMessage {
+                                msg: msg.as_slice().to_vec(),
+                                nonce: secret_msg.nonce,
+                                user_public_key: secret_msg.user_public_key,
+                            };
+                            msg_to_encrypt.encrypt_in_place()?;
+                            *msg = Binary::from(msg_to_encrypt.to_vec().as_slice());
+                        }
+                    }
+                }
+            }
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
@@ -719,8 +749,6 @@ fn attach_reply_headers_to_submsgs(
                 wasm_msg,
                 &sub_msg.reply_on,
                 sub_msg.id,
-                secret_msg.nonce,
-                secret_msg.user_public_key,
                 contract_hash,
                 reply_params,
             )?;
@@ -873,8 +901,6 @@ fn encrypt_v1_wasm_msg(
     wasm_msg: &mut cw_types_v1::results::WasmMsg,
     reply_on: &ReplyOn,
     msg_id: u64, // In every submessage there is a field called "id", currently used only by "reply".
-    nonce: IoNonce,
-    user_public_key: Ed25519PublicKey,
     reply_recipient_contract_hash: &str,
     reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<(), EnclaveError> {
@@ -914,15 +940,7 @@ fn encrypt_v1_wasm_msg(
 
             hash_appended_msg.extend_from_slice(msg.as_slice());
 
-            let mut msg_to_pass = SecretMessage {
-                msg: hash_appended_msg,
-                nonce,
-                user_public_key,
-            };
-
-            msg_to_pass.encrypt_in_place()?;
-
-            *msg = Binary::from(msg_to_pass.to_vec().as_slice());
+            *msg = Binary::from(hash_appended_msg.as_slice());
         }
     }
 
