@@ -215,6 +215,8 @@ pub fn post_process_output(
         sender_addr,
         is_ibc_output,
     )?;
+    let wasm_output = create_callback_sig_for_submsgs(wasm_output, &secret_msg, contract_addr, contract_hash)?;
+
     output = finalize_raw_output(wasm_output, is_query_output, is_ibc_output, true)?;
 
     Ok(output)
@@ -750,6 +752,47 @@ fn attach_reply_headers_to_submsgs(
     Ok(output)
 }
 
+fn create_callback_sig_for_submsgs(
+    mut output: RawWasmOutput,
+    secret_msg: &SecretMessage,
+    contract_addr: &CanonicalAddr,
+    contract_hash: &str,
+) -> Result<RawWasmOutput, EnclaveError> {
+    let sub_msgs;
+    match &mut output {
+        RawWasmOutput::OkV1 { ok, .. } => {
+            sub_msgs = &mut ok.messages;
+        },
+        RawWasmOutput::OkIBCPacketReceive { ok } => {
+            sub_msgs = &mut ok.messages;
+        },
+        _ => return Ok(output)
+    };
+
+    for sub_msg in sub_msgs {
+        if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+            match wasm_msg {
+                cw_types_v1::results::WasmMsg::Execute { msg, callback_sig, funds, .. }
+                | cw_types_v1::results::WasmMsg::Instantiate { msg, callback_sig, funds, .. } => {
+                    *callback_sig = Some(create_callback_signature(
+                        contract_addr,
+                        &SecretMessage::from_slice(msg.as_slice())?,
+                        &funds
+                            .iter()
+                            .map(|coin| Coin {
+                                denom: coin.denom.clone(),
+                                amount: cw_types_v010::math::Uint128(coin.amount.u128()),
+                            })
+                            .collect::<Vec<Coin>>()[..],
+                    ));
+                }
+            }
+        }
+    }
+
+    Ok(output)
+}
+
 fn create_replies(
     reply_params: Option<Vec<ReplyParams>>,
     encryption_key: AESKey,
@@ -910,18 +953,6 @@ fn encrypt_v1_wasm_msg(
             msg_to_pass.encrypt_in_place()?;
 
             *msg = Binary::from(msg_to_pass.to_vec().as_slice());
-
-            *callback_sig = Some(create_callback_signature(
-                contract_addr,
-                &msg_to_pass,
-                &funds
-                    .iter()
-                    .map(|coin| cw_types_v010::types::Coin {
-                        denom: coin.denom.clone(),
-                        amount: cw_types_v010::math::Uint128(coin.amount.u128()),
-                    })
-                    .collect::<Vec<cw_types_v010::types::Coin>>()[..],
-            ));
         }
     }
 
