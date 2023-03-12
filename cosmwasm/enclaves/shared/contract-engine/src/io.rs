@@ -206,7 +206,7 @@ pub fn post_process_output(
     is_ibc_output: bool,
 ) -> Result<Vec<u8>, EnclaveError> {
     let wasm_output = deserialize_output(output)?;
-    let wasm_output = attach_reply_headers_to_submsgs(wasm_output, &secret_msg, contract_hash, &reply_params)?;
+    let wasm_output = attach_reply_headers_to_submsgs(wasm_output, contract_hash, &reply_params)?;
     let wasm_output = encrypt_output(
         wasm_output,
         &secret_msg,
@@ -728,7 +728,6 @@ fn encrypt_output(
 
 fn attach_reply_headers_to_submsgs(
     mut output: RawWasmOutput,
-    secret_msg: &SecretMessage,
     contract_hash: &str,
     reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<RawWasmOutput, EnclaveError> {
@@ -745,7 +744,7 @@ fn attach_reply_headers_to_submsgs(
 
     for sub_msg in sub_msgs {
         if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
-            encrypt_v1_wasm_msg(
+            attach_reply_headers_to_v1_wasm_msg(
                 wasm_msg,
                 &sub_msg.reply_on,
                 sub_msg.id,
@@ -897,7 +896,7 @@ fn encrypt_v010_wasm_msg(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn encrypt_v1_wasm_msg(
+fn attach_reply_headers_to_v1_wasm_msg(
     wasm_msg: &mut cw_types_v1::results::WasmMsg,
     reply_on: &ReplyOn,
     msg_id: u64, // In every submessage there is a field called "id", currently used only by "reply".
