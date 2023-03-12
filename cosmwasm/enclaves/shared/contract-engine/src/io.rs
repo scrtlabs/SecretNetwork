@@ -8,7 +8,7 @@ use crate::contract_validation::ReplyParams;
 use super::types::{IoNonce, SecretMessage};
 use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::{CanonicalAddr, Coin, LogAttribute};
-use cw_types_v1::results::{Reply, ReplyOn, SubMsg, SubMsgResponse, SubMsgResult};
+use cw_types_v1::results::{Event, Reply, ReplyOn, SubMsg, SubMsgResponse, SubMsgResult};
 
 use enclave_ffi_types::EnclaveError;
 
@@ -525,9 +525,9 @@ fn encrypt_output(
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
             *ok = encrypt_serializable(&encryption_key, ok, reply_params, false)?;
         }
-        // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
         RawWasmOutput::OkV010 { ok, .. } => {
             for msg in &mut ok.messages {
+                // Encrypt all Wasm messages (keeps Bank, Staking, etc.. as is)
                 if let cw_types_v010::types::CosmosMsg::Wasm(wasm_msg) = msg {
                     encrypt_v010_wasm_msg(
                         wasm_msg,
@@ -555,27 +555,7 @@ fn encrypt_output(
             }
         }
         RawWasmOutput::OkV1 { ok, .. } => {
-            for sub_msg in ok.messages.iter_mut() {
-                encrypt_wasm_submsg(sub_msg, &secret_msg)?;
-            }
-
-            // v1: The attributes that will be emitted as part of a "wasm" event.
-            for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
-                attr.value =
-                    encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
-            }
-
-            // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
-            for event in ok.events.iter_mut() {
-                for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                    attr.key =
-                        encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
-                    attr.value =
-                        encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
-                }
-            }
-
+            encrypt_v1_non_result_fields(&mut ok.messages, &mut ok.attributes, &mut ok.events, &secret_msg)?;
             if let Some(data) = &mut ok.data {
                 if is_ibc_output {
                     warn!("IBC output should not contain any data");
@@ -591,26 +571,7 @@ fn encrypt_output(
             }
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
-            for sub_msg in ok.messages.iter_mut() {
-                encrypt_wasm_submsg(sub_msg, &secret_msg)?;
-            }
-
-            // v1: The attributes that will be emitted as part of a "wasm" event.
-            for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
-                attr.value =
-                    encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
-            }
-
-            // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
-            for event in ok.events.iter_mut() {
-                for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
-                    attr.key =
-                        encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
-                    attr.value =
-                        encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
-                }
-            }
+            encrypt_v1_non_result_fields(&mut ok.messages, &mut ok.attributes, &mut ok.events, &secret_msg)?;
 
             ok.acknowledgement = Binary::from_base64(&encrypt_serializable(
                 &encryption_key,
@@ -625,10 +586,43 @@ fn encrypt_output(
     Ok(output)
 }
 
+fn encrypt_v1_non_result_fields<T: Clone + fmt::Debug + PartialEq>(
+    messages: &mut Vec<SubMsg<T>>,
+    attributes: &mut Vec<LogAttribute>,
+    events: &mut Vec<Event>,
+    secret_msg: &SecretMessage,
+) -> Result<(), EnclaveError> {
+    let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
+
+    for sub_msg in messages.iter_mut() {
+        encrypt_wasm_submsg(sub_msg, &secret_msg)?;
+    }
+
+    // v1: The attributes that will be emitted as part of a "wasm" event.
+    for attr in attributes.iter_mut().filter(|attr| attr.encrypted) {
+        attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
+        attr.value =
+            encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
+    }
+
+    // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
+    for event in events.iter_mut() {
+        for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
+            attr.key =
+                encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
+            attr.value =
+                encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
+        }
+    }
+
+    Ok(())
+}
+
 fn encrypt_wasm_submsg<T: Clone + fmt::Debug + PartialEq>(
     sub_msg: &mut SubMsg<T>,
     secret_msg: &SecretMessage,
 ) -> Result<(), EnclaveError> {
+    // Messages other than Wasm (Bank, Staking, etc.) are kept plaintext
     if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
         match wasm_msg {
             cw_types_v1::results::WasmMsg::Instantiate { msg, .. } |
