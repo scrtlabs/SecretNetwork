@@ -466,6 +466,22 @@ pub fn set_all_logs_to_plaintext(raw_output: &mut RawWasmOutput) {
     }
 }
 
+pub fn deserialize_output(
+    output: Vec<u8>
+) -> Result<RawWasmOutput, EnclaveError> {
+    info!("output as received from contract: {:?}", String::from_utf8_lossy(&output));
+
+    let output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
+        warn!("got an error while trying to deserialize output bytes from json");
+        trace!("output: {:?} error: {:?}", output, err);
+        EnclaveError::FailedToDeserialize
+    })?;
+
+    info!("Output after deserialization: {:?}", output);
+
+    Ok(output)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn encrypt_output(
     mut output: RawWasmOutput,
@@ -477,7 +493,7 @@ pub fn encrypt_output(
     is_ibc_output: bool,
 ) -> Result<RawWasmOutput, EnclaveError> {
     // The output we receive from a contract could be a reply to a caller contract (via the "reply" endpoint).
-    // Therefore if reply_recipient_contract_hash is "Some", we append it to any encrypted data besided submessages that are irrelevant for replies.
+    // Therefore if reply_recipient_contract_hash is "Some", we append it to any encrypted data besides submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
     info!(
@@ -569,26 +585,7 @@ pub fn encrypt_output(
             internal_reply_enclave_sig,
             internal_msg_id,
         } => {
-            for sub_msg in &mut ok.messages {
-                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
-                    encrypt_v1_wasm_msg(
-                        wasm_msg,
-                        &sub_msg.reply_on,
-                        sub_msg.id,
-                        secret_msg.nonce,
-                        secret_msg.user_public_key,
-                        contract_addr,
-                        contract_hash,
-                        &reply_params,
-                    )?;
-
-                    // The ID can be extracted from the encrypted wasm msg
-                    // We don't encrypt it here to remain with the same type (u64)
-                    sub_msg.id = 0;
-                }
-
-                sub_msg.was_msg_encrypted = true;
-            }
+            // todo: submsgs were already encrypted but should be encrypted here
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
@@ -655,26 +652,7 @@ pub fn encrypt_output(
             )?;
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
-            for sub_msg in &mut ok.messages {
-                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
-                    encrypt_v1_wasm_msg(
-                        wasm_msg,
-                        &sub_msg.reply_on,
-                        sub_msg.id,
-                        secret_msg.nonce,
-                        secret_msg.user_public_key,
-                        contract_addr,
-                        contract_hash,
-                        &reply_params,
-                    )?;
-
-                    // The ID can be extracted from the encrypted wasm msg
-                    // We don't encrypt it here to remain with the same type (u64)
-                    sub_msg.id = 0;
-                }
-
-                sub_msg.was_msg_encrypted = true;
-            }
+            // todo: submsgs were already encrypted but should be encrypted here
 
             // v1: The attributes that will be emitted as part of a "wasm" event.
             for attr in ok.attributes.iter_mut().filter(|attr| attr.encrypted) {
@@ -706,18 +684,44 @@ pub fn encrypt_output(
     Ok(output)
 }
 
-pub fn deserialize_output(
-    output: Vec<u8>
+pub fn attach_reply_headers_to_submsgs(
+    mut output: RawWasmOutput,
+    secret_msg: &SecretMessage,
+    contract_addr: &CanonicalAddr,
+    contract_hash: &str,
+    reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<RawWasmOutput, EnclaveError> {
-    info!("output as received from contract: {:?}", String::from_utf8_lossy(&output));
+    let sub_msgs;
+    match &mut output {
+        RawWasmOutput::OkV1 { ok, .. } => {
+            sub_msgs = &mut ok.messages;
+        },
+        RawWasmOutput::OkIBCPacketReceive { ok } => {
+            sub_msgs = &mut ok.messages;
+        },
+        _ => return Ok(output)
+    };
 
-    let output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
-        warn!("got an error while trying to deserialize output bytes from json");
-        trace!("output: {:?} error: {:?}", output, err);
-        EnclaveError::FailedToDeserialize
-    })?;
+    for sub_msg in sub_msgs {
+        if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
+            encrypt_v1_wasm_msg(
+                wasm_msg,
+                &sub_msg.reply_on,
+                sub_msg.id,
+                secret_msg.nonce,
+                secret_msg.user_public_key,
+                contract_addr,
+                contract_hash,
+                reply_params,
+            )?;
 
-    info!("Output after deserialization: {:?}", output);
+            // The ID can be extracted from the encrypted wasm msg
+            // We don't encrypt it here to remain with the same type (u64)
+            sub_msg.id = 0;
+        }
+
+        sub_msg.was_msg_encrypted = true;
+    }
 
     Ok(output)
 }
@@ -848,7 +852,7 @@ fn encrypt_v1_wasm_msg(
             funds,
             ..
         } => {
-            // On cosmwasm v1, submessages  contracts whose results are sent back to the original caller by using "Reply".
+            // On cosmwasm v1, submessages execute contracts whose results are sent back to the original caller by using "Reply".
             // Such submessages should be encrypted, but they weren't initially meant to be sent back to the enclave as an input of another contract.
             // To support "sending back" behavior, the enclave expects every encrypted input to be prepended by the recipient's contract hash.
             // In this context, we prepend the message with both hashes to signal to the next wasm call that its output is going to be an input to this contract as a "Reply".
