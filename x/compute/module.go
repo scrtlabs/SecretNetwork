@@ -3,6 +3,7 @@ package compute
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
@@ -163,7 +164,7 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 	// In this case Marshal will fail with a Seg Fault.
 	// The fix below it a temporary fix until we will investigate the issue in tendermint.
 	if beginBlock.Commit == nil {
-		ctx.Logger().Info("skipping commit submition to the enlave for block %d\n", beginBlock.Header.Height)
+		ctx.Logger().Info(fmt.Sprintf("skipping commit submition to the enlave for block %d\n", beginBlock.Header.Height))
 		return
 	}
 
