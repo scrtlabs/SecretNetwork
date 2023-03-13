@@ -198,7 +198,7 @@ fn b64_encode(data: &[u8]) -> String {
 
 #[allow(clippy::too_many_arguments)]
 pub fn post_process_output(
-    mut output: Vec<u8>,
+    output: Vec<u8>,
     secret_msg: &SecretMessage,
     contract_addr: &CanonicalAddr,
     contract_hash: &str,
@@ -219,8 +219,7 @@ pub fn post_process_output(
     raw_output = create_callback_sig_for_submsgs(raw_output, contract_addr)?;
     raw_output = adapt_output_for_reply(raw_output, &reply_params, secret_msg, sender_addr)?;
 
-    output = finalize_raw_output(raw_output, is_query_output, is_ibc_output, true)?;
-
+    let output = finalize_raw_output(raw_output, is_query_output, is_ibc_output, true)?;
     Ok(output)
 }
 
