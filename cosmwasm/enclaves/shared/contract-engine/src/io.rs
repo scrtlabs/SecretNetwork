@@ -681,13 +681,12 @@ fn create_callback_sig_for_submsgs(
     mut output: RawWasmOutput,
     contract_addr: &CanonicalAddr,
 ) -> Result<RawWasmOutput, EnclaveError> {
-    let sub_msgs;
-    match &mut output {
+    let sub_msgs = match &mut output {
         RawWasmOutput::OkV1 { ok, .. } => {
-            sub_msgs = &mut ok.messages;
+            &mut ok.messages
         },
         RawWasmOutput::OkIBCPacketReceive { ok } => {
-            sub_msgs = &mut ok.messages;
+            &mut ok.messages
         },
         _ => return Ok(output)
     };
@@ -722,7 +721,7 @@ fn adapt_output_for_reply(
     secret_msg: &SecretMessage,
     sender_addr: &CanonicalAddr,
 ) -> Result<RawWasmOutput, EnclaveError> {
-    if let None = reply_params {
+    if reply_params.is_none() {
         // This message was not called from another contract,
         // no need to adapt output as a reply
         return Ok(output)
@@ -794,7 +793,7 @@ fn get_reply_info_for_output(
     let encrypted_id = Binary::from_base64(&encrypt_preserialized_string(
         &encryption_key,
         &reply_params.as_ref().unwrap()[0].sub_msg_id.to_string(),
-        &reply_params,
+        reply_params,
         should_append_all_reply_params,
     )?)?;
 
