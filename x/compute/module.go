@@ -181,16 +181,18 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 	var encryptedRandom []byte
 	if beginBlock.Header.EncryptedRandom != nil {
 		encryptedRandom = beginBlock.Header.EncryptedRandom.Random
+
+		random, err := api.SubmitBlockSignatures(header, commit, data, encryptedRandom)
+		if err != nil {
+			panic(err)
+		}
+
+		am.keeper.SetRandomSeed(ctx, random)
+		
 	} else {
+		println("No random got from TM header")
 		encryptedRandom = []byte{}
 	}
-
-	_, err = api.SubmitBlockSignatures(header, commit, data, encryptedRandom)
-	if err != nil {
-		panic(err)
-	}
-
-	// am.keeper.SetRandomSeed(ctx, random)
 }
 
 // EndBlock returns the end blocker for the compute module. It returns no validator
