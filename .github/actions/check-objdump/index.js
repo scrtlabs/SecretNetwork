@@ -3,7 +3,7 @@ import * as core from '@actions/core';
 import fs from 'fs';
 import { exec } from 'child_process';
 
-const url = (version) => `https://engfilestorage.blob.core.windows.net/${version}/librust_cosmwasm_enclave.signed.so`;
+const url = (version, fileName) => `https://engfilestorage.blob.core.windows.net/${version}/${fileName}`;
 const objdumpCommand = (fileName) => `objdump -d ${fileName} | grep -w 'lfence' | wc -l`;
 
 try {
@@ -14,7 +14,7 @@ try {
     const splitVersion = version.split('.')
     const parsedVersion = `${splitVersion[0]}${splitVersion[1]}`
 
-    const body = await fetch(url(parsedVersion))
+    const body = await fetch(url(parsedVersion, fileName))
         .then((x) => x.arrayBuffer())
         .catch((err) => {
             core.setFailed(`Fail to download file ${url(version)}: ${err}`);
@@ -25,7 +25,7 @@ try {
         throw new Error("failed to download file - no body");
     }
 
-    console.log(`Download completed: ${url(parsedVersion)}.`);
+    console.log(`Download completed: ${url(parsedVersion, fileName)}.`);
 
     fs.writeFileSync(fileName, Buffer.from(body));
     console.log(`File saved ${fileName}.`);

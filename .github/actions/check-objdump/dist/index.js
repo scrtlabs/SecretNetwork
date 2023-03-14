@@ -7102,7 +7102,7 @@ __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependen
 
 
 
-const url = (version) => `https://engfilestorage.blob.core.windows.net/${version}/librust_cosmwasm_enclave.signed.so`;
+const url = (version, fileName) => `https://engfilestorage.blob.core.windows.net/${version}/${fileName}`;
 const objdumpCommand = (fileName) => `objdump -d ${fileName} | grep -w 'lfence' | wc -l`;
 
 try {
@@ -7113,7 +7113,7 @@ try {
     const splitVersion = version.split('.')
     const parsedVersion = `${splitVersion[0]}${splitVersion[1]}`
 
-    const body = await (0,node_fetch__WEBPACK_IMPORTED_MODULE_3__/* ["default"] */ .ZP)(url(parsedVersion))
+    const body = await (0,node_fetch__WEBPACK_IMPORTED_MODULE_3__/* ["default"] */ .ZP)(url(parsedVersion, fileName))
         .then((x) => x.arrayBuffer())
         .catch((err) => {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed(`Fail to download file ${url(version)}: ${err}`);
@@ -7124,7 +7124,7 @@ try {
         throw new Error("failed to download file - no body");
     }
 
-    console.log(`Download completed: ${url(parsedVersion)}.`);
+    console.log(`Download completed: ${url(parsedVersion, fileName)}.`);
 
     fs__WEBPACK_IMPORTED_MODULE_1__.writeFileSync(fileName, Buffer.from(body));
     console.log(`File saved ${fileName}.`);
