@@ -1,0 +1,20 @@
+name: "Check LFENCE Count"
+description: "Download latest enclaves and check LFENCE instruction count"
+
+inputs:
+  version:  # id of input
+    description: 'Version of librust_cosmwasm_enclave to download'
+    required: false
+    default: 'v1.7.0'
+  min-fence:
+    description: "Lower bound of amount of LFENCE instructions to test for"
+    required: false
+    default: "10"
+
+outputs:
+  lfence:
+    description: 'instruction count'
+
+runs:
+  using: node16
+  main: "dist/index.js"

@@ -3,6 +3,13 @@ name: Tests
 on: [push]
 
 jobs:
+
+  Test-LFENCE:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/check-objdump
+
   Enclave-Unit-Tests:
     runs-on: ubuntu-20.04
     steps:
