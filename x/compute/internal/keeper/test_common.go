@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -107,9 +108,9 @@ const (
 	v010WithFloats              = "contract_with_floats.wasm"
 	tooHighMemoryContract       = "too-high-initial-memory.wasm"
 	staticTooHighMemoryContract = "static-too-high-initial-memory.wasm"
+	randomContract              = "v1_random_test.wasm"
+	benchContract               = "bench_contract.wasm"
 )
-
-const benchContract = "bench_contract.wasm"
 
 const contractPath = "testdata"
 
@@ -123,6 +124,7 @@ var TestContractPaths = map[string]string{
 	tooHighMemoryContract:       filepath.Join(".", contractPath, tooHighMemoryContract),
 	staticTooHighMemoryContract: filepath.Join(".", contractPath, staticTooHighMemoryContract),
 	benchContract:               filepath.Join(".", contractPath, benchContract),
+	randomContract:              filepath.Join(".", contractPath, randomContract),
 }
 
 var (
@@ -501,9 +503,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 
-	// random := make([]byte, 32)
-	// rand.Read(random)
-	// keeper.SetRandomSeed(ctx, random)
+	random := make([]byte, 32)
+	rand.Read(random)
+	keeper.SetRandomSeed(ctx, random)
 
 	am := module.NewManager( // minimal module set that we use for message/ query tests
 		bank.NewAppModule(encodingConfig.Marshaler, bankKeeper, authKeeper),

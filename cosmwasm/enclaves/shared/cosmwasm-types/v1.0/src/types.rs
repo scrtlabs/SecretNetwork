@@ -88,8 +88,8 @@ pub struct MessageInfo {
     /// or `MsgExecuteContract`. The transfer is processed in bank before the contract
     /// is executed such that the new balance is visible during contract execution.
     pub funds: Vec<Coin>,
-    #[cfg(feature = "random")]
-    pub random: Binary,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub random: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

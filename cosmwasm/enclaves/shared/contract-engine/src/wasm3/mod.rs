@@ -3,7 +3,7 @@ use std::convert::{TryFrom, TryInto};
 use log::*;
 
 use bech32::{FromBase32, ToBase32};
-use cw_types_generic::{CosmWasmApiVersion, CwEnv};
+use cw_types_generic::{ContractFeature, CosmWasmApiVersion, CwEnv};
 use rand_chacha::ChaChaRng;
 use rand_core::SeedableRng;
 use wasm3::{Instance, Memory, Trap};
@@ -183,6 +183,7 @@ pub struct Engine {
     environment: wasm3::Environment,
     code: Vec<u8>,
     api_version: CosmWasmApiVersion,
+    features: Vec<ContractFeature>,
 }
 
 impl Engine {
@@ -231,6 +232,7 @@ impl Engine {
             environment,
             code: versioned_code.code,
             api_version: versioned_code.version,
+            features: versioned_code.features,
         })
     }
 
@@ -345,6 +347,10 @@ impl Engine {
 
     pub fn get_api_version(&self) -> CosmWasmApiVersion {
         self.api_version
+    }
+
+    pub fn supported_features(&self) -> &Vec<ContractFeature> {
+        &self.features
     }
 
     pub fn init(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {

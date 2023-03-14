@@ -162,6 +162,85 @@ func TestAddrValidateFunction(t *testing.T) {
 	require.Equal(t, string(data), "\"Apple\"")
 }
 
+func TestRandomEnv(t *testing.T) {
+	type ReturnedV1MessageInfo struct {
+		Sender    cosmwasm.HumanAddress `json:"sender"`
+		SentFunds cosmwasm.Coins        `json:"funds"`
+		Random    string                `json:"random"`
+	}
+
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[randomContract], sdk.NewCoins())
+
+	_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
+	require.Empty(t, initErr)
+	require.Len(t, initEvents, 1)
+
+	// var firstRandom string
+
+	expectedV1Env := fmt.Sprintf(
+		`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+		ctx.BlockHeight(),
+		// env.block.time is nanoseconds since unix epoch
+		ctx.BlockTime().UnixNano(),
+		ctx.ChainID(),
+		contractAddress.String(),
+		calcCodeHash(TestContractPaths[randomContract]),
+	)
+
+	requireEventsInclude(t,
+		initEvents,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{
+					Key:   "env",
+					Value: expectedV1Env,
+				},
+			},
+		},
+	)
+
+	initEvent := initEvents[0]
+	infoLogAttributeIndex := slices.IndexFunc(initEvent, func(c v010types.LogAttribute) bool { return c.Key == "info" })
+	infoLogAttribute := initEvent[infoLogAttributeIndex]
+
+	var actualMessageInfo ReturnedV1MessageInfo
+	json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
+
+	require.Equal(t, walletA.String(), actualMessageInfo.Sender)
+	require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
+	require.Len(t, actualMessageInfo.Random, 44)
+	firstRandom := actualMessageInfo.Random
+
+	_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, 1)
+	require.Empty(t, execErr)
+
+	requireEventsInclude(t,
+		execEvents,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{
+					Key:   "env",
+					Value: expectedV1Env,
+				},
+			},
+		},
+	)
+
+	execEvent := execEvents[0]
+	infoLogAttributeIndex = slices.IndexFunc(execEvent, func(c v010types.LogAttribute) bool { return c.Key == "info" })
+	infoLogAttribute = execEvent[infoLogAttributeIndex]
+
+	json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
+
+	require.Equal(t, walletA.String(), actualMessageInfo.Sender)
+	require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
+
+	require.Len(t, actualMessageInfo.Random, 44)
+	require.NotEqual(t, firstRandom, actualMessageInfo.Random)
+}
+
 func TestEnv(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
