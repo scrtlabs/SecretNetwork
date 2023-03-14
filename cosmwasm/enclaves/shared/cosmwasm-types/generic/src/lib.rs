@@ -99,6 +99,7 @@ impl BaseEnv {
                     // v0.10 env.block.time is seconds since unix epoch
                     time: v1types::Timestamp::from_nanos(self.0.block.time).seconds(),
                     chain_id: self.0.block.chain_id,
+                    #[cfg(feature = "random")]
                     random: None,
                 },
                 message: v010types::MessageInfo {

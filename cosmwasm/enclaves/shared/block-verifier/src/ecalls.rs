@@ -8,7 +8,7 @@ use sgx_types::sgx_status_t;
 use crate::{txs, verify_block};
 use log::{debug, error};
 
-use enclave_utils::{validate_const_ptr, validate_mut_ptr};
+use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr};
 use tendermint::block::signed_header::SignedHeader;
 use tendermint::validator::Set;
 use tendermint::Hash::Sha256;
@@ -30,18 +30,6 @@ const MAX_TXS_LENGTH: u32 = 10 * 1024 * 1024;
 
 #[cfg(feature = "light-client-validation")]
 const TX_THRESHOLD: usize = 100_000;
-
-macro_rules! validate_input_length {
-    ($input:expr, $var_name:expr, $constant:expr) => {
-        if $input > $constant {
-            error!(
-                "Error: {} ({}) is larger than the constant value ({})",
-                $var_name, $input, $constant
-            );
-            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-        }
-    };
-}
 
 /// # Safety
 ///  This function reads buffers which must be correctly initialized by the caller,
@@ -214,7 +202,10 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
             }
         }
 
-        message_verifier.set_block_info(signed_header.header.height.value(), signed_header.header.time.unix_timestamp_nanos());
+        message_verifier.set_block_info(
+            signed_header.header.height.value(),
+            signed_header.header.time.unix_timestamp_nanos(),
+        );
     }
 
     #[cfg(feature = "random")]
