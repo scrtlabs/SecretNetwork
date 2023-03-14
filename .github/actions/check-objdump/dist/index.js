@@ -7124,10 +7124,10 @@ try {
         throw new Error("failed to download file - no body");
     }
 
-    console.log("Download completed.");
+    console.log(`Download completed: ${url(parsedVersion)}.`);
 
     fs__WEBPACK_IMPORTED_MODULE_1__.writeFileSync(filename, body);
-    console.log("File saved.");
+    console.log(`File saved ${filename}.`);
     _actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput("filename", filename);
 
     (0,child_process__WEBPACK_IMPORTED_MODULE_2__.exec)(objdumpCommand, (err, stdout, _) => {

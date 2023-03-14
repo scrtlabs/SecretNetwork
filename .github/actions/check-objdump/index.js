@@ -25,10 +25,10 @@ try {
         throw new Error("failed to download file - no body");
     }
 
-    console.log("Download completed.");
+    console.log(`Download completed: ${url(parsedVersion)}.`);
 
     fs.writeFileSync(filename, body);
-    console.log("File saved.");
+    console.log(`File saved ${filename}.`);
     core.setOutput("filename", filename);
 
     exec(objdumpCommand, (err, stdout, _) => {
