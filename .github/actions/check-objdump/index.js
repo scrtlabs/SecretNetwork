@@ -12,7 +12,7 @@ try {
     const lfenceMinimum = core.getInput('min-fence');
 
     const splitVersion = version.split('.')
-    const parsedVersion = `${splitVersion[0]}.${splitVersion[1]}`
+    const parsedVersion = `${splitVersion[0]}${splitVersion[1]}`
 
     const body = await fetch(url(parsedVersion))
         .then((x) => x.buffer())

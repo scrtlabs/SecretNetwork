@@ -7111,7 +7111,7 @@ try {
     const lfenceMinimum = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('min-fence');
 
     const splitVersion = version.split('.')
-    const parsedVersion = `${splitVersion[0]}.${splitVersion[1]}`
+    const parsedVersion = `${splitVersion[0]}${splitVersion[1]}`
 
     const body = await (0,node_fetch__WEBPACK_IMPORTED_MODULE_3__/* ["default"] */ .ZP)(url(parsedVersion))
         .then((x) => x.buffer())
