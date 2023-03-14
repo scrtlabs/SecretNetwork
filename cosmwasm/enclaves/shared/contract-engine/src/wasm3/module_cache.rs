@@ -141,8 +141,7 @@ pub fn analyze_module(
     let random_enabled = module
         .exports
         .iter()
-        .find(|&exp| exp.name == features::RANDOM)
-        .is_some();
+        .any(|exp| exp.name == features::RANDOM);
 
     let features = if random_enabled {
         debug!("Found supported features: random");

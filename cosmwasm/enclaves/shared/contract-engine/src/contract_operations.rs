@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use cw_types_generic::{BaseAddr, BaseEnv, ContractFeature, CwEnv};
+#[cfg(feature = "random")]
+use cw_types_generic::{ContractFeature, CwEnv};
+
+use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::CanonicalAddr;
@@ -23,6 +26,7 @@ use crate::random::update_msg_counter;
 
 #[cfg(feature = "random")]
 use crate::random::derive_random;
+#[cfg(feature = "random")]
 use crate::wasm3::Engine;
 
 use super::contract_validation::{
@@ -196,7 +200,7 @@ fn update_random_with_msg_counter(
 
     // rand is None if env is v0.10
     if let Some(rand) = old_random {
-        versioned_env.set_random(Some(derive_random(&rand, &contract_key, block_height)));
+        versioned_env.set_random(Some(derive_random(&rand, contract_key, block_height)));
     }
 
     debug!("New random: {:?}", versioned_env.get_random());
@@ -378,7 +382,7 @@ fn set_random_in_env(
     block_height: u64,
     contract_key: &[u8; 64],
     engine: &mut Engine,
-    mut versioned_env: &mut CwEnv,
+    versioned_env: &mut CwEnv,
 ) {
     {
         if engine
@@ -386,7 +390,7 @@ fn set_random_in_env(
             .contains(&ContractFeature::Random)
         {
             debug!("random is enabled by contract");
-            update_random_with_msg_counter(block_height, &contract_key, &mut versioned_env);
+            update_random_with_msg_counter(block_height, contract_key, versioned_env);
         } else {
             versioned_env.set_random(None);
         }

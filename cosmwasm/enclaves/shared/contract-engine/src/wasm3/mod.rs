@@ -176,6 +176,7 @@ fn check_execution_result<T>(
     })
 }
 
+
 pub struct Engine {
     context: Context,
     gas_limit: u64,
@@ -183,6 +184,7 @@ pub struct Engine {
     environment: wasm3::Environment,
     code: Vec<u8>,
     api_version: CosmWasmApiVersion,
+    #[allow(dead_code)]
     features: Vec<ContractFeature>,
 }
 
@@ -349,6 +351,7 @@ impl Engine {
         self.api_version
     }
 
+    #[allow(dead_code)]
     pub fn supported_features(&self) -> &Vec<ContractFeature> {
         &self.features
     }
