@@ -15,7 +15,7 @@ try {
     const parsedVersion = `${splitVersion[0]}${splitVersion[1]}`
 
     const body = await fetch(url(parsedVersion))
-        .then((x) => x.buffer())
+        .then((x) => x.arrayBuffer())
         .catch((err) => {
             core.setFailed(`Fail to download file ${url(version)}: ${err}`);
             return undefined;
