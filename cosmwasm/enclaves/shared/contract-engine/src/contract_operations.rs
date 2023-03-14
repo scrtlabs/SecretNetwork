@@ -185,6 +185,7 @@ pub fn init(
     })
 }
 
+#[cfg(feature = "random")]
 fn update_random_with_msg_counter(
     block_height: u64,
     contract_key: &[u8; 64],

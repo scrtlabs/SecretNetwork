@@ -158,10 +158,7 @@ pub enum CwEnv {
 
 impl CwEnv {
     pub fn is_v1(&self) -> bool {
-        match self {
-            CwEnv::V1Env { .. } => true,
-            _ => false,
-        }
+        matches!(self, CwEnv::V1Env { .. })
     }
 
     pub fn get_contract_hash(&self) -> &String {
