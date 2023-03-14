@@ -7126,7 +7126,7 @@ try {
 
     console.log(`Download completed: ${url(parsedVersion)}.`);
 
-    fs__WEBPACK_IMPORTED_MODULE_1__.writeFileSync(filename, body);
+    fs__WEBPACK_IMPORTED_MODULE_1__.writeFileSync(filename, Buffer.from(body));
     console.log(`File saved ${filename}.`);
     _actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput("filename", filename);
 
@@ -7137,7 +7137,7 @@ try {
 
         _actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput("lfence", stdout);
         console.log(`number of lfence instructions: ${stdout}`);
-        
+
         if (Number(stdout) < Number(lfenceMinimum)) {
             throw new Error(`LFENCE instructions found is less than minimum: ${stdout} vs minimum expected: ${lfenceMinimum}`);
         }

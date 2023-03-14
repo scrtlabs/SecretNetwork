@@ -27,7 +27,7 @@ try {
 
     console.log(`Download completed: ${url(parsedVersion)}.`);
 
-    fs.writeFileSync(filename, body);
+    fs.writeFileSync(filename, Buffer.from(body));
     console.log(`File saved ${filename}.`);
     core.setOutput("filename", filename);
 
