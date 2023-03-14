@@ -1,7 +1,7 @@
-const fetch = require("node-fetch");
-const core = require('@actions/core');
-const fs = require("fs");
-const { exec } = require('child_process');
+import fetch from 'node-fetch';
+import * as core from '@actions/core';
+import fs from 'fs';
+import { exec } from 'child_process';
 
 const url = (version) => `https://engfilestorage.blob.core.windows.net/${version}/librust_cosmwasm_enclave.signed.so`;
 const filename = "librust_cosmwasm_enclave.signed.so";
