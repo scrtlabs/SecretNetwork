@@ -7103,12 +7103,12 @@ __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependen
 
 
 const url = (version) => `https://engfilestorage.blob.core.windows.net/${version}/librust_cosmwasm_enclave.signed.so`;
-const filename = "librust_cosmwasm_enclave.signed.so";
-const objdumpCommand = `objdump -d ${filename} | grep -w 'lfence' | wc -l`;
+const objdumpCommand = (fileName) => `objdump -d ${fileName} | grep -w 'lfence' | wc -l`;
 
 try {
     const version = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('version');
     const lfenceMinimum = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('min-fence');
+    const fileName = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('filename');
 
     const splitVersion = version.split('.')
     const parsedVersion = `${splitVersion[0]}${splitVersion[1]}`
@@ -7126,11 +7126,11 @@ try {
 
     console.log(`Download completed: ${url(parsedVersion)}.`);
 
-    fs__WEBPACK_IMPORTED_MODULE_1__.writeFileSync(filename, Buffer.from(body));
-    console.log(`File saved ${filename}.`);
-    _actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput("filename", filename);
+    fs__WEBPACK_IMPORTED_MODULE_1__.writeFileSync(fileName, Buffer.from(body));
+    console.log(`File saved ${fileName}.`);
+    _actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput("filename", fileName);
 
-    (0,child_process__WEBPACK_IMPORTED_MODULE_2__.exec)(objdumpCommand, (err, stdout, _) => {
+    (0,child_process__WEBPACK_IMPORTED_MODULE_2__.exec)(objdumpCommand(fileName), (err, stdout, _) => {
         if (err) {
             throw new Error(`Error executing command: ${err}`);
         }

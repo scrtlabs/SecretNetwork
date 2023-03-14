@@ -6,6 +6,10 @@ inputs:
     description: 'Version of librust_cosmwasm_enclave to download'
     required: false
     default: 'v1.8.0'
+  filename:
+    description: 'File to download and test'
+    required: false
+    default: 'librust_cosmwasm_enclave.signed.so'
   min-fence:
     description: "Lower bound of amount of LFENCE instructions to test for"
     required: false

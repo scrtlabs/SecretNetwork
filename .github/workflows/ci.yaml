@@ -9,6 +9,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/check-objdump
+      - uses: ./.github/actions/check-objdump
+        with:
+          filename: "tendermint_enclave.signed.so"
+          min-fence: "10"
 
   Enclave-Unit-Tests:
     runs-on: ubuntu-20.04

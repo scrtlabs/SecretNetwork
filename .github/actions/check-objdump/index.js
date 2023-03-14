@@ -4,12 +4,12 @@ import fs from 'fs';
 import { exec } from 'child_process';
 
 const url = (version) => `https://engfilestorage.blob.core.windows.net/${version}/librust_cosmwasm_enclave.signed.so`;
-const filename = "librust_cosmwasm_enclave.signed.so";
-const objdumpCommand = `objdump -d ${filename} | grep -w 'lfence' | wc -l`;
+const objdumpCommand = (fileName) => `objdump -d ${fileName} | grep -w 'lfence' | wc -l`;
 
 try {
     const version = core.getInput('version');
     const lfenceMinimum = core.getInput('min-fence');
+    const fileName = core.getInput('filename');
 
     const splitVersion = version.split('.')
     const parsedVersion = `${splitVersion[0]}${splitVersion[1]}`
@@ -27,11 +27,11 @@ try {
 
     console.log(`Download completed: ${url(parsedVersion)}.`);
 
-    fs.writeFileSync(filename, Buffer.from(body));
-    console.log(`File saved ${filename}.`);
-    core.setOutput("filename", filename);
+    fs.writeFileSync(fileName, Buffer.from(body));
+    console.log(`File saved ${fileName}.`);
+    core.setOutput("filename", fileName);
 
-    exec(objdumpCommand, (err, stdout, _) => {
+    exec(objdumpCommand(fileName), (err, stdout, _) => {
         if (err) {
             throw new Error(`Error executing command: ${err}`);
         }
