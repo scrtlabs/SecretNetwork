@@ -259,6 +259,18 @@ jobs:
             SGX_MODE=SW
           target: build-localsecret
 
+  Lib-Checks:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/check-objdump
+        name: Check Mitigation flags in Cosmwasm Enclave
+      - uses: ./.github/actions/check-objdump
+        name: Check Mitigation flags in TM Enclave
+        with:
+          filename: "tendermint_enclave.signed.so"
+          min-fence: "10"
+
   Release:
     needs:
       [
