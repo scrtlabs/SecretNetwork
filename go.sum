@@ -700,8 +700,8 @@ github.com/scrtlabs/cosmos-sdk v0.45.12-secret-1.7 h1:817+U5L2eb3jO7eQ565cpx2r8P
 github.com/scrtlabs/cosmos-sdk v0.45.12-secret-1.7/go.mod h1:6n46SDUlhsl+a3+CaO1Xqb35CFxMqMdiouXnhZU2vvQ=
 github.com/scrtlabs/tendermint v1.7.1-secret.0.20230313155215-42e2299f7284 h1:PUtx0yZgvPUYZRonzBw9YkUa1xnweJCIiISNrJvVMVo=
 github.com/scrtlabs/tendermint v1.7.1-secret.0.20230313155215-42e2299f7284/go.mod h1:wBQs1xza37rbFHU1vFOWqc3dmcciGDHYLfzpoN5uqhw=
-github.com/scrtlabs/tm-secret-enclave v1.7.2-0.20230313154812-b08e3ee2ac31 h1:hbR0bpRl1Ft1w52JT/m45luGpqoBS0XiFuXSmvG/J1U=
-github.com/scrtlabs/tm-secret-enclave v1.7.2-0.20230313154812-b08e3ee2ac31/go.mod h1:qdFKkARpxJArJ6QiJiJFDu2LWl88hcSPuz6oOgq+cKQ=
+github.com/scrtlabs/tm-secret-enclave v1.7.2-0.20230314102956-8a5bb4f4529d h1:JcfrMufKZmwi5GfbA9s/zl5xHgEldWv7gB+KxSfkyn4=
+github.com/scrtlabs/tm-secret-enclave v1.7.2-0.20230314102956-8a5bb4f4529d/go.mod h1:qdFKkARpxJArJ6QiJiJFDu2LWl88hcSPuz6oOgq+cKQ=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/shirou/gopsutil v2.20.5+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
