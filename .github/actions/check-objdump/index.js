@@ -37,6 +37,7 @@ try {
         }
 
         core.setOutput("lfence", stdout);
+        console.log(`number of lfence instructions: ${stdout}`);
 
         if (Number(stdout) < Number(lfenceMinimum)) {
             throw new Error(`LFENCE instructions found is less than minimum: ${stdout} vs minimum expected: ${lfenceMinimum}`);

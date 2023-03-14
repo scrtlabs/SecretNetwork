@@ -7114,7 +7114,7 @@ try {
     const parsedVersion = `${splitVersion[0]}${splitVersion[1]}`
 
     const body = await (0,node_fetch__WEBPACK_IMPORTED_MODULE_3__/* ["default"] */ .ZP)(url(parsedVersion))
-        .then((x) => x.buffer())
+        .then((x) => x.arrayBuffer())
         .catch((err) => {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed(`Fail to download file ${url(version)}: ${err}`);
             return undefined;
@@ -7136,7 +7136,8 @@ try {
         }
 
         _actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput("lfence", stdout);
-
+        console.log(`number of lfence instructions: ${stdout}`);
+        
         if (Number(stdout) < Number(lfenceMinimum)) {
             throw new Error(`LFENCE instructions found is less than minimum: ${stdout} vs minimum expected: ${lfenceMinimum}`);
         }
