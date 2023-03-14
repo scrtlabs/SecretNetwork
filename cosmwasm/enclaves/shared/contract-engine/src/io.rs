@@ -229,147 +229,106 @@ pub fn finalize_raw_output(
     is_ibc: bool,
     is_msg_encrypted: bool,
 ) -> Result <Vec<u8>, EnclaveError> {
-    let wasm_output = match raw_output {
+    let mut wasm_output = WasmOutput {
+        v010: None,
+        v1: None,
+        ibc_basic: None,
+        ibc_packet_receive: None,
+        ibc_open_channel: None,
+        query: None,
+        internal_reply_enclave_sig: None,
+        internal_msg_id: None,
+    };
+
+    match raw_output {
         RawWasmOutput::Err {
             err,
             internal_msg_id,
             internal_reply_enclave_sig,
         } => {
             if is_query_output {
-                WasmOutput {
-                    v010: None,
-                    v1: None,
-                    ibc_basic: None,
-                    ibc_packet_receive: None,
-                    ibc_open_channel: None,
-                    query: Some(QueryOutput {
-                        ok: None,
-                        err: Some(err),
-                    }),
-                    internal_reply_enclave_sig: None,
-                    internal_msg_id: None,
-                }
+                wasm_output.query = Some(QueryOutput {
+                    ok: None,
+                    err: Some(err),
+                });
             } else {
-                WasmOutput {
-                    v010: Some(V010WasmOutput {
-                        err: match is_msg_encrypted {
-                            true => Some(err),
-                            false => Some(json!({"generic_err":{"msg":err}})),
-                        },
-                        ok: None,
-                    }),
-                    v1: None,
-                    ibc_basic: None,
-                    ibc_packet_receive: None,
-                    ibc_open_channel: None,
-                    query: None,
-                    internal_reply_enclave_sig,
-                    internal_msg_id,
-                }
+                wasm_output.v010 = Some(V010WasmOutput {
+                    err: match is_msg_encrypted {
+                        true => Some(err),
+                        false => Some(json!({"generic_err":{"msg":err}})),
+                    },
+                    ok: None,
+                });
+                wasm_output.internal_reply_enclave_sig = internal_reply_enclave_sig;
+                wasm_output.internal_msg_id = internal_msg_id;
             }
         }
         RawWasmOutput::OkV010 {
             ok,
             internal_reply_enclave_sig,
             internal_msg_id,
-        } => WasmOutput {
-            v010: Some(V010WasmOutput {
+        } => {
+            wasm_output.v010 = Some(V010WasmOutput {
                 err: None,
                 ok: Some(ok),
-            }),
-            v1: None,
-            ibc_basic: None,
-            ibc_packet_receive: None,
-            ibc_open_channel: None,
-            query: None,
-            internal_reply_enclave_sig,
-            internal_msg_id,
+            });
+            wasm_output.internal_reply_enclave_sig = internal_reply_enclave_sig;
+            wasm_output.internal_msg_id = internal_msg_id;
         },
         RawWasmOutput::OkV1 {
             ok,
             internal_reply_enclave_sig,
             internal_msg_id,
         } => match is_ibc {
-            false => WasmOutput {
-                v010: None,
-                v1: Some(V1WasmOutput {
+            false => {
+                wasm_output.v1 = Some(V1WasmOutput {
                     err: None,
                     ok: Some(ok),
-                }),
-                ibc_basic: None,
-                ibc_packet_receive: None,
-                ibc_open_channel: None,
-                query: None,
-                internal_reply_enclave_sig,
-                internal_msg_id,
+                });
+                wasm_output.internal_reply_enclave_sig = internal_reply_enclave_sig;
+                wasm_output.internal_msg_id = internal_msg_id;
             },
-            true => WasmOutput {
-                v010: None,
-                v1: None,
-                ibc_basic: Some(IBCOutput {
+            true => {
+                wasm_output.ibc_basic = Some(IBCOutput {
                     err: None,
                     ok: Some(cw_types_v1::ibc::IbcBasicResponse::new(
                         ok.messages,
                         ok.attributes,
                         ok.events,
                     )),
-                }),
-                ibc_packet_receive: None,
-                ibc_open_channel: None,
-                query: None,
-                internal_reply_enclave_sig,
-                internal_msg_id,
+                });
+                wasm_output.internal_reply_enclave_sig = internal_reply_enclave_sig;
+                wasm_output.internal_msg_id = internal_msg_id;
             },
         },
-        RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => WasmOutput {
-            v010: None,
-            v1: None,
-            ibc_basic: None,
-            ibc_packet_receive: None,
-            ibc_open_channel: None,
-            query: Some(QueryOutput {
+        RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
+            wasm_output.query = Some(QueryOutput {
                 ok: Some(ok),
                 err: None,
-            }),
-            internal_reply_enclave_sig: None,
-            internal_msg_id: None,
+            });
         },
-        RawWasmOutput::OkIBCPacketReceive { ok } => WasmOutput {
-            v010: None,
-            v1: None,
-            ibc_basic: None,
-            ibc_packet_receive: Some(IBCReceiveOutput {
+        RawWasmOutput::OkIBCPacketReceive { ok } => {
+            wasm_output.ibc_packet_receive = Some(IBCReceiveOutput {
                 err: None,
                 ok: Some(ok),
-            }),
-            ibc_open_channel: None,
-            query: None,
-            internal_reply_enclave_sig: None,
-            internal_msg_id: None,
+            });
         },
-        RawWasmOutput::OkIBCOpenChannel { ok } => WasmOutput {
-            v010: None,
-            v1: None,
-            ibc_basic: None,
-            ibc_packet_receive: None,
-            ibc_open_channel: Some(IBCOpenChannelOutput {
+        RawWasmOutput::OkIBCOpenChannel { ok } => {
+            wasm_output.ibc_open_channel = Some(IBCOpenChannelOutput {
                 err: None,
                 ok: match ok {
                     Some(o) => Some(o.version),
                     None => Some("".to_string()),
                 },
-            }),
-            query: None,
-            internal_reply_enclave_sig: None,
-            internal_msg_id: None,
-        },
+            });
+        }
     };
 
     trace!("WasmOutput: {:?}", wasm_output);
 
     let serialized_output = serde_json::to_vec(&wasm_output).map_err(|err| {
         debug!(
-            "got an error while trying to serialize output into json bytes {:?}: {}",
+            "got an error while trying to serialize wasm_output into json bytes {:?}: {}",
             wasm_output, err
         );
         EnclaveError::FailedToSerialize
