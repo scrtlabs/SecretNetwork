@@ -431,7 +431,15 @@ impl Keychain {
             self.initial_randomness_seed = Some(irs);
             self.random_encryption_key = Some(rek);
 
-            #[cfg(feature = "random")]
+            trace!(
+            "initial_randomness_seed: {:?}",
+            hex::encode(irs.get())
+            );
+            trace!(
+            "random_encryption_key: {:?}",
+            hex::encode(rek.get())
+            );
+
             self.write_randomness_keys();
         }
 
