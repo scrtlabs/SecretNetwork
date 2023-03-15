@@ -31,6 +31,12 @@ where
     Gov(GovMsg),
 }
 
+impl CosmosMsg {
+    pub fn is_wasm(&self) -> bool {
+        matches!(&self, CosmosMsg::Wasm(_))
+    }
+}
+
 /// The message types of the bank module.
 ///
 /// See https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/bank/v1beta1/tx.proto
@@ -173,6 +179,16 @@ pub enum WasmMsg {
         /// that are originating from other contracts
         callback_sig: Option<Vec<u8>>,
     },
+}
+
+impl WasmMsg {
+    pub fn msg_mut(&mut self) -> &mut Binary {
+        match self {
+            WasmMsg::Execute { msg, .. } => msg,
+            WasmMsg::Instantiate { msg, .. } => msg
+        }
+    }
+
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

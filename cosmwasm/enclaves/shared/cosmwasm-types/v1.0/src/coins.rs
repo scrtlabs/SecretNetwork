@@ -38,3 +38,18 @@ impl From<V010Coin> for Coin {
         }
     }
 }
+
+impl Into<V010Coin> for &Coin {
+    fn into(self) -> V010Coin {
+        V010Coin {
+            amount: cw_types_v010::math::Uint128(self.amount.u128()),
+            denom: self.denom.clone(),
+        }
+    }
+}
+
+pub fn to_v010_coins(v1_coins: &Vec<Coin>) -> Vec<V010Coin> {
+    v1_coins.iter().map(
+        |c| c.into()
+    ).collect()
+}

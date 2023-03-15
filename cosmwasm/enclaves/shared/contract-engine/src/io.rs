@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::Value;
 use sha2::Digest;
+use cw_types_v1::coins::to_v010_coins;
 
 /// The internal_reply_enclave_sig is being passed with the reply (Only if the reply is wasm reply)
 /// This is used by the receiver of the reply to:
@@ -61,6 +62,18 @@ pub enum RawWasmOutput {
         #[serde(rename = "Ok")]
         ok: cw_types_v1::ibc::IbcChannelOpenResponse,
     },
+}
+
+impl RawWasmOutput {
+    fn submsgs_mut<T>(&mut self) -> Option<&mut Vec<SubMsg<T>>>
+        where T: Clone + fmt::Debug + PartialEq,
+    {
+        match &self {
+            RawWasmOutput::OkV1 { mut ok, .. } => Some(&mut ok.messages),
+            RawWasmOutput::OkIBCPacketReceive { mut ok, .. } => Some(&mut ok.messages),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -337,6 +350,16 @@ pub fn finalize_raw_output(
     Ok(serialized_output)
 }
 
+/// Manipulates the callback signature for plaintext based on the provided contract address and output.
+///
+/// # Arguments
+///
+/// * `contract_addr` - A reference to a CanonicalAddr struct, representing a contract address.
+/// * `output` - A vector of bytes representing the output.
+///
+/// # Returns
+///
+/// A Result containing the manipulated RawWasmOutput or an EnclaveError.
 pub fn manipulate_callback_sig_for_plaintext(
     contract_addr: &CanonicalAddr,
     output: Vec<u8>,
@@ -348,67 +371,10 @@ pub fn manipulate_callback_sig_for_plaintext(
     })?;
 
     match &mut raw_output {
-        RawWasmOutput::OkV1 { ok, .. } => {
+        RawWasmOutput::OkV1 { ok, .. } | RawWasmOutput::OkIBCPacketReceive { ok } => {
             for sub_msg in &mut ok.messages {
                 if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
-                    match wasm_msg {
-                        cw_types_v1::results::WasmMsg::Execute {
-                            callback_sig,
-                            msg,
-                            funds,
-                            ..
-                        }
-                        | cw_types_v1::results::WasmMsg::Instantiate {
-                            callback_sig,
-                            msg,
-                            funds,
-                            ..
-                        } => {
-                            *callback_sig = Some(create_callback_signature(
-                                contract_addr,
-                                &msg.as_slice().to_vec(),
-                                &funds
-                                    .iter()
-                                    .map(|coin| cw_types_v010::types::Coin {
-                                        denom: coin.denom.clone(),
-                                        amount: cw_types_v010::math::Uint128(coin.amount.u128()),
-                                    })
-                                    .collect::<Vec<cw_types_v010::types::Coin>>()[..],
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-        RawWasmOutput::OkIBCPacketReceive { ok } => {
-            for sub_msg in &mut ok.messages {
-                if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
-                    match wasm_msg {
-                        cw_types_v1::results::WasmMsg::Execute {
-                            callback_sig,
-                            msg,
-                            funds,
-                            ..
-                        }
-                        | cw_types_v1::results::WasmMsg::Instantiate {
-                            callback_sig,
-                            msg,
-                            funds,
-                            ..
-                        } => {
-                            *callback_sig = Some(create_callback_signature(
-                                contract_addr,
-                                &msg.as_slice().to_vec(),
-                                &funds
-                                    .iter()
-                                    .map(|coin| Coin {
-                                        denom: coin.denom.clone(),
-                                        amount: cw_types_v010::math::Uint128(coin.amount.u128()),
-                                    })
-                                    .collect::<Vec<Coin>>()[..],
-                            ));
-                        }
-                    }
+                    update_callback_sig(contract_addr, wasm_msg);
                 }
             }
         }
@@ -416,6 +382,32 @@ pub fn manipulate_callback_sig_for_plaintext(
     }
 
     Ok(raw_output)
+}
+
+fn update_callback_sig(
+    contract_addr: &CanonicalAddr,
+    wasm_msg: &mut cw_types_v1::results::WasmMsg,
+) {
+    match wasm_msg {
+        cw_types_v1::results::WasmMsg::Execute {
+            callback_sig,
+            msg,
+            funds,
+            ..
+        }
+        | cw_types_v1::results::WasmMsg::Instantiate {
+            callback_sig,
+            msg,
+            funds,
+            ..
+        } => {
+            *callback_sig = Some(create_callback_signature(
+                contract_addr,
+                &msg.0,
+                &to_v010_coins(&funds)[..],
+            ));
+        }
+    }
 }
 
 pub fn set_attributes_to_plaintext(attributes: &mut Vec<LogAttribute>) {
@@ -458,6 +450,30 @@ fn deserialize_output(
     Ok(output)
 }
 
+
+/// Encrypts the content of the raw WebAssembly output based on the provided secret message,
+/// contract address, and reply parameters.
+///
+/// The function handles several cases for RawWasmOutput:
+///
+/// Err: Encrypts the error message.
+/// QueryOkV010 and QueryOkV1: Encrypts the query result.
+/// OkV010: Encrypts the messages, logs, and data.
+/// OkV1: Encrypts the non-result fields and data (if not an IBC output).
+/// OkIBCPacketReceive: Encrypts the non-result fields and acknowledgement.
+/// OkIBCOpenChannel: No encryption is performed.
+///
+/// # Arguments
+///
+/// * `output` - A mutable RawWasmOutput enum, representing different types of raw WebAssembly output.
+/// * `secret_msg` - A reference to a SecretMessage struct, containing the user's public key and nonce.
+/// * `contract_addr` - A reference to a CanonicalAddr struct, representing a contract address.
+/// * `reply_params` - A reference to an Option<Vec<ReplyParams>> type, storing optional parameters for replying to a caller contract.
+/// * `is_ibc_output` - A boolean flag to indicate if the output is related to IBC (Inter-Blockchain Communication).
+///
+/// # Returns
+///
+/// A Result containing the encrypted RawWasmOutput or an EnclaveError.
 fn encrypt_output(
     mut output: RawWasmOutput,
     secret_msg: &SecretMessage,
@@ -604,17 +620,13 @@ fn attach_reply_headers_to_submsgs(
     contract_hash: &str,
     reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<RawWasmOutput, EnclaveError> {
-    let sub_msgs = match &mut output {
-        RawWasmOutput::OkV1 { ok, .. } => {
-            &mut ok.messages
-        },
-        RawWasmOutput::OkIBCPacketReceive { ok } => {
-            &mut ok.messages
-        },
-        _ => return Ok(output)
-    };
+    let sub_msgs = output.submsgs_mut();
 
-    for sub_msg in sub_msgs {
+    if sub_msgs.is_none() {
+        return Ok(output);
+    }
+
+    for sub_msg in sub_msgs.unwrap_or_default() {
         if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
             attach_reply_headers_to_v1_wasm_msg(
                 wasm_msg,
@@ -657,13 +669,7 @@ fn create_callback_sig_for_submsgs(
                     *callback_sig = Some(create_callback_signature(
                         contract_addr,
                         &SecretMessage::from_slice(msg.as_slice())?.msg,
-                        &funds
-                            .iter()
-                            .map(|coin| Coin {
-                                denom: coin.denom.clone(),
-                                amount: cw_types_v010::math::Uint128(coin.amount.u128()),
-                            })
-                            .collect::<Vec<Coin>>()[..],
+                        &to_v010_coins(&funds)[..],
                     ));
                 }
             }
