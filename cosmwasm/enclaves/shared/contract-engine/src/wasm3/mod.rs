@@ -1763,31 +1763,19 @@ fn host_gas_evaporate(
     instance: &wasm3::Instance<Context>,
     evaporate_ptr: i32,
 ) -> WasmEngineResult<i64> {
-    let evaporate_data = read_from_memory(instance, evaporate_ptr as u32)
-        .map_err(debug_err!(err => "gas_evaporate failed to extract vector from evaporate_ptr: {err}"))?;
+    let evaporate_data = read_from_memory(instance, evaporate_ptr as u32).map_err(
+        debug_err!(err => "gas_evaporate failed to extract vector from evaporate_ptr: {err}"),
+    )?;
 
     if evaporate_data.len() != 8 {
-        debug!(
-            "gas_evaporate failed to extract vector of size 8 from evaporate_ptr: {:?}",
-            err
-        );
+        debug!("gas_evaporate failed to extract vector of size 8 from evaporate_ptr");
         // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-        return Ok(WasmApiCryptoError::GenericErr as i32);
+        return Ok(to_high_half(WasmApiCryptoError::GenericErr as u32) as i64);
     }
 
     let mut evaporate_data_slice = [0u8; 8];
     evaporate_data_slice[..].copy_from_slice(evaporate_data.as_slice());
-    let evaporate = match u64::from_be_bytes(evaporate_data_slice) {
-        Err(err) => {
-            debug!(
-                "gas_evaporate failed to create a u64 from evaporate: {:?}",
-                err
-            );
-            // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/crypto/src/errors.rs#L98
-            return Ok(WasmApiCryptoError::GenericErr as i32);
-        }
-        Ok(x) => x
-    }
+    let evaporate = u64::from_be_bytes(evaporate_data_slice);
 
     use_gas(instance, evaporate)?;
 
