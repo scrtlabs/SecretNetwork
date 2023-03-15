@@ -40,7 +40,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --build-arg FEATURES=light-client-validation --target compile-secretd
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --build-arg FEATURES=light-client-validation,random --target compile-secretd
       dockerfile: '$(dockerfilePath)'
 
   - script: |
