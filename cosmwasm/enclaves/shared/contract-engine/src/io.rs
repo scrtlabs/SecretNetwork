@@ -223,6 +223,19 @@ pub fn post_process_output(
     Ok(output)
 }
 
+/// Converts a RawWasmOutput to the final interface that the go code expects, WasmOutput
+/// (serialized to bytes)
+///
+/// # Arguments
+///
+/// * `raw_output` - A RawWasmOutput enum, containing the raw output of the Wasm contract.
+/// * `is_query_output` - A boolean indicating whether the output is a query output.
+/// * `is_ibc` - A boolean indicating whether the output is related to IBC.
+/// * `is_msg_encrypted` - A boolean indicating whether the message is encrypted.
+///
+/// # Returns
+///
+/// A Result containing a vector of bytes representing the serialized WasmOutput, or an EnclaveError.
 pub fn finalize_raw_output(
     raw_output: RawWasmOutput,
     is_query_output: bool,
@@ -449,6 +462,18 @@ fn deserialize_output(
     Ok(output)
 }
 
+/// Encrypts the output of a contract, this causes it to be known only to the User who triggered it,
+/// and the enclave itself.
+/// The encryption uses a symmetric key which is known only to the user and the enclave, as it is
+/// derived from a diffie-hellman exchange between the user and the enclave's respective public keys.
+///
+/// # Arguments
+///
+/// * `output` - A `RawWasmOutput` that represents the output of a Contract.
+/// * `secret_msg` - A `SecretMessage` struct that contains the nonce and user public key needed for encryption.
+/// * `contract_addr` - The address of the contract whose output we are processing.
+/// * `reply_params` - An optional vector describing the caller chain. Needed because the
+///         immediate caller to this contract will be appended to every field.
 fn encrypt_output(
     mut output: RawWasmOutput,
     secret_msg: &SecretMessage,
@@ -590,6 +615,17 @@ fn encrypt_wasm_submsg<T: Clone + fmt::Debug + PartialEq>(
     Ok(())
 }
 
+/// Attaches reply headers to submessages of a Contract output.
+/// We cannot use the normal field msg_id of the submessage since it is private data that goes
+/// out of the contract, therefore we encrypt it and put it inside the data of the submessage itself,
+/// along with all other msg_ids in the call chain. This ensures only the calling contract knows the
+/// reply's msg_id.
+///
+/// # Arguments
+///
+/// * `output` - A `RawWasmOutput` that represents the output of a Contract.
+/// * `reply_params` - An optional vector describing the caller chain.
+/// * `contract_hash` - The hash of the code of the contract whose output we are processing.
 fn attach_reply_headers_to_submsgs(
     mut output: RawWasmOutput,
     contract_hash: &str,
@@ -626,6 +662,14 @@ fn attach_reply_headers_to_submsgs(
     Ok(output)
 }
 
+/// Attaches callback signatures to every submessage of a Contract output.
+/// These are needed to prove to the callee contract that the execution message it receives
+/// was authored by this contract, inside the enclave.
+///
+/// # Arguments
+///
+/// * `output` - A `RawWasmOutput` that represents the output of a Contract.
+/// * `contract_addr` - The address of the contract whose output we are processing.
 fn create_callback_sig_for_submsgs(
     mut output: RawWasmOutput,
     contract_addr: &CanonicalAddr,
@@ -664,6 +708,20 @@ fn create_callback_sig_for_submsgs(
     Ok(output)
 }
 
+
+/// Adapt the output of a contract to be returned as a Reply message.
+/// If the contract's execution was not called from another contract, the output is returned as is.
+/// Otherwise, the fields `internal_msg_id` and `internal_reply_enclave_sig` of the output are populated.
+///     `internal_msg_id` contains all the message_ids in the reply params, encrypted.
+///     `internal_reply_enclave_sig` is a signature of the `SubMsgResult` message that should be
+///         created for this output outside the enclave.
+///
+/// # Arguments
+///
+/// * `output` - A `RawWasmOutput` that represents the output of a Contract.
+/// * `reply_params` - An optional vector describing the caller chain.
+/// * `secret_msg` - A `SecretMessage` struct that contains the nonce and user public key needed for encryption.
+/// * `sender_addr` - The address of the sender of the message.
 fn adapt_output_for_reply(
     mut output: RawWasmOutput,
     reply_params: &Option<Vec<ReplyParams>>,
