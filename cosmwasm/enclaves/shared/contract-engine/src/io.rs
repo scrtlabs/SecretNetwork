@@ -111,7 +111,7 @@ pub struct QueryOutput {
     pub err: Option<Value>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 pub struct WasmOutput {
     pub v010: Option<V010WasmOutput>,
     pub v1: Option<V1WasmOutput>,
@@ -229,16 +229,7 @@ pub fn finalize_raw_output(
     is_ibc: bool,
     is_msg_encrypted: bool,
 ) -> Result <Vec<u8>, EnclaveError> {
-    let mut wasm_output = WasmOutput {
-        v010: None,
-        v1: None,
-        ibc_basic: None,
-        ibc_packet_receive: None,
-        ibc_open_channel: None,
-        query: None,
-        internal_reply_enclave_sig: None,
-        internal_msg_id: None,
-    };
+    let mut wasm_output = WasmOutput::default();
 
     match raw_output {
         RawWasmOutput::Err {
