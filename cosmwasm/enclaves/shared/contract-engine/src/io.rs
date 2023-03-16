@@ -283,16 +283,11 @@ pub fn finalize_raw_output(
             ok,
             internal_reply_enclave_sig,
             internal_msg_id,
-        } => match is_ibc {
-            false => {
-                wasm_output.v1 = Some(V1WasmOutput {
-                    err: None,
-                    ok: Some(ok),
-                });
-                wasm_output.internal_reply_enclave_sig = internal_reply_enclave_sig;
-                wasm_output.internal_msg_id = internal_msg_id;
-            },
-            true => {
+        } => {
+            wasm_output.internal_reply_enclave_sig = internal_reply_enclave_sig;
+            wasm_output.internal_msg_id = internal_msg_id;
+
+            if is_ibc {
                 wasm_output.ibc_basic = Some(IBCOutput {
                     err: None,
                     ok: Some(cw_types_v1::ibc::IbcBasicResponse::new(
@@ -301,9 +296,12 @@ pub fn finalize_raw_output(
                         ok.events,
                     )),
                 });
-                wasm_output.internal_reply_enclave_sig = internal_reply_enclave_sig;
-                wasm_output.internal_msg_id = internal_msg_id;
-            },
+            } else {
+                wasm_output.v1 = Some(V1WasmOutput {
+                    err: None,
+                    ok: Some(ok),
+                });
+            }
         },
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
             wasm_output.query = Some(QueryOutput {
