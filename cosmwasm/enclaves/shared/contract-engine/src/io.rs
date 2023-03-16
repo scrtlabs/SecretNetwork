@@ -368,7 +368,7 @@ pub fn manipulate_callback_sig_for_plaintext(
                         } => {
                             *callback_sig = Some(create_callback_signature(
                                 contract_addr,
-                                &msg.as_slice().to_vec(),
+                                &msg.0,
                                 &funds
                                     .iter()
                                     .map(|coin| cw_types_v010::types::Coin {
