@@ -683,7 +683,7 @@ fn adapt_output_for_reply(
 
     match &output {
         RawWasmOutput::Err { err, .. } => {
-            let mut encrypted_error_message = err["generic_err"]["msg"].clone().to_string();
+            let mut encrypted_error_message = err["generic_err"]["msg"].to_string();
 
             // remove surrounding quotes
             encrypted_error_message.pop();
