@@ -160,7 +160,7 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 		panic(err)
 	}
 
-	// There is a possiblity, specificly was found on upgrade block, when there are no pre-commits at all (beginBlock.Commit == nil)
+	// There is a possibility, specifically was found on upgrade block, when there are no pre-commits at all (beginBlock.Commit == nil)
 	// In this case Marshal will fail with a Seg Fault.
 	// The fix below it a temporary fix until we will investigate the issue in tendermint.
 	if beginBlock.Commit == nil {
@@ -178,20 +178,20 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 		panic(err)
 	}
 
-	var encryptedRandom []byte
+	// var encryptedRandom []byte
 	if beginBlock.Header.EncryptedRandom != nil {
-		encryptedRandom = beginBlock.Header.EncryptedRandom.Random
-
-		random, err := api.SubmitBlockSignatures(header, commit, data, encryptedRandom)
+		//encryptedRandom = beginBlock.Header.EncryptedRandom.Random
+		randomAndProof := append(beginBlock.Header.EncryptedRandom.Random, beginBlock.Header.EncryptedRandom.Proof...)
+		random, err := api.SubmitBlockSignatures(header, commit, data, randomAndProof)
 		if err != nil {
 			panic(err)
 		}
 
 		am.keeper.SetRandomSeed(ctx, random)
-		
+
 	} else {
 		println("No random got from TM header")
-		encryptedRandom = []byte{}
+		// encryptedRandom = []byte{}
 	}
 }
 

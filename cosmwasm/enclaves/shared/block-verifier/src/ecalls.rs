@@ -23,9 +23,11 @@ use crate::txs::tx_from_bytes;
 #[cfg(feature = "light-client-validation")]
 use crate::wasm_messages::VERIFIED_MESSAGES;
 
+use crate::proof::create_proof;
 use enclave_utils::validator_set::ValidatorSetForHeight;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
+const RANDOM_PROOF_LEN: u32 = 80;
 const MAX_TXS_LENGTH: u32 = 10 * 1024 * 1024;
 
 #[cfg(feature = "light-client-validation")]
@@ -54,7 +56,7 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     validate_input_length!(
         in_encrypted_random_len,
         "encrypted random",
-        MAX_VARIABLE_LENGTH
+        RANDOM_PROOF_LEN
     );
 
     validate_const_ptr!(
@@ -95,9 +97,15 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         &[]
     };
 
+    let mut encrypted_random_slice: [u8; 48] = [0u8; 48];
+    let mut rand_proof: [u8; 32] = [0u8; 32];
     #[cfg(feature = "random")]
-    let encrypted_random_slice =
-        slice::from_raw_parts(in_encrypted_random, in_encrypted_random_len as usize);
+    {
+        let random_and_proof =
+            slice::from_raw_parts(in_encrypted_random, in_encrypted_random_len as usize);
+        encrypted_random_slice.copy_from_slice(&random_and_proof[0..48]);
+        rand_proof.copy_from_slice(&random_and_proof[48..])
+    }
 
     let validator_set_result = ValidatorSetForHeight::unseal();
     if let Err(validator_set_error) = validator_set_result {
@@ -210,10 +218,25 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
 
     #[cfg(feature = "random")]
     {
+        let calculated_proof = create_proof(
+            signed_header.header.height.value(),
+            &encrypted_random_slice,
+            signed_header.header.app_hash.as_bytes(),
+        );
+        if calculated_proof != rand_proof {
+            error!("Error validating random");
+            return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
+        }
+
+        println!(
+            "Encrypted random slice len: {}",
+            encrypted_random_slice.len()
+        );
+
         let decrypted = match KEY_MANAGER
             .random_encryption_key
             .unwrap()
-            .decrypt_siv(encrypted_random_slice, Some(&[validator_hash.as_bytes()]))
+            .decrypt_siv(&encrypted_random_slice, Some(&[validator_hash.as_bytes()]))
         {
             Ok(res) => res,
             Err(_) => {

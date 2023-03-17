@@ -2,7 +2,6 @@
 extern crate sgx_tstd as std;
 
 extern crate alloc;
-extern crate core;
 extern crate sgx_types;
 
 pub mod r#const;
@@ -14,6 +13,7 @@ pub use wasm_messages::VERIFIED_MESSAGES;
 
 mod txs;
 
+pub mod proof;
 #[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
 pub mod validator_whitelist;
 
