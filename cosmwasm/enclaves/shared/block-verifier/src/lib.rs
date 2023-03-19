@@ -13,6 +13,7 @@ pub use wasm_messages::VERIFIED_MESSAGES;
 
 mod txs;
 
+#[cfg(feature = "random")]
 pub mod proof;
 #[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
 pub mod validator_whitelist;
