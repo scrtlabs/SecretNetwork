@@ -23,7 +23,9 @@ use crate::txs::tx_from_bytes;
 #[cfg(feature = "light-client-validation")]
 use crate::wasm_messages::VERIFIED_MESSAGES;
 
+#[cfg(feature = "random")]
 use crate::proof::create_proof;
+
 use enclave_utils::validator_set::ValidatorSetForHeight;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
