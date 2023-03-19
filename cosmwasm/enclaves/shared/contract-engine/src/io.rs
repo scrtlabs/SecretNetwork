@@ -259,7 +259,9 @@ pub fn finalize_raw_output(
                 wasm_output.v010 = Some(V010WasmOutput {
                     err: match is_msg_encrypted {
                         true => Some(err),
-                        false => Some(json!({"generic_err":{"msg":err}})),
+                        // FIXME: probably no need for formatting the error here, otherwise it is
+                        //  double-formatted, but I didn't want to change the data
+                        false => Some(format_generic_error_message(err)),
                     },
                     ok: None,
                 });
@@ -492,7 +494,7 @@ fn encrypt_output(
     match &mut output {
         RawWasmOutput::Err { err, .. } => {
             let encrypted_err = encrypt_serializable(&encryption_key, err, reply_params, false)?;
-            *err = json!({"generic_err":{"msg":encrypted_err}});
+            *err = format_generic_error_message(Value::String(encrypted_err));
         }
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
             *ok = encrypt_serializable(&encryption_key, ok, reply_params, false)?;
@@ -939,4 +941,8 @@ pub fn create_callback_signature(
     callback_sig_bytes.extend(serde_json::to_vec(funds_to_send).unwrap());
 
     sha2::Sha256::digest(callback_sig_bytes.as_slice()).to_vec()
+}
+
+pub fn format_generic_error_message(encrypted_err: Value) -> Value {
+    json!({"generic_err":{"msg":encrypted_err}})
 }
