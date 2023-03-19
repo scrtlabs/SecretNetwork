@@ -500,7 +500,8 @@ bin-data-production:
 # 1. sudo docker login -u ABC -p XYZ
 # 2. sudo docker buildx create --use
 secret-contract-optimizer:
-	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
+	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/base-images/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
+	sudo docker buildx imagetools create -t enigmampc/secret-contract-optimizer:latest enigmampc/secret-contract-optimizer:${TAG}
 
 aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
