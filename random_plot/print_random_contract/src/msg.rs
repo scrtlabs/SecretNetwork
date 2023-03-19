@@ -1,4 +1,3 @@
-use cosmwasm_std::{Binary, Coin, IbcTimeout, VoteOption};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

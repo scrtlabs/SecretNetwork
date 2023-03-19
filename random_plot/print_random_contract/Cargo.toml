@@ -1,5 +1,5 @@
 [package]
-name = "contract-v1"
+name = "random-echo"
 version = "0.0.1"
 authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
@@ -26,10 +26,11 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", package = "secret-cosmwasm-std", branch = "secret", features = [
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", package = "secret-cosmwasm-std", branch = "random", features = [
   "stargate",
   "staking",
   "ibc3",
+  "random",
 ] }
 
 schemars = "0.8.1"

@@ -1,5 +1,5 @@
-use cosmwasm_std::{entry_point, Binary, DepsMut, Env, MessageInfo, Response, StdResult};
-use crate::msg::{Msg, PacketMsg, QueryMsg};
+use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use crate::msg::{Msg, QueryMsg};
 
 #[entry_point]
 pub fn instantiate(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Msg) -> StdResult<Response> {
