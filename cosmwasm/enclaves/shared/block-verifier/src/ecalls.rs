@@ -99,8 +99,8 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         &[]
     };
 
-    let mut encrypted_random_slice: [u8; 48] = [0u8; 48];
-    let mut rand_proof: [u8; 32] = [0u8; 32];
+    let encrypted_random_slice: [u8; 48] = [0u8; 48];
+    let rand_proof: [u8; 32] = [0u8; 32];
     #[cfg(feature = "random")]
     {
         let random_and_proof =
