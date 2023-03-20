@@ -37,6 +37,8 @@ Click the button below to start a new development environment:
 
 ## Manual Set up
 
+*You can find everything below in a handy script that you can copy and run from [here](https://github.com/scrtlabs/SecretNetwork/blob/master/scripts/install-everything.sh)*
+
 ### Install prerequisite packages
 
 ```
