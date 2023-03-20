@@ -94,6 +94,14 @@ We need a very specific version of xargo for everything to compile happily toget
 ```
 cargo install xargo --version 0.3.25
 ```
+# Install submodules
+
+We use `incubator-teaclave-sgx-sdk` as a submodule. To compile the code, you must first sync this submodule
+
+```
+git submodule init
+git submodule update --remote
+```
 
 # Build from Source
 
