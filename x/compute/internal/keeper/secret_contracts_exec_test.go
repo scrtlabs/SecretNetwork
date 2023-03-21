@@ -163,11 +163,6 @@ func TestAddrValidateFunction(t *testing.T) {
 }
 
 func TestRandomEnv(t *testing.T) {
-	type ReturnedV1MessageInfo struct {
-		Sender    cosmwasm.HumanAddress `json:"sender"`
-		SentFunds cosmwasm.Coins        `json:"funds"`
-		Random    string                `json:"random"`
-	}
 
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[randomContract], sdk.NewCoins())
 
@@ -175,18 +170,27 @@ func TestRandomEnv(t *testing.T) {
 	require.Empty(t, initErr)
 	require.Len(t, initEvents, 1)
 
+	initEvent := initEvents[0]
+	envAttributeIndex := slices.IndexFunc(initEvent, func(c v010types.LogAttribute) bool { return c.Key == "env" })
+	envAttribute := initEvent[envAttributeIndex]
+
+	var actualMessageInfo cosmwasm.Env
+	json.Unmarshal([]byte(envAttribute.Value), &actualMessageInfo)
+
 	// var firstRandom string
+	require.Len(t, actualMessageInfo.Block.Random, 32)
 
 	expectedV1Env := fmt.Sprintf(
-		`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
 		ctx.BlockHeight(),
 		// env.block.time is nanoseconds since unix epoch
 		ctx.BlockTime().UnixNano(),
 		ctx.ChainID(),
+		base64.StdEncoding.EncodeToString(actualMessageInfo.Block.Random),
 		contractAddress.String(),
 		calcCodeHash(TestContractPaths[randomContract]),
 	)
-
+	//
 	requireEventsInclude(t,
 		initEvents,
 		[]ContractEvent{
@@ -200,20 +204,27 @@ func TestRandomEnv(t *testing.T) {
 		},
 	)
 
-	initEvent := initEvents[0]
-	infoLogAttributeIndex := slices.IndexFunc(initEvent, func(c v010types.LogAttribute) bool { return c.Key == "info" })
-	infoLogAttribute := initEvent[infoLogAttributeIndex]
-
-	var actualMessageInfo ReturnedV1MessageInfo
-	json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
-
-	require.Equal(t, walletA.String(), actualMessageInfo.Sender)
-	require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
-	require.Len(t, actualMessageInfo.Random, 44)
-	firstRandom := actualMessageInfo.Random
-
+	//
 	_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, 1)
 	require.Empty(t, execErr)
+
+	execEvent := execEvents[0]
+	envAttributeIndex = slices.IndexFunc(execEvent, func(c v010types.LogAttribute) bool { return c.Key == "env" })
+	envAttribute = execEvent[envAttributeIndex]
+
+	var actualExecEnv cosmwasm.Env
+	json.Unmarshal([]byte(envAttribute.Value), &actualExecEnv)
+
+	expectedV1EnvExec := fmt.Sprintf(
+		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+		ctx.BlockHeight(),
+		// env.block.time is nanoseconds since unix epoch
+		ctx.BlockTime().UnixNano(),
+		ctx.ChainID(),
+		base64.StdEncoding.EncodeToString(actualExecEnv.Block.Random),
+		contractAddress.String(),
+		calcCodeHash(TestContractPaths[randomContract]),
+	)
 
 	requireEventsInclude(t,
 		execEvents,
@@ -222,33 +233,23 @@ func TestRandomEnv(t *testing.T) {
 				{Key: "contract_address", Value: contractAddress.String()},
 				{
 					Key:   "env",
-					Value: expectedV1Env,
+					Value: expectedV1EnvExec,
 				},
 			},
 		},
 	)
-
-	execEvent := execEvents[0]
-	infoLogAttributeIndex = slices.IndexFunc(execEvent, func(c v010types.LogAttribute) bool { return c.Key == "info" })
-	infoLogAttribute = execEvent[infoLogAttributeIndex]
-
-	json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
-
-	require.Equal(t, walletA.String(), actualMessageInfo.Sender)
-	require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
-
-	require.Len(t, actualMessageInfo.Random, 44)
-	require.NotEqual(t, firstRandom, actualMessageInfo.Random)
 }
 
 func TestEnv(t *testing.T) {
+
+	type ReturnedV1MessageInfo struct {
+		Sender    cosmwasm.HumanAddress `json:"sender"`
+		SentFunds cosmwasm.Coins        `json:"funds"`
+		// Random    string                `json:"random"`
+	}
+
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			type ReturnedV1MessageInfo struct {
-				Sender    cosmwasm.HumanAddress `json:"sender"`
-				SentFunds cosmwasm.Coins        `json:"funds"`
-				// Random    string                `json:"random"`
-			}
 
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 

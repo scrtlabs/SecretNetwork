@@ -126,6 +126,8 @@ impl BaseEnv {
                     // v1 env.block.time is nanoseconds since unix epoch
                     time: v1types::Timestamp::from_nanos(self.0.block.time),
                     chain_id: self.0.block.chain_id,
+                    #[cfg(feature = "random")]
+                    random: self.0.block.random,
                 },
                 contract: v1types::ContractInfo {
                     address: v1types::Addr::unchecked(self.0.contract.address.0),
@@ -142,8 +144,6 @@ impl BaseEnv {
                     .into_iter()
                     .map(|x| x.into())
                     .collect(),
-                #[cfg(feature = "random")]
-                random: self.0.block.random,
             },
         }
     }
@@ -183,8 +183,8 @@ impl CwEnv {
     pub fn set_random(&mut self, random: Option<Binary>) {
         match self {
             CwEnv::V010Env { .. } => {}
-            CwEnv::V1Env { msg_info, .. } => {
-                msg_info.random = random;
+            CwEnv::V1Env { env, .. } => {
+                env.block.random = random;
             }
         }
     }
@@ -193,7 +193,7 @@ impl CwEnv {
     pub fn get_random(&self) -> Option<Binary> {
         match self {
             CwEnv::V010Env { .. } => None,
-            CwEnv::V1Env { msg_info, .. } => msg_info.random.clone(),
+            CwEnv::V1Env { env, .. } => env.block.random.clone(),
         }
     }
     pub fn get_wasm_ptrs(&self) -> Result<(Vec<u8>, Vec<u8>), EnclaveError> {

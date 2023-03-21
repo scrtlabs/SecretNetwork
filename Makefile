@@ -438,7 +438,7 @@ go-tests: build-test-contract bin-data-sw
 	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
