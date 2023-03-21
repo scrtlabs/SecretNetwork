@@ -99,7 +99,9 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         &[]
     };
 
+    #[allow(unused_mut)]
     let mut encrypted_random_slice: [u8; 48] = [0u8; 48];
+    #[allow(unused_mut)]
     let mut rand_proof: [u8; 32] = [0u8; 32];
     #[cfg(feature = "random")]
     {
