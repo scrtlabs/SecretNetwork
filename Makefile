@@ -266,6 +266,7 @@ build-testnet-bootstrap:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg FEATURES="${FEATURES},light-client-validation,debug-print,random" \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=BOOTSTRAP \
