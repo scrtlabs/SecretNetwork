@@ -482,6 +482,10 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: execute")
 
+	if ctx.BlockHeight() == 7749134 {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "This block has been skipped")
+	}
+
 	signBytes := []byte{}
 	signMode := sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED
 	modeInfoBytes := []byte{}
