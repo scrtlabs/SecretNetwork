@@ -17,6 +17,7 @@ mod txs;
 pub mod proof;
 #[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
 pub mod validator_whitelist;
+mod verify;
 
 use lazy_static::lazy_static;
 use log::debug;
