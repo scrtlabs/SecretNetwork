@@ -36,6 +36,7 @@ type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
 
 use enclave_utils::kv_cache::KvCache;
+use crate::wasm3::gas::EXPORT_GAS_LIMIT;
 
 macro_rules! debug_err {
     ($message: literal) => {
@@ -314,7 +315,7 @@ impl Engine {
         link_fn(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
         link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
-
+        link_fn(instance, "check_gas", host_check_gas_used)?;
         //    DbReadIndex = 0,
         //     DbWriteIndex = 1,
         //     DbRemoveIndex = 2,
@@ -1754,4 +1755,22 @@ fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     encryption_salt.extend(&msg_counter.counter.to_be_bytes());
 
     encryption_salt
+}
+
+
+fn host_check_gas_used(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+) -> WasmEngineResult<i64> {
+    //
+    let used_gas = context.gas_costs.external_check_gas_used as u64;
+    use_gas(instance, used_gas)?;
+    // The gas limit actually gets modified - this is how we track the used gas
+    let gas_remaining: u64 = instance.get_global(EXPORT_GAS_LIMIT).unwrap_or_default();
+    let limit = context.gas_limit;
+    // return 0 == success
+
+    let gas_used = limit.saturating_sub(gas_remaining);
+
+    Ok(gas_used)
 }
