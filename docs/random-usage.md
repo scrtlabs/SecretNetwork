@@ -121,7 +121,7 @@ Here are the steps to use the randomness feature with LocalSecret:
 To run the local Secret Network using the Docker image, execute the following command:
 
 ```bash
-docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1317:1317 --name secretdev enigmampc/localsecret:v1.9.0-beta.1-random
+docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1317:1317 --name secretdev ghcr.io/scrtlabs/localsecret:v1.9.0-beta.1-random
 ```
 
 This command will start the local Secret Network using the localsecret:v1.9.0-beta.1-random Docker image, which has the randomness feature enabled by default.
