@@ -2129,3 +2129,46 @@ func TestV1ReplyChainWithError(t *testing.T) {
 
 	require.Equal(t, expectedFlow, string(data))
 }
+
+func TestEvaporateGas(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[evaporateContract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	t.Run("evaporate 1", func(t *testing.T) {
+		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":1}}`, true, true, defaultGasForTests, 0)
+		require.Empty(t, err)
+		// todo check gas consumed
+	})
+
+	t.Run("evaporate 100", func(t *testing.T) {
+		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":100}}`, true, true, defaultGasForTests, 0)
+		require.Empty(t, err)
+		// todo check gas consumed
+	})
+
+	t.Run("evaporate 1000", func(t *testing.T) {
+		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":1000}}`, true, true, defaultGasForTests, 0)
+		require.Empty(t, err)
+		// todo check gas consumed
+	})
+
+	t.Run("evaporate 10000", func(t *testing.T) {
+		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":10000}}`, true, true, defaultGasForTests, 0)
+		require.Empty(t, err)
+		// todo check gas consumed
+	})
+
+	t.Run("evaporate 100000", func(t *testing.T) {
+		_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":100000}}`, true, true, defaultGasForTests, 0)
+		require.Empty(t, err)
+		// todo check gas consumed
+	})
+
+	t.Run("evaporate 0", func(t *testing.T) {
+		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":0}}`, true, true, defaultGasForTests, 0)
+		require.Empty(t, err)
+		// todo check gas consumed
+	})
+}

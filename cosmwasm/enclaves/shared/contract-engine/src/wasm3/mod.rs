@@ -315,6 +315,8 @@ impl Engine {
         link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
 
+        link_fn(instance, "gas_evaporate", host_gas_evaporate)?;
+
         //    DbReadIndex = 0,
         //     DbWriteIndex = 1,
         //     DbRemoveIndex = 2,
@@ -1754,4 +1756,22 @@ fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     encryption_salt.extend(&msg_counter.counter.to_be_bytes());
 
     encryption_salt
+}
+
+fn host_gas_evaporate(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+    evaporate: i32,
+) -> WasmEngineResult<i32> {
+    const GAS_MULTIPLIER: u64 = 1000; // (cosmwasm gas : sdk gas)
+
+    let evaporate_cosmwasm = match evaporate {
+        0 => 1_u64,
+        x => (x as u32) as u64 * GAS_MULTIPLIER,
+    };
+    use_gas(instance, evaporate_cosmwasm)?;
+
+    // return 0 == success
+    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
+    Ok(0)
 }
