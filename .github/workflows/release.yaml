@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [rocksdb, goleveldb]
-    runs-on: ubuntu-20.04
+    runs-on: TestLargeRunner
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
@@ -69,7 +69,7 @@ jobs:
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
 
   build-deb-mainnet:
-    runs-on: ubuntu-20.04
+    runs-on: TestLargeRunner
     strategy:
       fail-fast: false
       matrix:
@@ -187,7 +187,7 @@ jobs:
           path: secretcli-MacOS-arm64
 
   check-hw-tool:
-    runs-on: ubuntu-20.04
+    runs-on: TestLargeRunner
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
@@ -222,7 +222,7 @@ jobs:
           path: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
 
   publish-localsecret:
-    runs-on: ubuntu-20.04
+    runs-on: TestLargeRunner
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/localsecret
@@ -260,7 +260,7 @@ jobs:
           target: build-localsecret
 
   Lib-Checks:
-    runs-on: ubuntu-20.04
+    runs-on: TestLargeRunner
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/check-objdump
@@ -280,7 +280,7 @@ jobs:
         MacOS-ARM64-CLI,
         check-hw-tool,
       ]
-    runs-on: ubuntu-20.04
+    runs-on: TestLargeRunner
     steps:
       - uses: actions/checkout@v3
       - name: Get the version
