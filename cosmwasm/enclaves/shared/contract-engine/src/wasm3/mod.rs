@@ -1764,7 +1764,7 @@ fn host_gas_evaporate(
     evaporate: i32,
 ) -> WasmEngineResult<i32> {
     if evaporate == 0 {
-        return Err(WasmEngineError::HostMisbehavior);
+        return Err(WasmEngineError::Panic);
     }
 
     const GAS_MULTIPLIER: u64 = 1000; // (cosmwasm gas : sdk gas)
