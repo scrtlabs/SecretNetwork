@@ -11,7 +11,7 @@ import (
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	"github.com/gonum/stat"
+	"gonum.org/v1/gonum/stat"
 
 	"github.com/stretchr/testify/require"
 )
