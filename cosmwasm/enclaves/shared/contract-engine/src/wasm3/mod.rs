@@ -1765,6 +1765,10 @@ fn host_gas_evaporate(
     instance: &wasm3::Instance<Context>,
     evaporate: i32,
 ) -> WasmEngineResult<i32> {
+    if evaporate == 0 {
+        return Err(WasmEngineError::HostMisbehavior);
+    }
+
     let evaporate = (evaporate as u32) as u64 * GAS_MULTIPLIER;
     use_gas(instance, evaporate)?;
 
