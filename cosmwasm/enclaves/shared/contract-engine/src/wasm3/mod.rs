@@ -1763,13 +1763,13 @@ fn host_gas_evaporate(
     instance: &wasm3::Instance<Context>,
     evaporate: i32,
 ) -> WasmEngineResult<i32> {
-    if evaporate == 0 {
-        return Err(WasmEngineError::Panic);
-    }
-
     const GAS_MULTIPLIER: u64 = 1000; // (cosmwasm gas : sdk gas)
-    let evaporate = (evaporate as u32) as u64 * GAS_MULTIPLIER;
-    use_gas(instance, evaporate)?;
+
+    let evaporate_cosmwasm = match evaporate {
+        0 => 1_u64,
+        x => (x as u32) as u64 * GAS_MULTIPLIER,
+    };
+    use_gas(instance, evaporate_cosmwasm)?;
 
     // return 0 == success
     // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
