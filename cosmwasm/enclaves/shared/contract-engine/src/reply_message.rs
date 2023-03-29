@@ -6,15 +6,6 @@ use cw_types_v1::results::{
 use enclave_ffi_types::EnclaveError;
 use log::{trace, warn};
 
-pub struct ParsedMessage {
-    pub should_validate_sig_info: bool,
-    pub was_msg_encrypted: bool,
-    pub should_encrypt_output: bool,
-    pub secret_msg: SecretMessage,
-    pub decrypted_msg: Vec<u8>,
-    pub data_for_validation: Option<Vec<u8>>,
-}
-
 const HEX_ENCODED_HASH_SIZE: usize = 64;
 const SIZE_OF_U64: usize = 8;
 
