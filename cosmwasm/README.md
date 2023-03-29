@@ -206,7 +206,7 @@ extern "C" {
     /// query export, which queries the state of the contract.
     fn query_chain(request: u32) -> u32;
 
-    /// Evaporates a specified amount of sdk gas (where 1000 cosmwasm gas : 1 sdk gas)
+    /// Evaporates a specified amount of gas (1 evaporate = 1 sdk gas)
     fn gas_evaporate(evaporate: u32) -> u32;
 }
 

@@ -1758,8 +1758,6 @@ fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     encryption_salt
 }
 
-const GAS_MULTIPLIER: u64 = 1000;
-
 fn host_gas_evaporate(
     context: &mut Context,
     instance: &wasm3::Instance<Context>,
@@ -1769,6 +1767,7 @@ fn host_gas_evaporate(
         return Err(WasmEngineError::HostMisbehavior);
     }
 
+    const GAS_MULTIPLIER: u64 = 1000; // (cosmwasm gas : sdk gas)
     let evaporate = (evaporate as u32) as u64 * GAS_MULTIPLIER;
     use_gas(instance, evaporate)?;
 
