@@ -80,7 +80,7 @@ macro_rules! validate_input_length {
                 "Error: {} ({}) is larger than the constant value ({})",
                 $var_name, $input, $constant
             );
-            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+            return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
         }
     };
 }

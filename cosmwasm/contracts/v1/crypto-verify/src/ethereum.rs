@@ -3,7 +3,7 @@ use rlp::RlpStream;
 use sha3::{Digest, Keccak256};
 use std::convert::TryInto;
 
-#[allow(clippy::too_many_arguments)]
+1
 pub fn verify_transaction(
     api: &dyn Api,
     from: [u8; 20],

@@ -1,11 +1,14 @@
+#![cfg(feature = "light-client-validation")]
+
 use crate::txs;
 use crate::txs::txs_hash;
+use cosmos_proto::tx::tx::Txs;
 use log::error;
 use sgx_types::sgx_status_t;
 use tendermint::block::signed_header::SignedHeader;
 use tendermint::Hash::Sha256;
 
-pub fn validate_txs(txs_slice: &[u8], header: &SignedHeader) -> Result<(), sgx_status_t> {
+pub fn validate_txs(txs_slice: &[u8], header: &SignedHeader) -> Result<Txs, sgx_status_t> {
     // validate the tx bytes with the hash in the header
     let txs = txs::txs_from_bytes(txs_slice).map_err(|e| {
         error!("Error parsing txs from proto: {:?}", e);
@@ -18,5 +21,5 @@ pub fn validate_txs(txs_slice: &[u8], header: &SignedHeader) -> Result<(), sgx_s
         return Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
     }
 
-    Ok(())
+    Ok(txs)
 }
