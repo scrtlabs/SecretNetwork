@@ -434,7 +434,7 @@ prep-go-tests: build-test-contract bin-data-sw
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 
 go-tests: build-test-contract bin-data-sw
-	SGX_MODE=SW $(MAKE) build-linux-with-query
+	SGX_MODE=SW FEATURES="debug-print" $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
