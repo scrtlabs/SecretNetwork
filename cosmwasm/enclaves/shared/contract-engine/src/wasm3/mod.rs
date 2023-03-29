@@ -1,3 +1,4 @@
+use core::cmp::max;
 use std::convert::{TryFrom, TryInto};
 
 use log::*;
@@ -139,6 +140,21 @@ where
             wasm3::Trap::Abort
         })
     }
+}
+
+fn link_fn_no_args<F, R>(instance: &mut Instance<Context>, name: &str, mut func: F) -> Wasm3RsResult<()>
+    where
+        F: FnMut(&mut Context, &wasm3::Instance<Context>) -> Result<R, WasmEngineError> + 'static,
+        R: wasm3::Arg + 'static,
+{
+    let wrapped_func = move |ctx: &mut Context, instance: &wasm3::Instance<Context>, _: ()| {
+        func(ctx, instance)
+    };
+
+    let wrapped_func = expect_context(wrapped_func);
+    instance
+        .link_function("env", name, wrapped_func)
+        .allow_missing_import()
 }
 
 fn link_fn<F, A, R>(instance: &mut Instance<Context>, name: &str, func: F) -> Wasm3RsResult<()>
@@ -315,7 +331,7 @@ impl Engine {
         link_fn(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
         link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
-        link_fn(instance, "check_gas", host_check_gas_used)?;
+        link_fn_no_args(instance, "check_gas", host_check_gas_used)?;
         link_fn(instance, "gas_evaporate", host_gas_evaporate)?;
 
         //    DbReadIndex = 0,
@@ -1765,15 +1781,11 @@ fn host_gas_evaporate(
     evaporate: i32,
 ) -> WasmEngineResult<i32> {
     const GAS_MULTIPLIER: u64 = 1000; // (cosmwasm gas : sdk gas)
+    let gas_requested = evaporate as u64 * GAS_MULTIPLIER;
 
-    let evaporate_cosmwasm = match evaporate {
-        0 => 1_u64,
-        x => (x as u32) as u64 * GAS_MULTIPLIER,
-    };
-    use_gas(instance, evaporate_cosmwasm)?;
+    use_gas(instance, max(gas_requested, context.gas_costs.external_minimum_gas_evaporate as u64))?;
 
     // return 0 == success
-    // https://github.com/CosmWasm/cosmwasm/blob/v1.0.0-beta5/packages/vm/src/imports.rs#L281
     Ok(0)
 }
 
@@ -1787,10 +1799,12 @@ fn host_check_gas_used(
     use_gas(instance, used_gas)?;
     // The gas limit actually gets modified - this is how we track the used gas
     let gas_remaining: u64 = instance.get_global(EXPORT_GAS_LIMIT).unwrap_or_default();
+
     let limit = context.gas_limit;
     // return 0 == success
+    debug!("Reported gas remaining: {:?}, limit: {:?}", gas_remaining, limit);
 
-    let gas_used = limit.saturating_sub(gas_remaining);
+    let gas_used = limit.saturating_sub(gas_remaining) / 1000;
 
-    Ok(gas_used)
+    Ok(gas_used as i64)
 }

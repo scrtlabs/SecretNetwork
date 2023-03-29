@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -2132,43 +2133,92 @@ func TestV1ReplyChainWithError(t *testing.T) {
 
 func TestEvaporateGas(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[evaporateContract], sdk.NewCoins())
-
-	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	t.Run("evaporate 1", func(t *testing.T) {
-		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":1}}`, true, true, defaultGasForTests, 0)
-		require.Empty(t, err)
-		// todo check gas consumed
-	})
+	_, _, _, _, baseGasUsed, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate":{"amount":0}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
 
-	t.Run("evaporate 100", func(t *testing.T) {
-		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":100}}`, true, true, defaultGasForTests, 0)
-		require.Empty(t, err)
-		// todo check gas consumed
-	})
+	for _, test := range []struct {
+		description   string
+		msg           string
+		outOfGas      bool
+		gasExpected   uint64
+		expectedError string
+		gasForTest    uint64
+	}{
+		{
+			description: "Evaporate 1 gas",
+			msg:         `{"evaporate":{"amount": 2}}`,
+			outOfGas:    false,
+			// less than the minimum of 8 should just return the base amount - though it turns out that
+			// for some reason calling evaporate with a value > 0 costs 1 more gas
+			gasExpected: 1,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Evaporate 1 gas",
+			msg:         `{"evaporate":{"amount": 9}}`,
+			outOfGas:    false,
+			// 9 - (base = 8) + 1 (see above) = 2
+			gasExpected: 2,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Evaporate 1 gas",
+			msg:         `{"evaporate":{"amount": 1200}}`,
+			outOfGas:    false,
+			// 1200 - (base = 8) + 1 (see above) = 1193
+			gasExpected: 1193,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Evaporate 1 gas",
+			msg:         `{"evaporate":{"amount": 400000}}`,
+			outOfGas:    false,
+			gasExpected: 399993,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Evaporate 1 gas",
+			msg:         `{"evaporate":{"amount": 500000}}`,
+			outOfGas:    true,
+			gasExpected: 0,
+			gasForTest:  defaultGasForTests,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
 
-	t.Run("evaporate 1000", func(t *testing.T) {
-		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":1000}}`, true, true, defaultGasForTests, 0)
-		require.Empty(t, err)
-		// todo check gas consumed
-	})
+			if test.outOfGas {
+				defer func() {
+					r := recover()
+					require.NotNil(t, r)
+					_, ok := r.(sdk.ErrorOutOfGas)
+					require.True(t, ok, "%+v", r)
+				}()
+			}
 
-	t.Run("evaporate 10000", func(t *testing.T) {
-		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":10000}}`, true, true, defaultGasForTests, 0)
-		require.Empty(t, err)
-		// todo check gas consumed
-	})
+			_, _, _, _, actualUsedGas, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, test.msg, true, true, defaultGasForTests, 0)
 
-	t.Run("evaporate 100000", func(t *testing.T) {
-		_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":100000}}`, true, true, defaultGasForTests, 0)
-		require.Empty(t, err)
-		// todo check gas consumed
-	})
+			require.Empty(t, err)
+			require.Equal(t, baseGasUsed+test.gasExpected, actualUsedGas)
+		})
+	}
+}
 
-	t.Run("evaporate 0", func(t *testing.T) {
-		_, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate_test":{"evaporate":0}}`, true, true, defaultGasForTests, 0)
-		require.Empty(t, err)
-		// todo check gas consumed
-	})
+func TestCheckGas(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[evaporateContract], sdk.NewCoins())
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, _, events, baseGasUsed, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"check_gas":{}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	execEvent := events[0]
+
+	gasUsed, err2 := strconv.ParseUint(execEvent[1].Value, 10, 64)
+	require.Empty(t, err2)
+
+	require.Equal(t, gasUsed+1, baseGasUsed)
+
 }
