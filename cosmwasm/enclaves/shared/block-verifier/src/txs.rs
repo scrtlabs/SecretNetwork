@@ -1,3 +1,5 @@
+#![cfg(feature = "light-client-validation")]
+
 use cosmos_proto::tx as protoTx;
 
 use protobuf::Message;
@@ -12,7 +14,6 @@ pub fn txs_from_bytes(raw_txs: &[u8]) -> SgxResult<protoTx::tx::Txs> {
     Ok(item_array)
 }
 
-#[cfg(feature = "light-client-validation")]
 pub fn tx_from_bytes(raw_tx: &[u8]) -> SgxResult<protoTx::tx::Tx> {
     let res = protoTx::tx::Tx::parse_from_bytes(raw_tx).unwrap();
 

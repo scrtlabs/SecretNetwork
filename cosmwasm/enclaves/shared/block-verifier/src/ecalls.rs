@@ -1,12 +1,20 @@
 use std::slice;
+
+#[cfg(feature = "light-client-validation")]
 use tendermint_proto::Protobuf;
 
 use sgx_types::sgx_status_t;
 
 use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr};
-use log::{debug, error};
+use log::error;
+
+#[cfg(feature = "light-client-validation")]
+use log::debug;
+
+#[cfg(feature = "light-client-validation")]
 use tendermint::validator::Set;
 
+#[cfg(feature = "light-client-validation")]
 macro_rules! unwrap_or_error {
     ($result:expr) => {
         match $result {
@@ -21,7 +29,9 @@ use crate::txs::tx_from_bytes;
 #[cfg(feature = "light-client-validation")]
 use crate::wasm_messages::VERIFIED_MESSAGES;
 
+#[cfg(feature = "light-client-validation")]
 use crate::verify::validator_set::get_validator_set_for_height;
+#[cfg(feature = "light-client-validation")]
 use enclave_utils::validator_set::ValidatorSetForHeight;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
@@ -157,6 +167,7 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(unused_variables)]
 fn validate_inputs(
     in_header: *const u8,
     in_header_len: u32,
