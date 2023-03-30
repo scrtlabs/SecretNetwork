@@ -1,6 +1,5 @@
 use std::slice;
 
-#[cfg(feature = "light-client-validation")]
 use tendermint_proto::Protobuf;
 
 use sgx_types::sgx_status_t;
@@ -8,13 +7,10 @@ use sgx_types::sgx_status_t;
 use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr};
 use log::error;
 
-#[cfg(feature = "light-client-validation")]
 use log::debug;
 
-#[cfg(feature = "light-client-validation")]
 use tendermint::validator::Set;
 
-#[cfg(feature = "light-client-validation")]
 macro_rules! unwrap_or_error {
     ($result:expr) => {
         match $result {
@@ -24,21 +20,15 @@ macro_rules! unwrap_or_error {
     };
 }
 
-#[cfg(feature = "light-client-validation")]
 use crate::txs::tx_from_bytes;
-#[cfg(feature = "light-client-validation")]
 use crate::wasm_messages::VERIFIED_MESSAGES;
 
-#[cfg(feature = "light-client-validation")]
 use crate::verify::validator_set::get_validator_set_for_height;
-#[cfg(feature = "light-client-validation")]
 use enclave_utils::validator_set::ValidatorSetForHeight;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
 const RANDOM_PROOF_LEN: u32 = 80;
 const MAX_TXS_LENGTH: u32 = 10 * 1024 * 1024;
-
-#[cfg(feature = "light-client-validation")]
 const TX_THRESHOLD: usize = 100_000;
 
 /// # Safety
@@ -81,87 +71,84 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         &[]
     };
 
-    #[cfg(feature = "light-client-validation")]
-    {
-        let validator_set_for_height: ValidatorSetForHeight =
-            unwrap_or_error!(get_validator_set_for_height());
+    let validator_set_for_height: ValidatorSetForHeight =
+        unwrap_or_error!(get_validator_set_for_height());
 
-        let validator_set = unwrap_or_error!(Set::decode(
-            validator_set_for_height.validator_set.as_slice()
-        )
-        .map_err(|e| {
-            error!("Error parsing validator set from proto: {:?}", e);
-            sgx_status_t::SGX_SUCCESS
-        }));
+    let validator_set = unwrap_or_error!(Set::decode(
+        validator_set_for_height.validator_set.as_slice()
+    )
+    .map_err(|e| {
+        error!("Error parsing validator set from proto: {:?}", e);
+        sgx_status_t::SGX_SUCCESS
+    }));
 
-        let commit = unwrap_or_error!(crate::verify::commit::decode(block_commit_slice));
+    let commit = unwrap_or_error!(crate::verify::commit::decode(block_commit_slice));
 
-        let header = unwrap_or_error!(crate::verify::header::validate_block_header(
-            block_header_slice,
-            &validator_set,
-            validator_set_for_height.height,
-            commit,
-        ));
+    let header = unwrap_or_error!(crate::verify::header::validate_block_header(
+        block_header_slice,
+        &validator_set,
+        validator_set_for_height.height,
+        commit,
+    ));
 
-        let txs = unwrap_or_error!(crate::verify::txs::validate_txs(txs_slice, &header));
+    let txs = unwrap_or_error!(crate::verify::txs::validate_txs(txs_slice, &header));
 
-        let mut message_verifier = VERIFIED_MESSAGES.lock().unwrap();
-        //debug to make sure it doesn't go out of sync
-        if message_verifier.remaining() != 0 {
-            error!(
+    let mut message_verifier = VERIFIED_MESSAGES.lock().unwrap();
+    //debug to make sure it doesn't go out of sync
+    if message_verifier.remaining() != 0 {
+        error!(
                 "Wasm verified out of sync?? Adding new messages but old one is not empty?? - remaining: {}",
                 message_verifier.remaining()
             );
 
-            // new tx, so messages should always be empty
-            message_verifier.clear();
-        }
-
-        for tx in txs.tx.iter() {
-            // doing this a different way makes the code unreadable or requires creating a copy of
-            // tx. Feel free to change this if someone finds a better way
-            log::trace!(
-                "Got tx: {}",
-                if tx.len() < TX_THRESHOLD {
-                    format!("{:?}", hex::encode(tx))
-                } else {
-                    String::new()
-                }
-            );
-
-            let parsed_tx = unwrap_or_error!(tx_from_bytes(tx.as_slice()).map_err(|_| {
-                error!("Unable to parse tx bytes from proto");
-                sgx_status_t::SGX_ERROR_INVALID_PARAMETER
-            }));
-
-            message_verifier.append_wasm_from_tx(parsed_tx);
-        }
-
-        message_verifier.set_block_info(
-            header.header.height.value(),
-            header.header.time.unix_timestamp_nanos(),
-        );
-
-        #[cfg(feature = "random")]
-        {
-            let encrypted_random_slice =
-                slice::from_raw_parts(in_encrypted_random, in_encrypted_random_len as usize);
-
-            let decrypted = unwrap_or_error!(crate::verify::random::validate_encrypted_random(
-                encrypted_random_slice,
-                validator_set.hash(),
-                header.header.app_hash.as_bytes(),
-                header.header.height.value(),
-            ));
-
-            decrypted_random.copy_from_slice(&decrypted);
-        }
-
-        debug!(
-            "Done verifying block height: {:?}",
-            header.header.height.value()
-        );
+        // new tx, so messages should always be empty
+        message_verifier.clear();
     }
+
+    for tx in txs.tx.iter() {
+        // doing this a different way makes the code unreadable or requires creating a copy of
+        // tx. Feel free to change this if someone finds a better way
+        log::trace!(
+            "Got tx: {}",
+            if tx.len() < TX_THRESHOLD {
+                format!("{:?}", hex::encode(tx))
+            } else {
+                String::new()
+            }
+        );
+
+        let parsed_tx = unwrap_or_error!(tx_from_bytes(tx.as_slice()).map_err(|_| {
+            error!("Unable to parse tx bytes from proto");
+            sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+        }));
+
+        message_verifier.append_wasm_from_tx(parsed_tx);
+    }
+
+    message_verifier.set_block_info(
+        header.header.height.value(),
+        header.header.time.unix_timestamp_nanos(),
+    );
+
+    #[cfg(feature = "random")]
+    {
+        let encrypted_random_slice =
+            slice::from_raw_parts(in_encrypted_random, in_encrypted_random_len as usize);
+
+        let decrypted = unwrap_or_error!(crate::verify::random::validate_encrypted_random(
+            encrypted_random_slice,
+            validator_set.hash(),
+            header.header.app_hash.as_bytes(),
+            header.header.height.value(),
+        ));
+
+        decrypted_random.copy_from_slice(&decrypted);
+    }
+
+    debug!(
+        "Done verifying block height: {:?}",
+        header.header.height.value()
+    );
 
     sgx_status_t::SGX_SUCCESS
 }

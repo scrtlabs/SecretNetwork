@@ -1,5 +1,3 @@
-#![cfg(feature = "light-client-validation")]
-
 use crate::txs;
 use crate::txs::txs_hash;
 use cosmos_proto::tx::tx::Txs;

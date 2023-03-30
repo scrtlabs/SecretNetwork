@@ -6,8 +6,7 @@ edition = "2018"
 [features]
 default = []
 test = []
-random = ["light-client-validation"]
-light-client-validation = []
+random = []
 production = []
 verify-validator-whitelist = []
 

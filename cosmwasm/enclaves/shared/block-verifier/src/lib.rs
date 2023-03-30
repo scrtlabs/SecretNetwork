@@ -11,15 +11,12 @@ pub mod wasm_messages;
 
 pub use wasm_messages::VERIFIED_MESSAGES;
 
-#[cfg(feature = "light-client-validation")]
 mod txs;
 
 #[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
 pub mod validator_whitelist;
 
-#[cfg(any(feature = "light-client-validation", feature = "random"))]
 mod verify;
-
 
 #[cfg(feature = "test")]
 pub mod tests {

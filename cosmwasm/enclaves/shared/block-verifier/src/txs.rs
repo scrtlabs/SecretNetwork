@@ -1,5 +1,3 @@
-#![cfg(feature = "light-client-validation")]
-
 use cosmos_proto::tx as protoTx;
 
 use protobuf::Message;

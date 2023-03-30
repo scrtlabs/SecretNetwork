@@ -1,5 +1,3 @@
-#![cfg(feature = "light-client-validation")]
-
 use log::error;
 use sgx_types::sgx_status_t;
 use tendermint::block::signed_header::SignedHeader;
