@@ -10,3 +10,5 @@ pub mod random;
 pub mod txs;
 #[cfg(feature = "light-client-validation")]
 pub mod validator_set;
+#[cfg(feature = "light-client-validation")]
+pub mod block;

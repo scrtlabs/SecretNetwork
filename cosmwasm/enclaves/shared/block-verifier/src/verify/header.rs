@@ -8,7 +8,7 @@ use tendermint::validator::Set;
 use tendermint_light_client_verifier::types::UntrustedBlockState;
 use tendermint_proto::Protobuf;
 
-use crate::verify_block;
+use crate::verify::block::verify_block;
 
 pub fn validate_block_header(
     block_header_slice: &[u8],
