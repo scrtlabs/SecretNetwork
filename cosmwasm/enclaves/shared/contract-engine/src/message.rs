@@ -1,14 +1,12 @@
-use log::{trace, warn};
+use log::trace;
 
-use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use enclave_cosmos_types::types::HandleType;
 use enclave_ffi_types::EnclaveError;
 
 use crate::execute_message::parse_execute_message;
 use crate::ibc_message::{parse_ibc_receive_message, parse_plaintext_ibc_protocol_message};
-use crate::message_utils::get_secret_msg;
 use crate::reply_message::parse_reply_message;
-use crate::types::{DecryptedSecretMessage, ParsedMessage, SecretMessage};
+use crate::types::ParsedMessage;
 
 // Parse the message that was passed to handle (Based on the assumption that it might be a reply or IBC as well)
 pub fn parse_message(

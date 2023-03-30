@@ -1,4 +1,5 @@
 use crate::types::{DecryptedSecretMessage, SecretMessage};
+use log::trace;
 
 pub fn get_secret_msg(message: &[u8]) -> SecretMessage {
     match SecretMessage::from_slice(message) {

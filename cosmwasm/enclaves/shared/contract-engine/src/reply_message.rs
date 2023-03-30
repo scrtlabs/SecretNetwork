@@ -1,4 +1,4 @@
-use crate::types::SecretMessage;
+use crate::types::{ParsedMessage, SecretMessage};
 use cw_types_v010::encoding::Binary;
 use cw_types_v1::results::{
     DecryptedReply, Event, Reply, SubMsgResponse, SubMsgResult, REPLY_ENCRYPTION_MAGIC_BYTES,

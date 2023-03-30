@@ -1,6 +1,8 @@
+use crate::message_utils::try_get_decrypted_secret_msg;
 use crate::types::{ParsedMessage, SecretMessage};
-use crate::message_utils::{try_get_decrypted_secret_msg, get_secret_msg}
+use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use enclave_ffi_types::EnclaveError;
+use log::{trace, warn};
 
 pub fn parse_plaintext_ibc_protocol_message(
     plaintext_message: &[u8],
@@ -8,7 +10,7 @@ pub fn parse_plaintext_ibc_protocol_message(
     let scrt_msg = SecretMessage {
         nonce: [0; 32],
         user_public_key: [0; 32],
-        msg: message.into(),
+        msg: plaintext_message.into(),
     };
 
     Ok(ParsedMessage {
@@ -16,7 +18,7 @@ pub fn parse_plaintext_ibc_protocol_message(
         was_msg_encrypted: false,
         should_encrypt_output: false,
         secret_msg: scrt_msg,
-        decrypted_msg: message,
+        decrypted_msg: plaintext_message.into(),
         data_for_validation: None,
     })
 }
@@ -33,33 +35,39 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
          EnclaveError::FailedToDeserialize
      })?;
 
-    let (was_msg_encrypted, secret_msg) = match try_get_decrypted_secret_msg(parsed_encrypted_ibc_packet.packet.data.as_slice()) {
-        Ok(decrypted_msg) => {
-            // IBC packet was encrypted
+    let (was_msg_encrypted, secret_msg) =
+        match try_get_decrypted_secret_msg(parsed_encrypted_ibc_packet.packet.data.as_slice()) {
+            Some(decrypted_msg) => {
+                // IBC packet was encrypted
 
-            trace!(
-                "ibc_packet_receive data before decryption: {:?}",
-                base64::encode(&message)
-            );
-    
-            parsed_encrypted_ibc_packet.packet.data = decrypted_msg.decrypted_msg.as_slice().into();
-            (true, decrypted_msg.secret_message)
-        }
-        Err(_) => {
-            // Assume data is not encrypted
+                trace!(
+                    "ibc_packet_receive data before decryption: {:?}",
+                    base64::encode(&message)
+                );
 
-            trace!(
-                "ibc_packet_receive data was plaintext: {:?}",
-                base64::encode(&encrypted_message)
-            );
+                parsed_encrypted_ibc_packet.packet.data =
+                    decrypted_msg.decrypted_msg.as_slice().into();
+                (true, decrypted_msg.secret_msg)
+            }
+            None => {
+                // Assume data is not encrypted
 
-            (false, SecretMessage {
-                nonce: [0; 32],
-                user_public_key: [0; 32],
-                msg: encrypted_message.into(),
-            })
-        }
-    }
+                trace!(
+                    "ibc_packet_receive data was plaintext: {:?}",
+                    base64::encode(&message)
+                );
+
+                (
+                    false,
+                    SecretMessage {
+                        nonce: [0; 32],
+                        user_public_key: [0; 32],
+                        msg: message.into(),
+                    },
+                )
+            }
+        };
+
     Ok(ParsedMessage {
         should_validate_sig_info: false,
         was_msg_encrypted,

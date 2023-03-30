@@ -1,6 +1,7 @@
 use crate::message_utils::try_get_decrypted_secret_msg;
 use crate::types::{ParsedMessage, SecretMessage};
 use enclave_ffi_types::EnclaveError;
+use log::trace;
 
 pub fn parse_execute_message(message: &[u8]) -> Result<ParsedMessage, EnclaveError> {
     if let Some(decrypted_secret_msg) = try_get_decrypted_secret_msg(message) {

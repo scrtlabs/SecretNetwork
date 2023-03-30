@@ -51,18 +51,18 @@ impl SecretMessage {
                 String::from_utf8_lossy(&msg)
             );
 
-            return Some(msg);
+            return Some(msg.to_vec());
         }
 
         None
     }
 
     pub fn decrypt(&self) -> Result<Vec<u8>, EnclaveError> {
-        match try_decrypt() {
-            Some(msg) => Ok(msg)
+        match self.try_decrypt() {
+            Some(msg) => Ok(msg),
             None => {
-                error!("got an error while trying to decrypt the msg: {:?}", err);
-                EnclaveError::DecryptionError
+                error!("got an error while trying to decrypt the msg");
+                Err(EnclaveError::DecryptionError)
             }
         }
     }
