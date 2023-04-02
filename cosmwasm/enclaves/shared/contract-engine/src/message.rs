@@ -34,13 +34,13 @@ pub fn parse_message(
 }
 
 pub fn is_ibc_msg(handle_type: HandleType) -> bool {
-    match handle_type {
+    matches!(
+        handle_type,
         HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
-        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
-        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE
-        | HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
-        | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
-        | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => true,
-        _ => false,
-    }
+            | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
+            | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE
+            | HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
+            | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
+            | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
+    )
 }

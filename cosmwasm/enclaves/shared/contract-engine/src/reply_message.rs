@@ -217,7 +217,7 @@ fn parse_encrypted_error_reply(
         })?,
     );
 
-    wrap_results_as_parsed_message(input_msg, id, result, &parsed_reply, data_for_validation)
+    wrap_results_as_parsed_message(input_msg, id, result, parsed_reply, data_for_validation)
 }
 
 fn parse_encrypted_reply_message(

@@ -21,11 +21,10 @@ pub fn get_secret_msg(message: &[u8]) -> SecretMessage {
 
 pub fn try_get_decrypted_secret_msg(message: &[u8]) -> Option<DecryptedSecretMessage> {
     let secret_msg = get_secret_msg(message);
-    match secret_msg.try_decrypt() {
-        Some(decrypted_msg) => Some(DecryptedSecretMessage {
+    secret_msg
+        .try_decrypt()
+        .map(|decrypted_msg| DecryptedSecretMessage {
             secret_msg,
             decrypted_msg,
-        }),
-        None => None,
-    }
+        })
 }
