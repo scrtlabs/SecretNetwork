@@ -44,7 +44,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepositoryLocalTests) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target compile-secretd
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target compile-secretd
       dockerfile: '$(dockerfilePath)'
 
   - task: Docker@2
@@ -56,7 +56,7 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES_TESTS_LOCAL) --target compile-secretd
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepositoryLocalTests) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES_TESTS_LOCAL) --target compile-secretd
       dockerfile: '$(dockerfilePath)'
 
   - script: |

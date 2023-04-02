@@ -86,7 +86,6 @@ fn submit_block_signature_impl(
     let mut random_decrypted = [0u8; 32];
 
     // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
-    #[cfg(feature = "light-client-validation")]
     let status = unsafe {
         ecall_submit_block_signatures(
             eid,
@@ -100,15 +99,8 @@ fn submit_block_signature_impl(
             encrypted_random.as_ptr(),
             encrypted_random.len() as u32,
             &mut random_decrypted
-            // val_set.as_ptr(),
-            // val_set.len() as u32,
-            // next_val_set.as_ptr(),
-            // next_val_set.len() as u32,
         )
     };
-
-    #[cfg(not(feature = "light-client-validation"))]
-    let status = sgx_status_t::SGX_SUCCESS;
 
     Ok((retval, random_decrypted, status))
 }

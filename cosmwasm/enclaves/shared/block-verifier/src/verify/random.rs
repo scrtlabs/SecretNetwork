@@ -1,11 +1,17 @@
 #![cfg(feature = "random")]
 
 use enclave_crypto::{sha_256, SIVEncryptable, KEY_MANAGER};
-use log::error;
+use log::{debug, error, trace};
 use sgx_types::sgx_status_t;
 use tendermint::Hash;
 
 pub fn create_proof(height: u64, random: &[u8], block_hash: &[u8]) -> [u8; 32] {
+    trace!(
+        "Height: {:?}\nRandom: {:?}\nApphash: {:?}",
+        height,
+        random,
+        block_hash
+    );
     let irs = KEY_MANAGER.initial_randomness_seed.unwrap();
 
     let height_bytes = height.to_be_bytes();
@@ -24,26 +30,29 @@ pub fn create_proof(height: u64, random: &[u8], block_hash: &[u8]) -> [u8; 32] {
 
 #[cfg(feature = "random")]
 pub fn validate_encrypted_random(
-    encrypted_random_slice: &[u8],
+    random_and_proof: &[u8],
     validator_set_hash: Hash,
     app_hash: &[u8],
     height: u64,
 ) -> Result<[u8; 32], sgx_status_t> {
-    let encrypted_random_slice = encrypted_random_slice
+    let encrypted_random_slice = random_and_proof
         .get(..48)
         .ok_or(sgx_status_t::SGX_ERROR_INVALID_PARAMETER)?;
-    let rand_proof = encrypted_random_slice
+    let rand_proof = random_and_proof
         .get(48..)
         .ok_or(sgx_status_t::SGX_ERROR_INVALID_PARAMETER)?;
 
-    let calculated_proof = create_proof(height, app_hash, encrypted_random_slice);
+    let calculated_proof = create_proof(height, encrypted_random_slice, app_hash);
 
     if calculated_proof != rand_proof {
-        error!("Error validating random");
+        error!(
+            "Error validating random: {:?} != {:?}",
+            calculated_proof, rand_proof
+        );
         return Err(sgx_status_t::SGX_ERROR_INVALID_SIGNATURE);
     }
 
-    println!(
+    debug!(
         "Encrypted random slice len: {}",
         encrypted_random_slice.len()
     );
