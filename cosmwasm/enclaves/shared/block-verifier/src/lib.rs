@@ -5,7 +5,6 @@ extern crate alloc;
 extern crate sgx_types;
 
 pub mod r#const;
-pub mod ecalls;
 
 pub mod wasm_messages;
 
@@ -16,6 +15,7 @@ mod txs;
 #[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
 pub mod validator_whitelist;
 
+pub mod submit_block_signatures;
 mod verify;
 
 #[cfg(feature = "test")]

@@ -28,7 +28,7 @@ test = ["enclave_contract_engine/test", "enclave_crypto/test", "enclave_cosmos_t
 use_seed_service_on_bootstrap = []
 epid_whitelist_disabled = []
 light-client-validation = ["enclave_contract_engine/light-client-validation", "block-verifier"]
-random = ["enclave_contract_engine/random", "block-verifier/random", "enclave_crypto/random", "light-client-validation"]
+random = ["enclave_contract_engine/random", "enclave_crypto/random"]
 verify-validator-whitelist = ["block-verifier/verify-validator-whitelist", "light-client-validation"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
@@ -77,7 +77,7 @@ hex = "0.4.2"
 log = "0.4.17"
 simple_logger = { version = "2.3.0", default-features = false, features = ["stderr"] }
 
-block-verifier = { path = "../shared/block-verifier", default-features = false, optional = true }
+block-verifier = { path = "../shared/block-verifier", optional = true }
 
 time = "=0.3.17"
 
