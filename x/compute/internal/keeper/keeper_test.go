@@ -619,7 +619,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// unauthorized - trialCtx so we don't change state
-	nonExistingAddress := addrFromUint64(9999)
+	nonExistingAddress := sdk.AccAddress([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	msgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
