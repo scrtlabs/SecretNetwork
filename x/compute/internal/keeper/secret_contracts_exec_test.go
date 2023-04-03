@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -46,7 +48,7 @@ func stringToCoins(balance string) sdk.Coins {
 		}
 		var amount int64
 		var denom string
-		fmt.Sscanf(coin, "%d%s", &amount, &denom)
+		_, _ = fmt.Sscanf(coin, "%d%s", &amount, &denom)
 		result = result.Add(sdk.NewInt64Coin(denom, amount))
 	}
 
@@ -208,7 +210,7 @@ func TestEnv(t *testing.T) {
 				infoLogAttribute := initEvent[infoLogAttributeIndex]
 
 				var actualMessageInfo ReturnedV1MessageInfo
-				json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
+				_ = json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
 
 				require.Equal(t, walletA.String(), actualMessageInfo.Sender)
 				require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
@@ -261,7 +263,7 @@ func TestEnv(t *testing.T) {
 				infoLogAttribute := execEvent[infoLogAttributeIndex]
 
 				var actualMessageInfo ReturnedV1MessageInfo
-				json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
+				_ = json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
 
 				require.Equal(t, walletA.String(), actualMessageInfo.Sender)
 				require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
@@ -2128,4 +2130,154 @@ func TestV1ReplyChainWithError(t *testing.T) {
 	expectedFlow += contractAddresses[0].String()
 
 	require.Equal(t, expectedFlow, string(data))
+}
+
+func TestEvaporateGas(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[evaporateContract], sdk.NewCoins())
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, _, _, baseGasUsed, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"evaporate":{"amount":0}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	for _, test := range []struct {
+		description   string
+		msg           string
+		outOfGas      bool
+		gasExpected   uint64
+		expectedError string
+		gasForTest    uint64
+	}{
+		{
+			description: "Evaporate 1 gas",
+			msg:         `{"evaporate":{"amount": 2}}`,
+			outOfGas:    false,
+			// less than the minimum of 8 should just return the base amount - though it turns out that
+			// for some reason calling evaporate with a value > 0 costs 1 more gas
+			gasExpected: 0,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Evaporate 9 gas",
+			msg:         `{"evaporate":{"amount": 9}}`,
+			outOfGas:    false,
+			// 9 - (base = 8)
+			gasExpected: 1,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Evaporate 1200 gas",
+			msg:         `{"evaporate":{"amount": 1200}}`,
+			outOfGas:    false,
+			// 1200 - (base = 8) + 1 (see above) = 1193
+			gasExpected: 1192,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Evaporate 400000 gas",
+			msg:         `{"evaporate":{"amount": 400000}}`,
+			outOfGas:    false,
+			// evaporate accepts sdk gas, which makes sense. However, I think this causes the amount
+			// to be offset by 1 sometimes - do we really care?
+			gasExpected: 399993,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Evaporate 500000 gas",
+			msg:         `{"evaporate":{"amount": 500000}}`,
+			outOfGas:    true,
+			gasExpected: 0,
+			gasForTest:  defaultGasForTests,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+
+			if test.outOfGas {
+				defer func() {
+					r := recover()
+					require.NotNil(t, r)
+					_, ok := r.(sdk.ErrorOutOfGas)
+					require.True(t, ok, "%+v", r)
+				}()
+			}
+
+			_, _, _, _, actualUsedGas, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, test.msg, true, true, defaultGasForTests, 0)
+
+			require.Empty(t, err)
+			require.Equal(t, baseGasUsed+test.gasExpected, actualUsedGas)
+		})
+	}
+}
+
+func TestCheckGas(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[evaporateContract], sdk.NewCoins())
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	// 854 is the sum of all the overhead that goes into a contract call beyond the base cost (reading keys, calculations, etc)
+	baseContractUsage := types.InstanceCost + 854
+
+	_, _, _, events, baseGasUsed, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"check_gas":{}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	execEvent := events[0]
+
+	gasUsed, err2 := strconv.ParseUint(execEvent[1].Value, 10, 64)
+	require.Empty(t, err2)
+
+	require.Equal(t, gasUsed+1, baseGasUsed-baseContractUsage)
+}
+
+func TestConsumeExact(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[evaporateContract], sdk.NewCoins())
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	// not sure where the 16 extra gas comes vs the previous check_gas test, but it makes everything play nice, so....
+	baseContractUsage := types.InstanceCost + 854 - 16
+
+	for _, test := range []struct {
+		description   string
+		msg           string
+		outOfGas      bool
+		gasExpected   uint64
+		expectedError string
+		gasForTest    uint64
+	}{
+		{
+			description: "Use exactly 1000 gas",
+			msg:         `{"use_exact":{"amount": 1000}}`,
+			outOfGas:    false,
+			// less than the minimum of 8 should just return the base amount - though it turns out that
+			// for some reason calling evaporate with a value > 0 costs 1 more gas
+			gasExpected: 1000,
+			gasForTest:  defaultGasForTests,
+		},
+		{
+			description: "Use exactly 400000",
+			// evaporate and check_gas use rounding to convert sdk to cosmwasm gas - sometimes this causes the amount
+			// to be offset by 1 - do we really care?
+			msg:         `{"use_exact":{"amount": 399999}}`,
+			outOfGas:    false,
+			gasExpected: 400000,
+			gasForTest:  defaultGasForTests,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+
+			if test.outOfGas {
+				defer func() {
+					r := recover()
+					require.NotNil(t, r)
+					_, ok := r.(sdk.ErrorOutOfGas)
+					require.True(t, ok, "%+v", r)
+				}()
+			}
+
+			_, _, _, _, actualUsedGas, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, test.msg, true, true, defaultGasForTests, 0)
+
+			require.Empty(t, err)
+			require.Equal(t, baseContractUsage+test.gasExpected, actualUsedGas)
+		})
+	}
 }

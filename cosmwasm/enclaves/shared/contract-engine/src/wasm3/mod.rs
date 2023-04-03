@@ -1,3 +1,4 @@
+use core::cmp::max;
 use std::convert::{TryFrom, TryInto};
 
 use log::*;
@@ -36,6 +37,7 @@ type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
 
 use enclave_utils::kv_cache::KvCache;
+use crate::wasm3::gas::EXPORT_GAS_LIMIT;
 
 macro_rules! debug_err {
     ($message: literal) => {
@@ -138,6 +140,21 @@ where
             wasm3::Trap::Abort
         })
     }
+}
+
+fn link_fn_no_args<F, R>(instance: &mut Instance<Context>, name: &str, mut func: F) -> Wasm3RsResult<()>
+    where
+        F: FnMut(&mut Context, &wasm3::Instance<Context>) -> Result<R, WasmEngineError> + 'static,
+        R: wasm3::Arg + 'static,
+{
+    let wrapped_func = move |ctx: &mut Context, instance: &wasm3::Instance<Context>, _: ()| {
+        func(ctx, instance)
+    };
+
+    let wrapped_func = expect_context(wrapped_func);
+    instance
+        .link_function("env", name, wrapped_func)
+        .allow_missing_import()
 }
 
 fn link_fn<F, A, R>(instance: &mut Instance<Context>, name: &str, func: F) -> Wasm3RsResult<()>
@@ -314,6 +331,8 @@ impl Engine {
         link_fn(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
         link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
+        link_fn_no_args(instance, "check_gas", host_check_gas_used)?;
+        link_fn(instance, "gas_evaporate", host_gas_evaporate)?;
 
         //    DbReadIndex = 0,
         //     DbWriteIndex = 1,
@@ -1754,4 +1773,38 @@ fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     encryption_salt.extend(&msg_counter.counter.to_be_bytes());
 
     encryption_salt
+}
+
+fn host_gas_evaporate(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+    evaporate: i32,
+) -> WasmEngineResult<i32> {
+    const GAS_MULTIPLIER: u64 = 1000; // (cosmwasm gas : sdk gas)
+    let gas_requested = evaporate as u64 * GAS_MULTIPLIER;
+
+    use_gas(instance, max(gas_requested, context.gas_costs.external_minimum_gas_evaporate as u64))?;
+
+    // return 0 == success
+    Ok(0)
+}
+
+
+fn host_check_gas_used(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+) -> WasmEngineResult<i64> {
+    //
+    let used_gas = context.gas_costs.external_check_gas_used as u64;
+    use_gas(instance, used_gas)?;
+    // The gas limit actually gets modified - this is how we track the used gas
+    let gas_remaining: u64 = instance.get_global(EXPORT_GAS_LIMIT).unwrap_or_default();
+
+    let limit = context.gas_limit;
+    // return 0 == success
+    debug!("Reported gas remaining: {:?}, limit: {:?}", gas_remaining, limit);
+
+    let gas_used = limit.saturating_sub(gas_remaining) / 1000;
+
+    Ok(gas_used as i64)
 }
