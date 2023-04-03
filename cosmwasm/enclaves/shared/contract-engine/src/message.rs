@@ -180,9 +180,9 @@ pub fn parse_message(
                 };
 
                 redact_custom_events(&mut parsed_reply);
-                let serialized_plaintext_reply: Vec<u8> = serde_json::to_vec(&parsed_reply).map_err(|err| {
+                let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&parsed_reply).map_err(|err| {
                     warn!(
-                        "got an error while trying to serialize plaintext reply into bytes {:?}: {}",
+                        "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
                         parsed_reply, err
                     );
                     EnclaveError::FailedToSerialize
@@ -191,7 +191,7 @@ pub fn parse_message(
                 let reply_secret_msg = SecretMessage {
                     nonce: orig_secret_msg.nonce,
                     user_public_key: orig_secret_msg.user_public_key,
-                    msg: serialized_plaintext_reply,
+                    msg: serialized_encrypted_reply,
                 };
 
                 let serialized_reply: Vec<u8> = serde_json::to_vec(&decrypted_reply).map_err(|err| {
@@ -261,7 +261,6 @@ pub fn parse_message(
 
                     let mut data_for_validation: Vec<u8> =
                         tmp_decrypted_msg_id[..HEX_ENCODED_HASH_SIZE].to_vec();
-
                     tmp_decrypted_msg_id = tmp_decrypted_msg_id[HEX_ENCODED_HASH_SIZE..].to_vec();
                     while tmp_decrypted_msg_id.len() >= REPLY_ENCRYPTION_MAGIC_BYTES.len()
                         && tmp_decrypted_msg_id[0..(REPLY_ENCRYPTION_MAGIC_BYTES.len())]
@@ -312,18 +311,18 @@ pub fn parse_message(
                         })?;
 
                     redact_custom_events(&mut parsed_reply);
-                    let serialized_decrypted_reply: Vec<u8> = serde_json::to_vec(&parsed_reply).map_err(|err| {
-                        warn!(
-                            "got an error while trying to serialize decrypted reply into bytes {:?}: {}",
-                            parsed_reply, err
-                        );
-                        EnclaveError::FailedToSerialize
-                    })?;
+                    let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&parsed_reply).map_err(|err| {
+                    warn!(
+                        "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
+                        parsed_reply, err
+                    );
+                    EnclaveError::FailedToSerialize
+                })?;
 
                     let reply_secret_msg = SecretMessage {
                         nonce: orig_secret_msg.nonce,
                         user_public_key: orig_secret_msg.user_public_key,
-                        msg: serialized_decrypted_reply,
+                        msg: serialized_encrypted_reply,
                     };
 
                     Ok(ParsedMessage {
@@ -423,12 +422,12 @@ pub fn parse_message(
                         })?;
 
                     let serialized_encrypted_reply : Vec<u8> = serde_json::to_vec(&parsed_reply).map_err(|err| {
-                        warn!(
-                            "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
-                            parsed_reply, err
-                        );
-                        EnclaveError::FailedToSerialize
-                    })?;
+                    warn!(
+                        "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
+                        parsed_reply, err
+                    );
+                    EnclaveError::FailedToSerialize
+                })?;
 
                     let reply_secret_msg = SecretMessage {
                         nonce: orig_secret_msg.nonce,
