@@ -29,6 +29,7 @@ where
     Ibc(IbcMsg),
     Wasm(WasmMsg),
     Gov(GovMsg),
+    Marker(T),
 }
 
 /// The message types of the bank module.

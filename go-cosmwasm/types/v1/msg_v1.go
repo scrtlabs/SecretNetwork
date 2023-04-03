@@ -78,6 +78,7 @@ type CosmosMsg struct {
 	Staking      *StakingMsg      `json:"staking,omitempty"`
 	Stargate     *StargateMsg     `json:"stargate,omitempty"`
 	Wasm         *WasmMsg         `json:"wasm,omitempty"`
+	Marker       json.RawMessage  `json:"marker,omitempty"`
 }
 
 type BankMsg struct {

@@ -186,6 +186,11 @@ func redactError(err error) (bool, error) {
 func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
+		if msg.Msg.Marker != nil {
+			// TODO: Maybe we should output an error here?
+			break
+		}
+
 		// Check replyOn validity
 		switch msg.ReplyOn {
 		case v1wasmTypes.ReplySuccess, v1wasmTypes.ReplyError, v1wasmTypes.ReplyAlways, v1wasmTypes.ReplyNever:
