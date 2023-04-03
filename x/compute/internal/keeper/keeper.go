@@ -898,8 +898,6 @@ func (k Keeper) generateContractAddress(ctx sdk.Context, codeID uint64, creator 
 }
 
 func contractAddress(codeID, instanceID uint64, creator sdk.AccAddress) sdk.AccAddress {
-	// NOTE: It is possible to get a duplicate address if either codeID or instanceID
-	// overflow 32 bits. This is highly improbable, but something that could be refactored.
 	contractId := codeID<<32 + instanceID
 	contractIdBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(contractIdBytes, contractId)
