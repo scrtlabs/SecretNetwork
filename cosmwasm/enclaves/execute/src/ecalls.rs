@@ -32,8 +32,16 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         )
     }
 
-    #[cfg(not(feature = "light-client-validation"))]
+    #[cfg(all(not(feature = "light-client-validation"), not(feature = "SGX_MODE_HW")))]
     {
+        // not returning an error here, but instead going for a noop so tests can run without errors
+        sgx_status_t::SGX_SUCCESS
+    }
+
+    #[cfg(all(not(feature = "light-client-validation"), feature = "SGX_MODE_HW"))]
+    {
+        // this is an error so that if we're compiling in HW mode we don't forget to enable this feature
+        // if this function is being called (integration tests)
         sgx_status_t::SGX_ERROR_ECALL_NOT_ALLOWED
     }
 }

@@ -170,17 +170,17 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 
 	commit, err := beginBlock.Commit.Marshal()
 	if err != nil {
+		ctx.Logger().Error("Failed to marshal commit")
 		panic(err)
 	}
 
 	data, err := beginBlock.Data.Marshal()
 	if err != nil {
+		ctx.Logger().Error("Failed to marshal data")
 		panic(err)
 	}
 
-	// var encryptedRandom []byte
 	if beginBlock.Header.EncryptedRandom != nil {
-		//encryptedRandom = beginBlock.Header.EncryptedRandom.Random
 		randomAndProof := append(beginBlock.Header.EncryptedRandom.Random, beginBlock.Header.EncryptedRandom.Proof...)
 		random, err := api.SubmitBlockSignatures(header, commit, data, randomAndProof)
 		if err != nil {
@@ -191,7 +191,6 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 
 	} else {
 		println("No random got from TM header")
-		// encryptedRandom = []byte{}
 	}
 }
 
