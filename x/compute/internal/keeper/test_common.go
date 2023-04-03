@@ -108,6 +108,7 @@ const (
 	v010WithFloats              = "contract_with_floats.wasm"
 	tooHighMemoryContract       = "too-high-initial-memory.wasm"
 	staticTooHighMemoryContract = "static-too-high-initial-memory.wasm"
+	evaporateContract           = "evaporate.wasm"
 	randomContract              = "v1_random_test.wasm"
 	benchContract               = "bench_contract.wasm"
 )
@@ -124,6 +125,7 @@ var TestContractPaths = map[string]string{
 	tooHighMemoryContract:       filepath.Join(".", contractPath, tooHighMemoryContract),
 	staticTooHighMemoryContract: filepath.Join(".", contractPath, staticTooHighMemoryContract),
 	benchContract:               filepath.Join(".", contractPath, benchContract),
+	evaporateContract:           filepath.Join(".", contractPath, evaporateContract),
 	randomContract:              filepath.Join(".", contractPath, randomContract),
 }
 

@@ -37,6 +37,8 @@ Click the button below to start a new development environment:
 
 ## Manual Set up
 
+*You can find everything below in a handy script that you can copy and run from [here](https://github.com/scrtlabs/SecretNetwork/blob/master/scripts/install-everything.sh)*
+
 ### Install prerequisite packages
 
 ```
@@ -93,6 +95,14 @@ We need a very specific version of xargo for everything to compile happily toget
 
 ```
 cargo install xargo --version 0.3.25
+```
+# Install submodules
+
+We use `incubator-teaclave-sgx-sdk` as a submodule. To compile the code, you must first sync this submodule
+
+```
+git submodule init
+git submodule update --remote
 ```
 
 # Build from Source

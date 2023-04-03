@@ -6,6 +6,7 @@
 extern crate sgx_tstd as std;
 
 extern crate sgx_types;
+extern crate core;
 
 mod contract_operations;
 mod contract_validation;
