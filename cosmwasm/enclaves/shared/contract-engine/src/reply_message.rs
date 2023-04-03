@@ -259,7 +259,7 @@ fn parse_plaintext_reply_message(
     };
 
     redact_custom_events(parsed_reply);
-    let serialized_encrypted_reply: Vec<u8> = serde_json::to_vec(parsed_reply).map_err(|err| {
+    let serialized_reply: Vec<u8> = serde_json::to_vec(parsed_reply).map_err(|err| {
         warn!(
             "got an error while trying to serialize encrypted reply into bytes {:?}: {}",
             parsed_reply, err
@@ -270,7 +270,7 @@ fn parse_plaintext_reply_message(
     let reply_secret_msg = SecretMessage {
         nonce: input_msg.nonce,
         user_public_key: input_msg.user_public_key,
-        msg: serialized_encrypted_reply,
+        msg: serialized_reply,
     };
 
     let serialized_reply: Vec<u8> = serde_json::to_vec(&decrypted_reply).map_err(|err| {
