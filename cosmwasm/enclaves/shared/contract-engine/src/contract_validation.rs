@@ -280,10 +280,10 @@ pub fn validate_basic_msg(
 
                 partial_msg = partial_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
 
-                let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
-                sub_msg_deserialized.copy_from_slice(&partial_msg[..SIZE_OF_U64]);
+                let mut sub_msg_id_serialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
+                sub_msg_id_serialized.copy_from_slice(&partial_msg[..SIZE_OF_U64]);
 
-                let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_deserialized);
+                let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_id_serialized);
                 partial_msg = partial_msg[SIZE_OF_U64..].to_vec();
 
                 let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
@@ -309,7 +309,6 @@ pub fn validate_basic_msg(
 
     let decoded_hash: Vec<u8> = hex::decode(&received_contract_hash[..]).map_err(|_| {
         warn!("Got message with malformed contract hash");
-
         EnclaveError::ValidationFailure
     })?;
 
@@ -327,10 +326,10 @@ pub fn validate_basic_msg(
 
         validated_msg = validated_msg[REPLY_ENCRYPTION_MAGIC_BYTES.len()..].to_vec();
 
-        let mut sub_msg_deserialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
-        sub_msg_deserialized.copy_from_slice(&validated_msg[..SIZE_OF_U64]);
+        let mut sub_msg_id_serialized: [u8; SIZE_OF_U64] = [0u8; SIZE_OF_U64];
+        sub_msg_id_serialized.copy_from_slice(&validated_msg[..SIZE_OF_U64]);
 
-        let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_deserialized);
+        let sub_msg_id: u64 = u64::from_be_bytes(sub_msg_id_serialized);
         validated_msg = validated_msg[SIZE_OF_U64..].to_vec();
 
         let mut reply_recipient_contract_hash: [u8; HEX_ENCODED_HASH_SIZE] =
@@ -569,7 +568,7 @@ fn verify_callback_sig_impl(
         return false;
     }
 
-    let callback_sig = create_callback_signature(sender, msg, sent_funds);
+    let callback_sig = create_callback_signature(sender, &msg.msg, sent_funds);
 
     if callback_signature != callback_sig {
         trace!(
