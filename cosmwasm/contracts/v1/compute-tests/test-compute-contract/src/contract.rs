@@ -342,6 +342,28 @@ pub fn wasm_msg(ty: String) -> StdResult<Response> {
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
+        ExecuteMsg::Special {} => {
+            let s = SubMsg {
+                id: 0,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from("{\"increment\":{\"addition\":1}}".as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: ReplyOn::Never,
+                gas_limit: None,
+            };
+
+            Ok(Response::new().add_submessages(vec![
+                s.clone(),
+                s.clone(),
+                s.clone(),
+                s.clone(),
+                s.clone(),
+            ]))
+        }
         ExecuteMsg::WasmMsg { ty } => wasm_msg(ty),
         ExecuteMsg::Increment { addition } => increment(env, deps, addition),
         ExecuteMsg::SendFundsWithErrorWithReply {} => Ok(Response::new()

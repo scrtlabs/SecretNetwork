@@ -114,6 +114,7 @@ pub enum InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    Special {},
     WasmMsg {
         ty: String,
     },

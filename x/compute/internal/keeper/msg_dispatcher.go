@@ -27,6 +27,7 @@ type Messenger interface {
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
 	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
+	GetStoreKey() sdk.StoreKey
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -185,7 +186,17 @@ func redactError(err error) (bool, error) {
 // that dispatched them, both on success as well as failure
 func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error) {
 	var rsp []byte
-	for _, msg := range msgs {
+	for idx, msg := range msgs {
+		store := ctx.KVStore(d.keeper.GetStoreKey())
+		if idx == 2 {
+			store.Set(types.LastMsgPrefix, []byte{1})
+			fmt.Printf("LIORRR Setting marker to on: %+v\n", store.Get(types.LastMsgPrefix))
+		}
+
+		if store.Get(types.LastMsgPrefix) != nil {
+			break
+		}
+
 		// Check replyOn validity
 		switch msg.ReplyOn {
 		case v1wasmTypes.ReplySuccess, v1wasmTypes.ReplyError, v1wasmTypes.ReplyAlways, v1wasmTypes.ReplyNever:
