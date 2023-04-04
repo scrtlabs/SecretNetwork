@@ -86,8 +86,7 @@ type SecretAppKeepers struct {
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   *ibctransferkeeper.Keeper
 
-	IbcFeeKeeper ibcfeekeeper.Keeper
-	//IBCHooksKeeper      *ibchookskeeper.Keeper
+	IbcFeeKeeper    ibcfeekeeper.Keeper
 	IbcRouterKeeper *ibcpacketforwardkeeper.Keeper
 
 	ICAControllerKeeper *icacontrollerkeeper.Keeper
@@ -308,13 +307,13 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.IbcKeeper.ChannelKeeper,
 	)
 
-	//	packetForwardMiddleware := packetforward.NewIBCMiddleware(
-	//		transfer.NewIBCModule(*ak.TransferKeeper),
-	//		ak.PacketForwardKeeper,
-	//		0,
-	//		packetforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
-	//		packetforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,
-	//	)
+	//packetForwardMiddleware := packetforward.NewIBCMiddleware(
+	//	transfer.NewIBCModule(*ak.TransferKeeper),
+	//	ak.PacketForwardKeeper,
+	//	0,
+	//	packetforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp,
+	//	packetforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,
+	//)
 
 	ak.IbcFeeKeeper = ibcfeekeeper.NewKeeper(
 		appCodec, ak.keys[ibcfeetypes.StoreKey],
