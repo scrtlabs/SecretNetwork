@@ -9,7 +9,6 @@ import (
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
-	"github.com/scrtlabs/SecretNetwork/x/mauth"
 	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 )
 
@@ -18,8 +17,8 @@ const upgradeName = "v1.9"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	// todo: mauth
-	StoreUpgrades: store.StoreUpgrades{Added: []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, mauth.ModuleName}},
+	StoreUpgrades: store.StoreUpgrades{Added: []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName},
+		Deleted: []string{"icamsgauth"}},
 }
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
@@ -34,7 +33,10 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 
 		ctx.Logger().Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
 
-		keepers.IbcRouterKeeper.SetParams(ctx, ibcpacketforwardtypes.DefaultParams())
+		vm[ibcfeetypes.ModuleName] = mm.Modules[ibcfeetypes.ModuleName].ConsensusVersion()
+		ctx.Logger().Info(fmt.Sprintf("ibcfee module version %s set", fmt.Sprint(vm[ibcfeetypes.ModuleName])))
+
+		keepers.PacketForwardKeeper.SetParams(ctx, ibcpacketforwardtypes.DefaultParams())
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}

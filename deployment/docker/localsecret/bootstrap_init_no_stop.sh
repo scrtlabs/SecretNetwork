@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 ENABLE_FAUCET=${1:-"true"}
 
@@ -90,5 +91,9 @@ if [ "${ENABLE_FAUCET}" = "true" ]; then
   cp $(which secretd) $(dirname $(which secretd))/secretcli
 fi
 
-source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG_LEVEL="$LOG_LEVEL" secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
+if [ "${SLEEP}" = "true" ]; then
+  sleep infinity
+fi
+
+RUST_BACKTRACE=1 LOG_LEVEL="$LOG_LEVEL" secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap
 

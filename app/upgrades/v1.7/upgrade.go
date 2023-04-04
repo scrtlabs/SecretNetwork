@@ -105,7 +105,7 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		keepers.RegKeeper.SetMasterKey(ctx, ioMasterKey, reg.MasterIoKeyId)
 		keepers.RegKeeper.SetMasterKey(ctx, masterKey, reg.MasterNodeKeyId)
 
-		keepers.IbcRouterKeeper.SetParams(ctx, ibcpacketforwardtypes.DefaultParams())
+		keepers.PacketForwardKeeper.SetParams(ctx, ibcpacketforwardtypes.DefaultParams())
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
