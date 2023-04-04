@@ -34,7 +34,7 @@ use super::contract_validation::{
 };
 use super::gas::WasmCosts;
 use super::io::{
-    encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    post_process_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
     set_all_logs_to_plaintext,
 };
 use super::types::{IoNonce, SecretMessage};
@@ -168,7 +168,8 @@ pub fn init(
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
     //let start = Instant::now();
-    let output = encrypt_output(
+
+    let output = post_process_output(
         output,
         &secret_msg,
         &canonical_contract_address,
@@ -178,6 +179,7 @@ pub fn init(
         false,
         false,
     )?;
+
     // let duration = start.elapsed();
     // trace!("Time elapsed in encrypt_output: {:?}", duration);
 
@@ -273,8 +275,8 @@ pub fn handle(
 
     // There is no signature to verify when the input isn't signed.
     // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
-    // All of these functions go through handle but the data isn't signed:
-    //  Reply (that is not WASM reply)
+    // The following messages go through handle but the data isn't signed:
+    //  * Replies from other sdk modules (WASM replies are signed)
     if should_validate_sig_info {
         // Verify env parameters against the signed tx
         verify_params(
@@ -343,7 +345,7 @@ pub fn handle(
         secret_msg.nonce, secret_msg.user_public_key
     );
     if should_encrypt_output {
-        output = encrypt_output(
+        output = post_process_output(
             output,
             &secret_msg,
             &canonical_contract_address,
@@ -358,20 +360,8 @@ pub fn handle(
             manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
         set_all_logs_to_plaintext(&mut raw_output);
 
-        let finalized_output =
-            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false);
-        trace!(
-            "Wasm output for plaintext message is: {:?}",
-            finalized_output
-        );
-
-        output = serde_json::to_vec(&finalized_output).map_err(|err| {
-            debug!(
-                "got an error while trying to serialize output json into bytes {:?}: {}",
-                finalized_output, err
-            );
-            EnclaveError::FailedToSerialize
-        })?;
+        output =
+            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false)?;
     }
 
     Ok(HandleSuccess { output })
@@ -460,7 +450,7 @@ pub fn query(
     *used_gas = engine.gas_used();
     let output = result?;
 
-    let output = encrypt_output(
+    let output = post_process_output(
         output,
         &secret_msg,
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
@@ -504,7 +494,7 @@ fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
     serde_json::from_slice(env)
         .map_err(|err| {
             warn!(
-                "error while deserializing env into json {:?}: {}",
+                "error while deserializing env from json {:?}: {}",
                 String::from_utf8_lossy(env),
                 err
             );
