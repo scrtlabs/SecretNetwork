@@ -11,7 +11,7 @@ use log::debug;
 
 use tendermint::validator::Set;
 
-macro_rules! unwrap_or_error {
+macro_rules! unwrap_or_return {
     ($result:expr) => {
         match $result {
             Ok(commit) => commit,
@@ -61,16 +61,16 @@ pub unsafe fn submit_block_signatures_impl(
     let block_header_slice = slice::from_raw_parts(in_header, in_header_len as usize);
     let block_commit_slice = slice::from_raw_parts(in_commit, in_commit_len as usize);
 
+    // todo: from_raw_parts caused a crash when txs was empty. Investigate and see if this still happens
     let txs_slice = if in_txs_len != 0 && !in_txs.is_null() {
         slice::from_raw_parts(in_txs, in_txs_len as usize)
     } else {
         &[]
     };
 
-    let validator_set_for_height: ValidatorSetForHeight =
-        unwrap_or_error!(get_validator_set_for_height());
+    let validator_set_for_height = unwrap_or_return!(get_validator_set_for_height());
 
-    let validator_set = unwrap_or_error!(Set::decode(
+    let validator_set = unwrap_or_return!(Set::decode(
         validator_set_for_height.validator_set.as_slice()
     )
     .map_err(|e| {
@@ -78,21 +78,23 @@ pub unsafe fn submit_block_signatures_impl(
         sgx_status_t::SGX_SUCCESS
     }));
 
-    let commit = unwrap_or_error!(crate::verify::commit::decode(block_commit_slice));
+    let commit = unwrap_or_return!(crate::verify::commit::decode(block_commit_slice));
 
-    let header = unwrap_or_error!(crate::verify::header::validate_block_header(
+    let header = unwrap_or_return!(crate::verify::header::validate_block_header(
         block_header_slice,
         &validator_set,
         validator_set_for_height.height,
         commit,
     ));
 
-    let txs = unwrap_or_error!(crate::verify::txs::validate_txs(txs_slice, &header));
+    let txs = unwrap_or_return!(crate::verify::txs::validate_txs(txs_slice, &header));
 
     let mut message_verifier = VERIFIED_MESSAGES.lock().unwrap();
-    //debug to make sure it doesn't go out of sync
+
     if message_verifier.remaining() != 0 {
-        error!(
+        // this will happen if a tx fails - the message queue doesn't get cleared.
+        // todo: add clearing of message queue if a tx fails?
+        debug!(
                 "Wasm verified out of sync?? Adding new messages but old one is not empty?? - remaining: {}",
                 message_verifier.remaining()
             );
@@ -113,7 +115,7 @@ pub unsafe fn submit_block_signatures_impl(
             }
         );
 
-        let parsed_tx = unwrap_or_error!(tx_from_bytes(tx.as_slice()).map_err(|_| {
+        let parsed_tx = unwrap_or_return!(tx_from_bytes(tx.as_slice()).map_err(|_| {
             error!("Unable to parse tx bytes from proto");
             sgx_status_t::SGX_ERROR_INVALID_PARAMETER
         }));
@@ -131,7 +133,7 @@ pub unsafe fn submit_block_signatures_impl(
         let encrypted_random_slice =
             slice::from_raw_parts(in_encrypted_random, in_encrypted_random_len as usize);
 
-        let decrypted = unwrap_or_error!(crate::verify::random::validate_encrypted_random(
+        let decrypted = unwrap_or_return!(crate::verify::random::validate_encrypted_random(
             encrypted_random_slice,
             validator_set.hash(),
             header.header.app_hash.as_bytes(),

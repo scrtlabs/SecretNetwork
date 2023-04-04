@@ -21,7 +21,7 @@ pub fn validate_block_header(
 
     let signed_header = SignedHeader::new(header, commit).map_err(|e| {
         error!("Error creating signed header: {:?}", e);
-        sgx_status_t::SGX_SUCCESS
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     })?;
 
     // validate that we have the validator set for the current height
