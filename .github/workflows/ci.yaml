@@ -332,8 +332,8 @@ jobs:
         run: |
           cd integration-tests
           yarn
-          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
-          yarn test
+          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d > docker-compose.log 2>&1
+          yarn test || { cat docker-compose.log; exit 1; }
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
@@ -342,6 +342,6 @@ jobs:
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
           yarn
-          docker compose -f ./test/docker-compose.yml up -d
-          yarn test-ci
+          docker compose -f ./test/docker-compose.yml up -d > docker-compose.log 2>&1
+          yarn test-ci || { cat docker-compose.log; exit 1; }
           make kill-localsecret
