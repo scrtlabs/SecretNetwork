@@ -354,6 +354,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             }
             Ok(res)
         }
+        ExecuteMsg::LastMsgMarkerNop {} => {
+            Ok(Response::new()
+                .add_message(CosmosMsg::Marker(Empty {})))
+        }
         ExecuteMsg::LastMsgMarker {} => {
             let increment_msg = SubMsg {
                 id: 0,

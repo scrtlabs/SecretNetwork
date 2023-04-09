@@ -40,7 +40,6 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 
 	anteDecorators := []sdk.AnteDecorator{
 		compute.NewCountTXDecorator(options.TXCounterStoreKey),
-		compute.NewLastMsgDecorator(options.LastMsgMarkerStoreKey),
 		ante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
 		ante.NewRejectExtensionOptionsDecorator(),
 		ante.NewMempoolFeeDecorator(),

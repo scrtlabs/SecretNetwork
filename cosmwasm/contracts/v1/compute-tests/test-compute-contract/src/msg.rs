@@ -117,6 +117,7 @@ pub enum ExecuteMsg {
     IncrementTimes {
         times: u64,
     },
+    LastMsgMarkerNop {},
     LastMsgMarker {},
     WasmMsg {
         ty: String,

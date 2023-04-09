@@ -216,7 +216,6 @@ func NewSecretNetworkApp(
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
-	// bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
 
 	// Initialize our application with the store keys it requires
 	app := &SecretNetworkApp{
@@ -375,10 +374,9 @@ func NewSecretNetworkApp(
 			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
-		IBCKeeper:             app.AppKeepers.IbcKeeper,
-		WasmConfig:            computeConfig,
-		TXCounterStoreKey:     app.AppKeepers.GetKey(compute.StoreKey),
-		LastMsgMarkerStoreKey: app.AppKeepers.GetKey(compute.StoreKey),
+		IBCKeeper:         app.AppKeepers.IbcKeeper,
+		WasmConfig:        computeConfig,
+		TXCounterStoreKey: app.AppKeepers.GetKey(compute.StoreKey),
 	})
 	if err != nil {
 		panic(fmt.Errorf("failed to create AnteHandler: %s", err))

@@ -75,6 +75,7 @@ type Keeper struct {
 	HomeDir       string
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
+	LastMsgManager *baseapp.LastMsgMarkerContainer
 }
 
 func moduleLogger(ctx sdk.Context) log.Logger {
@@ -108,6 +109,7 @@ func NewKeeper(
 	supportedFeatures string,
 	customEncoders *MessageEncoders,
 	customPlugins *QueryPlugins,
+	LastMsgManager *baseapp.LastMsgMarkerContainer,
 ) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize)
 	if err != nil {
@@ -126,10 +128,15 @@ func NewKeeper(
 		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 		HomeDir:          homeDir,
+		LastMsgManager:   LastMsgManager,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
+}
+
+func (k Keeper) GetLastMessageMarkerManager() *baseapp.LastMsgMarkerContainer {
+	return k.LastMsgManager
 }
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
@@ -848,10 +855,10 @@ func (k *Keeper) handleContractResponse(
 	logs []v010wasmTypes.LogAttribute,
 	evts v1wasmTypes.Events,
 	data []byte,
-	// original TX in order to extract the first 64bytes of signing info
+// original TX in order to extract the first 64bytes of signing info
 	ogTx []byte,
-	// sigInfo of the initial message that triggered the original contract call
-	// This is used mainly in replies in order to decrypt their data.
+// sigInfo of the initial message that triggered the original contract call
+// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.VerificationInfo,
 	ogCosmosMessageVersion wasmTypes.CosmosMsgVersion,
 ) ([]byte, error) {

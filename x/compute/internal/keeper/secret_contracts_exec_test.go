@@ -2287,19 +2287,11 @@ func TestLastMsgMarkerMultipleMsgsInATx(t *testing.T) {
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop": {}}`, true, true, defaultGasForTests)
 
-	msgs := []string{`{"get_env":{}}`, `{"get_env":{}}`}
+	msgs := []string{`{"last_msg_marker_nop":{}}`, `{"last_msg_marker_nop":{}}`}
 
 	results, err := execHelperMultipleMsgs(t, keeper, ctx, contractAddress, walletA, privKeyA, msgs, true, true, math.MaxUint64, 0)
-	require.NotEqual(t, err, cosmwasm.StdError{})
+	require.NotEqual(t, nil, err)
+	println("Error: ", err)
 
-	require.Equal(t, len(results), 2)
-	require.Equal(t, results[1].GasUsed, 0)
-	//queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
-	//require.Empty(t, qErr)
-	//
-	//var resp v1QueryResponse
-	//e := json.Unmarshal([]byte(queryRes), &resp)
-	//require.NoError(t, e)
-	//
-	//require.Equal(t, uint32(14), resp.Get.Count)
+	require.Equal(t, 1, len(results))
 }

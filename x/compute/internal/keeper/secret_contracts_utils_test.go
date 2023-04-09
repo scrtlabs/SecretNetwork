@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"os"
 	"regexp"
 	"strings"
@@ -315,7 +316,7 @@ type WasmCounterGasMeter struct {
 	gasMeter    sdk.GasMeter
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) RefundGas(amount stypes.Gas, descriptor string) {}
+func (wasmGasMeter *WasmCounterGasMeter) RefundGas(_ stypes.Gas, _ string) {}
 
 func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() sdk.Gas {
 	return wasmGasMeter.gasMeter.GasConsumed()
@@ -433,8 +434,12 @@ func execHelperCustomWasmCount(
 		panic("Single msg test somehow returned multiple results")
 	}
 
+	if err != nil {
+		return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, *err.CosmWasm
+	}
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, cosmwasm.StdError{}
 	// todo: lol refactor tests to use the struct
-	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, err
+
 }
 
 func execHelperMultipleCoins(
@@ -449,7 +454,10 @@ func execHelperMultipleCoins(
 	}
 
 	// todo: lol refactor tests to use the struct
-	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, err
+	if err != nil {
+		return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, *err.CosmWasm
+	}
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, cosmwasm.StdError{}
 }
 
 func execHelper(
@@ -460,18 +468,20 @@ func execHelper(
 	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
 
 	if len(results) != 1 {
-		panic("Single msg test somehow returned multiple results")
+		panic(fmt.Sprintf("Single msg test somehow returned multiple results: %d", len(results)))
 	}
 
-	// todo: lol refactor tests to use the struct
-	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, err
+	if err != nil {
+		return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, *err.CosmWasm
+	}
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, cosmwasm.StdError{}
 }
 
 func execHelperMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg []string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
-) ([]ExecResult, cosmwasm.StdError) {
+) ([]ExecResult, *ErrorResult) {
 	return execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
 }
 
@@ -479,7 +489,7 @@ func execTxBuilderImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsgs []string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
-) ([]ExecResult, cosmwasm.StdError) {
+) ([]ExecResult, *ErrorResult) {
 	hash, err := keeper.GetContractHash(ctx, contractAddress)
 	require.NoError(t, err)
 
@@ -516,8 +526,20 @@ func execTxBuilderImpl(
 
 	ctx = PrepareExecSignedTxWithMultipleMsgs(t, keeper, ctx, txSender, senderPrivKey, secretMsgsBz, contractAddress, coins)
 
+	// reset value before test
+	keeper.LastMsgManager.SetMarker(false)
+
 	var results []ExecResult
 	for _, msg := range secretMsgsBz {
+
+		// simulate the check in baseapp
+		if keeper.LastMsgManager.GetMarker() == true {
+			errResult := ErrorResult{
+				Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
+			}
+			return results, &errResult
+		}
+
 		nonce := msg[0:32]
 
 		gasBefore := ctx.GasMeter().GasConsumed()
@@ -540,7 +562,14 @@ func execTxBuilderImpl(
 				WasmEvents: nil,
 				GasUsed:    gasUsed,
 			})
-			return results, extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
+
+			errResult := ErrorResult{
+				Generic: err,
+			}
+			cwErr := extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
+			errResult.CosmWasm = &cwErr
+
+			return results, &errResult
 		}
 
 		// wasmEvents comes from all the callbacks as well
@@ -558,7 +587,7 @@ func execTxBuilderImpl(
 		})
 	}
 
-	return results, cosmwasm.StdError{}
+	return results, nil
 }
 
 func initHelper(

@@ -603,8 +603,7 @@ func TestLastMsgMarker(t *testing.T) {
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 
-	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"last_msg_marker":{}}`, true, true, math.MaxUint64, 0)
-
+	_, err := execHelperMultipleMsgs(t, keeper, ctx, contractAddress, walletA, privKeyA, []string{`{"last_msg_marker":{}}`}, true, true, math.MaxUint64, 0)
 	require.Empty(t, err)
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
