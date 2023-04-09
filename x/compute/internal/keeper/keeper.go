@@ -10,8 +10,8 @@ import (
 	"time"
 
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
-	channelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
-	portkeeper "github.com/cosmos/ibc-go/v3/modules/core/05-port/keeper"
+	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
+	portkeeper "github.com/cosmos/ibc-go/v4/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"

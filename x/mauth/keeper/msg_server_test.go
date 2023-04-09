@@ -2,8 +2,8 @@ package keeper_test
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
-	ibctesting "github.com/cosmos/ibc-go/v3/testing"
+	icatypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/types"
+	ibctesting "github.com/cosmos/ibc-go/v4/testing"
 
 	"github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/mauth/types"
@@ -43,7 +43,7 @@ func (suite *KeeperTestSuite) TestRegisterInterchainAccount() {
 				portID, err := icatypes.NewControllerPortID(owner)
 				suite.Require().NoError(err)
 
-				suite.GetICAApp(suite.chainA).ICAControllerKeeper.SetActiveChannelID(suite.chainA.GetContext(), path.EndpointA.ConnectionID, portID, path.EndpointA.ChannelID)
+				suite.GetICAApp(suite.chainA).AppKeepers.ICAControllerKeeper.SetActiveChannelID(suite.chainA.GetContext(), path.EndpointA.ConnectionID, portID, path.EndpointA.ChannelID)
 			},
 			false,
 		},
@@ -62,7 +62,7 @@ func (suite *KeeperTestSuite) TestRegisterInterchainAccount() {
 
 			tc.malleate() // malleate mutates test data
 
-			msgSrv := keeper.NewMsgServerImpl(suite.GetICAApp(suite.chainA).ICAAuthKeeper)
+			msgSrv := keeper.NewMsgServerImpl(*suite.GetICAApp(suite.chainA).AppKeepers.ICAAuthKeeper)
 			msg := types.NewMsgRegisterAccount(owner, path.EndpointA.ConnectionID, path.EndpointB.ConnectionID)
 
 			res, err := msgSrv.RegisterAccount(sdk.WrapSDKContext(suite.chainA.GetContext()), msg)
