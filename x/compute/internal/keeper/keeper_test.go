@@ -294,7 +294,7 @@ func TestInstantiate(t *testing.T) {
 	// create with no balance is also legal
 	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
 	require.NoError(t, err)
-	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
+	require.Equal(t, "secret1uhfqhj6cvt7983n6xdxkjhfvx9833qk5pmgfl4", contractAddr.String())
 
 	// gas can change +- 10% before we start failing, though maybe for consensus we should check a constant amount
 	gasAfter := ctx.GasMeter().GasConsumed()
@@ -462,7 +462,7 @@ func TestExecute(t *testing.T) {
 
 	require.NoError(t, err)
 
-	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
+	require.Equal(t, "secret12exhpaft5rv3t8lcw9nykudxaddq2nmtv4r3tl", addr.String())
 
 	// ensure bob doesn't exist
 	bobAcct := accKeeper.GetAccount(ctx, bob)
@@ -619,7 +619,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// unauthorized - trialCtx so we don't change state
-	nonExistingAddress := addrFromUint64(9999)
+	nonExistingAddress := sdk.AccAddress([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	msgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
