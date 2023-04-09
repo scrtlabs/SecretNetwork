@@ -1073,3 +1073,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }
+
+func (k Keeper) GetStoreKey() sdk.StoreKey {
+	return k.storeKey
+}
