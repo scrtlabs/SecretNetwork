@@ -25,8 +25,6 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
-type ContractEvent []v010cosmwasm.LogAttribute
-
 type TestContract struct {
 	CosmWasmVersion string
 	IsCosmWasmV1    bool
@@ -416,12 +414,42 @@ func queryHelperImpl(
 	return string(resultBz), cosmwasm.StdError{}
 }
 
+//func execHelperImpl(
+//	t *testing.T, keeper Keeper, ctx sdk.Context,
+//	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+//	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
+//) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+//	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), wasmCallCount, shouldSkipAttributes...)
+//}
+
+func execHelperCustomWasmCount(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
+) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewCoin("denom", sdk.NewInt(coin))), wasmCallCount, shouldSkipAttributes...)
+
+	if len(results) != 1 {
+		panic("Single msg test somehow returned multiple results")
+	}
+
+	// todo: lol refactor tests to use the struct
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, err
+}
+
 func execHelperMultipleCoins(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, shouldSkipAttributes ...bool,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCount int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coins, -1, shouldSkipAttributes...)
+	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, coins, wasmCount, shouldSkipAttributes...)
+
+	if len(results) != 1 {
+		panic("Single msg test somehow returned multiple results")
+	}
+
+	// todo: lol refactor tests to use the struct
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, err
 }
 
 func execHelper(
@@ -429,35 +457,51 @@ func execHelper(
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coin, -1, shouldSkipAttributes...)
+	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
+
+	if len(results) != 1 {
+		panic("Single msg test somehow returned multiple results")
+	}
+
+	// todo: lol refactor tests to use the struct
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, err
 }
 
-func execHelperImpl(
+func execHelperMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
-) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), wasmCallCount, shouldSkipAttributes...)
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg []string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
+) ([]ExecResult, cosmwasm.StdError) {
+	return execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
 }
 
-func execHelperMultipleCoinsImpl(
+func execTxBuilderImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsgs []string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
-) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+) ([]ExecResult, cosmwasm.StdError) {
 	hash, err := keeper.GetContractHash(ctx, contractAddress)
 	require.NoError(t, err)
 
 	hashStr := hex.EncodeToString(hash)
 
-	msg := types.SecretMsg{
-		CodeHash: []byte(hashStr),
-		Msg:      []byte(execMsg),
+	var secretMsgs []types.SecretMsg
+	for _, execMsg := range execMsgs {
+		secretMsg := types.SecretMsg{
+			CodeHash: []byte(hashStr),
+			Msg:      []byte(execMsg),
+		}
+		secretMsgs = append(secretMsgs, secretMsg)
 	}
 
-	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
-	require.NoError(t, err)
-	nonce := execMsgBz[0:32]
+	var secretMsgsBz [][]byte
+	for _, msg := range secretMsgs {
+		execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
+		require.NoError(t, err)
+
+		secretMsgsBz = append(secretMsgsBz, execMsgBz)
+		// nonce := execMsgBz[0:32]
+	}
 
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -470,33 +514,51 @@ func execHelperMultipleCoinsImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, coins)
+	ctx = PrepareExecSignedTxWithMultipleMsgs(t, keeper, ctx, txSender, senderPrivKey, secretMsgsBz, contractAddress, coins)
 
-	gasBefore := ctx.GasMeter().GasConsumed()
-	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, coins, nil)
-	gasAfter := ctx.GasMeter().GasConsumed()
-	gasUsed := gasAfter - gasBefore
+	var results []ExecResult
+	for _, msg := range secretMsgsBz {
+		nonce := msg[0:32]
 
-	if wasmCallCount < 0 {
-		// default, just check that at least 1 call happened
-		require.NotZero(t, gasMeter.GetWasmCounter(), err)
-	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
+		gasBefore := ctx.GasMeter().GasConsumed()
+		execResult, err := keeper.Execute(ctx, contractAddress, txSender, msg, coins, nil)
+		gasAfter := ctx.GasMeter().GasConsumed()
+		gasUsed := gasAfter - gasBefore
+
+		if wasmCallCount < 0 {
+			// default, just check that at least 1 call happened
+			require.NotZero(t, gasMeter.GetWasmCounter(), err)
+		} else {
+			require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
+		}
+
+		if err != nil {
+			results = append(results, ExecResult{
+				Nonce:      nil,
+				Ctx:        ctx,
+				Data:       nil,
+				WasmEvents: nil,
+				GasUsed:    gasUsed,
+			})
+			return results, extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
+		}
+
+		// wasmEvents comes from all the callbacks as well
+		wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
+
+		// Data is the output of only the first call
+		data := getDecryptedData(t, execResult.Data, nonce)
+
+		results = append(results, ExecResult{
+			Nonce:      nonce,
+			Ctx:        ctx,
+			Data:       data,
+			WasmEvents: wasmEvents,
+			GasUsed:    gasUsed,
+		})
 	}
 
-	if err != nil {
-		return nil, ctx, nil, nil, 0, extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
-	}
-
-	// wasmEvents comes from all the callbacks as well
-	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
-
-	// TODO check if we can extract the messages from ctx
-
-	// Data is the output of only the first call
-	data := getDecryptedData(t, execResult.Data, nonce)
-
-	return nonce, ctx, data, wasmEvents, gasUsed, cosmwasm.StdError{}
+	return results, cosmwasm.StdError{}
 }
 
 func initHelper(

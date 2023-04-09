@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"os"
 	"path/filepath"
 	"testing"
@@ -131,6 +132,16 @@ var (
 	outOfGasError                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
 	_             wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
 )
+
+type ContractEvent []v010cosmwasm.LogAttribute
+
+type ExecResult struct {
+	Nonce      []byte
+	Ctx        sdk.Context
+	Data       []byte
+	WasmEvents []ContractEvent
+	GasUsed    uint64
+}
 
 type MockIBCTransferKeeper struct {
 	GetPortFn func(ctx sdk.Context) string
@@ -585,6 +596,41 @@ func PrepareIBCOpenAck(t *testing.T, keeper Keeper, ctx sdk.Context, ibcOpenAck 
 	}
 
 	txBytes, err := json.Marshal(channelConnectMsg)
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
+func PrepareExecSignedTxWithMultipleMsgs(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	sender sdk.AccAddress, senderPrivKey crypto.PrivKey, secretMsgs [][]byte, contractAddress sdk.AccAddress, coins sdk.Coins,
+) sdk.Context {
+
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	var encryptedMsgs []sdk.Msg
+	for _, msg := range secretMsgs {
+		executeMsg := wasmtypes.MsgExecuteContract{
+			Sender:    sender,
+			Contract:  contractAddress,
+			Msg:       msg,
+			SentFunds: coins,
+		}
+		encryptedMsgs = append(encryptedMsgs, &executeMsg)
+	}
+
+	creatorAccs := make([]authtypes.AccountI, len(encryptedMsgs))
+	senderPrivKeys := make([]crypto.PrivKey, len(encryptedMsgs))
+
+	for i := range encryptedMsgs {
+		creatorAccs[i] = creatorAcc
+		senderPrivKeys[i] = senderPrivKey
+	}
+
+	preparedTx := NewTestTxMultiple(encryptedMsgs, creatorAccs, senderPrivKeys)
+
+	txBytes, err := preparedTx.Marshal()
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
