@@ -12,7 +12,7 @@ option go_package = "github.com/strangelove-ventures/packet-forward-middleware/v
 service Query {
   // Params queries all parameters of the router module.
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
-    option (google.api.http).get = "/ibc/apps/packetforward/v1/params";
+    option (google.api.http).get = "/ibc/apps/router/v1/params";
   }
 }
 
