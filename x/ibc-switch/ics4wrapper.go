@@ -10,7 +10,7 @@ import (
 	"github.com/cosmos/ibc-go/v4/modules/core/exported"
 
 	// todo: change with custom types, from osmosis
-	"github.com/osmosis-labs/osmosis/v15/x/ibc-rate-limit/types"
+	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
 )
 
 var (
@@ -64,7 +64,6 @@ func (i *ICS4Wrapper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilityt
 }
 
 func (i *ICS4Wrapper) GetSwitchStatus(ctx sdk.Context) (contract string) {
-	// todo: create param
 	return i.GetParams(ctx).SwitchStatus
 }
 

@@ -6,6 +6,7 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 )
 
+// todo: move to keys.go
 // Parameter store keys.
 var (
 	KeySwitchStatus  = []byte("switch-status")
@@ -21,7 +22,7 @@ func ParamKeyTable() paramtypes.KeyTable {
 func NewParams(switchStatus string, pauserAddress sdk.AccAddress) (Params, error) {
 	return Params{
 		SwitchStatus:  switchStatus,
-		PauserAddress: pauser,
+		PauserAddress: pauserAddress,
 	}, nil
 }
 
@@ -44,14 +45,15 @@ func (p Params) Validate() error {
 // Implements params.ParamSet.
 func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
 	return paramtypes.ParamSetPairs{
-		paramtypes.NewParamSetPair(KeyContractAddress, &p.ContractAddress, validateContractAddress),
+		paramtypes.NewParamSetPair(KeySwitchStatus, &p.SwitchStatus, validateSwitchStatus),
+		paramtypes.NewParamSetPair(KeyPauserAddress, &p.PauserAddress, validatePauserAddress),
 	}
 }
 
 func validatePauserAddress(i interface{}) error {
 	v, ok := i.(string)
 	if !ok {
-		return fmt.Errorf("invalid parameter type: %T", i)
+		return fmt.Errorf("invalid parameter type for pauser address: %T", i)
 	}
 
 	// Empty strings are valid for unsetting the param
@@ -69,6 +71,19 @@ func validatePauserAddress(i interface{}) error {
 	err = sdk.VerifyAddressFormat(bech32)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func validateSwitchStatus(i interface{}) error {
+	v, ok := i.(string)
+	if !ok {
+		return fmt.Errorf("invalid parameter type for switch status: %T", i)
+	}
+
+	if v != "on" && v != "off" {
+		return fmt.Errorf("invalid value for switch status: %s", v)
 	}
 
 	return nil
