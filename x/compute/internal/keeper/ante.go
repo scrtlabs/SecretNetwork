@@ -2,8 +2,6 @@ package keeper
 
 import (
 	"encoding/binary"
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -13,18 +11,9 @@ type CountTXDecorator struct {
 	storeKey sdk.StoreKey
 }
 
-type LastMsgDecorator struct {
-	storeKey sdk.StoreKey
-}
-
 // NewCountTXDecorator constructor
 func NewCountTXDecorator(storeKey sdk.StoreKey) *CountTXDecorator {
 	return &CountTXDecorator{storeKey: storeKey}
-}
-
-// LastMsgDecorator constructor
-func NewLastMsgDecorator(storeKey sdk.StoreKey) *LastMsgDecorator {
-	return &LastMsgDecorator{storeKey: storeKey}
 }
 
 // AnteHandle handler stores a tx counter with current height encoded in the store to let the app handle
@@ -51,20 +40,6 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 	store.Set(types.TXCounterPrefix, encodeHeightCounter(currentHeight, txCounter+1))
 
 	return next(types.WithTXCounter(ctx, txCounter), tx, simulate)
-}
-
-// AnteHandle handler resets the market of the last message in the block
-func (a LastMsgDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
-	if simulate {
-		return next(ctx, tx, simulate)
-	}
-
-	store := ctx.KVStore(a.storeKey)
-	// Reset last msg marker
-	fmt.Println("LIORRR Setting marker to off")
-	store.Set(types.LastMsgPrefix, nil)
-
-	return next(ctx, tx, simulate)
 }
 
 func encodeHeightCounter(height int64, counter uint32) []byte {

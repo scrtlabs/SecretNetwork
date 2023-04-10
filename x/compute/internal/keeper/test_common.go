@@ -555,11 +555,6 @@ func TestHandler(k Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
-		store := ctx.KVStore(k.GetStoreKey())
-		if bz := store.Get(wasmtypes.LastMsgPrefix); bz != nil {
-			fmt.Printf("Message of type: %+v was filtered out\n", msg)
-			return &sdk.Result{}, nil
-		}
 		switch msg := msg.(type) {
 		case *wasmtypes.MsgInstantiateContract:
 			return handleInstantiate(ctx, k, msg)

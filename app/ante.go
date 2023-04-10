@@ -14,10 +14,9 @@ import (
 type HandlerOptions struct {
 	ante.HandlerOptions
 
-	IBCKeeper             *keeper.Keeper
-	WasmConfig            *compute.WasmConfig
-	TXCounterStoreKey     sdk.StoreKey
-	LastMsgMarkerStoreKey sdk.StoreKey
+	IBCKeeper         *keeper.Keeper
+	WasmConfig        *compute.WasmConfig
+	TXCounterStoreKey sdk.StoreKey
 }
 
 func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
