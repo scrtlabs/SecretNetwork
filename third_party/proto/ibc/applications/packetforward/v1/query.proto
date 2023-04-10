@@ -1,10 +1,12 @@
 syntax = "proto3";
+
 package packetforward.v1;
 
+import "gogoproto/gogo.proto";
+import "ibc/applications/packetforward/v1/genesis.proto";
 import "google/api/annotations.proto";
-import "packetforward/v1/genesis.proto";
 
-option go_package = "github.com/strangelove-ventures/packet-forward-middleware/v7/router/types";
+option go_package = "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types";
 
 // Query provides defines the gRPC querier service.
 service Query {
