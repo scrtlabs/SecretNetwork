@@ -533,7 +533,7 @@ func execTxBuilderImpl(
 	for _, msg := range secretMsgsBz {
 
 		// simulate the check in baseapp
-		if keeper.LastMsgManager.GetMarker() == true {
+		if keeper.LastMsgManager.GetMarker() {
 			errResult := ErrorResult{
 				Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
 			}
