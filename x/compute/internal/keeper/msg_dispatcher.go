@@ -189,7 +189,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 	var rsp []byte
 	for _, msg := range msgs {
 
-		if d.keeper.GetLastMsgMarkerContainer().GetMarker() == true {
+		if d.keeper.GetLastMsgMarkerContainer().GetMarker() {
 			// todo: break with error? probably
 			return nil, sdkerrors.Wrap(sdkerrors.ErrLastTx, "Cannot send messages or submessages after last tx marker was set")
 		}
