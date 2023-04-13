@@ -75,6 +75,7 @@ type Keeper struct {
 	HomeDir       string
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
+	LastMsgManager *baseapp.LastMsgMarkerContainer
 }
 
 func moduleLogger(ctx sdk.Context) log.Logger {
@@ -108,6 +109,7 @@ func NewKeeper(
 	supportedFeatures string,
 	customEncoders *MessageEncoders,
 	customPlugins *QueryPlugins,
+	LastMsgManager *baseapp.LastMsgMarkerContainer,
 ) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize)
 	if err != nil {
@@ -126,10 +128,15 @@ func NewKeeper(
 		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 		HomeDir:          homeDir,
+		LastMsgManager:   LastMsgManager,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
+}
+
+func (k Keeper) GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer {
+	return k.LastMsgManager
 }
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
@@ -1072,4 +1079,8 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	default:
 		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
+}
+
+func (k Keeper) GetStoreKey() sdk.StoreKey {
+	return k.storeKey
 }

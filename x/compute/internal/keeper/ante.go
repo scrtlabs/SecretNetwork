@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/binary"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )

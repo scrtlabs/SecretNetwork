@@ -590,7 +590,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			}
 
 			// when
-			_, _, _, _, _, err = execHelperImpl(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, false, defaultGasForTests, deposit, wasmCalls)
+			_, _, _, _, _, err = execHelperCustomWasmCount(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, false, defaultGasForTests, deposit, wasmCalls)
 
 			// then
 			if spec.expError {

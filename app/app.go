@@ -216,7 +216,6 @@ func NewSecretNetworkApp(
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
-	// bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
 
 	// Initialize our application with the store keys it requires
 	app := &SecretNetworkApp{

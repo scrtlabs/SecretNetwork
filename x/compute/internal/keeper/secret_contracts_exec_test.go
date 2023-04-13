@@ -1297,7 +1297,7 @@ func TestSendFunds(t *testing.T) {
 							} else if originType == "exec" {
 								_, _, originAddress, _, _ = initHelper(t, keeper, ctx, originCodeId, helperWallet, helperPrivKey, `{"nop":{}}`, false, originVersion.IsCosmWasmV1, defaultGasForTests)
 
-								_, _, _, wasmEvents, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.balancesBefore))
+								_, _, _, wasmEvents, _, err = execHelperMultipleCoins(t, keeper, ctx, originAddress, fundingWallet, fundingWalletPrivKey, msg, false, originVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.balancesBefore), -1)
 							} else {
 								// user sends directly to contract
 								originAddress = fundingWallet
@@ -1306,7 +1306,7 @@ func TestSendFunds(t *testing.T) {
 									wasmCount = 0
 								}
 								if destinationType == "exec" {
-									_, _, _, _, _, err = execHelperMultipleCoinsImpl(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, `{"no_data":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend), wasmCount)
+									_, _, _, _, _, err = execHelperMultipleCoins(t, keeper, ctx, destinationAddr, fundingWallet, fundingWalletPrivKey, `{"no_data":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, stringToCoins(test.coinsToSend), wasmCount)
 								} else {
 									_, _, destinationAddr, _, err = initHelperImpl(t, keeper, ctx, destinationCodeId, fundingWallet, fundingWalletPrivKey, `{"nop":{}}`, false, destinationVersion.IsCosmWasmV1, math.MaxUint64, wasmCount, stringToCoins(test.coinsToSend))
 								}
@@ -1632,7 +1632,7 @@ func TestGasIsChargedForExecCallbackToExec(t *testing.T) {
 			require.Empty(t, initErr)
 
 			// exec callback to exec
-			_, _, _, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":1,"y":2}}`, addr, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 3)
+			_, _, _, _, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":1,"y":2}}`, addr, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 3)
 			require.Empty(t, err)
 		})
 	}
@@ -2280,4 +2280,18 @@ func TestConsumeExact(t *testing.T) {
 			require.Equal(t, baseContractUsage+test.gasExpected, actualUsedGas)
 		})
 	}
+}
+
+func TestLastMsgMarkerMultipleMsgsInATx(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop": {}}`, true, true, defaultGasForTests)
+
+	msgs := []string{`{"last_msg_marker_nop":{}}`, `{"last_msg_marker_nop":{}}`}
+
+	results, err := execHelperMultipleMsgs(t, keeper, ctx, contractAddress, walletA, privKeyA, msgs, true, true, math.MaxUint64, 0)
+	require.NotEqual(t, nil, err)
+	println("Error: ", err)
+
+	require.Equal(t, 1, len(results))
 }
