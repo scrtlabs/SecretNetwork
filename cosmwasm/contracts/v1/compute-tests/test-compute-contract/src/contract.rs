@@ -342,6 +342,55 @@ pub fn wasm_msg(ty: String) -> StdResult<Response> {
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
+        ExecuteMsg::IncrementTimes { times } => {
+            let mut res = Response::default();
+            for _ in 0..times {
+                res = res.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash.clone(),
+                    contract_addr: env.contract.address.clone().into_string(),
+                    msg: Binary::from("{\"increment\":{\"addition\":1}}".as_bytes().to_vec()),
+                    funds: vec![],
+                }));
+            }
+            Ok(res)
+        }
+        ExecuteMsg::LastMsgMarkerNop {} => {
+            Ok(Response::new().add_message(CosmosMsg::LastMsgMark(Empty {})))
+        }
+        ExecuteMsg::LastMsgMarker {} => {
+            let increment_msg = SubMsg {
+                id: 0,
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    code_hash: env.contract.code_hash,
+                    contract_addr: env.contract.address.into_string(),
+                    msg: Binary::from("{\"increment\":{\"addition\":1}}".as_bytes().to_vec()),
+                    funds: vec![],
+                })
+                .into(),
+                reply_on: ReplyOn::Never,
+                gas_limit: None,
+            };
+
+            let bank_msg = SubMsg {
+                id: 0,
+                msg: CosmosMsg::Bank(BankMsg::Send {
+                    to_address: "".to_string(),
+                    amount: coins(1u128, "ust"),
+                })
+                .into(),
+                reply_on: ReplyOn::Never,
+                gas_limit: None,
+            };
+            Ok(Response::new()
+                .add_submessages(vec![
+                    increment_msg.clone(),
+                    increment_msg.clone(),
+                    increment_msg.clone(),
+                    increment_msg.clone(),
+                ])
+                .add_message(CosmosMsg::LastMsgMark(Empty {}))
+                .add_submessages(vec![increment_msg.clone(), bank_msg.clone()]))
+        }
         ExecuteMsg::WasmMsg { ty } => wasm_msg(ty),
         ExecuteMsg::Increment { addition } => increment(env, deps, addition),
         ExecuteMsg::SendFundsWithErrorWithReply {} => Ok(Response::new()

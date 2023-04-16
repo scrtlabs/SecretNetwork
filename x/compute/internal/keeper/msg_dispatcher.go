@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"os"
 	"sort"
 	"strings"
@@ -27,6 +28,7 @@ type Messenger interface {
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
 	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
+	GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -186,6 +188,18 @@ func redactError(err error) (bool, error) {
 func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
+
+		if d.keeper.GetLastMsgMarkerContainer().GetMarker() {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrLastTx, "Cannot send messages or submessages after last tx marker was set")
+		}
+
+		if msg.Msg.LastMsgMark != nil {
+			d.keeper.GetLastMsgMarkerContainer().SetMarker(true)
+
+			// no handler is defined for marker - it's just to get here
+			break
+		}
+
 		// Check replyOn validity
 		switch msg.ReplyOn {
 		case v1wasmTypes.ReplySuccess, v1wasmTypes.ReplyError, v1wasmTypes.ReplyAlways, v1wasmTypes.ReplyNever:

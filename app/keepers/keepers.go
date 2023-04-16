@@ -282,6 +282,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		supportedFeatures,
 		nil,
 		nil,
+		&app.LastTxManager,
 	)
 	ak.ComputeKeeper = &computeKeeper
 

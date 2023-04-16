@@ -5,6 +5,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+
+	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,8 +23,6 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-
-	"github.com/cosmos/cosmos-sdk/client"
 
 	"github.com/stretchr/testify/require"
 
@@ -94,10 +95,10 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
-const (
-	flagLRUCacheSize  = "lru_size"
-	flagQueryGasLimit = "query_gas_limit"
-)
+//const (
+//	flagLRUCacheSize  = "lru_size"
+//	flagQueryGasLimit = "query_gas_limit"
+//)
 
 const (
 	hackAtomContract            = "hackatom.wasm"
@@ -130,9 +131,24 @@ var TestContractPaths = map[string]string{
 }
 
 var (
-	outOfGasError                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
-	_             wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
+	// _                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
+	_ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
 )
+
+type ContractEvent []v010cosmwasm.LogAttribute
+
+type ExecResult struct {
+	Nonce      []byte
+	Ctx        sdk.Context
+	Data       []byte
+	WasmEvents []ContractEvent
+	GasUsed    uint64
+}
+
+type ErrorResult struct {
+	CosmWasm *cosmwasm.StdError
+	Generic  error
+}
 
 type MockIBCTransferKeeper struct {
 	GetPortFn func(ctx sdk.Context) string
@@ -477,6 +493,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	msgRouter := baseapp.NewMsgServiceRouter()
 	msgRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
 
+	bappTxMngr := baseapp.LastMsgMarkerContainer{}
+
 	keeper := NewKeeper(
 		encodingConfig.Marshaler,
 		*encodingConfig.Amino,
@@ -500,6 +518,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		supportedFeatures,
 		encoders,
 		queriers,
+		&bappTxMngr,
 	)
 	// keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
@@ -534,6 +553,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 // TestHandler returns a wasm handler for tests (to avoid circular imports)
 func TestHandler(k Keeper) sdk.Handler {
+
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
@@ -592,6 +612,41 @@ func PrepareIBCOpenAck(t *testing.T, keeper Keeper, ctx sdk.Context, ibcOpenAck 
 	return ctx.WithTxBytes(txBytes)
 }
 
+func PrepareExecSignedTxWithMultipleMsgs(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	sender sdk.AccAddress, senderPrivKey crypto.PrivKey, secretMsgs [][]byte, contractAddress sdk.AccAddress, coins sdk.Coins,
+) sdk.Context {
+
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	var encryptedMsgs []sdk.Msg
+	for _, msg := range secretMsgs {
+		executeMsg := wasmtypes.MsgExecuteContract{
+			Sender:    sender,
+			Contract:  contractAddress,
+			Msg:       msg,
+			SentFunds: coins,
+		}
+		encryptedMsgs = append(encryptedMsgs, &executeMsg)
+	}
+
+	creatorAccs := make([]authtypes.AccountI, len(encryptedMsgs))
+	senderPrivKeys := make([]crypto.PrivKey, len(encryptedMsgs))
+
+	for i := range encryptedMsgs {
+		creatorAccs[i] = creatorAcc
+		senderPrivKeys[i] = senderPrivKey
+	}
+
+	preparedTx := NewTestTxMultiple(encryptedMsgs, creatorAccs, senderPrivKeys)
+
+	txBytes, err := preparedTx.Marshal()
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
 func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
 	require.NoError(t, err)
@@ -602,9 +657,9 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 		Msg:       encMsg,
 		SentFunds: funds,
 	}
-	tx := NewTestTx(&executeMsg, creatorAcc, privKey)
+	newTx := NewTestTx(&executeMsg, creatorAcc, privKey)
 
-	txBytes, err := tx.Marshal()
+	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
@@ -621,9 +676,9 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator s
 		InitMsg:   encMsg,
 		InitFunds: funds,
 	}
-	tx := NewTestTx(&initMsg, creatorAcc, privKey)
+	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
 
-	txBytes, err := tx.Marshal()
+	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
 	return ctx.WithTxBytes(txBytes)
@@ -728,11 +783,11 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 		panic(err)
 	}
 
-	tx, ok := builder.(protoTxProvider)
+	newTx, ok := builder.(protoTxProvider)
 	if !ok {
 		panic("failed to unwrap tx builder to protobuf tx")
 	}
-	return tx.GetProtoTx()
+	return newTx.GetProtoTx()
 }
 
 func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
@@ -785,11 +840,11 @@ type protoTxProvider interface {
 	GetProtoTx() *tx.Tx
 }
 
-func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) {
-	protoProvider, ok := txBuilder.(protoTxProvider)
-	if !ok {
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expected proto tx builder, got %T", txBuilder)
-	}
-
-	return protoProvider.GetProtoTx(), nil
-}
+//func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) {
+//	protoProvider, ok := txBuilder.(protoTxProvider)
+//	if !ok {
+//		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expected proto tx builder, got %T", txBuilder)
+//	}
+//
+//	return protoProvider.GetProtoTx(), nil
+//}
