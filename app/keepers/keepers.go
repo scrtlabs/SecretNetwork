@@ -1,11 +1,12 @@
 package keepers
 
 import (
+	"path/filepath"
+
 	ibcfee "github.com/cosmos/ibc-go/v4/modules/apps/29-fee"
 	ibcpacketforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 	ibcpacketforwardkeeper "github.com/strangelove-ventures/packet-forward-middleware/v4/router/keeper"
 	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
-	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -62,6 +63,10 @@ import (
 
 	ibcfeekeeper "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/keeper"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+
+	ibchooks "github.com/scrtlabs/SecretNetwork/x/ibc-hooks"
+	ibchookskeeper "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
+	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
 
 type SecretAppKeepers struct {
@@ -85,6 +90,7 @@ type SecretAppKeepers struct {
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   ibctransferkeeper.Keeper
 
+	IbcHooksKeeper      *ibchookskeeper.Keeper
 	IbcFeeKeeper        ibcfeekeeper.Keeper
 	PacketForwardKeeper *ibcpacketforwardkeeper.Keeper
 
@@ -294,6 +300,39 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.ComputeKeeper = &computeKeeper
 
+	// The order stuff happen:
+	// 1. WASM Hooks
+	// 2. Fee
+	// 3. PFM
+	// 4. Transfer
+	//
+	// Assaf: I think PFM and WASM hoosk are mutually exclusive, and I'm not sure what happens if we have both in a packet. That's also the order Osmosis uses, but they don't have the Fee middleware. It would be interesting to test this behavior. Juno does it in the same order that we do (Fee middleware included).
+
+	// Setup the ICS4Wrapper used by the hooks middleware
+	// Configure the hooks keeper
+	hooksKeeper := ibchookskeeper.NewKeeper(
+		ak.keys[ibchookstypes.StoreKey],
+	)
+	ak.IbcHooksKeeper = &hooksKeeper
+
+	secretPrefix := sdk.GetConfig().GetBech32AccountAddrPrefix()
+	wasmHooks := ibchooks.NewWasmHooks(&hooksKeeper, &computeKeeper, secretPrefix)
+	ibcHooksICS4Wrapper := ibchooks.NewICS4Middleware(
+		ak.IbcKeeper.ChannelKeeper,
+		wasmHooks,
+	)
+
+	ak.IbcFeeKeeper = ibcfeekeeper.NewKeeper(
+		appCodec,
+		ak.keys[ibcfeetypes.StoreKey],
+		ak.GetSubspace(ibcfeetypes.ModuleName), // this isn't even used in the keeper but is required?
+		ibcHooksICS4Wrapper,
+		ak.IbcKeeper.ChannelKeeper,
+		&ak.IbcKeeper.PortKeeper,
+		ak.AccountKeeper,
+		ak.BankKeeper,
+	)
+
 	// Initialize packet forward middleware router
 	ak.PacketForwardKeeper = ibcpacketforwardkeeper.NewKeeper(
 		appCodec,
@@ -305,17 +344,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.BankKeeper,
 		// ak.IbcKeeper.ChannelKeeper,
 		&ak.IbcFeeKeeper,
-	)
-
-	ak.IbcFeeKeeper = ibcfeekeeper.NewKeeper(
-		appCodec,
-		ak.keys[ibcfeetypes.StoreKey],
-		ak.GetSubspace(ibcfeetypes.ModuleName), // this isn't even used in the keeper but is required?
-		ak.IbcKeeper.ChannelKeeper,             // replaced with IBC middleware
-		ak.IbcKeeper.ChannelKeeper,
-		&ak.IbcKeeper.PortKeeper,
-		ak.AccountKeeper,
-		ak.BankKeeper,
 	)
 
 	icaControllerKeeper := icacontrollerkeeper.NewKeeper(

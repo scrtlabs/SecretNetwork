@@ -1,5 +1,7 @@
 # IBC-hooks
 
+## Forked from https://github.com/osmosis-labs/osmosis/tree/512654fb35845f807cdc9179984db9e2afc2e564/x/ibc-hooks
+
 ## Wasm Hooks
 
 The wasm hook is an IBC middleware which is used to allow ICS-20 token transfers to initiate contract calls.

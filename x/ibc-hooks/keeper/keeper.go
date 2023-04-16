@@ -2,11 +2,12 @@ package keeper
 
 import (
 	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/types/address"
 
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/osmosis-labs/osmosis/x/ibc-hooks/types"
+	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

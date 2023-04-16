@@ -11,12 +11,12 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
-	"github.com/osmosis-labs/osmosis/x/ibc-hooks/client/cli"
-	"github.com/osmosis-labs/osmosis/x/ibc-hooks/types"
+	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/client/cli"
+	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 
-	"github.com/osmosis-labs/osmosis/osmoutils"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -75,11 +75,11 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 type AppModule struct {
 	AppModuleBasic
 
-	authKeeper osmoutils.AccountKeeper
+	authKeeper AccountKeeper
 }
 
 // NewAppModule creates a new AppModule object.
-func NewAppModule(ak osmoutils.AccountKeeper) AppModule {
+func NewAppModule(ak AccountKeeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		authKeeper:     ak,
@@ -136,3 +136,10 @@ func (AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.Validato
 
 // ConsensusVersion implements AppModule/ConsensusVersion.
 func (AppModule) ConsensusVersion() uint64 { return 1 }
+
+type AccountKeeper interface {
+	NewAccount(sdk.Context, authtypes.AccountI) authtypes.AccountI
+
+	GetAccount(ctx sdk.Context, addr sdk.AccAddress) authtypes.AccountI
+	SetAccount(ctx sdk.Context, acc authtypes.AccountI)
+}
