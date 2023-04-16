@@ -294,19 +294,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.ComputeKeeper = &computeKeeper
 
-	// Initialize packet forward middleware router
-	ak.PacketForwardKeeper = ibcpacketforwardkeeper.NewKeeper(
-		appCodec,
-		ak.keys[ibcpacketforwardtypes.StoreKey],
-		ak.GetSubspace(ibcpacketforwardtypes.ModuleName),
-		ak.TransferKeeper,
-		ak.IbcKeeper.ChannelKeeper,
-		ak.DistrKeeper,
-		ak.BankKeeper,
-		// ak.IbcKeeper.ChannelKeeper,
-		&ak.IbcFeeKeeper,
-	)
-
 	ak.IbcFeeKeeper = ibcfeekeeper.NewKeeper(
 		appCodec,
 		ak.keys[ibcfeetypes.StoreKey],
@@ -349,7 +336,11 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		appCodec,
 		ak.keys[ibctransfertypes.StoreKey],
 		ak.GetSubspace(ibctransfertypes.ModuleName),
-		ak.PacketForwardKeeper,
+		// todo: I think transfer keeper does not need to know about packet forward keeper, because
+		//  we don't want to need to go through that module if the packets originated in this chain.
+		//  pass here the hooked ibc-switch channel instead
+		//ak.PacketForwardKeeper,
+		ak.IbcKeeper.ChannelKeeper,
 		ak.IbcKeeper.ChannelKeeper,
 		&ak.IbcKeeper.PortKeeper,
 		ak.AccountKeeper,
@@ -358,7 +349,18 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.TransferKeeper = transferKeeper
 
-	ak.PacketForwardKeeper.SetTransferKeeper(ak.TransferKeeper)
+	// Initialize packet forward middleware router
+	ak.PacketForwardKeeper = ibcpacketforwardkeeper.NewKeeper(
+		appCodec,
+		ak.keys[ibcpacketforwardtypes.StoreKey],
+		ak.GetSubspace(ibcpacketforwardtypes.ModuleName),
+		ak.TransferKeeper,
+		ak.IbcKeeper.ChannelKeeper,
+		ak.DistrKeeper,
+		ak.BankKeeper,
+		// ak.IbcKeeper.ChannelKeeper,
+		&ak.IbcFeeKeeper,
+	)
 
 	var transferStack porttypes.IBCModule
 	transferStack = transfer.NewIBCModule(ak.TransferKeeper)
