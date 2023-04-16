@@ -2,11 +2,9 @@
 extern crate sgx_tstd as std;
 
 extern crate alloc;
-extern crate core;
 extern crate sgx_types;
 
 pub mod r#const;
-pub mod ecalls;
 
 pub mod wasm_messages;
 
@@ -17,35 +15,8 @@ mod txs;
 #[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
 pub mod validator_whitelist;
 
-use lazy_static::lazy_static;
-use log::debug;
-
-use tendermint_light_client_verifier::types::UntrustedBlockState;
-use tendermint_light_client_verifier::{ProdVerifier, Verdict};
-
-lazy_static! {
-    static ref VERIFIER: ProdVerifier = ProdVerifier::default();
-}
-
-pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
-    #[cfg(feature = "verify-validator-whitelist")]
-    if !validator_whitelist::whitelisted_validators_in_block(untrusted_block) {
-        debug!("Error verifying validators in block");
-        return false;
-    }
-
-    match VERIFIER.verify_commit(untrusted_block) {
-        Verdict::Success => true,
-        Verdict::NotEnoughTrust(_) => {
-            debug!("Error verifying header - not enough trust");
-            false
-        }
-        Verdict::Invalid(e) => {
-            debug!("Error verifying header - invalid block header: {:?}", e);
-            false
-        }
-    }
-}
+pub mod submit_block_signatures;
+mod verify;
 
 #[cfg(feature = "test")]
 pub mod tests {

@@ -24,7 +24,7 @@ import (
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
-const SupportedFeatures = "staking,stargate,ibc3"
+const SupportedFeatures = "staking,stargate,ibc3,random"
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath: "/tmp/id_tx_io.json",

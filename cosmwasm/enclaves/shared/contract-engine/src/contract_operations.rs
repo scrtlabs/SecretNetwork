@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "random")]
+use cw_types_generic::{ContractFeature, CwEnv};
+
 use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
@@ -24,6 +27,8 @@ use crate::random::update_msg_counter;
 
 #[cfg(feature = "random")]
 use crate::random::derive_random;
+#[cfg(feature = "random")]
+use crate::wasm3::Engine;
 
 use super::contract_validation::{
     generate_contract_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -144,17 +149,7 @@ pub fn init(
     versioned_env.set_contract_hash(&contract_hash);
 
     #[cfg(feature = "random")]
-    {
-        debug!("Old random: {:?}", versioned_env.get_random());
-
-        versioned_env.set_random(derive_random(
-            &versioned_env.get_random(),
-            &contract_key,
-            block_height,
-        ));
-
-        debug!("New random: {:?}", versioned_env.get_random());
-    }
+    set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
 
     update_msg_counter(block_height);
     //let start = Instant::now();
@@ -195,6 +190,23 @@ pub fn init(
         output,
         contract_key,
     })
+}
+
+#[cfg(feature = "random")]
+fn update_random_with_msg_counter(
+    block_height: u64,
+    contract_key: &[u8; 64],
+    versioned_env: &mut CwEnv,
+) {
+    let old_random = versioned_env.get_random();
+    debug!("Old random: {:?}", old_random);
+
+    // rand is None if env is v0.10
+    if let Some(rand) = old_random {
+        versioned_env.set_random(Some(derive_random(&rand, contract_key, block_height)));
+    }
+
+    debug!("New random: {:?}", versioned_env.get_random());
 }
 
 fn to_canonical(contract_address: &BaseAddr) -> Result<CanonicalAddr, EnclaveError> {
@@ -311,21 +323,12 @@ pub fn handle(
         .into_versioned_env(&engine.get_api_version());
 
     #[cfg(feature = "random")]
-    {
-        debug!("Old random: {:?}", versioned_env.get_random());
-
-        versioned_env.set_random(derive_random(
-            &versioned_env.get_random(),
-            &contract_key,
-            block_height,
-        ));
-
-        debug!("New random: {:?}", versioned_env.get_random());
-    }
+    set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
 
     versioned_env.set_contract_hash(&contract_hash);
 
     update_msg_counter(block_height);
+
     let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
 
     *used_gas = engine.gas_used();
@@ -363,6 +366,26 @@ pub fn handle(
     }
 
     Ok(HandleSuccess { output })
+}
+
+#[cfg(feature = "random")]
+fn set_random_in_env(
+    block_height: u64,
+    contract_key: &[u8; 64],
+    engine: &mut Engine,
+    versioned_env: &mut CwEnv,
+) {
+    {
+        if engine
+            .supported_features()
+            .contains(&ContractFeature::Random)
+        {
+            debug!("random is enabled by contract");
+            update_random_with_msg_counter(block_height, contract_key, versioned_env);
+        } else {
+            versioned_env.set_random(None);
+        }
+    }
 }
 
 fn extract_sig_info(sig_info: &[u8]) -> Result<SigInfo, EnclaveError> {

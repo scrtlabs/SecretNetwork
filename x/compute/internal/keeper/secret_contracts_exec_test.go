@@ -164,14 +164,94 @@ func TestAddrValidateFunction(t *testing.T) {
 	require.Equal(t, string(data), "\"Apple\"")
 }
 
+func TestRandomEnv(t *testing.T) {
+
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[randomContract], sdk.NewCoins())
+
+	_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
+	require.Empty(t, initErr)
+	require.Len(t, initEvents, 1)
+
+	initEvent := initEvents[0]
+	envAttributeIndex := slices.IndexFunc(initEvent, func(c v010types.LogAttribute) bool { return c.Key == "env" })
+	envAttribute := initEvent[envAttributeIndex]
+
+	var actualMessageInfo cosmwasm.Env
+	json.Unmarshal([]byte(envAttribute.Value), &actualMessageInfo)
+
+	// var firstRandom string
+	require.Len(t, actualMessageInfo.Block.Random, 32)
+
+	expectedV1Env := fmt.Sprintf(
+		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+		ctx.BlockHeight(),
+		// env.block.time is nanoseconds since unix epoch
+		ctx.BlockTime().UnixNano(),
+		ctx.ChainID(),
+		base64.StdEncoding.EncodeToString(actualMessageInfo.Block.Random),
+		contractAddress.String(),
+		calcCodeHash(TestContractPaths[randomContract]),
+	)
+	//
+	requireEventsInclude(t,
+		initEvents,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{
+					Key:   "env",
+					Value: expectedV1Env,
+				},
+			},
+		},
+	)
+
+	//
+	_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, 1)
+	require.Empty(t, execErr)
+
+	execEvent := execEvents[0]
+	envAttributeIndex = slices.IndexFunc(execEvent, func(c v010types.LogAttribute) bool { return c.Key == "env" })
+	envAttribute = execEvent[envAttributeIndex]
+
+	var actualExecEnv cosmwasm.Env
+	json.Unmarshal([]byte(envAttribute.Value), &actualExecEnv)
+
+	expectedV1EnvExec := fmt.Sprintf(
+		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+		ctx.BlockHeight(),
+		// env.block.time is nanoseconds since unix epoch
+		ctx.BlockTime().UnixNano(),
+		ctx.ChainID(),
+		base64.StdEncoding.EncodeToString(actualExecEnv.Block.Random),
+		contractAddress.String(),
+		calcCodeHash(TestContractPaths[randomContract]),
+	)
+
+	requireEventsInclude(t,
+		execEvents,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{
+					Key:   "env",
+					Value: expectedV1EnvExec,
+				},
+			},
+		},
+	)
+}
+
 func TestEnv(t *testing.T) {
+
+	type ReturnedV1MessageInfo struct {
+		Sender    cosmwasm.HumanAddress `json:"sender"`
+		SentFunds cosmwasm.Coins        `json:"funds"`
+		// Random    string                `json:"random"`
+	}
+
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			type ReturnedV1MessageInfo struct {
-				Sender    cosmwasm.HumanAddress `json:"sender"`
-				SentFunds cosmwasm.Coins        `json:"funds"`
-				// Random    string                `json:"random"`
-			}
 
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
@@ -2214,8 +2294,8 @@ func TestCheckGas(t *testing.T) {
 	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	// 854 is the sum of all the overhead that goes into a contract call beyond the base cost (reading keys, calculations, etc)
-	baseContractUsage := types.InstanceCost + 854
+	// 995 is the sum of all the overhead that goes into a contract call beyond the base cost (reading keys, calculations, etc)
+	baseContractUsage := types.InstanceCost + 995
 
 	_, _, _, events, baseGasUsed, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"check_gas":{}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
@@ -2234,7 +2314,7 @@ func TestConsumeExact(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// not sure where the 16 extra gas comes vs the previous check_gas test, but it makes everything play nice, so....
-	baseContractUsage := types.InstanceCost + 854 - 16
+	baseContractUsage := types.InstanceCost + 995 - 16
 
 	for _, test := range []struct {
 		description   string
