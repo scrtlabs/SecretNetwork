@@ -71,13 +71,7 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		// Remove the compute dir part
 		homeDir := filepath.Dir(keepers.ComputeKeeper.HomeDir[:len(keepers.ComputeKeeper.HomeDir)-1])
 
-		seedFilePath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-		seedFileBackupPath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedBackupConfig)
-
-		err = os.Rename(seedFilePath, seedFileBackupPath)
-		if err != nil {
-			return nil, err
-		}
+		seedFilePath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedNewConfig)
 
 		err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
 		if err != nil {
