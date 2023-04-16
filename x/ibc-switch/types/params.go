@@ -19,7 +19,7 @@ func ParamKeyTable() paramtypes.KeyTable {
 	return paramtypes.NewKeyTable().RegisterParamSet(&Params{})
 }
 
-func NewParams(switchStatus string, pauserAddress sdk.AccAddress) (Params, error) {
+func NewParams(switchStatus string, pauserAddress string) (Params, error) {
 	return Params{
 		SwitchStatus:  switchStatus,
 		PauserAddress: pauserAddress,
