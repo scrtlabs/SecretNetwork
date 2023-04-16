@@ -9,7 +9,6 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
 	"github.com/cosmos/ibc-go/v4/modules/core/exported"
 
-	// todo: change with custom types, from osmosis
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
 )
 
@@ -55,7 +54,6 @@ func (i *ICS4Wrapper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capab
 		return i.channel.SendPacket(ctx, chanCap, packet)
 	}
 
-	// todo: define error
 	return sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 }
 

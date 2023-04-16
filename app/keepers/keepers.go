@@ -101,7 +101,6 @@ type SecretAppKeepers struct {
 	ScopedICAAuthKeeper       capabilitykeeper.ScopedKeeper
 
 	ScopedComputeKeeper capabilitykeeper.ScopedKeeper
-	//
 
 	// keys to access the substores
 	keys    map[string]*sdk.KVStoreKey
@@ -249,6 +248,18 @@ func (ak *SecretAppKeepers) CreateScopedKeepers() {
 	ak.CapabilityKeeper.Seal()
 }
 
+// InitCustomKeepers Create keeper for the register module.
+// Also, Create keepers and modules for the transfer, compute, icacontroller and icahost modules.
+// These are all ibc-enabled, so we build a Stack around each of them.
+//
+// For example, this is how the stack will be build for the transfer app
+//   - SendPacket. Originates from the transferKeeper and goes up the stack:
+//     transferKeeper.SendPacket -> ibcfeekeeper.SendPacket -> ibcswitch.SendPacket -> channel.SendPacket
+//   - RecvPacket, message that originates from core IBC and goes down to app, the flow is the other way:
+//     channel.RecvPacket -> ibcswitch.OnRecvPacket -> ibcfeekeeper.OnRecvPacket ->
+//     ibcpacketforward.OnRecvPacket -> transfer.OnRecvPacket
+//
+// Note that the forward middleware is only integrated on the "receive" direction. It can be safely skipped when sending.
 func (ak *SecretAppKeepers) InitCustomKeepers(
 	appCodec codec.Codec,
 	legacyAmino *codec.LegacyAmino,
