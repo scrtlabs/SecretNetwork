@@ -70,6 +70,23 @@ RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment &
 
 ENTRYPOINT ["/bin/bash"]
 
+FROM prepare-compile-enclave AS compile-tendermint-enclave
+
+ARG SGX_MODE=SW
+ARG FEATURES_U
+
+ARG SGX_MODE=${SGX_MODE}
+ENV FEATURES_U=${FEATURES_U}
+
+RUN git clone --branch main https://github.com/scrtlabs/tm-secret-enclave.git
+
+WORKDIR tm-secret-enclave
+
+RUN git submodule init
+RUN git submodule update --remote
+
+RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U=${FEATURES_U} make build
+
 # ***************** COMPILE SECRETD ************** #
 FROM $TEST AS compile-secretd
 
@@ -161,8 +178,8 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
 
-ARG SECRET_NODE_TYPE=NODE
-ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
+#ARG SECRET_NODE_TYPE=NODE
+#ENV SECRET_NODE_TYPE=${SECRET_NODE_TYPE}
 
 ENV PKG_CONFIG_PATH=""
 ENV SCRT_ENCLAVE_DIR=/usr/lib/
@@ -178,6 +195,9 @@ WORKDIR /root
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/secretd /usr/bin/secretd
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/api/librandom_api.so /usr/lib/librandom_api.so
+
 
 COPY deployment/docker/testnet/bootstrap_init.sh .
 COPY deployment/docker/testnet/node_init.sh .
@@ -192,7 +212,7 @@ RUN chmod +x node_init.sh
 
 RUN secretd completion > /root/secretd_completion
 
-RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
+# RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
 RUN echo 'source /root/secretd_completion' >> ~/.bashrc
 
 RUN mkdir -p /root/.secretd/.compute/
@@ -228,6 +248,10 @@ RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
     && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
 RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
     && wget -O /usr/lib/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/libgo_cosmwasm.so
+RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+    && wget -O /usr/lib/librandom_api.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librandom_api.so
+RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+    && wget -O /usr/lib/tendermint_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/tendermint_enclave.signed.so
 
 COPY deployment/docker/mainnet/mainnet_node.sh .
 RUN chmod +x mainnet_node.sh
@@ -255,6 +279,8 @@ COPY Makefile .
 # Copy over binaries from the build-env
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so ./go-cosmwasm/tendermint_enclave.signed.so
+COPY --from=compile-tendermint-enclave /go/src/github.com/enigmampc/SecretNetwork/tm-secret-enclave/api/librandom_api.so ./go-cosmwasm/librandom_api.so
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/secretd secretd
 RUN cp /go/src/github.com/enigmampc/SecretNetwork/secretcli secretcli
 
@@ -271,6 +297,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 FROM build-deb as build-deb-mainnet
 
 COPY --from=mainnet-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
+COPY --from=mainnet-release /usr/lib/tendermint_enclave.signed.so ./go-cosmwasm/
 
 CMD ["/bin/bash", "build_deb.sh"]
 

@@ -3,7 +3,10 @@ package compute
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
+
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -151,7 +154,45 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 }
 
 // BeginBlock returns the begin blocker for the compute module.
-func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
+func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBlock) {
+	header, err := beginBlock.Header.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	// There is a possibility, specifically was found on upgrade block, when there are no pre-commits at all (beginBlock.Commit == nil)
+	// In this case Marshal will fail with a Seg Fault.
+	// The fix below it a temporary fix until we will investigate the issue in tendermint.
+	if beginBlock.Commit == nil {
+		ctx.Logger().Info(fmt.Sprintf("skipping commit submition to the enlave for block %d\n", beginBlock.Header.Height))
+		return
+	}
+
+	commit, err := beginBlock.Commit.Marshal()
+	if err != nil {
+		ctx.Logger().Error("Failed to marshal commit")
+		panic(err)
+	}
+
+	data, err := beginBlock.Data.Marshal()
+	if err != nil {
+		ctx.Logger().Error("Failed to marshal data")
+		panic(err)
+	}
+
+	if beginBlock.Header.EncryptedRandom != nil {
+		randomAndProof := append(beginBlock.Header.EncryptedRandom.Random, beginBlock.Header.EncryptedRandom.Proof...)
+		random, err := api.SubmitBlockSignatures(header, commit, data, randomAndProof)
+		if err != nil {
+			panic(err)
+		}
+
+		am.keeper.SetRandomSeed(ctx, random)
+
+	} else {
+		println("No random got from TM header")
+	}
+}
 
 // EndBlock returns the end blocker for the compute module. It returns no validator
 // updates.

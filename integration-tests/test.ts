@@ -163,7 +163,7 @@ beforeAll(async () => {
 
   if (t.code !== 0) {
     console.error(`failed to multisend coins`);
-    throw new Error("Failed to multisend coins to initial accounts");
+    throw new Error(`Failed to multisend coins to initial accounts: ${t.code}: ${t.rawLog}`);
   }
 
   readonly = new SecretNetworkClient({

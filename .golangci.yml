@@ -28,8 +28,6 @@ linters:
     - nolintlint
 
 issues:
-  exclude:
-    - "undeclared name: `Asset`"
   exclude-rules:
     - text: "var-naming"
       linters:

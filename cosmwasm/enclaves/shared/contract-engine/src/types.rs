@@ -14,6 +14,20 @@ pub struct SecretMessage {
     pub msg: Vec<u8>,
 }
 
+pub struct ParsedMessage {
+    pub should_validate_sig_info: bool,
+    pub was_msg_encrypted: bool,
+    pub should_encrypt_output: bool,
+    pub secret_msg: SecretMessage,
+    pub decrypted_msg: Vec<u8>,
+    pub data_for_validation: Option<Vec<u8>>,
+}
+
+pub struct DecryptedSecretMessage {
+    pub secret_msg: SecretMessage,
+    pub decrypted_msg: Vec<u8>,
+}
+
 impl SecretMessage {
     pub fn encrypt_in_place(&mut self) -> Result<(), EnclaveError> {
         self.msg = self
@@ -27,22 +41,30 @@ impl SecretMessage {
         Ok(())
     }
 
-    pub fn decrypt(&self) -> Result<Vec<u8>, EnclaveError> {
+    pub fn try_decrypt(&self) -> Option<Vec<u8>> {
         trace!("input before decryption: {:?}", base64::encode(&self.msg));
         let key = self.encryption_key();
 
-        // pass
-        let msg = key.decrypt_siv(self.msg.as_slice(), None).map_err(|err| {
-            error!("got an error while trying to decrypt the msg: {:?}", err);
-            EnclaveError::DecryptionError
-        })?;
+        if let Ok(msg) = key.decrypt_siv(self.msg.as_slice(), None) {
+            trace!(
+                "input after decryption: {:?}",
+                String::from_utf8_lossy(&msg)
+            );
 
-        trace!(
-            "input after decryption: {:?}",
-            String::from_utf8_lossy(&msg)
-        );
+            return Some(msg.to_vec());
+        }
 
-        Ok(msg)
+        None
+    }
+
+    pub fn decrypt(&self) -> Result<Vec<u8>, EnclaveError> {
+        match self.try_decrypt() {
+            Some(msg) => Ok(msg),
+            None => {
+                error!("got an error while trying to decrypt the msg");
+                Err(EnclaveError::DecryptionError)
+            }
+        }
     }
 
     pub fn encryption_key(&self) -> AESKey {

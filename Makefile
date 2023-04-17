@@ -20,6 +20,8 @@ BRANCH ?= develop
 DEBUG ?= 0
 DOCKER_TAG ?= latest
 
+TM_SGX ?= true
+
 CW_CONTRACTS_V010_PATH = ./cosmwasm/contracts/v010/
 CW_CONTRACTS_V1_PATH = ./cosmwasm/contracts/v1/
 
@@ -96,6 +98,11 @@ ifeq ($(SGX_MODE), HW)
   endif
 
   build_tags += hw
+  build_tags += sgx
+else
+  ifeq ($(TM_SGX), true)
+    build_tags += sgx
+  endif
 endif
 
 build_tags += $(IAS_BUILD)
@@ -146,10 +153,10 @@ go.sum: go.mod
 	GO111MODULE=on go mod verify
 
 build_cli:
-	go build -o secretcli -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -o secretcli -mod=readonly -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
-	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
+	xgo --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
@@ -201,7 +208,7 @@ deb-no-compile:
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	cp -f ./go-cosmwasm/tendermint_enclave.signed.so ./go-cosmwasm/librandom_api.so ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
@@ -237,7 +244,7 @@ clean:
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
-			--build-arg FEATURES="${FEATURES},debug-print" \
+			--build-arg FEATURES="${FEATURES},debug-print,random" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \
@@ -250,7 +257,7 @@ localsecret:
  			-t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
 build-ibc-hermes:
-	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc --load
+	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc
 
 build-testnet-bootstrap:
 	@mkdir build 2>&3 || true
@@ -274,6 +281,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,${FEATURES}" \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \
@@ -286,6 +294,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
+				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,${FEATURES}" \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
@@ -297,8 +306,8 @@ build-testnet:
 
 build-mainnet-upgrade:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
-                 --build-arg FEATURES_U=${FEATURES_U} \
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
+                 --build-arg FEATURES_U="production, ${FEATURES_U}" \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
                  --secret id=API_KEY,src=api_key.txt \
                  --secret id=SPID,src=spid.txt \
@@ -310,8 +319,8 @@ build-mainnet-upgrade:
                  $(DOCKER_BUILD_ARGS) \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target mainnet-release .
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
-				 --build-arg FEATURES_U=${FEATURES_U} \
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
+				 --build-arg FEATURES_U="production, ${FEATURES_U}" \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
@@ -322,10 +331,9 @@ build-mainnet-upgrade:
 				 -t deb_build \
 				 --target build-deb-mainnet .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
-
 build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
                  --secret id=API_KEY,src=api_key.txt \
@@ -339,7 +347,7 @@ build-mainnet:
                  -f deployment/dockerfiles/Dockerfile \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target release-image .
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
 				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
@@ -423,14 +431,16 @@ prep-go-tests: build-test-contract bin-data-sw
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 
 go-tests: build-test-contract bin-data-sw
-	SGX_MODE=SW $(MAKE) build-linux-with-query
+	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
 	rm -rf ./x/compute/internal/keeper/.sgx_secrets
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contract bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
@@ -492,7 +502,8 @@ bin-data-production:
 # 1. sudo docker login -u ABC -p XYZ
 # 2. sudo docker buildx create --use
 secret-contract-optimizer:
-	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
+	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/base-images/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
+	sudo docker buildx imagetools create -t enigmampc/secret-contract-optimizer:latest enigmampc/secret-contract-optimizer:${TAG}
 
 aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .

@@ -267,7 +267,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	computeDir := filepath.Join(homePath, ".compute")
 	// The last arguments can contain custom message handlers, and custom query handlers,
 	// if we want to allow any custom callbacks
-	supportedFeatures := "staking,stargate,ibc3"
+	supportedFeatures := "staking,stargate,ibc3,random"
 
 	computeKeeper := compute.NewKeeper(
 		appCodec,
@@ -291,6 +291,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		supportedFeatures,
 		nil,
 		nil,
+		&app.LastTxManager,
 	)
 	ak.ComputeKeeper = &computeKeeper
 

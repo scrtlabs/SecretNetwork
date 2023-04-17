@@ -14,7 +14,7 @@ impl Kdf<AESKey> for AESKey {
         let mut input_bytes: Vec<u8> = self.get().to_vec();
         input_bytes.extend_from_slice(data);
 
-        derive_key(&input_bytes, &[])
+        hkdf_sha_256(&input_bytes, &[])
     }
 }
 
@@ -24,11 +24,11 @@ impl Kdf<AESKey> for Seed {
         let mut input_bytes: Vec<u8> = self.as_slice().to_vec();
         input_bytes.extend_from_slice(data);
 
-        derive_key(&input_bytes, &[b"seed"])
+        hkdf_sha_256(&input_bytes, &[b"seed"])
     }
 }
 
-fn derive_key(input_bytes: &[u8], info: &[&[u8]]) -> AESKey {
+pub fn hkdf_sha_256(input_bytes: &[u8], info: &[&[u8]]) -> AESKey {
     let salt = hkdf::Salt::new(hkdf::HKDF_SHA256, &KDF_SALT);
 
     let prk = salt.extract(input_bytes);

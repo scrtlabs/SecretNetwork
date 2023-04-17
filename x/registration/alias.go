@@ -19,13 +19,14 @@ const (
 	EnclaveRegistrationKey     = types.EnclaveRegistrationKey
 	QueryEncryptedSeed         = keeper.QueryEncryptedSeed
 	QueryMasterKey             = keeper.QueryMasterKey
-	SecretNodeSeedConfig       = types.SecretNodeSeedConfig
-	SecretNodeSeedBackupConfig = types.SecretNodeSeedBackupConfig
+	SecretNodeSeedLegacyConfig = types.SecretNodeSeedLegacyConfig
+	SecretNodeSeedNewConfig    = types.SecretNodeSeedNewConfig
 	SecretNodeCfgFolder        = types.SecretNodeCfgFolder
 	EncryptedKeyLength         = types.EncryptedKeyLength
 	LegacyEncryptedKeyLength   = types.LegacyEncryptedKeyLength
 	AttestationCertPath        = types.AttestationCertPath
 	IoExchMasterKeyPath        = types.IoExchMasterKeyPath
+	LegacyIoMasterCertificate  = types.LegacyIoMasterCertificate
 	NodeExchMasterKeyPath      = types.NodeExchMasterKeyPath
 	SeedPath                   = types.SeedPath
 	MasterIoKeyId              = types.MasterIoKeyId

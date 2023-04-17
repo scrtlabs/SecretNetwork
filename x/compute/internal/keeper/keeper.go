@@ -2,7 +2,9 @@ package keeper
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v4/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	"golang.org/x/crypto/ripemd160"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
@@ -27,8 +30,6 @@ import (
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	"github.com/tendermint/tendermint/libs/log"
-
-	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
@@ -75,6 +76,7 @@ type Keeper struct {
 	HomeDir       string
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
+	LastMsgManager *baseapp.LastMsgMarkerContainer
 }
 
 func moduleLogger(ctx sdk.Context) log.Logger {
@@ -108,6 +110,7 @@ func NewKeeper(
 	supportedFeatures string,
 	customEncoders *MessageEncoders,
 	customPlugins *QueryPlugins,
+	LastMsgManager *baseapp.LastMsgMarkerContainer,
 ) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize)
 	if err != nil {
@@ -126,10 +129,15 @@ func NewKeeper(
 		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 		HomeDir:          homeDir,
+		LastMsgManager:   LastMsgManager,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
+}
+
+func (k Keeper) GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer {
+	return k.LastMsgManager
 }
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
@@ -347,7 +355,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		return nil, nil, sdkerrors.Wrap(types.ErrAccountExists, label)
 	}
 
-	contractAddress := k.generateContractAddress(ctx, codeID)
+	contractAddress := k.generateContractAddress(ctx, codeID, creator)
 	existingAcct := k.accountKeeper.GetAccount(ctx, contractAddress)
 	if existingAcct != nil {
 		return nil, nil, sdkerrors.Wrap(types.ErrAccountExists, existingAcct.GetAddress().String())
@@ -377,8 +385,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(bz, &codeInfo)
 
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
+
 	// prepare env for contract instantiate call
-	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil)
+	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil, random)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -518,8 +528,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 	}
 
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey)
+	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, random)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -613,12 +624,14 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 	store := ctx.KVStore(k.storeKey)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+
 	params := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* empty because it's unused in queries */
 		sdk.NewCoins(),   /* empty because it's unused in queries */
 		contractAddress,
 		contractKey,
+		[]byte{0}, /* empty because it's unused in queries */
 	)
 	params.QueryDepth = queryDepth
 
@@ -679,6 +692,22 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
 	return contractKey
+}
+
+func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
+	store := ctx.KVStore(k.storeKey)
+
+	random := store.Get(types.GetRandomKey(height))
+
+	return random
+}
+
+func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
+	store := ctx.KVStore(k.storeKey)
+
+	ctx.Logger().Info(fmt.Sprintf("Setting random: %s", hex.EncodeToString(random)))
+
+	store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {
@@ -874,16 +903,22 @@ func consumeGas(ctx sdk.Context, gas uint64) {
 }
 
 // generates a contract address from codeID + instanceID
-func (k Keeper) generateContractAddress(ctx sdk.Context, codeID uint64) sdk.AccAddress {
+func (k Keeper) generateContractAddress(ctx sdk.Context, codeID uint64, creator sdk.AccAddress) sdk.AccAddress {
 	instanceID := k.autoIncrementID(ctx, types.KeyLastInstanceID)
-	return contractAddress(codeID, instanceID)
+	return contractAddress(codeID, instanceID, creator)
 }
 
-func contractAddress(codeID, instanceID uint64) sdk.AccAddress {
-	// NOTE: It is possible to get a duplicate address if either codeID or instanceID
-	// overflow 32 bits. This is highly improbable, but something that could be refactored.
-	contractID := codeID<<32 + instanceID
-	return addrFromUint64(contractID)
+func contractAddress(codeID, instanceID uint64, creator sdk.AccAddress) sdk.AccAddress {
+	contractId := codeID<<32 + instanceID
+	contractIdBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(contractIdBytes, contractId)
+
+	sourceBytes := append(contractIdBytes, creator...)
+
+	sha := sha256.Sum256(sourceBytes)
+	hasherRIPEMD160 := ripemd160.New()
+	hasherRIPEMD160.Write(sha[:]) // does not error
+	return sdk.AccAddress(hasherRIPEMD160.Sum(nil))
 }
 
 func (k Keeper) GetNextCodeID(ctx sdk.Context) uint64 {
@@ -944,13 +979,6 @@ func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, cus
 	return k.importContractState(ctx, contractAddr, state)
 }
 
-func addrFromUint64(id uint64) sdk.AccAddress {
-	addr := make([]byte, 20)
-	addr[0] = 'C'
-	binary.PutUvarint(addr[1:], id)
-	return sdk.AccAddress(crypto.AddressHash(addr))
-}
-
 // MultipliedGasMeter wraps the GasMeter from context and multiplies all reads by out defined multiplier
 type MultipiedGasMeter struct {
 	originalMeter sdk.GasMeter
@@ -1008,7 +1036,9 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	store := ctx.KVStore(k.storeKey)
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
-	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey)
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
+
+	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey, random)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -1053,4 +1083,8 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	default:
 		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
+}
+
+func (k Keeper) GetStoreKey() sdk.StoreKey {
+	return k.storeKey
 }

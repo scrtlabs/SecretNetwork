@@ -16,6 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
@@ -26,7 +27,7 @@ const upgradeName = "v1.7"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades:        store.StoreUpgrades{Added: []string{icacontrollertypes.StoreKey, ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, mauth.ModuleName}}, // we kind of forgot this in 1.3
+	StoreUpgrades:        store.StoreUpgrades{Added: []string{icacontrollertypes.StoreKey}},
 }
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
@@ -71,13 +72,7 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		// Remove the compute dir part
 		homeDir := filepath.Dir(keepers.ComputeKeeper.HomeDir[:len(keepers.ComputeKeeper.HomeDir)-1])
 
-		seedFilePath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-		seedFileBackupPath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedBackupConfig)
-
-		err = os.Rename(seedFilePath, seedFileBackupPath)
-		if err != nil {
-			return nil, err
-		}
+		seedFilePath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedNewConfig)
 
 		err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
 		if err != nil {

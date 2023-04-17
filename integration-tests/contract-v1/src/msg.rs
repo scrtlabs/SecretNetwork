@@ -72,6 +72,7 @@ pub enum Msg {
         funds: Vec<Coin>,
     },
     GetTxId {},
+    //GetRandom {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

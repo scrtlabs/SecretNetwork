@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"testing"
@@ -53,7 +54,7 @@ func CreateTestSeedConfig(t *testing.T) []byte {
 
 	cfg := regtypes.SeedConfig{
 		EncryptedKey: seed,
-		MasterKey:    key,
+		MasterKey:    base64.StdEncoding.EncodeToString(key),
 		Version:      regtypes.SeedConfigVersion,
 	}
 
