@@ -8,4 +8,4 @@ edition = "2021"
 name = "eng_edl"
 
 [dependencies]
-sgx_edl = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_edl"}
+sgx_edl = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_edl" }

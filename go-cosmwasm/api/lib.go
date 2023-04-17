@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"syscall"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -159,7 +160,7 @@ func Instantiate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store sdk.KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -205,7 +206,7 @@ func Handle(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store sdk.KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -251,7 +252,7 @@ func Query(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store sdk.KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,

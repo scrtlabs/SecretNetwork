@@ -44,6 +44,7 @@ import (
 
 	dbm "github.com/tendermint/tm-db"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 )
 
@@ -88,25 +89,6 @@ type GasMeter interface {
 
 /****** DB ********/
 
-// KVStore copies a subset of types from cosmos-sdk
-// We may wish to make this more generic sometime in the future, but not now
-// https://github.com/cosmos/cosmos-sdk/blob/bef3689245bab591d7d169abd6bea52db97a70c7/store/types/store.go#L170
-type KVStore interface {
-	Get(key []byte) []byte
-	Set(key, value []byte)
-	Delete(key []byte)
-
-	// Iterator over a domain of keys in ascending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
-	// Iterator must be closed by caller.
-	// To iterate over entire domain, use store.Iterator(nil, nil)
-	Iterator(start, end []byte) dbm.Iterator
-
-	// Iterator over a domain of keys in descending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
-	// Iterator must be closed by caller.
-	ReverseIterator(start, end []byte) dbm.Iterator
-}
 
 var db_vtable = C.DB_vtable{
 	read_db:   (C.read_db_fn)(C.cGet_cgo),
@@ -116,7 +98,7 @@ var db_vtable = C.DB_vtable{
 }
 
 type DBState struct {
-	Store KVStore
+	Store sdk.KVStore
 	// IteratorStackID is used to lookup the proper stack frame for iterators associated with this DB (iterator.go)
 	IteratorStackID uint64
 }
@@ -126,7 +108,7 @@ type DBState struct {
 //	state := buildDBState(kv, counter)
 //	db := buildDB(&state, &gasMeter)
 //	// then pass db into some FFI function
-func buildDBState(kv KVStore, counter uint64) DBState {
+func buildDBState(kv sdk.KVStore, counter uint64) DBState {
 	return DBState{
 		Store:           kv,
 		IteratorStackID: counter,
@@ -166,11 +148,20 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val 
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 
+	iavl, err := getIavl(kv)
+	if err != nil {
+		return C.GoResult_Panic // Should add another error type
+	}
+
 	gasBefore := gm.GasConsumed()
-	v := kv.Get(k)
+
+	// Need to pass the verified block_height to cGet
+	// getWithProof(kv, key, block_height)
+
+	v := iavl.Get(k)
 	gasAfter := gm.GasConsumed()
 	*usedGas = (u64)(gasAfter - gasBefore)
 
@@ -195,7 +186,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 	v := receiveSlice(val)
 
@@ -216,7 +207,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 
 	gasBefore := gm.GasConsumed()
