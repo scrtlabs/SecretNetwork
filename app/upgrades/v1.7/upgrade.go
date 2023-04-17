@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	icacontrollertypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/controller/types"
-	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
-	"github.com/scrtlabs/SecretNetwork/x/mauth"
-	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 	"os"
 	"path/filepath"
 
@@ -16,7 +13,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
@@ -99,8 +95,6 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 
 		keepers.RegKeeper.SetMasterKey(ctx, ioMasterKey, reg.MasterIoKeyId)
 		keepers.RegKeeper.SetMasterKey(ctx, masterKey, reg.MasterNodeKeyId)
-
-		keepers.PacketForwardKeeper.SetParams(ctx, ibcpacketforwardtypes.DefaultParams())
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
