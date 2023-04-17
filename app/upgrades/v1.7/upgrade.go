@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	icacontrollertypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/controller/types"
-	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
-	"github.com/scrtlabs/SecretNetwork/x/mauth"
-	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 	"os"
 	"path/filepath"
 
@@ -26,7 +23,7 @@ const upgradeName = "v1.7"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades:        store.StoreUpgrades{Added: []string{icacontrollertypes.StoreKey, ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, mauth.ModuleName}}, // we kind of forgot this in 1.3
+	StoreUpgrades:        store.StoreUpgrades{Added: []string{icacontrollertypes.StoreKey}},
 }
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
@@ -98,8 +95,6 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 
 		keepers.RegKeeper.SetMasterKey(ctx, ioMasterKey, reg.MasterIoKeyId)
 		keepers.RegKeeper.SetMasterKey(ctx, masterKey, reg.MasterNodeKeyId)
-
-		keepers.PacketForwardKeeper.SetParams(ctx, ibcpacketforwardtypes.DefaultParams())
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}

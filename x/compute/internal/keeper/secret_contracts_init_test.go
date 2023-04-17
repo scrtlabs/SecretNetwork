@@ -499,7 +499,7 @@ func TestGasIsChargedForExecCallbackToInit(t *testing.T) {
 			require.Empty(t, initErr)
 
 			// exec callback to init
-			_, _, _, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
+			_, _, _, _, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d,"code_hash":"%s"}}`, codeID, codeHash), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 			require.Empty(t, err)
 		})
 	}
@@ -857,7 +857,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 			require.Empty(t, err)
 
 			t.Run("GoodCodeHash", func(t *testing.T) {
-				_, _, _, events, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
+				_, _, _, events, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 
 				require.Empty(t, err)
 
@@ -885,7 +885,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 				)
 			})
 			t.Run("EmptyCodeHash", func(t *testing.T) {
-				_, _, _, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
+				_, _, _, _, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"","msg":"%s","label":"2"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -894,7 +894,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 				)
 			})
 			t.Run("TooBigCodeHash", func(t *testing.T) {
-				_, _, _, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
+				_, _, _, _, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%sa","msg":"%s","label":"3"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 
 				require.NotEmpty(t, err)
 				if testContract.IsCosmWasmV1 {
@@ -910,7 +910,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 				}
 			})
 			t.Run("TooSmallCodeHash", func(t *testing.T) {
-				_, _, _, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
+				_, _, _, _, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"4"}}`, codeID, codeHash[0:63], `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -919,7 +919,7 @@ func TestCodeHashExecCallInit(t *testing.T) {
 				)
 			})
 			t.Run("IncorrectCodeHash", func(t *testing.T) {
-				_, _, _, _, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
+				_, _, _, _, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s","label":"5"}}`, codeID, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 
 				require.NotEmpty(t, err)
 				require.Contains(t,
@@ -939,10 +939,10 @@ func TestLabelCollisionWhenMultipleCallbacksToInitFromSameContract(t *testing.T)
 			_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, err)
 
-			_, _, _, _, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
+			_, _, _, _, _, err = execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), true, testContract.IsCosmWasmV1, defaultGasForTests, 0, 2)
 			require.Empty(t, err)
 
-			_, _, _, _, _, err = execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 0, 1)
+			_, _, _, _, _, err = execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, codeID, codeHash, `{\"nop\":{}}`), false, testContract.IsCosmWasmV1, defaultGasForTests, 0, 1)
 			require.NotEmpty(t, err)
 			require.NotNil(t, err.GenericErr)
 			require.Contains(t, err.GenericErr.Msg, "contract account already exists")

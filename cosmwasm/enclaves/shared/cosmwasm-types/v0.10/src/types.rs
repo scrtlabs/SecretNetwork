@@ -124,7 +124,8 @@ pub struct BlockInfo {
     pub time: u64,
     pub chain_id: String,
     #[cfg(feature = "random")]
-    pub random: Binary,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub random: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]

@@ -99,11 +99,8 @@ fn submit_block_signature_impl(
             encrypted_random.as_ptr(),
             encrypted_random.len() as u32,
             &mut random_decrypted
-            // val_set.as_ptr(),
-            // val_set.len() as u32,
-            // next_val_set.as_ptr(),
-            // next_val_set.len() as u32,
         )
     };
+
     Ok((retval, random_decrypted, status))
 }
