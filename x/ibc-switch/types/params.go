@@ -9,8 +9,8 @@ import (
 // todo: move to keys.go
 // Parameter store keys.
 var (
-	KeySwitchStatus  = []byte("switch-status")
-	KeyPauserAddress = []byte("pauser-address")
+	KeySwitchStatus  = []byte("switchstatus")
+	KeyPauserAddress = []byte("pauseraddress")
 
 	_ paramtypes.ParamSet = &Params{}
 )
