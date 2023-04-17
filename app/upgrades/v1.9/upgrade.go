@@ -2,6 +2,7 @@ package v1_9
 
 import (
 	"fmt"
+
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -9,6 +10,7 @@ import (
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
+	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 )
 
@@ -17,8 +19,10 @@ const upgradeName = "v1.9"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades: store.StoreUpgrades{Added: []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName},
-		Deleted: []string{"icamsgauth"}},
+	StoreUpgrades: store.StoreUpgrades{
+		Added:   []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, ibchookstypes.StoreKey},
+		Deleted: []string{"icamsgauth"},
+	},
 }
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
