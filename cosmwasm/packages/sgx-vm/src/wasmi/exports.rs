@@ -45,6 +45,7 @@ pub extern "C" fn ocall_read_db(
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
+    _block_height: u64,
     value: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,

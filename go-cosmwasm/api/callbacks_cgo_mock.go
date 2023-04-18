@@ -22,8 +22,8 @@ package api
 //GoResult cQueryExternal(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
 //
 //// Gateway functions (db)
-//GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val) {
-//	return cGet(ptr, gas_meter, used_gas, key, val);
+//GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, uint64_t block_height, Buffer key, Buffer *val) {
+//	return cGet(ptr, gas_meter, used_gas, block_height, key, val);
 //}
 //GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val) {
 //	return cSet(ptr, gas_meter, used_gas, key, val);

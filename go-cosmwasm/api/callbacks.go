@@ -140,16 +140,20 @@ func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 
 //export cGet
 func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, key C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
-	println("TOMMM inside cGet")
+	println("TOMMM inside cGet1")
+	fmt.Printf("TOMMM block height: %d\n", block_height)
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
+	println("TOMMM inside cGet2")
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
+
+	println("TOMMM inside cGet3")
 
 	gasBefore := gm.GasConsumed()
 
@@ -159,6 +163,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, 
 	// if err != nil {
 	// 	return C.GoResult_Panic // Should add another error type
 	// }
+	println("TOMMM inside cGet4")
 
 	v, proof, err := getWithProof(kv, k, int64(block_height))
 	if err != nil {
