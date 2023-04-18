@@ -121,12 +121,11 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 	return channeltypes.NewResultAcknowledgement(bz)
 }
 
-func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *wasm.MsgExecuteContract) (*wasm.MsgExecuteContractResponse, error) {
+func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *wasm.MsgExecuteContract) (*sdk.Result, error) {
 	if err := execMsg.ValidateBasic(); err != nil {
 		return nil, fmt.Errorf(types.ErrBadExecutionMsg, err.Error())
 	}
-	wasmMsgServer := wasm.NewMsgServerImpl(*h.ContractKeeper)
-	return wasmMsgServer.ExecuteContract(sdk.WrapSDKContext(ctx), execMsg)
+	return h.ContractKeeper.Execute(ctx, execMsg.Contract, execMsg.Sender, execMsg.Msg, execMsg.SentFunds, execMsg.CallbackSig, true)
 }
 
 func isIcs20Packet(packet channeltypes.Packet) (isIcs20 bool, ics20data transfertypes.FungibleTokenPacketData) {

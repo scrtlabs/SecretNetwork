@@ -473,7 +473,7 @@ func execHelperMultipleCoinsImpl(
 	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, coins)
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, coins, nil)
+	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, coins, nil, false)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 
