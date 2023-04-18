@@ -89,7 +89,6 @@ type GasMeter interface {
 
 /****** DB ********/
 
-
 var db_vtable = C.DB_vtable{
 	read_db:   (C.read_db_fn)(C.cGet_cgo),
 	write_db:  (C.write_db_fn)(C.cSet_cgo),
@@ -140,7 +139,7 @@ func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 }
 
 //export cGet
-func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, key C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
@@ -151,15 +150,14 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val 
 	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 
-	iavl, err := getIavl(kv)
-	if err != nil {
-		return C.GoResult_Panic // Should add another error type
-	}
-
 	gasBefore := gm.GasConsumed()
 
 	// Need to pass the verified block_height to cGet
 	// getWithProof(kv, key, block_height)
+	iavl, err := getIavl(kv)
+	if err != nil {
+		return C.GoResult_Panic // Should add another error type
+	}
 
 	v := iavl.Get(k)
 	gasAfter := gm.GasConsumed()
