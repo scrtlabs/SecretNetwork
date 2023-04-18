@@ -129,6 +129,7 @@ enclave {
             Ctx context,
             [out] UntrustedVmError* vm_error,
             [out] uint64_t* gas_used,
+            uint64_t block_height,
             [out] EnclaveBuffer* value,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len

@@ -15,6 +15,7 @@ extern "C" {
         context: Ctx,
         vm_error: *mut UntrustedVmError,
         gas_used: *mut u64,
+        block_height: u64,
         value: *mut EnclaveBuffer,
         key: *const u8,
         key_len: usize,

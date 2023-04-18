@@ -156,6 +156,7 @@ pub fn read_from_encrypted_state(
     has_write_permissions: bool,
     kv_cache: &mut KvCache,
     encryption_salt: &[u8],
+    block_height: u64,
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     // Try reading with the new encryption format
     let encrypted_key = EncryptedKey {
@@ -168,7 +169,11 @@ pub fn read_from_encrypted_state(
 
     let mut maybe_plaintext_value: Option<Vec<u8>>;
     let gas_used_first_read: u64;
-    (maybe_plaintext_value, gas_used_first_read) = match read_db(context, &encrypted_key_bytes) {
+    (maybe_plaintext_value, gas_used_first_read) = match read_db(
+        context,
+        &encrypted_key_bytes,
+        block_height,
+    ) {
         Ok((maybe_encrypted_value_bytes, gas_used)) => match maybe_encrypted_value_bytes {
             Some(encrypted_value_bytes) => {
                 let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
@@ -211,23 +216,24 @@ pub fn read_from_encrypted_state(
     );
 
     let gas_used_second_read: u64;
-    (maybe_plaintext_value, gas_used_second_read) = match read_db(context, &scrambled_field_name) {
-        Ok((encrypted_value, gas_used)) => match encrypted_value {
-            Some(plaintext_value) => {
-                match decrypt_value_old(&scrambled_field_name, &plaintext_value, contract_key) {
-                    Ok(plaintext_value) => {
-                        let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
-                        Ok((Some(plaintext_value), gas_used))
+    (maybe_plaintext_value, gas_used_second_read) =
+        match read_db(context, &scrambled_field_name, block_height) {
+            Ok((encrypted_value, gas_used)) => match encrypted_value {
+                Some(plaintext_value) => {
+                    match decrypt_value_old(&scrambled_field_name, &plaintext_value, contract_key) {
+                        Ok(plaintext_value) => {
+                            let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
+                            Ok((Some(plaintext_value), gas_used))
+                        }
+                        // This error case is why we have all the matches here.
+                        // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
+                        Err(err) => Err(err),
                     }
-                    // This error case is why we have all the matches here.
-                    // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
-                    Err(err) => Err(err),
                 }
-            }
-            None => Ok((None, gas_used)),
-        },
-        Err(err) => Err(err),
-    }?;
+                None => Ok((None, gas_used)),
+            },
+            Err(err) => Err(err),
+        }?;
 
     let mut gas_used_write: u64 = 0;
     if has_write_permissions {
@@ -298,7 +304,11 @@ fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] 
 }
 
 /// Safe wrapper around reads from the contract storage
-fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
+fn read_db(
+    context: &Ctx,
+    key: &[u8],
+    block_height: u64,
+) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut vm_err = UntrustedVmError::default();
@@ -310,6 +320,7 @@ fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngi
             context.unsafe_clone(),
             (&mut vm_err) as *mut _,
             (&mut gas_used) as *mut _,
+            block_height,
             enclave_buffer.as_mut_ptr(),
             key.as_ptr(),
             key.len(),
