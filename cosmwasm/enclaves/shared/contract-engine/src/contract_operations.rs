@@ -133,6 +133,7 @@ pub fn init(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        base_env.0.block.height,
         base_env.0.block.time,
     )?;
     // let duration = start.elapsed();
@@ -300,6 +301,7 @@ pub fn handle(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        block_height,
         base_env.0.block.time,
     )?;
 
@@ -424,6 +426,7 @@ pub fn query(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        base_env.0.block.height,
         base_env.0.block.time,
     )?;
 
@@ -461,6 +464,7 @@ fn start_engine(
     query_depth: u32,
     nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
+    block_height: u64,
     timestamp: u64,
 ) -> Result<crate::wasm3::Engine, EnclaveError> {
     crate::wasm3::Engine::new(
@@ -473,6 +477,7 @@ fn start_engine(
         nonce,
         user_public_key,
         query_depth,
+        block_height,
         timestamp,
     )
 }

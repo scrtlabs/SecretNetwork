@@ -98,6 +98,7 @@ pub struct Context {
     user_public_key: Ed25519PublicKey,
     kv_cache: KvCache,
     last_error: Option<WasmEngineError>,
+    block_height: u64,
     timestamp: u64,
 }
 
@@ -197,6 +198,7 @@ impl Engine {
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
         query_depth: u32,
+        block_height: u64,
         timestamp: u64,
     ) -> Result<Engine, EnclaveError> {
         let versioned_code = create_module_instance(contract_code, &gas_costs, operation)?;
@@ -213,6 +215,7 @@ impl Engine {
             user_public_key,
             kv_cache,
             last_error: None,
+            block_height,
             timestamp,
         };
 
@@ -822,6 +825,7 @@ fn host_read_db(
         },
         &mut context.kv_cache,
         &get_encryption_salt(context.timestamp),
+        context.block_height,
     )
     .map_err(debug_err!("db_read failed to read key from storage"))?;
     context.use_gas_externally(used_gas);
