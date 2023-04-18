@@ -7,7 +7,7 @@ package api
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
+typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, uint64_t block_height, Buffer key, Buffer *val, Buffer *errOut);
 typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
 typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
 typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
@@ -19,7 +19,7 @@ typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *ca
 typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, uint32_t query_depth, Buffer *result, Buffer *errOut);
 
 // forward declarations (db)
-GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
+GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, uint64_t block_height, Buffer key, Buffer *val, Buffer *errOut);
 GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
 GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
 GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
@@ -140,6 +140,7 @@ func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 
 //export cGet
 func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, key C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+	println("TOMMM inside cGet")
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
@@ -154,12 +155,18 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, 
 
 	// Need to pass the verified block_height to cGet
 	// getWithProof(kv, key, block_height)
-	iavl, err := getIavl(kv)
-	if err != nil {
-		return C.GoResult_Panic // Should add another error type
-	}
+	// iavl, err := getIavl(kv)
+	// if err != nil {
+	// 	return C.GoResult_Panic // Should add another error type
+	// }
 
-	v := iavl.Get(k)
+	v, proof, err := getWithProof(kv, k, int64(block_height))
+	if err != nil {
+		return C.GoResult_Panic
+	}
+	fmt.Printf("TOMMM proof: %+v", proof)
+
+	// v := iavl.Get(k)
 	gasAfter := gm.GasConsumed()
 	*usedGas = (u64)(gasAfter - gasBefore)
 

@@ -10,7 +10,7 @@ package api
 //
 //// imports (db)
 //GoResult cSet(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val);
-//GoResult cGet(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val);
+//GoResult cGet(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, uint64_t block_height, Buffer key, Buffer *val);
 //GoResult cDelete(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key);
 //GoResult cScan(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out);
 //// imports (iterator)

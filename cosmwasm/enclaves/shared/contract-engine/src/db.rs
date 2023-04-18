@@ -169,6 +169,7 @@ pub fn read_from_encrypted_state(
 
     let mut maybe_plaintext_value: Option<Vec<u8>>;
     let gas_used_first_read: u64;
+    debug!("TOMMM contract_engine::db.rs before read_db");
     (maybe_plaintext_value, gas_used_first_read) = match read_db(
         context,
         &encrypted_key_bytes,
@@ -314,6 +315,7 @@ fn read_db(
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
 
+    debug!("TOMMM contract-engine::db.rs before ocall_read_db");
     let value = unsafe {
         let status = ocalls::ocall_read_db(
             (&mut ocall_return) as *mut _,
