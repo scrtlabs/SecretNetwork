@@ -66,15 +66,19 @@ impl BaseEnv {
         )
     }
 
-    pub fn into_versioned_env(self, api_version: &CosmWasmApiVersion) -> CwEnv {
+    pub fn into_versioned_env(
+        self,
+        api_version: &CosmWasmApiVersion,
+        is_empty_sender: bool,
+    ) -> CwEnv {
         match api_version {
-            CosmWasmApiVersion::V010 => self.into_v010(),
-            CosmWasmApiVersion::V1 => self.into_v1(),
+            CosmWasmApiVersion::V010 => self.into_v010(is_empty_sender),
+            CosmWasmApiVersion::V1 => self.into_v1(is_empty_sender),
             CosmWasmApiVersion::Invalid => panic!("Can't parse invalid env"),
         }
     }
 
-    fn into_v010(self) -> CwEnv {
+    fn into_v010(self, is_empty_sender: bool) -> CwEnv {
         // Assaf: contract_key is irrelevant inside the contract,
         // but existing v0.10 contracts might expect it to be populated :facepalm:,
         // therefore we are going to leave it populated :shrug:.
@@ -94,7 +98,10 @@ impl BaseEnv {
                     chain_id: self.0.block.chain_id,
                 },
                 message: v010types::MessageInfo {
-                    sender: self.0.message.sender,
+                    sender: match is_empty_sender {
+                        false => self.0.message.sender,
+                        true => HumanAddr::from(""),
+                    },
                     sent_funds: self.0.message.sent_funds,
                 },
                 contract: v010types::ContractInfo {
@@ -109,7 +116,7 @@ impl BaseEnv {
 
     /// This is the conversion function from the base to the new env. We assume that if there are
     /// any API changes that are necessary on the base level we will have to update this as well
-    fn into_v1(self) -> CwEnv {
+    fn into_v1(self, is_empty_sender: bool) -> CwEnv {
         CwEnv::V1Env {
             env: V1Env {
                 block: v1types::BlockInfo {
@@ -125,7 +132,10 @@ impl BaseEnv {
                 transaction: self.0.transaction,
             },
             msg_info: v1types::MessageInfo {
-                sender: v1types::Addr::unchecked(self.0.message.sender.0),
+                sender: match is_empty_sender {
+                    false => v1types::Addr::unchecked(self.0.message.sender.0),
+                    true => v1types::Addr::unchecked(""),
+                },
                 funds: self
                     .0
                     .message

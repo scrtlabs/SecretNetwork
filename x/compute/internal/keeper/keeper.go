@@ -499,7 +499,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 	if ibcHooks {
-		verificationInfo = types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
+		verificationInfo = types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
 	}
 
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)

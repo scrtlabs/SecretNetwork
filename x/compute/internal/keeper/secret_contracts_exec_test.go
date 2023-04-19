@@ -2101,3 +2101,15 @@ func TestV1ReplyChainWithError(t *testing.T) {
 
 	require.Equal(t, expectedFlow, string(data))
 }
+
+func TestPlaintextInputWithIBCHooksFlag(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	res, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"unicode_data":{}}`), sdk.NewCoins(), nil, true)
+
+	require.Empty(t, err)
+	require.Equal(t, "🍆🥑🍄", string(res.Data))
+}

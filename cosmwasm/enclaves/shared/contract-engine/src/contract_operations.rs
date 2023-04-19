@@ -125,7 +125,7 @@ pub fn init(
     // let duration = start.elapsed();
     // trace!("Time elapsed in start_engine: {:?}", duration);
 
-    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
+    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version(), false);
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -227,19 +227,43 @@ pub fn handle(
 
     // There is no signature to verify when the input isn't signed.
     // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
-    // All of these functions go through handle but the data isn't signed:
-    //  Reply (that is not WASM reply)
-    if should_validate_sig_info {
+    // All of these scenarios go through here with HANDLE_TYPE_EXECUTE but the data isn't signed:
+    // - Reply (that is not WASM reply)
+    // - IBC WASM Hooks
+    // - (In the future:) ICA
+    //
+    // So we want to allow executing contracts with plaintext input via IBC
+    // while the sender of an IBC packet cannot be verified.
+    // And we don't want malicious actors using this new enclvae setting to just
+    // impersonate any sender they want.
+    // => Therefore we'll zero out the sender if it cannot be verified && the input is plaintext
+    let is_empty_sender = if should_validate_sig_info {
         // Verify env parameters against the signed tx
-
-        verify_params(
+        // If verification fails && input is encryted => error
+        // If verification fails && input is not encryted => zero out the sender
+        match verify_params(
             &parsed_sig_info,
             sent_funds,
             &canonical_sender_address,
             contract_address,
             &secret_msg,
-        )?;
-    }
+        ) {
+            Err(err) => {
+                if !was_msg_encrypted && parsed_handle_type == HandleType::Execute {
+                    trace!(
+                        "Failed to verify_params(), however continuing with zeroed out sender, error: {:?}",
+                        err
+                    );
+                    true // zero out sender
+                } else {
+                    return Err(err);
+                }
+            }
+            _ => false, // don't zero out sender
+        }
+    } else {
+        false // don't zero out sender
+    };
 
     let mut validated_msg = decrypted_msg.clone();
     let mut reply_params: Option<Vec<ReplyParams>> = None;
@@ -270,7 +294,7 @@ pub fn handle(
 
     let mut versioned_env = base_env
         .clone()
-        .into_versioned_env(&engine.get_api_version());
+        .into_versioned_env(&engine.get_api_version(), is_empty_sender);
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -377,7 +401,7 @@ pub fn query(
 
     let mut versioned_env = base_env
         .clone()
-        .into_versioned_env(&engine.get_api_version());
+        .into_versioned_env(&engine.get_api_version(), false);
 
     versioned_env.set_contract_hash(&contract_hash);
 
