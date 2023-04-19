@@ -125,7 +125,15 @@ func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *wasm.MsgExecuteContract
 	if err := execMsg.ValidateBasic(); err != nil {
 		return nil, fmt.Errorf(types.ErrBadExecutionMsg, err.Error())
 	}
-	return h.ContractKeeper.Execute(ctx, execMsg.Contract, execMsg.Sender, execMsg.Msg, execMsg.SentFunds, execMsg.CallbackSig, true)
+	return h.ContractKeeper.Execute(
+		ctx,
+		execMsg.Contract,
+		execMsg.Sender,
+		execMsg.Msg,
+		execMsg.SentFunds,
+		execMsg.CallbackSig,
+		true,
+	)
 }
 
 func isIcs20Packet(packet channeltypes.Packet) (isIcs20 bool, ics20data transfertypes.FungibleTokenPacketData) {
@@ -217,9 +225,6 @@ func ValidateAndParseMemo(memo string, receiver string) (isWasmRouted bool, cont
 		return isWasmRouted, sdk.AccAddress{}, nil,
 			fmt.Errorf(types.ErrBadMetadataFormatMsg, memo, err.Error())
 	}
-
-	// TODO: get code hash & encrypt with a constant privkey + nonce, just to pass verification.
-	// Everything that's coming from IBC is plaintext anyway
 
 	return isWasmRouted, contractAddr, msgBytes, nil
 }
@@ -329,8 +334,12 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 
 	// Execute the contract
 	msg := []byte(fmt.Sprintf(
-		`{"ibc_lifecycle_complete": {"ibc_ack": {"channel": "%s", "sequence": %d, "ack": %s, "success": %s}}}`,
-		packet.SourceChannel, packet.Sequence, ackAsJson, success))
+		`{"ibc_lifecycle_complete":{"ibc_ack":{"channel":"%s","sequence":%d,"ack":%s,"success":%s}}}`,
+		packet.SourceChannel,
+		packet.Sequence,
+		ackAsJson,
+		success,
+	))
 	execMsg := wasm.MsgExecuteContract{
 		Sender:    sdk.AccAddress{}, // empty
 		Contract:  contractAddr,
@@ -372,7 +381,9 @@ func (h WasmHooks) OnTimeoutPacketOverride(im IBCMiddleware, ctx sdk.Context, pa
 	// Execute the contract
 	msg := []byte(fmt.Sprintf(
 		`{"ibc_lifecycle_complete":{"ibc_timeout":{"channel":"%s","sequence":%d}}}`,
-		packet.SourceChannel, packet.Sequence))
+		packet.SourceChannel,
+		packet.Sequence,
+	))
 	execMsg := wasm.MsgExecuteContract{
 		Sender:    sdk.AccAddress{}, // empty
 		Contract:  contractAddr,
