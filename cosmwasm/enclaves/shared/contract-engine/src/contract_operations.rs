@@ -249,7 +249,7 @@ pub fn handle(
             &secret_msg,
         ) {
             Err(err) => {
-                if !was_msg_encrypted && parsed_handle_type == HandleType::Execute {
+                if !was_msg_encrypted && parsed_handle_type == HandleType::HANDLE_TYPE_EXECUTE {
                     trace!(
                         "Failed to verify_params(), however continuing with zeroed out sender, error: {:?}",
                         err
