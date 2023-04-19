@@ -18,11 +18,15 @@ workspace:
 
 variables:
   baseImageRepository: 'azcr.io/enigmampc/ci-base-image'
+  baseImageRepositoryLocalTests: 'azcr.io/enigmampc/ci-base-image-local'
   nodeImageRepository: 'azcr.io/enigmampc/ci-node-image'
   containerRegistry: 'enigmampcdocker'
   dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/Dockerfile'
   tag: '$(Build.BuildId)'
   DOCKER_BUILDKIT: 1
+  SGX_MODE: "HW"
+  FEATURES: "light-client-validation,random"
+  FEATURES_TESTS_LOCAL: "random"
 
 steps:
   - checkout: "self"
@@ -40,7 +44,19 @@ steps:
         $(tag)
         latest
       buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=HW --target compile-secretd
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target compile-secretd
+      dockerfile: '$(dockerfilePath)'
+
+  - task: Docker@2
+    displayName: "Build base image for system tests"
+    inputs:
+      command: build
+      repository: '$(baseImageRepositoryLocalTests)'
+      tags: |
+        $(tag)
+        latest
+      buildContext: .
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepositoryLocalTests) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES_TESTS_LOCAL) --target compile-secretd
       dockerfile: '$(dockerfilePath)'
 
   - script: |
@@ -57,7 +73,7 @@ steps:
       repository: '$(nodeImageRepository)'
       tags: latest
       buildContext: .
-      arguments: --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=HW --target release-image
+      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target release-image
       Dockerfile: deployment/dockerfiles/Dockerfile
 
   - task: Docker@2
@@ -87,7 +103,7 @@ steps:
       repository: tests-base-image
       tags: latest
       buildContext: .
-      arguments: --build-arg SGX_MODE=HW
+      arguments: --build-arg SGX_MODE=HW --build-arg CI_BASE_IMAGE=$(baseImageRepositoryLocalTests):latest
       Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
 
   - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base

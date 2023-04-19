@@ -48,7 +48,7 @@ serde_json = "1.0"
 # wasmer-middleware-common = "=0.17.0"
 # wasmer-clif-backend = { version = "=0.17.0", optional = true }
 # wasmer-singlepass-backend = { version = "=0.17.0", optional = true }
-serde = { version = "1.0.103", default-features = false, features = [
+serde = { version = "1.0.159", default-features = false, features = [
     "derive",
     "alloc"
 ] }
@@ -71,5 +71,5 @@ parking_lot = "0.11"
 num_cpus = "1.14.0"
 
 [dev-dependencies]
-tempfile = "3.1.0"
+tempfile = "3.5.0"
 wabt = "0.9.1"

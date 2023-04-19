@@ -221,6 +221,84 @@ pub extern "C" fn init_cache(
     }
 }
 
+#[no_mangle]
+pub extern "C" fn submit_block_signatures(
+    header: Buffer,
+    commit: Buffer,
+    txs:    Buffer,
+    random: Buffer,
+    // val_set: Buffer,
+    // next_val_set: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    trace!("Hello from right before init_bootstrap");
+
+    let header_slice = match unsafe { header.read() } {
+        None => {
+            set_error(Error::empty_arg("header"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let commit_slice = match unsafe { commit.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let txs_slice = match unsafe { txs.read() } {
+        None => {
+            set_error(Error::empty_arg("txs"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let random_slice = match unsafe { random.read() } {
+        None => {
+            set_error(Error::empty_arg("random"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+    // let val_set_slice = match unsafe { val_set.read() } {
+    //     None => {
+    //         set_error(Error::empty_arg("api_key"), err);
+    //         return Buffer::default();
+    //     }
+    //     Some(r) => r,
+    // };
+    //
+    // let next_val_set_slice = match unsafe { next_val_set.read() } {
+    //     None => {
+    //         set_error(Error::empty_arg("api_key"), err);
+    //         return Buffer::default();
+    //     }
+    //     Some(r) => r,
+    // };
+
+    match cosmwasm_sgx_vm::untrusted_submit_block_signatures(
+        header_slice,
+        commit_slice,
+        txs_slice,
+        random_slice,
+        // val_set_slice,
+        // next_val_set_slice,
+    ) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(r) => {
+            clear_error();
+            Buffer::from_vec(r.to_vec())
+        }
+    }
+}
+
 // store some common string for argument names
 static DATA_DIR_ARG: &str = "data_dir";
 static FEATURES_ARG: &str = "supported_features";

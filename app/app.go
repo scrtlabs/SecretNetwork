@@ -34,6 +34,7 @@ import (
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
+	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
 	v1_9 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.9"
 
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
@@ -95,6 +96,7 @@ var (
 		v1_5.Upgrade,
 		v1_6.Upgrade,
 		v1_7.Upgrade,
+		v1_8.Upgrade,
 		v1_9.Upgrade,
 	}
 )
@@ -201,7 +203,6 @@ func NewSecretNetworkApp(
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
-	// bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
 
 	// Initialize our application with the store keys it requires
 	app := &SecretNetworkApp{

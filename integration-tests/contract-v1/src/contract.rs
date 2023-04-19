@@ -29,7 +29,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResul
     return handle_msg(deps, env, info, msg);
 }
 
-fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResult<Response> {
+fn handle_msg(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResult<Response> {
     match msg {
         Msg::Nop {} => {
             return Ok(Response::new().set_data(vec![137, 137].as_slice()));
@@ -181,6 +181,12 @@ fn handle_msg(deps: DepsMut, env: Env, _info: MessageInfo, msg: Msg) -> StdResul
                 ))
             }
         },
+        // Msg::GetRandom {} => {
+        //     return Ok(
+        //         Response::new()
+        //             .add_attribute_plaintext("random_value", format!("{:?}", info.random))
+        //     )
+        // }
     }
 }
 

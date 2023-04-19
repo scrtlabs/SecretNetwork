@@ -1,4 +1,5 @@
-use ring::digest;
+pub use ring::digest;
+pub use ring::digest::SHA256;
 
 pub const HASH_SIZE: usize = 32;
 

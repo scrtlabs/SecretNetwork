@@ -105,7 +105,7 @@ func TestInitializeStaking(t *testing.T) {
 	accKeeper, stakingKeeper, keeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper
 
 	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin("stake", 1234567))
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 	v, found := stakingKeeper.GetValidator(ctx, valAddr)
 	assert.True(t, found)
 	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(1234567))
@@ -191,7 +191,7 @@ func initializeStaking(t *testing.T) initInfo {
 	accKeeper, stakingKeeper, keeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper
 
 	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin(sdk.DefaultBondDenom, 1000000))
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
 	// set some baseline - this seems to be needed
 	keepers.DistKeeper.SetValidatorHistoricalRewards(ctx, valAddr, 0, distributiontypes.ValidatorHistoricalRewards{
@@ -343,7 +343,7 @@ func TestUnbonding(t *testing.T) {
 	require.NoError(t, err)
 
 	// update height a bit
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
 	// now unbond 30k - note that 3k (10%) goes to the owner as a tax, 27k unbonded and available as claims
 	unbond := StakingHandleMsg{
@@ -419,7 +419,7 @@ func TestReinvest(t *testing.T) {
 	require.NoError(t, err)
 
 	// update height a bit to solidify the delegation
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 	// we get 1/6, our share should be 40k minus 10% commission = 36k
 	setValidatorRewards(ctx, bankKeeper, stakingKeeper, distKeeper, valAddr, sdk.NewInt64Coin(sdk.DefaultBondDenom, 240000))
 
@@ -497,10 +497,12 @@ func addValidator(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, accountKe
 
 // this will commit the current set, update the block height and set historic info
 // basically, letting two blocks pass
-func nextBlock(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper) sdk.Context {
+func nextBlock(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, wasmKeeper Keeper) sdk.Context {
 	staking.EndBlocker(ctx, stakingKeeper)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
 	staking.BeginBlocker(ctx, stakingKeeper)
+	// StoreRandomOnNewBlock(ctx, wasmKeeper)
+
 	return ctx
 }
 

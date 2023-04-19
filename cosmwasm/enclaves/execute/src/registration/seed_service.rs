@@ -51,8 +51,12 @@ fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
 fn make_client_config() -> rustls::ClientConfig {
     let mut config = rustls::ClientConfig::new();
 
-    pub const SSS_CA: &[u8] = include_bytes!("sss_ca.pem");
-    let mut pem_reader = BufReader::new(SSS_CA);
+    #[cfg(feature = "production")]
+    pub const SERVICE_CA: &[u8] = include_bytes!("sss_ca.pem");
+    #[cfg(not(feature = "production"))]
+    pub const SERVICE_CA: &[u8] = include_bytes!("sssd_ca.pem");
+
+    let mut pem_reader = BufReader::new(SERVICE_CA);
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store
