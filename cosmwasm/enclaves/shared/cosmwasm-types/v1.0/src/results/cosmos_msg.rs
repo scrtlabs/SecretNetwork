@@ -29,7 +29,7 @@ where
     Ibc(IbcMsg),
     Wasm(WasmMsg),
     Gov(GovMsg),
-    LastMsgMark(T),
+    FinalizeTx(Empty),
 }
 
 /// The message types of the bank module.

@@ -67,6 +67,8 @@ func (a *LogAttributes) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type Empty struct{}
+
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type CosmosMsg struct {
@@ -78,7 +80,7 @@ type CosmosMsg struct {
 	Staking      *StakingMsg      `json:"staking,omitempty"`
 	Stargate     *StargateMsg     `json:"stargate,omitempty"`
 	Wasm         *WasmMsg         `json:"wasm,omitempty"`
-	LastMsgMark  json.RawMessage  `json:"last_msg_mark,omitempty"`
+	FinalizeTx   *Empty           `json:"finalize_tx,omitempty"`
 }
 
 type BankMsg struct {
