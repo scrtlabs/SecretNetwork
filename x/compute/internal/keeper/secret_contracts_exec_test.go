@@ -2103,13 +2103,31 @@ func TestV1ReplyChainWithError(t *testing.T) {
 }
 
 func TestPlaintextInputWithIBCHooksFlag(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+	for _, testContract := range testContracts {
+		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
-	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-	require.Empty(t, initErr)
+			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	res, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"unicode_data":{}}`), sdk.NewCoins(), nil, true)
+			_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"log_msg_sender":{}}`), sdk.NewCoins(), nil, true)
 
-	require.Empty(t, err)
-	require.Equal(t, "🍆🥑🍄", string(res.Data))
+			require.Empty(t, err)
+
+			events := tryDecryptWasmEvents(ctx, nil)
+
+			requireEvents(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{
+							Key:   "msg.sender",
+							Value: "",
+						},
+					},
+				},
+				events,
+			)
+		})
+	}
 }
