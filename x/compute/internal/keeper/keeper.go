@@ -515,11 +515,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "blocked address can not be used")
 		}
 
-		if !ibcHooks {
-			sdkerr := k.bankKeeper.SendCoins(ctx, caller, contractAddress, coins)
-			if sdkerr != nil {
-				return nil, sdkerr
-			}
+		sdkerr := k.bankKeeper.SendCoins(ctx, caller, contractAddress, coins)
+		if sdkerr != nil {
+			return nil, sdkerr
 		}
 	}
 
