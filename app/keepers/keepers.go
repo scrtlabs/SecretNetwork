@@ -270,37 +270,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	regKeeper := reg.NewKeeper(appCodec, ak.keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homePath, bootstrap)
 	ak.RegKeeper = &regKeeper
 
-	computeDir := filepath.Join(homePath, ".compute")
-	// The last arguments can contain custom message handlers, and custom query handlers,
-	// if we want to allow any custom callbacks
-	supportedFeatures := "staking,stargate,ibc3,random"
-
-	computeKeeper := compute.NewKeeper(
-		appCodec,
-		*legacyAmino,
-		ak.keys[compute.StoreKey],
-		*ak.AccountKeeper,
-		ak.BankKeeper,
-		*ak.GovKeeper,
-		*ak.DistrKeeper,
-		*ak.MintKeeper,
-		*ak.StakingKeeper,
-		ak.ScopedComputeKeeper,
-		ak.IbcKeeper.PortKeeper,
-		ak.TransferKeeper,
-		ak.IbcKeeper.ChannelKeeper,
-		app.Router(),
-		app.MsgServiceRouter(),
-		app.GRPCQueryRouter(),
-		computeDir,
-		computeConfig,
-		supportedFeatures,
-		nil,
-		nil,
-		&app.LastTxManager,
-	)
-	ak.ComputeKeeper = &computeKeeper
-
 	// The order stuff happen:
 	// 1. WASM Hooks
 	// 2. Fee
@@ -317,7 +286,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	ak.IbcHooksKeeper = &hooksKeeper
 
 	secretPrefix := sdk.GetConfig().GetBech32AccountAddrPrefix()
-	wasmHooks := ibchooks.NewWasmHooks(&hooksKeeper, &computeKeeper, secretPrefix)
+	wasmHooks := ibchooks.NewWasmHooks(&hooksKeeper, nil, secretPrefix) // The compute keeper will be set later on
 	ibcHooksICS4Wrapper := ibchooks.NewICS4Middleware(
 		ak.IbcKeeper.ChannelKeeper,
 		wasmHooks,
@@ -409,6 +378,39 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	var icaControllerStack porttypes.IBCModule
 	icaControllerStack = icacontroller.NewIBCMiddleware(icaControllerStack, *ak.ICAControllerKeeper)
 	icaControllerStack = ibcfee.NewIBCMiddleware(icaControllerStack, ak.IbcFeeKeeper)
+
+	computeDir := filepath.Join(homePath, ".compute")
+	// The last arguments can contain custom message handlers, and custom query handlers,
+	// if we want to allow any custom callbacks
+	supportedFeatures := "staking,stargate,ibc3,random"
+
+	computeKeeper := compute.NewKeeper(
+		appCodec,
+		*legacyAmino,
+		ak.keys[compute.StoreKey],
+		*ak.AccountKeeper,
+		ak.BankKeeper,
+		*ak.GovKeeper,
+		*ak.DistrKeeper,
+		*ak.MintKeeper,
+		*ak.StakingKeeper,
+		ak.ScopedComputeKeeper,
+		ak.IbcKeeper.PortKeeper,
+		ak.TransferKeeper,
+		ak.IbcKeeper.ChannelKeeper,
+		app.Router(),
+		app.MsgServiceRouter(),
+		app.GRPCQueryRouter(),
+		computeDir,
+		computeConfig,
+		supportedFeatures,
+		nil,
+		nil,
+		&app.LastTxManager,
+	)
+	ak.ComputeKeeper = &computeKeeper
+
+	wasmHooks.ContractKeeper = &computeKeeper
 
 	// Create fee enabled wasm ibc Stack
 	var computeStack porttypes.IBCModule
