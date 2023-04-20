@@ -57,6 +57,6 @@ func (k Keeper) DeletePacketCallback(ctx sdk.Context, channel string, packetSequ
 func DeriveIntermediateSender(channel, originalSender, bech32Prefix string) (string, error) {
 	senderStr := fmt.Sprintf("%s/%s", channel, originalSender)
 	senderHash32 := address.Hash(types.SenderPrefix, []byte(senderStr))
-	sender := sdk.AccAddress(senderHash32[:])
+	sender := sdk.AccAddress(senderHash32)
 	return sdk.Bech32ifyAddressBytes(bech32Prefix, sender)
 }

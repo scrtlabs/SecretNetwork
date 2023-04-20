@@ -63,6 +63,9 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 	}
 
 	// Calculate the receiver / contract caller based on the packet's channel and sender
+	// Assaf: on Secret this later gets zeroed out by the enclave.
+	// We cannot allow unsigned calls to MsgExecute,
+	// otherwise attackers would be able to run MsgExecute with a falsified sender.
 	channel := packet.GetDestChannel()
 	sender := data.GetSender()
 	senderBech32, err := keeper.DeriveIntermediateSender(channel, sender, h.bech32PrefixAccAddr)
