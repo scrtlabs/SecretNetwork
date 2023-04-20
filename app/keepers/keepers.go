@@ -63,6 +63,7 @@ import (
 	ibcfeekeeper "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/keeper"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/ibc-switch"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
 )
 
 type SecretAppKeepers struct {
@@ -480,6 +481,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
 	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
+	paramsKeeper.Subspace(ibcswitchtypes.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
 
 	return paramsKeeper
 }
