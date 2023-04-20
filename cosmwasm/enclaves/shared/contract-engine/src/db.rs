@@ -81,17 +81,19 @@ fn write_to_encrypted_state(
     plaintext_value: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
-    encryption_salt: &[u8],
+    // _encryption_salt: &[u8],
 ) -> Result<u64, WasmEngineError> {
     // Get the state key from the key manager
 
-    let (encrypted_key, used_gas_for_key_creation, encrypted_value) = create_encrypted_key_value(
-        plaintext_key,
-        plaintext_value,
-        context,
-        contract_key,
-        encryption_salt,
-    )?;
+    // let (encrypted_key, used_gas_for_key_creation, encrypted_value) = create_encrypted_key_value(
+    //     plaintext_key,
+    //     plaintext_value,
+    //     context,
+    //     contract_key,
+    //     encryption_salt,
+    // )?;
+    let (encrypted_key, used_gas_for_key_creation, encrypted_value) =
+        create_encrypted_key(plaintext_key, plaintext_value, context, contract_key)?;
 
     // Write the new data as concat(ad, encrypted_val)
     let used_gas_for_write =
@@ -106,12 +108,11 @@ fn write_to_encrypted_state(
     Ok(used_gas_for_key_creation + used_gas_for_write)
 }
 
-pub fn create_encrypted_key_value(
+pub fn create_encrypted_key(
     plaintext_key: &[u8],
     plaintext_value: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
-    encryption_salt: &[u8],
 ) -> Result<(Vec<u8>, u64, Vec<u8>), WasmEngineError> {
     let scrambled_field_name = field_name_digest(plaintext_key, contract_key);
     let gas_used_remove = remove_db(context, &scrambled_field_name).map_err(|err| {
@@ -122,32 +123,64 @@ pub fn create_encrypted_key_value(
         err
     })?;
 
-    let encrypted_key = EncryptedKey {
-        magic_bytes: ENCRYPTED_KEY_MAGIC_BYTES.to_vec(),
-        consensus_seed_version: CONSENSUS_SEED_VERSION,
-        state_encryption_version: STATE_ENCRYPTION_VERSION,
-        data: encrypt_key_new(plaintext_key, contract_key)?,
-    };
-    let encrypted_key_bytes = bincode2::serialize(&encrypted_key).unwrap();
+    let encrypted_key = encrypt_key_new(plaintext_key, contract_key)?;
+    let encrypted_value = encrypt_value_new(&encrypted_key, plaintext_value, contract_key)?;
 
-    let encrypted_value = EncryptedValue {
-        salt: encryption_salt.to_vec(),
-        data: encrypt_value_new(
-            &encrypted_key.data,
-            plaintext_value,
-            contract_key,
-            encryption_salt,
-        )?,
-    };
-    let encrypted_value_bytes = bincode2::serialize(&encrypted_value).unwrap();
+    let mut encrypted_key_with_header: Vec<u8> = vec![];
+    encrypted_key_with_header.extend_from_slice(ENCRYPTED_KEY_MAGIC_BYTES);
+    encrypted_key_with_header.extend_from_slice(&CONSENSUS_SEED_VERSION.to_be_bytes());
+    encrypted_key_with_header.extend_from_slice(&encrypted_key);
 
     debug!(
-        "Removed old field name: {:?} and created new field name: {:?}",
-        scrambled_field_name, encrypted_key_bytes
+        "Removed scrambled field name: {:?} and created new key with magic: {:?}",
+        scrambled_field_name, encrypted_key_with_header
     );
 
-    Ok((encrypted_key_bytes, gas_used_remove, encrypted_value_bytes))
+    Ok((encrypted_key_with_header, gas_used_remove, encrypted_value))
 }
+
+// pub fn create_encrypted_key_value(
+//     plaintext_key: &[u8],
+//     plaintext_value: &[u8],
+//     context: &Ctx,
+//     contract_key: &ContractKey,
+//     encryption_salt: &[u8],
+// ) -> Result<(Vec<u8>, u64, Vec<u8>), WasmEngineError> {
+//     let scrambled_field_name = field_name_digest(plaintext_key, contract_key);
+//     let gas_used_remove = remove_db(context, &scrambled_field_name).map_err(|err| {
+//         warn!(
+//             "write_db() got an error from ocall_remove_db, stopping wasm: {:?}",
+//             err
+//         );
+//         err
+//     })?;
+//
+//     let encrypted_key = EncryptedKey {
+//         magic_bytes: ENCRYPTED_KEY_MAGIC_BYTES.to_vec(),
+//         consensus_seed_version: CONSENSUS_SEED_VERSION,
+//         state_encryption_version: STATE_ENCRYPTION_VERSION,
+//         data: encrypt_key_new(plaintext_key, contract_key)?,
+//     };
+//     let encrypted_key_bytes = bincode2::serialize(&encrypted_key).unwrap();
+//
+//     let encrypted_value = EncryptedValue {
+//         salt: encryption_salt.to_vec(),
+//         data: encrypt_value_new(
+//             &encrypted_key.data,
+//             plaintext_value,
+//             contract_key,
+//             encryption_salt,
+//         )?,
+//     };
+//     let encrypted_value_bytes = bincode2::serialize(&encrypted_value).unwrap();
+//
+//     debug!(
+//         "Removed old field name: {:?} and created new field name: {:?}",
+//         scrambled_field_name, encrypted_key_bytes
+//     );
+//
+//     Ok((encrypted_key_bytes, gas_used_remove, encrypted_value_bytes))
+// }
 
 pub fn read_from_encrypted_state(
     plaintext_key: &[u8],
@@ -155,48 +188,32 @@ pub fn read_from_encrypted_state(
     contract_key: &ContractKey,
     has_write_permissions: bool,
     kv_cache: &mut KvCache,
-    encryption_salt: &[u8],
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     // Try reading with the new encryption format
-    let encrypted_key = EncryptedKey {
-        magic_bytes: ENCRYPTED_KEY_MAGIC_BYTES.to_vec(),
-        consensus_seed_version: CONSENSUS_SEED_VERSION,
-        state_encryption_version: STATE_ENCRYPTION_VERSION,
-        data: encrypt_key_new(plaintext_key, contract_key)?,
-    };
-    let encrypted_key_bytes = bincode2::serialize(&encrypted_key).unwrap();
+    let encrypted_key = encrypt_key_new(plaintext_key, contract_key)?;
+
+    let mut encrypted_key_with_header: Vec<u8> = vec![];
+    encrypted_key_with_header.extend_from_slice(ENCRYPTED_KEY_MAGIC_BYTES);
+    encrypted_key_with_header.extend_from_slice(&CONSENSUS_SEED_VERSION.to_be_bytes());
+    encrypted_key_with_header.extend_from_slice(&encrypted_key);
 
     let mut maybe_plaintext_value: Option<Vec<u8>>;
     let gas_used_first_read: u64;
-    (maybe_plaintext_value, gas_used_first_read) = match read_db(context, &encrypted_key_bytes) {
-        Ok((maybe_encrypted_value_bytes, gas_used)) => match maybe_encrypted_value_bytes {
-            Some(encrypted_value_bytes) => {
-                let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
-                    warn!(
-                        "read_db() got an error while trying to read_from_encrypted_state the value {:?} for key {:?}, stopping wasm: {:?}",
-                        encrypted_value_bytes,
-                        encrypted_key_bytes,
-                        err.to_string()
-                    );
-                    WasmEngineError::DecryptionError
-                })?;
-
-                match decrypt_value_new(
-                    &encrypted_key.data,
-                    &encrypted_value.data,
-                    contract_key,
-                    &encrypted_value.salt,
-                ) {
-                    Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
-                    // This error case is why we have all the matches here.
-                    // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
-                    Err(err) => Err(err),
+    (maybe_plaintext_value, gas_used_first_read) =
+        match read_db(context, &encrypted_key_with_header) {
+            Ok((maybe_encrypted_value, gas_used)) => match maybe_encrypted_value {
+                Some(encrypted_value) => {
+                    match decrypt_value_new(&encrypted_key, &encrypted_value, contract_key) {
+                        Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
+                        // This error case is why we have all the matches here.
+                        // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
+                        Err(err) => Err(err),
+                    }
                 }
-            }
-            None => Ok((None, gas_used)),
-        },
-        Err(err) => Err(err),
-    }?;
+                None => Ok((None, gas_used)),
+            },
+            Err(err) => Err(err),
+        }?;
 
     if let Some(plaintext_value) = maybe_plaintext_value {
         return Ok((Some(plaintext_value), gas_used_first_read));
@@ -233,13 +250,8 @@ pub fn read_from_encrypted_state(
     if has_write_permissions {
         if let Some(ref plaintext_value) = maybe_plaintext_value {
             // Key exists with the old format, rewriting with the new format
-            gas_used_write = write_to_encrypted_state(
-                plaintext_key,
-                plaintext_value,
-                context,
-                contract_key,
-                encryption_salt,
-            )?;
+            gas_used_write =
+                write_to_encrypted_state(plaintext_key, plaintext_value, context, contract_key)?;
         }
     }
 
@@ -248,6 +260,106 @@ pub fn read_from_encrypted_state(
         gas_used_first_read + gas_used_second_read + gas_used_write,
     ))
 }
+
+// pub fn read_from_encrypted_state(
+//     plaintext_key: &[u8],
+//     context: &Ctx,
+//     contract_key: &ContractKey,
+//     has_write_permissions: bool,
+//     kv_cache: &mut KvCache,
+//     encryption_salt: &[u8],
+// ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
+//     // Try reading with the new encryption format
+//     let encrypted_key = EncryptedKey {
+//         magic_bytes: ENCRYPTED_KEY_MAGIC_BYTES.to_vec(),
+//         consensus_seed_version: CONSENSUS_SEED_VERSION,
+//         state_encryption_version: STATE_ENCRYPTION_VERSION,
+//         data: encrypt_key_new(plaintext_key, contract_key)?,
+//     };
+//     let encrypted_key_bytes = bincode2::serialize(&encrypted_key).unwrap();
+//
+//     let mut maybe_plaintext_value: Option<Vec<u8>>;
+//     let gas_used_first_read: u64;
+//     (maybe_plaintext_value, gas_used_first_read) = match read_db(context, &encrypted_key_bytes) {
+//         Ok((maybe_encrypted_value_bytes, gas_used)) => match maybe_encrypted_value_bytes {
+//             Some(encrypted_value_bytes) => {
+//                 let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
+//                     warn!(
+//                         "read_db() got an error while trying to read_from_encrypted_state the value {:?} for key {:?}, stopping wasm: {:?}",
+//                         encrypted_value_bytes,
+//                         encrypted_key_bytes,
+//                         err.to_string()
+//                     );
+//                     WasmEngineError::DecryptionError
+//                 })?;
+//
+//                 match decrypt_value_new(
+//                     &encrypted_key.data,
+//                     &encrypted_value.data,
+//                     contract_key,
+//                     &encrypted_value.salt,
+//                 ) {
+//                     Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
+//                     // This error case is why we have all the matches here.
+//                     // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
+//                     Err(err) => Err(err),
+//                 }
+//             }
+//             None => Ok((None, gas_used)),
+//         },
+//         Err(err) => Err(err),
+//     }?;
+//
+//     if let Some(plaintext_value) = maybe_plaintext_value {
+//         return Ok((Some(plaintext_value), gas_used_first_read));
+//     }
+//
+//     // Key doesn't exist, try reading with the old encryption format
+//     let scrambled_field_name = field_name_digest(plaintext_key, contract_key);
+//
+//     trace!(
+//         "Reading from scrambled field name: {:?}",
+//         scrambled_field_name
+//     );
+//
+//     let gas_used_second_read: u64;
+//     (maybe_plaintext_value, gas_used_second_read) = match read_db(context, &scrambled_field_name) {
+//         Ok((encrypted_value, gas_used)) => match encrypted_value {
+//             Some(plaintext_value) => {
+//                 match decrypt_value_old(&scrambled_field_name, &plaintext_value, contract_key) {
+//                     Ok(plaintext_value) => {
+//                         let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
+//                         Ok((Some(plaintext_value), gas_used))
+//                     }
+//                     // This error case is why we have all the matches here.
+//                     // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
+//                     Err(err) => Err(err),
+//                 }
+//             }
+//             None => Ok((None, gas_used)),
+//         },
+//         Err(err) => Err(err),
+//     }?;
+//
+//     let mut gas_used_write: u64 = 0;
+//     if has_write_permissions {
+//         if let Some(ref plaintext_value) = maybe_plaintext_value {
+//             // Key exists with the old format, rewriting with the new format
+//             gas_used_write = write_to_encrypted_state(
+//                 plaintext_key,
+//                 plaintext_value,
+//                 context,
+//                 contract_key,
+//                 encryption_salt,
+//             )?;
+//         }
+//     }
+//
+//     Ok((
+//         maybe_plaintext_value,
+//         gas_used_first_read + gas_used_second_read + gas_used_write,
+//     ))
+// }
 
 pub fn remove_from_encrypted_state(
     plaintext_key: &[u8],
@@ -437,12 +549,12 @@ fn encrypt_value_new(
     encrypted_state_key: &[u8],
     plaintext_state_value: &[u8],
     contract_key: &ContractKey,
-    encryption_salt: &[u8],
+    // encryption_salt: &[u8],
 ) -> Result<Vec<u8>, WasmEngineError> {
     let encryption_key = get_symmetrical_key_new(contract_key);
 
     encryption_key
-        .encrypt_siv(plaintext_state_value, Some(&[encrypted_state_key, encryption_salt]))
+        .encrypt_siv(plaintext_state_value, Some(&[encrypted_state_key /*, encryption_salt */ ]))
         .map_err(|err| {
             warn!(
                 "write_db() got an error while trying to encrypt_value_new the value '{:?}', stopping wasm: {:?}",
@@ -458,11 +570,11 @@ fn decrypt_value_new(
     encrypted_key: &[u8],
     encrypted_value: &[u8],
     contract_key: &ContractKey,
-    encryption_salt: &[u8],
+    // encryption_salt: &[u8],
 ) -> Result<Vec<u8>, WasmEngineError> {
     let decryption_key = get_symmetrical_key_new(contract_key);
 
-    decryption_key.decrypt_siv(encrypted_value, Some(&[encrypted_key, encryption_salt])).map_err(|err| {
+    decryption_key.decrypt_siv(encrypted_value, Some(&[encrypted_key /* , encryption_salt */ ])).map_err(|err| {
         warn!(
             "read_db() got an error while trying to decrypt_value_new the value {:?} for key {:?}, stopping wasm: {:?}",
             encrypted_value,

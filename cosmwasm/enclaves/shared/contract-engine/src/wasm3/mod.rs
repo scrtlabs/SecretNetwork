@@ -36,8 +36,8 @@ mod validation;
 type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
 
-use enclave_utils::kv_cache::KvCache;
 use crate::wasm3::gas::EXPORT_GAS_LIMIT;
+use enclave_utils::kv_cache::KvCache;
 
 macro_rules! debug_err {
     ($message: literal) => {
@@ -142,14 +142,17 @@ where
     }
 }
 
-fn link_fn_no_args<F, R>(instance: &mut Instance<Context>, name: &str, mut func: F) -> Wasm3RsResult<()>
-    where
-        F: FnMut(&mut Context, &wasm3::Instance<Context>) -> Result<R, WasmEngineError> + 'static,
-        R: wasm3::Arg + 'static,
+fn link_fn_no_args<F, R>(
+    instance: &mut Instance<Context>,
+    name: &str,
+    mut func: F,
+) -> Wasm3RsResult<()>
+where
+    F: FnMut(&mut Context, &wasm3::Instance<Context>) -> Result<R, WasmEngineError> + 'static,
+    R: wasm3::Arg + 'static,
 {
-    let wrapped_func = move |ctx: &mut Context, instance: &wasm3::Instance<Context>, _: ()| {
-        func(ctx, instance)
-    };
+    let wrapped_func =
+        move |ctx: &mut Context, instance: &wasm3::Instance<Context>, _: ()| func(ctx, instance);
 
     let wrapped_func = expect_context(wrapped_func);
     instance
@@ -192,7 +195,6 @@ fn check_execution_result<T>(
         },
     })
 }
-
 
 pub struct Engine {
     context: Context,
@@ -552,7 +554,7 @@ impl Engine {
     }
 
     pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
-        use crate::db::create_encrypted_key_value;
+        use crate::db::create_encrypted_key;
 
         // here we refund all the pseudo gas charged for writes to cache
         // todo: optimize to only charge for writes that change chain state
@@ -564,12 +566,12 @@ impl Engine {
             .flush()
             .into_iter()
             .map(|(k, v)| {
-                let (enc_key, _, enc_v) = create_encrypted_key_value(
+                let (enc_key, _, enc_v) = create_encrypted_key(
                     &k,
                     &v,
                     &self.context.context,
                     &self.context.contract_key,
-                    &get_encryption_salt(self.context.timestamp),
+                    // &get_encryption_salt(self.context.timestamp),
                 )
                 .unwrap();
 
@@ -849,7 +851,7 @@ fn host_read_db(
             ContractOperation::Query => false,
         },
         &mut context.kv_cache,
-        &get_encryption_salt(context.timestamp),
+        // &get_encryption_salt(context.timestamp),
     )
     .map_err(debug_err!("db_read failed to read key from storage"))?;
     context.use_gas_externally(used_gas);
@@ -1792,12 +1794,17 @@ fn host_gas_evaporate(
     const GAS_MULTIPLIER: u64 = 1000; // (cosmwasm gas : sdk gas)
     let gas_requested = evaporate as u64 * GAS_MULTIPLIER;
 
-    use_gas(instance, max(gas_requested, context.gas_costs.external_minimum_gas_evaporate as u64))?;
+    use_gas(
+        instance,
+        max(
+            gas_requested,
+            context.gas_costs.external_minimum_gas_evaporate as u64,
+        ),
+    )?;
 
     // return 0 == success
     Ok(0)
 }
-
 
 fn host_check_gas_used(
     context: &mut Context,
@@ -1811,7 +1818,10 @@ fn host_check_gas_used(
 
     let limit = context.gas_limit;
     // return 0 == success
-    debug!("Reported gas remaining: {:?}, limit: {:?}", gas_remaining, limit);
+    debug!(
+        "Reported gas remaining: {:?}, limit: {:?}",
+        gas_remaining, limit
+    );
 
     let gas_used = limit.saturating_sub(gas_remaining) / 1000;
 
