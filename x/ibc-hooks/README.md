@@ -148,11 +148,11 @@ For the callback to be processed, the transfer packet's memo should contain the 
 `{"ibc_callback": "secret1contractAddr"}`
 
 The wasm hooks will keep the mapping from the packet's channel and sequence to the contract in storage. When an ack is
-received, it will notify the specified contract via a sudo message.
+received, it will notify the specified contract via a `execute` message.
 
 #### Interface for receiving the Acks and Timeouts
 
-The contract that awaits the callback should implement the following interface for a sudo message:
+The contract that awaits the callback should implement the following interface for a `execute` message:
 
 ```rust
 #[cw_serde]
