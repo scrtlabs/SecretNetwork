@@ -169,6 +169,7 @@ type TransferMsg struct {
 	ToAddress string     `json:"to_address"`
 	Amount    types.Coin `json:"amount"`
 	Timeout   IBCTimeout `json:"timeout"`
+	Memo      string     `json:"memo"`
 }
 
 type SendPacketMsg struct {
