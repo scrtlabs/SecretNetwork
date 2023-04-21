@@ -2,9 +2,10 @@
 
 ## Forked from https://github.com/osmosis-labs/osmosis/tree/512654fb35845f807cdc9179984db9e2afc2e564/x/ibc-hooks
 
-Different behavior on Secret:
+Different behaviors on Secret vs. Osmosis:
 
-- Instead of a scrambled/placeholder sender, on Secret the contract sees the sender as an empty string.
+- When receiving a token over IBC, instead of the scrambled sender on the Osmosis, on Secret the contract sees the sender as an empty string.
+- When using `ibc_callback` with `IbcMsg::Transfer` from a non IBC contract, on Secret the ack/timeout will be sent to the `execute` endpoint instead of to the `sudo` endpoint. 
 
 ## Wasm Hooks
 
