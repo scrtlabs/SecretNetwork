@@ -5,7 +5,7 @@
 - Added randomness injection to secret contracts.
   - Eliminates the need for contracts to bootstrap their own entropy pool.
   - Unique for every contract call.
-  - Useful in lotteries, gaming, secure authentication protocols, where unpredictable outcomes are essential for fairness and security, and much more.
+  - Useful in lotteries, gaming, secure authentication protocols, protocols where unpredictable outcomes are essential for fairness and security, and much more.
 - Added FinalizeTx.
   - Contracts can force the transaction to finalize at a certain point or revert.
   - Example: protect against sandwich attacks and potential transaction rollbacks.
