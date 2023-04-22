@@ -7,7 +7,7 @@
   - Unique for every contract call.
   - Useful in lotteries, gaming, secure authentication protocols, protocols where unpredictable outcomes are essential for fairness and security, and much more.
 - Added FinalizeTx.
-  - Contracts can force the transaction to finalize at a certain point or revert.
+  - Contracts can force the transaction to finalize at a certain point, otherwise revert.
   - Example: protect against sandwich attacks and potential transaction rollbacks.
   - Example: protect against cheating in gaming applications, where a malicious player could try to rollback a transaction in which they lost.
 - Updated ibc-go from v3.4.0 to v4.3.0.
