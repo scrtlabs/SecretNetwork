@@ -12,7 +12,7 @@
   - Example: protect against cheating in gaming applications, where a malicious player could try to rollback a transaction in which they lost.
 - Updated ibc-go from v3.4.0 to v4.3.0.
 - Added packet-forward-middleware by Strangelove.
-  - Other chains would be able to more easily route SCRT in the interchain. For example, sending SCRT from Osmosis to Hub now becomes a single transaction on Osmosis rather than a transaction on `Osmosis -> Secret`, then a transaction on `Secret -> Hub`.
+  - Other chains would be able to more easily route SCRT in the interchain. For example, sending SCRT from Osmosis to Hub now becomes a single transaction from `Osmosis -> Secret` rather than a transaction from `Osmosis -> Secret`, then a transaction from `Secret -> Hub`.
 - Added IBC fee middleware.
   - Creates a fee market for relaying IBC packets.
 - Added ibc-hooks middleware by Osmosis.
