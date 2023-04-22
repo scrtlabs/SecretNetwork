@@ -87,9 +87,8 @@ type SecretAppKeepers struct {
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   ibctransferkeeper.Keeper
 
-	IbcFeeKeeper        ibcfeekeeper.Keeper
-	PacketForwardKeeper *ibcpacketforwardkeeper.Keeper
-	// todo: maybe setting this as a global field is not necessary
+	IbcFeeKeeper         ibcfeekeeper.Keeper
+	PacketForwardKeeper  *ibcpacketforwardkeeper.Keeper
 	IbcSwitchICS4Wrapper *ibcswitch.ICS4Wrapper
 	TransferStack        *ibcswitch.IBCModule
 

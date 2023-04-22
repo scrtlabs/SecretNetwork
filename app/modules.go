@@ -31,6 +31,7 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v4/modules/core"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
+	ibcswitch "github.com/scrtlabs/SecretNetwork/x/ibc-switch"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	packetforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 )
@@ -77,5 +78,6 @@ func AppModules(
 		ica.NewAppModule(app.AppKeepers.ICAControllerKeeper, app.AppKeepers.ICAHostKeeper),
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper),
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
+		ibcswitch.NewAppModule(*app.AppKeepers.IbcSwitchICS4Wrapper),
 	}
 }
