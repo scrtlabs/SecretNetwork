@@ -17,7 +17,7 @@
   - Creates a fee market for relaying IBC packets.
 - Added ibc-hooks middleware by Osmosis.
   - WASM Hooks: allows ICS-20 token transfers to initiate contract calls. This is useful for a variety of use cases.
-    - Example: Sending tokens into Secret and immediately wrapping them as SNIP-20 token. For example, `ATOM on Hub -> ATOM on Secret -> sATOMS on Secret` (2 transactions on 2 chains) now becomes `ATOM on Hub -> sATOM on Secret` (1 transaction).
+    - Example: Sending tokens to Secret and immediately wrapping them as SNIP-20 token. For example, `ATOM on Hub -> ATOM on Secret -> sATOMS on Secret` (2 transactions on 2 chains) now becomes `ATOM on Hub -> sATOM on Secret` (1 transaction).
     - Another example is cross-chain swaps - using WASM Hooks, an AMM on Secret can atomically swap tokens that originated on chain A and are headed to chain B.
   - Ack callbacks allow non-IBC contracts that send an `IbcMsg::Transfer` to listen for the ack/timeout of the token transfer. This allows these contracts to definitively know whether the transfer was successful or not and act accordingly (refund if failed, continue if succeeded).
 - WIP: IBC panic button.
