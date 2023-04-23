@@ -1,25 +1,26 @@
-package ibc_switch
+package module
 
 import (
-	//"context" //todo discomment
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/scrtlabs/SecretNetwork/x/ibc-switch"
+	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/grpc"
+
+	"github.com/gorilla/mux"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/spf13/cobra"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	ibcswitchclient "github.com/scrtlabs/SecretNetwork/x/ibc-switch/client"
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	//todo why?
-	"github.com/gorilla/mux"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/spf13/cobra"
-
+	ibcswitchcli "github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/cli"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
-	// todo create in ibc-switch
-	//ibcswitchclient "github.com/scrtlabs/SecretNetwork/x/ibc-switch/client"
-	//ibcswitchcli "github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/cli"
 	//"github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/grpc"
 	//"github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/queryproto"
 )
@@ -55,8 +56,7 @@ func (b AppModuleBasic) RegisterRESTRoutes(ctx client.Context, r *mux.Router) {
 }
 
 func (b AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-	// todo discomment
-	//queryproto.RegisterQueryHandlerClient(context.Background(), mux, queryproto.NewQueryClient(clientCtx)) //nolint:errcheck
+	types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx)) //nolint:errcheck
 }
 
 func (b AppModuleBasic) GetTxCmd() *cobra.Command {
@@ -64,9 +64,7 @@ func (b AppModuleBasic) GetTxCmd() *cobra.Command {
 }
 
 func (b AppModuleBasic) GetQueryCmd() *cobra.Command {
-	//todo discomment
-	//return ibcswitchcli.GetQueryCmd()
-	return &cobra.Command{}
+	return ibcswitchcli.GetQueryCmd()
 }
 
 // RegisterInterfaces registers interfaces and implementations of the ibc-switch module.
@@ -81,10 +79,10 @@ func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) 
 type AppModule struct {
 	AppModuleBasic
 
-	ics4wrapper ICS4Wrapper
+	ics4wrapper ibc_switch.ICS4Wrapper
 }
 
-func NewAppModule(ics4wrapper ICS4Wrapper) AppModule {
+func NewAppModule(ics4wrapper ibc_switch.ICS4Wrapper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		ics4wrapper:    ics4wrapper,
@@ -114,8 +112,7 @@ func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sd
 // RegisterServices registers a GRPC query service to respond to the
 // module-specific GRPC queries.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	// todo discomment
-	//queryproto.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: am.ics4wrapper}})
+	types.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: am.ics4wrapper}})
 }
 
 // RegisterInvariants registers the txfees module's invariants.

@@ -31,7 +31,7 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v4/modules/core"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
-	ibcswitch "github.com/scrtlabs/SecretNetwork/x/ibc-switch"
+	ibcswitch "github.com/scrtlabs/SecretNetwork/x/ibc-switch/module"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	packetforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 )
