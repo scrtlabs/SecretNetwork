@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
 	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 	"io"
 	"net/http"
@@ -456,6 +457,7 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
 	)
 }
 
@@ -473,6 +475,7 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
 
 		icatypes.ModuleName,
 		icaauthtypes.ModuleName,
@@ -515,5 +518,6 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		packetforwardtypes.ModuleName,
 		compute.ModuleName,
 		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
 	)
 }
