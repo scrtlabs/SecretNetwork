@@ -275,21 +275,22 @@ pub fn handle(
     };
 
     // There is no signature to verify when the input isn't signed.
-    // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
+    // Receiving unsigned messages is only possible in Handle (Init tx are always signed).
     // All of these scenarios go through here with HANDLE_TYPE_EXECUTE but the data isn't signed:
-    // - Replies from other sdk modules (WASM replies are signed)
+    // - Plaintext replies (resulting from an IBC call) - doesn't have a msg.sender anyway
     // - IBC WASM Hooks
     // - (In the future:) ICA
     //
-    // So we want to allow executing contracts with plaintext input via IBC
+    // We do want to allow executing contracts with plaintext input via IBC
     // while the sender of an IBC packet cannot be verified.
-    // And we don't want malicious actors using this new enclvae setting to just
+    // And we don't want malicious actors using this enclvae setting to just
     // impersonate any sender they want.
     // => Therefore we'll zero out the sender if it cannot be verified && the input is plaintext
     let is_empty_sender = if should_validate_sig_info {
         // Verify env parameters against the signed tx
-        // If verification fails && input is encryted => error
-        // If verification fails && input is not encryted => zero out the sender
+        // If verification fails:
+        //     If input is not encryted && execute => zero out the sender
+        //     If input is encryted || !execute => error
         match verify_params(
             &parsed_sig_info,
             sent_funds,
