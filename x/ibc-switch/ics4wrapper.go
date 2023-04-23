@@ -61,11 +61,11 @@ func (i *ICS4Wrapper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilityt
 	return i.channel.WriteAcknowledgement(ctx, chanCap, packet, ack)
 }
 
-func (i *ICS4Wrapper) GetPauserAddress(ctx sdk.Context) (contract string) {
+func (i *ICS4Wrapper) GetPauserAddress(ctx sdk.Context) (pauser string) {
 	return i.GetParams(ctx).PauserAddress
 }
 
-func (i *ICS4Wrapper) GetSwitchStatus(ctx sdk.Context) (contract string) {
+func (i *ICS4Wrapper) GetSwitchStatus(ctx sdk.Context) (status string) {
 	return i.GetParams(ctx).SwitchStatus
 }
 

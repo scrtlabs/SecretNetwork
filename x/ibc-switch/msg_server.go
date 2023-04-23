@@ -22,13 +22,16 @@ func (m msgServer) ToggleSwitch(goCtx context.Context, msg *types.MsgToggleSwitc
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	pauser := m.ics4wrapper.GetPauserAddress(ctx)
+	if pauser == "" {
+		return nil, sdkerrors.Wrap(types.ErrPauserUnset, "no address is currently approved to toggle ibc-switch")
+	}
 	pauserAddress, err := sdk.AccAddressFromBech32(pauser)
 	if err != nil {
 		return nil, err
 	}
 
 	if !pauserAddress.Equals(msg.GetSender()) {
-		return nil, sdkerrors.Wrap(types.ErrUnauthorizedToggle, "This address is not allowed to toggle ibc-switch")
+		return nil, sdkerrors.Wrap(types.ErrUnauthorizedToggle, "this address is not allowed to toggle ibc-switch")
 	}
 
 	status := m.ics4wrapper.GetSwitchStatus(ctx)
