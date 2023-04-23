@@ -58,7 +58,7 @@ func (b AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux 
 }
 
 func (b AppModuleBasic) GetTxCmd() *cobra.Command {
-	return nil
+	return ibcswitchcli.GetTxCmd()
 }
 
 func (b AppModuleBasic) GetQueryCmd() *cobra.Command {
@@ -67,6 +67,7 @@ func (b AppModuleBasic) GetQueryCmd() *cobra.Command {
 
 // RegisterInterfaces registers interfaces and implementations of the ibc-switch module.
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {
+	types.RegisterInterfaces(registry)
 }
 
 // ----------------------------------------------------------------------------
