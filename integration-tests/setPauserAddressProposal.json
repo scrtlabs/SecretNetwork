@@ -1,0 +1,12 @@
+ {
+  "title": "Set pauser of ibc-switch",
+  "description": "Testing the changing of the pauserAddress param",
+  "changes": [
+    {
+      "subspace": "ibc-switch",
+      "key": "pauseraddress",
+      "value": "secret1tjljjd0vfuh8kp4az6wretgdyglnwquqaassaf"
+    }
+  ],
+  "deposit": "100000000000uscrt"
+}
