@@ -5,5 +5,6 @@ import (
 )
 
 var (
-	ErrIbcOff = sdkerrors.Register(ModuleName, 1, "Ibc is temporarily paused")
+	ErrIbcOff             = sdkerrors.Register(ModuleName, 1, "ibc processing failed")
+	ErrUnauthorizedToggle = sdkerrors.Register(ModuleName, 2, "ibc-switch toggle failed")
 )

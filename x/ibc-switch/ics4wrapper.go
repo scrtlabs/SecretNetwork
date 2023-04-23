@@ -61,6 +61,10 @@ func (i *ICS4Wrapper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilityt
 	return i.channel.WriteAcknowledgement(ctx, chanCap, packet, ack)
 }
 
+func (i *ICS4Wrapper) GetPauserAddress(ctx sdk.Context) (contract string) {
+	return i.GetParams(ctx).PauserAddress
+}
+
 func (i *ICS4Wrapper) GetSwitchStatus(ctx sdk.Context) (contract string) {
 	return i.GetParams(ctx).SwitchStatus
 }
@@ -77,6 +81,10 @@ func (i *ICS4Wrapper) GetParams(ctx sdk.Context) (params types.Params) {
 		return types.DefaultParams()
 	}
 	return params
+}
+
+func (i *ICS4Wrapper) SetSwitchStatus(ctx sdk.Context, value string) {
+	i.paramSpace.Set(ctx, types.KeySwitchStatus, value)
 }
 
 func (i *ICS4Wrapper) SetParams(ctx sdk.Context, params types.Params) {
