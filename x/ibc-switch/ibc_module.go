@@ -3,10 +3,12 @@ package ibc_switch
 import (
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
 	"github.com/cosmos/ibc-go/v4/modules/core/exported"
+	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
 )
 
 type IBCModule struct {
@@ -107,9 +109,13 @@ func (im *IBCModule) OnRecvPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) exported.Acknowledgement {
-	// todo: check if the switch is off, in which case packet is not forwarded to underlying application
-	fmt.Println("RecvPacket on switch middleware: passing packet")
+	if im.ics4Middleware.GetSwitchStatus(ctx) == "off" {
+		err := sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
+		return channeltypes.NewErrorAcknowledgement(err)
+	}
 
+	//todo remove print
+	fmt.Println("RecvPacket on switch middleware: passing packet")
 	return im.app.OnRecvPacket(ctx, packet, relayer)
 }
 
@@ -120,37 +126,6 @@ func (im *IBCModule) OnAcknowledgementPacket(
 	acknowledgement []byte,
 	relayer sdk.AccAddress,
 ) error {
-	// todo: decide if we do want to disable acks too when the switch is off
-	//  (we may want to let them in, e.g. to revert transfers):
-
-	//var ack channeltypes.Acknowledgement
-	//if err := json.Unmarshal(acknowledgement, &ack); err != nil {
-	//	return sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "cannot unmarshal ICS-20 transfer packet acknowledgement: %v", err)
-	//}
-
-	//var IsAckError = func (acknowledgement []byte) bool {
-	//	var ackErr channeltypes.Acknowledgement_Error
-	//		if err := json.Unmarshal(acknowledgement, &ackErr); err == nil && len(ackErr.Error) > 0 {
-	//		return true
-	//	}
-	//	return false
-	//}
-
-	//if IsAckError(acknowledgement) {
-	//	err := im.RevertSentPacket(ctx, packet) // If there is an error here we should still handle the ack
-	//	if err != nil {
-	//		ctx.EventManager().EmitEvent(
-	//			sdk.NewEvent(
-	//				types.EventBadRevert,
-	//				sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-	//				sdk.NewAttribute(types.AttributeKeyFailureType, "acknowledgment"),
-	//				sdk.NewAttribute(types.AttributeKeyPacket, string(packet.GetData())),
-	//				sdk.NewAttribute(types.AttributeKeyAck, string(acknowledgement)),
-	//			),
-	//		)
-	//	}
-	//}
-
 	return im.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
 }
 
@@ -160,21 +135,6 @@ func (im *IBCModule) OnTimeoutPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) error {
-	// todo: decide if we do want to disable timeouts too when the switch is off
-	//  (we may want to let them in, e.g. to revert transfers):
-
-	//err := im.RevertSentPacket(ctx, packet) // If there is an error here we should still handle the timeout
-	//if err != nil {
-	//	ctx.EventManager().EmitEvent(
-	//		sdk.NewEvent(
-	//			types.EventBadRevert,
-	//			sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-	//			sdk.NewAttribute(types.AttributeKeyFailureType, "timeout"),
-	//			sdk.NewAttribute(types.AttributeKeyPacket, string(packet.GetData())),
-	//		),
-	//	)
-	//}
-
 	return im.app.OnTimeoutPacket(ctx, packet, relayer)
 }
 

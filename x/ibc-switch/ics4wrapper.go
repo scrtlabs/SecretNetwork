@@ -48,13 +48,11 @@ func NewICS4Middleware(
 func (i *ICS4Wrapper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI) error {
 	status := i.GetSwitchStatus(ctx)
 
-	// todo: make this an enum
-	if status != "off" {
-		// The status has not been configured. Continue as usual
-		return i.channel.SendPacket(ctx, chanCap, packet)
+	if status == "off" {
+		return sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 	}
 
-	return sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
+	return i.channel.SendPacket(ctx, chanCap, packet)
 }
 
 func (i *ICS4Wrapper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI, ack exported.Acknowledgement) error {
