@@ -7,15 +7,17 @@ use bech32::{FromBase32, ToBase32};
 use cw_types_generic::{ContractFeature, CosmWasmApiVersion, CwEnv};
 use rand_chacha::ChaChaRng;
 use rand_core::SeedableRng;
+use sgx_rand::Rng;
+use sgx_rand::StdRng;
 use wasm3::{Instance, Memory, Trap};
 
 use cw_types_v010::consts::BECH32_PREFIX_ACC_ADDR;
+use cw_types_v010::encoding::Binary;
 use enclave_cosmos_types::types::{ContractCode, HandleType};
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
-
 use crate::cosmwasm_config::ContractOperation;
 use crate::db::read_from_encrypted_state;
 use crate::db::{remove_from_encrypted_state, write_multiple_keys};
@@ -616,14 +618,14 @@ impl Engine {
         })
     }
 
-    pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
+    pub fn flush_cache(&mut self, random: Option<Binary>) -> Result<u64, EnclaveError> {
         use crate::db::create_encrypted_key_value;
 
         // here we refund all the pseudo gas charged for writes to cache
         // todo: optimize to only charge for writes that change chain state
         let total_gas_to_refund = self.context.kv_cache.drain_gas_tracker();
 
-        let keys: Vec<(Vec<u8>, Vec<u8>)> = self
+        let mut keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .context
             .kv_cache
             .flush()
@@ -641,6 +643,24 @@ impl Engine {
                 (enc_key.to_vec(), enc_v)
             })
             .collect();
+
+        if let Some(random_unwraped) = random {
+            let sha256 = &sha_256(&random_unwraped.as_slice())[..];
+            // SeedableRng is implemented for 4*32 bit seed
+            let seed: Vec<usize> = sha256
+                .chunks_exact(8)
+                .map(|chunk| {
+                    usize::from_le_bytes([
+                        chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6],
+                        chunk[7],
+                    ])
+                })
+                .collect();
+
+            let mut rng: StdRng = sgx_rand::SeedableRng::from_seed(seed.as_slice());
+
+            rng.shuffle(&mut keys);
+        }
 
         write_multiple_keys(&self.context.context, keys).map_err(|err| {
             debug!(
