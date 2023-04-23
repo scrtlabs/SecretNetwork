@@ -21,8 +21,6 @@ import (
 
 	ibcswitchcli "github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/cli"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
-	//"github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/grpc"
-	//"github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/queryproto"
 )
 
 var (
