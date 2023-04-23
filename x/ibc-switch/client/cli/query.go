@@ -8,22 +8,6 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
 )
 
-// todo remove
-//"github.com/osmosis-labs/osmosis/osmoutils/osmocli"
-//"github.com/osmosis-labs/osmosis/v15/x/ibc-rate-limit/client/queryproto"
-
-// GetQueryCmd returns the cli query commands for this module.
-//func GetQueryCmdOsmosis() *cobra.Command {
-//	cmd := osmocli.QueryIndexCmd(types.ModuleName)
-//
-//	cmd.AddCommand(
-//		osmocli.GetParams[*queryproto.ParamsRequest](
-//			types.ModuleName, queryproto.NewQueryClient),
-//	)
-//
-//	return cmd
-//}
-
 func GetQueryCmd() *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
@@ -53,7 +37,7 @@ func GetCmdParams() *cobra.Command {
 			}
 
 			queryClient := types.NewQueryClient(clientCtx)
-			res, err := queryClient.Params(cmd.Context(), &types.QueryParamsRequest{})
+			res, err := queryClient.Params(cmd.Context(), &types.ParamsRequest{})
 			if err != nil {
 				return err
 			}
