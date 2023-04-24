@@ -50,7 +50,7 @@ pub struct DB {
 }
 
 impl Storage for DB {
-    fn get(&self, key: &[u8]) -> FfiResult<Option<Vec<u8>>> {
+    fn get(&self, height: u64, key: &[u8]) -> FfiResult<Option<Vec<u8>>> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
         let mut err = Buffer::default();
@@ -59,7 +59,7 @@ impl Storage for DB {
             self.state,
             self.gas_meter,
             &mut used_gas as *mut u64,
-            0,
+            height,
             key_buf,
             &mut result_buf as *mut Buffer,
             &mut err as *mut Buffer,

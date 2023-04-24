@@ -45,7 +45,7 @@ pub extern "C" fn ocall_read_db(
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
-    _block_height: u64,
+    block_height: u64,
     value: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,
@@ -55,6 +55,7 @@ pub extern "C" fn ocall_read_db(
         context,
         vm_error,
         gas_used,
+        block_height,
         value,
         key,
         key_len,
@@ -88,6 +89,7 @@ fn ocall_read_db_concrete(
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
+    height: u64,
     value: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,
@@ -96,7 +98,7 @@ fn ocall_read_db_concrete(
 
     let implementation = unsafe { get_implementations_from_context(&context).read_db };
 
-    std::panic::catch_unwind(|| implementation(context, key))
+    std::panic::catch_unwind(|| implementation(context, height, key))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
         .map(|result| -> Result<EnclaveBuffer, OcallReturn> {
@@ -369,7 +371,7 @@ unsafe fn store_vm_error(vm_err: VmError, location: *mut UntrustedVmError) {
 /// appropriate for it.
 #[allow(clippy::type_complexity)]
 struct ExportImplementations {
-    read_db: fn(context: Ctx, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>,
+    read_db: fn(context: Ctx, height: u64, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>,
     query_chain: fn(
         context: Ctx,
         query: &[u8],
@@ -425,13 +427,17 @@ unsafe fn get_implementations_from_context(context: &Ctx) -> &ExportImplementati
     &(*(context.data as *mut FullContext)).implementation
 }
 
-fn ocall_read_db_impl<S, Q>(mut context: Ctx, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>
+fn ocall_read_db_impl<S, Q>(
+    mut context: Ctx,
+    height: u64,
+    key: &[u8],
+) -> VmResult<(Option<Vec<u8>>, u64)>
 where
     S: Storage,
     Q: Querier,
 {
     with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
-        let (ffi_result, gas_info) = storage.get(key);
+        let (ffi_result, gas_info) = storage.get(height, key);
         ffi_result
             .map(|value| (value, gas_info.externally_used))
             .map_err(Into::into)

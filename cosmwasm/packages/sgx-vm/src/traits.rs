@@ -69,7 +69,7 @@ where
     ///
     /// Note: Support for differentiating between a non-existent key and a key with empty value
     /// is not great yet and might not be possible in all backends. But we're trying to get there.
-    fn get(&self, key: &[u8]) -> FfiResult<Option<Vec<u8>>>;
+    fn get(&self, height: u64, key: &[u8]) -> FfiResult<Option<Vec<u8>>>;
 
     #[cfg(feature = "iterator")]
     /// Allows iteration over a set of key/value pairs, either forwards or backwards.
