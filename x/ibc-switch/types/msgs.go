@@ -5,33 +5,33 @@ import (
 )
 
 const (
-	TypeMsgToggleSwitch = "toggle_switch"
+	TypeMsgToggleIbcSwitch = "toggle_switch"
 )
 
-var _ sdk.Msg = &MsgToggleSwitch{}
+var _ sdk.Msg = &MsgToggleIbcSwitch{}
 
-// NewMsgToggleSwitch creates a message to toggle switch
-func NewMsgToggleSwitch(sender sdk.AccAddress) *MsgToggleSwitch {
-	return &MsgToggleSwitch{sender}
+// NewMsgToggleIbcSwitch creates a message to toggle switch
+func NewMsgToggleIbcSwitch(sender sdk.AccAddress) *MsgToggleIbcSwitch {
+	return &MsgToggleIbcSwitch{sender}
 }
 
 // Route takes a toggle switch message, then returns the RouterKey used for slashing.
-func (m MsgToggleSwitch) Route() string { return RouterKey }
+func (m MsgToggleIbcSwitch) Route() string { return RouterKey }
 
 // Type takes a toggle switch message, then returns a toggle switch message type.
-func (m MsgToggleSwitch) Type() string { return TypeMsgToggleSwitch }
+func (m MsgToggleIbcSwitch) Type() string { return TypeMsgToggleIbcSwitch }
 
 // ValidateBasic checks that the toggle switch message is valid.
-func (m MsgToggleSwitch) ValidateBasic() error {
+func (m MsgToggleIbcSwitch) ValidateBasic() error {
 	return nil
 }
 
 // GetSignBytes takes a toggle switch message and turns it into a byte array.
-func (m MsgToggleSwitch) GetSignBytes() []byte {
+func (m MsgToggleIbcSwitch) GetSignBytes() []byte {
 	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&m))
 }
 
-// GetSigners takes a toggle switch message and returns the sender in a byte array.
-func (m MsgToggleSwitch) GetSigners() []sdk.AccAddress {
+// GetSigners takes a toggle switch message and returns the sender in an array.
+func (m MsgToggleIbcSwitch) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{m.Sender}
 }

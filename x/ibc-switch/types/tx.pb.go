@@ -6,7 +6,6 @@ package types
 import (
 	context "context"
 	fmt "fmt"
-	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/gogo/protobuf/gogoproto"
 	grpc1 "github.com/gogo/protobuf/grpc"
 	proto "github.com/gogo/protobuf/proto"
@@ -29,23 +28,23 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// MsgToggleSwitch represents a message to toggle the ibc-switch status by the defined pauser.
-type MsgToggleSwitch struct {
-	Sender github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
+// MsgToggleIbcSwitch represents a message to toggle the ibc-switch status by the defined pauser.
+type MsgToggleIbcSwitch struct {
+	Sender string `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty"`
 }
 
-func (m *MsgToggleSwitch) Reset()         { *m = MsgToggleSwitch{} }
-func (m *MsgToggleSwitch) String() string { return proto.CompactTextString(m) }
-func (*MsgToggleSwitch) ProtoMessage()    {}
-func (*MsgToggleSwitch) Descriptor() ([]byte, []int) {
+func (m *MsgToggleIbcSwitch) Reset()         { *m = MsgToggleIbcSwitch{} }
+func (m *MsgToggleIbcSwitch) String() string { return proto.CompactTextString(m) }
+func (*MsgToggleIbcSwitch) ProtoMessage()    {}
+func (*MsgToggleIbcSwitch) Descriptor() ([]byte, []int) {
 	return fileDescriptor_652aa9c0543f986d, []int{0}
 }
-func (m *MsgToggleSwitch) XXX_Unmarshal(b []byte) error {
+func (m *MsgToggleIbcSwitch) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MsgToggleSwitch) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgToggleIbcSwitch) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MsgToggleSwitch.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgToggleIbcSwitch.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -55,41 +54,41 @@ func (m *MsgToggleSwitch) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *MsgToggleSwitch) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgToggleSwitch.Merge(m, src)
+func (m *MsgToggleIbcSwitch) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgToggleIbcSwitch.Merge(m, src)
 }
-func (m *MsgToggleSwitch) XXX_Size() int {
+func (m *MsgToggleIbcSwitch) XXX_Size() int {
 	return m.Size()
 }
-func (m *MsgToggleSwitch) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgToggleSwitch.DiscardUnknown(m)
+func (m *MsgToggleIbcSwitch) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgToggleIbcSwitch.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MsgToggleSwitch proto.InternalMessageInfo
+var xxx_messageInfo_MsgToggleIbcSwitch proto.InternalMessageInfo
 
-func (m *MsgToggleSwitch) GetSender() github_com_cosmos_cosmos_sdk_types.AccAddress {
+func (m *MsgToggleIbcSwitch) GetSender() string {
 	if m != nil {
 		return m.Sender
 	}
-	return nil
+	return ""
 }
 
-// MsgSendResponse defines the response type for the toggle.
-type MsgToggleSwitchResponse struct {
+// MsgToggleIbcSwitchResponse defines the response type for the toggle.
+type MsgToggleIbcSwitchResponse struct {
 }
 
-func (m *MsgToggleSwitchResponse) Reset()         { *m = MsgToggleSwitchResponse{} }
-func (m *MsgToggleSwitchResponse) String() string { return proto.CompactTextString(m) }
-func (*MsgToggleSwitchResponse) ProtoMessage()    {}
-func (*MsgToggleSwitchResponse) Descriptor() ([]byte, []int) {
+func (m *MsgToggleIbcSwitchResponse) Reset()         { *m = MsgToggleIbcSwitchResponse{} }
+func (m *MsgToggleIbcSwitchResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgToggleIbcSwitchResponse) ProtoMessage()    {}
+func (*MsgToggleIbcSwitchResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_652aa9c0543f986d, []int{1}
 }
-func (m *MsgToggleSwitchResponse) XXX_Unmarshal(b []byte) error {
+func (m *MsgToggleIbcSwitchResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MsgToggleSwitchResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgToggleIbcSwitchResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MsgToggleSwitchResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgToggleIbcSwitchResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -99,21 +98,21 @@ func (m *MsgToggleSwitchResponse) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
-func (m *MsgToggleSwitchResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MsgToggleSwitchResponse.Merge(m, src)
+func (m *MsgToggleIbcSwitchResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgToggleIbcSwitchResponse.Merge(m, src)
 }
-func (m *MsgToggleSwitchResponse) XXX_Size() int {
+func (m *MsgToggleIbcSwitchResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *MsgToggleSwitchResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_MsgToggleSwitchResponse.DiscardUnknown(m)
+func (m *MsgToggleIbcSwitchResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgToggleIbcSwitchResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MsgToggleSwitchResponse proto.InternalMessageInfo
+var xxx_messageInfo_MsgToggleIbcSwitchResponse proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*MsgToggleSwitch)(nil), "secret.ibcswitch.v1beta1.MsgToggleSwitch")
-	proto.RegisterType((*MsgToggleSwitchResponse)(nil), "secret.ibcswitch.v1beta1.MsgToggleSwitchResponse")
+	proto.RegisterType((*MsgToggleIbcSwitch)(nil), "secret.ibcswitch.v1beta1.MsgToggleIbcSwitch")
+	proto.RegisterType((*MsgToggleIbcSwitchResponse)(nil), "secret.ibcswitch.v1beta1.MsgToggleIbcSwitchResponse")
 }
 
 func init() {
@@ -121,24 +120,22 @@ func init() {
 }
 
 var fileDescriptor_652aa9c0543f986d = []byte{
-	// 271 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x90, 0x31, 0x4b, 0xc3, 0x40,
-	0x18, 0x86, 0x13, 0x84, 0x0e, 0x47, 0x41, 0x08, 0x82, 0xb5, 0xc3, 0x29, 0x99, 0x74, 0xc8, 0x1d,
-	0x51, 0xff, 0x40, 0xbb, 0x39, 0xb4, 0x43, 0xeb, 0x24, 0x2e, 0xbd, 0xcb, 0xc7, 0x35, 0x34, 0xed,
-	0x17, 0xee, 0x3b, 0x6d, 0xfd, 0x17, 0xfe, 0x2c, 0xc7, 0x8e, 0x4e, 0x22, 0xc9, 0xbf, 0x70, 0x12,
-	0x2f, 0x11, 0x6a, 0x41, 0xe8, 0x74, 0x37, 0x3c, 0xdf, 0xf3, 0xf2, 0xbe, 0x2c, 0x26, 0xd0, 0x16,
-	0x9c, 0xcc, 0x95, 0x4e, 0x68, 0x9d, 0x3b, 0x3d, 0x97, 0xcf, 0xa9, 0x02, 0x37, 0x4b, 0xa5, 0xdb,
-	0x88, 0xd2, 0xa2, 0xc3, 0xa8, 0xd7, 0x30, 0x22, 0x57, 0xba, 0x41, 0x44, 0x8b, 0xf4, 0x4f, 0x0c,
-	0x1a, 0xf4, 0x90, 0xfc, 0xf9, 0x35, 0x7c, 0xfc, 0xc8, 0x8e, 0x47, 0x64, 0xee, 0xd1, 0x98, 0x02,
-	0xa6, 0xfe, 0x20, 0xba, 0x63, 0x1d, 0x82, 0x55, 0x06, 0xb6, 0x17, 0x5e, 0x84, 0x97, 0xdd, 0x61,
-	0xfa, 0xf5, 0x71, 0x9e, 0x98, 0xdc, 0xcd, 0x9f, 0x94, 0xd0, 0xb8, 0x94, 0x1a, 0x69, 0x89, 0xd4,
-	0x3e, 0x09, 0x65, 0x0b, 0xe9, 0x5e, 0x4a, 0x20, 0x31, 0xd0, 0x7a, 0x90, 0x65, 0x16, 0x88, 0x26,
-	0xad, 0x20, 0x3e, 0x63, 0xa7, 0x7b, 0xf6, 0x09, 0x50, 0x89, 0x2b, 0x82, 0x6b, 0x62, 0x47, 0x23,
-	0x32, 0x51, 0xc1, 0xba, 0x7f, 0xc2, 0xaf, 0xc4, 0x7f, 0x05, 0xc4, 0x9e, 0xa9, 0x9f, 0x1e, 0x8c,
-	0xfe, 0x86, 0x0e, 0xc7, 0x6f, 0x15, 0x0f, 0xb7, 0x15, 0x0f, 0x3f, 0x2b, 0x1e, 0xbe, 0xd6, 0x3c,
-	0xd8, 0xd6, 0x3c, 0x78, 0xaf, 0x79, 0xf0, 0x70, 0xbb, 0x53, 0x90, 0xb4, 0x75, 0xc5, 0x4c, 0x91,
-	0x9c, 0x7a, 0xff, 0x18, 0xdc, 0x1a, 0xed, 0x42, 0x6e, 0x76, 0x87, 0xf7, 0x95, 0x55, 0xc7, 0x8f,
-	0x78, 0xf3, 0x1d, 0x00, 0x00, 0xff, 0xff, 0x87, 0xdc, 0x0b, 0xc3, 0x9a, 0x01, 0x00, 0x00,
+	// 240 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0x2a, 0x4e, 0x4d, 0x2e,
+	0x4a, 0x2d, 0xd1, 0xcf, 0x4c, 0x4a, 0xd6, 0x2d, 0x2e, 0xcf, 0x2c, 0x49, 0xce, 0xd0, 0x2f, 0x33,
+	0x4c, 0x4a, 0x2d, 0x49, 0x34, 0xd4, 0x2f, 0xa9, 0xd0, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x92,
+	0x80, 0xa8, 0xd1, 0xcb, 0x4c, 0x4a, 0x86, 0x28, 0xd1, 0x83, 0x2a, 0x91, 0x12, 0x49, 0xcf, 0x4f,
+	0xcf, 0x07, 0x2b, 0xd2, 0x07, 0xb1, 0x20, 0xea, 0x95, 0x74, 0xb8, 0x84, 0x7c, 0x8b, 0xd3, 0x43,
+	0xf2, 0xd3, 0xd3, 0x73, 0x52, 0x3d, 0x93, 0x92, 0x83, 0xc1, 0x7a, 0x84, 0xc4, 0xb8, 0xd8, 0x8a,
+	0x53, 0xf3, 0x52, 0x52, 0x8b, 0x24, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0xa0, 0x3c, 0x25, 0x19,
+	0x2e, 0x29, 0x4c, 0xd5, 0x41, 0xa9, 0xc5, 0x05, 0xf9, 0x79, 0xc5, 0xa9, 0x46, 0x35, 0x5c, 0xcc,
+	0xbe, 0xc5, 0xe9, 0x42, 0xa5, 0x5c, 0xfc, 0xe8, 0xe6, 0xe9, 0xe8, 0xe1, 0x72, 0x96, 0x1e, 0xa6,
+	0x79, 0x52, 0x26, 0xa4, 0xa8, 0x86, 0xd9, 0xee, 0xe4, 0x77, 0xe2, 0x91, 0x1c, 0xe3, 0x85, 0x47,
+	0x72, 0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0x4e, 0x78, 0x2c, 0xc7, 0x70, 0xe1, 0xb1, 0x1c, 0xc3, 0x8d,
+	0xc7, 0x72, 0x0c, 0x51, 0x26, 0xe9, 0x99, 0x25, 0x19, 0xa5, 0x49, 0x7a, 0xc9, 0xf9, 0xb9, 0xfa,
+	0xc5, 0xc9, 0x45, 0x25, 0x39, 0x89, 0x49, 0xc5, 0xfa, 0xc1, 0x60, 0x2b, 0xfc, 0x52, 0x4b, 0xca,
+	0xf3, 0x8b, 0xb2, 0xf5, 0x2b, 0x90, 0x03, 0xb5, 0xa4, 0xb2, 0x20, 0xb5, 0x38, 0x89, 0x0d, 0x1c,
+	0x40, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xbd, 0x7c, 0xb5, 0x95, 0x76, 0x01, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -153,8 +150,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type MsgClient interface {
-	// ToggleSwitch defines a method for toggling the status of the ibc-switch.
-	ToggleSwitch(ctx context.Context, in *MsgToggleSwitch, opts ...grpc.CallOption) (*MsgToggleSwitchResponse, error)
+	// ToggleIbcSwitch defines a method for toggling the status of the ibc-switch.
+	ToggleIbcSwitch(ctx context.Context, in *MsgToggleIbcSwitch, opts ...grpc.CallOption) (*MsgToggleIbcSwitchResponse, error)
 }
 
 type msgClient struct {
@@ -165,9 +162,9 @@ func NewMsgClient(cc grpc1.ClientConn) MsgClient {
 	return &msgClient{cc}
 }
 
-func (c *msgClient) ToggleSwitch(ctx context.Context, in *MsgToggleSwitch, opts ...grpc.CallOption) (*MsgToggleSwitchResponse, error) {
-	out := new(MsgToggleSwitchResponse)
-	err := c.cc.Invoke(ctx, "/secret.ibcswitch.v1beta1.Msg/ToggleSwitch", in, out, opts...)
+func (c *msgClient) ToggleIbcSwitch(ctx context.Context, in *MsgToggleIbcSwitch, opts ...grpc.CallOption) (*MsgToggleIbcSwitchResponse, error) {
+	out := new(MsgToggleIbcSwitchResponse)
+	err := c.cc.Invoke(ctx, "/secret.ibcswitch.v1beta1.Msg/ToggleIbcSwitch", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,36 +173,36 @@ func (c *msgClient) ToggleSwitch(ctx context.Context, in *MsgToggleSwitch, opts 
 
 // MsgServer is the server API for Msg service.
 type MsgServer interface {
-	// ToggleSwitch defines a method for toggling the status of the ibc-switch.
-	ToggleSwitch(context.Context, *MsgToggleSwitch) (*MsgToggleSwitchResponse, error)
+	// ToggleIbcSwitch defines a method for toggling the status of the ibc-switch.
+	ToggleIbcSwitch(context.Context, *MsgToggleIbcSwitch) (*MsgToggleIbcSwitchResponse, error)
 }
 
 // UnimplementedMsgServer can be embedded to have forward compatible implementations.
 type UnimplementedMsgServer struct {
 }
 
-func (*UnimplementedMsgServer) ToggleSwitch(ctx context.Context, req *MsgToggleSwitch) (*MsgToggleSwitchResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ToggleSwitch not implemented")
+func (*UnimplementedMsgServer) ToggleIbcSwitch(ctx context.Context, req *MsgToggleIbcSwitch) (*MsgToggleIbcSwitchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ToggleIbcSwitch not implemented")
 }
 
 func RegisterMsgServer(s grpc1.Server, srv MsgServer) {
 	s.RegisterService(&_Msg_serviceDesc, srv)
 }
 
-func _Msg_ToggleSwitch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgToggleSwitch)
+func _Msg_ToggleIbcSwitch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgToggleIbcSwitch)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).ToggleSwitch(ctx, in)
+		return srv.(MsgServer).ToggleIbcSwitch(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/secret.ibcswitch.v1beta1.Msg/ToggleSwitch",
+		FullMethod: "/secret.ibcswitch.v1beta1.Msg/ToggleIbcSwitch",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).ToggleSwitch(ctx, req.(*MsgToggleSwitch))
+		return srv.(MsgServer).ToggleIbcSwitch(ctx, req.(*MsgToggleIbcSwitch))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -215,15 +212,15 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*MsgServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ToggleSwitch",
-			Handler:    _Msg_ToggleSwitch_Handler,
+			MethodName: "ToggleIbcSwitch",
+			Handler:    _Msg_ToggleIbcSwitch_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "secret/ibc-switch/v1beta1/tx.proto",
 }
 
-func (m *MsgToggleSwitch) Marshal() (dAtA []byte, err error) {
+func (m *MsgToggleIbcSwitch) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -233,12 +230,12 @@ func (m *MsgToggleSwitch) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MsgToggleSwitch) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgToggleIbcSwitch) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MsgToggleSwitch) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgToggleIbcSwitch) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -253,7 +250,7 @@ func (m *MsgToggleSwitch) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MsgToggleSwitchResponse) Marshal() (dAtA []byte, err error) {
+func (m *MsgToggleIbcSwitchResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -263,12 +260,12 @@ func (m *MsgToggleSwitchResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MsgToggleSwitchResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgToggleIbcSwitchResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MsgToggleSwitchResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgToggleIbcSwitchResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -287,7 +284,7 @@ func encodeVarintTx(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *MsgToggleSwitch) Size() (n int) {
+func (m *MsgToggleIbcSwitch) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -300,7 +297,7 @@ func (m *MsgToggleSwitch) Size() (n int) {
 	return n
 }
 
-func (m *MsgToggleSwitchResponse) Size() (n int) {
+func (m *MsgToggleIbcSwitchResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -315,7 +312,7 @@ func sovTx(x uint64) (n int) {
 func sozTx(x uint64) (n int) {
 	return sovTx(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *MsgToggleSwitch) Unmarshal(dAtA []byte) error {
+func (m *MsgToggleIbcSwitch) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -338,17 +335,17 @@ func (m *MsgToggleSwitch) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MsgToggleSwitch: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgToggleIbcSwitch: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgToggleSwitch: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgToggleIbcSwitch: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Sender", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowTx
@@ -358,25 +355,23 @@ func (m *MsgToggleSwitch) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthTx
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthTx
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Sender = append(m.Sender[:0], dAtA[iNdEx:postIndex]...)
-			if m.Sender == nil {
-				m.Sender = []byte{}
-			}
+			m.Sender = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -399,7 +394,7 @@ func (m *MsgToggleSwitch) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MsgToggleSwitchResponse) Unmarshal(dAtA []byte) error {
+func (m *MsgToggleIbcSwitchResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -422,10 +417,10 @@ func (m *MsgToggleSwitchResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MsgToggleSwitchResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgToggleIbcSwitchResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MsgToggleSwitchResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgToggleIbcSwitchResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:

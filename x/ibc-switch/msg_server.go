@@ -18,19 +18,15 @@ func NewMsgServer(ics4wrapper ICS4Wrapper) types.MsgServer {
 	return &msgServer{ics4wrapper}
 }
 
-func (m msgServer) ToggleSwitch(goCtx context.Context, msg *types.MsgToggleSwitch) (*types.MsgToggleSwitchResponse, error) {
+func (m msgServer) ToggleSwitch(goCtx context.Context, msg *types.MsgToggleIbcSwitch) (*types.MsgToggleIbcSwitchResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	pauser := m.ics4wrapper.GetPauserAddress(ctx)
 	if pauser == "" {
 		return nil, sdkerrors.Wrap(types.ErrPauserUnset, "no address is currently approved to toggle ibc-switch")
 	}
-	pauserAddress, err := sdk.AccAddressFromBech32(pauser)
-	if err != nil {
-		return nil, err
-	}
 
-	if !pauserAddress.Equals(msg.GetSender()) {
+	if pauser != msg.GetSender() {
 		return nil, sdkerrors.Wrap(types.ErrUnauthorizedToggle, "this address is not allowed to toggle ibc-switch")
 	}
 
@@ -45,5 +41,5 @@ func (m msgServer) ToggleSwitch(goCtx context.Context, msg *types.MsgToggleSwitc
 
 	// todo maybe emit event here?
 
-	return &types.MsgToggleSwitchResponse{}, nil
+	return &types.MsgToggleIbcSwitchResponse{}, nil
 }

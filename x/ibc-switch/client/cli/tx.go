@@ -38,7 +38,7 @@ func toggleSwitchCmd() *cobra.Command {
 				return err
 			}
 
-			msg := types.NewMsgToggleSwitch(clientCtx.GetFromAddress())
+			msg := types.NewMsgToggleIbcSwitch(clientCtx.GetFromAddress())
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
