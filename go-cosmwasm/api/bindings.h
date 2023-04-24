@@ -157,7 +157,7 @@ void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 
-Buffer get_encrypted_genesis_seed(Buffer cert, Buffer *err);
+Buffer get_encrypted_genesis_seed(Buffer pk, Buffer *err);
 
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 

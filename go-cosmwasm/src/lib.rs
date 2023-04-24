@@ -93,17 +93,17 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
 }
 
 #[no_mangle]
-pub extern "C" fn get_encrypted_genesis_seed(cert: Buffer, err: Option<&mut Buffer>) -> Buffer {
+pub extern "C" fn get_encrypted_genesis_seed(pk: Buffer, err: Option<&mut Buffer>) -> Buffer {
     trace!("Called get_encrypted_genesis_seed");
-    let cert_slice = match unsafe { cert.read() } {
+    let pk_slice = match unsafe { pk.read() } {
         None => {
-            set_error(Error::empty_arg("attestation_cert"), err);
+            set_error(Error::empty_arg("public_key"), err);
             return Buffer::default();
         }
         Some(r) => r,
     };
     trace!("Hello from right before untrusted_get_encrypted_genesis_seed");
-    match untrusted_get_encrypted_genesis_seed(cert_slice) {
+    match untrusted_get_encrypted_genesis_seed(pk_slice) {
         Err(e) => {
             // An error happened in the SGX sdk.
             set_error(Error::enclave_err(e.to_string()), err);

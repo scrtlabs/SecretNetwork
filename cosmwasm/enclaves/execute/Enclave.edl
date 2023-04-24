@@ -45,8 +45,8 @@ enclave {
         );
 
         public sgx_status_t ecall_get_genesis_seed(
-            [in, count=cert_len] const uint8_t* cert,
-            uintptr_t cert_len,
+            [in, count=pk_len] const uint8_t* pk,
+            uintptr_t pk_len,
             [out, count=48] uint8_t* seed
         );
 

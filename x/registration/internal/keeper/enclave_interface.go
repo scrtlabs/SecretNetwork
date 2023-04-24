@@ -3,5 +3,5 @@ package keeper
 type EnclaveInterface interface {
 	LoadSeed(masterKey []byte, seed []byte, apiKey []byte) (bool, error)
 	GetEncryptedSeed(masterCert []byte) ([]byte, error)
-	GetEncryptedGenesisSeed(masterCert []byte) ([]byte, error)
+	GetEncryptedGenesisSeed(pk []byte) ([]byte, error)
 }

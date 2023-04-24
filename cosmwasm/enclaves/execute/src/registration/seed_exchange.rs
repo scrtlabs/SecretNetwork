@@ -17,20 +17,28 @@ pub fn encrypt_seed(
     seed_type: SeedType,
     is_legacy: bool,
 ) -> SgxResult<Vec<u8>> {
-    let base_seed = if is_legacy {
-        KEY_MANAGER.seed_exchange_key().unwrap().genesis
+    let (base_seed, seed_to_share) = if is_legacy {
+        let key_manager = Keychain::new();
+        (
+            key_manager.seed_exchange_key().unwrap().genesis,
+            match seed_type {
+                SeedType::Genesis => key_manager.get_consensus_seed().unwrap().genesis,
+                SeedType::Current => key_manager.get_consensus_seed().unwrap().current,
+            },
+        )
     } else {
-        KEY_MANAGER.seed_exchange_key().unwrap().current
+        (
+            KEY_MANAGER.seed_exchange_key().unwrap().current,
+            match seed_type {
+                SeedType::Genesis => KEY_MANAGER.get_consensus_seed().unwrap().genesis,
+                SeedType::Current => KEY_MANAGER.get_consensus_seed().unwrap().current,
+            },
+        )
     };
 
     let shared_enc_key = base_seed.diffie_hellman(&new_node_pk);
 
     let authenticated_data: Vec<&[u8]> = vec![&new_node_pk];
-
-    let seed_to_share = match seed_type {
-        SeedType::Genesis => KEY_MANAGER.get_consensus_seed().unwrap().genesis,
-        SeedType::Current => KEY_MANAGER.get_consensus_seed().unwrap().current,
-    };
 
     // encrypt the seed using the symmetric key derived in the previous stage
     // genesis seed is passed in registration

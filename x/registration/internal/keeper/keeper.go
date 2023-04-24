@@ -95,8 +95,8 @@ func getLegacySeedParams(path string) ([]byte, []byte) {
 	return enc, pk
 }
 
-func createOldSecret(cert []byte, seedFilePath string, enclave EnclaveInterface) error {
-	seed, err := enclave.GetEncryptedGenesisSeed(cert)
+func createOldSecret(key []byte, seedFilePath string, enclave EnclaveInterface) error {
+	seed, err := enclave.GetEncryptedGenesisSeed(key)
 	if err != nil {
 		return err
 	}
@@ -139,6 +139,9 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	legacySeedPath := filepath.Join(nodeDir, types.SecretNodeSeedLegacyConfig)
 
 	if !fileExists(seedPath) {
+		if !fileExists(legacySeedPath) {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", legacySeedPath)))
+		}
 		encSeed, pk = getLegacySeedParams(legacySeedPath)
 	} else {
 		encSeed, pk = getNewSeedParams(seedPath)
@@ -176,7 +179,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 		err = createOldSecret(key, legacySeedPath, enclave)
 		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found and could not be created. Did you initialize the node?", legacySeedPath)))
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("%s was not found and could not be created", legacySeedPath)))
 		}
 	}
 }

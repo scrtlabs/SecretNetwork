@@ -14,6 +14,6 @@ func (Api) GetEncryptedSeed(masterCert []byte) ([]byte, error) {
 	return api.GetEncryptedSeed(masterCert)
 }
 
-func (Api) GetEncryptedGenesisSeed(masterCert []byte) ([]byte, error) {
-	return api.GetEncryptedGenesisSeed(masterCert)
+func (Api) GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
+	return api.GetEncryptedGenesisSeed(pk)
 }

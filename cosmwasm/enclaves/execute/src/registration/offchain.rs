@@ -1,5 +1,4 @@
 //!
-use super::cert::verify_ra_cert;
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
@@ -457,8 +456,8 @@ pub unsafe extern "C" fn ecall_key_gen(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn ecall_get_genesis_seed(
-    cert: *const u8,
-    cert_len: u32,
+    pk: *const u8,
+    pk_len: u32,
     seed: &mut [u8; SINGLE_ENCRYPTED_SEED_SIZE as usize],
 ) -> sgx_types::sgx_status_t {
     validate_mut_ptr!(
@@ -466,23 +465,20 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
         seed.len(),
         sgx_status_t::SGX_ERROR_UNEXPECTED
     );
-    let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
+    let pk_slice = std::slice::from_raw_parts(pk, pk_len as usize);
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, sgx_types::sgx_status_t> {
-        // verify certificate, and return the public key in the extra data of the report
-        let pk = cert_slice;
-
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
-        if pk.len() != PUBLIC_KEY_SIZE {
+        if pk_slice.len() != PUBLIC_KEY_SIZE {
             warn!(
                 "Got public key from certificate with the wrong size: {:?}",
-                pk.len()
+                pk_slice.len()
             );
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
 
         let mut target_public_key: [u8; 32] = [0u8; 32];
-        target_public_key.copy_from_slice(&pk);
+        target_public_key.copy_from_slice(&pk_slice);
         trace!(
             "ecall_get_encrypted_genesis_seed target_public_key key pk: {:?}",
             &target_public_key.to_vec()
