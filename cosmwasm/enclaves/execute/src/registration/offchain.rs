@@ -470,8 +470,7 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, sgx_types::sgx_status_t> {
         // verify certificate, and return the public key in the extra data of the report
-        let pk =
-            verify_ra_cert(cert_slice, None).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+        let pk = cert_slice;
 
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
         if pk.len() != PUBLIC_KEY_SIZE {

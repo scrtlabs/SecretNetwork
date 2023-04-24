@@ -136,26 +136,9 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 	// Read the most recent seed json config and pass the param to LoadSeed in order for him to understand wether new seed should be fetched from the service or not
 	seedPath := filepath.Join(nodeDir, types.SecretNodeSeedNewConfig)
+	legacySeedPath := filepath.Join(nodeDir, types.SecretNodeSeedLegacyConfig)
+
 	if !fileExists(seedPath) {
-		legacySeedPath := filepath.Join(nodeDir, types.SecretNodeSeedLegacyConfig)
-		if !fileExists(legacySeedPath) {
-			sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
-			if sgxSecretsFolder == "" {
-				sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
-			}
-
-			sgxAttestationCert := filepath.Join(sgxSecretsFolder, types.AttestationCertPath)
-			cert, err := os.ReadFile(sgxAttestationCert)
-			if err != nil {
-				panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to read attestation certificate at %s", sgxAttestationCert)))
-			}
-
-			err = createOldSecret(cert, legacySeedPath, enclave)
-			if err != nil {
-				panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found and could not be created. Did you initialize the node?", legacySeedPath)))
-			}
-		}
-
 		encSeed, pk = getLegacySeedParams(legacySeedPath)
 	} else {
 		encSeed, pk = getNewSeedParams(seedPath)
@@ -172,6 +155,29 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	_, err = enclave.LoadSeed(pk, sizedEndSeed, apiKey)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	if !fileExists(legacySeedPath) {
+		sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
+		if sgxSecretsFolder == "" {
+			sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
+		}
+
+		sgxAttestationCert := filepath.Join(sgxSecretsFolder, types.AttestationCertPath)
+		cert, err := os.ReadFile(sgxAttestationCert)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to read attestation certificate at %s", sgxAttestationCert)))
+		}
+
+		key, err := ra.UNSAFE_VerifyRaCert(cert)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to get key from cert")))
+		}
+
+		err = createOldSecret(key, legacySeedPath, enclave)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found and could not be created. Did you initialize the node?", legacySeedPath)))
+		}
 	}
 }
 

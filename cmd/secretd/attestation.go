@@ -424,6 +424,7 @@ Please report any issues with this command
 				}
 			} else {
 				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
+				_ = os.Remove(sgxAttestationCert)
 				_, err := api.KeyGen()
 				if err != nil {
 					return fmt.Errorf("failed to initialize enclave: %w", err)
@@ -447,7 +448,7 @@ Please report any issues with this command
 				return err
 			}
 
-			_ = os.Remove(sgxAttestationCert)
+			// _ = os.Remove(sgxAttestationCert)
 
 			// verify certificate
 			_, err = ra.UNSAFE_VerifyRaCert(cert)
