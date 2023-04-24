@@ -269,7 +269,7 @@ impl Keychain {
             current.as_slice()
         );
 
-        debug!(
+        error!(
             "Sealing genesis consensus seed in {}",
             *GENESIS_CONSENSUS_SEED_SEALING_PATH
         );
@@ -278,7 +278,7 @@ impl Keychain {
             return Err(e);
         }
 
-        debug!(
+        error!(
             "Sealing current consensus seed in {}",
             *CURRENT_CONSENSUS_SEED_SEALING_PATH
         );
@@ -416,17 +416,15 @@ impl Keychain {
 
         #[cfg(feature = "random")]
         {
-            let rek = self
-                .consensus_seed
-                .unwrap()
-                .current
-                .derive_key_from_this(&RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes());
+            let rek =
+                self.consensus_seed.unwrap().current.derive_key_from_this(
+                    &RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes(),
+                );
 
-            let irs = self
-                .consensus_seed
-                .unwrap()
-                .current
-                .derive_key_from_this(&INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes());
+            let irs =
+                self.consensus_seed.unwrap().current.derive_key_from_this(
+                    &INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes(),
+                );
 
             self.initial_randomness_seed = Some(irs);
             self.random_encryption_key = Some(rek);

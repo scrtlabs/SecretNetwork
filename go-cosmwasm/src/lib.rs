@@ -24,8 +24,8 @@ use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen,
+    create_attestation_report_u, untrusted_get_encrypted_genesis_seed,
+    untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
 };
 
 use ctor::ctor;
@@ -86,6 +86,30 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
             Buffer::default()
         }
         Ok(Ok(seed)) => {
+            clear_error();
+            Buffer::from_vec(seed.to_vec())
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_encrypted_genesis_seed(pk: Buffer, err: Option<&mut Buffer>) -> Buffer {
+    trace!("Called get_encrypted_genesis_seed");
+    let pk_slice = match unsafe { pk.read() } {
+        None => {
+            set_error(Error::empty_arg("public_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+    trace!("Hello from right before untrusted_get_encrypted_genesis_seed");
+    match untrusted_get_encrypted_genesis_seed(pk_slice) {
+        Err(e) => {
+            // An error happened in the SGX sdk.
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(seed) => {
             clear_error();
             Buffer::from_vec(seed.to_vec())
         }
@@ -225,7 +249,7 @@ pub extern "C" fn init_cache(
 pub extern "C" fn submit_block_signatures(
     header: Buffer,
     commit: Buffer,
-    txs:    Buffer,
+    txs: Buffer,
     random: Buffer,
     // val_set: Buffer,
     // next_val_set: Buffer,
