@@ -289,7 +289,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	wasmHooks := ibchooks.NewWasmHooks(&hooksKeeper, nil, secretPrefix) // The compute keeper will be set later on
 	ibcHooksICS4Wrapper := ibchooks.NewICS4Middleware(
 		ak.IbcKeeper.ChannelKeeper,
-		wasmHooks,
+		&wasmHooks,
 	)
 
 	ak.IbcFeeKeeper = ibcfeekeeper.NewKeeper(
@@ -410,7 +410,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.ComputeKeeper = &computeKeeper
 
-	wasmHooks.ContractKeeper = &computeKeeper
+	wasmHooks.ContractKeeper = ak.ComputeKeeper
 
 	// Create fee enabled wasm ibc Stack
 	var computeStack porttypes.IBCModule
