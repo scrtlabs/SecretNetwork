@@ -355,7 +355,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             Ok(res)
         }
         ExecuteMsg::LastMsgMarkerNop {} => {
-            Ok(Response::new().add_message(CosmosMsg::LastMsgMark(Empty {})))
+            // also tests using finalize like this
+            Ok(Response::new().add_message(CosmosMsg::FinalizeTx(Empty {})))
         }
         ExecuteMsg::LastMsgMarker {} => {
             let increment_msg = SubMsg {
@@ -388,7 +389,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     increment_msg.clone(),
                     increment_msg.clone(),
                 ])
-                .add_message(CosmosMsg::LastMsgMark(Empty {}))
+                // also tests using finalize like this
+                .add_message(CosmosMsg::finalize_tx())
                 .add_submessages(vec![increment_msg.clone(), bank_msg.clone()]))
         }
         ExecuteMsg::WasmMsg { ty } => wasm_msg(ty),

@@ -1,13 +1,46 @@
 # CHANGELOG
 
-# Unreleased
+# 1.9.0
 
+- Added randomness injection to secret contracts.
+  - Eliminates the need for contracts to bootstrap their own entropy pool.
+  - Unique for every contract call.
+  - Useful in lotteries, gaming, secure authentication protocols, protocols where unpredictable outcomes are essential for fairness and security, and much more.
+- Added FinalizeTx.
+  - Contracts can force the transaction to finalize at a certain point, otherwise revert.
+  - Example: protect against sandwich attacks and potential transaction rollbacks.
+  - Example: protect against cheating in gaming applications, where a malicious player could try to rollback a transaction in which they lost.
+- Updated ibc-go from v3.4.0 to v4.3.0.
+- Added packet-forward-middleware by Strangelove.
+  - Other chains would be able to more easily route SCRT in the interchain. For example, sending SCRT from Osmosis to Hub now becomes a single transaction from `Osmosis -> Secret` rather than a transaction from `Osmosis -> Secret`, then a transaction from `Secret -> Hub`.
+- Added IBC fee middleware.
+  - Creates a fee market for relaying IBC packets.
+- Added ibc-hooks middleware by Osmosis.
+  - WASM Hooks: allows ICS-20 token transfers to initiate contract calls. This is useful for a variety of use cases.
+    - Example: Sending tokens to Secret and immediately wrapping them as SNIP-20 token. For example, `ATOM on Hub -> ATOM on Secret -> sATOMS on Secret` (2 transactions on 2 chains) now becomes `ATOM on Hub -> sATOM on Secret` (1 transaction).
+    - Another example is cross-chain swaps - using WASM Hooks, an AMM on Secret can atomically swap tokens that originated on chain A and are headed to chain B.
+  - Ack callbacks: allow non-IBC contracts that send an `IbcMsg::Transfer` to listen for the ack/timeout of the token transfer. This allows these contracts to definitively know whether the transfer was successful or not and act accordingly (refund if failed, continue if succeeded).
+- WIP: IBC panic button.
+  - Quickly shut down IBC in case of an emergency.
+
+# 1.8.0
+
+Fixed a critical bug in 1.7.0 that prevented new nodes from joining the network and existing nodes from restarting their secretd process.
+
+# 1.7.0
+
+- Added the ability to rotate consensus seed during a network upgrade
+  - this will be executed during this upgrade
 - Added expedited gov proposals
   - Initial params (can be amended with a param change proposal):
     - Minimum deposit: 750 SCRT
     - Voting time: 24 hours
     - Voting treshhold: 2/3 yes to pass
   - If an expedited proposal fails to meet the threshold within the scope of shorter voting duration, the expedited proposal is then converted to a regular proposal and restarts voting under regular voting conditions.
+- Added auto-restaking - an opt-in feature that enables automatic compounding of staking rewards
+- Added light-client validation for blocks
+  - Protects against leaking private data using an offline fork attack
+  - Enables trusted block heights and block time to be relied on by contracts
 
 # 1.6.0
 
