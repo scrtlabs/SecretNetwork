@@ -18,7 +18,7 @@ func NewMsgServer(ics4wrapper ICS4Wrapper) types.MsgServer {
 	return &msgServer{ics4wrapper}
 }
 
-func (m msgServer) ToggleSwitch(goCtx context.Context, msg *types.MsgToggleIbcSwitch) (*types.MsgToggleIbcSwitchResponse, error) {
+func (m msgServer) ToggleIbcSwitch(goCtx context.Context, msg *types.MsgToggleIbcSwitch) (*types.MsgToggleIbcSwitchResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	pauser := m.ics4wrapper.GetPauserAddress(ctx)

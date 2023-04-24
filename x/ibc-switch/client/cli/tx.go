@@ -20,13 +20,13 @@ func GetTxCmd() *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 	txCmd.AddCommand(
-		toggleSwitchCmd(),
+		toggleIbcSwitchCmd(),
 	)
 	return txCmd
 }
 
-// toggleSwitchCmd will toggle the status of the Switch and turn ibc on or off.
-func toggleSwitchCmd() *cobra.Command {
+// toggleIbcSwitchCmd will toggle the status of the Switch and turn ibc on or off.
+func toggleIbcSwitchCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "toggle",
 		Short: "Toggle the ibc switch on or off",
