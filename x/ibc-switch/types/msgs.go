@@ -12,7 +12,7 @@ var _ sdk.Msg = &MsgToggleIbcSwitch{}
 
 // NewMsgToggleIbcSwitch creates a message to toggle switch
 func NewMsgToggleIbcSwitch(sender sdk.AccAddress) *MsgToggleIbcSwitch {
-	return &MsgToggleIbcSwitch{sender}
+	return &MsgToggleIbcSwitch{sender.String()}
 }
 
 // Route takes a toggle switch message, then returns the RouterKey used for slashing.
@@ -33,5 +33,6 @@ func (m MsgToggleIbcSwitch) GetSignBytes() []byte {
 
 // GetSigners takes a toggle switch message and returns the sender in an array.
 func (m MsgToggleIbcSwitch) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{m.Sender}
+	sender, _ := sdk.AccAddressFromBech32(m.Sender)
+	return []sdk.AccAddress{sender}
 }
