@@ -17,5 +17,5 @@ var (
 
 const (
 	IbcSwitchStatusOff string = "off"
-	IbcSwitchStatusOn         = "on"
+	IbcSwitchStatusOn  string = "on"
 )
