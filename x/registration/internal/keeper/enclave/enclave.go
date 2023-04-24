@@ -13,3 +13,7 @@ func (Api) LoadSeed(masterKey []byte, seed []byte, apiKey []byte) (bool, error) 
 func (Api) GetEncryptedSeed(masterCert []byte) ([]byte, error) {
 	return api.GetEncryptedSeed(masterCert)
 }
+
+func (Api) GetEncryptedGenesisSeed(masterCert []byte) ([]byte, error) {
+	return api.GetEncryptedGenesisSeed(masterCert)
+}

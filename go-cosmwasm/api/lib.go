@@ -339,6 +339,17 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	return receiveVector(res), nil
 }
 
+func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
+	errmsg := C.Buffer{}
+	certSlice := sendSlice(cert)
+	defer freeAfterSend(certSlice)
+	res, err := C.get_encrypted_genesis_seed(certSlice, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), nil
+}
+
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {

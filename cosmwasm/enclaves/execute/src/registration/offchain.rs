@@ -1,9 +1,11 @@
 //!
+use super::cert::verify_ra_cert;
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
 use log::*;
 use sgx_types::sgx_status_t;
+use std::panic;
 use std::slice;
 
 use enclave_crypto::consts::{
@@ -315,8 +317,8 @@ pub unsafe extern "C" fn ecall_init_node(
             debug!("New consensus seed already exists, no need to get it from service");
         }
 
-        let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis).unwrap();
-        let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current).unwrap();
+        let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis, false).unwrap();
+        let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current, false).unwrap();
         res.extend(&res_current);
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
@@ -440,4 +442,75 @@ pub unsafe extern "C" fn ecall_key_gen(
     public_key.clone_from_slice(&pubkey);
     trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
     sgx_status_t::SGX_SUCCESS
+}
+
+///
+/// `ecall_get_genesis_seed
+///
+/// This call is used to help new nodes that want to full sync to have the previous "genesis" seed
+/// A node that is regestering or being upgraded to version 1.9 will call this function.
+///
+/// The seed is encrypted with a key derived from the secret master key of the chain, and the public
+/// key of the requesting chain
+///
+/// This function happens off-chain
+///
+#[no_mangle]
+pub unsafe extern "C" fn ecall_get_genesis_seed(
+    cert: *const u8,
+    cert_len: u32,
+    seed: &mut [u8; SINGLE_ENCRYPTED_SEED_SIZE as usize],
+) -> sgx_types::sgx_status_t {
+    validate_mut_ptr!(
+        seed.as_mut_ptr(),
+        seed.len(),
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+    let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
+
+    let result = panic::catch_unwind(|| -> Result<Vec<u8>, sgx_types::sgx_status_t> {
+        // verify certificate, and return the public key in the extra data of the report
+        let pk =
+            verify_ra_cert(cert_slice, None).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+
+        // just make sure the length isn't wrong for some reason (certificate may be malformed)
+        if pk.len() != PUBLIC_KEY_SIZE {
+            warn!(
+                "Got public key from certificate with the wrong size: {:?}",
+                pk.len()
+            );
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+
+        let mut target_public_key: [u8; 32] = [0u8; 32];
+        target_public_key.copy_from_slice(&pk);
+        trace!(
+            "ecall_get_encrypted_genesis_seed target_public_key key pk: {:?}",
+            &target_public_key.to_vec()
+        );
+
+        let res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis, true)
+            .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+
+        Ok(res)
+    });
+
+    if let Ok(res) = result {
+        match res {
+            Ok(res) => {
+                trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
+
+                seed.copy_from_slice(&res);
+                trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
+                sgx_status_t::SGX_SUCCESS
+            }
+            Err(e) => {
+                trace!("error encrypting seed {:?}", e);
+                e
+            }
+        }
+    } else {
+        warn!("Enclave call ecall_get_genesis_seed panic!");
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    }
 }
