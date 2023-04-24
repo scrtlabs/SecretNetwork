@@ -158,6 +158,8 @@ pub unsafe extern "C" fn ecall_init_node(
     api_key_len: u32,
     // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
 ) -> sgx_status_t {
+    println!("HELOO I AM IN THE INIT");
+
     validate_const_ptr!(
         master_key,
         master_key_len as usize,
@@ -263,7 +265,10 @@ pub unsafe extern "C" fn ecall_init_node(
     let mut single_seed_bytes = [0u8; SINGLE_ENCRYPTED_SEED_SIZE];
     single_seed_bytes.copy_from_slice(&encrypted_seed_slice[1..(SINGLE_ENCRYPTED_SEED_SIZE + 1)]);
 
-    trace!("Target public key is: {:?}", target_public_key);
+    error!(
+        "**************************** Target public key is: {:?}",
+        target_public_key
+    );
     let genesis_seed = match decrypt_seed(&key_manager, target_public_key, single_seed_bytes) {
         Ok(result) => result,
         Err(status) => return status,
@@ -273,7 +278,7 @@ pub unsafe extern "C" fn ecall_init_node(
     let new_consensus_seed;
 
     if encrypted_seed_len as usize == 2 * SINGLE_ENCRYPTED_SEED_SIZE {
-        debug!("Got both keys from registration");
+        error!("Got both keys from registration");
 
         single_seed_bytes.copy_from_slice(
             &encrypted_seed_slice
@@ -465,6 +470,9 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
         seed.len(),
         sgx_status_t::SGX_ERROR_UNEXPECTED
     );
+
+    println!("HELOO I AM IN THE GENESIS SEED");
+
     let pk_slice = std::slice::from_raw_parts(pk, pk_len as usize);
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, sgx_types::sgx_status_t> {

@@ -109,12 +109,7 @@ pub extern "C" fn get_encrypted_genesis_seed(pk: Buffer, err: Option<&mut Buffer
             set_error(Error::enclave_err(e.to_string()), err);
             Buffer::default()
         }
-        Ok(Err(e)) => {
-            // An error was returned from the enclave.
-            set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
-        }
-        Ok(Ok(seed)) => {
+        Ok(seed) => {
             clear_error();
             Buffer::from_vec(seed.to_vec())
         }
