@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/grpc"
 

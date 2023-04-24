@@ -2,6 +2,7 @@ package ibc_switch
 
 import (
 	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
@@ -114,7 +115,7 @@ func (im *IBCModule) OnRecvPacket(
 		return channeltypes.NewErrorAcknowledgement(err)
 	}
 
-	//todo remove print
+	// todo remove print
 	fmt.Println("RecvPacket on switch middleware: passing packet")
 	return im.app.OnRecvPacket(ctx, packet, relayer)
 }

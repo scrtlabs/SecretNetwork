@@ -4,6 +4,7 @@ package grpc
 
 import (
 	"context"
+
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"

@@ -2,6 +2,7 @@ package ibc_switch
 
 import (
 	"context"
+
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
