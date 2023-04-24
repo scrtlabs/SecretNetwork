@@ -7,13 +7,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"math"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"golang.org/x/exp/slices"
@@ -165,7 +166,6 @@ func TestAddrValidateFunction(t *testing.T) {
 }
 
 func TestRandomEnv(t *testing.T) {
-
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[randomContract], sdk.NewCoins())
 
 	_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
@@ -243,7 +243,6 @@ func TestRandomEnv(t *testing.T) {
 }
 
 func TestEnv(t *testing.T) {
-
 	type ReturnedV1MessageInfo struct {
 		Sender    cosmwasm.HumanAddress `json:"sender"`
 		SentFunds cosmwasm.Coins        `json:"funds"`
@@ -252,7 +251,6 @@ func TestEnv(t *testing.T) {
 
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
 			_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
@@ -2271,7 +2269,6 @@ func TestEvaporateGas(t *testing.T) {
 		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
-
 			if test.outOfGas {
 				defer func() {
 					r := recover()
@@ -2344,7 +2341,6 @@ func TestConsumeExact(t *testing.T) {
 		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
-
 			if test.outOfGas {
 				defer func() {
 					r := recover()
