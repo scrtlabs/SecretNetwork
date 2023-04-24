@@ -48,7 +48,7 @@ func NewICS4Middleware(
 func (i *ICS4Wrapper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI) error {
 	status := i.GetSwitchStatus(ctx)
 
-	if status == "off" {
+	if status == types.IbcSwitchStatusOff {
 		return sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 	}
 

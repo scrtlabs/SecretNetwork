@@ -6,14 +6,8 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 )
 
-// todo: move to keys.go
 // Parameter store keys.
-var (
-	KeySwitchStatus  = []byte("switchstatus")
-	KeyPauserAddress = []byte("pauseraddress")
-
-	_ paramtypes.ParamSet = &Params{}
-)
+var _ paramtypes.ParamSet = &Params{}
 
 func ParamKeyTable() paramtypes.KeyTable {
 	return paramtypes.NewKeyTable().RegisterParamSet(&Params{})
@@ -29,7 +23,7 @@ func NewParams(switchStatus string, pauserAddress string) (Params, error) {
 // default gamm module parameters.
 func DefaultParams() Params {
 	return Params{
-		SwitchStatus: "on",
+		SwitchStatus: IbcSwitchStatusOn,
 	}
 }
 
@@ -62,7 +56,6 @@ func validatePauserAddress(i interface{}) error {
 	}
 
 	// Checks that the contract address is valid
-	// todo: verify that this is necessary
 	bech32, err := sdk.AccAddressFromBech32(v)
 	if err != nil {
 		return err
@@ -82,7 +75,7 @@ func validateSwitchStatus(i interface{}) error {
 		return fmt.Errorf("invalid parameter type for switch status: %T", i)
 	}
 
-	if v != "on" && v != "off" {
+	if v != IbcSwitchStatusOn && v != IbcSwitchStatusOff {
 		return fmt.Errorf("invalid value for switch status: %s", v)
 	}
 
