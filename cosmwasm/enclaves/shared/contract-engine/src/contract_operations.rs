@@ -285,11 +285,11 @@ pub fn handle(
     // while the sender of an IBC packet cannot be verified.
     // And we don't want malicious actors using this enclvae setting to just
     // impersonate any sender they want.
-    // => Therefore we'll zero out the sender if it cannot be verified && the input is plaintext
-    let is_empty_sender = if should_validate_sig_info {
+    // => Therefore we'll use a null sender if it cannot be verified && the input is plaintext
+    let is_null_sender = if should_validate_sig_info {
         // Verify env parameters against the signed tx
         // If verification fails:
-        //     If input is not encryted && execute => zero out the sender
+        //     If input is not encryted && execute => null sender
         //     If input is encryted || !execute => error
         match verify_params(
             &parsed_sig_info,
@@ -302,18 +302,18 @@ pub fn handle(
             Err(err) => {
                 if !was_msg_encrypted && parsed_handle_type == HandleType::HANDLE_TYPE_EXECUTE {
                     trace!(
-                        "Failed to verify_params(), however continuing with zeroed out sender, error: {:?}",
+                        "Failed to verify_params(), however continuing with a null msg.sender, error: {:?}",
                         err
                     );
-                    true // zero out sender
+                    true // null sender
                 } else {
                     return Err(err);
                 }
             }
-            _ => false, // don't zero out sender
+            _ => false, // don't null sender
         }
     } else {
-        false // don't zero out sender
+        false // don't null sender
     };
 
     let mut validated_msg = decrypted_msg.clone();
@@ -346,7 +346,7 @@ pub fn handle(
 
     let mut versioned_env = base_env
         .clone()
-        .into_versioned_env(&engine.get_api_version(), is_empty_sender);
+        .into_versioned_env(&engine.get_api_version(), is_null_sender);
 
     #[cfg(feature = "random")]
     set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);

@@ -63,7 +63,7 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 	}
 
 	// Calculate the receiver / contract caller based on the packet's channel and sender
-	// Assaf: on Secret this later gets zeroed out by the enclave.
+	// Assaf: on Secret this later gets emptied out by the enclave.
 	// We cannot allow unsigned calls to MsgExecute,
 	// otherwise attackers would be able to run MsgExecute with a falsified sender.
 	channel := packet.GetDestChannel()
@@ -105,7 +105,7 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 
 	// Execute the contract
 	execMsg := wasm.MsgExecuteContract{
-		Sender:    sdk.MustAccAddressFromBech32(senderBech32), // zeroed out later by the enclave
+		Sender:    sdk.MustAccAddressFromBech32(senderBech32), // emptied out later by the enclave
 		Contract:  contractAddr,
 		Msg:       msgBytes,
 		SentFunds: funds,
@@ -301,6 +301,16 @@ func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap
 	return nil
 }
 
+// zeroSender is a valid 20 byte canonical address that's used to bypass the x/compute checks
+// and later on is ignored by the enclave, which passes a null sender to the contract
+// This is used in OnAcknowledgementPacketOverride & OnTimeoutPacketOverride
+var zeroSender = sdk.AccAddress{
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+}
+
 func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, relayer sdk.AccAddress) error {
 	err := im.App.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
 	if err != nil {
@@ -344,18 +354,12 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 		success,
 	))
 
-	// Assaf: on Secret this later gets zeroed out by the enclave.
-	// We cannot allow unsigned calls to MsgExecute,
-	// otherwise attackers would be able to run MsgExecute with a falsified sender.
-	fakeSenderBech32, err := keeper.DeriveIntermediateSender("bla", "bla", h.bech32PrefixAccAddr)
-	if err != nil {
-		return err
-	}
 	execMsg := wasm.MsgExecuteContract{
-		Sender:    sdk.MustAccAddressFromBech32(fakeSenderBech32), // zeroed out later on anyway
+		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
+		Sender:    zeroSender,
 		Contract:  contractAddr,
 		Msg:       msg,
-		SentFunds: sdk.NewCoins(), // empty
+		SentFunds: sdk.NewCoins(),
 	}
 	_, err = h.execWasmMsg(ctx, &execMsg)
 	if err != nil {
@@ -391,23 +395,18 @@ func (h WasmHooks) OnTimeoutPacketOverride(im IBCMiddleware, ctx sdk.Context, pa
 
 	// Execute the contract
 
-	// Assaf: on Secret this later gets zeroed out by the enclave.
-	// We cannot allow unsigned calls to MsgExecute,
-	// otherwise attackers would be able to run MsgExecute with a falsified sender.
-	fakeSenderBech32, err := keeper.DeriveIntermediateSender("bla", "bla", h.bech32PrefixAccAddr)
-	if err != nil {
-		return err
-	}
 	msg := []byte(fmt.Sprintf(
 		`{"ibc_lifecycle_complete":{"ibc_timeout":{"channel":"%s","sequence":%d}}}`,
 		packet.SourceChannel,
 		packet.Sequence,
 	))
+
 	execMsg := wasm.MsgExecuteContract{
-		Sender:    sdk.MustAccAddressFromBech32(fakeSenderBech32), // zeroed out later on anyway
+		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
+		Sender:    zeroSender,
 		Contract:  contractAddr,
 		Msg:       msg,
-		SentFunds: sdk.NewCoins(), // empty
+		SentFunds: sdk.NewCoins(),
 	}
 	_, err = h.execWasmMsg(ctx, &execMsg)
 	if err != nil {
