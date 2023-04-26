@@ -96,7 +96,7 @@ type SecretAppKeepers struct {
 	PacketForwardKeeper  *ibcpacketforwardkeeper.Keeper
 	IbcSwitchICS4Wrapper *ibcswitch.ICS4Wrapper
 	TransferStack        *ibcswitch.IBCModule
-	IbcHooksKeeper      *ibchookskeeper.Keeper
+	IbcHooksKeeper       *ibchookskeeper.Keeper
 
 	ICAControllerKeeper *icacontrollerkeeper.Keeper
 	ICAHostKeeper       *icahostkeeper.Keeper
@@ -311,7 +311,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		appCodec,
 		ak.keys[ibcfeetypes.StoreKey],
 		ak.GetSubspace(ibcfeetypes.ModuleName), // this isn't even used in the keeper but is required?
-		ibcHooksICS4Wrapper, //todo verify this
+		ibcHooksICS4Wrapper,                    //todo verify this
 		ak.IbcKeeper.ChannelKeeper,
 		&ak.IbcKeeper.PortKeeper,
 		ak.AccountKeeper,
@@ -395,7 +395,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	transferStack = ibcfee.NewIBCMiddleware(transferStack, ak.IbcFeeKeeper)
 	transferStack = ibchooks.NewIBCMiddleware(transferStack, &ibcHooksICS4Wrapper)
 
-	// todo: this is ugly since the IBCModule interface on the switch module is implemented with pointers, try without pointers instead
 	var stackWithSwitch ibcswitch.IBCModule
 	stackWithSwitch = ibcswitch.NewIBCModule(transferStack, ak.IbcSwitchICS4Wrapper)
 	ak.TransferStack = &stackWithSwitch
@@ -406,6 +405,10 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	var icaControllerStack porttypes.IBCModule
 	icaControllerStack = icacontroller.NewIBCMiddleware(icaControllerStack, *ak.ICAControllerKeeper)
 	icaControllerStack = ibcfee.NewIBCMiddleware(icaControllerStack, ak.IbcFeeKeeper)
+
+	var controllerStackWithSwitch ibcswitch.IBCModule
+	controllerStackWithSwitch = ibcswitch.NewIBCModule(icaControllerStack, ak.IbcSwitchICS4Wrapper)
+	icaControllerStack = &controllerStackWithSwitch
 
 	computeDir := filepath.Join(homePath, ".compute")
 	// The last arguments can contain custom message handlers, and custom query handlers,
@@ -444,6 +447,10 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	var computeStack porttypes.IBCModule
 	computeStack = compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper, ak.IbcFeeKeeper)
 	computeStack = ibcfee.NewIBCMiddleware(computeStack, ak.IbcFeeKeeper)
+
+	var computeStackWithSwitch ibcswitch.IBCModule
+	computeStackWithSwitch = ibcswitch.NewIBCModule(computeStack, ak.IbcSwitchICS4Wrapper)
+	computeStack = &computeStackWithSwitch
 
 	// Create static IBC router, add ibc-transfer module route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
