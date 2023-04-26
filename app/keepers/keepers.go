@@ -95,7 +95,6 @@ type SecretAppKeepers struct {
 	IbcFeeKeeper         ibcfeekeeper.Keeper
 	PacketForwardKeeper  *ibcpacketforwardkeeper.Keeper
 	IbcSwitchICS4Wrapper *ibcswitch.ICS4Wrapper
-	TransferStack        *ibcswitch.IBCModule
 	IbcHooksKeeper       *ibchookskeeper.Keeper
 
 	ICAControllerKeeper *icacontrollerkeeper.Keeper
@@ -447,7 +446,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	// Create static IBC router, add ibc-transfer module route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
 	ibcRouter.
-		AddRoute(ibctransfertypes.ModuleName, ak.TransferStack).
+		AddRoute(ibctransfertypes.ModuleName, transferStack).
 		AddRoute(compute.ModuleName, computeStack).
 		AddRoute(icacontrollertypes.SubModuleName, icaControllerStack).
 		AddRoute(icahosttypes.SubModuleName, icaHostStack)
