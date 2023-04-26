@@ -427,8 +427,9 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	transferStack = ibcfee.NewIBCMiddleware(transferStack, ak.IbcFeeKeeper)
 	transferStack = ibcswitch.NewIBCModule(transferStack, ak.IbcSwitchChannelWrapper)
 
-	// todo: add switch middleware to other stacks
-	icaHostStack := ibcfee.NewIBCMiddleware(icaHostIBCModule, ak.IbcFeeKeeper)
+	var icaHostStack porttypes.IBCModule
+	icaHostStack = ibcfee.NewIBCMiddleware(icaHostIBCModule, ak.IbcFeeKeeper)
+	icaHostStack = ibcswitch.NewIBCModule(icaHostStack, ak.IbcSwitchChannelWrapper)
 
 	// initialize ICA module with mock module as the authentication module on the controller side
 	var icaControllerStack porttypes.IBCModule
