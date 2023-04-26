@@ -13,14 +13,14 @@ import (
 )
 
 type IBCModule struct {
-	app            porttypes.IBCModule
-	ics4Middleware *ICS4Wrapper
+	app               porttypes.IBCModule
+	channelMiddleware *ChannelWrapper
 }
 
-func NewIBCModule(app porttypes.IBCModule, ics4 *ICS4Wrapper) IBCModule {
+func NewIBCModule(app porttypes.IBCModule, ics4 *ChannelWrapper) IBCModule {
 	return IBCModule{
-		app:            app,
-		ics4Middleware: ics4,
+		app:               app,
+		channelMiddleware: ics4,
 	}
 }
 
@@ -110,7 +110,7 @@ func (im IBCModule) OnRecvPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) exported.Acknowledgement {
-	if im.ics4Middleware.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff {
+	if im.channelMiddleware.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff {
 		err := sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 		return channeltypes.NewErrorAcknowledgement(err)
 	}
@@ -140,13 +140,13 @@ func (im IBCModule) OnTimeoutPacket(
 }
 
 // SendPacket implements the ICS4 Wrapper interface. In case the switch is off, the SendPacket method of the
-// ics4Middleware should block it
+// channelMiddleware should block it
 func (im IBCModule) SendPacket(
 	ctx sdk.Context,
 	chanCap *capabilitytypes.Capability,
 	packet exported.PacketI,
 ) error {
-	return im.ics4Middleware.SendPacket(ctx, chanCap, packet)
+	return im.channelMiddleware.SendPacket(ctx, chanCap, packet)
 }
 
 // WriteAcknowledgement implements the ICS4 Wrapper interface
@@ -156,9 +156,9 @@ func (im IBCModule) WriteAcknowledgement(
 	packet exported.PacketI,
 	ack exported.Acknowledgement,
 ) error {
-	return im.ics4Middleware.WriteAcknowledgement(ctx, chanCap, packet, ack)
+	return im.channelMiddleware.WriteAcknowledgement(ctx, chanCap, packet, ack)
 }
 
 func (im IBCModule) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
-	return im.ics4Middleware.GetAppVersion(ctx, portID, channelID)
+	return im.channelMiddleware.GetAppVersion(ctx, portID, channelID)
 }

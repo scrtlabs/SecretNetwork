@@ -10,7 +10,7 @@ import (
 // This file should evolve to being code gen'd, off of `proto/twap/v1beta/query.yml`
 
 type Querier struct {
-	K ibcswitch.ICS4Wrapper
+	K ibcswitch.ChannelWrapper
 }
 
 func (q Querier) Params(ctx sdk.Context,

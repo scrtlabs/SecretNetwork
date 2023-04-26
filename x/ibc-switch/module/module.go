@@ -79,13 +79,13 @@ func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) 
 type AppModule struct {
 	AppModuleBasic
 
-	ics4wrapper ibc_switch.ICS4Wrapper
+	channelWrapper ibc_switch.ChannelWrapper
 }
 
-func NewAppModule(ics4wrapper ibc_switch.ICS4Wrapper) AppModule {
+func NewAppModule(channelWrapper ibc_switch.ChannelWrapper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
-		ics4wrapper:    ics4wrapper,
+		channelWrapper: channelWrapper,
 	}
 }
 
@@ -112,8 +112,8 @@ func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sd
 // RegisterServices registers a GRPC query service to respond to the
 // module-specific GRPC queries.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), ibc_switch.NewMsgServer(am.ics4wrapper))
-	types.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: am.ics4wrapper}})
+	types.RegisterMsgServer(cfg.MsgServer(), ibc_switch.NewMsgServer(am.channelWrapper))
+	types.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: am.channelWrapper}})
 }
 
 // RegisterInvariants registers the txfees module's invariants.
@@ -125,14 +125,14 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 	var genState types.GenesisState
 	// Initialize global index to index in genesis state
 	cdc.MustUnmarshalJSON(gs, &genState)
-	am.ics4wrapper.InitGenesis(ctx, genState)
+	am.channelWrapper.InitGenesis(ctx, genState)
 
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns the txfees module's exported genesis state as raw JSON bytes.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	genState := am.ics4wrapper.ExportGenesis(ctx)
+	genState := am.channelWrapper.ExportGenesis(ctx)
 	return cdc.MustMarshalJSON(genState)
 }
 

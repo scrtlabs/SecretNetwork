@@ -78,6 +78,6 @@ func AppModules(
 		ica.NewAppModule(app.AppKeepers.ICAControllerKeeper, app.AppKeepers.ICAHostKeeper),
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper),
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
-		ibcswitch.NewAppModule(*app.AppKeepers.IbcSwitchICS4Wrapper),
+		ibcswitch.NewAppModule(*app.AppKeepers.IbcSwitchChannelWrapper),
 	}
 }
