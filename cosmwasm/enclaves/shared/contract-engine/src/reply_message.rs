@@ -282,6 +282,9 @@ fn parse_plaintext_reply_message(
     })?;
 
     Ok(ParsedMessage {
+        // There's no msg.sender in reply, therefore we don't need to validate the sender.
+        // It's also not possible to validate with our current design, since contracts
+        // don't know if their output is a reply to another contract, thus can't sign it as such
         should_validate_sig_info: false,
         was_msg_encrypted: false,
         should_encrypt_output: parsed_reply.was_orig_msg_encrypted,

@@ -487,7 +487,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 }
 
 // Execute executes the contract instance
-func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
+func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte, ibcHooks bool) (*sdk.Result, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "execute")
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: execute")
@@ -500,7 +500,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	var err error
 
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
-	if callbackSig == nil {
+	if callbackSig == nil && !ibcHooks {
 		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetSignerInfo(ctx, caller)
 		if err != nil {
 			return nil, err
@@ -508,6 +508,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
+	if ibcHooks {
+		verificationInfo = types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
+	}
 
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
