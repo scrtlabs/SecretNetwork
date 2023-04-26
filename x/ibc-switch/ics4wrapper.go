@@ -14,28 +14,28 @@ import (
 
 var (
 	_ porttypes.Middleware  = &IBCModule{}
-	_ porttypes.ICS4Wrapper = &ICS4Wrapper{}
+	_ porttypes.ICS4Wrapper = &ChannelWrapper{}
 )
 
-type ICS4Wrapper struct {
+type ChannelWrapper struct {
 	channel       porttypes.ICS4Wrapper
 	accountKeeper *authkeeper.AccountKeeper
 	paramSpace    paramtypes.Subspace
 }
 
-func (i *ICS4Wrapper) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
+func (i *ChannelWrapper) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
 	return i.channel.GetAppVersion(ctx, portID, channelID)
 }
 
-func NewICS4Middleware(
+func NewChannelMiddleware(
 	channel porttypes.ICS4Wrapper,
 	accountKeeper *authkeeper.AccountKeeper,
 	paramSpace paramtypes.Subspace,
-) ICS4Wrapper {
+) ChannelWrapper {
 	if !paramSpace.HasKeyTable() {
 		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
 	}
-	return ICS4Wrapper{
+	return ChannelWrapper{
 		channel:       channel,
 		accountKeeper: accountKeeper,
 		paramSpace:    paramSpace,
@@ -45,7 +45,7 @@ func NewICS4Middleware(
 // SendPacket implements the ICS4 interface and is called when sending packets.
 // This method blocks the sending of the packet if the ibc-switch is turned off.
 // If the switcher param is not configured, packets are not blocked and handled by the wrapped IBC app
-func (i *ICS4Wrapper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI) error {
+func (i *ChannelWrapper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI) error {
 	status := i.GetSwitchStatus(ctx)
 
 	if status == types.IbcSwitchStatusOff {
@@ -55,19 +55,19 @@ func (i *ICS4Wrapper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capab
 	return i.channel.SendPacket(ctx, chanCap, packet)
 }
 
-func (i *ICS4Wrapper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI, ack exported.Acknowledgement) error {
+func (i *ChannelWrapper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI, ack exported.Acknowledgement) error {
 	return i.channel.WriteAcknowledgement(ctx, chanCap, packet, ack)
 }
 
-func (i *ICS4Wrapper) GetPauserAddress(ctx sdk.Context) (pauser string) {
+func (i *ChannelWrapper) GetPauserAddress(ctx sdk.Context) (pauser string) {
 	return i.GetParams(ctx).PauserAddress
 }
 
-func (i *ICS4Wrapper) GetSwitchStatus(ctx sdk.Context) (status string) {
+func (i *ChannelWrapper) GetSwitchStatus(ctx sdk.Context) (status string) {
 	return i.GetParams(ctx).SwitchStatus
 }
 
-func (i *ICS4Wrapper) GetParams(ctx sdk.Context) (params types.Params) {
+func (i *ChannelWrapper) GetParams(ctx sdk.Context) (params types.Params) {
 	// This was previously done via i.paramSpace.GetParamSet(ctx, &params). That will
 	// panic if the params don't exist. This is a workaround to avoid that panic.
 	// Params should be refactored to just use a raw kvstore.
@@ -81,10 +81,10 @@ func (i *ICS4Wrapper) GetParams(ctx sdk.Context) (params types.Params) {
 	return params
 }
 
-func (i *ICS4Wrapper) SetSwitchStatus(ctx sdk.Context, value string) {
+func (i *ChannelWrapper) SetSwitchStatus(ctx sdk.Context, value string) {
 	i.paramSpace.Set(ctx, types.KeySwitchStatus, value)
 }
 
-func (i *ICS4Wrapper) SetParams(ctx sdk.Context, params types.Params) {
+func (i *ChannelWrapper) SetParams(ctx sdk.Context, params types.Params) {
 	i.paramSpace.SetParamSet(ctx, &params)
 }

@@ -12,17 +12,17 @@ import (
 var _ types.MsgServer = msgServer{}
 
 type msgServer struct {
-	ics4wrapper ICS4Wrapper
+	channelWrapper ChannelWrapper
 }
 
-func NewMsgServer(ics4wrapper ICS4Wrapper) types.MsgServer {
-	return &msgServer{ics4wrapper}
+func NewMsgServer(channelWrapper ChannelWrapper) types.MsgServer {
+	return &msgServer{channelWrapper}
 }
 
 func (m msgServer) ToggleIbcSwitch(goCtx context.Context, msg *types.MsgToggleIbcSwitch) (*types.MsgToggleIbcSwitchResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	pauser := m.ics4wrapper.GetPauserAddress(ctx)
+	pauser := m.channelWrapper.GetPauserAddress(ctx)
 	if pauser == "" {
 		return nil, sdkerrors.Wrap(types.ErrPauserUnset, "no address is currently approved to toggle ibc-switch")
 	}
@@ -31,13 +31,13 @@ func (m msgServer) ToggleIbcSwitch(goCtx context.Context, msg *types.MsgToggleIb
 		return nil, sdkerrors.Wrap(types.ErrUnauthorizedToggle, "this address is not allowed to toggle ibc-switch")
 	}
 
-	status := m.ics4wrapper.GetSwitchStatus(ctx)
+	status := m.channelWrapper.GetSwitchStatus(ctx)
 
 	// todo enum?
 	if status == "off" {
-		m.ics4wrapper.SetSwitchStatus(ctx, "on")
+		m.channelWrapper.SetSwitchStatus(ctx, "on")
 	} else {
-		m.ics4wrapper.SetSwitchStatus(ctx, "off")
+		m.channelWrapper.SetSwitchStatus(ctx, "off")
 	}
 
 	// todo maybe emit event here?
