@@ -110,7 +110,7 @@ func (im *IBCModule) OnRecvPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) exported.Acknowledgement {
-	if im.ics4Middleware.GetSwitchStatus(ctx) == "off" {
+	if im.ics4Middleware.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff {
 		err := sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 		return channeltypes.NewErrorAcknowledgement(err)
 	}
