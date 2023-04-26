@@ -401,7 +401,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ibcpacketforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,
 	)
 	transferStack = ibcfee.NewIBCMiddleware(transferStack, ak.IbcFeeKeeper)
-	// todo: this is ugly since the IBCModule interface on the switch module is implemented with pointers, try without pointers instead
+
 	var stackWithSwitch ibcswitch.IBCModule
 	stackWithSwitch = ibcswitch.NewIBCModule(transferStack, ak.IbcSwitchICS4Wrapper)
 	ak.TransferStack = &stackWithSwitch
@@ -418,6 +418,10 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	var computeStack porttypes.IBCModule
 	computeStack = compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper, ak.IbcFeeKeeper)
 	computeStack = ibcfee.NewIBCMiddleware(computeStack, ak.IbcFeeKeeper)
+
+	var computeStackWithSwitch ibcswitch.IBCModule
+	computeStackWithSwitch = ibcswitch.NewIBCModule(computeStack, ak.IbcSwitchICS4Wrapper)
+	computeStack = &computeStackWithSwitch
 
 	// Create static IBC router, add ibc-transfer module route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
