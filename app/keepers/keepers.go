@@ -397,7 +397,9 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	transferStack = ibchooks.NewIBCMiddleware(transferStack, &ibcHooksICS4Wrapper)
 	transferStack = ibcswitch.NewIBCModule(transferStack, ak.IbcSwitchChannelWrapper)
 
-	icaHostStack := ibcfee.NewIBCMiddleware(icaHostIBCModule, ak.IbcFeeKeeper)
+	var icaHostStack porttypes.IBCModule
+	icaHostStack = ibcfee.NewIBCMiddleware(icaHostIBCModule, ak.IbcFeeKeeper)
+	icaHostStack = ibcswitch.NewIBCModule(icaHostStack, ak.IbcSwitchChannelWrapper)
 
 	// initialize ICA module with mock module as the authentication module on the controller side
 	var icaControllerStack porttypes.IBCModule
