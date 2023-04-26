@@ -286,10 +286,11 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	ak.RegKeeper = &regKeeper
 
 	// The order stuff happen:
-	// 1. WASM Hooks
-	// 2. Fee
-	// 3. PFM
-	// 4. Transfer
+	// 1. Switch
+	// 2. WASM Hooks
+	// 3. Fee
+	// 4. PFM
+	// 5. Transfer
 	//
 	// Assaf: I think PFM and WASM hoosk are mutually exclusive, and I'm not sure what happens if we have both in a packet. That's also the order Osmosis uses, but they don't have the Fee middleware. It would be interesting to test this behavior. Juno does it in the same order that we do (Fee middleware included).
 
@@ -336,7 +337,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.DistrKeeper,
 		ak.BankKeeper,
 		// ak.IbcKeeper.ChannelKeeper,
-		&ak.IbcFeeKeeper,
+		ak.IbcFeeKeeper,
 	)
 
 	icaControllerKeeper := icacontrollerkeeper.NewKeeper(
@@ -394,10 +395,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	transferStack = ibcfee.NewIBCMiddleware(transferStack, ak.IbcFeeKeeper)
 	transferStack = ibchooks.NewIBCMiddleware(transferStack, &ibcHooksICS4Wrapper)
-
-	var stackWithSwitch ibcswitch.IBCModule
-	stackWithSwitch = ibcswitch.NewIBCModule(transferStack, ak.IbcSwitchICS4Wrapper)
-	ak.TransferStack = &stackWithSwitch
+	transferStack = ibcswitch.NewIBCModule(transferStack, ak.IbcSwitchICS4Wrapper)
 
 	icaHostStack := ibcfee.NewIBCMiddleware(icaHostIBCModule, ak.IbcFeeKeeper)
 
@@ -405,10 +403,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	var icaControllerStack porttypes.IBCModule
 	icaControllerStack = icacontroller.NewIBCMiddleware(icaControllerStack, *ak.ICAControllerKeeper)
 	icaControllerStack = ibcfee.NewIBCMiddleware(icaControllerStack, ak.IbcFeeKeeper)
-
-	var controllerStackWithSwitch ibcswitch.IBCModule
-	controllerStackWithSwitch = ibcswitch.NewIBCModule(icaControllerStack, ak.IbcSwitchICS4Wrapper)
-	icaControllerStack = &controllerStackWithSwitch
+	icaControllerStack = ibcswitch.NewIBCModule(icaControllerStack, ak.IbcSwitchICS4Wrapper)
 
 	computeDir := filepath.Join(homePath, ".compute")
 	// The last arguments can contain custom message handlers, and custom query handlers,
@@ -447,10 +442,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	var computeStack porttypes.IBCModule
 	computeStack = compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper, ak.IbcFeeKeeper)
 	computeStack = ibcfee.NewIBCMiddleware(computeStack, ak.IbcFeeKeeper)
-
-	var computeStackWithSwitch ibcswitch.IBCModule
-	computeStackWithSwitch = ibcswitch.NewIBCModule(computeStack, ak.IbcSwitchICS4Wrapper)
-	computeStack = &computeStackWithSwitch
+	computeStack = ibcswitch.NewIBCModule(computeStack, ak.IbcSwitchICS4Wrapper)
 
 	// Create static IBC router, add ibc-transfer module route, then set and seal it
 	ibcRouter := porttypes.NewRouter()

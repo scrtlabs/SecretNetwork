@@ -25,7 +25,7 @@ func NewIBCModule(app porttypes.IBCModule, ics4 *ICS4Wrapper) IBCModule {
 }
 
 // OnChanOpenInit implements the IBCModule interface
-func (im *IBCModule) OnChanOpenInit(ctx sdk.Context,
+func (im IBCModule) OnChanOpenInit(ctx sdk.Context,
 	order channeltypes.Order,
 	connectionHops []string,
 	portID string,
@@ -48,7 +48,7 @@ func (im *IBCModule) OnChanOpenInit(ctx sdk.Context,
 }
 
 // OnChanOpenTry implements the IBCModule interface
-func (im *IBCModule) OnChanOpenTry(
+func (im IBCModule) OnChanOpenTry(
 	ctx sdk.Context,
 	order channeltypes.Order,
 	connectionHops []string,
@@ -63,7 +63,7 @@ func (im *IBCModule) OnChanOpenTry(
 }
 
 // OnChanOpenAck implements the IBCModule interface
-func (im *IBCModule) OnChanOpenAck(
+func (im IBCModule) OnChanOpenAck(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -75,7 +75,7 @@ func (im *IBCModule) OnChanOpenAck(
 }
 
 // OnChanOpenConfirm implements the IBCModule interface
-func (im *IBCModule) OnChanOpenConfirm(
+func (im IBCModule) OnChanOpenConfirm(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -85,7 +85,7 @@ func (im *IBCModule) OnChanOpenConfirm(
 }
 
 // OnChanCloseInit implements the IBCModule interface
-func (im *IBCModule) OnChanCloseInit(
+func (im IBCModule) OnChanCloseInit(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -95,7 +95,7 @@ func (im *IBCModule) OnChanCloseInit(
 }
 
 // OnChanCloseConfirm implements the IBCModule interface
-func (im *IBCModule) OnChanCloseConfirm(
+func (im IBCModule) OnChanCloseConfirm(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -105,7 +105,7 @@ func (im *IBCModule) OnChanCloseConfirm(
 }
 
 // OnRecvPacket implements the IBCModule interface
-func (im *IBCModule) OnRecvPacket(
+func (im IBCModule) OnRecvPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
@@ -121,7 +121,7 @@ func (im *IBCModule) OnRecvPacket(
 }
 
 // OnAcknowledgementPacket implements the IBCModule interface
-func (im *IBCModule) OnAcknowledgementPacket(
+func (im IBCModule) OnAcknowledgementPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 	acknowledgement []byte,
@@ -131,7 +131,7 @@ func (im *IBCModule) OnAcknowledgementPacket(
 }
 
 // OnTimeoutPacket implements the IBCModule interface
-func (im *IBCModule) OnTimeoutPacket(
+func (im IBCModule) OnTimeoutPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
@@ -141,7 +141,7 @@ func (im *IBCModule) OnTimeoutPacket(
 
 // SendPacket implements the ICS4 Wrapper interface. In case the switch is off, the SendPacket method of the
 // ics4Middleware should block it
-func (im *IBCModule) SendPacket(
+func (im IBCModule) SendPacket(
 	ctx sdk.Context,
 	chanCap *capabilitytypes.Capability,
 	packet exported.PacketI,
@@ -150,7 +150,7 @@ func (im *IBCModule) SendPacket(
 }
 
 // WriteAcknowledgement implements the ICS4 Wrapper interface
-func (im *IBCModule) WriteAcknowledgement(
+func (im IBCModule) WriteAcknowledgement(
 	ctx sdk.Context,
 	chanCap *capabilitytypes.Capability,
 	packet exported.PacketI,
@@ -159,6 +159,6 @@ func (im *IBCModule) WriteAcknowledgement(
 	return im.ics4Middleware.WriteAcknowledgement(ctx, chanCap, packet, ack)
 }
 
-func (im *IBCModule) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
+func (im IBCModule) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
 	return im.ics4Middleware.GetAppVersion(ctx, portID, channelID)
 }
