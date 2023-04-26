@@ -264,9 +264,9 @@ func (ak *SecretAppKeepers) CreateScopedKeepers() {
 //
 // For example, this is how the stack will be build for the transfer app
 //   - SendPacket. Originates from the transferKeeper and goes up the stack:
-//     transferKeeper.SendPacket -> ibcfeekeeper.SendPacket -> ibcswitch.SendPacket -> channel.SendPacket
+//     transferKeeper.SendPacket -> ibcfeekeeper.SendPacket -> hooks.SendPacket -> ibcswitch.SendPacket -> channel.SendPacket
 //   - RecvPacket, message that originates from core IBC and goes down to app, the flow is the other way:
-//     channel.RecvPacket -> ibcswitch.OnRecvPacket -> ibcfeekeeper.OnRecvPacket ->
+//     channel.RecvPacket -> ibcswitch.OnRecvPacket -> hooks.OnRecvPacket -> ibcfeekeeper.OnRecvPacket ->
 //     ibcpacketforward.OnRecvPacket -> transfer.OnRecvPacket
 //
 // Note that the forward middleware is only integrated on the "receive" direction. It can be safely skipped when sending.
@@ -293,6 +293,14 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	//
 	// Assaf: I think PFM and WASM hoosk are mutually exclusive, and I'm not sure what happens if we have both in a packet. That's also the order Osmosis uses, but they don't have the Fee middleware. It would be interesting to test this behavior. Juno does it in the same order that we do (Fee middleware included).
 
+	// Initialize ics4 channel for stacks that can turn off
+	ibcSwitchICS4Wrapper := ibcswitch.NewICS4Middleware(
+		ak.IbcKeeper.ChannelKeeper,
+		ak.AccountKeeper,
+		ak.GetSubspace(ibcswitchtypes.ModuleName),
+	)
+	ak.IbcSwitchICS4Wrapper = &ibcSwitchICS4Wrapper
+
 	// Setup the ICS4Wrapper used by the hooks middleware
 	// Configure the hooks keeper
 	hooksKeeper := ibchookskeeper.NewKeeper(
@@ -303,7 +311,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	secretPrefix := sdk.GetConfig().GetBech32AccountAddrPrefix()
 	wasmHooks := ibchooks.NewWasmHooks(&hooksKeeper, nil, secretPrefix) // The compute keeper will be set later on
 	ibcHooksICS4Wrapper := ibchooks.NewICS4Middleware(
-		ak.IbcKeeper.ChannelKeeper,
+		ak.IbcSwitchICS4Wrapper,
 		&wasmHooks,
 	)
 
@@ -311,20 +319,12 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		appCodec,
 		ak.keys[ibcfeetypes.StoreKey],
 		ak.GetSubspace(ibcfeetypes.ModuleName), // this isn't even used in the keeper but is required?
-		ibcHooksICS4Wrapper,                    //todo verify this
+		ibcHooksICS4Wrapper,
 		ak.IbcKeeper.ChannelKeeper,
 		&ak.IbcKeeper.PortKeeper,
 		ak.AccountKeeper,
 		ak.BankKeeper,
 	)
-
-	// Initialize ics4 channel for stacks that can turn off
-	ibcSwitchICS4Wrapper := ibcswitch.NewICS4Middleware(
-		ak.IbcKeeper.ChannelKeeper,
-		ak.AccountKeeper,
-		ak.GetSubspace(ibcswitchtypes.ModuleName),
-	)
-	ak.IbcSwitchICS4Wrapper = &ibcSwitchICS4Wrapper
 
 	// Initialize packet forward middleware router
 	ak.PacketForwardKeeper = ibcpacketforwardkeeper.NewKeeper(
