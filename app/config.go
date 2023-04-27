@@ -31,7 +31,7 @@ import (
 	"github.com/cosmos/ibc-go/v4/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v4/modules/core"
 	ibcclient "github.com/cosmos/ibc-go/v4/modules/core/02-client/client"
-	ibcswitch "github.com/scrtlabs/SecretNetwork/x/ibc-switch/module"
+	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"

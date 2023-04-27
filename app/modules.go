@@ -31,7 +31,7 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v4/modules/core"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
-	ibcswitch "github.com/scrtlabs/SecretNetwork/x/ibc-switch/module"
+	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	packetforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 )
@@ -46,6 +46,7 @@ var ModuleAccountPermissions = map[string][]string{
 	ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 	icatypes.ModuleName:            nil,
 	ibcfeetypes.ModuleName:         nil,
+	ibcswitch.ModuleName:           nil,
 	compute.ModuleName:             {authtypes.Burner},
 }
 
@@ -78,6 +79,6 @@ func AppModules(
 		ica.NewAppModule(app.AppKeepers.ICAControllerKeeper, app.AppKeepers.ICAHostKeeper),
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper),
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
-		ibcswitch.NewAppModule(*app.AppKeepers.IbcSwitchChannelWrapper),
+		ibcswitch.NewAppModule(app.AppKeepers.IbcSwitchKeeper),
 	}
 }

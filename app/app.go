@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
-	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 	"io"
 	"net/http"
@@ -488,6 +488,7 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		evidencetypes.ModuleName,
 		ibctransfertypes.ModuleName,
 		packetforwardtypes.ModuleName,
+
 		ibcfeetypes.ModuleName,
 		feegrant.ModuleName,
 	)

@@ -62,8 +62,8 @@ import (
 
 	ibcfeekeeper "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/keeper"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
-	ibcswitch "github.com/scrtlabs/SecretNetwork/x/ibc-switch"
-	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
+	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 )
 
 type SecretAppKeepers struct {
@@ -396,19 +396,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.TransferKeeper = transferKeeper
 
-	// Initialize packet forward middleware router
-	ak.PacketForwardKeeper = ibcpacketforwardkeeper.NewKeeper(
-		appCodec,
-		ak.keys[ibcpacketforwardtypes.StoreKey],
-		ak.GetSubspace(ibcpacketforwardtypes.ModuleName),
-		ak.TransferKeeper,
-		ak.IbcKeeper.ChannelKeeper,
-		ak.DistrKeeper,
-		ak.BankKeeper,
-		// ak.IbcKeeper.ChannelKeeper,
-		&ak.IbcFeeKeeper,
-	)
-
 	var transferStack porttypes.IBCModule
 	transferStack = transfer.NewIBCModule(ak.TransferKeeper)
 	transferStack = ibcpacketforward.NewIBCMiddleware(
@@ -475,6 +462,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		icacontrollertypes.StoreKey,
 		ibcpacketforwardtypes.StoreKey,
 		ibcfeetypes.StoreKey,
+		ibcswitch.StoreKey,
 	)
 
 	ak.tKeys = sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -500,7 +488,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
 	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
-	paramsKeeper.Subspace(ibcswitchtypes.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
+	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
 
 	return paramsKeeper
 }
