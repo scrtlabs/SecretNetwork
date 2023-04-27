@@ -311,6 +311,7 @@ pub enum StdCosmWasmMsg {
         label: String,
         callback_sig: Option<Vec<u8>>,
     },
+    // The core IBC messages don't support Amino
     #[serde(other, deserialize_with = "deserialize_ignore_any")]
     Other,
 }
@@ -386,6 +387,7 @@ impl StdCosmWasmMsg {
 
 #[derive(Debug)]
 pub enum CosmWasmMsg {
+    // CosmWasm:
     Execute {
         sender: CanonicalAddr,
         contract: HumanAddr,
@@ -400,6 +402,19 @@ pub enum CosmWasmMsg {
         label: String,
         callback_sig: Option<Vec<u8>>,
     },
+    // IBC:
+    // MsgChannelOpenInit {}, // TODO
+    // MsgChannelOpenTry {}, // TODO
+    // MsgChannelOpenAck {}, // TODO
+    // MsgChannelOpenConfirm {}, // TODO
+    // MsgChannelCloseInit {}, // TODO
+    // MsgChannelCloseConfirm {}, // TODO
+    // MsgAcknowledgement {}, // TODO
+    // MsgTimeout {}, // TODO
+    MsgRecvPacket {
+        data: Vec<u8>,
+    },
+    // All else:
     Other,
 }
 
@@ -407,6 +422,15 @@ impl CosmWasmMsg {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
         Self::try_parse_execute(bytes)
             .or_else(|_| Self::try_parse_instantiate(bytes))
+            // .or_else(|_| Self::try_parse_msg_channel_open_init(bytes))
+            // .or_else(|_| Self::try_parse_msg_channel_open_try(bytes))
+            // .or_else(|_| Self::try_parse_msg_channel_open_ack(bytes))
+            // .or_else(|_| Self::try_parse_msg_channel_open_confirm(bytes))
+            // .or_else(|_| Self::try_parse_msg_channel_close_init(bytes))
+            // .or_else(|_| Self::try_parse_msg_channel_close_confirm(bytes))
+            // .or_else(|_| Self::try_parse_msg_acknowledgement(bytes))
+            // .or_else(|_| Self::try_parse_msg_timeout(bytes))
+            .or_else(|_| Self::try_parse_recv_packet(bytes))
             .or_else(|_| {
                 warn!(
                     "got an error while trying to deserialize cosmwasm message bytes from protobuf: {}",
@@ -414,6 +438,50 @@ impl CosmWasmMsg {
                 );
                 Ok(CosmWasmMsg::Other)
             })
+    }
+
+    // fn try_parse_msg_channel_open_init(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    //     todo!()
+    // }
+
+    // fn try_parse_msg_channel_open_try(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    //     todo!()
+    // }
+
+    // fn try_parse_msg_channel_open_ack(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    //     todo!()
+    // }
+
+    // fn try_parse_msg_channel_open_confirm(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    //     todo!()
+    // }
+
+    // fn try_parse_msg_channel_close_init(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    //     todo!()
+    // }
+
+    // fn try_parse_msg_channel_close_confirm(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    //     todo!()
+    // }
+
+    // fn try_parse_msg_acknowledgement(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    //     todo!()
+    // }
+
+    // fn try_parse_msg_timeout(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    //     todo!()
+    // }
+
+    fn try_parse_msg_recv_packet(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        use proto::ibc::tx::MsgRecvPacket;
+
+        let raw_msg = MsgRecvPacket::parse_from_bytes(bytes)
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+        match raw_msg.packet.into_option() {
+            None => Err(EnclaveError::FailedToDeserialize),
+            Some(packet) => Ok(CosmWasmMsg::MsgRecvPacket { data: packet.data }),
+        }
     }
 
     fn try_parse_instantiate(bytes: &[u8]) -> Result<Self, EnclaveError> {
