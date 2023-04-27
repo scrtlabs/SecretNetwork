@@ -312,6 +312,29 @@ var zeroSender = sdk.AccAddress{
 	0, 0, 0, 0, 0,
 }
 
+type (
+	IbcLifecycleComplete struct {
+		IbcLifecycleCompleteContainer `json:"ibc_lifecycle_complete"`
+	}
+
+	IbcLifecycleCompleteContainer struct {
+		Ack     IbcLifecycleCompleteAck     `json:"ibc_ack,omitempty"`
+		Timeout IbcLifecycleCompleteTimeout `json:"ibc_timeout,omitempty"`
+	}
+
+	IbcLifecycleCompleteAck struct {
+		Channel  string `json:"channel"`
+		Sequence uint64 `json:"sequence"`
+		Ack      string `json:"ack"`
+		Success  string `json:"success"`
+	}
+
+	IbcLifecycleCompleteTimeout struct {
+		Channel  string `json:"channel"`
+		Sequence uint64 `json:"sequence"`
+	}
+)
+
 func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Context, packet channeltypes.Packet, acknowledgement []byte, relayer sdk.AccAddress) error {
 	err := im.App.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
 	if err != nil {
@@ -347,13 +370,19 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 	}
 
 	// Execute the contract
-	msg := []byte(fmt.Sprintf(
-		`{"ibc_lifecycle_complete":{"ibc_ack":{"channel":"%s","sequence":%d,"ack":%s,"success":%s}}}`,
-		packet.SourceChannel,
-		packet.Sequence,
-		ackAsJson,
-		success,
-	))
+	msg, err := json.Marshal(IbcLifecycleComplete{
+		IbcLifecycleCompleteContainer{
+			Ack: IbcLifecycleCompleteAck{
+				Channel:  packet.SourceChannel,
+				Sequence: packet.Sequence,
+				Ack:      string(ackAsJson),
+				Success:  success,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
 
 	execMsg := wasm.MsgExecuteContract{
 		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
@@ -395,12 +424,17 @@ func (h WasmHooks) OnTimeoutPacketOverride(im IBCMiddleware, ctx sdk.Context, pa
 	}
 
 	// Execute the contract
-
-	msg := []byte(fmt.Sprintf(
-		`{"ibc_lifecycle_complete":{"ibc_timeout":{"channel":"%s","sequence":%d}}}`,
-		packet.SourceChannel,
-		packet.Sequence,
-	))
+	msg, err := json.Marshal(IbcLifecycleComplete{
+		IbcLifecycleCompleteContainer{
+			Timeout: IbcLifecycleCompleteTimeout{
+				Channel:  packet.SourceChannel,
+				Sequence: packet.Sequence,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
 
 	execMsg := wasm.MsgExecuteContract{
 		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
