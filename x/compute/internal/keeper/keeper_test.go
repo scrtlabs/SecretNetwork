@@ -18,6 +18,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	eng "github.com/scrtlabs/SecretNetwork/types"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
@@ -511,7 +512,7 @@ func TestExecute(t *testing.T) {
 
 	ctx = PrepareExecSignedTx(t, keeper, ctx, fred, privFred, msgBz, addr, topUp)
 
-	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp, nil, false)
+	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp, nil, wasmtypes.HandleTypeExecute)
 	diff := time.Since(start)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -639,7 +640,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 
 	ctx = ctx.WithTxBytes(txBytes)
 
-	_, err = keeper.Execute(ctx, nonExistingAddress, creator, msgBz, nil, nil, false)
+	_, err = keeper.Execute(ctx, nonExistingAddress, creator, msgBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.True(t, types.ErrNotFound.Is(err), err)
 }
 
@@ -694,7 +695,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	ctx = ctx.WithTxBytes(txBytes)
 
 	// let's make sure we get a reasonable error, no panic/crash
-	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, topUp, nil, false)
+	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, topUp, nil, wasmtypes.HandleTypeExecute)
 	require.Error(t, err)
 }
 
@@ -803,7 +804,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	ctx = ctx.WithTxBytes(txBytes)
 
 	// this must fail
-	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil, nil, false)
+	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil, nil, wasmtypes.HandleTypeExecute)
 	assert.True(t, false)
 	// make sure gas ran out
 	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
@@ -888,7 +889,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	}()
 
 	// this should throw out of gas exception (panic)
-	_, err = keeper.Execute(ctx, addr, fred, msgBz, nil, nil, false)
+	_, err = keeper.Execute(ctx, addr, fred, msgBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.True(t, false, "We must panic before this line")
 }
 

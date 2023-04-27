@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
@@ -116,7 +117,7 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 		msg.Msg,
 		msg.SentFunds,
 		msg.CallbackSig,
-		false,
+		wasmtypes.HandleTypeExecute,
 	)
 	if err != nil {
 		return res, err

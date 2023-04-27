@@ -487,7 +487,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 }
 
 // Execute executes the contract instance
-func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte, ibcHooks bool) (*sdk.Result, error) {
+func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte, handleType wasmTypes.HandleType) (*sdk.Result, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "execute")
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: execute")
@@ -498,6 +498,11 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	pkBytes := []byte{}
 	signerSig := []byte{}
 	var err error
+
+	ibcHooks := false
+	if handleType == wasmTypes.HandleTypeIbcWasmHooksIncomingTransfer || handleType == wasmTypes.HandleTypeIbcWasmHooksOutgoingTransferAck || handleType == wasmTypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout {
+		ibcHooks = true
+	}
 
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
 	if callbackSig == nil && !ibcHooks {
@@ -543,7 +548,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	gas := gasForContract(ctx)
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, wasmTypes.HandleTypeExecute)
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, handleType)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {

@@ -14,6 +14,7 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
 
@@ -110,7 +111,7 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 		Msg:       msgBytes,
 		SentFunds: funds,
 	}
-	response, err := h.execWasmMsg(ctx, &execMsg)
+	response, err := h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksIncomingTransfer)
 	if err != nil {
 		return NewEmitErrorAcknowledgement(ctx, types.ErrWasmError, err.Error())
 	}
@@ -124,7 +125,7 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 	return channeltypes.NewResultAcknowledgement(bz)
 }
 
-func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *wasm.MsgExecuteContract) (*sdk.Result, error) {
+func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *wasm.MsgExecuteContract, handleType wasmtypes.HandleType) (*sdk.Result, error) {
 	if err := execMsg.ValidateBasic(); err != nil {
 		return nil, fmt.Errorf(types.ErrBadExecutionMsg, err.Error())
 	}
@@ -135,7 +136,7 @@ func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *wasm.MsgExecuteContract
 		execMsg.Msg,
 		execMsg.SentFunds,
 		execMsg.CallbackSig,
-		true,
+		handleType,
 	)
 }
 
@@ -361,7 +362,7 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 		Msg:       msg,
 		SentFunds: sdk.NewCoins(),
 	}
-	_, err = h.execWasmMsg(ctx, &execMsg)
+	_, err = h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksOutgoingTransferAck)
 	if err != nil {
 		// error processing the callback
 		// ToDo: Open Question: Should we also delete the callback here?
@@ -408,7 +409,7 @@ func (h WasmHooks) OnTimeoutPacketOverride(im IBCMiddleware, ctx sdk.Context, pa
 		Msg:       msg,
 		SentFunds: sdk.NewCoins(),
 	}
-	_, err = h.execWasmMsg(ctx, &execMsg)
+	_, err = h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout)
 	if err != nil {
 		// error processing the callback. This could be because the contract doesn't implement the message type to
 		// process the callback. Retrying this will not help, so we can delete the callback from storage.

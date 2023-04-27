@@ -6,9 +6,9 @@ use cw_types_v010::encoding::Binary;
 
 use cw_types_v010::types as v010types;
 use cw_types_v010::types::{Env as V010Env, HumanAddr};
-use cw_types_v1::types as v1types;
 use cw_types_v1::types::Env as V1Env;
 use cw_types_v1::types::MessageInfo as V1MessageInfo;
+use cw_types_v1::types::{self as v1types, Addr};
 use enclave_ffi_types::EnclaveError;
 
 pub const CONTRACT_KEY_LENGTH: usize = 64;
@@ -73,19 +73,15 @@ impl BaseEnv {
         )
     }
 
-    pub fn into_versioned_env(
-        self,
-        api_version: &CosmWasmApiVersion,
-        is_empty_sender: bool,
-    ) -> CwEnv {
+    pub fn into_versioned_env(self, api_version: &CosmWasmApiVersion) -> CwEnv {
         match api_version {
-            CosmWasmApiVersion::V010 => self.into_v010(is_empty_sender),
-            CosmWasmApiVersion::V1 => self.into_v1(is_empty_sender),
+            CosmWasmApiVersion::V010 => self.into_v010(),
+            CosmWasmApiVersion::V1 => self.into_v1(),
             CosmWasmApiVersion::Invalid => panic!("Can't parse invalid env"),
         }
     }
 
-    fn into_v010(self, is_empty_sender: bool) -> CwEnv {
+    fn into_v010(self) -> CwEnv {
         // Assaf: contract_key is irrelevant inside the contract,
         // but existing v0.10 contracts might expect it to be populated :facepalm:,
         // therefore we are going to leave it populated :shrug:.
@@ -107,10 +103,7 @@ impl BaseEnv {
                     random: None,
                 },
                 message: v010types::MessageInfo {
-                    sender: match is_empty_sender {
-                        false => self.0.message.sender,
-                        true => HumanAddr::from(""),
-                    },
+                    sender: self.0.message.sender,
                     sent_funds: self.0.message.sent_funds,
                 },
                 contract: v010types::ContractInfo {
@@ -125,7 +118,7 @@ impl BaseEnv {
 
     /// This is the conversion function from the base to the new env. We assume that if there are
     /// any API changes that are necessary on the base level we will have to update this as well
-    fn into_v1(self, is_empty_sender: bool) -> CwEnv {
+    fn into_v1(self) -> CwEnv {
         CwEnv::V1Env {
             env: V1Env {
                 block: v1types::BlockInfo {
@@ -143,10 +136,7 @@ impl BaseEnv {
                 transaction: self.0.transaction,
             },
             msg_info: v1types::MessageInfo {
-                sender: match is_empty_sender {
-                    false => v1types::Addr::unchecked(self.0.message.sender.0),
-                    true => v1types::Addr::unchecked(""),
-                },
+                sender: v1types::Addr::unchecked(self.0.message.sender.0),
                 funds: self
                     .0
                     .message
@@ -236,6 +226,17 @@ impl CwEnv {
                 })?;
 
                 Ok((env_bytes, msg_bytes))
+            }
+        }
+    }
+
+    pub fn set_msg_sender(&mut self, msg_sender: &str) {
+        match self {
+            CwEnv::V010Env { env } => {
+                env.message.sender = HumanAddr(msg_sender.into());
+            }
+            CwEnv::V1Env { msg_info, .. } => {
+                msg_info.sender = Addr::unchecked(msg_sender);
             }
         }
     }

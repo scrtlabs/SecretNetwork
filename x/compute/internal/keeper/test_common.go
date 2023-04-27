@@ -5,13 +5,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-
-	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+
+	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
@@ -130,10 +131,8 @@ var TestContractPaths = map[string]string{
 	randomContract:              filepath.Join(".", contractPath, randomContract),
 }
 
-var (
-	// _                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
-	_ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
-)
+// _                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
+var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
 
 type ContractEvent []v010cosmwasm.LogAttribute
 
@@ -553,7 +552,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 // TestHandler returns a wasm handler for tests (to avoid circular imports)
 func TestHandler(k Keeper) sdk.Handler {
-
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
@@ -591,7 +589,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateC
 }
 
 func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract) (*sdk.Result, error) {
-	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, false)
+	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, cosmwasm.HandleTypeExecute)
 	if err != nil {
 		return res, err
 	}
@@ -616,7 +614,6 @@ func PrepareExecSignedTxWithMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	sender sdk.AccAddress, senderPrivKey crypto.PrivKey, secretMsgs [][]byte, contractAddress sdk.AccAddress, coins sdk.Coins,
 ) sdk.Context {
-
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
 	require.NoError(t, err)
 

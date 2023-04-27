@@ -144,7 +144,7 @@ pub fn init(
     // let duration = start.elapsed();
     // trace!("Time elapsed in start_engine: {:?}", duration);
 
-    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version(), false);
+    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -254,8 +254,8 @@ pub fn handle(
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
-    // The flow of handle is now used for multiple messages (such ash Handle, Reply)
-    // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
+    // The flow of handle is now used for multiple messages (such ash Handle, Reply, IBC)
+    // When the message is handle, we expect it always to be encrypted while in Reply & IBC it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
     trace!("Handle type is {:?}", parsed_handle_type);
@@ -275,46 +275,21 @@ pub fn handle(
     };
 
     // There is no signature to verify when the input isn't signed.
-    // Receiving unsigned messages is only possible in Handle (Init tx are always signed).
-    // All of these scenarios go through here with HANDLE_TYPE_EXECUTE but the data isn't signed:
-    // - Plaintext replies (resulting from an IBC call) - doesn't have a msg.sender anyway
+    // Receiving an unsigned messages is only possible in Handle (Init tx are always signed).
+    // All of these scenarios go through here but the data isn't signed:
+    // - Plaintext replies (resulting from an IBC call)
     // - IBC WASM Hooks
     // - (In the future:) ICA
-    //
-    // We do want to allow executing contracts with plaintext input via IBC
-    // while the sender of an IBC packet cannot be verified.
-    // And we don't want malicious actors using this enclvae setting to just
-    // impersonate any sender they want.
-    // => Therefore we'll use a null sender if it cannot be verified && the input is plaintext
-    let is_null_sender = if should_validate_sig_info {
-        // Verify env parameters against the signed tx
-        // If verification fails:
-        //     If input is not encryted && execute => null sender
-        //     If input is encryted || !execute => error
-        match verify_params(
+    if should_validate_sig_info {
+        verify_params(
             &parsed_sig_info,
             sent_funds,
             &canonical_sender_address,
             contract_address,
             &secret_msg,
             msg,
-        ) {
-            Err(err) => {
-                if !was_msg_encrypted && parsed_handle_type == HandleType::HANDLE_TYPE_EXECUTE {
-                    trace!(
-                        "Failed to verify_params(), however continuing with a null msg.sender, error: {:?}",
-                        err
-                    );
-                    true // null sender
-                } else {
-                    return Err(err);
-                }
-            }
-            _ => false, // don't null sender
-        }
-    } else {
-        false // don't null sender
-    };
+        )?;
+    }
 
     let mut validated_msg = decrypted_msg.clone();
     let mut reply_params: Option<Vec<ReplyParams>> = None;
@@ -346,7 +321,30 @@ pub fn handle(
 
     let mut versioned_env = base_env
         .clone()
-        .into_versioned_env(&engine.get_api_version(), is_null_sender);
+        .into_versioned_env(&engine.get_api_version());
+
+    // We want to allow executing contracts with plaintext input via IBC,
+    // even though the sender of an IBC packet cannot be verified.
+    // But we don't want malicious actors using this enclave setting to fake any sender they want.
+    // Therefore we'll use a null sender if it cannot be verified.
+    match parsed_handle_type {
+        // Execute: msg.sender was already verified
+        HandleType::HANDLE_TYPE_EXECUTE => {}
+        // Reply & IBC stuff: no msg.sender, set it to null just in case
+        HandleType::HANDLE_TYPE_REPLY
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
+        | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
+        // WASM Hooks: cannot verify sender, set it to null 
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
+            versioned_env.set_msg_sender("")
+        }
+    }
 
     #[cfg(feature = "random")]
     set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);

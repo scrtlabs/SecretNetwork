@@ -2380,7 +2380,7 @@ func TestPlaintextInputWithIBCHooksFlag(t *testing.T) {
 			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"log_msg_sender":{}}`), sdk.NewCoins(), nil, true)
+			_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"log_msg_sender":{}}`), sdk.NewCoins(), nil, cosmwasm.HandleTypeExecute)
 
 			require.Empty(t, err)
 

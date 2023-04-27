@@ -159,6 +159,9 @@ pub enum HandleType {
     HANDLE_TYPE_IBC_PACKET_RECEIVE = 5,
     HANDLE_TYPE_IBC_PACKET_ACK = 6,
     HANDLE_TYPE_IBC_PACKET_TIMEOUT = 7,
+    HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER = 8,
+    HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK = 9,
+    HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT = 10,
 }
 
 impl HandleType {
@@ -172,6 +175,9 @@ impl HandleType {
             5 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE),
             6 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_ACK),
             7 => Ok(HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT),
+            8 => Ok(HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER),
+            9 => Ok(HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK),
+            10 => Ok(HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT),
             _ => {
                 error!("unrecognized handle type: {}", value);
                 Err(EnclaveError::FailedToDeserialize)
@@ -189,6 +195,9 @@ impl HandleType {
             HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => "ibc_packet_receive",
             HandleType::HANDLE_TYPE_IBC_PACKET_ACK => "ibc_packet_ack",
             HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => "ibc_packet_timeout",
+            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => "execute",
+            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => "execute",
+            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => "execute",
         }
     }
 }
