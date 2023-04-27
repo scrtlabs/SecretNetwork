@@ -466,7 +466,7 @@ pub fn query(
 
     let mut versioned_env = base_env
         .clone()
-        .into_versioned_env(&engine.get_api_version(), false);
+        .into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
