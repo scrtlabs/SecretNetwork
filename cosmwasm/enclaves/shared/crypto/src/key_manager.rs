@@ -269,7 +269,7 @@ impl Keychain {
             current.as_slice()
         );
 
-        error!(
+        debug!(
             "Sealing genesis consensus seed in {}",
             *GENESIS_CONSENSUS_SEED_SEALING_PATH
         );
@@ -278,7 +278,7 @@ impl Keychain {
             return Err(e);
         }
 
-        error!(
+        debug!(
             "Sealing current consensus seed in {}",
             *CURRENT_CONSENSUS_SEED_SEALING_PATH
         );
@@ -429,14 +429,8 @@ impl Keychain {
             self.initial_randomness_seed = Some(irs);
             self.random_encryption_key = Some(rek);
 
-            trace!(
-            "initial_randomness_seed: {:?}",
-            hex::encode(irs.get())
-            );
-            trace!(
-            "random_encryption_key: {:?}",
-            hex::encode(rek.get())
-            );
+            trace!("initial_randomness_seed: {:?}", hex::encode(irs.get()));
+            trace!("random_encryption_key: {:?}", hex::encode(rek.get()));
 
             self.write_randomness_keys();
         }
