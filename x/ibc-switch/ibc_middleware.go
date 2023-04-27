@@ -7,23 +7,26 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
 	"github.com/cosmos/ibc-go/v4/modules/core/exported"
+	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/types"
 )
 
-type IBCModule struct {
-	app               porttypes.IBCModule
-	channelMiddleware *ChannelWrapper
+var _ porttypes.Middleware = (*IBCMiddleware)(nil)
+
+type IBCMiddleware struct {
+	app    porttypes.IBCModule
+	keeper keeper.Keeper
 }
 
-func NewIBCModule(app porttypes.IBCModule, ics4 *ChannelWrapper) IBCModule {
-	return IBCModule{
-		app:               app,
-		channelMiddleware: ics4,
+func NewIBCMiddleware(app porttypes.IBCModule, keeper keeper.Keeper) IBCMiddleware {
+	return IBCMiddleware{
+		app:    app,
+		keeper: keeper,
 	}
 }
 
 // OnChanOpenInit implements the IBCModule interface
-func (im IBCModule) OnChanOpenInit(ctx sdk.Context,
+func (im IBCMiddleware) OnChanOpenInit(ctx sdk.Context,
 	order channeltypes.Order,
 	connectionHops []string,
 	portID string,
@@ -46,7 +49,7 @@ func (im IBCModule) OnChanOpenInit(ctx sdk.Context,
 }
 
 // OnChanOpenTry implements the IBCModule interface
-func (im IBCModule) OnChanOpenTry(
+func (im IBCMiddleware) OnChanOpenTry(
 	ctx sdk.Context,
 	order channeltypes.Order,
 	connectionHops []string,
@@ -61,7 +64,7 @@ func (im IBCModule) OnChanOpenTry(
 }
 
 // OnChanOpenAck implements the IBCModule interface
-func (im IBCModule) OnChanOpenAck(
+func (im IBCMiddleware) OnChanOpenAck(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -73,7 +76,7 @@ func (im IBCModule) OnChanOpenAck(
 }
 
 // OnChanOpenConfirm implements the IBCModule interface
-func (im IBCModule) OnChanOpenConfirm(
+func (im IBCMiddleware) OnChanOpenConfirm(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -82,8 +85,8 @@ func (im IBCModule) OnChanOpenConfirm(
 	return im.app.OnChanOpenConfirm(ctx, portID, channelID)
 }
 
-// OnChanCloseInit implements the IBCModule interface
-func (im IBCModule) OnChanCloseInit(
+// OnChanCloseInit implements the IBCMiddleware interface
+func (im IBCMiddleware) OnChanCloseInit(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -92,8 +95,8 @@ func (im IBCModule) OnChanCloseInit(
 	return im.app.OnChanCloseInit(ctx, portID, channelID)
 }
 
-// OnChanCloseConfirm implements the IBCModule interface
-func (im IBCModule) OnChanCloseConfirm(
+// OnChanCloseConfirm implements the IBCMiddleware interface
+func (im IBCMiddleware) OnChanCloseConfirm(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -102,13 +105,13 @@ func (im IBCModule) OnChanCloseConfirm(
 	return im.app.OnChanCloseConfirm(ctx, portID, channelID)
 }
 
-// OnRecvPacket implements the IBCModule interface
-func (im IBCModule) OnRecvPacket(
+// OnRecvPacket implements the IBCMiddleware interface
+func (im IBCMiddleware) OnRecvPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) exported.Acknowledgement {
-	if im.channelMiddleware.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff {
+	if im.keeper.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff {
 		err := sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 		return channeltypes.NewErrorAcknowledgement(err)
 	}
@@ -116,8 +119,8 @@ func (im IBCModule) OnRecvPacket(
 	return im.app.OnRecvPacket(ctx, packet, relayer)
 }
 
-// OnAcknowledgementPacket implements the IBCModule interface
-func (im IBCModule) OnAcknowledgementPacket(
+// OnAcknowledgementPacket implements the IBCMiddleware interface
+func (im IBCMiddleware) OnAcknowledgementPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 	acknowledgement []byte,
@@ -126,8 +129,8 @@ func (im IBCModule) OnAcknowledgementPacket(
 	return im.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
 }
 
-// OnTimeoutPacket implements the IBCModule interface
-func (im IBCModule) OnTimeoutPacket(
+// OnTimeoutPacket implements the IBCMiddleware interface
+func (im IBCMiddleware) OnTimeoutPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
@@ -137,24 +140,24 @@ func (im IBCModule) OnTimeoutPacket(
 
 // SendPacket implements the ICS4 Wrapper interface. In case the switch is off, the SendPacket method of the
 // channelMiddleware should block it
-func (im IBCModule) SendPacket(
+func (im IBCMiddleware) SendPacket(
 	ctx sdk.Context,
 	chanCap *capabilitytypes.Capability,
 	packet exported.PacketI,
 ) error {
-	return im.channelMiddleware.SendPacket(ctx, chanCap, packet)
+	return im.keeper.SendPacket(ctx, chanCap, packet)
 }
 
 // WriteAcknowledgement implements the ICS4 Wrapper interface
-func (im IBCModule) WriteAcknowledgement(
+func (im IBCMiddleware) WriteAcknowledgement(
 	ctx sdk.Context,
 	chanCap *capabilitytypes.Capability,
 	packet exported.PacketI,
 	ack exported.Acknowledgement,
 ) error {
-	return im.channelMiddleware.WriteAcknowledgement(ctx, chanCap, packet, ack)
+	return im.keeper.WriteAcknowledgement(ctx, chanCap, packet, ack)
 }
 
-func (im IBCModule) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
-	return im.channelMiddleware.GetAppVersion(ctx, portID, channelID)
+func (im IBCMiddleware) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
+	return im.keeper.GetAppVersion(ctx, portID, channelID)
 }

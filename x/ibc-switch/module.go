@@ -1,11 +1,10 @@
-package module
+package ibc_switch
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
-	"github.com/scrtlabs/SecretNetwork/x/ibc-switch"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-switch/client/grpc"
 
 	"github.com/gorilla/mux"
@@ -79,13 +78,13 @@ func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) 
 type AppModule struct {
 	AppModuleBasic
 
-	channelWrapper ibc_switch.ChannelWrapper
+	keeper Keeper
 }
 
-func NewAppModule(channelWrapper ibc_switch.ChannelWrapper) AppModule {
+func NewAppModule(keeper Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
-		channelWrapper: channelWrapper,
+		keeper:         keeper,
 	}
 }
 
@@ -112,8 +111,8 @@ func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sd
 // RegisterServices registers a GRPC query service to respond to the
 // module-specific GRPC queries.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), ibc_switch.NewMsgServer(am.channelWrapper))
-	types.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: am.channelWrapper}})
+	types.RegisterMsgServer(cfg.MsgServer(), NewMsgServer(am.keeper))
+	types.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: am.keeper}})
 }
 
 // RegisterInvariants registers the txfees module's invariants.
@@ -125,14 +124,14 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 	var genState types.GenesisState
 	// Initialize global index to index in genesis state
 	cdc.MustUnmarshalJSON(gs, &genState)
-	am.channelWrapper.InitGenesis(ctx, genState)
+	am.keeper.InitGenesis(ctx, genState)
 
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns the txfees module's exported genesis state as raw JSON bytes.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	genState := am.channelWrapper.ExportGenesis(ctx)
+	genState := am.keeper.ExportGenesis(ctx)
 	return cdc.MustMarshalJSON(genState)
 }
 

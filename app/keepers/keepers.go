@@ -87,9 +87,9 @@ type SecretAppKeepers struct {
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   ibctransferkeeper.Keeper
 
-	IbcFeeKeeper            ibcfeekeeper.Keeper
-	PacketForwardKeeper     *ibcpacketforwardkeeper.Keeper
-	IbcSwitchChannelWrapper *ibcswitch.ChannelWrapper
+	IbcFeeKeeper        ibcfeekeeper.Keeper
+	PacketForwardKeeper *ibcpacketforwardkeeper.Keeper
+	IbcSwitchKeeper     ibcswitch.Keeper
 
 	ICAControllerKeeper *icacontrollerkeeper.Keeper
 	ICAHostKeeper       *icahostkeeper.Keeper
@@ -321,20 +321,17 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 
 	// Initialize channel for stacks that can turn off
 	// todo: verify that I don't have to create a new middleware instance for every different stack
-	ibcSwitchChannelWrapper := ibcswitch.NewChannelMiddleware(
+	ak.IbcSwitchKeeper = ibcswitch.NewKeeper(
 		ak.IbcKeeper.ChannelKeeper,
-		// todo: verify that the account keeper has already been initialized
 		ak.AccountKeeper,
-		// todo: replace with ibcswitch.ModuleName (move ModuleName from types to global)
-		ak.GetSubspace("ibc-switch"),
+		ak.GetSubspace(ibcswitch.ModuleName),
 	)
-	ak.IbcSwitchChannelWrapper = &ibcSwitchChannelWrapper
 
 	ak.IbcFeeKeeper = ibcfeekeeper.NewKeeper(
 		appCodec,
 		ak.keys[ibcfeetypes.StoreKey],
 		ak.GetSubspace(ibcfeetypes.ModuleName), // this isn't even used in the keeper but is required?
-		ak.IbcSwitchChannelWrapper,             // integrate ibc-switch with every app that uses ibc fees middleware
+		ak.IbcKeeper.ChannelKeeper,
 		ak.IbcKeeper.ChannelKeeper,
 		&ak.IbcKeeper.PortKeeper,
 		ak.AccountKeeper,
@@ -424,23 +421,23 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ibcpacketforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,
 	)
 	transferStack = ibcfee.NewIBCMiddleware(transferStack, ak.IbcFeeKeeper)
-	transferStack = ibcswitch.NewIBCModule(transferStack, ak.IbcSwitchChannelWrapper)
+	transferStack = ibcswitch.NewIBCMiddleware(transferStack, ak.IbcSwitchKeeper)
 
 	var icaHostStack porttypes.IBCModule
 	icaHostStack = ibcfee.NewIBCMiddleware(icaHostIBCModule, ak.IbcFeeKeeper)
-	icaHostStack = ibcswitch.NewIBCModule(icaHostStack, ak.IbcSwitchChannelWrapper)
+	icaHostStack = ibcswitch.NewIBCMiddleware(transferStack, ak.IbcSwitchKeeper)
 
 	// initialize ICA module with mock module as the authentication module on the controller side
 	var icaControllerStack porttypes.IBCModule
 	icaControllerStack = icacontroller.NewIBCMiddleware(icaControllerStack, *ak.ICAControllerKeeper)
 	icaControllerStack = ibcfee.NewIBCMiddleware(icaControllerStack, ak.IbcFeeKeeper)
-	icaControllerStack = ibcswitch.NewIBCModule(icaControllerStack, ak.IbcSwitchChannelWrapper)
+	icaControllerStack = ibcswitch.NewIBCMiddleware(transferStack, ak.IbcSwitchKeeper)
 
 	// Create fee enabled wasm ibc Stack
 	var computeStack porttypes.IBCModule
 	computeStack = compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper, ak.IbcFeeKeeper)
 	computeStack = ibcfee.NewIBCMiddleware(computeStack, ak.IbcFeeKeeper)
-	computeStack = ibcswitch.NewIBCModule(computeStack, ak.IbcSwitchChannelWrapper)
+	computeStack = ibcswitch.NewIBCMiddleware(transferStack, ak.IbcSwitchKeeper)
 
 	// Create static IBC router, add ibc-transfer module route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
