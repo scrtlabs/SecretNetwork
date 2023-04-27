@@ -87,8 +87,8 @@ type SecretAppKeepers struct {
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   ibctransferkeeper.Keeper
 
-	IbcFeeKeeper         ibcfeekeeper.Keeper
-	PacketForwardKeeper  *ibcpacketforwardkeeper.Keeper
+	IbcFeeKeeper            ibcfeekeeper.Keeper
+	PacketForwardKeeper     *ibcpacketforwardkeeper.Keeper
 	IbcSwitchChannelWrapper *ibcswitch.ChannelWrapper
 
 	ICAControllerKeeper *icacontrollerkeeper.Keeper
@@ -319,10 +319,9 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.ComputeKeeper = &computeKeeper
 
-
 	// Initialize channel for stacks that can turn off
 	// todo: verify that I don't have to create a new middleware instance for every different stack
-	ibcSwitchChannelWrapper := ibcswitch.NewICS4Middleware(
+	ibcSwitchChannelWrapper := ibcswitch.NewChannelMiddleware(
 		ak.IbcKeeper.ChannelKeeper,
 		// todo: verify that the account keeper has already been initialized
 		ak.AccountKeeper,
@@ -335,7 +334,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		appCodec,
 		ak.keys[ibcfeetypes.StoreKey],
 		ak.GetSubspace(ibcfeetypes.ModuleName), // this isn't even used in the keeper but is required?
-		ak.IbcSwitchChannelWrapper,                // integrate ibc-switch with every app that uses ibc fees middleware
+		ak.IbcSwitchChannelWrapper,             // integrate ibc-switch with every app that uses ibc fees middleware
 		ak.IbcKeeper.ChannelKeeper,
 		&ak.IbcKeeper.PortKeeper,
 		ak.AccountKeeper,
