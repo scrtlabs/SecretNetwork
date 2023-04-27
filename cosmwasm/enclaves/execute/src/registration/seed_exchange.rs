@@ -24,8 +24,8 @@ pub fn encrypt_seed(
     };
 
     let seed_to_share = match seed_type {
-        SeedType::Genesis => key_manager.get_consensus_seed().unwrap().genesis,
-        SeedType::Current => key_manager.get_consensus_seed().unwrap().current,
+        SeedType::Genesis => KEY_MANAGER.get_consensus_seed().unwrap().genesis,
+        SeedType::Current => KEY_MANAGER.get_consensus_seed().unwrap().current,
     };
 
     let shared_enc_key = base_seed.diffie_hellman(&new_node_pk);
