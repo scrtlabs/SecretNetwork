@@ -17,23 +17,15 @@ pub fn encrypt_seed(
     seed_type: SeedType,
     is_legacy: bool,
 ) -> SgxResult<Vec<u8>> {
-    let (base_seed, seed_to_share) = if is_legacy {
-        let key_manager = Keychain::new();
-        (
-            key_manager.seed_exchange_key().unwrap().genesis,
-            match seed_type {
-                SeedType::Genesis => key_manager.get_consensus_seed().unwrap().genesis,
-                SeedType::Current => key_manager.get_consensus_seed().unwrap().current,
-            },
-        )
+    let base_seed = if is_legacy {
+        KEY_MANAGER.seed_exchange_key().unwrap().genesis
     } else {
-        (
-            KEY_MANAGER.seed_exchange_key().unwrap().current,
-            match seed_type {
-                SeedType::Genesis => KEY_MANAGER.get_consensus_seed().unwrap().genesis,
-                SeedType::Current => KEY_MANAGER.get_consensus_seed().unwrap().current,
-            },
-        )
+        KEY_MANAGER.seed_exchange_key().unwrap().current
+    };
+
+    let seed_to_share = match seed_type {
+        SeedType::Genesis => key_manager.get_consensus_seed().unwrap().genesis,
+        SeedType::Current => key_manager.get_consensus_seed().unwrap().current,
     };
 
     let shared_enc_key = base_seed.diffie_hellman(&new_node_pk);
