@@ -233,7 +233,7 @@ impl CwEnv {
     pub fn set_msg_sender(&mut self, msg_sender: &str) {
         match self {
             CwEnv::V010Env { env } => {
-                env.message.sender = HumanAddr(msg_sender.into());
+                env.message.sender = HumanAddr::from(msg_sender);
             }
             CwEnv::V1Env { msg_info, .. } => {
                 msg_info.sender = Addr::unchecked(msg_sender);

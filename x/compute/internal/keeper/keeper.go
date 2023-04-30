@@ -500,7 +500,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	var err error
 
 	ibcHooks := false
-	if handleType == wasmTypes.HandleTypeIbcWasmHooksIncomingTransfer || handleType == wasmTypes.HandleTypeIbcWasmHooksOutgoingTransferAck || handleType == wasmTypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout {
+	if handleType == wasmTypes.HandleTypeIbcWasmHooksIncomingTransfer ||
+		handleType == wasmTypes.HandleTypeIbcWasmHooksOutgoingTransferAck ||
+		handleType == wasmTypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout {
 		ibcHooks = true
 	}
 
