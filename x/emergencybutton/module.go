@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/scrtlabs/SecretNetwork/x/emergencybutton/client/grpc"
 
 	"github.com/gorilla/mux"

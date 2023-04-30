@@ -23,7 +23,6 @@ func NewKeeper(
 	channel porttypes.ICS4Wrapper,
 	paramSpace paramtypes.Subspace,
 ) Keeper {
-
 	if !paramSpace.HasKeyTable() {
 		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
 	}
