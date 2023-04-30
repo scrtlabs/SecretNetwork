@@ -3,7 +3,6 @@ package keeper
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
@@ -12,9 +11,8 @@ import (
 )
 
 type Keeper struct {
-	channel       porttypes.ICS4Wrapper
-	accountKeeper *authkeeper.AccountKeeper
-	paramSpace    paramtypes.Subspace
+	channel    porttypes.ICS4Wrapper
+	paramSpace paramtypes.Subspace
 }
 
 func (i *Keeper) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
@@ -23,7 +21,6 @@ func (i *Keeper) GetAppVersion(ctx sdk.Context, portID, channelID string) (strin
 
 func NewKeeper(
 	channel porttypes.ICS4Wrapper,
-	accountKeeper *authkeeper.AccountKeeper,
 	paramSpace paramtypes.Subspace,
 ) Keeper {
 
@@ -32,9 +29,8 @@ func NewKeeper(
 	}
 
 	return Keeper{
-		channel:       channel,
-		accountKeeper: accountKeeper,
-		paramSpace:    paramSpace,
+		channel:    channel,
+		paramSpace: paramSpace,
 	}
 }
 
@@ -45,6 +41,7 @@ func (i *Keeper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability
 	status := i.GetSwitchStatus(ctx)
 
 	if status == types.IbcSwitchStatusOff {
+		println("Returning error!")
 		return sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 	}
 
@@ -53,4 +50,8 @@ func (i *Keeper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability
 
 func (i *Keeper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI, ack exported.Acknowledgement) error {
 	return i.channel.WriteAcknowledgement(ctx, chanCap, packet, ack)
+}
+
+func (i *Keeper) IsHalted(ctx sdk.Context) bool {
+	return i.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff
 }

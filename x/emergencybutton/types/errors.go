@@ -6,6 +6,6 @@ import (
 
 var (
 	ErrIbcOff             = sdkerrors.Register(ModuleName, 1, "ibc processing failed")
-	ErrUnauthorizedToggle = sdkerrors.Register(ModuleName, 2, "emergencybutton toggle failed")
-	ErrPauserUnset        = sdkerrors.Register(ModuleName, 3, "emergencybutton toggle failed")
+	ErrUnauthorizedToggle = sdkerrors.Register(ModuleName, 2, "emergency button toggle failed")
+	ErrPauserUnset        = sdkerrors.Register(ModuleName, 3, "emergency button toggle failed")
 )

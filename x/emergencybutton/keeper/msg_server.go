@@ -24,20 +24,19 @@ func (m msgServer) ToggleIbcSwitch(goCtx context.Context, msg *types.MsgToggleIb
 
 	pauser := m.keeper.GetPauserAddress(ctx)
 	if pauser == "" {
-		return nil, sdkerrors.Wrap(types.ErrPauserUnset, "no address is currently approved to toggle emergencybutton")
+		return nil, sdkerrors.Wrap(types.ErrPauserUnset, "no address is currently approved to toggle emergency button")
 	}
 
 	if pauser != msg.GetSender() {
-		return nil, sdkerrors.Wrap(types.ErrUnauthorizedToggle, "this address is not allowed to toggle emergencybutton")
+		return nil, sdkerrors.Wrap(types.ErrUnauthorizedToggle, "this address is not allowed to toggle emergency button")
 	}
 
 	status := m.keeper.GetSwitchStatus(ctx)
 
-	// todo enum?
-	if status == "off" {
-		m.keeper.SetSwitchStatus(ctx, "on")
+	if status == types.IbcSwitchStatusOff {
+		m.keeper.SetSwitchStatus(ctx, types.IbcSwitchStatusOn)
 	} else {
-		m.keeper.SetSwitchStatus(ctx, "off")
+		m.keeper.SetSwitchStatus(ctx, types.IbcSwitchStatusOff)
 	}
 
 	// todo maybe emit event here?

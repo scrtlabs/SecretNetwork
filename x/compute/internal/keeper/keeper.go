@@ -46,6 +46,10 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
+type emergencyButton interface {
+	IsHalted(ctx sdk.Context) bool
+}
+
 type ResponseHandler interface {
 	// Handle processes the data returned by a contract invocation.
 	Handle(
@@ -102,6 +106,7 @@ func NewKeeper(
 	portKeeper portkeeper.Keeper,
 	portSource types.ICS20TransferPortSource,
 	channelKeeper channelkeeper.Keeper,
+	emergencyButton emergencyButton,
 	legacyMsgRouter sdk.Router,
 	msgRouter MessageRouter,
 	queryRouter GRPCQueryRouter,
@@ -126,7 +131,7 @@ func NewKeeper(
 		bankKeeper:       bankKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
-		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
+		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, emergencyButton, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 		HomeDir:          homeDir,
 		LastMsgManager:   LastMsgManager,

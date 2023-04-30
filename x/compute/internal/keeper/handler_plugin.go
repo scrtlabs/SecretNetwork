@@ -57,10 +57,11 @@ func NewSDKMessageHandler(router MessageRouter, legacyRouter sdk.Router, encoder
 type IBCRawPacketHandler struct {
 	channelKeeper    channelkeeper.Keeper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
+	emergencyButton  emergencyButton
 }
 
-func NewIBCRawPacketHandler(chk channelkeeper.Keeper, cak capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
-	return IBCRawPacketHandler{channelKeeper: chk, capabilityKeeper: cak}
+func NewIBCRawPacketHandler(chk channelkeeper.Keeper, cak capabilitykeeper.ScopedKeeper, eb emergencyButton) IBCRawPacketHandler {
+	return IBCRawPacketHandler{channelKeeper: chk, capabilityKeeper: cak, emergencyButton: eb}
 }
 
 func NewMessageHandlerChain(first Messenger, others ...Messenger) *MessageHandlerChain {
@@ -79,13 +80,14 @@ func NewMessageHandler(
 	customEncoders *MessageEncoders,
 	channelKeeper channelkeeper.Keeper,
 	capabilityKeeper capabilitykeeper.ScopedKeeper,
+	emergencyButton emergencyButton,
 	portSource types.ICS20TransferPortSource,
 	unpacker codectypes.AnyUnpacker,
 ) Messenger {
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
 		NewSDKMessageHandler(msgRouter, legacyMsgRouter, encoders),
-		NewIBCRawPacketHandler(channelKeeper, capabilityKeeper),
+		NewIBCRawPacketHandler(channelKeeper, capabilityKeeper, emergencyButton),
 	)
 }
 
@@ -113,6 +115,11 @@ func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, cont
 	if msg.IBC == nil || msg.IBC.SendPacket == nil {
 		return nil, nil, types.ErrUnknownMsg
 	}
+
+	if h.emergencyButton.IsHalted(ctx) {
+		return nil, nil, sdkerrors.Wrapf(types.ErrExecuteFailed, "ibc contract execution is disabled")
+	}
+
 	if contractIBCPortID == "" {
 		return nil, nil, sdkerrors.Wrapf(types.ErrUnsupportedForContract, "ibc not supported")
 	}

@@ -77,10 +77,10 @@ func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) 
 type AppModule struct {
 	AppModuleBasic
 
-	keeper Keeper
+	keeper *Keeper
 }
 
-func NewAppModule(keeper Keeper) AppModule {
+func NewAppModule(keeper *Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		keeper:         keeper,
@@ -110,8 +110,8 @@ func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sd
 // RegisterServices registers a GRPC query service to respond to the
 // module-specific GRPC queries.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), NewMsgServerImpl(am.keeper))
-	types.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: am.keeper}})
+	types.RegisterMsgServer(cfg.MsgServer(), NewMsgServerImpl(*am.keeper))
+	types.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: *am.keeper}})
 }
 
 // RegisterInvariants registers the txfees module's invariants.

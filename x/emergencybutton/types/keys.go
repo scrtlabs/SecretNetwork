@@ -12,6 +12,8 @@ const (
 var RouterKey = QuerierRoute
 
 const (
+	// IbcSwitchStatusOff - IBC messages halted
 	IbcSwitchStatusOff string = "off"
-	IbcSwitchStatusOn  string = "on"
+	// IbcSwitchStatusOn - IBC messages enabled
+	IbcSwitchStatusOn string = "on"
 )

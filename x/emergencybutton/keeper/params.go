@@ -9,9 +9,9 @@ func (i *Keeper) GetPauserAddress(ctx sdk.Context) (pauser string) {
 	return i.GetParams(ctx).PauserAddress
 }
 
-func (i *Keeper) GetSwitchStatus(ctx sdk.Context) (status string) {
-	return i.GetParams(ctx).SwitchStatus
-}
+//func (i *Keeper) GetSwitchStatus(ctx sdk.Context) (status string) {
+//	return i.GetParams(ctx).SwitchStatus
+//}
 
 func (i *Keeper) GetParams(ctx sdk.Context) (params types.Params) {
 	// This was previously done via i.paramSpace.GetParamSet(ctx, &params). That will
@@ -25,6 +25,11 @@ func (i *Keeper) GetParams(ctx sdk.Context) (params types.Params) {
 		return types.DefaultParams()
 	}
 	return params
+}
+
+func (i *Keeper) GetSwitchStatus(ctx sdk.Context) (status string) {
+	i.paramSpace.Get(ctx, types.KeySwitchStatus, &status)
+	return
 }
 
 func (i *Keeper) SetSwitchStatus(ctx sdk.Context, value string) {

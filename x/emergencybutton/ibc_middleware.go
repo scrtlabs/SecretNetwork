@@ -15,10 +15,10 @@ var _ porttypes.Middleware = (*IBCMiddleware)(nil)
 
 type IBCMiddleware struct {
 	app    porttypes.IBCModule
-	keeper keeper.Keeper
+	keeper *keeper.Keeper
 }
 
-func NewIBCMiddleware(app porttypes.IBCModule, keeper keeper.Keeper) IBCMiddleware {
+func NewIBCMiddleware(app porttypes.IBCModule, keeper *keeper.Keeper) IBCMiddleware {
 	return IBCMiddleware{
 		app:    app,
 		keeper: keeper,
@@ -112,6 +112,7 @@ func (im IBCMiddleware) OnRecvPacket(
 	relayer sdk.AccAddress,
 ) exported.Acknowledgement {
 	if im.keeper.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff {
+		println("Returning error!")
 		err := sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 		return channeltypes.NewErrorAcknowledgement(err)
 	}
