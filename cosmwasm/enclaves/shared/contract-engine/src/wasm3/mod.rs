@@ -470,7 +470,7 @@ impl Engine {
                 CosmWasmApiVersion::V1 => {
                     let export_name = HandleType::get_export_name(handle_type);
 
-                    if handle_type == &HandleType::HANDLE_TYPE_EXECUTE {
+                    if export_name == "execute" {
                         let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
                         let (handle, args) = (
                             instance
