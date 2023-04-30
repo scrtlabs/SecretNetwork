@@ -318,15 +318,15 @@ type (
 	}
 
 	IbcLifecycleCompleteContainer struct {
-		Ack     IbcLifecycleCompleteAck     `json:"ibc_ack,omitempty"`
-		Timeout IbcLifecycleCompleteTimeout `json:"ibc_timeout,omitempty"`
+		Ack     *IbcLifecycleCompleteAck     `json:"ibc_ack,omitempty"`
+		Timeout *IbcLifecycleCompleteTimeout `json:"ibc_timeout,omitempty"`
 	}
 
 	IbcLifecycleCompleteAck struct {
 		Channel  string `json:"channel"`
 		Sequence uint64 `json:"sequence"`
 		Ack      string `json:"ack"`
-		Success  string `json:"success"`
+		Success  bool   `json:"success"`
 	}
 
 	IbcLifecycleCompleteTimeout struct {
@@ -357,9 +357,9 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 		return sdkerrors.Wrap(err, "Ack callback error") // The callback configured is not a bech32. Error out
 	}
 
-	success := "false"
+	success := false
 	if !IsAckError(acknowledgement) {
-		success = "true"
+		success = true
 	}
 
 	// Notify the sender that the ack has been received
@@ -372,7 +372,7 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 	// Execute the contract
 	msg, err := json.Marshal(IbcLifecycleComplete{
 		IbcLifecycleCompleteContainer{
-			Ack: IbcLifecycleCompleteAck{
+			Ack: &IbcLifecycleCompleteAck{
 				Channel:  packet.SourceChannel,
 				Sequence: packet.Sequence,
 				Ack:      string(ackAsJson),
@@ -426,7 +426,7 @@ func (h WasmHooks) OnTimeoutPacketOverride(im IBCMiddleware, ctx sdk.Context, pa
 	// Execute the contract
 	msg, err := json.Marshal(IbcLifecycleComplete{
 		IbcLifecycleCompleteContainer{
-			Timeout: IbcLifecycleCompleteTimeout{
+			Timeout: &IbcLifecycleCompleteTimeout{
 				Channel:  packet.SourceChannel,
 				Sequence: packet.Sequence,
 			},
