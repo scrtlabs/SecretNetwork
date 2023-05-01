@@ -448,8 +448,6 @@ Please report any issues with this command
 				return err
 			}
 
-			// _ = os.Remove(sgxAttestationCert)
-
 			// verify certificate
 			_, err = ra.UNSAFE_VerifyRaCert(cert)
 			if err != nil {
