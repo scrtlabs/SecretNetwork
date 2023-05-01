@@ -138,21 +138,21 @@ Wait until you see `ERR CONSENSUS FAILURE!!! err="UPGRADE \"v1.9\" NEEDED at hei
 Copy binaries from v1.9 chain to v1.7 chain.
 
 ```bash
-FEATURES="verify-validator-whitelist,light-client-validation,random" SGX_MODE=SW make build-linux
+FEATURES="light-client-validation,random" SGX_MODE=SW make build-linux
 
 # Copy binaries from host to current v1.7 chain
 
 docker exec bootstrap bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 docker exec node bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 
-docker cp secretd                                                  bootstrap:/tmp/upgrade-bin
-docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           bootstrap:/tmp/upgrade-bin
-docker cp go-cosmwasm/api/libgo_cosmwasm.so                        bootstrap:/tmp/upgrade-bin
-docker cp secretd                                                  node:/tmp/upgrade-bin
-docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           node:/tmp/upgrade-bin
-docker cp go-cosmwasm/api/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
-docker cp docs/librandom_api.so                                    node:/usr/lib
-docker cp docs/tendermint_enclave.signed.so                        node:/usr/lib
+docker cp test/secretd                                                  bootstrap:/tmp/upgrade-bin
+docker cp test/librust_cosmwasm_enclave.signed.so           bootstrap:/tmp/upgrade-bin
+docker cp test/libgo_cosmwasm.so                        bootstrap:/tmp/upgrade-bin
+docker cp test/secretd                                                  node:/tmp/upgrade-bin
+docker cp test/librust_cosmwasm_enclave.signed.so           node:/tmp/upgrade-bin
+docker cp test/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
+docker cp test/librandom_api.so                                    node:/usr/lib
+docker cp test/tendermint_enclave.signed.so                        node:/usr/lib
 
 docker exec node bash -c 'pkill -9 secretd'
 

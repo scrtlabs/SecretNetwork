@@ -13,7 +13,7 @@ const (
 	MasterNodeKeyId            = "NodeExchMasterKey"
 	MasterIoKeyId              = "IoExchMasterKey"
 	SecretNodeSeedLegacyConfig = "seed.json"
-	SecretNodeSeedNewConfig    = "new_seed.json"
+	SecretNodeSeedNewConfig    = "seed.json"
 	SecretNodeCfgFolder        = ".node"
 )
 

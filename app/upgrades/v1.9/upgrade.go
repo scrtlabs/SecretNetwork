@@ -11,6 +11,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
+	icacontrollertypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/controller/types"
 )
 
 const upgradeName = "v1.9"
@@ -18,7 +19,7 @@ const upgradeName = "v1.9"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades: store.StoreUpgrades{Added: []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, ibcswitchtypes.ModuleName},
+	StoreUpgrades: store.StoreUpgrades{Added: []string{icacontrollertypes.StoreKey, ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, ibcswitchtypes.ModuleName},
 		Deleted: []string{"icamsgauth"}},
 }
 
