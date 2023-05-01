@@ -11,3 +11,7 @@ func (MockEnclaveApi) LoadSeed(masterCert []byte, seed []byte, apiKey []byte) (b
 func (MockEnclaveApi) GetEncryptedSeed(masterCert []byte) ([]byte, error) {
 	return []byte(""), nil
 }
+
+func (MockEnclaveApi) GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
+	return []byte(""), nil
+}

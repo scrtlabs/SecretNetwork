@@ -295,48 +295,11 @@ func ConfigureSecret() *cobra.Command {
 				return err
 			}
 
-			err = createOldSecret(seed, nodeDir)
-			if err != nil {
-				fmt.Println("failed to create legacy secrets")
-				return err
-			}
-
 			return nil
 		},
 	}
 
 	return cmd
-}
-
-func createOldSecret(combinedSeed string, nodeDir string) error {
-	seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedLegacyConfig)
-	if _, err := os.Stat(seedFilePath); err == nil {
-		return nil
-	}
-
-	if len(combinedSeed) != reg.EncryptedKeyLength || !reg.IsHexString(combinedSeed) {
-		return fmt.Errorf("invalid encrypted seed format (requires hex string of length 192 without 0x prefix)")
-	}
-
-	seed := combinedSeed[0:reg.LegacyEncryptedKeyLength]
-	println(seed)
-
-	cfg := reg.LegacySeedConfig{
-		EncryptedKey: seed,
-		MasterCert:   reg.LegacyIoMasterCertificate,
-	}
-
-	cfgBytes, err := json.Marshal(&cfg)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func HealthCheck() *cobra.Command {
@@ -461,6 +424,7 @@ Please report any issues with this command
 				}
 			} else {
 				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
+				_ = os.Remove(sgxAttestationCert)
 				_, err := api.KeyGen()
 				if err != nil {
 					return fmt.Errorf("failed to initialize enclave: %w", err)
@@ -483,8 +447,6 @@ Please report any issues with this command
 				_ = os.Remove(sgxAttestationCert)
 				return err
 			}
-
-			_ = os.Remove(sgxAttestationCert)
 
 			// verify certificate
 			_, err = ra.UNSAFE_VerifyRaCert(cert)
@@ -607,12 +569,6 @@ Please report any issues with this command
 				if err != nil {
 					return fmt.Errorf("failed to create file '%s': %w", seedCfgFile, err)
 				}
-			}
-
-			err = createOldSecret(seed, seedCfgDir)
-			if err != nil {
-				fmt.Println("failed to create legacy secrets")
-				return err
 			}
 
 			fmt.Println("Done registering! Ready to start...")
