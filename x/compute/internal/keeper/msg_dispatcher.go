@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
