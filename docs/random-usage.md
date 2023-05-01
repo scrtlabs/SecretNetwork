@@ -51,6 +51,28 @@ pub fn execute(env: Env, _info: MessageInfo, _msg: T) -> Result<Response<T>> {
 }
 ```
 
+The env and block_info structures are defined as:
+
+```rust
+pub struct Env {
+    pub block: BlockInfo,
+    pub contract: ContractInfo,
+    pub transaction: Option<TransactionInfo>,
+}
+
+pub struct BlockInfo {
+    /// The height of a block is the number of blocks preceding it in the blockchain.
+    pub height: u64,
+    pub time: Timestamp,
+    pub chain_id: String,
+    #[cfg(feature = "random")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub random: Option<Binary>,
+}
+```
+
+Where the random is 32 bytes long and base64 encoded.
+
 ## Example: Lottery Contract
 Below is a simple lottery contract that uses the randomness feature:
 
