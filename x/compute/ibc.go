@@ -178,7 +178,8 @@ func (i IBCHandler) OnChanOpenConfirm(ctx sdk.Context, portID, channelID string)
 	}
 	msg := v1types.IBCChannelConnectMsg{
 		OpenConfirm: &v1types.IBCOpenConfirm{
-			Channel: toWasmVMChannel(portID, channelID, channelInfo, appVersion)},
+			Channel: toWasmVMChannel(portID, channelID, channelInfo, appVersion),
+		},
 	}
 	return i.keeper.OnConnectChannel(ctx, contractAddr, msg)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -94,6 +95,32 @@ func getLegacySeedParams(path string) ([]byte, []byte) {
 	return enc, pk
 }
 
+func createOldSecret(key []byte, seedFilePath string, enclave EnclaveInterface) error {
+	seed, err := enclave.GetEncryptedGenesisSeed(key)
+	if err != nil {
+		return err
+	}
+
+	println(seed)
+
+	cfg := types.LegacySeedConfig{
+		EncryptedKey: fmt.Sprintf("%02x", seed),
+		MasterCert:   types.LegacyIoMasterCertificate,
+	}
+
+	cfgBytes, err := json.Marshal(&cfg)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	apiKey, err := types.GetApiKey()
 	if err != nil {
@@ -105,14 +132,16 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 		pk      []byte
 	)
 
+	nodeDir := filepath.Join(homeDir, types.SecretNodeCfgFolder)
+
 	// Read the most recent seed json config and pass the param to LoadSeed in order for him to understand wether new seed should be fetched from the service or not
-	seedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedNewConfig)
+	seedPath := filepath.Join(nodeDir, types.SecretNodeSeedNewConfig)
+	legacySeedPath := filepath.Join(nodeDir, types.SecretNodeSeedLegacyConfig)
+
 	if !fileExists(seedPath) {
-		legacySeedPath := filepath.Join(homeDir, types.SecretNodeCfgFolder, types.SecretNodeSeedLegacyConfig)
 		if !fileExists(legacySeedPath) {
 			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", legacySeedPath)))
 		}
-
 		encSeed, pk = getLegacySeedParams(legacySeedPath)
 	} else {
 		encSeed, pk = getNewSeedParams(seedPath)
@@ -125,10 +154,38 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	}
 
 	// On upgrade LoadSeed will write the new seed to "SeedPath -- seed.txt" which then will be parsed by the upgrade handler to create new_seed.json
-	// On registration both seed.jsn and new_seed.json will be created by 'secretd q register secret-network-params' on manual flow or by auto-registration flow"
+	// On registration both seed.jsםn and new_seed.json will be created by 'secretd q register secret-network-params' on manual flow or by auto-registration flow"
 	_, err = enclave.LoadSeed(pk, sizedEndSeed, apiKey)
 	if err != nil {
 		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+	}
+
+	if !fileExists(legacySeedPath) {
+		sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
+		if sgxSecretsFolder == "" {
+			sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
+		}
+
+		sgxAttestationCertPath := filepath.Join(sgxSecretsFolder, types.AttestationCertPath)
+		if !fileExists(sgxAttestationCertPath) {
+			fmt.Printf("Failed to create legacy seed file. Attestation certificate does not exist in %s. Try to re-initialize the enclave\n", sgxAttestationCertPath)
+			return;
+		}
+
+		cert, err := os.ReadFile(sgxAttestationCertPath)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to read attestation certificate at %s", sgxAttestationCertPath)))
+		}
+
+		key, err := ra.UNSAFE_VerifyRaCert(cert)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to get key from cert")))
+		}
+
+		err = createOldSecret(key, legacySeedPath, enclave)
+		if err != nil {
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("%s was not found and could not be created", legacySeedPath)))
+		}
 	}
 }
 

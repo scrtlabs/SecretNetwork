@@ -416,29 +416,21 @@ impl Keychain {
 
         #[cfg(feature = "random")]
         {
-            let rek = self
-                .consensus_seed
-                .unwrap()
-                .current
-                .derive_key_from_this(&RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes());
+            let rek =
+                self.consensus_seed.unwrap().current.derive_key_from_this(
+                    &RANDOMNESS_ENCRYPTION_KEY_SECRET_DERIVE_ORDER.to_be_bytes(),
+                );
 
-            let irs = self
-                .consensus_seed
-                .unwrap()
-                .current
-                .derive_key_from_this(&INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes());
+            let irs =
+                self.consensus_seed.unwrap().current.derive_key_from_this(
+                    &INITIAL_RANDOMNESS_SEED_SECRET_DERIVE_ORDER.to_be_bytes(),
+                );
 
             self.initial_randomness_seed = Some(irs);
             self.random_encryption_key = Some(rek);
 
-            trace!(
-            "initial_randomness_seed: {:?}",
-            hex::encode(irs.get())
-            );
-            trace!(
-            "random_encryption_key: {:?}",
-            hex::encode(rek.get())
-            );
+            trace!("initial_randomness_seed: {:?}", hex::encode(irs.get()));
+            trace!("random_encryption_key: {:?}", hex::encode(rek.get()));
 
             self.write_randomness_keys();
         }
