@@ -1,6 +1,8 @@
 package keepers
 
 import (
+	"path/filepath"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -57,7 +59,6 @@ import (
 	ibcpacketforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 	ibcpacketforwardkeeper "github.com/strangelove-ventures/packet-forward-middleware/v4/router/keeper"
 	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
-	"path/filepath"
 
 	ibcfeekeeper "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/keeper"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
@@ -277,15 +278,18 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	regKeeper := reg.NewKeeper(appCodec, ak.keys[reg.StoreKey], regRouter, reg.EnclaveApi{}, homePath, bootstrap)
 	ak.RegKeeper = &regKeeper
 
-	// The order stuff happen:
-	// 1. Switch
-	// 2. WASM Hooks
-	// 3. Fee
-	// 4. PFM
-	// 5. Transfer
+	// Assaf:
+	// Rules:
+	// 1. Everything should go through our IBC Switch middleware
+	// 2. Everything should go through the IBC Fee middleware
+	// 3. IBC Transfer should go through the IBC Packet Forward middleware
+	// 4. (In the future:) IBC Transfer should go through the IBC Hooks middleware
 	//
-	// Assaf: I think PFM and WASM hooks are mutually exclusive, and I'm not sure what happens if we have both in a packet. That's also the order Osmosis uses, but they don't have the Fee middleware. It would be interesting to test this behavior. Juno does it in the same order that we do (Fee middleware included).
-	// Assaf: I think PFM and WASM hooks are mutually exclusive, and I'm not sure what happens if we have both in a packet. That's also the order Osmosis uses, but they don't have the Fee middleware. It would be interesting to test this behavior. Juno does it in the same order that we do (Fee middleware included).
+	// Therefore we'll initialize the Switch keeper and pass it to the Fee keeper as an ics4wrapper.
+	// That means that whenever a packet is being send via Fee as an ics4wrapper, it will go through the switch middleware first (ref: https://github.com/cosmos/ibc-go/blob/v4.3.0/modules/apps/29-fee/keeper/relay.go#L15-L18).
+	// Then we'll pass Fee as an ics4wrapper to everything eles.
+	//
+	// Note: we need to make sure that every underlying IBC app/middleware that we're adding uses the ics4wrapper to send packets, and not the IBC channel keeper.
 
 	// Initialize channel for stacks that can turn off
 	// todo: verify that I don't have to create a new middleware instance for every different stack
@@ -294,38 +298,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.GetSubspace(ibcswitch.ModuleName),
 	)
 	ak.IbcSwitchKeeper = &ibcSwitchKeeper
-
-	computeDir := filepath.Join(homePath, ".compute")
-	// The last arguments can contain custom message handlers, and custom query handlers,
-	// if we want to allow any custom callbacks
-	supportedFeatures := "staking,stargate,ibc3,random"
-
-	computeKeeper := compute.NewKeeper(
-		appCodec,
-		*legacyAmino,
-		ak.keys[compute.StoreKey],
-		*ak.AccountKeeper,
-		ak.BankKeeper,
-		*ak.GovKeeper,
-		*ak.DistrKeeper,
-		*ak.MintKeeper,
-		*ak.StakingKeeper,
-		ak.ScopedComputeKeeper,
-		ak.IbcKeeper.PortKeeper,
-		ak.TransferKeeper,
-		ak.IbcKeeper.ChannelKeeper,
-		ak.IbcSwitchKeeper,
-		app.Router(),
-		app.MsgServiceRouter(),
-		app.GRPCQueryRouter(),
-		computeDir,
-		computeConfig,
-		supportedFeatures,
-		nil,
-		nil,
-		&app.LastTxManager,
-	)
-	ak.ComputeKeeper = &computeKeeper
 
 	ak.IbcFeeKeeper = ibcfeekeeper.NewKeeper(
 		appCodec,
@@ -347,7 +319,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.IbcKeeper.ChannelKeeper,
 		ak.DistrKeeper,
 		ak.BankKeeper,
-		// ak.IbcKeeper.ChannelKeeper,
 		ak.IbcFeeKeeper,
 	)
 
@@ -421,6 +392,38 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	icaControllerStack = icacontroller.NewIBCMiddleware(icaControllerStack, *ak.ICAControllerKeeper)
 	icaControllerStack = ibcfee.NewIBCMiddleware(icaControllerStack, ak.IbcFeeKeeper)
 	icaControllerStack = ibcswitch.NewIBCMiddleware(icaControllerStack, ak.IbcSwitchKeeper)
+
+	computeDir := filepath.Join(homePath, ".compute")
+	// The last arguments can contain custom message handlers, and custom query handlers,
+	// if we want to allow any custom callbacks
+	supportedFeatures := "staking,stargate,ibc3,random"
+
+	computeKeeper := compute.NewKeeper(
+		appCodec,
+		*legacyAmino,
+		ak.keys[compute.StoreKey],
+		*ak.AccountKeeper,
+		ak.BankKeeper,
+		*ak.GovKeeper,
+		*ak.DistrKeeper,
+		*ak.MintKeeper,
+		*ak.StakingKeeper,
+		ak.ScopedComputeKeeper,
+		ak.IbcKeeper.PortKeeper,
+		ak.TransferKeeper,
+		ak.IbcKeeper.ChannelKeeper,
+		ak.IbcFeeKeeper,
+		app.Router(),
+		app.MsgServiceRouter(),
+		app.GRPCQueryRouter(),
+		computeDir,
+		computeConfig,
+		supportedFeatures,
+		nil,
+		nil,
+		&app.LastTxManager,
+	)
+	ak.ComputeKeeper = &computeKeeper
 
 	// Create fee enabled wasm ibc Stack
 	var computeStack porttypes.IBCModule
