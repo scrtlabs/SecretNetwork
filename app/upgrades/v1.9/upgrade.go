@@ -18,8 +18,7 @@ const upgradeName = "v1.9"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades: store.StoreUpgrades{Added: []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, ibcswitchtypes.ModuleName},
-		Deleted: []string{"icamsgauth"}},
+	StoreUpgrades: store.StoreUpgrades{Added: []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, ibcswitchtypes.ModuleName}},
 }
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
