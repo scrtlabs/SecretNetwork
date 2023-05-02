@@ -294,7 +294,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=HW \
-				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,${FEATURES}" \
+				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,random,${FEATURES}" \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
