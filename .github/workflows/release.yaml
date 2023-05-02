@@ -58,6 +58,7 @@ jobs:
             CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
+            FEATURES="verify-validator-whitelist,light-client-validation,random"
           target: build-deb
       - name: Run .deb Package Image
         run: |
