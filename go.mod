@@ -11,7 +11,7 @@ replace (
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/scrtlabs/tm-secret-enclave => github.com/scrtlabs/tm-secret-enclave v1.7.2-0.20230314102956-8a5bb4f4529d
-	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v1.7.1-secret.0.20230313155215-42e2299f7284
+	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v1.9.0-scrt
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
