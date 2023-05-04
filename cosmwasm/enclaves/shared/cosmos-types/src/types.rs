@@ -385,6 +385,23 @@ impl StdCosmWasmMsg {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+
+pub struct FungibleTokenPacketData {
+    pub denom: String,
+    pub amount: Uint128,
+    pub sender: HumanAddr,
+    pub receiver: HumanAddr,
+    pub memo: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+
+pub struct IbcHooksWasmMsg {
+    pub contract: HumanAddr,
+    pub msg: serde_json::Value,
+}
+
 #[derive(Debug)]
 pub enum CosmWasmMsg {
     // CosmWasm:
@@ -412,6 +429,15 @@ pub enum CosmWasmMsg {
     // MsgAcknowledgement {}, // TODO
     // MsgTimeout {}, // TODO
     MsgRecvPacket {
+        sequence: u64,
+        source_port: String,
+        source_channel: String,
+        /// if the packet is sent into an IBC-enabled contract, `destination_port` will be `"wasm.{contract_address}"`
+        /// if the packet is rounted here via ibc-hooks, `destination_port` will be `"transfer"`
+        destination_port: String,
+        destination_channel: String,
+        /// if the packet is sent into an IBC-enabled contract, this will be raw bytes
+        /// if the packet is rounted here via ibc-hooks, this will be a JSON string of the type `FungibleTokenPacketData` (https://github.com/cosmos/ibc-go/blob/v4.3.0/modules/apps/transfer/types/packet.pb.go#L25-L39)
         data: Vec<u8>,
     },
     // All else:
@@ -472,7 +498,7 @@ impl CosmWasmMsg {
     //     todo!()
     // }
 
-    fn try_parse_msg_recv_packet(bytes: &[u8]) -> Result<Self, EnclaveError> {
+    fn try_parse_recv_packet(bytes: &[u8]) -> Result<Self, EnclaveError> {
         use proto::ibc::tx::MsgRecvPacket;
 
         let raw_msg = MsgRecvPacket::parse_from_bytes(bytes)
@@ -480,7 +506,14 @@ impl CosmWasmMsg {
 
         match raw_msg.packet.into_option() {
             None => Err(EnclaveError::FailedToDeserialize),
-            Some(packet) => Ok(CosmWasmMsg::MsgRecvPacket { data: packet.data }),
+            Some(packet) => Ok(CosmWasmMsg::MsgRecvPacket {
+                sequence: packet.sequence,
+                source_port: packet.source_port,
+                source_channel: packet.source_channel,
+                destination_port: packet.destination_port,
+                destination_channel: packet.destination_channel,
+                data: packet.data,
+            }),
         }
     }
 
@@ -576,6 +609,7 @@ impl CosmWasmMsg {
             CosmWasmMsg::Execute { sender, .. } | CosmWasmMsg::Instantiate { sender, .. } => {
                 Some(sender)
             }
+            CosmWasmMsg::MsgRecvPacket { .. } => None,
             CosmWasmMsg::Other => None,
         }
     }

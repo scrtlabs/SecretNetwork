@@ -22,7 +22,12 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	msgBz []byte,
 	callType wasmTypes.HandleType,
 ) (interface{}, error) {
-	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
+	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
 
 	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {

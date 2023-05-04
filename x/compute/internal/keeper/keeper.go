@@ -21,6 +21,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -37,7 +38,6 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	wasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm"
 
 	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -185,26 +185,11 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 	return nil
 }
 
-func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, sdktxsigning.SignMode, []byte, []byte, []byte, error) {
+func (k Keeper) GetTxInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, sdktxsigning.SignMode, []byte, []byte, []byte, error) {
 	tx := sdktx.Tx{}
 	err := k.cdc.Unmarshal(ctx.TxBytes(), &tx)
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
-	}
-
-	// for MsgInstantiateContract, there is only one signer which is msg.Sender
-	// (https://github.com/scrtlabs/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
-	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer)
-	if err != nil {
-		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
-	}
-
-	txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
-	modeHandler := txConfig.SignModeHandler()
-	signingData := authsigning.SignerData{
-		ChainID:       ctx.ChainID(),
-		AccountNumber: signerAcc.GetAccountNumber(),
-		Sequence:      signerAcc.GetSequence() - 1,
 	}
 
 	protobufTx := authtx.WrapTx(&tx).GetTx()
@@ -238,6 +223,31 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	case *sdktxsigning.MultiSignatureData:
 		signMode = sdktxsigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON
 	}
+
+	if signer == nil {
+		// Assaf:
+		// We are in a situation where the contract gets a null msg.sender,
+		// however we still need to get the sign bytes for verification against the wasm input msg inside the enclave.
+		// There can be multiple signers on the tx, for example one can be the msg.sender and the another can be the gas fee payer. Another example is if this tx also contains MsgMultiSend which supports multiple msg.senders thus requiring multiple signers.
+		// Not sure if we should support this or if this even matters here, as we're most likely here because it's an incoming IBC tx and the signer is the relayer.
+		// Gor now we will just take the first signer.
+
+		signer = protobufTx.GetSigners()[0]
+	}
+
+	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer)
+	if err != nil {
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+	}
+
+	txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
+	modeHandler := txConfig.SignModeHandler()
+	signingData := authsigning.SignerData{
+		ChainID:       ctx.ChainID(),
+		AccountNumber: signerAcc.GetAccountNumber(),
+		Sequence:      signerAcc.GetSequence() - 1,
+	}
+
 	signBytes, err := modeHandler.GetSignBytes(signMode, signingData, protobufTx)
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
@@ -338,7 +348,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
 	if callbackSig == nil {
-		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetSignerInfo(ctx, creator)
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetTxInfo(ctx, creator)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -499,25 +509,15 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	signerSig := []byte{}
 	var err error
 
-	ibcHooks := false
-	if handleType == wasmTypes.HandleTypeIbcWasmHooksIncomingTransfer ||
-		handleType == wasmTypes.HandleTypeIbcWasmHooksOutgoingTransferAck ||
-		handleType == wasmTypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout {
-		ibcHooks = true
-	}
-
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
-	if callbackSig == nil && !ibcHooks {
-		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetSignerInfo(ctx, caller)
+	if callbackSig == nil {
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetTxInfo(ctx, caller)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
-	if ibcHooks {
-		verificationInfo = types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
-	}
 
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {

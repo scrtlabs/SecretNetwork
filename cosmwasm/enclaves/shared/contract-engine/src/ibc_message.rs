@@ -15,6 +15,7 @@ pub fn parse_plaintext_ibc_protocol_message(
 
     Ok(ParsedMessage {
         should_validate_sig_info: false,
+        should_validate_input: false,
         was_msg_encrypted: false,
         should_encrypt_output: false,
         secret_msg: scrt_msg,
@@ -28,10 +29,10 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
     let mut parsed_encrypted_ibc_packet: IbcPacketReceiveMsg =
      serde_json::from_slice(message).map_err(|err| {
          warn!(
- "Got an error while trying to deserialize input bytes msg into IbcPacketReceiveMsg message {:?}: {}",
- String::from_utf8_lossy(message),
- err
-);
+            "Got an error while trying to deserialize input bytes msg into IbcPacketReceiveMsg message {:?}: {}",
+            String::from_utf8_lossy(message),
+            err
+        );
          EnclaveError::FailedToDeserialize
      })?;
 
@@ -70,6 +71,7 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
 
     Ok(ParsedMessage {
         should_validate_sig_info: false,
+        should_validate_input: true,
         was_msg_encrypted,
         should_encrypt_output: was_msg_encrypted,
         secret_msg,

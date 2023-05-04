@@ -112,6 +112,8 @@ pub fn init(
         contract_address,
         &secret_msg,
         msg,
+        true,
+        true,
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -262,6 +264,7 @@ pub fn handle(
 
     let ParsedMessage {
         should_validate_sig_info,
+        should_validate_input,
         was_msg_encrypted,
         should_encrypt_output,
         secret_msg,
@@ -280,16 +283,16 @@ pub fn handle(
     // - Plaintext replies (resulting from an IBC call)
     // - IBC WASM Hooks
     // - (In the future:) ICA
-    if should_validate_sig_info {
-        verify_params(
-            &parsed_sig_info,
-            sent_funds,
-            &canonical_sender_address,
-            contract_address,
-            &secret_msg,
-            msg,
-        )?;
-    }
+    verify_params(
+        &parsed_sig_info,
+        sent_funds,
+        &canonical_sender_address,
+        contract_address,
+        &secret_msg,
+        msg,
+        should_validate_sig_info,
+        should_validate_input,
+    )?;
 
     let mut validated_msg = decrypted_msg.clone();
     let mut reply_params: Option<Vec<ReplyParams>> = None;

@@ -46,4 +46,5 @@ pub mod ibc {
     pub mod channel;
     pub mod client;
     pub mod tx;
+    pub mod upgrade;
 }

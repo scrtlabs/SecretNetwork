@@ -16,6 +16,7 @@ pub struct SecretMessage {
 
 pub struct ParsedMessage {
     pub should_validate_sig_info: bool,
+    pub should_validate_input: bool,
     pub was_msg_encrypted: bool,
     pub should_encrypt_output: bool,
     pub secret_msg: SecretMessage,

@@ -100,6 +100,7 @@ mod protobuf {
                     from_ibc("core/client/v1/client.proto"),
                 ],
             ),
+            ("src/ibc", &[from_cosmos("upgrade/v1beta1/upgrade.proto")]),
         ];
 
         for (out_dir, inputs) in directories {

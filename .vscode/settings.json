@@ -13,9 +13,7 @@
     "integration-tests/contract-v1/Cargo.toml",
     "integration-tests/contract-v0.10/Cargo.toml",
     "go-cosmwasm/Cargo.toml",
-    "integration-tests/contract-v0.10/Cargo.toml",
-    "check-hw/Cargo.toml",
-    "./cosmwasm/enclaves/shared/cosmos-proto/Cargo.toml"
+    "cosmwasm/enclaves/shared/cosmos-proto/Cargo.toml"
   ],
   "rust-analyzer.diagnostics.experimental.enable": true,
   "rust-analyzer.rustfmt.rangeFormatting.enable": true,
@@ -23,12 +21,11 @@
     "unresolved-macro-call",
     "unresolved-proc-macro"
   ],
-  "rust-analyzer.cargo.features": ["light-client-validation", "build-protobuf"],
+  "rust-analyzer.cargo.features": "all",
   "[rust]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
-
   "go.testEnvVars": {
     "SGX_MODE": "SW",
     "RUST_BACKTRACE": "1"
