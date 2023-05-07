@@ -39,8 +39,8 @@ require (
 	github.com/tendermint/tendermint v0.34.24
 	github.com/tendermint/tm-db v0.6.7
 	golang.org/x/crypto v0.8.0
-	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-	gonum.org/v1/gonum v0.12.0
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
+	gonum.org/v1/gonum v0.13.0
 	google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.30.0
