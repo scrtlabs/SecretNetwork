@@ -78,10 +78,13 @@ ARG FEATURES_U
 ARG SGX_MODE=${SGX_MODE}
 ENV FEATURES_U=${FEATURES_U}
 
+RUN echo "Hello"
+
 RUN git clone --branch main https://github.com/scrtlabs/tm-secret-enclave.git
 
 WORKDIR tm-secret-enclave
 
+RUN git fetch
 RUN git checkout tags/v1.9.0
 
 RUN git submodule init
