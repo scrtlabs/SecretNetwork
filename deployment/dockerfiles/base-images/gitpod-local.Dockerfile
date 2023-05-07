@@ -1,4 +1,4 @@
-FROM ghcr.io/scrtlabs/localsecret:v1.5.1-patch.3
+FROM ghcr.io/scrtlabs/localsecret:v1.9.0-beta.1-random
 
 ### Install Sudo ###
 
@@ -68,8 +68,10 @@ RUN mkdir -p $HOME/.secretd/.compute/
 RUN mkdir -p $HOME/.secretd/.node/
 RUN mkdir -p $HOME/config/
 
-COPY deployment/docker/devimage/bootstrap_init_no_stop.sh bootstrap_init.sh
-COPY deployment/docker/devimage/faucet/faucet_server.js .
+COPY deployment/docker/localsecret/bootstrap_init_no_stop.sh bootstrap_init.sh
+RUN sudo chmod +x bootstrap_init.sh
+
+COPY deployment/docker/localsecret/faucet/faucet_server.js .
 
 RUN sudo npm cache clean -f && sudo npm install -g n && sudo n 14.19
 
