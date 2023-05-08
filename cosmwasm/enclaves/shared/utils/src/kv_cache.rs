@@ -42,6 +42,11 @@ impl KvCache {
         }
     }
 
+    pub fn remove(&mut self, key: &[u8]) {
+        self.writeable_cache.remove(key);
+        self.readable_cache.remove(key);
+    }
+
     pub fn drain_gas_tracker(&mut self) -> u64 {
         let gas_used = self.gas_tracker;
         self.gas_tracker = 0;
