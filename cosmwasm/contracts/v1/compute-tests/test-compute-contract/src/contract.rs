@@ -11,7 +11,7 @@ use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
 
 use crate::msg::{ExecuteMsg, ExternalMessages, InstantiateMsg, QueryMsg, QueryRes};
-use crate::state::{count, count_read, expiration, expiration_read};
+use crate::state::{count, count_read, expiration, expiration_read, PREFIX_TEST, TEST_KEY};
 
 #[entry_point]
 pub fn instantiate(
@@ -324,6 +324,23 @@ pub fn instantiate(
         InstantiateMsg::GetEnv {} => Ok(Response::new()
             .add_attribute("env", serde_json_wasm::to_string(&env).unwrap())
             .add_attribute("info", serde_json_wasm::to_string(&info).unwrap())),
+        InstantiateMsg::TestRemoveDb {} => {
+            let mut store = PrefixedStorage::new(deps.storage, PREFIX_TEST);
+            // save something
+            store.set(
+                TEST_KEY,
+                &bincode2::serialize(&true)
+                    .map_err(|_| StdError::generic_err("serialization error"))?,
+            );
+
+            store.remove(TEST_KEY);
+            // test if it was removed
+            if store.get(TEST_KEY).is_some() {
+                return Err(StdError::generic_err("This key should have been removed!"));
+            }
+
+            Ok(Response::new())
+        }
     }
 }
 
