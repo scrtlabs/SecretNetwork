@@ -22,6 +22,7 @@
   The new Check Gas and Evaporate APIs allow contract developers to create contracts that consume a constant amount of gas, independently of their code path. This helps harden contracts against information leakage from the amount of gas consumed by a contract.
 - Bug Fix: Fixed an issue where nodes would sometimes stop if failing to enter SGX enclave
 - Bug Fix: Fixed a bug where stopping and restarting a node would often cause the node to apphash
+- Bug Fix: Fixed an issue where storing and deleting a key from storage in the same msg would cause it not to be deleted
 
 # 1.8.0
 
