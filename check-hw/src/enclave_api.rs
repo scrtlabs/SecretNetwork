@@ -3,7 +3,9 @@ use std::{
     os::unix::prelude::IntoRawFd,
 };
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError, UserSpaceBuffer};
+use enclave_ffi_types::{
+    Ctx, EnclaveBuffer, NodeAuthResult, OcallReturn, UntrustedVmError, UserSpaceBuffer,
+};
 use sgx_types::{
     c_int, sgx_calc_quote_size, sgx_enclave_id_t, sgx_epid_group_id_t, sgx_get_quote,
     sgx_init_quote, sgx_platform_info_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_quote_t,
@@ -14,12 +16,11 @@ use sgx_types::{
 // ecalls
 
 extern "C" {
-    pub fn ecall_get_attestation_report(
+    pub fn ecall_check_patch_level(
         eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
+        retval: *mut NodeAuthResult,
         api_key: *const u8,
         api_key_len: u32,
-        dry_run: u8,
     ) -> sgx_status_t;
 }
 

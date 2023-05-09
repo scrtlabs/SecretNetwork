@@ -30,6 +30,7 @@ epid_whitelist_disabled = []
 light-client-validation = ["enclave_contract_engine/light-client-validation", "block-verifier"]
 random = ["enclave_contract_engine/random", "enclave_crypto/random"]
 verify-validator-whitelist = ["block-verifier/verify-validator-whitelist", "light-client-validation"]
+check-hw = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.

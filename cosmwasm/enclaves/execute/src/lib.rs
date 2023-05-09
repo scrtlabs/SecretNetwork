@@ -4,6 +4,7 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate core;
 extern crate sgx_trts;
 extern crate sgx_types;
 
@@ -15,6 +16,8 @@ pub use enclave_contract_engine;
 mod ecalls;
 pub mod registration;
 mod tests;
+
+use crate::registration::check_patch_level::ecall_check_patch_level;
 
 #[cfg(feature = "production")]
 #[ctor]
