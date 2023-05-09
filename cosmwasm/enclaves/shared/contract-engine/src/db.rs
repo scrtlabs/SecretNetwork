@@ -361,12 +361,52 @@ pub fn read_from_encrypted_state(
 //     ))
 // }
 
+// pub fn remove_from_encrypted_state(
+//     plaintext_key: &[u8],
+//     context: &Ctx,
+//     contract_key: &ContractKey,
+// ) -> Result<u64, WasmEngineError> {
+//     // TODO in the future we can check if all the state keys are of the new format
+//     // then skip removing the old key step
+//
+//     // Remove key with old format
+//     let scrambled_field_name = field_name_digest(plaintext_key, contract_key);
+//
+//     trace!("Removing scrambled field name: {:?}", scrambled_field_name);
+//
+//     let gas_used_first_remove = remove_db(context, &scrambled_field_name).map_err(|err| {
+//         warn!(
+//             "remove_db() got an error from ocall_remove_db on old key remove, stopping wasm: {:?}",
+//             err
+//         );
+//         err
+//     })?;
+//
+//     // Remove key with new format
+//     let encrypted_key = EncryptedKey {
+//         magic_bytes: ENCRYPTED_KEY_MAGIC_BYTES.to_vec(),
+//         consensus_seed_version: CONSENSUS_SEED_VERSION,
+//         state_encryption_version: STATE_ENCRYPTION_VERSION,
+//         data: encrypt_key_new(plaintext_key, contract_key)?,
+//     };
+//     let encrypted_key_bytes = bincode2::serialize(&encrypted_key).unwrap();
+//
+//     let gas_used_second_remove = remove_db(context, &encrypted_key_bytes).map_err(|err| {
+//         warn!(
+//             "remove_db() got an error from ocall_remove_db on new key remove, stopping wasm: {:?}",
+//             err
+//         );
+//         err
+//     })?;
+//
+//     Ok(gas_used_first_remove + gas_used_second_remove)
+// }
 pub fn remove_from_encrypted_state(
     plaintext_key: &[u8],
     context: &Ctx,
     contract_key: &ContractKey,
 ) -> Result<u64, WasmEngineError> {
-    // TODO in the future we can check if all the state keys are of the new format
+    // TODO in the future we can check if all the state keys are new
     // then skip removing the old key step
 
     // Remove key with old format
@@ -383,15 +423,14 @@ pub fn remove_from_encrypted_state(
     })?;
 
     // Remove key with new format
-    let encrypted_key = EncryptedKey {
-        magic_bytes: ENCRYPTED_KEY_MAGIC_BYTES.to_vec(),
-        consensus_seed_version: CONSENSUS_SEED_VERSION,
-        state_encryption_version: STATE_ENCRYPTION_VERSION,
-        data: encrypt_key_new(plaintext_key, contract_key)?,
-    };
-    let encrypted_key_bytes = bincode2::serialize(&encrypted_key).unwrap();
+    let encrypted_key = encrypt_key_new(plaintext_key, contract_key)?;
 
-    let gas_used_second_remove = remove_db(context, &encrypted_key_bytes).map_err(|err| {
+    let mut encrypted_key_with_header: Vec<u8> = vec![];
+    encrypted_key_with_header.extend_from_slice(ENCRYPTED_KEY_MAGIC_BYTES);
+    encrypted_key_with_header.extend_from_slice(&CONSENSUS_SEED_VERSION.to_be_bytes());
+    encrypted_key_with_header.extend_from_slice(&encrypted_key);
+
+    let gas_used_second_remove = remove_db(context, &encrypted_key_with_header).map_err(|err| {
         warn!(
             "remove_db() got an error from ocall_remove_db on new key remove, stopping wasm: {:?}",
             err
@@ -401,6 +440,7 @@ pub fn remove_from_encrypted_state(
 
     Ok(gas_used_first_remove + gas_used_second_remove)
 }
+
 
 fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {
     let mut data = field_name.to_vec();
