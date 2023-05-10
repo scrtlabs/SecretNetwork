@@ -334,11 +334,8 @@ func ibcPacketReceiveHelper(
 			DestinationPort:    internalPacket.Dest.PortID,
 			DestinationChannel: internalPacket.Dest.ChannelID,
 			Data:               internalPacket.Data,
-			TimeoutHeight: ibcclienttypes.Height{
-				RevisionNumber: internalPacket.Timeout.Block.Revision,
-				RevisionHeight: internalPacket.Timeout.Block.Height,
-			},
-			TimeoutTimestamp: internalPacket.Timeout.Timestamp,
+			TimeoutHeight:      ibcclienttypes.Height{},
+			TimeoutTimestamp:   internalPacket.Timeout.Timestamp,
 		},
 		ProofCommitment: []byte{},
 		ProofHeight:     ibcclienttypes.Height{},
