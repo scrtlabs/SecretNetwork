@@ -149,6 +149,7 @@ docker cp go-cosmwasm/api/libgo_cosmwasm.so                        bootstrap:/tm
 docker cp secretd                                                  node:/tmp/upgrade-bin
 docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           node:/tmp/upgrade-bin
 docker cp go-cosmwasm/api/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
+# These two should be brought from the external repo or from a previous localsecret
 docker cp docs/librandom_api.so                                    node:/usr/lib
 docker cp docs/tendermint_enclave.signed.so                        node:/usr/lib
 
