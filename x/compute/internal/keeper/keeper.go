@@ -920,12 +920,12 @@ func (k Keeper) generateContractAddress(ctx sdk.Context, codeID uint64, creator 
 
 func contractAddress(codeID, instanceID uint64, creator sdk.AccAddress) sdk.AccAddress {
 	contractId := codeID<<32 + instanceID
-	contractIdBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(contractIdBytes, contractId)
+	hashSourceBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(hashSourceBytes, contractId)
 
-	sourceBytes := append(contractIdBytes, creator...)
+	hashSourceBytes = append(hashSourceBytes, creator...)
 
-	sha := sha256.Sum256(sourceBytes)
+	sha := sha256.Sum256(hashSourceBytes)
 	hasherRIPEMD160 := ripemd160.New()
 	hasherRIPEMD160.Write(sha[:]) // does not error
 	return sdk.AccAddress(hasherRIPEMD160.Sum(nil))
@@ -1059,11 +1059,11 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	marshaledReply, error := json.Marshal(reply)
+	marshaledReply, err := json.Marshal(reply)
 	marshaledReply = append(ogTx[0:64], marshaledReply...)
 
-	if error != nil {
-		return nil, error
+	if err != nil {
+		return nil, err
 	}
 
 	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, ogSigInfo, wasmTypes.HandleTypeReply)
