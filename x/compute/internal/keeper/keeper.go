@@ -15,7 +15,7 @@ import (
 	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v4/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/ripemd160" //nolint:staticcheck
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
@@ -23,7 +23,6 @@ import (
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
@@ -110,7 +109,7 @@ func NewKeeper(
 	supportedFeatures string,
 	customEncoders *MessageEncoders,
 	customPlugins *QueryPlugins,
-	LastMsgManager *baseapp.LastMsgMarkerContainer,
+	lastMsgManager *baseapp.LastMsgMarkerContainer,
 ) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize)
 	if err != nil {
@@ -129,7 +128,7 @@ func NewKeeper(
 		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
 		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
 		HomeDir:          homeDir,
-		LastMsgManager:   LastMsgManager,
+		LastMsgManager:   lastMsgManager,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
@@ -185,34 +184,69 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 	return nil
 }
 
-func (k Keeper) GetTxInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, sdktxsigning.SignMode, []byte, []byte, []byte, error) {
-	tx := sdktx.Tx{}
-	err := k.cdc.Unmarshal(ctx.TxBytes(), &tx)
+func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktxsigning.SignMode, []byte, []byte, []byte, error) {
+	var rawTx sdktx.TxRaw
+	err := k.cdc.Unmarshal(ctx.TxBytes(), &rawTx)
 	if err != nil {
-		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode raw transaction from bytes: %s", err.Error()))
 	}
 
-	protobufTx := authtx.WrapTx(&tx).GetTx()
+	var txAuthInfo sdktx.AuthInfo
+	err = k.cdc.Unmarshal(rawTx.AuthInfoBytes, &txAuthInfo)
+	if err != nil {
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction auth info from bytes: %s", err.Error()))
+	}
 
-	pubKeys, err := protobufTx.GetPubKeys()
+	// Assaf:
+	// We're not decoding Body as it is unnecessary in this context,
+	// and it fails decoding IBC messages with the error "no concrete type registered for type URL /ibc.core.channel.v1.MsgChannelOpenInit against interface *types.Msg".
+	// I think that's because the core IBC messages don't support Amino encoding,
+	// and a "concrete type" is used to refer to the mapping between the Go struct and the Amino type string (e.g. "cosmos-sdk/MsgSend")
+	// Therefore we'll ignore the Body here.
+	// Plus this probably saves CPU cycles to not decode the body.
+	tx := authtx.WrapTx(&sdktx.Tx{
+		Body:       nil,
+		AuthInfo:   &txAuthInfo,
+		Signatures: rawTx.Signatures,
+	}).GetTx()
+
+	pubKeys, err := tx.GetPubKeys()
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to get public keys for instantiate: %s", err.Error()))
 	}
 
 	pkIndex := -1
-	var _signers [][]byte // This is just used for the error message below
-	for index, pubKey := range pubKeys {
-		thisSigner := pubKey.Address().Bytes()
-		_signers = append(_signers, thisSigner)
-		if bytes.Equal(thisSigner, signer.Bytes()) {
-			pkIndex = index
+	if sender == nil {
+		// Assaf:
+		// We are in a situation where the contract gets a null msg.sender,
+		// however we still need to get the sign bytes for verification against the wasm input msg inside the enclave.
+		// There can be multiple signers on the tx, for example one can be the msg.sender and the another can be the gas fee payer. Another example is if this tx also contains MsgMultiSend which supports multiple msg.senders thus requiring multiple signers.
+		// Not sure if we should support this or if this even matters here, as we're most likely here because it's an incoming IBC tx and the signer is the relayer.
+		// For now we will just take the first signer.
+		// Also, because we're not decoding the tx body anymore, we can't use tx.GetSigners() here. Therefore we'll convert the pubkey into an address.
+
+		pubkeys, err := tx.GetPubKeys()
+		if err != nil {
+			return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve pubkeys from tx: %s", err.Error()))
+		}
+
+		pkIndex = 0
+		sender = sdk.AccAddress(pubkeys[pkIndex].Address())
+	} else {
+		var _signers [][]byte // This is just used for the error message below
+		for index, pubKey := range pubKeys {
+			thisSigner := pubKey.Address().Bytes()
+			_signers = append(_signers, thisSigner)
+			if bytes.Equal(thisSigner, sender.Bytes()) {
+				pkIndex = index
+			}
+		}
+		if pkIndex == -1 {
+			return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", sender, _signers))
 		}
 	}
-	if pkIndex == -1 {
-		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
-	}
 
-	signatures, err := protobufTx.GetSignaturesV2()
+	signatures, err := tx.GetSignaturesV2()
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to get signatures: %s", err.Error()))
 	}
@@ -224,31 +258,12 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, sdktx
 		signMode = sdktxsigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON
 	}
 
-	if signer == nil {
-		// Assaf:
-		// We are in a situation where the contract gets a null msg.sender,
-		// however we still need to get the sign bytes for verification against the wasm input msg inside the enclave.
-		// There can be multiple signers on the tx, for example one can be the msg.sender and the another can be the gas fee payer. Another example is if this tx also contains MsgMultiSend which supports multiple msg.senders thus requiring multiple signers.
-		// Not sure if we should support this or if this even matters here, as we're most likely here because it's an incoming IBC tx and the signer is the relayer.
-		// Gor now we will just take the first signer.
-
-		signer = protobufTx.GetSigners()[0]
-	}
-
-	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer)
+	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, sender)
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
 	}
 
-	txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
-	modeHandler := txConfig.SignModeHandler()
-	signingData := authsigning.SignerData{
-		ChainID:       ctx.ChainID(),
-		AccountNumber: signerAcc.GetAccountNumber(),
-		Sequence:      signerAcc.GetSequence() - 1,
-	}
-
-	signBytes, err := modeHandler.GetSignBytes(signMode, signingData, protobufTx)
+	signBytes, err := authtx.DirectSignBytes(rawTx.BodyBytes, rawTx.AuthInfoBytes, ctx.ChainID(), signerAcc.GetAccountNumber())
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
 	}
@@ -268,7 +283,7 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, sdktx
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, "couldn't marshal public key")
 	}
-	return signBytes, signMode, modeInfoBytes, pkBytes, tx.Signatures[pkIndex], nil
+	return signBytes, signMode, modeInfoBytes, pkBytes, rawTx.Signatures[pkIndex], nil
 }
 
 func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1wasmTypes.SubMsg, error) {

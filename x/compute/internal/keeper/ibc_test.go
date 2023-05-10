@@ -17,14 +17,23 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/log"
+
+	ibcclienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
+	ibcchanneltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 )
 
 const defaultGasForIbcTests = 600_000
 
 func ibcChannelConnectHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
-	gas uint64, shouldSendOpenAck bool, channel v1types.IBCChannel,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contract sdk.AccAddress,
+	relayer sdk.AccAddress,
+	relayerPrivkey crypto.PrivKey,
+	gas uint64,
+	shouldSendOpenAck bool,
+	channel v1types.IBCChannel,
 ) (sdk.Context, []ContractEvent, cosmwasm.StdError) {
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -46,6 +55,18 @@ func ibcChannelConnectHelper(
 			},
 			OpenConfirm: nil,
 		}
+
+		msg := ibcchanneltypes.MsgChannelOpenAck{
+			PortId:                channel.Endpoint.PortID,
+			ChannelId:             channel.Endpoint.ChannelID,
+			CounterpartyChannelId: channel.CounterpartyEndpoint.ChannelID,
+			CounterpartyVersion:   channel.Version,
+			ProofTry:              []byte{},
+			ProofHeight:           ibcclienttypes.Height{},
+			Signer:                relayer.String(),
+		}
+
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
 	} else {
 		ibcChannelConnectMsg = v1types.IBCChannelConnectMsg{
 			OpenAck: nil,
@@ -53,9 +74,19 @@ func ibcChannelConnectHelper(
 				Channel: channel,
 			},
 		}
+
+		msg := ibcchanneltypes.MsgChannelOpenConfirm{
+			PortId:      channel.Endpoint.PortID,
+			ChannelId:   channel.Endpoint.ChannelID,
+			ProofAck:    []byte{},
+			ProofHeight: ibcclienttypes.Height{},
+			Signer:      relayer.String(),
+		}
+
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
 	}
 
-	err := keeper.OnConnectChannel(ctx, contractAddr, ibcChannelConnectMsg)
+	err := keeper.OnConnectChannel(ctx, contract, ibcChannelConnectMsg)
 
 	require.NotZero(t, gasMeter.GetWasmCounter(), err)
 
@@ -70,9 +101,15 @@ func ibcChannelConnectHelper(
 }
 
 func ibcChannelOpenHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
-	gas uint64, shouldSendOpenTry bool, channel v1types.IBCChannel,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contract sdk.AccAddress,
+	relayer sdk.AccAddress,
+	relayerPrivkey crypto.PrivKey,
+	gas uint64,
+	shouldSendOpenTry bool,
+	channel v1types.IBCChannel,
 ) (string, cosmwasm.StdError) {
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -94,6 +131,26 @@ func ibcChannelOpenHelper(
 			},
 			OpenInit: nil,
 		}
+
+		msg := ibcchanneltypes.MsgChannelOpenTry{
+			PortId:            channel.Endpoint.PortID,
+			PreviousChannelId: "",
+			Channel: ibcchanneltypes.Channel{
+				State:    ibcchanneltypes.TRYOPEN,
+				Ordering: v1types.IBCOrderToEnum(channel.Order),
+				Counterparty: ibcchanneltypes.Counterparty{
+					PortId:    channel.CounterpartyEndpoint.PortID,
+					ChannelId: channel.CounterpartyEndpoint.ChannelID,
+				},
+				ConnectionHops: []string{},
+				Version:        channel.Version,
+			},
+			CounterpartyVersion: channel.Version,
+			ProofInit:           []byte{},
+			ProofHeight:         ibcclienttypes.Height{},
+			Signer:              relayer.String(),
+		}
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
 	} else {
 		ibcChannelOpenMsg = v1types.IBCChannelOpenMsg{
 			OpenTry: nil,
@@ -101,9 +158,25 @@ func ibcChannelOpenHelper(
 				Channel: channel,
 			},
 		}
+
+		msg := ibcchanneltypes.MsgChannelOpenInit{
+			PortId: channel.Endpoint.PortID,
+			Channel: ibcchanneltypes.Channel{
+				State:    ibcchanneltypes.INIT,
+				Ordering: v1types.IBCOrderToEnum(channel.Order),
+				Counterparty: ibcchanneltypes.Counterparty{
+					PortId:    channel.CounterpartyEndpoint.PortID,
+					ChannelId: channel.CounterpartyEndpoint.ChannelID,
+				},
+				ConnectionHops: []string{},
+				Version:        channel.Version,
+			},
+			Signer: relayer.String(),
+		}
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
 	}
 
-	res, err := keeper.OnOpenChannel(ctx, contractAddr, ibcChannelOpenMsg)
+	res, err := keeper.OnOpenChannel(ctx, contract, ibcChannelOpenMsg)
 
 	require.NotZero(t, gasMeter.GetWasmCounter(), err)
 
@@ -115,9 +188,15 @@ func ibcChannelOpenHelper(
 }
 
 func ibcChannelCloseHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
-	gas uint64, shouldSendCloseConfirn bool, channel v1types.IBCChannel,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contract sdk.AccAddress,
+	relayer sdk.AccAddress,
+	relayerPrivkey crypto.PrivKey,
+	gas uint64,
+	shouldSendCloseConfirn bool,
+	channel v1types.IBCChannel,
 ) (sdk.Context, []ContractEvent, cosmwasm.StdError) {
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -138,6 +217,15 @@ func ibcChannelCloseHelper(
 			},
 			CloseInit: nil,
 		}
+
+		msg := ibcchanneltypes.MsgChannelCloseConfirm{
+			PortId:      channel.Endpoint.PortID,
+			ChannelId:   channel.Endpoint.ChannelID,
+			ProofInit:   []byte{},
+			ProofHeight: ibcclienttypes.Height{},
+			Signer:      relayer.String(),
+		}
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
 	} else {
 		ibcChannelCloseMsg = v1types.IBCChannelCloseMsg{
 			CloseConfirm: nil,
@@ -145,9 +233,16 @@ func ibcChannelCloseHelper(
 				Channel: channel,
 			},
 		}
+
+		msg := ibcchanneltypes.MsgChannelCloseInit{
+			PortId:    channel.Endpoint.PortID,
+			ChannelId: channel.Endpoint.ChannelID,
+			Signer:    relayer.String(),
+		}
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
 	}
 
-	err := keeper.OnCloseChannel(ctx, contractAddr, ibcChannelCloseMsg)
+	err := keeper.OnCloseChannel(ctx, contract, ibcChannelCloseMsg)
 
 	require.NotZero(t, gasMeter.GetWasmCounter(), err)
 
@@ -186,9 +281,15 @@ func createIBCPacket(src v1types.IBCEndpoint, dest v1types.IBCEndpoint, sequence
 }
 
 func ibcPacketReceiveHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey,
-	shouldEncryptMsg bool, gas uint64, packet v1types.IBCPacket,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	relayer sdk.AccAddress,
+	relayerPrivkey crypto.PrivKey,
+	shouldEncryptMsg bool,
+	gas uint64,
+	packet v1types.IBCPacket,
 ) (sdk.Context, []byte, []ContractEvent, []byte, cosmwasm.StdError) {
 	var nonce []byte
 	internalPacket := packet
@@ -224,6 +325,27 @@ func ibcPacketReceiveHelper(
 		Packet:  internalPacket,
 		Relayer: "relayer",
 	}
+
+	msg := ibcchanneltypes.MsgRecvPacket{
+		Packet: ibcchanneltypes.Packet{
+			Sequence:           internalPacket.Sequence,
+			SourcePort:         internalPacket.Src.PortID,
+			SourceChannel:      internalPacket.Src.ChannelID,
+			DestinationPort:    internalPacket.Dest.PortID,
+			DestinationChannel: internalPacket.Dest.ChannelID,
+			Data:               internalPacket.Data,
+			TimeoutHeight: ibcclienttypes.Height{
+				RevisionNumber: internalPacket.Timeout.Block.Revision,
+				RevisionHeight: internalPacket.Timeout.Block.Height,
+			},
+			TimeoutTimestamp: internalPacket.Timeout.Timestamp,
+		},
+		ProofCommitment: []byte{},
+		ProofHeight:     ibcclienttypes.Height{},
+		Signer:          relayer.String(),
+	}
+
+	ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
 
 	res, err := keeper.OnRecvPacket(ctx, contractAddr, ibcPacketReceiveMsg)
 
@@ -320,9 +442,9 @@ func ibcPacketTimeoutHelper(
 }
 
 func TestIBCChannelOpen(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 
 	ibcChannel := v1types.IBCChannel{
@@ -333,7 +455,7 @@ func TestIBCChannelOpen(t *testing.T) {
 		ConnectionID:         "1",
 	}
 
-	version, err := ibcChannelOpenHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, false, ibcChannel)
+	version, err := ibcChannelOpenHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, defaultGasForTests, false, ibcChannel)
 	require.Empty(t, err)
 	require.Equal(t, version, "ibc-v1")
 
@@ -344,9 +466,9 @@ func TestIBCChannelOpen(t *testing.T) {
 }
 
 func TestIBCChannelOpenTry(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 
 	ibcChannel := v1types.IBCChannel{
@@ -357,7 +479,7 @@ func TestIBCChannelOpenTry(t *testing.T) {
 		ConnectionID:         "1",
 	}
 
-	version, err := ibcChannelOpenHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, true, ibcChannel)
+	version, err := ibcChannelOpenHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, defaultGasForTests, true, ibcChannel)
 	require.Empty(t, err)
 	require.Equal(t, version, "ibc-v1")
 
@@ -368,9 +490,9 @@ func TestIBCChannelOpenTry(t *testing.T) {
 }
 
 func TestIBCChannelConnect(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 
 	for _, test := range []struct {
@@ -439,7 +561,7 @@ func TestIBCChannelConnect(t *testing.T) {
 				ConnectionID:         test.connectionID,
 			}
 
-			ctx, events, err := ibcChannelConnectHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForIbcTests, false, ibcChannel)
+			ctx, events, err := ibcChannelConnectHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, defaultGasForIbcTests, false, ibcChannel)
 
 			if !test.isSuccess {
 				require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
@@ -492,9 +614,9 @@ func TestIBCChannelConnect(t *testing.T) {
 }
 
 func TestIBCChannelConnectOpenAck(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 
 	ibcChannel := v1types.IBCChannel{
@@ -505,7 +627,7 @@ func TestIBCChannelConnectOpenAck(t *testing.T) {
 		ConnectionID:         "1",
 	}
 
-	ctx, _, err = ibcChannelConnectHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, true, ibcChannel)
+	ctx, _, err = ibcChannelConnectHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, defaultGasForTests, true, ibcChannel)
 	require.Empty(t, err)
 
 	queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
@@ -515,9 +637,9 @@ func TestIBCChannelConnectOpenAck(t *testing.T) {
 }
 
 func TestIBCChannelClose(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
 	require.Empty(t, err)
 
 	for _, test := range []struct {
@@ -586,7 +708,7 @@ func TestIBCChannelClose(t *testing.T) {
 				ConnectionID:         test.connectionID,
 			}
 
-			ctx, events, err := ibcChannelCloseHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForIbcTests, true, ibcChannel)
+			ctx, events, err := ibcChannelCloseHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, defaultGasForIbcTests, true, ibcChannel)
 
 			if !test.isSuccess {
 				require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
@@ -639,9 +761,9 @@ func TestIBCChannelClose(t *testing.T) {
 }
 
 func TestIBCChannelCloseInit(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 
 	ibcChannel := v1types.IBCChannel{
@@ -652,7 +774,7 @@ func TestIBCChannelCloseInit(t *testing.T) {
 		ConnectionID:         "1",
 	}
 
-	ctx, _, err = ibcChannelCloseHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForTests, false, ibcChannel)
+	ctx, _, err = ibcChannelCloseHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, defaultGasForTests, false, ibcChannel)
 	require.Empty(t, err)
 
 	queryRes, err := queryHelper(t, keeper, ctx, contractAddress, `{"q":{}}`, true, true, math.MaxUint64)
@@ -662,9 +784,9 @@ func TestIBCChannelCloseInit(t *testing.T) {
 }
 
 func TestIBCPacketReceive(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 	for _, isEncrypted := range []bool{false, true} {
 		for _, test := range []struct {
@@ -739,7 +861,7 @@ func TestIBCPacketReceive(t *testing.T) {
 					createIBCTimeout(math.MaxUint64),
 					[]byte{},
 				)
-				ctx, nonce, events, data, err := ibcPacketReceiveHelper(t, keeper, ctx, contractAddress, privKeyA, isEncrypted, defaultGasForIbcTests, ibcPacket)
+				ctx, nonce, events, data, err := ibcPacketReceiveHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, isEncrypted, defaultGasForIbcTests, ibcPacket)
 
 				if !test.isSuccess {
 					require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
@@ -799,7 +921,7 @@ type ContractInfo struct {
 }
 
 func TestIBCPacketReceiveCallsV010Contract(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
 	wasmCode, err := os.ReadFile(TestContractPaths[v010Contract])
 	require.NoError(t, err)
@@ -811,9 +933,9 @@ func TestIBCPacketReceiveCallsV010Contract(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
 	require.Empty(t, err)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"counter":{"counter":10}}`, true, false, defaultGasForIbcTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privkeyA, `{"counter":{"counter":10}}`, true, false, defaultGasForIbcTests)
 	require.Empty(t, err)
 	contractInfo := ContractInfo{
 		Address: v010ContractAddress.String(),
@@ -834,7 +956,7 @@ func TestIBCPacketReceiveCallsV010Contract(t *testing.T) {
 
 	for _, isEncrypted := range []bool{true, true} {
 		t.Run(fmt.Sprintf("Encryption:%t", isEncrypted), func(t *testing.T) {
-			ctx, _, _, data, err := ibcPacketReceiveHelper(t, keeper, ctx, contractAddress, privKeyA, isEncrypted, defaultGasForIbcTests, ibcPacket)
+			ctx, _, _, data, err := ibcPacketReceiveHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, isEncrypted, defaultGasForIbcTests, ibcPacket)
 			require.Empty(t, err)
 			require.Equal(t, "\"out\"", string(data))
 
@@ -856,9 +978,9 @@ func TestIBCPacketReceiveCallsV010Contract(t *testing.T) {
 }
 
 func TestIBCPacketAck(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
 	require.Empty(t, err)
 
 	for _, test := range []struct {
@@ -928,7 +1050,7 @@ func TestIBCPacketAck(t *testing.T) {
 			ack := make([]byte, 8)
 			binary.LittleEndian.PutUint64(ack, uint64(test.sequence))
 
-			ctx, events, err := ibcPacketAckHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForIbcTests, ibcPacket, ack)
+			ctx, events, err := ibcPacketAckHelper(t, keeper, ctx, contractAddress, privkeyA, defaultGasForIbcTests, ibcPacket, ack)
 
 			if !test.isSuccess {
 				require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
@@ -981,9 +1103,9 @@ func TestIBCPacketAck(t *testing.T) {
 }
 
 func TestIBCPacketTimeout(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privkeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privkeyA, `{"init":{}}`, true, true, defaultGasForIbcTests)
 	require.Empty(t, err)
 
 	for _, test := range []struct {
@@ -1051,7 +1173,7 @@ func TestIBCPacketTimeout(t *testing.T) {
 				[]byte{},
 			)
 
-			ctx, events, err := ibcPacketTimeoutHelper(t, keeper, ctx, contractAddress, privKeyA, defaultGasForIbcTests, ibcPacket)
+			ctx, events, err := ibcPacketTimeoutHelper(t, keeper, ctx, contractAddress, privkeyA, defaultGasForIbcTests, ibcPacket)
 
 			if !test.isSuccess {
 				require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
