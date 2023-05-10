@@ -3,7 +3,6 @@ package keeper
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -97,7 +96,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
-	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
@@ -611,18 +609,6 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract)
 
 	res.Events = ctx.EventManager().Events().ToABCIEvents()
 	return res, nil
-}
-
-func PrepareIBCOpenAck(t *testing.T, keeper Keeper, ctx sdk.Context, ibcOpenAck v1types.IBCOpenAck, ibcOpenConfirm v1types.IBCOpenConfirm) sdk.Context {
-	channelConnectMsg := v1types.IBCChannelConnectMsg{
-		OpenAck:     &ibcOpenAck,
-		OpenConfirm: &ibcOpenConfirm,
-	}
-
-	txBytes, err := json.Marshal(channelConnectMsg)
-	require.NoError(t, err)
-
-	return ctx.WithTxBytes(txBytes)
 }
 
 func PrepareExecSignedTxWithMultipleMsgs(
