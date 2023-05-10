@@ -270,7 +270,7 @@ jobs:
         name: Check Mitigation flags in TM Enclave
         with:
           filename: "tendermint_enclave.signed.so"
-          min-fence: "10"
+          min-fence: "1000"
 
   Release:
     needs:
