@@ -133,10 +133,8 @@ echo "UPGRADE_BLOCK = ${UPGRADE_BLOCK}"
 
 Apply the upgrade.
 
-Wait until you see `ERR CONSENSUS FAILURE!!! err="UPGRADE \"v1.9\" NEEDED at height` in BOTH of the logs, then run:
-
-Copy binaries from v1.9 chain to v1.8 chain.
-
+Wait until you see `ERR CONSENSUS FAILURE!!! err="UPGRADE \"v1.9\" NEEDED at height` in BOTH of the logs,
+then, from the root directory of the project, run:
 ```bash
 FEATURES="verify-validator-whitelist,light-client-validation,random" SGX_MODE=SW make build-linux
 
