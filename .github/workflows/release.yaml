@@ -266,11 +266,14 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/check-objdump
         name: Check Mitigation flags in Cosmwasm Enclave
+        with:
+          version: "v1.9.0"
       - uses: ./.github/actions/check-objdump
         name: Check Mitigation flags in TM Enclave
         with:
           filename: "tendermint_enclave.signed.so"
           min-fence: "1000"
+          version: "v1.9.0"
 
   Release:
     needs:
