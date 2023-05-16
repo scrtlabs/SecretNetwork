@@ -348,6 +348,9 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.ICAHostKeeper = &icaHostKeeper
 
+	icaAuthKeeper := icaauthkeeper.NewKeeper(appCodec, ak.keys[icaauthtypes.StoreKey], *ak.ICAControllerKeeper, ak.ScopedICAAuthKeeper)
+	ak.ICAAuthKeeper = &icaAuthKeeper
+
 	icaHostIBCModule := icahost.NewIBCModule(*ak.ICAHostKeeper)
 
 	// Create Transfer Keepers
