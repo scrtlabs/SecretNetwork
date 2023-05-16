@@ -2,13 +2,14 @@ package app
 
 import (
 	"fmt"
-	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
-	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
-	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
+	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -21,6 +22,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
+	"github.com/cosmos/cosmos-sdk/store/iavl"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/authz"
@@ -308,6 +310,30 @@ func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
 func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	// Fix v1.9 fuckup
+	if ctx.BlockHeight() == 8861811 {
+		ibcSwitchStore := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcswitchtypes.StoreKey)).(*iavl.Store)
+		err := commitStoreToLatestHeight(ctx, ibcSwitchStore, "ibc switch")
+		if err != nil {
+			ctx.Logger().Info("Error rolling back store for 'ibc switch'")
+			panic(err)
+		}
+
+		ibcFeeStore := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcfeetypes.StoreKey)).(*iavl.Store)
+		err = commitStoreToLatestHeight(ctx, ibcFeeStore, "ibc fee")
+		if err != nil {
+			ctx.Logger().Info("Error rolling back store for 'ibc fee'")
+			panic(err)
+		}
+
+		ibcPFMStore := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(packetforwardtypes.StoreKey)).(*iavl.Store)
+		err = commitStoreToLatestHeight(ctx, ibcPFMStore, "ibc pfm")
+		if err != nil {
+			ctx.Logger().Info("Error rolling back store for 'ibc pfm'")
+			panic(err)
+		}
+	}
+
 	return app.mm.BeginBlock(ctx, req)
 }
 
@@ -521,4 +547,27 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		reg.ModuleName,
 		ibcswitchtypes.ModuleName,
 	)
+}
+
+// this function takes a store and commits the store state, moving it's version/height by X
+// the purpose of this function is to move the height of a store(which is behind) to latest.
+func commitStoreToLatestHeight(ctx sdk.Context, store *iavl.Store, storeName string) error {
+	// If there is already version for the latest or latest-1 blocks height, then we don't do anything
+	if store.VersionExists(ctx.BlockHeight()) || store.VersionExists(ctx.BlockHeight()-1) {
+		ctx.Logger().Info("Latest version is already stored, the store doesn't need fixing")
+		return nil
+	}
+
+	ctx.Logger().Info("Equalizing store height...")
+	for store.LastCommitID().Version >= ctx.BlockHeight() {
+		ctx.Logger().Info("Rolling back height %d for store %s", store.LastCommitID().Version, storeName)
+
+		err := store.DeleteVersions(store.LastCommitID().Version)
+		if err != nil {
+			return err
+		}
+	}
+	ctx.Logger().Info("Finished equalizing store height")
+
+	return nil
 }
