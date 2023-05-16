@@ -322,30 +322,24 @@ func fixStores(
 
 	// Fix v1.9 fuckup
 	store := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcswitchtypes.StoreKey)).(*iavl.Store)
-	for store.LastCommitID().Version >= 8861811 {
-		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcswitcht")
-		err := store.DeleteVersions(store.LastCommitID().Version)
-		if err != nil {
-			panic(err)
-		}
+	fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcswitch")
+	_, err := store.LoadVersionForOverwriting(8861810)
+	if err != nil {
+		panic(err)
 	}
 
 	store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcfeetypes.StoreKey)).(*iavl.Store)
-	for store.LastCommitID().Version >= 8861811 {
-		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcfeetypes")
-		err := store.DeleteVersions(store.LastCommitID().Version)
-		if err != nil {
-			panic(err)
-		}
+	fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcfee")
+	_, err = store.LoadVersionForOverwriting(8861810)
+	if err != nil {
+		panic(err)
 	}
 
 	store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(packetforwardtypes.StoreKey)).(*iavl.Store)
-	for store.LastCommitID().Version >= 8861811 {
-		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "packetforwardtypes")
-		err := store.DeleteVersions(store.LastCommitID().Version)
-		if err != nil {
-			panic(err)
-		}
+	fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "packetforward")
+	_, err = store.LoadVersionForOverwriting(8861810)
+	if err != nil {
+		panic(err)
 	}
 
 	return app.ExportAppStateAndValidators(forZeroHeight, jailWhiteList, modulesToExport)
