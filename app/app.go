@@ -312,26 +312,29 @@ func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	// Fix v1.9 fuckup
 	if ctx.BlockHeight() == 8861811 {
-		ibcSwitchStore := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcswitchtypes.StoreKey)).(*iavl.Store)
-		err := commitStoreToLatestHeight(ctx, ibcSwitchStore, "ibc switch")
+		store := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcswitchtypes.StoreKey)).(*iavl.Store)
+		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcswitch")
+		_, err := store.LoadVersionForOverwriting(8861810)
 		if err != nil {
-			ctx.Logger().Info("Error rolling back store for 'ibc switch'")
 			panic(err)
 		}
+		fmt.Printf("Store %s is now at height %d\n", "ibcswitch", store.LastCommitID().Version)
 
-		ibcFeeStore := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcfeetypes.StoreKey)).(*iavl.Store)
-		err = commitStoreToLatestHeight(ctx, ibcFeeStore, "ibc fee")
+		store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcfeetypes.StoreKey)).(*iavl.Store)
+		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcfee")
+		_, err = store.LoadVersionForOverwriting(8861810)
 		if err != nil {
-			ctx.Logger().Info("Error rolling back store for 'ibc fee'")
 			panic(err)
 		}
+		fmt.Printf("Store %s is now at height %d\n", "ibcfee", store.LastCommitID().Version)
 
-		ibcPFMStore := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(packetforwardtypes.StoreKey)).(*iavl.Store)
-		err = commitStoreToLatestHeight(ctx, ibcPFMStore, "ibc pfm")
+		store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(packetforwardtypes.StoreKey)).(*iavl.Store)
+		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "packetforward")
+		_, err = store.LoadVersionForOverwriting(8861810)
 		if err != nil {
-			ctx.Logger().Info("Error rolling back store for 'ibc pfm'")
 			panic(err)
 		}
+		fmt.Printf("Store %s is now at height %d\n", "packetforward", store.LastCommitID().Version)
 	}
 
 	return app.mm.BeginBlock(ctx, req)
