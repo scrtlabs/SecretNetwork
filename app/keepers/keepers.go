@@ -64,6 +64,7 @@ import (
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
+	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 )
 
 type SecretAppKeepers struct {
@@ -351,6 +352,8 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	icaAuthKeeper := icaauthkeeper.NewKeeper(appCodec, ak.keys[icaauthtypes.StoreKey], *ak.ICAControllerKeeper, ak.ScopedICAAuthKeeper)
 	ak.ICAAuthKeeper = &icaAuthKeeper
 
+	icaAuthIBCModule := icaauth.NewIBCModule(*ak.ICAAuthKeeper)
+
 	icaHostIBCModule := icahost.NewIBCModule(*ak.ICAHostKeeper)
 
 	// Create Transfer Keepers
@@ -392,7 +395,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 
 	// initialize ICA module with mock module as the authentication module on the controller side
 	var icaControllerStack porttypes.IBCModule
-	icaControllerStack = icacontroller.NewIBCMiddleware(icaControllerStack, *ak.ICAControllerKeeper)
+	icaControllerStack = icacontroller.NewIBCMiddleware(icaAuthIBCModule, *ak.ICAControllerKeeper)
 	icaControllerStack = ibcfee.NewIBCMiddleware(icaControllerStack, ak.IbcFeeKeeper)
 	icaControllerStack = ibcswitch.NewIBCMiddleware(icaControllerStack, ak.IbcSwitchKeeper)
 
