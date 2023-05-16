@@ -114,6 +114,7 @@ pub fn init(
         msg,
         true,
         true,
+        HandleType::HANDLE_TYPE_EXECUTE, // unused in init, but same behavior as execute
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -292,6 +293,7 @@ pub fn handle(
         msg,
         should_validate_sig_info,
         should_validate_input,
+        parsed_handle_type.clone(),
     )?;
 
     let mut validated_msg = decrypted_msg.clone();

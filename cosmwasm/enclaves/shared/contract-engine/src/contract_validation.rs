@@ -365,6 +365,7 @@ pub fn verify_params(
     og_msg: &[u8],
     should_validate_sig_info: bool,
     should_validate_input: bool,
+    handle_type: HandleType,
 ) -> Result<(), EnclaveError> {
     if should_validate_sig_info {
         debug!("Verifying message signatures for: {:?}", sig_info);
@@ -438,8 +439,14 @@ pub fn verify_params(
         let messages = get_messages(sig_info)?;
 
         // let start = Instant::now();
-        let is_verified =
-            verify_message_params(&messages, sender, sent_funds, contract_address, msg);
+        let is_verified = verify_message_params(
+            &messages,
+            sender,
+            sent_funds,
+            contract_address,
+            msg,
+            handle_type,
+        );
         // let duration = start.elapsed();
         // trace!(
         //     "verify_params: Time elapsed in verify_message_params: {:?}",
@@ -633,7 +640,10 @@ fn get_verified_msg<'sd>(
     messages: &'sd [CosmWasmMsg],
     msg_sender: &CanonicalAddr,
     sent_msg: &SecretMessage,
+    handle_type: HandleType,
 ) -> Option<&'sd CosmWasmMsg> {
+    trace!("get_verified_msg: {:?}", messages);
+
     messages.iter().find(|&m| match m {
         CosmWasmMsg::Execute { msg, sender, .. }
         | CosmWasmMsg::Instantiate {
@@ -641,7 +651,18 @@ fn get_verified_msg<'sd>(
             sender,
             ..
         } => msg_sender == sender && &sent_msg.to_vec() == msg,
-        CosmWasmMsg::MsgRecvPacket { data, .. } => sent_msg.msg == *data,
+        CosmWasmMsg::MsgRecvPacket { data, .. } => match handle_type {
+            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
+                &sent_msg.msg == data // plaintext
+                 || &sent_msg.to_vec() == data // encrypted
+            }
+            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
+                // TODO:
+                // parase data as {wasm:{contract:..,msg:...}} JSON and make sure wasm.msg == send_msg (maybe use sorted JSON?)
+                false
+            }
+            _ => false,
+        },
         CosmWasmMsg::Other => false,
     })
 }
@@ -877,13 +898,14 @@ fn verify_message_params(
     sent_funds: &[Coin],
     contract_address: &HumanAddr,
     sent_msg: &SecretMessage,
+    handle_type: HandleType,
 ) -> bool {
     debug!("Verifying sender...");
 
     info!("Verifying message...");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
-    let msg = get_verified_msg(messages, sender, sent_msg);
+    let msg = get_verified_msg(messages, sender, sent_msg, handle_type);
     if msg.is_none() {
         debug!("Message verification failed!");
         trace!(
