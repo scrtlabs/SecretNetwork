@@ -311,30 +311,35 @@ func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 // BeginBlocker application updates every begin block
 func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	// Fix v1.9 fuckup
-	if ctx.BlockHeight() == 8861811 {
-		store := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcswitchtypes.StoreKey)).(*iavl.Store)
-		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcswitch")
-		_, err := store.LoadVersionForOverwriting(8861810)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("Store %s is now at height %d\n", "ibcswitch", store.LastCommitID().Version)
+	nextBlock := int64(8861811)
 
-		store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcfeetypes.StoreKey)).(*iavl.Store)
-		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcfee")
-		_, err = store.LoadVersionForOverwriting(8861810)
+	if ctx.BlockHeight() == nextBlock {
+		storeKey := ibcswitchtypes.StoreKey
+		store := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(storeKey)).(*iavl.Store)
+		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, storeKey)
+		_, err := store.LoadVersionForOverwriting(nextBlock - 1)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Store %s is now at height %d\n", "ibcfee", store.LastCommitID().Version)
+		fmt.Printf("Store %s is now at height %d\n", storeKey, store.LastCommitID().Version)
 
-		store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(packetforwardtypes.StoreKey)).(*iavl.Store)
-		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "packetforward")
-		_, err = store.LoadVersionForOverwriting(8861810)
+		storeKey = ibcfeetypes.StoreKey
+		store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(storeKey)).(*iavl.Store)
+		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, storeKey)
+		_, err = store.LoadVersionForOverwriting(nextBlock - 1)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Store %s is now at height %d\n", "packetforward", store.LastCommitID().Version)
+		fmt.Printf("Store %s is now at height %d\n", storeKey, store.LastCommitID().Version)
+
+		storeKey = packetforwardtypes.StoreKey
+		store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(storeKey)).(*iavl.Store)
+		fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, storeKey)
+		_, err = store.LoadVersionForOverwriting(nextBlock - 1)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Store %s is now at height %d\n", storeKey, store.LastCommitID().Version)
 	}
 
 	return app.mm.BeginBlock(ctx, req)
