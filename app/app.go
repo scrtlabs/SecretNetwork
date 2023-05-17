@@ -320,13 +320,14 @@ func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBegin
 			store := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(storeKey)).(*iavl.Store)
 
 			if store.LastCommitID().Version >= ctx.BlockHeight() {
-				ctx.Logger().Info("Rolling back height %d for store %s\n", store.LastCommitID().Version, storeKey)
-				_, err := store.LoadVersionForOverwriting(ctx.BlockHeight() - 1)
+				ctx.Logger().Info(fmt.Sprintf("Rolling back height %v for store %v\n", store.LastCommitID().Version, storeKey))
+				_, err := store.LoadVersionForOverwriting(ctx.BlockHeight() - 2)
 				if err != nil {
 					ctx.Logger().Error("Error: %+v\n", err)
 					panic(err)
 				}
-				ctx.Logger().Info("Store %s is now at height %d\n", storeKey, store.LastCommitID().Version)
+				store.Commit()
+				ctx.Logger().Info(fmt.Sprintf("Store %v is now at height %v\n", storeKey, store.LastCommitID().Version))
 			}
 
 		}
