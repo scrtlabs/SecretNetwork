@@ -547,26 +547,3 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		ibcswitchtypes.ModuleName,
 	)
 }
-
-// this function takes a store and commits the store state, moving it's version/height by X
-// the purpose of this function is to move the height of a store(which is behind) to latest.
-func commitStoreToLatestHeight(ctx sdk.Context, store *iavl.Store, storeName string) error {
-	// If there is already version for the latest or latest-1 blocks height, then we don't do anything
-	if store.VersionExists(ctx.BlockHeight()) || store.VersionExists(ctx.BlockHeight()-1) {
-		ctx.Logger().Info("Latest version is already stored, the store doesn't need fixing")
-		return nil
-	}
-
-	ctx.Logger().Info("Equalizing store height...")
-	for store.LastCommitID().Version >= ctx.BlockHeight() {
-		ctx.Logger().Info("Rolling back height %d for store %s", store.LastCommitID().Version, storeName)
-
-		err := store.DeleteVersions(store.LastCommitID().Version)
-		if err != nil {
-			return err
-		}
-	}
-	ctx.Logger().Info("Finished equalizing store height")
-
-	return nil
-}
