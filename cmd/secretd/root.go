@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	"github.com/cosmos/cosmos-sdk/store/iavl"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
@@ -45,6 +46,10 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	secretlegacy "github.com/scrtlabs/SecretNetwork/app/legacy"
+
+	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
+	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 )
 
 // thanks @terra-project for this fix
@@ -169,7 +174,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		debug.Cmd(),
 	)
 
-	server.AddCommands(rootCmd, app.DefaultNodeHome, newApp, exportAppStateAndTMValidators, addModuleInitFlags)
+	server.AddCommands(rootCmd, app.DefaultNodeHome, newApp, fixStores, addModuleInitFlags)
 
 	// add keybase, auxiliary RPC, query, and tx child commands
 	rootCmd.AddCommand(
@@ -310,25 +315,42 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 	)
 }
 
-func exportAppStateAndTMValidators(
+func fixStores(
 	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailWhiteList []string, appOpts servertypes.AppOptions, modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
-	bootstrap := viper.GetBool("bootstrap")
+	app := app.NewSecretNetworkApp(logger, db, traceStore, true, map[int64]bool{}, "", uint(1), false, appOpts, compute.DefaultWasmConfig())
 
-	// encCfg := app.MakeEncodingConfig()
-	// encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
-	var wasmApp *app.SecretNetworkApp
-	if height != -1 {
-		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, map[int64]bool{}, "", uint(1), bootstrap, appOpts, compute.DefaultWasmConfig())
-
-		if err := wasmApp.LoadHeight(height); err != nil {
-			return servertypes.ExportedApp{}, err
-		}
-	} else {
-		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, true, map[int64]bool{}, "", uint(1), bootstrap, appOpts, compute.DefaultWasmConfig())
+	// Fix v1.9 fuckup
+	store := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcswitchtypes.StoreKey)).(*iavl.Store)
+	fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcswitch")
+	_, err := store.LoadVersionForOverwriting(8861809)
+	if err != nil {
+		panic(err)
 	}
+	store.Commit()
 
-	return wasmApp.ExportAppStateAndValidators(forZeroHeight, jailWhiteList, modulesToExport)
+	store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(ibcfeetypes.StoreKey)).(*iavl.Store)
+	fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "ibcfee")
+	_, err = store.LoadVersionForOverwriting(8861809)
+	if err != nil {
+		panic(err)
+	}
+	store.Commit()
+
+	store = app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(packetforwardtypes.StoreKey)).(*iavl.Store)
+	fmt.Printf("Rolling back height %d for store %s\n", store.LastCommitID().Version, "packetforward")
+	_, err = store.LoadVersionForOverwriting(8861809)
+	if err != nil {
+		panic(err)
+	}
+	store.Commit()
+
+	return servertypes.ExportedApp{
+		AppState:        nil,
+		Validators:      nil,
+		Height:          height,
+		ConsensusParams: nil,
+	}, nil
 }
 
 // writeParamsAndConfigCmd patches the write-params cmd to additionally update the app pruning config.
