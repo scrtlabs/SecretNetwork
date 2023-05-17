@@ -310,7 +310,7 @@ func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
 func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
-	// Fix v1.9 fuckup
+	// Fix v1.9 mishap
 	if ctx.BlockHeight() < 8861820 {
 		for _, storeKey := range []string{
 			ibcswitchtypes.StoreKey,
