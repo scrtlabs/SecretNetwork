@@ -41,6 +41,9 @@ func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byt
 	if len(result.ProofOps.Ops) != 1 {
 		return nil, nil, fmt.Errorf("error in retrieving proof for key: %+v, got: %+v", key, result.ProofOps.Ops)
 	}
+	if result.ProofOps.Ops[0].Data == nil {
+		return nil, nil, fmt.Errorf("`iavlStore.Query()` returned an empty value for key: %+v", key)
+	}
 
 	return result.Value, result.ProofOps.Ops[0].Data, nil
 }

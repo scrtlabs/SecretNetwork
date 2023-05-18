@@ -154,7 +154,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, 
 
 	v, proof, err := getWithProof(kv, k, int64(block_height))
 	if err != nil {
-		return C.GoResult_Panic
+		panic(fmt.Sprintf("error getting merkle proof: %s", err.Error()))
 	}
 
 	gasAfter := gm.GasConsumed()
