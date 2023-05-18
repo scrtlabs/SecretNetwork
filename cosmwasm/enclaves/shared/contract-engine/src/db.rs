@@ -174,7 +174,7 @@ pub fn read_from_encrypted_state(
         &encrypted_key_bytes,
         block_height,
     ) {
-        Ok(((maybe_encrypted_value_bytes, maybe_proof), gas_used)) => {
+        Ok((maybe_encrypted_value_bytes, maybe_proof, gas_used)) => {
             debug!("merkle proof returned from read_db(): {:?}", maybe_proof);
             match maybe_encrypted_value_bytes {
                 Some(encrypted_value_bytes) => {
@@ -221,7 +221,7 @@ pub fn read_from_encrypted_state(
     let gas_used_second_read: u64;
     (maybe_plaintext_value, gas_used_second_read) =
         match read_db(context, &scrambled_field_name, block_height) {
-            Ok(((encrypted_value, proof), gas_used)) => {
+            Ok((encrypted_value, proof, gas_used)) => {
                 debug!("proof returned from read_db(): {:?}", proof);
                 match encrypted_value {
                     Some(plaintext_value) => {
@@ -314,11 +314,12 @@ fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] 
 }
 
 /// Safe wrapper around reads from the contract storage
+#[allow(clippy::type_complexity)]
 fn read_db(
     context: &Ctx,
     key: &[u8],
     block_height: u64,
-) -> Result<((Option<Vec<u8>>, Option<Vec<u8>>), u64), WasmEngineError> {
+) -> Result<(Option<Vec<u8>>, Option<Vec<u8>>, u64), WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut value_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut proof_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
@@ -364,7 +365,7 @@ fn read_db(
         }
     };
 
-    Ok(((value, proof), gas_used))
+    Ok((value, proof, gas_used))
 }
 
 /// Safe wrapper around reads from the contract storage
