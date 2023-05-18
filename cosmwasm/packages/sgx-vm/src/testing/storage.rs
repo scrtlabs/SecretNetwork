@@ -56,9 +56,9 @@ impl MockStorage {
 }
 
 impl Storage for MockStorage {
-    fn get(&self, _height: u64, key: &[u8]) -> FfiResult<Option<Vec<u8>>> {
+    fn get(&self, _height: u64, key: &[u8]) -> FfiResult<(Option<Vec<u8>>, Option<Vec<u8>>)> {
         let gas_info = GasInfo::with_externally_used(key.len() as u64);
-        (Ok(self.data.get(key).cloned()), gas_info)
+        (Ok((self.data.get(key).cloned(), Some(vec![]))), gas_info) // TODO is it ok to return an empty proof on MockStorage?
     }
 
     #[cfg(feature = "iterator")]

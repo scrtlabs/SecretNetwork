@@ -47,6 +47,7 @@ pub extern "C" fn ocall_read_db(
     gas_used: *mut u64,
     block_height: u64,
     value: *mut EnclaveBuffer,
+    proof: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,
 ) -> OcallReturn {
@@ -57,6 +58,7 @@ pub extern "C" fn ocall_read_db(
         gas_used,
         block_height,
         value,
+        proof,
         key,
         key_len,
     )
@@ -91,6 +93,7 @@ fn ocall_read_db_concrete(
     gas_used: *mut u64,
     height: u64,
     value: *mut EnclaveBuffer,
+    proof: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,
 ) -> OcallReturn {
@@ -101,24 +104,35 @@ fn ocall_read_db_concrete(
     std::panic::catch_unwind(|| implementation(context, height, key))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
-        .map(|result| -> Result<EnclaveBuffer, OcallReturn> {
-            match result {
-                Ok((value, gas_cost)) => {
-                    unsafe { *gas_used = gas_cost };
-                    value
-                        .map(|val| alloc_impl(&val).map_err(|_| OcallReturn::Failure))
-                        .unwrap_or_else(|| Ok(EnclaveBuffer::default()))
+        .map(
+            |result| -> Result<(EnclaveBuffer, EnclaveBuffer), OcallReturn> {
+                match result {
+                    Ok(((value, proof), gas_cost)) => {
+                        unsafe { *gas_used = gas_cost };
+
+                        if let (Some(value), Some(proof)) = (value, proof) {
+                            let val = alloc_impl(&value).map_err(|_| OcallReturn::Failure);
+                            let p = alloc_impl(&proof).map_err(|_| OcallReturn::Failure);
+
+                            val.and_then(|val| p.and_then(|p| Ok((val, p))))
+                        } else {
+                            Ok((EnclaveBuffer::default(), EnclaveBuffer::default()))
+                        }
+                    }
+                    Err(err) => {
+                        unsafe { store_vm_error(err, vm_error) };
+                        Err(OcallReturn::Failure)
+                    }
                 }
-                Err(err) => {
-                    unsafe { store_vm_error(err, vm_error) };
-                    Err(OcallReturn::Failure)
-                }
-            }
-        })
+            },
+        )
         // Return the result or report the error
         .map(|result| match result {
-            Ok(enclave_buffer) => {
-                unsafe { *value = enclave_buffer };
+            Ok((value_buffer, proof_buffer)) => {
+                unsafe {
+                    *value = value_buffer;
+                    *proof = proof_buffer
+                };
                 OcallReturn::Success
             }
             Err(err) => err,
@@ -371,7 +385,11 @@ unsafe fn store_vm_error(vm_err: VmError, location: *mut UntrustedVmError) {
 /// appropriate for it.
 #[allow(clippy::type_complexity)]
 struct ExportImplementations {
-    read_db: fn(context: Ctx, height: u64, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>,
+    read_db: fn(
+        context: Ctx,
+        height: u64,
+        key: &[u8],
+    ) -> VmResult<((Option<Vec<u8>>, Option<Vec<u8>>), u64)>,
     query_chain: fn(
         context: Ctx,
         query: &[u8],
@@ -431,7 +449,7 @@ fn ocall_read_db_impl<S, Q>(
     mut context: Ctx,
     height: u64,
     key: &[u8],
-) -> VmResult<(Option<Vec<u8>>, u64)>
+) -> VmResult<((Option<Vec<u8>>, Option<Vec<u8>>), u64)>
 where
     S: Storage,
     Q: Querier,

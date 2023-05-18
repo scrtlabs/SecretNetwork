@@ -169,15 +169,16 @@ pub fn read_from_encrypted_state(
 
     let mut maybe_plaintext_value: Option<Vec<u8>>;
     let gas_used_first_read: u64;
-    debug!("TOMMM contract_engine::db.rs before read_db");
     (maybe_plaintext_value, gas_used_first_read) = match read_db(
         context,
         &encrypted_key_bytes,
         block_height,
     ) {
-        Ok((maybe_encrypted_value_bytes, gas_used)) => match maybe_encrypted_value_bytes {
-            Some(encrypted_value_bytes) => {
-                let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
+        Ok(((maybe_encrypted_value_bytes, maybe_proof), gas_used)) => {
+            debug!("merkle proof returned from read_db(): {:?}", maybe_proof);
+            match maybe_encrypted_value_bytes {
+                Some(encrypted_value_bytes) => {
+                    let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
                     warn!(
                         "read_db() got an error while trying to read_from_encrypted_state the value {:?} for key {:?}, stopping wasm: {:?}",
                         encrypted_value_bytes,
@@ -187,20 +188,21 @@ pub fn read_from_encrypted_state(
                     WasmEngineError::DecryptionError
                 })?;
 
-                match decrypt_value_new(
-                    &encrypted_key.data,
-                    &encrypted_value.data,
-                    contract_key,
-                    &encrypted_value.salt,
-                ) {
-                    Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
-                    // This error case is why we have all the matches here.
-                    // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
-                    Err(err) => Err(err),
+                    match decrypt_value_new(
+                        &encrypted_key.data,
+                        &encrypted_value.data,
+                        contract_key,
+                        &encrypted_value.salt,
+                    ) {
+                        Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
+                        // This error case is why we have all the matches here.
+                        // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
+                        Err(err) => Err(err),
+                    }
                 }
+                None => Ok((None, gas_used)),
             }
-            None => Ok((None, gas_used)),
-        },
+        }
         Err(err) => Err(err),
     }?;
 
@@ -219,20 +221,27 @@ pub fn read_from_encrypted_state(
     let gas_used_second_read: u64;
     (maybe_plaintext_value, gas_used_second_read) =
         match read_db(context, &scrambled_field_name, block_height) {
-            Ok((encrypted_value, gas_used)) => match encrypted_value {
-                Some(plaintext_value) => {
-                    match decrypt_value_old(&scrambled_field_name, &plaintext_value, contract_key) {
-                        Ok(plaintext_value) => {
-                            let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
-                            Ok((Some(plaintext_value), gas_used))
+            Ok(((encrypted_value, proof), gas_used)) => {
+                debug!("proof returned from read_db(): {:?}", proof);
+                match encrypted_value {
+                    Some(plaintext_value) => {
+                        match decrypt_value_old(
+                            &scrambled_field_name,
+                            &plaintext_value,
+                            contract_key,
+                        ) {
+                            Ok(plaintext_value) => {
+                                let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
+                                Ok((Some(plaintext_value), gas_used))
+                            }
+                            // This error case is why we have all the matches here.
+                            // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
+                            Err(err) => Err(err),
                         }
-                        // This error case is why we have all the matches here.
-                        // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
-                        Err(err) => Err(err),
                     }
+                    None => Ok((None, gas_used)),
                 }
-                None => Ok((None, gas_used)),
-            },
+            }
             Err(err) => Err(err),
         }?;
 
@@ -309,21 +318,22 @@ fn read_db(
     context: &Ctx,
     key: &[u8],
     block_height: u64,
-) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
+) -> Result<((Option<Vec<u8>>, Option<Vec<u8>>), u64), WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
-    let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
+    let mut value_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
+    let mut proof_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
 
-    debug!("TOMMM contract-engine::db.rs before ocall_read_db");
-    let value = unsafe {
+    let (value, proof) = unsafe {
         let status = ocalls::ocall_read_db(
             (&mut ocall_return) as *mut _,
             context.unsafe_clone(),
             (&mut vm_err) as *mut _,
             (&mut gas_used) as *mut _,
             block_height,
-            enclave_buffer.as_mut_ptr(),
+            value_buffer.as_mut_ptr(),
+            proof_buffer.as_mut_ptr(),
             key.as_ptr(),
             key.len(),
         );
@@ -340,8 +350,12 @@ fn read_db(
 
         match ocall_return {
             OcallReturn::Success => {
-                let enclave_buffer = enclave_buffer.assume_init();
-                ecalls::recover_buffer(enclave_buffer)?
+                let value_buffer = value_buffer.assume_init();
+                let proof_buffer = proof_buffer.assume_init();
+                (
+                    ecalls::recover_buffer(value_buffer)?,
+                    ecalls::recover_buffer(proof_buffer)?,
+                )
             }
             OcallReturn::Failure => {
                 return Err(WasmEngineError::FailedOcall(vm_err));
@@ -350,7 +364,7 @@ fn read_db(
         }
     };
 
-    Ok((value, gas_used))
+    Ok(((value, proof), gas_used))
 }
 
 /// Safe wrapper around reads from the contract storage

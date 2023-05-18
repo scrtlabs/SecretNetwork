@@ -17,6 +17,7 @@ extern "C" {
         gas_used: *mut u64,
         block_height: u64,
         value: *mut EnclaveBuffer,
+        proof: *mut EnclaveBuffer,
         key: *const u8,
         key_len: usize,
     ) -> sgx_status_t;
