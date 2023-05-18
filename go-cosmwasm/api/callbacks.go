@@ -169,7 +169,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, 
 	if err != nil {
 		return C.GoResult_Panic
 	}
-	fmt.Printf("TOMMM proof: %+v", proof)
+	fmt.Printf("TOMMM proof: %+v\n", proof)
 
 	// v := iavl.Get(k)
 	gasAfter := gm.GasConsumed()
