@@ -2,6 +2,7 @@
 /// These functions run on-chain and must be deterministic across all nodes
 ///
 use log::*;
+use sgx_types::{sgx_status_t, SgxResult};
 use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
@@ -16,6 +17,9 @@ use enclave_utils::{
 
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
+
+#[cfg(feature = "light-client-validation")]
+use block_verifier::VERIFIED_MESSAGES;
 
 ///
 /// `ecall_authenticate_new_node`
@@ -45,7 +49,12 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     validate_mut_ptr!(seed.as_mut_ptr(), seed.len(), NodeAuthResult::InvalidInput);
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
+
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
+
+    if !verify_reg_msg(cert_slice) {
+        return NodeAuthResult::SignatureInvalid;
+    }
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         // verify certificate, and return the public key in the extra data of the report

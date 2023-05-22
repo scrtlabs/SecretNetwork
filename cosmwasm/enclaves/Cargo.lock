@@ -1470,6 +1470,7 @@ dependencies = [
  "bit-vec",
  "block-verifier",
  "chrono",
+ "cosmos_proto",
  "ctor",
  "derive_more",
  "enclave-ffi-types",
