@@ -149,6 +149,60 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveVector(code), nil
 }
 
+func Migrate(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	msg []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	sigInfo []byte,
+	admin []byte,
+	adminProof []byte,
+) ([]byte, uint64, error) {
+	id := sendSlice(code_id)
+	defer freeAfterSend(id)
+	p := sendSlice(params)
+	defer freeAfterSend(p)
+	m := sendSlice(msg)
+	defer freeAfterSend(m)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+
+	s := sendSlice(sigInfo)
+	defer freeAfterSend(s)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed u64
+	errmsg := C.Buffer{}
+
+	adminBuffer := sendSlice(admin)
+	defer freeAfterSend(adminBuffer)
+
+	adminProofBuffer := sendSlice(adminProof)
+	defer freeAfterSend(adminBuffer)
+
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
+
+	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer, adminProofBuffer)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), uint64(gasUsed), nil
+}
+
 func Instantiate(
 	cache Cache,
 	code_id []byte,

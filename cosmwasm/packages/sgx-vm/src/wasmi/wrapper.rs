@@ -10,10 +10,11 @@ use crate::enclave::ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
 
-use enclave_ffi_types::{Ctx, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, HandleResult, InitResult, MigrateResult, QueryResult};
 
 use sgx_types::sgx_status_t;
 
+use crate::wasmi::results::{migrate_result_to_vm_result, MigrateSuccess};
 use log::*;
 use serde::Deserialize;
 
@@ -90,6 +91,69 @@ where
     // This is here to avoid putting it in the module's scope
     fn busy_enclave_err() -> VmError {
         VmError::generic_err("The enclave is too busy and can not respond to this query")
+    }
+
+    pub fn migrate(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+        admin_proof: &[u8],
+    ) -> VmResult<MigrateSuccess> {
+        trace!(
+            "init() called with env: {:?} msg: {:?} gas_left: {}",
+            String::from_utf8_lossy(env),
+            String::from_utf8_lossy(msg),
+            self.gas_left()
+        );
+
+        let mut migrate_result = MaybeUninit::<MigrateResult>::uninit();
+        let mut used_gas = 0_u64;
+
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = ENCLAVE_DOORBELL
+            .get_access(1) // This can never be recursive
+            .ok_or_else(Self::busy_enclave_err)?;
+        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+
+        let status = unsafe {
+            imports::ecall_migrate(
+                enclave.geteid(),
+                migrate_result.as_mut_ptr(),
+                self.ctx.unsafe_clone(),
+                self.gas_left(),
+                &mut used_gas,
+                self.bytecode.as_ptr(),
+                self.bytecode.len(),
+                env.as_ptr(),
+                env.len(),
+                msg.as_ptr(),
+                msg.len(),
+                sig_info.as_ptr(),
+                sig_info.len(),
+                admin.as_ptr(),
+                admin.len(),
+                admin_proof.as_ptr(),
+                admin_proof.len(),
+            )
+        };
+
+        trace!(
+            "migrate() returned with gas_used: {} (gas_limit: {})",
+            used_gas,
+            self.gas_limit
+        );
+        self.consume_gas(used_gas);
+
+        match status {
+            sgx_status_t::SGX_SUCCESS => {
+                let migrate_result = unsafe { migrate_result.assume_init() };
+                migrate_result_to_vm_result(migrate_result)
+            }
+            failure_status => Err(EnclaveError::sdk_err(failure_status).into()),
+        }
     }
 
     pub fn init(

@@ -419,7 +419,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
+	response, key, adminProof, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
 	consumeGas(ctx, gasUsed)
 
 	if err != nil {
@@ -442,7 +442,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 		// persist instance
 		createdAt := types.NewAbsoluteTxPosition(ctx)
-		contractInfo := types.NewContractInfo(codeID, creator, admin, label, createdAt)
+		contractInfo := types.NewContractInfo(codeID, creator, admin, adminProof, label, createdAt)
 
 		k.storeContractInfo(ctx, contractAddress, &contractInfo)
 		store.Set(types.GetContractEnclaveKey(contractAddress), key)
@@ -462,7 +462,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	case *v1wasmTypes.Response:
 		// persist instance first
 		createdAt := types.NewAbsoluteTxPosition(ctx)
-		contractInfo := types.NewContractInfo(codeID, creator, admin, label, createdAt)
+		contractInfo := types.NewContractInfo(codeID, creator, admin, adminProof, label, createdAt)
 
 		// check for IBC flag
 		report, err := k.wasmer.AnalyzeCode(codeInfo.CodeHash)
@@ -873,10 +873,10 @@ func (k *Keeper) handleContractResponse(
 	logs []v010wasmTypes.LogAttribute,
 	evts v1wasmTypes.Events,
 	data []byte,
-	// original TX in order to extract the first 64bytes of signing info
+// original TX in order to extract the first 64bytes of signing info
 	ogTx []byte,
-	// sigInfo of the initial message that triggered the original contract call
-	// This is used mainly in replies in order to decrypt their data.
+// sigInfo of the initial message that triggered the original contract call
+// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.VerificationInfo,
 	ogCosmosMessageVersion wasmTypes.CosmosMsgVersion,
 ) ([]byte, error) {
@@ -1154,8 +1154,12 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	store := ctx.KVStore(k.storeKey)
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
-	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey)
+	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey, random)
+
+	adminProof := k.GetContractInfo(ctx, contractAddress).Admin //Proof
+	admin := k.GetContractInfo(ctx, contractAddress).Admin
 
 	// prepare querier
 	querier := QueryHandler{
@@ -1167,7 +1171,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, gasUsed, err := k.wasmer.Execute(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, wasmTypes.HandleTypeMigrate)
+	response, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, admin, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if err != nil {

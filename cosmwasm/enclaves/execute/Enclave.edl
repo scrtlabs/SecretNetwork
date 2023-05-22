@@ -106,6 +106,24 @@ enclave {
             uintptr_t msg_len
         );
 
+        public HandleResult ecall_migrate(
+            Ctx context,
+            uint64_t gas_limit,
+            [out] uint64_t* used_gas,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len,
+            [in, count=sig_info_len] const uint8_t* sig_info,
+            uintptr_t sig_info_len,
+            [in, count=admin_len] const uint8_t* admin,
+            uintptr_t admin_len,
+            [in, count=admin_proof_len] const uint8_t* admin_proof,
+            uintptr_t admin_proof_len
+        );
+
         public HealthCheckResult ecall_health_check();
 
         public uint32_t ecall_run_tests();

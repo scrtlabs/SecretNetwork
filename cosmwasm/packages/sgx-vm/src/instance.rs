@@ -326,6 +326,18 @@ where
         Ok(function)
     }
 
+    pub fn call_migrate(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+        admin_proof: &[u8],
+    ) -> VmResult<Vec<u8>> {
+        let result = self.inner.migrate(env, msg, sig_info, admin, admin_proof)?;
+        Ok(result.into_output())
+    }
+
     pub fn call_init(
         &mut self,
         env: &[u8],

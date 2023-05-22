@@ -9,7 +9,7 @@ use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::CanonicalAddr;
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
-use enclave_crypto::Ed25519PublicKey;
+use enclave_crypto::{sha_256, Ed25519PublicKey};
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 
@@ -19,7 +19,7 @@ use crate::cosmwasm_config::ContractOperation;
 use crate::contract_validation::verify_block_info;
 
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
-use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
+use crate::external::results::{HandleSuccess, InitSuccess, MigrateSuccess, QuerySuccess};
 use crate::message::{is_ibc_msg, parse_message};
 use crate::types::ParsedMessage;
 
@@ -35,7 +35,7 @@ use super::contract_validation::{
 };
 use super::gas::WasmCosts;
 use super::io::{
-    post_process_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    finalize_raw_output, manipulate_callback_sig_for_plaintext, post_process_output,
     set_all_logs_to_plaintext,
 };
 use super::types::{IoNonce, SecretMessage};
@@ -54,6 +54,13 @@ down to the wasm implementations, but because they are buffers
 we need to allocate memory regions inside the VM's instance and copy
 `env` & `msg` into those memory regions inside the VM's instance.
 */
+
+fn generate_admin_signature(admin: &[u8], code_hash: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
+    let mut data_to_hash = vec![];
+    data_to_hash.extend_from_slice(admin);
+    data_to_hash.extend_from_slice(code_hash);
+    sha_256(&data_to_hash)
+}
 
 pub fn init(
     context: Ctx,       // need to pass this to read_db & write_db
@@ -81,6 +88,8 @@ pub fn init(
         verify_block_info(&base_env)?;
     }
 
+    let admin_sig = generate_admin_signature(admin, &contract_hash);
+
     // let duration = start.elapsed();
     // trace!("Time elapsed in extract_base_env is: {:?}", duration);
     let query_depth = extract_query_depth(env)?;
@@ -91,7 +100,6 @@ pub fn init(
     // trace!("Time elapsed in get_verification_paramsis: {:?}", duration);
 
     let canonical_contract_address = to_canonical(contract_address)?;
-
     let canonical_sender_address = to_canonical(sender)?;
 
     let contract_key = generate_contract_key(
@@ -190,6 +198,7 @@ pub fn init(
     Ok(InitSuccess {
         output,
         contract_key,
+        admin_proof: admin_sig,
     })
 }
 
@@ -218,6 +227,148 @@ fn to_canonical(contract_address: &BaseAddr) -> Result<CanonicalAddr, EnclaveErr
         );
         EnclaveError::FailedToDeserialize
     })
+}
+
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
+pub fn migrate(
+    context: Ctx,
+    gas_limit: u64,
+    used_gas: &mut u64,
+    contract: &[u8],
+    env: &[u8],
+    msg: &[u8],
+    sig_info: &[u8],
+    admin: &[u8],
+    admin_proof: &[u8],
+) -> Result<MigrateSuccess, EnclaveError> {
+    trace!("Starting init");
+
+    //let start = Instant::now();
+    let contract_code = ContractCode::new(contract);
+    let contract_hash = contract_code.hash();
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
+
+    //let start = Instant::now();
+    let base_env: BaseEnv = extract_base_env(env)?;
+
+    #[cfg(feature = "light-client-validation")]
+    {
+        verify_block_info(&base_env)?;
+    }
+
+    let admin_sig = generate_admin_signature(admin, &contract_hash);
+
+    if &admin_sig != admin_proof {
+        error!("Failed to validate admin signature for migrate");
+    }
+
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in extract_base_env is: {:?}", duration);
+    let query_depth = extract_query_depth(env)?;
+
+    //let start = Instant::now();
+    let (sender, contract_address, block_height, sent_funds) = base_env.get_verification_params();
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in get_verification_paramsis: {:?}", duration);
+
+    let canonical_contract_address = to_canonical(contract_address)?;
+    let canonical_sender_address = to_canonical(sender)?;
+
+    let contract_key = generate_contract_key(
+        &canonical_sender_address,
+        &block_height,
+        &contract_hash,
+        &canonical_contract_address,
+    )?;
+
+    let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
+
+    let secret_msg = SecretMessage::from_slice(msg)?;
+
+    //let start = Instant::now();
+    verify_params(
+        &parsed_sig_info,
+        sent_funds,
+        &canonical_sender_address,
+        contract_address,
+        &secret_msg,
+        msg,
+    )?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in verify_params: {:?}", duration);
+
+    //let start = Instant::now();
+    let decrypted_msg = secret_msg.decrypt()?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in decrypt: {:?}", duration);
+
+    //let start = Instant::now();
+    let ValidatedMessage {
+        validated_msg,
+        reply_params,
+    } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in validate_msg: {:?}", duration);
+
+    //let start = Instant::now();
+    let mut engine = start_engine(
+        context,
+        gas_limit,
+        &contract_code,
+        &contract_key,
+        ContractOperation::Migrate,
+        query_depth,
+        secret_msg.nonce,
+        secret_msg.user_public_key,
+        base_env.0.block.time,
+    )?;
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in start_engine: {:?}", duration);
+
+    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
+
+    versioned_env.set_contract_hash(&contract_hash);
+
+    #[cfg(feature = "random")]
+    set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
+
+    update_msg_counter(block_height);
+    //let start = Instant::now();
+    let result = engine.migrate(&versioned_env, validated_msg);
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in engine.init: {:?}", duration);
+
+    *used_gas = engine.gas_used();
+
+    let output = result?;
+
+    engine
+        .flush_cache()
+        .map_err(|_| EnclaveError::FailedFunctionCall)?;
+
+    // TODO: copy cosmwasm's structures to enclave
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
+    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
+    //let start = Instant::now();
+
+    let output = post_process_output(
+        output,
+        &secret_msg,
+        &canonical_contract_address,
+        versioned_env.get_contract_hash(),
+        reply_params,
+        &canonical_sender_address,
+        false,
+        false,
+    )?;
+
+    // let duration = start.elapsed();
+    // trace!("Time elapsed in encrypt_output: {:?}", duration);
+
+    // todo: can move the key to somewhere in the output message if we want
+
+    Ok(MigrateSuccess { output })
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
@@ -362,8 +513,7 @@ pub fn handle(
             manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
         set_all_logs_to_plaintext(&mut raw_output);
 
-        output =
-            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false)?;
+        output = finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false)?;
     }
 
     Ok(HandleSuccess { output })

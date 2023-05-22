@@ -4,7 +4,7 @@ use log::*;
 
 use sgx_types::{sgx_enclave_id_t, sgx_status_t, SgxResult};
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, HandleResult, InitResult, MigrateResult, QueryResult};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -15,6 +15,26 @@ extern "C" {
         retval: *mut EnclaveBuffer,
         buffer: *const u8,
         length: usize,
+    ) -> sgx_status_t;
+
+    pub fn ecall_migrate(
+        eid: sgx_enclave_id_t,
+        retval: *mut MigrateResult,
+        context: Ctx,
+        gas_limit: u64,
+        used_gas: *mut u64,
+        contract: *const u8,
+        contract_len: usize,
+        env: *const u8,
+        env_len: usize,
+        msg: *const u8,
+        msg_len: usize,
+        sig_info: *const u8,
+        sig_info_len: usize,
+        admin: *const u8,
+        admin_len: usize,
+        admin_proof: *const u8,
+        admin_proof_len: usize,
     ) -> sgx_status_t;
 
     /// Trigger the init method in a wasm contract

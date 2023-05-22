@@ -302,6 +302,7 @@ pub enum InitResult {
         output: UserSpaceBuffer,
         /// The contract_key for this contract.
         contract_key: [u8; 64],
+        admin_proof: [u8; 32],
     },
     Failure {
         /// The error that happened in the enclave
@@ -313,6 +314,18 @@ pub enum InitResult {
 /// cbindgen:prefix-with-name
 #[repr(C)]
 pub enum HandleResult {
+    Success {
+        /// A pointer to the output of the calculation
+        output: UserSpaceBuffer,
+    },
+    Failure {
+        /// The error that happened in the enclave
+        err: EnclaveError,
+    },
+}
+
+#[repr(C)]
+pub enum MigrateResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,

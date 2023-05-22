@@ -78,7 +78,6 @@ const (
 	HandleTypeIbcPacketReceive
 	HandleTypeIbcPacketAck
 	HandleTypeIbcPacketTimeout
-	HandleTypeMigrate
 )
 
 type CosmosMsgVersion int

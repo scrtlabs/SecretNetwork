@@ -377,6 +377,71 @@ impl Engine {
         &self.features
     }
 
+    pub fn migrate(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+        let api_version = self.get_api_version();
+
+        self.with_instance(|instance, context| {
+            debug!("starting migrate, api version: {:?}", api_version);
+
+            let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
+
+            // let start = Instant::now();
+            let env_ptr = write_to_memory(instance, &env_bytes)?;
+            // let duration = start.elapsed();
+            // trace!(
+            //     "Time elapsed in env_bytes write_to_memory is: {:?}",
+            //     duration
+            // );
+
+            // let start = Instant::now();
+            let msg_ptr = write_to_memory(instance, &msg)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in msg write_to_memory is: {:?}", duration);
+
+            let result = match api_version {
+                CosmWasmApiVersion::V010 => {
+                    let (init, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("migrate")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    init.call_with_context(context, args)
+                }
+                CosmWasmApiVersion::V1 => {
+                    let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
+
+                    let (init, args) = (
+                        instance
+                            .find_function::<(u32, u32, u32), u32>("migrate")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_info_ptr, msg_ptr),
+                    );
+                    // let start = Instant::now();
+                    // let res =
+                    init.call_with_context(context, args)
+                    // let duration = start.elapsed();
+                    // trace!("Time elapsed in call_with_context is: {:?}", duration);
+                    // res
+                }
+                CosmWasmApiVersion::Invalid => {
+                    return Err(EnclaveError::InvalidWasm);
+                }
+            };
+            // let start = Instant::now();
+            let output_ptr = check_execution_result(instance, context, result)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in check_execution_result is: {:?}", duration);
+
+            // let start = Instant::now();
+            let output = read_from_memory(instance, output_ptr)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in read_from_memory is: {:?}", duration);
+
+            Ok(output)
+        })
+    }
+
     pub fn init(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
         let api_version = self.get_api_version();
 
@@ -849,6 +914,7 @@ fn host_read_db(
             ContractOperation::Init => true,
             ContractOperation::Handle => true,
             ContractOperation::Query => false,
+            ContractOperation::Migrate => true,
         },
         &mut context.kv_cache,
         &get_encryption_salt(context.timestamp),
