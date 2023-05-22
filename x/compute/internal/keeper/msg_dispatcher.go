@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -27,6 +29,7 @@ type Messenger interface {
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
 	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
+	GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -141,7 +144,7 @@ func (e UnsupportedRequest) Error() string {
 }
 
 // Reply is encrypted only when it is a contract reply
-func isReplyEncrypted(msg v1wasmTypes.SubMsg, reply v1wasmTypes.Reply) bool {
+func isReplyEncrypted(msg v1wasmTypes.SubMsg) bool {
 	if msg.Msg.Wasm == nil {
 		return false
 	}
@@ -186,6 +189,18 @@ func redactError(err error) (bool, error) {
 func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
+
+		if d.keeper.GetLastMsgMarkerContainer().GetMarker() {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrLastTx, "Cannot send messages or submessages after last tx marker was set")
+		}
+
+		if msg.Msg.FinalizeTx != nil {
+			d.keeper.GetLastMsgMarkerContainer().SetMarker(true)
+
+			// no handler is defined for marker - it's just to get here
+			break
+		}
+
 		// Check replyOn validity
 		switch msg.ReplyOn {
 		case v1wasmTypes.ReplySuccess, v1wasmTypes.ReplyError, v1wasmTypes.ReplyAlways, v1wasmTypes.ReplyNever:
@@ -294,11 +309,11 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// In a case when the reply is encrypted but the sdk failed (Most likely, funds issue)
 		// we return a error
-		if isReplyEncrypted(msg, reply) && isSdkError {
+		if isReplyEncrypted(msg) && isSdkError {
 			return nil, fmt.Errorf("an sdk error occoured while sending a sub-message: %s", redactedErr.Error())
 		}
 
-		if isReplyEncrypted(msg, reply) {
+		if isReplyEncrypted(msg) {
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
 
 			if reply.Result.Ok != nil {

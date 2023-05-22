@@ -309,6 +309,158 @@ impl ::protobuf::reflect::ProtobufValue for MsgStoreCode {
 }
 
 #[derive(PartialEq,Clone,Default)]
+pub struct MsgStoreCodeResponse {
+    // message fields
+    pub code_id: u64,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgStoreCodeResponse {
+    fn default() -> &'a MsgStoreCodeResponse {
+        <MsgStoreCodeResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgStoreCodeResponse {
+    pub fn new() -> MsgStoreCodeResponse {
+        ::std::default::Default::default()
+    }
+
+    // uint64 code_id = 1;
+
+
+    pub fn get_code_id(&self) -> u64 {
+        self.code_id
+    }
+    pub fn clear_code_id(&mut self) {
+        self.code_id = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_code_id(&mut self, v: u64) {
+        self.code_id = v;
+    }
+}
+
+impl ::protobuf::Message for MsgStoreCodeResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.code_id = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.code_id != 0 {
+            my_size += ::protobuf::rt::value_size(1, self.code_id, ::protobuf::wire_format::WireTypeVarint);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if self.code_id != 0 {
+            os.write_uint64(1, self.code_id)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgStoreCodeResponse {
+        MsgStoreCodeResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "code_id",
+                |m: &MsgStoreCodeResponse| { &m.code_id },
+                |m: &mut MsgStoreCodeResponse| { &mut m.code_id },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgStoreCodeResponse>(
+                "MsgStoreCodeResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgStoreCodeResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgStoreCodeResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgStoreCodeResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgStoreCodeResponse {
+    fn clear(&mut self) {
+        self.code_id = 0;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgStoreCodeResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgStoreCodeResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct MsgInstantiateContract {
     // message fields
     pub sender: ::std::vec::Vec<u8>,
@@ -720,6 +872,207 @@ impl ::protobuf::reflect::ProtobufValue for MsgInstantiateContract {
 }
 
 #[derive(PartialEq,Clone,Default)]
+pub struct MsgInstantiateContractResponse {
+    // message fields
+    pub address: ::std::string::String,
+    pub data: ::std::vec::Vec<u8>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgInstantiateContractResponse {
+    fn default() -> &'a MsgInstantiateContractResponse {
+        <MsgInstantiateContractResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgInstantiateContractResponse {
+    pub fn new() -> MsgInstantiateContractResponse {
+        ::std::default::Default::default()
+    }
+
+    // string address = 1;
+
+
+    pub fn get_address(&self) -> &str {
+        &self.address
+    }
+    pub fn clear_address(&mut self) {
+        self.address.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_address(&mut self, v: ::std::string::String) {
+        self.address = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_address(&mut self) -> &mut ::std::string::String {
+        &mut self.address
+    }
+
+    // Take field
+    pub fn take_address(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.address, ::std::string::String::new())
+    }
+
+    // bytes data = 2;
+
+
+    pub fn get_data(&self) -> &[u8] {
+        &self.data
+    }
+    pub fn clear_data(&mut self) {
+        self.data.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_data(&mut self, v: ::std::vec::Vec<u8>) {
+        self.data = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_data(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.data
+    }
+
+    // Take field
+    pub fn take_data(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.data, ::std::vec::Vec::new())
+    }
+}
+
+impl ::protobuf::Message for MsgInstantiateContractResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.address)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.data)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.address.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.address);
+        }
+        if !self.data.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(2, &self.data);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.address.is_empty() {
+            os.write_string(1, &self.address)?;
+        }
+        if !self.data.is_empty() {
+            os.write_bytes(2, &self.data)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgInstantiateContractResponse {
+        MsgInstantiateContractResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "address",
+                |m: &MsgInstantiateContractResponse| { &m.address },
+                |m: &mut MsgInstantiateContractResponse| { &mut m.address },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "data",
+                |m: &MsgInstantiateContractResponse| { &m.data },
+                |m: &mut MsgInstantiateContractResponse| { &mut m.data },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgInstantiateContractResponse>(
+                "MsgInstantiateContractResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgInstantiateContractResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgInstantiateContractResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgInstantiateContractResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgInstantiateContractResponse {
+    fn clear(&mut self) {
+        self.address.clear();
+        self.data.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgInstantiateContractResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgInstantiateContractResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct MsgExecuteContract {
     // message fields
     pub sender: ::std::vec::Vec<u8>,
@@ -1095,6 +1448,165 @@ impl ::protobuf::reflect::ProtobufValue for MsgExecuteContract {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct MsgExecuteContractResponse {
+    // message fields
+    pub data: ::std::vec::Vec<u8>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a MsgExecuteContractResponse {
+    fn default() -> &'a MsgExecuteContractResponse {
+        <MsgExecuteContractResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl MsgExecuteContractResponse {
+    pub fn new() -> MsgExecuteContractResponse {
+        ::std::default::Default::default()
+    }
+
+    // bytes data = 1;
+
+
+    pub fn get_data(&self) -> &[u8] {
+        &self.data
+    }
+    pub fn clear_data(&mut self) {
+        self.data.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_data(&mut self, v: ::std::vec::Vec<u8>) {
+        self.data = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_data(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.data
+    }
+
+    // Take field
+    pub fn take_data(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.data, ::std::vec::Vec::new())
+    }
+}
+
+impl ::protobuf::Message for MsgExecuteContractResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.data)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.data.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.data);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.data.is_empty() {
+            os.write_bytes(1, &self.data)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> MsgExecuteContractResponse {
+        MsgExecuteContractResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "data",
+                |m: &MsgExecuteContractResponse| { &m.data },
+                |m: &mut MsgExecuteContractResponse| { &mut m.data },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgExecuteContractResponse>(
+                "MsgExecuteContractResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static MsgExecuteContractResponse {
+        static instance: ::protobuf::rt::LazyV2<MsgExecuteContractResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(MsgExecuteContractResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for MsgExecuteContractResponse {
+    fn clear(&mut self) {
+        self.data.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for MsgExecuteContractResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for MsgExecuteContractResponse {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x20secret/compute/v1beta1/msg.proto\x12\x16secret.compute.v1beta1\x1a\
     \x14gogoproto/gogo.proto\x1a\x1ecosmos/base/v1beta1/coin.proto\"\xc9\x01\
@@ -1102,27 +1614,36 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x126\n\x0ewas\
     m_byte_code\x18\x02\x20\x01(\x0cR\x0cwasmByteCodeB\x10\xe2\xde\x1f\x0cWA\
     SMByteCode\x12\x16\n\x06source\x18\x03\x20\x01(\tR\x06source\x12\x18\n\
-    \x07builder\x18\x04\x20\x01(\tR\x07builder:\x04\x88\xa0\x1f\0\"\x8d\x03\
-    \n\x16MsgInstantiateContract\x12I\n\x06sender\x18\x01\x20\x01(\x0cR\x06s\
-    enderB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x12,\n\
-    \x12callback_code_hash\x18\x02\x20\x01(\tR\x10callbackCodeHash\x12#\n\
-    \x07code_id\x18\x03\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\x06CodeID\x12\
-    \x14\n\x05label\x18\x04\x20\x01(\tR\x05label\x12\x19\n\x08init_msg\x18\
-    \x05\x20\x01(\x0cR\x07initMsg\x12j\n\ninit_funds\x18\x06\x20\x03(\x0b2\
-    \x19.cosmos.base.v1beta1.CoinR\tinitFundsB0\xaa\xdf\x1f(github.com/cosmo\
-    s/cosmos-sdk/types.Coins\xc8\xde\x1f\0\x122\n\x0ccallback_sig\x18\x07\
-    \x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig:\x04\x88\
-    \xa0\x1f\0\"\x94\x03\n\x12MsgExecuteContract\x12I\n\x06sender\x18\x01\
-    \x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/type\
-    s.AccAddress\x12M\n\x08contract\x18\x02\x20\x01(\x0cR\x08contractB1\xfa\
-    \xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x12\x10\n\x03msg\
-    \x18\x03\x20\x01(\x0cR\x03msg\x12,\n\x12callback_code_hash\x18\x04\x20\
-    \x01(\tR\x10callbackCodeHash\x12j\n\nsent_funds\x18\x05\x20\x03(\x0b2\
-    \x19.cosmos.base.v1beta1.CoinR\tsentFundsB0\xaa\xdf\x1f(github.com/cosmo\
-    s/cosmos-sdk/types.Coins\xc8\xde\x1f\0\x122\n\x0ccallback_sig\x18\x06\
-    \x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig:\x04\x88\
-    \xa0\x1f\0B=Z;github.com/enigmampc/SecretNetwork/x/compute/internal/type\
-    sb\x06proto3\
+    \x07builder\x18\x04\x20\x01(\tR\x07builder:\x04\x88\xa0\x1f\0\";\n\x14Ms\
+    gStoreCodeResponse\x12#\n\x07code_id\x18\x01\x20\x01(\x04R\x06codeIdB\n\
+    \xe2\xde\x1f\x06CodeID\"\x8d\x03\n\x16MsgInstantiateContract\x12I\n\x06s\
+    ender\x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-github.com/cosmos/co\
+    smos-sdk/types.AccAddress\x12,\n\x12callback_code_hash\x18\x02\x20\x01(\
+    \tR\x10callbackCodeHash\x12#\n\x07code_id\x18\x03\x20\x01(\x04R\x06codeI\
+    dB\n\xe2\xde\x1f\x06CodeID\x12\x14\n\x05label\x18\x04\x20\x01(\tR\x05lab\
+    el\x12\x19\n\x08init_msg\x18\x05\x20\x01(\x0cR\x07initMsg\x12j\n\ninit_f\
+    unds\x18\x06\x20\x03(\x0b2\x19.cosmos.base.v1beta1.CoinR\tinitFundsB0\
+    \xaa\xdf\x1f(github.com/cosmos/cosmos-sdk/types.Coins\xc8\xde\x1f\0\x122\
+    \n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\
+    \x0bCallbackSig:\x04\x88\xa0\x1f\0\"N\n\x1eMsgInstantiateContractRespons\
+    e\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04data\
+    \x18\x02\x20\x01(\x0cR\x04data\"\x94\x03\n\x12MsgExecuteContract\x12I\n\
+    \x06sender\x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-github.com/cosm\
+    os/cosmos-sdk/types.AccAddress\x12M\n\x08contract\x18\x02\x20\x01(\x0cR\
+    \x08contractB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\
+    \x12\x10\n\x03msg\x18\x03\x20\x01(\x0cR\x03msg\x12,\n\x12callback_code_h\
+    ash\x18\x04\x20\x01(\tR\x10callbackCodeHash\x12j\n\nsent_funds\x18\x05\
+    \x20\x03(\x0b2\x19.cosmos.base.v1beta1.CoinR\tsentFundsB0\xaa\xdf\x1f(gi\
+    thub.com/cosmos/cosmos-sdk/types.Coins\xc8\xde\x1f\0\x122\n\x0ccallback_\
+    sig\x18\x06\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig\
+    :\x04\x88\xa0\x1f\0\"0\n\x1aMsgExecuteContractResponse\x12\x12\n\x04data\
+    \x18\x01\x20\x01(\x0cR\x04data2\xd8\x02\n\x03Msg\x12_\n\tStoreCode\x12$.\
+    secret.compute.v1beta1.MsgStoreCode\x1a,.secret.compute.v1beta1.MsgStore\
+    CodeResponse\x12}\n\x13InstantiateContract\x12..secret.compute.v1beta1.M\
+    sgInstantiateContract\x1a6.secret.compute.v1beta1.MsgInstantiateContract\
+    Response\x12q\n\x0fExecuteContract\x12*.secret.compute.v1beta1.MsgExecut\
+    eContract\x1a2.secret.compute.v1beta1.MsgExecuteContractResponseB<Z:gith\
+    ub.com/scrtlabs/SecretNetwork/x/compute/internal/typesb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

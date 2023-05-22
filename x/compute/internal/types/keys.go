@@ -33,6 +33,7 @@ var (
 	TXCounterPrefix                                = []byte{0x08}
 	ContractCodeHistoryElementPrefix               = []byte{0x09}
 	ContractByCodeIDAndCreatedSecondaryIndexPrefix = []byte{0x0A}
+	RandomPrefix            					   = []byte{0xFF}
 
 	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
@@ -51,6 +52,13 @@ func decodeCodeKey(src []byte) uint64 {
 // GetContractAddressKey returns the key for the WASM contract instance
 func GetContractAddressKey(addr sdk.AccAddress) []byte {
 	return append(ContractKeyPrefix, addr...)
+}
+
+// GetRandomKey returns the key for the random seed for each block
+func GetRandomKey(height int64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(height))
+	return append(RandomPrefix, b...)
 }
 
 // GetContractAddressKey returns the key for the WASM contract instance

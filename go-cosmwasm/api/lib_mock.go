@@ -36,27 +36,14 @@ func HealthCheck() ([]byte, error) {
 }
 
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
-	//errmsg := C.Buffer{}
-	//
-	//res, err := C.init_bootstrap(&errmsg)
-	//if err != nil {
-	//	return nil, errorWithMessage(err, errmsg)
-	//}
-	//return receiveVector(res), nil
 	return nil, nil
 }
 
-func LoadSeedToEnclave(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
-	//pkSlice := sendSlice(masterCert)
-	//defer freeAfterSend(pkSlice)
-	//seedSlice := sendSlice(seed)
-	//defer freeAfterSend(seedSlice)
-	//errmsg := C.Buffer{}
-	//
-	//_, err := C.init_node(pkSlice, seedSlice, &errmsg)
-	//if err != nil {
-	//	return false, errorWithMessage(err, errmsg)
-	//}
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []byte /* valSet []byte, nextValSet []byte*/) ([]byte, error) {
+	return nil, nil
+}
+
+func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
 	return true, nil
 }
 
@@ -253,6 +240,10 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	//	return nil, errorWithMessage(err, errmsg)
 	//}
 	//return receiveVector(res), nil
+	return nil, nil
+}
+
+func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
 	return nil, nil
 }
 

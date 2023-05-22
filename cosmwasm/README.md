@@ -205,6 +205,9 @@ extern "C" {
     /// Executes a query on the chain (import). Not to be confused with the
     /// query export, which queries the state of the contract.
     fn query_chain(request: u32) -> u32;
+
+    /// Evaporates a specified amount of gas (1 evaporate = 1 sdk gas)
+    fn gas_evaporate(evaporate: u32) -> u32;
 }
 
 ```

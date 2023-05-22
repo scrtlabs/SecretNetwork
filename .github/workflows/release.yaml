@@ -43,7 +43,7 @@ jobs:
         run: |
           echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
       - name: Build .deb Package Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -58,6 +58,7 @@ jobs:
             CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
+            FEATURES="verify-validator-whitelist,light-client-validation,random"
           target: build-deb
       - name: Run .deb Package Image
         run: |
@@ -95,7 +96,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and Push Node Image
         if: ${{ matrix.db_backend == 'goleveldb' }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -105,7 +106,7 @@ jobs:
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
-            FEATURES=production
+            FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
@@ -118,7 +119,7 @@ jobs:
           echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
 
       - name: Build .deb Package Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -128,7 +129,7 @@ jobs:
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
-            FEATURES=production
+            FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
@@ -152,7 +153,7 @@ jobs:
         os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v4
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Build CLI
@@ -169,7 +170,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
@@ -199,7 +200,7 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Build check-hw-tool image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -243,7 +244,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build LocalSecret
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -258,6 +259,21 @@ jobs:
             FEATURES=debug-print
             SGX_MODE=SW
           target: build-localsecret
+
+  Lib-Checks:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/check-objdump
+        name: Check Mitigation flags in Cosmwasm Enclave
+        with:
+          version: "v1.9.0"
+      - uses: ./.github/actions/check-objdump
+        name: Check Mitigation flags in TM Enclave
+        with:
+          filename: "tendermint_enclave.signed.so"
+          min-fence: "1000"
+          version: "v1.9.0"
 
   Release:
     needs:

@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Secret Network
   description: A REST interface for queries and transactions
-  version: v1.5.0
+  version: v1.8
 paths:
   /cosmos/auth/v1beta1/accounts:
     get:
@@ -3686,6 +3686,16 @@ paths:
                           proposer_address:
                             type: string
                             format: byte
+                          encrypted_random:
+                            title: encrypted random
+                            type: object
+                            properties:
+                              random:
+                                type: string
+                                format: byte
+                              proof:
+                                type: string
+                                format: byte
                         description: Header defines the structure of a Tendermint block header.
                       data:
                         type: object
@@ -3925,6 +3935,16 @@ paths:
                                                 proposer_address:
                                                   type: string
                                                   format: byte
+                                                encrypted_random:
+                                                  title: encrypted random
+                                                  type: object
+                                                  properties:
+                                                    random:
+                                                      type: string
+                                                      format: byte
+                                                    proof:
+                                                      type: string
+                                                      format: byte
                                               description: Header defines the structure of a Tendermint block header.
                                             commit:
                                               type: object
@@ -4395,6 +4415,16 @@ paths:
                           proposer_address:
                             type: string
                             format: byte
+                          encrypted_random:
+                            title: encrypted random
+                            type: object
+                            properties:
+                              random:
+                                type: string
+                                format: byte
+                              proof:
+                                type: string
+                                format: byte
                         description: Header defines the structure of a Tendermint block header.
                       data:
                         type: object
@@ -4634,6 +4664,16 @@ paths:
                                                 proposer_address:
                                                   type: string
                                                   format: byte
+                                                encrypted_random:
+                                                  title: encrypted random
+                                                  type: object
+                                                  properties:
+                                                    random:
+                                                      type: string
+                                                      format: byte
+                                                    proof:
+                                                      type: string
+                                                      format: byte
                                               description: Header defines the structure of a Tendermint block header.
                                             commit:
                                               type: object
@@ -6716,8 +6756,108 @@ paths:
                         type: string
                       secret_foundation_address:
                         type: string
+                      minimum_restake_threshold:
+                        type: string
+                      restake_period:
+                        type: string
                 description: QueryParamsResponse is the response type for the Query/Params RPC
                   method.
+        default:
+          description: An unexpected error response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type_url:
+                          type: string
+                        value:
+                          type: string
+                          format: byte
+      tags:
+        - gRPC Gateway API
+  /cosmos/distribution/v1beta1/restake_entries:
+    get:
+      summary: RestakeThreshold queries the community pool coins.
+      operationId: RestakingEntries
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  validators:
+                    type: array
+                    items:
+                      type: string
+                    title: threshold = minimum amount in uscrt that you need to have delegated to
+                      enable restaking
+                description: QueryRestakeThresholdResponse is the request type for the
+                  Query/Params RPC method.
+        default:
+          description: An unexpected error response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type_url:
+                          type: string
+                        value:
+                          type: string
+                          format: byte
+      parameters:
+        - name: delegator
+          in: query
+          required: false
+          schema:
+            type: string
+      tags:
+        - gRPC Gateway API
+  /cosmos/distribution/v1beta1/restake_threshold:
+    get:
+      summary: RestakeThreshold queries the community pool coins.
+      operationId: RestakeThreshold
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  threshold:
+                    type: string
+                    title: threshold = minimum amount in uscrt that you need to have delegated to
+                      enable restaking
+                description: QueryRestakeThresholdResponse is the request type for the
+                  Query/Params RPC method.
         default:
           description: An unexpected error response.
           content:
@@ -8763,6 +8903,9 @@ paths:
                       voting_period:
                         type: string
                         description: Length of the voting period.
+                      expedited_voting_period:
+                        type: string
+                        description: Length of the expedited voting period.
                   deposit_params:
                     description: deposit_params defines the parameters related to deposit.
                     type: object
@@ -8791,6 +8934,24 @@ paths:
                           Maximum period for Atom holders to deposit on a
                           proposal. Initial value: 2
                            months.
+                      min_expedited_deposit:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            denom:
+                              type: string
+                            amount:
+                              type: string
+                          description: >-
+                            Coin defines a token with a denomination and an
+                            amount.
+
+
+                            NOTE: The amount field is an Int which implements the custom method
+
+                            signatures required by gogoproto.
+                        description: Minimum expedited deposit for a proposal to enter voting period.
                   tally_params:
                     description: tally_params defines the parameters related to tally.
                     type: object
@@ -8814,6 +8975,11 @@ paths:
                           Minimum value of Veto votes to Total votes ratio for
                           proposal to be
                            vetoed. Default value: 1/3.
+                      expedited_threshold:
+                        type: string
+                        format: byte
+                        description: "Minimum proportion of Yes votes for an expedited proposal to pass.
+                          Default value: 0.67."
                 description: QueryParamsResponse is the response type for the Query/Params RPC
                   method.
         default:
@@ -9233,6 +9399,8 @@ paths:
                         voting_end_time:
                           type: string
                           format: date-time
+                        is_expedited:
+                          type: boolean
                       description: Proposal defines the core field members of a governance proposal.
                   pagination:
                     description: pagination defines the pagination in the response.
@@ -9759,6 +9927,8 @@ paths:
                       voting_end_time:
                         type: string
                         format: date-time
+                      is_expedited:
+                        type: boolean
                     description: Proposal defines the core field members of a governance proposal.
                 description: QueryProposalResponse is the response type for the Query/Proposal
                   RPC method.
@@ -13868,6 +14038,16 @@ paths:
                           proposer_address:
                             type: string
                             format: byte
+                          encrypted_random:
+                            title: encrypted random
+                            type: object
+                            properties:
+                              random:
+                                type: string
+                                format: byte
+                              proof:
+                                type: string
+                                format: byte
                         description: Header defines the structure of a Tendermint block header.
                       valset:
                         type: array
@@ -20816,6 +20996,16 @@ paths:
                           proposer_address:
                             type: string
                             format: byte
+                          encrypted_random:
+                            title: encrypted random
+                            type: object
+                            properties:
+                              random:
+                                type: string
+                                format: byte
+                              proof:
+                                type: string
+                                format: byte
                         description: Header defines the structure of a Tendermint block header.
                       data:
                         type: object
@@ -21055,6 +21245,16 @@ paths:
                                                 proposer_address:
                                                   type: string
                                                   format: byte
+                                                encrypted_random:
+                                                  title: encrypted random
+                                                  type: object
+                                                  properties:
+                                                    random:
+                                                      type: string
+                                                      format: byte
+                                                    proof:
+                                                      type: string
+                                                      format: byte
                                               description: Header defines the structure of a Tendermint block header.
                                             commit:
                                               type: object
@@ -23855,6 +24055,60 @@ paths:
             format: int64
       tags:
         - gRPC Gateway API
+  "/ibc/apps/interchain_accounts/controller/v1/owners/{owner}/connections/{connection_id}":
+    get:
+      summary: InterchainAccount returns the interchain account address for a given
+        owner address on a given connection
+      operationId: InterchainAccount
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  address:
+                    type: string
+                description: QueryInterchainAccountResponse the response type for the
+                  Query/InterchainAccount RPC method.
+        default:
+          description: An unexpected error response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type_url:
+                          type: string
+                        value:
+                          type: string
+                          format: byte
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: connection_id
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - gRPC Gateway API
   /ibc/apps/interchain_accounts/controller/v1/params:
     get:
       summary: Params queries all parameters of the ICA controller submodule.
@@ -23953,6 +24207,63 @@ paths:
                         value:
                           type: string
                           format: byte
+      tags:
+        - gRPC Gateway API
+  "/ibc/apps/transfer/v1/channels/{channel_id}/ports/{port_id}/escrow_address":
+    get:
+      summary: EscrowAddress returns the escrow address for a particular port and
+        channel id.
+      operationId: EscrowAddress
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  escrow_address:
+                    type: string
+                    title: the escrow account address
+                description: QueryEscrowAddressResponse is the response type of the
+                  EscrowAddress RPC method.
+        default:
+          description: An unexpected error response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type_url:
+                          type: string
+                        value:
+                          type: string
+                          format: byte
+      parameters:
+        - name: channel_id
+          description: unique channel identifier
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: port_id
+          description: unique port identifier
+          in: path
+          required: true
+          schema:
+            type: string
       tags:
         - gRPC Gateway API
   "/ibc/apps/transfer/v1/denom_hashes/{trace}":
@@ -24210,7 +24521,8 @@ paths:
                           format: byte
       parameters:
         - name: hash
-          description: hash (in hex format) of the denomination trace information.
+          description: hash (in hex format) or denom (full denom with ibc prefix) of the
+            denomination trace information.
           in: path
           required: true
           schema:
@@ -29923,6 +30235,319 @@ paths:
             type: boolean
       tags:
         - gRPC Gateway API
+  "/ibc/core/client/v1/consensus_states/{client_id}/heights":
+    get:
+      summary: ConsensusStateHeights queries the height of every consensus states
+        associated with a given client.
+      operationId: ConsensusStateHeights
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  consensus_state_heights:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        revision_number:
+                          type: string
+                          format: uint64
+                          title: the revision that the client is currently on
+                        revision_height:
+                          type: string
+                          format: uint64
+                          title: the height within the given revision
+                      description: >-
+                        Normally the RevisionHeight is incremented at each
+                        height while keeping
+
+                        RevisionNumber the same. However some consensus algorithms may choose to
+
+                        reset the height in certain conditions e.g. hard forks, state-machine
+
+                        breaking changes In these cases, the RevisionNumber is incremented so that
+
+                        height continues to be monitonically increasing even as the RevisionHeight
+
+                        gets reset
+                      title: >-
+                        Height is a monotonically increasing data type
+
+                        that can be compared against another Height for the purposes of updating and
+
+                        freezing clients
+                    title: consensus state heights
+                  pagination:
+                    title: pagination response
+                    type: object
+                    properties:
+                      next_key:
+                        type: string
+                        format: byte
+                        title: |-
+                          next_key is the key to be passed to PageRequest.key to
+                          query the next page most efficiently
+                      total:
+                        type: string
+                        format: uint64
+                        title: >-
+                          total is total number of results available if
+                          PageRequest.count_total
+
+                          was set, its value is undefined otherwise
+                    description: >-
+                      PageResponse is to be embedded in gRPC response messages
+                      where the
+
+                      corresponding request message has used PageRequest.
+
+                       message SomeResponse {
+                               repeated Bar results = 1;
+                               PageResponse page = 2;
+                       }
+                title: >-
+                  QueryConsensusStateHeightsResponse is the response type for
+                  the
+
+                  Query/ConsensusStateHeights RPC method
+        default:
+          description: An unexpected error response.
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type_url:
+                          type: string
+                          description: >-
+                            A URL/resource name that uniquely identifies the
+                            type of the serialized
+
+                            protocol buffer message. This string must contain at least
+
+                            one "/" character. The last segment of the URL's path must represent
+
+                            the fully qualified name of the type (as in
+
+                            `path/google.protobuf.Duration`). The name should be in a canonical form
+
+                            (e.g., leading "." is not accepted).
+
+
+                            In practice, teams usually precompile into the binary all types that they
+
+                            expect it to use in the context of Any. However, for URLs which use the
+
+                            scheme `http`, `https`, or no scheme, one can optionally set up a type
+
+                            server that maps type URLs to message definitions as follows:
+
+
+                            * If no scheme is provided, `https` is assumed.
+
+                            * An HTTP GET on the URL must yield a [google.protobuf.Type][]
+                              value in binary format, or produce an error.
+                            * Applications are allowed to cache lookup results based on the
+                              URL, or have them precompiled into a binary to avoid any
+                              lookup. Therefore, binary compatibility needs to be preserved
+                              on changes to types. (Use versioned type names to manage
+                              breaking changes.)
+
+                            Note: this functionality is not currently available in the official
+
+                            protobuf release, and it is not used for type URLs beginning with
+
+                            type.googleapis.com.
+
+
+                            Schemes other than `http`, `https` (or the empty scheme) might be
+
+                            used with implementation specific semantics.
+                        value:
+                          type: string
+                          format: byte
+                          description: Must be a valid serialized protocol buffer of the above specified
+                            type.
+                      description: >-
+                        `Any` contains an arbitrary serialized protocol buffer
+                        message along with a
+
+                        URL that describes the type of the serialized message.
+
+
+                        Protobuf library provides support to pack/unpack Any values in the form
+
+                        of utility functions or additional generated methods of the Any type.
+
+
+                        Example 1: Pack and unpack a message in C++.
+
+                            Foo foo = ...;
+                            Any any;
+                            any.PackFrom(foo);
+                            ...
+                            if (any.UnpackTo(&foo)) {
+                              ...
+                            }
+
+                        Example 2: Pack and unpack a message in Java.
+
+                            Foo foo = ...;
+                            Any any = Any.pack(foo);
+                            ...
+                            if (any.is(Foo.class)) {
+                              foo = any.unpack(Foo.class);
+                            }
+
+                         Example 3: Pack and unpack a message in Python.
+
+                            foo = Foo(...)
+                            any = Any()
+                            any.Pack(foo)
+                            ...
+                            if any.Is(Foo.DESCRIPTOR):
+                              any.Unpack(foo)
+                              ...
+
+                         Example 4: Pack and unpack a message in Go
+
+                             foo := &pb.Foo{...}
+                             any, err := ptypes.MarshalAny(foo)
+                             ...
+                             foo := &pb.Foo{}
+                             if err := ptypes.UnmarshalAny(any, foo); err != nil {
+                               ...
+                             }
+
+                        The pack methods provided by protobuf library will by default use
+
+                        'type.googleapis.com/full.type.name' as the type URL and the unpack
+
+                        methods only use the fully qualified type name after the last '/'
+
+                        in the type URL, for example "foo.bar.com/x/y.z" will yield type
+
+                        name "y.z".
+
+
+
+                        JSON
+
+                        ====
+
+                        The JSON representation of an `Any` value uses the regular
+
+                        representation of the deserialized, embedded message, with an
+
+                        additional field `@type` which contains the type URL. Example:
+
+                            package google.profile;
+                            message Person {
+                              string first_name = 1;
+                              string last_name = 2;
+                            }
+
+                            {
+                              "@type": "type.googleapis.com/google.profile.Person",
+                              "firstName": <string>,
+                              "lastName": <string>
+                            }
+
+                        If the embedded message type is well-known and has a custom JSON
+
+                        representation, that representation will be embedded adding a field
+
+                        `value` which holds the custom JSON in addition to the `@type`
+
+                        field. Example (for message [google.protobuf.Duration][]):
+
+                            {
+                              "@type": "type.googleapis.com/google.protobuf.Duration",
+                              "value": "1.212s"
+                            }
+      parameters:
+        - name: client_id
+          description: client identifier
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pagination.key
+          description: |-
+            key is a value returned in PageResponse.next_key to begin
+            querying the next page most efficiently. Only one of offset or key
+            should be set.
+          in: query
+          required: false
+          schema:
+            type: string
+            format: byte
+        - name: pagination.offset
+          description: >-
+            offset is a numeric offset that can be used when key is unavailable.
+
+            It is less efficient than using key. Only one of offset or key should
+
+            be set.
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uint64
+        - name: pagination.limit
+          description: >-
+            limit is the total number of results to be returned in the result
+            page.
+
+            If left empty it will default to a value to be set by each app.
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uint64
+        - name: pagination.count_total
+          description: >-
+            count_total is set to true  to indicate that the result set should
+            include
+
+            a count of the total number of items available for pagination in UIs.
+
+            count_total is only respected when offset is used. It is ignored when key
+
+            is set.
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: pagination.reverse
+          description: >-
+            reverse is set to true if results are to be returned in the
+            descending order.
+
+
+            Since: cosmos-sdk 0.43
+          in: query
+          required: false
+          schema:
+            type: boolean
+      tags:
+        - gRPC Gateway API
   "/ibc/core/client/v1/consensus_states/{client_id}/revision/{revision_number}/height/{revision_height}":
     get:
       summary: >-
@@ -30096,7 +30721,6 @@ paths:
                     format: byte
                     title: merkle proof of existence
                   proof_height:
-                    title: height at which the proof was retrieved
                     type: object
                     properties:
                       revision_number:
@@ -30120,6 +30744,12 @@ paths:
                       height continues to be monitonically increasing even as the RevisionHeight
 
                       gets reset
+                    title: >-
+                      Height is a monotonically increasing data type
+
+                      that can be compared against another Height for the purposes of updating and
+
+                      freezing clients
                 title: >-
                   QueryConsensusStateResponse is the response type for the
                   Query/ConsensusState
@@ -42243,6 +42873,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             data:
               type: object
@@ -42480,6 +43120,16 @@ components:
                                       proposer_address:
                                         type: string
                                         format: byte
+                                      encrypted_random:
+                                        title: encrypted random
+                                        type: object
+                                        properties:
+                                          random:
+                                            type: string
+                                            format: byte
+                                          proof:
+                                            type: string
+                                            format: byte
                                     description: Header defines the structure of a Tendermint block header.
                                   commit:
                                     type: object
@@ -42772,6 +43422,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             data:
               type: object
@@ -43009,6 +43669,16 @@ components:
                                       proposer_address:
                                         type: string
                                         format: byte
+                                      encrypted_random:
+                                        title: encrypted random
+                                        type: object
+                                        properties:
+                                          random:
+                                            type: string
+                                            format: byte
+                                          proof:
+                                            type: string
+                                            format: byte
                                     description: Header defines the structure of a Tendermint block header.
                                   commit:
                                     type: object
@@ -44018,6 +44688,16 @@ components:
             proposer_address:
               type: string
               format: byte
+            encrypted_random:
+              title: encrypted random
+              type: object
+              properties:
+                random:
+                  type: string
+                  format: byte
+                proof:
+                  type: string
+                  format: byte
           description: Header defines the structure of a Tendermint block header.
         data:
           type: object
@@ -44254,6 +44934,16 @@ components:
                                   proposer_address:
                                     type: string
                                     format: byte
+                                  encrypted_random:
+                                    title: encrypted random
+                                    type: object
+                                    properties:
+                                      random:
+                                        type: string
+                                        format: byte
+                                      proof:
+                                        type: string
+                                        format: byte
                                 description: Header defines the structure of a Tendermint block header.
                               commit:
                                 type: object
@@ -44687,6 +45377,16 @@ components:
           format: date-time
       description: DuplicateVoteEvidence contains evidence of a validator signed two
         conflicting votes.
+    tendermint.types.EncryptedRandom:
+      type: object
+      properties:
+        random:
+          type: string
+          format: byte
+        proof:
+          type: string
+          format: byte
+      title: Data contains the set of transactions included in the block
     tendermint.types.Evidence:
       type: object
       properties:
@@ -44900,6 +45600,16 @@ components:
                         proposer_address:
                           type: string
                           format: byte
+                        encrypted_random:
+                          title: encrypted random
+                          type: object
+                          properties:
+                            random:
+                              type: string
+                              format: byte
+                            proof:
+                              type: string
+                              format: byte
                       description: Header defines the structure of a Tendermint block header.
                     commit:
                       type: object
@@ -45260,6 +45970,16 @@ components:
                               proposer_address:
                                 type: string
                                 format: byte
+                              encrypted_random:
+                                title: encrypted random
+                                type: object
+                                properties:
+                                  random:
+                                    type: string
+                                    format: byte
+                                  proof:
+                                    type: string
+                                    format: byte
                             description: Header defines the structure of a Tendermint block header.
                           commit:
                             type: object
@@ -45475,6 +46195,16 @@ components:
         proposer_address:
           type: string
           format: byte
+        encrypted_random:
+          title: encrypted random
+          type: object
+          properties:
+            random:
+              type: string
+              format: byte
+            proof:
+              type: string
+              format: byte
       description: Header defines the structure of a Tendermint block header.
     tendermint.types.LightBlock:
       type: object
@@ -45557,6 +46287,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             commit:
               type: object
@@ -45746,6 +46486,16 @@ components:
                     proposer_address:
                       type: string
                       format: byte
+                    encrypted_random:
+                      title: encrypted random
+                      type: object
+                      properties:
+                        random:
+                          type: string
+                          format: byte
+                        proof:
+                          type: string
+                          format: byte
                   description: Header defines the structure of a Tendermint block header.
                 commit:
                   type: object
@@ -45974,6 +46724,16 @@ components:
             proposer_address:
               type: string
               format: byte
+            encrypted_random:
+              title: encrypted random
+              type: object
+              properties:
+                random:
+                  type: string
+                  format: byte
+                proof:
+                  type: string
+                  format: byte
           description: Header defines the structure of a Tendermint block header.
         commit:
           type: object
@@ -46235,6 +46995,10 @@ components:
           type: string
         secret_foundation_address:
           type: string
+        minimum_restake_threshold:
+          type: string
+        restake_period:
+          type: string
       description: Params defines the set of params for the distribution module.
     cosmos.distribution.v1beta1.QueryCommunityPoolResponse:
       type: object
@@ -46385,7 +47149,31 @@ components:
               type: string
             secret_foundation_address:
               type: string
+            minimum_restake_threshold:
+              type: string
+            restake_period:
+              type: string
       description: QueryParamsResponse is the response type for the Query/Params RPC method.
+    cosmos.distribution.v1beta1.QueryRestakeThresholdResponse:
+      type: object
+      properties:
+        threshold:
+          type: string
+          title: threshold = minimum amount in uscrt that you need to have delegated to
+            enable restaking
+      description: QueryRestakeThresholdResponse is the request type for the
+        Query/Params RPC method.
+    cosmos.distribution.v1beta1.QueryRestakingEntriesResponse:
+      type: object
+      properties:
+        validators:
+          type: array
+          items:
+            type: string
+          title: threshold = minimum amount in uscrt that you need to have delegated to
+            enable restaking
+      description: QueryRestakeThresholdResponse is the request type for the
+        Query/Params RPC method.
     cosmos.distribution.v1beta1.QueryValidatorCommissionResponse:
       type: object
       properties:
@@ -47258,6 +48046,23 @@ components:
             Maximum period for Atom holders to deposit on a proposal. Initial
             value: 2
              months.
+        min_expedited_deposit:
+          type: array
+          items:
+            type: object
+            properties:
+              denom:
+                type: string
+              amount:
+                type: string
+            description: >-
+              Coin defines a token with a denomination and an amount.
+
+
+              NOTE: The amount field is an Int which implements the custom method
+
+              signatures required by gogoproto.
+          description: Minimum expedited deposit for a proposal to enter voting period.
       description: DepositParams defines the params for deposits on governance proposals.
     cosmos.gov.v1beta1.Proposal:
       type: object
@@ -47480,6 +48285,8 @@ components:
         voting_end_time:
           type: string
           format: date-time
+        is_expedited:
+          type: boolean
       description: Proposal defines the core field members of a governance proposal.
     cosmos.gov.v1beta1.ProposalStatus:
       type: string
@@ -47603,6 +48410,9 @@ components:
             voting_period:
               type: string
               description: Length of the voting period.
+            expedited_voting_period:
+              type: string
+              description: Length of the expedited voting period.
         deposit_params:
           description: deposit_params defines the parameters related to deposit.
           type: object
@@ -47630,6 +48440,23 @@ components:
                 Maximum period for Atom holders to deposit on a proposal.
                 Initial value: 2
                  months.
+            min_expedited_deposit:
+              type: array
+              items:
+                type: object
+                properties:
+                  denom:
+                    type: string
+                  amount:
+                    type: string
+                description: >-
+                  Coin defines a token with a denomination and an amount.
+
+
+                  NOTE: The amount field is an Int which implements the custom method
+
+                  signatures required by gogoproto.
+              description: Minimum expedited deposit for a proposal to enter voting period.
         tally_params:
           description: tally_params defines the parameters related to tally.
           type: object
@@ -47653,6 +48480,11 @@ components:
                 Minimum value of Veto votes to Total votes ratio for proposal to
                 be
                  vetoed. Default value: 1/3.
+            expedited_threshold:
+              type: string
+              format: byte
+              description: "Minimum proportion of Yes votes for an expedited proposal to pass.
+                Default value: 0.67."
       description: QueryParamsResponse is the response type for the Query/Params RPC method.
     cosmos.gov.v1beta1.QueryProposalResponse:
       type: object
@@ -47878,6 +48710,8 @@ components:
             voting_end_time:
               type: string
               format: date-time
+            is_expedited:
+              type: boolean
           description: Proposal defines the core field members of a governance proposal.
       description: QueryProposalResponse is the response type for the Query/Proposal
         RPC method.
@@ -48107,6 +48941,8 @@ components:
               voting_end_time:
                 type: string
                 format: date-time
+              is_expedited:
+                type: boolean
             description: Proposal defines the core field members of a governance proposal.
         pagination:
           description: pagination defines the pagination in the response.
@@ -48309,6 +49145,11 @@ components:
           description: |-
             Minimum value of Veto votes to Total votes ratio for proposal to be
              vetoed. Default value: 1/3.
+        expedited_threshold:
+          type: string
+          format: byte
+          description: "Minimum proportion of Yes votes for an expedited proposal to pass.
+            Default value: 0.67."
       description: TallyParams defines the params for tallying votes on governance
         proposals.
     cosmos.gov.v1beta1.TallyResult:
@@ -48404,6 +49245,9 @@ components:
         voting_period:
           type: string
           description: Length of the voting period.
+        expedited_voting_period:
+          type: string
+          description: Length of the expedited voting period.
       description: VotingParams defines the params for voting on governance proposals.
     cosmos.gov.v1beta1.WeightedVoteOption:
       type: object
@@ -48949,6 +49793,16 @@ components:
             proposer_address:
               type: string
               format: byte
+            encrypted_random:
+              title: encrypted random
+              type: object
+              properties:
+                random:
+                  type: string
+                  format: byte
+                proof:
+                  type: string
+                  format: byte
           description: Header defines the structure of a Tendermint block header.
         valset:
           type: array
@@ -50045,6 +50899,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             valset:
               type: array
@@ -53827,6 +54691,16 @@ components:
                 proposer_address:
                   type: string
                   format: byte
+                encrypted_random:
+                  title: encrypted random
+                  type: object
+                  properties:
+                    random:
+                      type: string
+                      format: byte
+                    proof:
+                      type: string
+                      format: byte
               description: Header defines the structure of a Tendermint block header.
             data:
               type: object
@@ -54064,6 +54938,16 @@ components:
                                       proposer_address:
                                         type: string
                                         format: byte
+                                      encrypted_random:
+                                        title: encrypted random
+                                        type: object
+                                        properties:
+                                          random:
+                                            type: string
+                                            format: byte
+                                          proof:
+                                            type: string
+                                            format: byte
                                     description: Header defines the structure of a Tendermint block header.
                                   commit:
                                     type: object
@@ -59845,6 +60729,13 @@ components:
         Params defines the set of on-chain interchain accounts parameters.
 
         The following parameters may be used to disable the controller submodule.
+    ibc.applications.interchain_accounts.controller.v1.QueryInterchainAccountResponse:
+      type: object
+      properties:
+        address:
+          type: string
+      description: QueryInterchainAccountResponse the response type for the
+        Query/InterchainAccount RPC method.
     ibc.applications.interchain_accounts.controller.v1.QueryParamsResponse:
       type: object
       properties:
@@ -60013,6 +60904,14 @@ components:
         RPC
 
         method.
+    ibc.applications.transfer.v1.QueryEscrowAddressResponse:
+      type: object
+      properties:
+        escrow_address:
+          type: string
+          title: the escrow account address
+      description: QueryEscrowAddressResponse is the response type of the
+        EscrowAddress RPC method.
     ibc.applications.transfer.v1.QueryParamsResponse:
       type: object
       properties:
@@ -62216,6 +63115,71 @@ components:
         Query/ClientStatus RPC
 
         method. It returns the current status of the IBC client.
+    ibc.core.client.v1.QueryConsensusStateHeightsResponse:
+      type: object
+      properties:
+        consensus_state_heights:
+          type: array
+          items:
+            type: object
+            properties:
+              revision_number:
+                type: string
+                format: uint64
+                title: the revision that the client is currently on
+              revision_height:
+                type: string
+                format: uint64
+                title: the height within the given revision
+            description: >-
+              Normally the RevisionHeight is incremented at each height while
+              keeping
+
+              RevisionNumber the same. However some consensus algorithms may choose to
+
+              reset the height in certain conditions e.g. hard forks, state-machine
+
+              breaking changes In these cases, the RevisionNumber is incremented so that
+
+              height continues to be monitonically increasing even as the RevisionHeight
+
+              gets reset
+            title: >-
+              Height is a monotonically increasing data type
+
+              that can be compared against another Height for the purposes of updating and
+
+              freezing clients
+          title: consensus state heights
+        pagination:
+          title: pagination response
+          type: object
+          properties:
+            next_key:
+              type: string
+              format: byte
+              title: |-
+                next_key is the key to be passed to PageRequest.key to
+                query the next page most efficiently
+            total:
+              type: string
+              format: uint64
+              title: >-
+                total is total number of results available if
+                PageRequest.count_total
+
+                was set, its value is undefined otherwise
+          description: |-
+            PageResponse is to be embedded in gRPC response messages where the
+            corresponding request message has used PageRequest.
+
+             message SomeResponse {
+                     repeated Bar results = 1;
+                     PageResponse page = 2;
+             }
+      title: |-
+        QueryConsensusStateHeightsResponse is the response type for the
+        Query/ConsensusStateHeights RPC method
     ibc.core.client.v1.QueryConsensusStateResponse:
       type: object
       properties:
@@ -62376,7 +63340,6 @@ components:
           format: byte
           title: merkle proof of existence
         proof_height:
-          title: height at which the proof was retrieved
           type: object
           properties:
             revision_number:
@@ -62400,6 +63363,12 @@ components:
             height continues to be monitonically increasing even as the RevisionHeight
 
             gets reset
+          title: >-
+            Height is a monotonically increasing data type
+
+            that can be compared against another Height for the purposes of updating and
+
+            freezing clients
       title: >-
         QueryConsensusStateResponse is the response type for the
         Query/ConsensusState

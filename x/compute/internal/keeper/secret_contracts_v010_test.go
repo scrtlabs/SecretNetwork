@@ -65,7 +65,7 @@ func TestEncryptedAndPlaintextLogs(t *testing.T) {
 	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
 
-	_, _, _, events, _, err := execHelperImpl(t, keeper, ctx, addr, walletA, privKeyA, "{}", true, false, defaultGasForTests, 0, 1)
+	_, _, _, events, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, "{}", true, false, defaultGasForTests, 0, 1)
 
 	require.Empty(t, err)
 	requireEvents(t,

@@ -1,5 +1,48 @@
 # CHANGELOG
 
+# 1.9.0
+
+- New Feature: Randomness injection for secret contracts.
+  - Eliminates the need for contracts to bootstrap their own entropy pool.
+  - Unique for every contract call.
+  - Useful in lotteries, gaming, secure authentication protocols, protocols where unpredictable outcomes are essential for fairness and security, and much more.
+  For more infomation on how to use this feature, see the documentation
+- New Feature: FinalizeTx.
+  - Contracts can force the transaction to finalize at a certain point, otherwise revert.
+  - Example: protect against sandwich attacks and potential transaction rollbacks.
+  - Example: protect against cheating in gaming applications, where a malicious player could try to rollback a transaction in which they lost.
+- IBC: Updated ibc-go from v3.4.0 to v4.3.0.
+- New IBC Feature: Added packet-forward-middleware by Strangelove.
+  - Other chains would be able to more easily route SCRT in the interchain. For example, sending SCRT from Osmosis to Hub now becomes a single transaction from `Osmosis -> Secret` rather than a transaction from `Osmosis -> Secret`, then a transaction from `Secret -> Hub`.
+- New IBC Feature: Added IBC fee middleware.
+  - Creates a fee market for relaying IBC packets.
+- New IBC Feature: Added IBC panic button.
+  - Quickly shut down IBC in case of an emergency.
+- New Feature: Evaporate & Check Gas APIs
+  The new Check Gas and Evaporate APIs allow contract developers to create contracts that consume a constant amount of gas, independently of their code path. This helps harden contracts against information leakage from the amount of gas consumed by a contract.
+- Bug Fix: Fixed an issue where nodes would sometimes stop if failing to enter SGX enclave
+- Bug Fix: Fixed a bug where stopping and restarting a node would often cause the node to apphash
+- Bug Fix: Fixed an issue where storing and deleting a key from storage in the same msg would cause it not to be deleted
+
+# 1.8.0
+
+Fixed a critical bug in 1.7.0 that prevented new nodes from joining the network and existing nodes from restarting their secretd process.
+
+# 1.7.0
+
+- Added the ability to rotate consensus seed during a network upgrade
+  - this will be executed during this upgrade
+- Added expedited gov proposals
+  - Initial params (can be amended with a param change proposal):
+    - Minimum deposit: 750 SCRT
+    - Voting time: 24 hours
+    - Voting treshhold: 2/3 yes to pass
+  - If an expedited proposal fails to meet the threshold within the scope of shorter voting duration, the expedited proposal is then converted to a regular proposal and restarts voting under regular voting conditions.
+- Added auto-restaking - an opt-in feature that enables automatic compounding of staking rewards
+- Added light-client validation for blocks
+  - Protects against leaking private data using an offline fork attack
+  - Enables trusted block heights and block time to be relied on by contracts
+
 # 1.6.0
 
 - Fixed issue causing registrations to fail
@@ -13,20 +56,21 @@
 - Bumped to tendermint 0.34.24
 - Bumped to cosmos-sdk 0.45.11
 - Changed base gas prices:
-  * Default instruction cost 1 -> 2
-  * Div instruction cost 16 -> 2
-  * Mul instruction cost 4 -> 2
-  * Mem instruction cost 2 -> 2
-  * Contract Entry cost 100,000 -> 20,000
-  * Read from storage base cost 1,000 -> 10
-  * Write to storage base cost 2,000 -> 20
 
- - SecretJS 1.5 has been released, and uses GRPC-Gateway endpoints. Check it out: https://www.npmjs.com/package/secretjs or https://github.com/scrtlabs/secret.js
- - Add check-hw tool that returns patch-level and compatibility information for hardware
+  - Default instruction cost 1 -> 2
+  - Div instruction cost 16 -> 2
+  - Mul instruction cost 4 -> 2
+  - Mem instruction cost 2 -> 2
+  - Contract Entry cost 100,000 -> 20,000
+  - Read from storage base cost 1,000 -> 10
+  - Write to storage base cost 2,000 -> 20
+
+- SecretJS 1.5 has been released, and uses GRPC-Gateway endpoints. Check it out: https://www.npmjs.com/package/secretjs or https://github.com/scrtlabs/secret.js
+- Add check-hw tool that returns patch-level and compatibility information for hardware
 
 # 1.5.1
 
-29/11/2022 - Startup fix due to TCB recovery - startup validation on 1.5.1 does not account for SW_HARDENING_NEEDED including INTEL-SA-00615 in it's response. Registering using this binary will not work, however restarting your node can be done using the _startup_bypass packages.
+29/11/2022 - Startup fix due to TCB recovery - startup validation on 1.5.1 does not account for SW_HARDENING_NEEDED including INTEL-SA-00615 in it's response. Registering using this binary will not work, however restarting your node can be done using the \_startup_bypass packages.
 
 Fix for GRPC-gateway concurrency. This will greatly improve performance on nodes serving queries to GRPC-gateway requests (REST requests going to v1beta1/blah/blah)
 

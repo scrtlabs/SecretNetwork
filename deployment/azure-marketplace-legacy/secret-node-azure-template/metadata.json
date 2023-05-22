@@ -1,0 +1,9 @@
+{
+    "$schema": "https://aka.ms/azure-quickstart-templates-metadata-schema#",
+    "type": "QuickStart",
+    "itemDisplayName": "Secret Node Template",
+    "description": "Deploy a VM with secret node software.",
+    "summary": "This template deploys a single VM and allows you to run an SGX-enabled secret node as a part of the Secret Network",
+    "githubUsername": "enigmampc",
+    "dateUpdated": "2020-06-23"
+  }

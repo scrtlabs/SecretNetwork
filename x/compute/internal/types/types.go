@@ -123,7 +123,7 @@ func (a *AbsoluteTxPosition) Bytes() []byte {
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, caller sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte) wasmTypes.Env {
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte, random []byte) wasmTypes.Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -137,9 +137,10 @@ func NewEnv(ctx sdk.Context, caller sdk.AccAddress, deposit sdk.Coins, contractA
 			Height:  uint64(ctx.BlockHeight()),
 			Time:    uint64(nano),
 			ChainID: ctx.ChainID(),
+			Random:  random,
 		},
 		Message: wasmTypes.MessageInfo{
-			Sender:    caller.String(),
+			Sender:    creator.String(),
 			SentFunds: NewWasmCoins(deposit),
 		},
 		Contract: wasmTypes.ContractInfo{

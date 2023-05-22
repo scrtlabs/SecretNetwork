@@ -150,20 +150,20 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 			userHome, _ := os.UserHomeDir()
 
 			// Load consensus_seed_exchange_pubkey
-			var cert []byte
+			var key []byte
 			if len(args) >= 1 {
-				cert, err = os.ReadFile(args[0])
+				key, err = os.ReadFile(args[0])
 				if err != nil {
 					return err
 				}
 			} else {
-				cert, err = os.ReadFile(filepath.Join(userHome, reg.NodeExchMasterCertPath))
+				key, err = os.ReadFile(filepath.Join(userHome, reg.NodeExchMasterKeyPath))
 				if err != nil {
 					return err
 				}
 			}
 
-			pubkey, err := ra.UNSAFE_VerifyRaCert(cert)
+			pubkey, err := base64.StdEncoding.DecodeString(string(key))
 			if err != nil {
 				return err
 			}
@@ -176,21 +176,28 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				return fmt.Errorf("invalid certificate for master public key")
 			}
 
-			regGenState.NodeExchMasterCertificate.Bytes = cert
+			regGenState.NodeExchMasterKey.Bytes, err = base64.StdEncoding.DecodeString(string(key))
+			if err != nil {
+				return err
+			}
 
 			// Load consensus_io_exchange_pubkey
 			if len(args) == 2 {
-				cert, err = os.ReadFile(args[1])
+				key, err = os.ReadFile(args[1])
 				if err != nil {
 					return err
 				}
 			} else {
-				cert, err = os.ReadFile(filepath.Join(userHome, reg.IoExchMasterCertPath))
+				key, err = os.ReadFile(filepath.Join(userHome, reg.IoExchMasterKeyPath))
 				if err != nil {
 					return err
 				}
 			}
-			regGenState.IoMasterCertificate.Bytes = cert
+
+			regGenState.IoMasterKey.Bytes, err = base64.StdEncoding.DecodeString(string(key))
+			if err != nil {
+				return err
+			}
 
 			// Create genesis state from certificates
 			regGenStateBz, err := cdc.MarshalJSON(&regGenState)
@@ -242,25 +249,26 @@ func ParseCert() *cobra.Command {
 
 func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "configure-secret [master-cert] [seed]",
-		Short: "After registration is successful, configure the secret node with the credentials file and the encrypted " +
+		Use: "configure-secret [master-key] [seed]",
+		Short: "After registration is successful, configure the secret node with the master key file and the encrypted " +
 			"seed that was written on-chain",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cert, err := os.ReadFile(args[0])
+			masterKey, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
 			}
 
-			// We expect seed to be 48 bytes of encrypted data (aka 96 hex chars) [32 bytes + 12 IV]
 			seed := args[1]
-			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
-				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
+			println(seed)
+			if (len(seed) != reg.LegacyEncryptedKeyLength && len(seed) != reg.EncryptedKeyLength) || !reg.IsHexString(seed) {
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length of at least 96 bytes without 0x prefix)")
 			}
 
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
-				MasterCert:   base64.StdEncoding.EncodeToString(cert),
+				MasterKey:    string(masterKey),
+				Version:      reg.SeedConfigVersion,
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)
@@ -280,7 +288,7 @@ func ConfigureSecret() *cobra.Command {
 				return err
 			}
 
-			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedConfig)
+			seedFilePath := filepath.Join(nodeDir, reg.SecretNodeSeedNewConfig)
 
 			err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
 			if err != nil {
@@ -328,7 +336,7 @@ func ResetEnclave() *cobra.Command {
 			}
 
 			// Remove .secretd/.node/seed.json
-			path := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			path := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedNewConfig)
 			if _, err := os.Stat(path); !os.IsNotExist(err) {
 				fmt.Printf("Removing %s\n", path)
 				err = os.Remove(path)
@@ -416,6 +424,7 @@ Please report any issues with this command
 				}
 			} else {
 				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
+				_ = os.Remove(sgxAttestationCert)
 				_, err := api.KeyGen()
 				if err != nil {
 					return fmt.Errorf("failed to initialize enclave: %w", err)
@@ -438,8 +447,6 @@ Please report any issues with this command
 				_ = os.Remove(sgxAttestationCert)
 				return err
 			}
-
-			_ = os.Remove(sgxAttestationCert)
 
 			// verify certificate
 			_, err = ra.UNSAFE_VerifyRaCert(cert)
@@ -510,7 +517,7 @@ Please report any issues with this command
 			}
 
 			if len(seed) != reg.EncryptedKeyLength || !reg.IsHexString(seed) {
-				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 96 without 0x prefix)")
+				return fmt.Errorf("invalid encrypted seed format (requires hex string of length 148 without 0x prefix)")
 			}
 
 			regPublicKey := details.RegistrationKey
@@ -519,7 +526,8 @@ Please report any issues with this command
 
 			cfg := reg.SeedConfig{
 				EncryptedKey: seed,
-				MasterCert:   regPublicKey,
+				MasterKey:    regPublicKey,
+				Version:      reg.SeedConfigVersion,
 			}
 
 			cfgBytes, err := json.Marshal(&cfg)
@@ -532,7 +540,7 @@ Please report any issues with this command
 				return err
 			}
 
-			seedCfgFile := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
+			seedCfgFile := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedNewConfig)
 			seedCfgDir := filepath.Join(homeDir, reg.SecretNodeCfgFolder)
 
 			// create seed directory if it doesn't exist

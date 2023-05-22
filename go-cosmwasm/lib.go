@@ -11,8 +11,8 @@ import (
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 )
 
-// CodeID represents an ID for a given wasm code blob, must be generated from this library
-type CodeID []byte
+// CodeHash represents an ID for a given wasm code blob, must be generated from this library
+type CodeHash []byte
 
 // WasmCode is an alias for raw bytes of the wasm compiled code
 type WasmCode []byte
@@ -69,7 +69,7 @@ func (w *Wasmer) Cleanup() {
 // be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
-func (w *Wasmer) Create(code WasmCode) (CodeID, error) {
+func (w *Wasmer) Create(code WasmCode) (CodeHash, error) {
 	return api.Create(w.cache, code)
 }
 
@@ -80,7 +80,7 @@ func (w *Wasmer) Create(code WasmCode) (CodeID, error) {
 // This can be used so that the (short) code id (hash) is stored in the iavl tree
 // and the larger binary blobs (wasm and pre-compiles) are all managed by the
 // rust library
-func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
+func (w *Wasmer) GetCode(code CodeHash) (WasmCode, error) {
 	return api.GetCode(w.cache, code)
 }
 
@@ -131,7 +131,7 @@ type V1ContractInitResponse struct {
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
 func (w *Wasmer) Instantiate(
-	codeId CodeID,
+	codeId CodeHash,
 	env types.Env,
 	initMsg []byte,
 	store KVStore,
@@ -168,7 +168,7 @@ func (w *Wasmer) Instantiate(
 		return nil, nil, gasUsed, fmt.Errorf("instantiate: cannot parse response from json: %w", err)
 	}
 
-	isOutputAddressedToReply := (len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0)
+	isOutputAddressedToReply := len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0
 
 	// init v0.10 response
 	if respV010orV1.V010 != nil {
@@ -234,7 +234,7 @@ func AppendReplyInternalDataToData(data []byte, internaReplyEnclaveSig []byte, i
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
 // and setting the env with relevant info on this instance (address, balance, etc)
 func (w *Wasmer) Execute(
-	code CodeID,
+	code CodeHash,
 	env types.Env,
 	executeMsg []byte,
 	store KVStore,
@@ -267,7 +267,7 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
 	}
 
-	isOutputAddressedToReply := (len(resp.InternaReplyEnclaveSig) > 0 && len(resp.InternalMsgId) > 0)
+	isOutputAddressedToReply := len(resp.InternaReplyEnclaveSig) > 0 && len(resp.InternalMsgId) > 0
 
 	// handle v0.10 response
 	if resp.V010 != nil {
@@ -349,7 +349,7 @@ func (w *Wasmer) Execute(
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
 func (w *Wasmer) Query(
-	code CodeID,
+	code CodeHash,
 	env types.Env,
 	queryMsg []byte,
 	store KVStore,

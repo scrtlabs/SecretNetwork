@@ -157,6 +157,8 @@ void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 
+Buffer get_encrypted_genesis_seed(Buffer pk, Buffer *err);
+
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
 Buffer get_health_check(Buffer *err);
@@ -178,7 +180,7 @@ Buffer init_bootstrap(Buffer spid, Buffer api_key, Buffer *err);
 
 cache_t *init_cache(Buffer data_dir, Buffer supported_features, uintptr_t _cache_size, Buffer *err);
 
-bool init_node(Buffer master_cert, Buffer encrypted_seed, Buffer api_key, Buffer *err);
+bool init_node(Buffer master_key, Buffer encrypted_seed, Buffer api_key, Buffer *err);
 
 Buffer instantiate(cache_t *cache,
                    Buffer contract_id,
@@ -215,3 +217,9 @@ Buffer query(cache_t *cache,
  * and cannot be called on any other pointer.
  */
 void release_cache(cache_t *cache);
+
+Buffer submit_block_signatures(Buffer header,
+                               Buffer commit,
+                               Buffer txs,
+                               Buffer random,
+                               Buffer *err);

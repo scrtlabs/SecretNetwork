@@ -109,7 +109,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
@@ -131,6 +131,8 @@ jobs:
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/bin/secretd /opt/mount/secretd
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/libgo_cosmwasm.so /opt/mount/libgo_cosmwasm.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librandom_api.so /opt/mount/librandom_api.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/tendermint_enclave.signed.so /opt/mount/tendermint_enclave.signed.so
 
       - uses: actions/download-artifact@v3
         with:
@@ -157,6 +159,8 @@ jobs:
           find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
+          # cp /opt/mount/librandom_api.so /usr/lib/librandom_api.so
+          # cp /opt/mount/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
           cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
           cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
@@ -239,7 +243,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
       - name: Install xgo
@@ -260,7 +264,7 @@ jobs:
         with:
           submodules: recursive
       - name: Build LocalSecret
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -272,7 +276,7 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES=debug-print
+            FEATURES=debug-print,random
             SGX_MODE=SW
           target: build-localsecret
           cache-from: type=gha
@@ -291,7 +295,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - uses: actions/checkout@v3
       - name: Build Hermes Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/ibc/hermes.Dockerfile
           context: deployment/dockerfiles/ibc
@@ -332,31 +336,16 @@ jobs:
         run: |
           cd integration-tests
           yarn
-          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
-          yarn test
+          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d > docker-compose.log 2>&1
+          yarn test || { cat docker-compose.log; exit 1; }
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
           git clone --depth 1 --branch master https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
-          perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*
-          yarn
-          yarn test
-          docker rm -f localsecret # next step needs the localsecret ports
-      - name: Install Requirements
-        run: |
-          chmod +x ./scripts/install-wasm-tools.sh
-          ./scripts/install-wasm-tools.sh
-      - name: Run cw20-ics20 tests
-        run: |
-          git clone --depth 1 --branch secret https://github.com/scrtlabs/cw-plus
-          cd cw-plus/contracts/cw20-ics20
-          # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
-          docker compose -f ./test/docker-compose.yml up -d
-          rustup target add wasm32-unknown-unknown
-          wget -O - 'https://github.com/WebAssembly/binaryen/releases/download/version_110/binaryen-version_110-x86_64-linux.tar.gz' | tar -xzf -
-          sudo cp binaryen-version_110/bin/wasm-opt /bin/wasm-opt
-          sudo chmod +x /bin/wasm-opt
-          make test
+          yarn
+          docker compose -f ./test/docker-compose.yml up -d > docker-compose.log 2>&1
+          yarn test-ci || { cat docker-compose.log; exit 1; }
+          make kill-localsecret

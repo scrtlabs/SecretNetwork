@@ -35,7 +35,7 @@ fi
 $SECRETD gentx validator 5000000000uscrt --keyring-backend="test" --chain-id $CHAINID --home $SECRETD_HOME
 $SECRETD collect-gentxs --home $SECRETD_HOME
 
-$SECRETD init-bootstrap node-master-cert.der io-master-cert.der --home $SECRETD_HOME
+$SECRETD init-bootstrap node-master-key.txt io-master-key.txt --home $SECRETD_HOME
 
 # Set proper defaults and change ports
 sed -i 's#"tcp://127.0.0.1:26657"#"tcp://0.0.0.0:26657"#g' $SECRETD_HOME/config/config.toml
@@ -48,4 +48,4 @@ perl -i -pe 's/rpc-write-timeout = 600/rpc-read-timeout = 5/' $SECRETD_HOME/conf
 perl -i -pe 's/"stake"/ "uscrt"/g' $SECRETD_HOME/config/genesis.json
 
 # Start the secretd
-LOG_LEVEL=info $SECRETD start --pruning=nothing --bootstrap --home $SECRETD_HOME
+LOG_LEVEL=trace $SECRETD start --pruning=nothing --bootstrap --home $SECRETD_HOME

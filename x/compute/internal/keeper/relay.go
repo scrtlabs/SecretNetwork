@@ -32,12 +32,14 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	store := ctx.KVStore(k.storeKey)
 
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	random := store.Get(types.GetRandomKey(ctx.BlockHeight()))
 	env := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* there's no MessageInfo for IBC contract calls */
 		sdk.NewCoins(),   /* there's no MessageInfo for IBC contract calls */
 		contractAddress,
 		contractKey,
+		random,
 	)
 
 	// prepare querier

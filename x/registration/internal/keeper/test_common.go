@@ -20,7 +20,7 @@ import (
 	// "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
-	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
+	"github.com/cosmos/ibc-go/v4/modules/apps/transfer"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	// ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
@@ -49,9 +49,13 @@ func CreateTestSeedConfig(t *testing.T) []byte {
 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
 	require.NoError(t, err)
 
+	key, err := fetchPubKeyFromLegacyCert(cert)
+	require.NoError(t, err)
+
 	cfg := regtypes.SeedConfig{
 		EncryptedKey: seed,
-		MasterCert:   base64.StdEncoding.EncodeToString(cert),
+		MasterKey:    base64.StdEncoding.EncodeToString(key),
+		Version:      regtypes.SeedConfigVersion,
 	}
 
 	cfgBytes, err := json.Marshal(&cfg)

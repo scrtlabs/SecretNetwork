@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -23,11 +24,11 @@ import (
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
-const SupportedFeatures = "staking,stargate,ibc3"
+const SupportedFeatures = "staking,stargate,ibc3,random"
 
 var wasmCtx = wasmUtils.WASMContext{
-	TestKeyPairPath:  "/tmp/id_tx_io.json",
-	TestMasterIOCert: reg.MasterCertificate{Bytes: nil},
+	TestKeyPairPath: "/tmp/id_tx_io.json",
+	TestMasterIOKey: reg.MasterKey{Bytes: nil},
 }
 
 func init() {
@@ -48,9 +49,14 @@ func init() {
 		panic(fmt.Sprintf("Error initializing the enclave: %v", err))
 	}
 
-	wasmCtx.TestMasterIOCert.Bytes, err = os.ReadFile(filepath.Join(".", reg.IoExchMasterCertPath))
+	b64Bz, err := os.ReadFile(filepath.Join(".", reg.IoExchMasterKeyPath))
 	if err != nil {
-		panic(fmt.Sprintf("Error reading 'io-master-cert.der': %v", err))
+		panic(fmt.Sprintf("Error reading 'io-master-key.txt': %v", err))
+	}
+
+	wasmCtx.TestMasterIOKey.Bytes, err = base64.StdEncoding.DecodeString(string(b64Bz))
+	if err != nil {
+		panic(fmt.Sprintf("Error reading 'io-master-key.txt': %v", err))
 	}
 }
 
@@ -288,7 +294,7 @@ func TestInstantiate(t *testing.T) {
 	// create with no balance is also legal
 	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.NoError(t, err)
-	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
+	require.Equal(t, "secret1uhfqhj6cvt7983n6xdxkjhfvx9833qk5pmgfl4", contractAddr.String())
 
 	// gas can change +- 10% before we start failing, though maybe for consensus we should check a constant amount
 	gasAfter := ctx.GasMeter().GasConsumed()
@@ -456,7 +462,7 @@ func TestExecute(t *testing.T) {
 
 	require.NoError(t, err)
 
-	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
+	require.Equal(t, "secret12exhpaft5rv3t8lcw9nykudxaddq2nmtv4r3tl", addr.String())
 
 	// ensure bob doesn't exist
 	bobAcct := accKeeper.GetAccount(ctx, bob)
@@ -584,7 +590,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			}
 
 			// when
-			_, _, _, _, _, err = execHelperImpl(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, false, defaultGasForTests, deposit, wasmCalls)
+			_, _, _, _, _, err = execHelperCustomWasmCount(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, false, defaultGasForTests, deposit, wasmCalls)
 
 			// then
 			if spec.expError {
@@ -613,7 +619,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// unauthorized - trialCtx so we don't change state
-	nonExistingAddress := addrFromUint64(9999)
+	nonExistingAddress := sdk.AccAddress([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	msgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 

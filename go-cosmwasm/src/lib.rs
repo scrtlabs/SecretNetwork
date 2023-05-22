@@ -24,8 +24,8 @@ use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen,
+    create_attestation_report_u, untrusted_get_encrypted_genesis_seed,
+    untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
 };
 
 use ctor::ctor;
@@ -93,6 +93,30 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
 }
 
 #[no_mangle]
+pub extern "C" fn get_encrypted_genesis_seed(pk: Buffer, err: Option<&mut Buffer>) -> Buffer {
+    trace!("Called get_encrypted_genesis_seed");
+    let pk_slice = match unsafe { pk.read() } {
+        None => {
+            set_error(Error::empty_arg("public_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+    trace!("Hello from right before untrusted_get_encrypted_genesis_seed");
+    match untrusted_get_encrypted_genesis_seed(pk_slice) {
+        Err(e) => {
+            // An error happened in the SGX sdk.
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(seed) => {
+            clear_error();
+            Buffer::from_vec(seed.to_vec())
+        }
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn init_bootstrap(
     spid: Buffer,
     api_key: Buffer,
@@ -130,14 +154,14 @@ pub extern "C" fn init_bootstrap(
 
 #[no_mangle]
 pub extern "C" fn init_node(
-    master_cert: Buffer,
+    master_key: Buffer,
     encrypted_seed: Buffer,
     api_key: Buffer,
     err: Option<&mut Buffer>,
 ) -> bool {
-    let pk_slice = match unsafe { master_cert.read() } {
+    let pk_slice = match unsafe { master_key.read() } {
         None => {
-            set_error(Error::empty_arg("master_cert"), err);
+            set_error(Error::empty_arg("master_key"), err);
             return false;
         }
         Some(r) => r,
@@ -158,7 +182,7 @@ pub extern "C" fn init_node(
     };
 
     match untrusted_init_node(pk_slice, encrypted_seed_slice, api_key_slice) {
-        Ok(_) => {
+        Ok(()) => {
             clear_error();
             true
         }
@@ -217,6 +241,84 @@ pub extern "C" fn init_cache(
         Err(e) => {
             set_error(e, err);
             std::ptr::null_mut()
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn submit_block_signatures(
+    header: Buffer,
+    commit: Buffer,
+    txs: Buffer,
+    random: Buffer,
+    // val_set: Buffer,
+    // next_val_set: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    trace!("Hello from right before init_bootstrap");
+
+    let header_slice = match unsafe { header.read() } {
+        None => {
+            set_error(Error::empty_arg("header"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let commit_slice = match unsafe { commit.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let txs_slice = match unsafe { txs.read() } {
+        None => {
+            set_error(Error::empty_arg("txs"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let random_slice = match unsafe { random.read() } {
+        None => {
+            set_error(Error::empty_arg("random"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+    // let val_set_slice = match unsafe { val_set.read() } {
+    //     None => {
+    //         set_error(Error::empty_arg("api_key"), err);
+    //         return Buffer::default();
+    //     }
+    //     Some(r) => r,
+    // };
+    //
+    // let next_val_set_slice = match unsafe { next_val_set.read() } {
+    //     None => {
+    //         set_error(Error::empty_arg("api_key"), err);
+    //         return Buffer::default();
+    //     }
+    //     Some(r) => r,
+    // };
+
+    match cosmwasm_sgx_vm::untrusted_submit_block_signatures(
+        header_slice,
+        commit_slice,
+        txs_slice,
+        random_slice,
+        // val_set_slice,
+        // next_val_set_slice,
+    ) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(r) => {
+            clear_error();
+            Buffer::from_vec(r.to_vec())
         }
     }
 }

@@ -13,10 +13,10 @@ import (
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	ibcxfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	"github.com/cosmos/ibc-go/v3/modules/core/exported"
-	ibccoretypes "github.com/cosmos/ibc-go/v3/modules/core/types"
+	ibcxfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	"github.com/cosmos/ibc-go/v4/modules/core/exported"
+	ibccoretypes "github.com/cosmos/ibc-go/v4/modules/core/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -27,7 +27,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	legacy120 "github.com/scrtlabs/SecretNetwork/app/legacy/v120"
+	legacy170 "github.com/scrtlabs/SecretNetwork/app/legacy/v170"
 )
 
 const (
@@ -75,8 +75,8 @@ $ secretd migrate /path/to/genesis.json --chain-id=secret-4 --genesis-time=2019-
 				return errors.Wrap(err, "failed to JSON unmarshal initial genesis state")
 			}
 
-			// Migrate Terra specific state
-			newGenState := legacy120.Migrate(initialState, clientCtx)
+			// Migrate 120 state to 170 state
+			newGenState := legacy170.Migrate(initialState, clientCtx)
 
 			var bankGenesis banktypes.GenesisState
 

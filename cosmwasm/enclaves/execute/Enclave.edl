@@ -41,12 +41,18 @@ enclave {
         public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
             uintptr_t cert_len,
+            [out, count=96] uint8_t* seed
+        );
+
+        public sgx_status_t ecall_get_genesis_seed(
+            [in, count=pk_len] const uint8_t* pk,
+            uintptr_t pk_len,
             [out, count=48] uint8_t* seed
         );
 
         public sgx_status_t ecall_init_node(
-            [in, count=master_cert_len] const uint8_t* master_cert,
-            uintptr_t master_cert_len,
+            [in, count=master_key_len] const uint8_t* master_key,
+            uintptr_t master_key_len,
             [in, count=encrypted_seed_len] const uint8_t* encrypted_seed,
             uintptr_t encrypted_seed_len,
             [in, count=api_key_len] const uint8_t* api_key,
@@ -103,6 +109,22 @@ enclave {
         public HealthCheckResult ecall_health_check();
 
         public uint32_t ecall_run_tests();
+
+        public sgx_status_t ecall_submit_block_signatures(
+            [in, count=in_header_len] const uint8_t* in_header,
+            uintptr_t in_header_len,
+            [in, count=in_commit_len] const uint8_t* in_commit,
+            uintptr_t in_commit_len,
+            [in, count=in_txs_len] const uint8_t* in_txs,
+            uintptr_t in_txs_len,
+            [in, count=in_encrypted_random_len] const uint8_t* in_encrypted_random,
+            uintptr_t in_encrypted_random_len,
+            [out, count=32] uint8_t* decrypted
+      //      [in, count=in_validator_set_len] const uint8_t* in_validator_set,
+    //        uintptr_t in_validator_set_len,
+  //          [in, count=in_next_validator_set_len] const uint8_t* in_next_validator_set,
+//            uintptr_t in_next_validator_set_len
+        );
     };
 
     untrusted {

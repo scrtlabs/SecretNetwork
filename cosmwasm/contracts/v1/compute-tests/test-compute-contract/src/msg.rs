@@ -109,11 +109,17 @@ pub enum InstantiateMsg {
         code_hash: String,
     },
     GetEnv {},
+    TestRemoveDb {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    IncrementTimes {
+        times: u64,
+    },
+    LastMsgMarkerNop {},
+    LastMsgMarker {},
     WasmMsg {
         ty: String,
     },
