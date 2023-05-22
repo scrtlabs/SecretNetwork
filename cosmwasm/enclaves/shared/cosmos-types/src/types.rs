@@ -257,7 +257,7 @@ impl SignDoc {
 
 #[derive(Debug)]
 pub struct TxBody {
-    pub messages: Vec<CosmWasmMsg>,
+    pub messages: Vec<CosmosMsg>,
     // Leaving this here for discoverability. We can use this, but don't verify it today.
     #[allow(dead_code)]
     memo: (),
@@ -279,7 +279,7 @@ impl TxBody {
         let messages = tx_body
             .messages
             .into_iter()
-            .map(|any| CosmWasmMsg::from_bytes(&any.value))
+            .map(|any| CosmosMsg::from_bytes(&any.value))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(TxBody {
@@ -323,7 +323,7 @@ pub fn deserialize_ignore_any<'de, D: serde::Deserializer<'de>, T: Default>(
 }
 
 impl StdCosmWasmMsg {
-    pub fn into_cosmwasm_msg(self) -> Result<CosmWasmMsg, EnclaveError> {
+    pub fn into_cosmwasm_msg(self) -> Result<CosmosMsg, EnclaveError> {
         match self {
             Self::Execute {
                 sender,
@@ -344,7 +344,7 @@ impl StdCosmWasmMsg {
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = msg.0;
-                Ok(CosmWasmMsg::Execute {
+                Ok(CosmosMsg::Execute {
                     sender,
                     contract,
                     msg,
@@ -372,7 +372,7 @@ impl StdCosmWasmMsg {
                     EnclaveError::FailedToDeserialize
                 })?;
                 let init_msg = init_msg.0;
-                Ok(CosmWasmMsg::Instantiate {
+                Ok(CosmosMsg::Instantiate {
                     sender,
                     init_msg,
                     init_funds,
@@ -380,7 +380,7 @@ impl StdCosmWasmMsg {
                     callback_sig,
                 })
             }
-            Self::Other => Ok(CosmWasmMsg::Other),
+            Self::Other => Ok(CosmosMsg::Other),
         }
     }
 }
@@ -403,7 +403,7 @@ pub struct IbcHooksWasmMsg {
 }
 
 #[derive(Debug)]
-pub enum CosmWasmMsg {
+pub enum CosmosMsg {
     // CosmWasm:
     Execute {
         sender: CanonicalAddr,
@@ -444,25 +444,21 @@ pub enum CosmWasmMsg {
     Other,
 }
 
-impl CosmWasmMsg {
+impl CosmosMsg {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        // Assaf: This function needs a refactor, as some protobufs are
+        // compatible, e.g. try_parse_execute succeeds in parsing MsgRecvPacket as
+        // MsgExecuteContract, so for now for each field of MsgExecuteContract we also need
+        // to add a sanity check
         Self::try_parse_execute(bytes)
             .or_else(|_| Self::try_parse_instantiate(bytes))
-            // .or_else(|_| Self::try_parse_msg_channel_open_init(bytes))
-            // .or_else(|_| Self::try_parse_msg_channel_open_try(bytes))
-            // .or_else(|_| Self::try_parse_msg_channel_open_ack(bytes))
-            // .or_else(|_| Self::try_parse_msg_channel_open_confirm(bytes))
-            // .or_else(|_| Self::try_parse_msg_channel_close_init(bytes))
-            // .or_else(|_| Self::try_parse_msg_channel_close_confirm(bytes))
-            // .or_else(|_| Self::try_parse_msg_acknowledgement(bytes))
-            // .or_else(|_| Self::try_parse_msg_timeout(bytes))
             .or_else(|_| Self::try_parse_recv_packet(bytes))
             .or_else(|_| {
                 warn!(
-                    "got an error while trying to deserialize cosmwasm message bytes from protobuf: {}",
+                    "error while trying to deserialize message bytes protobuf: {}",
                     Binary(bytes.into())
                 );
-                Ok(CosmWasmMsg::Other)
+                Ok(CosmosMsg::Other)
             })
     }
 
@@ -506,7 +502,7 @@ impl CosmWasmMsg {
 
         match raw_msg.packet.into_option() {
             None => Err(EnclaveError::FailedToDeserialize),
-            Some(packet) => Ok(CosmWasmMsg::MsgRecvPacket {
+            Some(packet) => Ok(CosmosMsg::MsgRecvPacket {
                 sequence: packet.sequence,
                 source_port: packet.source_port,
                 source_channel: packet.source_channel,
@@ -529,11 +525,16 @@ impl CosmWasmMsg {
             raw_msg.sender
         );
 
+        if raw_msg.sender.len() == 0 {
+            warn!("try_parse_instantiate: sender address to instantiate was empty");
+            return Err(EnclaveError::FailedToDeserialize);
+        }
+
         let init_funds = Self::parse_funds(raw_msg.init_funds)?;
 
         let callback_sig = Some(raw_msg.callback_sig);
 
-        Ok(CosmWasmMsg::Instantiate {
+        Ok(CosmosMsg::Instantiate {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
             init_msg: raw_msg.init_msg,
             init_funds,
@@ -553,11 +554,22 @@ impl CosmWasmMsg {
             raw_msg.sender.len(),
             raw_msg.sender
         );
+
+        if raw_msg.sender.len() == 0 {
+            warn!("try_parse_execute: sender address to execute was empty");
+            return Err(EnclaveError::FailedToDeserialize);
+        }
+
         trace!(
             "try_parse_execute contract: len={} val={:?}",
             raw_msg.contract.len(),
             raw_msg.contract
         );
+
+        if raw_msg.contract.len() == 0 {
+            warn!("try_parse_execute: contract address to execute was empty");
+            return Err(EnclaveError::FailedToDeserialize);
+        }
 
         // humanize address
         let contract = HumanAddr::from_canonical(&CanonicalAddr(Binary(raw_msg.contract)))
@@ -573,7 +585,7 @@ impl CosmWasmMsg {
 
         let callback_sig = Some(raw_msg.callback_sig);
 
-        Ok(CosmWasmMsg::Execute {
+        Ok(CosmosMsg::Execute {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
             contract,
             msg: raw_msg.msg,
@@ -606,11 +618,11 @@ impl CosmWasmMsg {
 
     pub fn sender(&self) -> Option<&CanonicalAddr> {
         match self {
-            CosmWasmMsg::Execute { sender, .. } | CosmWasmMsg::Instantiate { sender, .. } => {
+            CosmosMsg::Execute { sender, .. } | CosmosMsg::Instantiate { sender, .. } => {
                 Some(sender)
             }
-            CosmWasmMsg::MsgRecvPacket { .. } => None,
-            CosmWasmMsg::Other => None,
+            CosmosMsg::MsgRecvPacket { .. } => None,
+            CosmosMsg::Other => None,
         }
     }
 }

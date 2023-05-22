@@ -336,6 +336,7 @@ pub fn handle(
         // Execute: msg.sender was already verified
         HandleType::HANDLE_TYPE_EXECUTE => {}
         // Reply & IBC stuff: no msg.sender, set it to null just in case
+        // WASM Hooks: cannot verify sender, set it to null
         HandleType::HANDLE_TYPE_REPLY
         | HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
         | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
@@ -343,7 +344,6 @@ pub fn handle(
         | HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
         | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
         | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
-        // WASM Hooks: cannot verify sender, set it to null 
         | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER
         | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK
         | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {

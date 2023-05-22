@@ -1,4 +1,5 @@
-use cw_types_v1::ibc::IbcPacketReceiveMsg;
+use cw_types_generic::IbcHooksIncomingTransferMsg;
+use cw_types_v1::ibc::{IbcPacketReceiveMsg};
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
@@ -8,7 +9,7 @@ use cw_types_generic::BaseEnv;
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmWasmMsg, CosmosPubKey, FungibleTokenPacketData, HandleType, IbcHooksWasmMsg,
+    ContractCode, CosmosMsg, CosmosPubKey, FungibleTokenPacketData, HandleType, IbcHooksWasmMsg,
     SigInfo, SignDoc, StdSignDoc,
 };
 use enclave_crypto::traits::VerifyingKey;
@@ -524,7 +525,7 @@ fn get_signer(sign_info: &SigInfo, sender: &CanonicalAddr) -> Result<CosmosPubKe
     }
 }
 
-fn get_messages(sign_info: &SigInfo) -> Result<Vec<CosmWasmMsg>, EnclaveError> {
+fn get_messages(sign_info: &SigInfo) -> Result<Vec<CosmosMsg>, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
@@ -539,7 +540,7 @@ fn get_messages(sign_info: &SigInfo) -> Result<Vec<CosmWasmMsg>, EnclaveError> {
                     warn!("failure to parse StdSignDoc: {:?}", err);
                     EnclaveError::FailedTxVerification
                 })?;
-            let messages: Result<Vec<CosmWasmMsg>, _> = sign_doc
+            let messages: Result<Vec<CosmosMsg>, _> = sign_doc
                 .msgs
                 .iter()
                 .map(|x| x.clone().into_cosmwasm_msg())
@@ -575,7 +576,7 @@ fn get_messages(sign_info: &SigInfo) -> Result<Vec<CosmWasmMsg>, EnclaveError> {
                 );
                 EnclaveError::FailedTxVerification
             })?;
-            let messages: Result<Vec<CosmWasmMsg>, _> = sign_doc
+            let messages: Result<Vec<CosmosMsg>, _> = sign_doc
                 .msgs
                 .iter()
                 .map(|x| x.clone().into_cosmwasm_msg())
@@ -637,41 +638,70 @@ fn verify_callback_sig_impl(
 
 /// Get the cosmwasm message that contains the encrypted message
 fn get_verified_msg<'sd>(
-    messages: &'sd [CosmWasmMsg],
+    messages: &'sd [CosmosMsg],
     msg_sender: &CanonicalAddr,
     sent_msg: &SecretMessage,
     handle_type: HandleType,
-) -> Option<&'sd CosmWasmMsg> {
+) -> Option<&'sd CosmosMsg> {
     trace!("get_verified_msg: {:?}", messages);
 
     messages.iter().find(|&m| match m {
-        CosmWasmMsg::Execute { msg, sender, .. }
-        | CosmWasmMsg::Instantiate {
+        CosmosMsg::Execute { msg, sender, .. }
+        | CosmosMsg::Instantiate {
             init_msg: msg,
             sender,
             ..
         } => msg_sender == sender && &sent_msg.to_vec() == msg,
-        CosmWasmMsg::MsgRecvPacket { data, .. } => match handle_type {
+        CosmosMsg::MsgRecvPacket {
+            sequence,
+            source_port,
+            source_channel,
+            destination_port,
+            destination_channel,
+            data,
+        } => match handle_type {
             HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
-                &sent_msg.msg == data // plaintext
-                 || &sent_msg.to_vec() == data // encrypted
+                let parsed = serde_json::from_slice::<IbcPacketReceiveMsg>(&sent_msg.msg);
+                if parsed.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_PACKET_RECEIVE: sent_msg.msg cannot be parsed as IbcPacketReceiveMsg: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), parsed.err());
+                    return false;
+                }
+                let parsed = parsed.unwrap();
+                
+                parsed.packet.data.as_slice() == data.as_slice()
+                    && parsed.packet.sequence == *sequence
+                    && parsed.packet.src.port_id == *source_port
+                    && parsed.packet.src.channel_id == *source_channel
+                    && parsed.packet.dest.port_id == *destination_port
+                    && parsed.packet.dest.channel_id == *destination_channel
+                   
             }
             HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
-                // TODO:
-                // parase data as {wasm:{contract:..,msg:...}} JSON and make sure wasm.msg == send_msg (maybe use sorted JSON?)
-                false
+                let parsed = serde_json::from_slice::<IbcHooksIncomingTransferMsg>(data);
+                if parsed.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: data cannot be parsed as IbcHooksIncomingTransferMsg: {:?} Error: {:?}", String::from_utf8_lossy(data), parsed.err());
+                    return false;
+                }
+                
+                let send_msg_value = serde_json::from_slice::<serde_json::Value>(&sent_msg.msg);
+                if send_msg_value.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: sent_msg.msg cannot be parsed as serde_json::Value: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), send_msg_value.err());
+                    return false;
+                }
+
+                parsed.unwrap().wasm.msg == send_msg_value.unwrap()
             }
             _ => false,
         },
-        CosmWasmMsg::Other => false,
+        CosmosMsg::Other => false,
     })
 }
 
 /// Check that the contract listed in the cosmwasm message matches the one in env
-fn verify_contract(msg: &CosmWasmMsg, contract_address: &HumanAddr) -> bool {
+fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     match msg {
-        CosmWasmMsg::Execute { contract, .. } => {
+        CosmosMsg::Execute { contract, .. } => {
             info!("Verifying contract address..");
             let is_verified = contract_address == contract;
             if !is_verified {
@@ -683,9 +713,9 @@ fn verify_contract(msg: &CosmWasmMsg, contract_address: &HumanAddr) -> bool {
             }
             is_verified
         }
-        CosmWasmMsg::Instantiate { .. } => true,
-        CosmWasmMsg::Other => false,
-        CosmWasmMsg::MsgRecvPacket {
+        CosmosMsg::Instantiate { .. } => true,
+        CosmosMsg::Other => false,
+        CosmosMsg::MsgRecvPacket {
             destination_port,
             data,
             ..
@@ -774,15 +804,15 @@ fn verify_contract(msg: &CosmWasmMsg, contract_address: &HumanAddr) -> bool {
 }
 
 /// Check that the funds listed in the cosmwasm message matches the ones in env
-fn verify_funds(msg: &CosmWasmMsg, sent_funds_msg: &[Coin]) -> bool {
+fn verify_funds(msg: &CosmosMsg, sent_funds_msg: &[Coin]) -> bool {
     match msg {
-        CosmWasmMsg::Execute { sent_funds, .. }
-        | CosmWasmMsg::Instantiate {
+        CosmosMsg::Execute { sent_funds, .. }
+        | CosmosMsg::Instantiate {
             init_funds: sent_funds,
             ..
         } => sent_funds_msg == sent_funds,
-        CosmWasmMsg::Other => false,
-        CosmWasmMsg::MsgRecvPacket {
+        CosmosMsg::Other => false,
+        CosmosMsg::MsgRecvPacket {
             data,
             source_port,
             source_channel,
@@ -893,15 +923,13 @@ fn verify_funds(msg: &CosmWasmMsg, sent_funds_msg: &[Coin]) -> bool {
 }
 
 fn verify_message_params(
-    messages: &[CosmWasmMsg],
+    messages: &[CosmosMsg],
     sender: &CanonicalAddr,
     sent_funds: &[Coin],
     contract_address: &HumanAddr,
     sent_msg: &SecretMessage,
     handle_type: HandleType,
 ) -> bool {
-    debug!("Verifying sender...");
-
     info!("Verifying message...");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
@@ -919,11 +947,11 @@ fn verify_message_params(
     let msg = msg.unwrap();
 
     match msg {
-        CosmWasmMsg::MsgRecvPacket { .. } => {
+        CosmosMsg::MsgRecvPacket { .. } => {
             // No sender to verify.
             // Going to pass null sender to the contract if all other checks pass.
         }
-        CosmWasmMsg::Execute { .. } | CosmWasmMsg::Instantiate { .. } | CosmWasmMsg::Other => {
+        CosmosMsg::Execute { .. } | CosmosMsg::Instantiate { .. } | CosmosMsg::Other => {
             if msg.sender() != Some(&sender) {
                 warn!(
                     "message sender did not match cosmwasm message sender: {:?} {:?}",

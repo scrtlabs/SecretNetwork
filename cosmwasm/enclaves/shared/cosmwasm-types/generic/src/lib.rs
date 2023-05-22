@@ -10,6 +10,7 @@ use cw_types_v1::types::Env as V1Env;
 use cw_types_v1::types::MessageInfo as V1MessageInfo;
 use cw_types_v1::types::{self as v1types, Addr};
 use enclave_ffi_types::EnclaveError;
+use serde_json;
 
 pub const CONTRACT_KEY_LENGTH: usize = 64;
 
@@ -248,4 +249,15 @@ mod tests {
     fn it_works() {
         assert_eq!(2 + 2, 4);
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct IbcHooksIncomingTransferMsg {
+    pub wasm: IbcHooksIncomingTransferMsgWasm,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct IbcHooksIncomingTransferMsgWasm {
+    pub contract: String,
+    pub msg: serde_json::Value,
 }
