@@ -21,6 +21,9 @@ use super::seed_exchange::encrypt_seed;
 #[cfg(feature = "light-client-validation")]
 use block_verifier::VERIFIED_MESSAGES;
 
+#[cfg(feature = "light-client-validation")]
+use block_verifier::registration::verify_reg_msg;
+
 ///
 /// `ecall_authenticate_new_node`
 ///
