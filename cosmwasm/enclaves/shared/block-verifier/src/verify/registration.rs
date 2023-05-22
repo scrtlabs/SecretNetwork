@@ -1,6 +1,6 @@
-use crate::wasm_messages::tests::check_message_is_reg;
 use crate::VERIFIED_MESSAGES;
 use log::{debug, error};
+use protobuf::Message;
 
 pub fn verify_reg_msg(certificate: &[u8]) -> bool {
     let mut verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
@@ -18,7 +18,7 @@ pub fn verify_reg_msg(certificate: &[u8]) -> bool {
         match cosmos_proto::registration::v1beta1::msg::RaAuthenticate::parse_from_bytes(&msg) {
             Ok(ra_msg) => {
                 if ra_msg.certificate == certificate {
-                    true
+                    return true;
                 }
                 error!("Error failed to validate registration message - 0x7535");
                 false
@@ -29,8 +29,6 @@ pub fn verify_reg_msg(certificate: &[u8]) -> bool {
                 false
             }
         }
-
-        true
     } else {
         error!("Cannot verify new node unless msg is part of the current block");
         false

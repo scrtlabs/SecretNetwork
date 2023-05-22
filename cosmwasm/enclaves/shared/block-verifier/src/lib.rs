@@ -10,6 +10,8 @@ pub mod wasm_messages;
 
 pub use wasm_messages::VERIFIED_MESSAGES;
 
+pub use verify::registration;
+
 mod txs;
 
 #[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
