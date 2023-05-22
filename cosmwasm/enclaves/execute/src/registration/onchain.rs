@@ -52,6 +52,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
 
+    #[cfg(feature = "light-client-validation")]
     if !verify_reg_msg(cert_slice) {
         return NodeAuthResult::SignatureInvalid;
     }
