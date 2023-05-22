@@ -37,8 +37,14 @@ pub fn init_result_to_vm_result(other: InitResult) -> VmResult<InitSuccess> {
 
 pub fn migrate_result_to_vm_result(other: MigrateResult) -> VmResult<MigrateSuccess> {
     match other {
-        MigrateResult::Success { output } => Ok(MigrateSuccess {
+        MigrateResult::Success {
+            output,
+            new_contract_key,
+            proof,
+        } => Ok(MigrateSuccess {
             output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(Vec::new),
+            new_contract_key,
+            proof,
         }),
         MigrateResult::Failure { err } => Err(err.into()),
     }
@@ -48,11 +54,16 @@ pub fn migrate_result_to_vm_result(other: MigrateResult) -> VmResult<MigrateSucc
 pub struct MigrateSuccess {
     /// A pointer to the output of the execution
     output: Vec<u8>,
+    new_contract_key: [u8; 64],
+    proof: [u8; 32],
 }
 
 impl MigrateSuccess {
     pub fn into_output(self) -> Vec<u8> {
-        self.output
+        let mut out_vec = self.new_contract_key.to_vec();
+        out_vec.extend_from_slice(&self.proof);
+        out_vec.extend_from_slice(&self.output);
+        out_vec
     }
 }
 

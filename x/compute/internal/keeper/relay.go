@@ -29,16 +29,18 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 		return "", err
 	}
 
-	store := ctx.KVStore(k.storeKey)
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-	random := store.Get(types.GetRandomKey(ctx.BlockHeight()))
 	env := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* there's no MessageInfo for IBC contract calls */
 		sdk.NewCoins(),   /* there's no MessageInfo for IBC contract calls */
 		contractAddress,
-		contractKey,
+		&contractKey,
 		random,
 	)
 

@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/base64"
 	fmt "fmt"
 	"strings"
 
@@ -20,9 +19,6 @@ const (
 	defaultEnclaveLRUCacheSize = uint16(100)
 	defaultQueryGasLimit       = uint64(10_000_000)
 )
-
-// base64 of a 64 byte key
-type ContractKey string
 
 func (m Model) ValidateBasic() error {
 	if len(m.Key) == 0 {
@@ -123,7 +119,7 @@ func (a *AbsoluteTxPosition) Bytes() []byte {
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte, random []byte) wasmTypes.Env {
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey *ContractKey, random []byte) wasmTypes.Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -146,8 +142,17 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 		Contract: wasmTypes.ContractInfo{
 			Address: contractAddr.String(),
 		},
-		Key:        wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
 		QueryDepth: 1,
+	}
+
+	if contractKey != nil {
+		env.Key = &wasmTypes.ContractKey{
+			Key: contractKey.Key,
+			Original: wasmTypes.ContractKeyWithProof{
+				Proof: contractKey.Original.Proof,
+				Key:   contractKey.Original.Proof,
+			},
+		}
 	}
 
 	if txCounter, ok := TXCounter(ctx); ok {

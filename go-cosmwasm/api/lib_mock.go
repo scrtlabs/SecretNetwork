@@ -95,6 +95,23 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return nil, nil
 }
 
+func Migrate(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	msg []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	sigInfo []byte,
+	admin []byte,
+	adminProof []byte,
+) ([]byte, uint64, error) {
+	return nil, 0, nil
+}
+
 func Instantiate(
 	cache Cache,
 	code_id []byte,

@@ -197,6 +197,20 @@ Buffer instantiate(cache_t *cache,
 
 Buffer key_gen(Buffer *err);
 
+Buffer migrate(cache_t *cache,
+               Buffer contract_id,
+               Buffer params,
+               Buffer msg,
+               DB db,
+               GoApi api,
+               GoQuerier querier,
+               uint64_t gas_limit,
+               uint64_t *gas_used,
+               Buffer *err,
+               Buffer sig_info,
+               Buffer admin,
+               Buffer admin_proof);
+
 Buffer query(cache_t *cache,
              Buffer code_id,
              Buffer params,

@@ -84,13 +84,19 @@ pub fn result_handle_success_to_handleresult(
 pub struct MigrateSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
+    pub new_contract_key: [u8; 64],
+    pub proof: [u8; 32],
 }
 
 pub fn result_migrate_success_to_result(
     result: Result<MigrateSuccess, EnclaveError>,
 ) -> MigrateResult {
     match result {
-        Ok(MigrateSuccess { output }) => {
+        Ok(MigrateSuccess {
+            output,
+            new_contract_key,
+            proof,
+        }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
                 match ocall_allocate(user_buffer.as_mut_ptr(), output.as_ptr(), output.len()) {
@@ -107,6 +113,8 @@ pub fn result_migrate_success_to_result(
             };
             MigrateResult::Success {
                 output: user_buffer,
+                new_contract_key,
+                proof,
             }
         }
         Err(err) => MigrateResult::Failure { err },

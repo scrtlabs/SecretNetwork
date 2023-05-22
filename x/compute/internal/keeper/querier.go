@@ -18,6 +18,11 @@ type GrpcQuerier struct {
 	keeper Keeper
 }
 
+func (q GrpcQuerier) ContractHistory(ctx context.Context, request *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewGrpcQuerier(keeper Keeper) GrpcQuerier {
 	return GrpcQuerier{keeper: keeper}
 }

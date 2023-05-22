@@ -418,28 +418,32 @@ func (w *Wasmer) Migrate(
 	admin sdk.AccAddress,
 	adminProof []byte,
 	// data, contractKey, adminProof, gasUsed, error
-) (interface{}, uint64, error) {
+) (interface{}, []byte, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, nil, 0, err
 	}
 
 	sigInfoBin, err := json.Marshal(sigInfo)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, nil, 0, err
 	}
 
 	data, gasUsed, err := api.Migrate(w.cache, newCodeId, paramBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, admin, adminProof)
 	if err != nil {
-		return nil, gasUsed, err
+		return nil, nil, nil, gasUsed, err
 	}
+
+	newContractKey := data[0:64]
+	proof := data[64:96]
+	data = data[96:]
 
 	var respV010orV1 V010orV1ContractInitResponse
 	err = json.Unmarshal(data, &respV010orV1)
 
 	if err != nil {
 		// unidentified response 🤷
-		return nil, gasUsed, fmt.Errorf("migrate: cannot parse response from json: %w", err)
+		return nil, nil, nil, gasUsed, fmt.Errorf("migrate: cannot parse response from json: %w", err)
 	}
 
 	isOutputAddressedToReply := len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0
@@ -451,18 +455,18 @@ func (w *Wasmer) Migrate(
 				InternalMsgId:          respV010orV1.InternalMsgId,
 				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
 				Data:                   []byte(respV010orV1.V010.Err.GenericErr.Msg),
-			}, gasUsed, fmt.Errorf("%+v", respV010orV1.V010.Err)
+			}, nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010.Err)
 		}
 
 		if respV010orV1.V010.Ok != nil {
 			if isOutputAddressedToReply {
 				respV010orV1.V010.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 				if err != nil {
-					return nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
+					return nil, nil, nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
 				}
 			}
 
-			return respV010orV1.V010.Ok, gasUsed, nil
+			return respV010orV1.V010.Ok, newContractKey, proof, gasUsed, nil
 		}
 	}
 
@@ -473,20 +477,20 @@ func (w *Wasmer) Migrate(
 				InternalMsgId:          respV010orV1.InternalMsgId,
 				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
 				Data:                   []byte(respV010orV1.V1.Err.GenericErr.Msg),
-			}, gasUsed, fmt.Errorf("%+v", respV010orV1.V1.Err)
+			}, nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V1.Err)
 		}
 
 		if respV010orV1.V1.Ok != nil {
 			if isOutputAddressedToReply {
 				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 				if err != nil {
-					return nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
+					return nil, nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
 				}
 			}
 
-			return respV010orV1.V1.Ok, gasUsed, nil
+			return respV010orV1.V1.Ok, newContractKey, proof, gasUsed, nil
 		}
 	}
 
-	return nil, gasUsed, fmt.Errorf("instantiate: cannot detect response type (v0.10 or v1)")
+	return nil, nil, nil, gasUsed, fmt.Errorf("instantiate: cannot detect response type (v0.10 or v1)")
 }

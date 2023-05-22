@@ -528,8 +528,6 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return nil, err
 	}
 
-	store := ctx.KVStore(k.storeKey)
-
 	// add more funds
 	if !coins.IsZero() {
 		if k.bankKeeper.BlockedAddr(caller) {
@@ -543,8 +541,13 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, random)
+
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	env := types.NewEnv(ctx, caller, coins, contractAddress, &contractKey, random)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -635,16 +638,17 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 		Caller:  contractAddress,
 	}
 
-	store := ctx.KVStore(k.storeKey)
-	// 0x01 | codeID (uint64) -> ContractInfo
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
 
 	params := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* empty because it's unused in queries */
 		sdk.NewCoins(),   /* empty because it's unused in queries */
 		contractAddress,
-		contractKey,
+		&contractKey,
 		[]byte{0}, /* empty because it's unused in queries */
 	)
 	params.QueryDepth = queryDepth
@@ -700,12 +704,29 @@ func (k Keeper) contractInstance(ctx sdk.Context, contractAddress sdk.AccAddress
 	return contract, codeInfo, prefixStore, nil
 }
 
-func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) []byte {
+func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractKey, error) {
 	store := ctx.KVStore(k.storeKey)
 
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	var contractKey types.ContractKey
+	contractKeyBz := store.Get(types.GetContractEnclaveKey(contractAddress))
 
-	return contractKey
+	if contractKeyBz == nil {
+		return types.ContractKey{}, sdkerrors.Wrap(types.ErrNotFound, "contract key")
+	}
+
+	err := k.cdc.Unmarshal(contractKeyBz, &contractKey)
+	if err != nil {
+		return contractKey, err
+	}
+
+	return contractKey, nil
+}
+
+func (k Keeper) SetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress, contractKey *types.ContractKey) {
+	store := ctx.KVStore(k.storeKey)
+
+	contractKeyBz := k.cdc.MustMarshal(contractKey)
+	store.Set(types.GetContractEnclaveKey(contractAddress), contractKeyBz)
 }
 
 func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
@@ -873,10 +894,10 @@ func (k *Keeper) handleContractResponse(
 	logs []v010wasmTypes.LogAttribute,
 	evts v1wasmTypes.Events,
 	data []byte,
-// original TX in order to extract the first 64bytes of signing info
+	// original TX in order to extract the first 64bytes of signing info
 	ogTx []byte,
-// sigInfo of the initial message that triggered the original contract call
-// This is used mainly in replies in order to decrypt their data.
+	// sigInfo of the initial message that triggered the original contract call
+	// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.VerificationInfo,
 	ogCosmosMessageVersion wasmTypes.CosmosMsgVersion,
 ) ([]byte, error) {
@@ -1047,12 +1068,14 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	// always consider this pinned
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: reply")
 
-	store := ctx.KVStore(k.storeKey)
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
 
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
-	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey, random)
+	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, &contractKey, random)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -1152,13 +1175,16 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		contractInfo.IBCPortID = ibcPort
 	}
 
-	store := ctx.KVStore(k.storeKey)
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
-	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey, random)
+	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, &contractKey, random)
 
-	adminProof := k.GetContractInfo(ctx, contractAddress).Admin //Proof
+	adminProof := k.GetContractInfo(ctx, contractAddress).AdminProof
 	admin := k.GetContractInfo(ctx, contractAddress).Admin
 
 	// prepare querier
@@ -1171,8 +1197,17 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, admin, adminProof)
+	response, newContractKey, proof, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, admin, adminProof)
 	consumeGas(ctx, gasUsed)
+
+	// update contract key with new one
+	k.SetContractKey(ctx, contractAddress, &types.ContractKey{
+		Key: newContractKey,
+		Original: &types.ContractKeyWithProof{
+			Key:   contractKey.Key,
+			Proof: proof,
+		},
+	})
 
 	if err != nil {
 		var result []byte

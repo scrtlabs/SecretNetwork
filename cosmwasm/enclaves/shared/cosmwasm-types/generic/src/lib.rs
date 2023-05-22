@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use cw_types_v010::encoding::Binary;
 
 use cw_types_v010::types as v010types;
-use cw_types_v010::types::{Env as V010Env, HumanAddr};
+use cw_types_v010::types::{ContractKeyWithProof, Env as V010Env, HumanAddr};
 use cw_types_v1::types as v1types;
 use cw_types_v1::types::Env as V1Env;
 use cw_types_v1::types::MessageInfo as V1MessageInfo;
@@ -41,7 +41,7 @@ pub struct BaseEnv(pub V010Env);
 impl BaseEnv {
     pub fn get_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
         let contract_key = if let Some(b64_key) = &self.0.contract_key {
-            base64::decode(b64_key).map_err(|err| {
+            base64::decode(&b64_key.key).map_err(|err| {
                 warn!(
                     "got an error while trying to decode contract key {:?}: {}",
                     b64_key, err
@@ -62,6 +62,22 @@ impl BaseEnv {
         key_as_bytes.copy_from_slice(&contract_key);
 
         Ok(key_as_bytes)
+    }
+
+    pub fn was_migrated(&self) -> bool {
+        if let Some(key) = &self.0.contract_key {
+            key.original.is_some()
+        } else {
+            false
+        }
+    }
+
+    pub fn get_original_contract_key(&self) -> Option<ContractKeyWithProof> {
+        if let Some(key) = &self.0.contract_key {
+            key.original.clone()
+        } else {
+            None
+        }
     }
 
     pub fn get_verification_params(&self) -> (&BaseAddr, &BaseAddr, u64, &Vec<BaseCoin>) {

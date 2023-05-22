@@ -62,6 +62,20 @@ fn generate_admin_signature(admin: &[u8], code_hash: &[u8]) -> [u8; enclave_cryp
     sha_256(&data_to_hash)
 }
 
+fn generate_contract_key_proof(
+    address: &[u8],
+    code_hash: &[u8],
+    prev_contract_key: &[u8],
+    new_contract_key: &[u8],
+) -> [u8; enclave_crypto::HASH_SIZE] {
+    let mut data_to_hash = vec![];
+    data_to_hash.extend_from_slice(address);
+    data_to_hash.extend_from_slice(code_hash);
+    data_to_hash.extend_from_slice(prev_contract_key);
+    data_to_hash.extend_from_slice(new_contract_key);
+    sha_256(&data_to_hash)
+}
+
 pub fn init(
     context: Ctx,       // need to pass this to read_db & write_db
     gas_limit: u64,     // gas limit for this execution
@@ -282,6 +296,15 @@ pub fn migrate(
         &canonical_contract_address,
     )?;
 
+    let og_contract_key = base_env.get_contract_key()?;
+
+    let contract_key_proof = generate_contract_key_proof(
+        &canonical_sender_address.0 .0,
+        &contract_code.hash(),
+        &og_contract_key,
+        &contract_key,
+    );
+
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
     let secret_msg = SecretMessage::from_slice(msg)?;
@@ -368,7 +391,11 @@ pub fn migrate(
 
     // todo: can move the key to somewhere in the output message if we want
 
-    Ok(MigrateSuccess { output })
+    Ok(MigrateSuccess {
+        output,
+        new_contract_key: contract_key,
+        proof: contract_key_proof,
+    })
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
@@ -400,9 +427,16 @@ pub fn handle(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let contract_key = base_env.get_contract_key()?;
+    let mut contract_key = base_env.get_contract_key()?;
 
     validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
+
+    if base_env.was_migrated() {
+        let og_key = base_env.get_original_contract_key().unwrap(); // was_migrated checks that this won't fail
+        contract_key = og_key.get_key();
+
+        // validate proof
+    }
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 

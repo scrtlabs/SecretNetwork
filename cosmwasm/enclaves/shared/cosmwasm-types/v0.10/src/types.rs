@@ -92,12 +92,34 @@ impl fmt::Display for CanonicalAddr {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub struct ContractKey {
+    pub key: String,
+    pub original: Option<ContractKeyWithProof>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub struct ContractKeyWithProof {
+    pub key: String,
+    pub proof: [u8; 32],
+}
+
+impl ContractKeyWithProof {
+    pub fn get_key(&self) -> [u8; 64] {
+        let mut output = [0u8; 64];
+        let decoded = base64::decode(&self.key).unwrap();
+        output.copy_from_slice(&decoded);
+
+        output
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Env {
     pub block: BlockInfo,
     pub message: MessageInfo,
     pub contract: ContractInfo,
-    pub contract_key: Option<String>,
+    pub contract_key: Option<ContractKey>,
     #[serde(default)]
     pub contract_code_hash: String,
     #[serde(default)]

@@ -11,9 +11,19 @@ type Env struct {
 	Block       BlockInfo        `json:"block"`
 	Message     MessageInfo      `json:"message"`
 	Contract    ContractInfo     `json:"contract"`
-	Key         ContractKey      `json:"contract_key"`
+	Key         *ContractKey     `json:"contract_key,omitempty"`
 	QueryDepth  uint32           `json:"query_depth"`
 	Transaction *TransactionInfo `json:"transaction,omitempty"`
+}
+
+type ContractKey struct {
+	Key      []byte               `json:"key"`
+	Original ContractKeyWithProof `json:"original,omitempty"`
+}
+
+type ContractKeyWithProof struct {
+	Key   []byte `json:"key"`
+	Proof []byte `json:"proof"`
 }
 
 type TransactionInfo struct {
@@ -28,8 +38,6 @@ type TransactionInfo struct {
 type BaseEnv[T Env] struct {
 	First T
 }
-
-type ContractKey string
 
 type BlockInfo struct {
 	// block height this transaction is executed

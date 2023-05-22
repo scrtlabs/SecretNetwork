@@ -329,6 +329,8 @@ pub enum MigrateResult {
     Success {
         /// A pointer to the output of the calculation
         output: UserSpaceBuffer,
+        new_contract_key: [u8; 64],
+        proof: [u8; 32],
     },
     Failure {
         /// The error that happened in the enclave
