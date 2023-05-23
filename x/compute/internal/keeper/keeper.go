@@ -426,9 +426,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	response, key, adminProof, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
 	consumeGas(ctx, gasUsed)
 
-	println("Got admin proof: *******************************", hex.EncodeToString(adminProof))
-	println("Got new key: *******************************", hex.EncodeToString(key))
-
 	if err != nil {
 		switch res := response.(type) { //nolint:gocritic
 		case v1wasmTypes.DataWithInternalReplyInfo:
@@ -566,13 +563,6 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	contractKey, err := k.GetContractKey(ctx, contractAddress)
 	if err != nil {
 		return nil, err
-	}
-
-	println("Running with contract key: ******************************* ", hex.EncodeToString(contractKey.Key))
-
-	if contractKey.Original != nil {
-		println("Running with OG contract key: ******************************* ", hex.EncodeToString(contractKey.Original.Key))
-		println("Running with OG Proof: ******************************* ", hex.EncodeToString(contractKey.Original.Proof))
 	}
 
 	env := types.NewEnv(ctx, caller, coins, contractAddress, &contractKey, random)

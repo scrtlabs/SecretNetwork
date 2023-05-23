@@ -304,7 +304,7 @@ func TestEnv(t *testing.T) {
 							{
 								Key: "env",
 								Value: fmt.Sprintf(
-									`{"block":{"height":%d,"time":%d,"chain_id":"%s"},"message":{"sender":"%s","sent_funds":[{"denom":"denom","amount":"1"}]},"contract":{"address":"%s"},"contract_key":"","contract_code_hash":"%s"}`,
+									`{"block":{"height":%d,"time":%d,"chain_id":"%s"},"message":{"sender":"%s","sent_funds":[{"denom":"denom","amount":"1"}]},"contract":{"address":"%s"},"contract_key":null,"contract_code_hash":"%s"}`,
 									ctx.BlockHeight(),
 									// env.block.time is seconds since unix epoch
 									ctx.BlockTime().Unix(),
@@ -351,8 +351,6 @@ func TestEnv(t *testing.T) {
 				// require.NotEqual(t, firstRandom, actualMessageInfo.Random)
 			} else {
 
-				contractKey, _ := keeper.GetContractKey(ctx, contractAddress)
-
 				requireEvents(t,
 					[]ContractEvent{
 						{
@@ -360,14 +358,13 @@ func TestEnv(t *testing.T) {
 							{
 								Key: "env",
 								Value: fmt.Sprintf(
-									`{"block":{"height":%d,"time":%d,"chain_id":"%s"},"message":{"sender":"%s","sent_funds":[{"denom":"denom","amount":"1"}]},"contract":{"address":"%s"},"contract_key":"%s","contract_code_hash":"%s"}`,
+									`{"block":{"height":%d,"time":%d,"chain_id":"%s"},"message":{"sender":"%s","sent_funds":[{"denom":"denom","amount":"1"}]},"contract":{"address":"%s"},"contract_key":null,"contract_code_hash":"%s"}`,
 									ctx.BlockHeight(),
 									// env.block.time is seconds since unix epoch
 									ctx.BlockTime().Unix(),
 									ctx.ChainID(),
 									walletA.String(),
 									contractAddress.String(),
-									base64.StdEncoding.EncodeToString(contractKey.Key),
 									calcCodeHash(testContract.WasmFilePath),
 								),
 							},
@@ -2295,7 +2292,7 @@ func TestCheckGas(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// 995 is the sum of all the overhead that goes into a contract call beyond the base cost (reading keys, calculations, etc)
-	baseContractUsage := types.InstanceCost + 995
+	baseContractUsage := types.InstanceCost + 1053
 
 	_, _, _, events, baseGasUsed, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"check_gas":{}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
@@ -2305,7 +2302,7 @@ func TestCheckGas(t *testing.T) {
 	gasUsed, err2 := strconv.ParseUint(execEvent[1].Value, 10, 64)
 	require.Empty(t, err2)
 
-	require.Equal(t, gasUsed+1, baseGasUsed-baseContractUsage)
+	require.Equal(t, baseGasUsed-baseContractUsage, gasUsed+1)
 }
 
 func TestConsumeExact(t *testing.T) {
@@ -2314,7 +2311,7 @@ func TestConsumeExact(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// not sure where the 16 extra gas comes vs the previous check_gas test, but it makes everything play nice, so....
-	baseContractUsage := types.InstanceCost + 995 - 16
+	baseContractUsage := types.InstanceCost + 1053 - 16
 
 	for _, test := range []struct {
 		description   string

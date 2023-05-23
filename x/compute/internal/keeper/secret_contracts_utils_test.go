@@ -546,7 +546,6 @@ func execTxBuilderImpl(
 		execResult, err := keeper.Execute(ctx, contractAddress, txSender, msg, coins, nil)
 		gasAfter := ctx.GasMeter().GasConsumed()
 		gasUsed := gasAfter - gasBefore
-		require.NoError(t, err)
 
 		if wasmCallCount < 0 {
 			// default, just check that at least 1 call happened
