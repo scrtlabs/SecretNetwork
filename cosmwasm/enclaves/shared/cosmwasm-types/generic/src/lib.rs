@@ -125,7 +125,9 @@ impl BaseEnv {
                 contract: v010types::ContractInfo {
                     address: self.0.contract.address,
                 },
-                contract_key: self.0.contract_key,
+                // to maintain compatability with v010 we just return none here - no contract would care
+                // about this anyway
+                contract_key: None,
                 contract_code_hash: self.0.contract_code_hash,
                 transaction: None,
             },

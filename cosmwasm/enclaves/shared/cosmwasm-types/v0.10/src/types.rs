@@ -101,13 +101,21 @@ pub struct ContractKey {
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractKeyWithProof {
     pub key: String,
-    pub proof: [u8; 32],
+    pub proof: String,
 }
 
 impl ContractKeyWithProof {
     pub fn get_key(&self) -> [u8; 64] {
         let mut output = [0u8; 64];
         let decoded = base64::decode(&self.key).unwrap();
+        output.copy_from_slice(&decoded);
+
+        output
+    }
+
+    pub fn decode_proof(&self) -> [u8; 32] {
+        let mut output = [0u8; 32];
+        let decoded = base64::decode(&self.proof).unwrap();
         output.copy_from_slice(&decoded);
 
         output

@@ -188,7 +188,7 @@ func Migrate(
 	defer freeAfterSend(adminBuffer)
 
 	adminProofBuffer := sendSlice(adminProof)
-	defer freeAfterSend(adminBuffer)
+	defer freeAfterSend(adminProofBuffer)
 
 	//// This is done in order to ensure that goroutines don't
 	//// swap threads between recursive calls to the enclave.

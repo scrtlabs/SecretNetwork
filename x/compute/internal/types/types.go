@@ -58,11 +58,12 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 // NewContractInfo creates a new instance of a given WASM contract info
 func NewContractInfo(codeID uint64, creator sdk.AccAddress, admin sdk.AccAddress, adminProof []byte, label string, createdAt *AbsoluteTxPosition) ContractInfo {
 	return ContractInfo{
-		CodeID:  codeID,
-		Creator: creator,
-		Label:   label,
-		Created: createdAt,
-		Admin:   admin,
+		CodeID:     codeID,
+		Creator:    creator,
+		Label:      label,
+		Created:    createdAt,
+		Admin:      admin,
+		AdminProof: adminProof,
 	}
 }
 
@@ -147,11 +148,15 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 
 	if contractKey != nil {
 		env.Key = &wasmTypes.ContractKey{
-			Key: contractKey.Key,
-			Original: wasmTypes.ContractKeyWithProof{
+			Key:      contractKey.Key,
+			Original: nil,
+		}
+
+		if contractKey.Original != nil {
+			env.Key.Original = &wasmTypes.ContractKeyWithProof{
 				Proof: contractKey.Original.Proof,
-				Key:   contractKey.Original.Proof,
-			},
+				Key:   contractKey.Original.Key,
+			}
 		}
 	}
 

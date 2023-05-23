@@ -113,6 +113,8 @@ const (
 	evaporateContract           = "evaporate.wasm"
 	randomContract              = "v1_random_test.wasm"
 	benchContract               = "bench_contract.wasm"
+	migrateContractV1           = "migrate_contract_v1.wasm"
+	migrateContractV2           = "migrate_contract_v2.wasm"
 )
 
 const contractPath = "testdata"
@@ -129,12 +131,22 @@ var TestContractPaths = map[string]string{
 	benchContract:               filepath.Join(".", contractPath, benchContract),
 	evaporateContract:           filepath.Join(".", contractPath, evaporateContract),
 	randomContract:              filepath.Join(".", contractPath, randomContract),
+	migrateContractV1:           filepath.Join(".", contractPath, migrateContractV1),
+	migrateContractV2:           filepath.Join(".", contractPath, migrateContractV2),
 }
 
 // _                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
 var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
 
 type ContractEvent []v010cosmwasm.LogAttribute
+
+type MigrateResult struct {
+	Nonce      []byte
+	Ctx        sdk.Context
+	Data       []byte
+	WasmEvents []ContractEvent
+	GasUsed    uint64
+}
 
 type ExecResult struct {
 	Nonce      []byte
@@ -673,6 +685,24 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator s
 		Label:     "demo contract 1",
 		InitMsg:   encMsg,
 		InitFunds: funds,
+	}
+	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
+
+	txBytes, err := newTx.Marshal()
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
+func PrepareMigrateSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64) sdk.Context {
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
+	require.NoError(t, err)
+
+	initMsg := wasmtypes.MsgMigrateContract{
+		Sender:   creator.String(),
+		CodeID:   codeID,
+		Contract: contractAddress,
+		Msg:      encMsg,
 	}
 	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
 

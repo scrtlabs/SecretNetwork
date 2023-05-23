@@ -591,6 +591,7 @@ fn get_verified_msg<'sd>(
 ) -> Option<&'sd CosmWasmMsg> {
     messages.iter().find(|&m| match m {
         CosmWasmMsg::Execute { msg, sender, .. }
+        | CosmWasmMsg::Migrate { msg, sender }
         | CosmWasmMsg::Instantiate {
             init_msg: msg,
             sender,
@@ -617,6 +618,7 @@ fn verify_contract(msg: &CosmWasmMsg, contract_address: &HumanAddr) -> bool {
             is_verified
         }
         CosmWasmMsg::Instantiate { .. } => true,
+        CosmWasmMsg::Migrate { .. } => true,
         CosmWasmMsg::Other => false,
     }
 }
@@ -630,6 +632,7 @@ fn verify_funds(msg: &CosmWasmMsg, sent_funds_msg: &[Coin]) -> bool {
             ..
         } => sent_funds_msg == sent_funds,
         CosmWasmMsg::Other => false,
+        CosmWasmMsg::Migrate { .. } => true,
     }
 }
 

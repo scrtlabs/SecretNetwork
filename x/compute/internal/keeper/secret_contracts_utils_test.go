@@ -546,6 +546,7 @@ func execTxBuilderImpl(
 		execResult, err := keeper.Execute(ctx, contractAddress, txSender, msg, coins, nil)
 		gasAfter := ctx.GasMeter().GasConsumed()
 		gasUsed := gasAfter - gasBefore
+		require.NoError(t, err)
 
 		if wasmCallCount < 0 {
 			// default, just check that at least 1 call happened
@@ -630,7 +631,7 @@ func initHelperImpl(
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, sentFunds)
 	// make the label a random base64 string, because why not?
-	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sentFunds, nil)
+	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator, creator, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sentFunds, nil)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happened
@@ -695,4 +696,89 @@ type GetResponse struct {
 }
 type v1QueryResponse struct {
 	Get GetResponse `json:"get"`
+}
+
+func MigrateHelper(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	newCodeId uint64,
+	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, migrateMsg string,
+	isErrorEncrypted bool, isV1Contract bool, gas uint64, shouldSkipAttributes ...bool,
+) (MigrateResult, *ErrorResult) {
+	codeInfo, err := keeper.GetCodeInfo(ctx, newCodeId)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(codeInfo.CodeHash)
+
+	secretMsg := types.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      []byte(migrateMsg),
+	}
+
+	migrateMsgBz, err := wasmCtx.Encrypt(secretMsg.Serialize())
+	require.NoError(t, err)
+
+	// create new ctx with the same storage and a gas limit
+	// this is to reset the event manager, so we won't get
+	// events from past calls
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	ctx = sdk.NewContext(
+		ctx.MultiStore(),
+		ctx.BlockHeader(),
+		ctx.IsCheckTx(),
+		log.NewNopLogger(),
+	).WithGasMeter(gasMeter)
+
+	ctx = PrepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
+
+	// reset value before test
+	keeper.LastMsgManager.SetMarker(false)
+
+	// simulate the check in baseapp
+	if keeper.LastMsgManager.GetMarker() {
+		errResult := ErrorResult{
+			Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
+		}
+		return MigrateResult{}, &errResult
+	}
+
+	nonce := migrateMsgBz[0:32]
+
+	gasBefore := ctx.GasMeter().GasConsumed()
+	execResult, err := keeper.Migrate(ctx, contractAddress, txSender, newCodeId, migrateMsgBz)
+	gasAfter := ctx.GasMeter().GasConsumed()
+	gasUsed := gasAfter - gasBefore
+
+	if err != nil {
+		result := MigrateResult{
+			Nonce:      nil,
+			Ctx:        ctx,
+			Data:       nil,
+			WasmEvents: nil,
+			GasUsed:    gasUsed,
+		}
+
+		errResult := ErrorResult{
+			Generic: err,
+		}
+		cwErr := extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
+		errResult.CosmWasm = &cwErr
+
+		return result, &errResult
+	}
+
+	// wasmEvents comes from all the callbacks as well
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
+
+	// Data is the output of only the first call
+	data := getDecryptedData(t, execResult, nonce)
+
+	result := MigrateResult{
+		Nonce:      nonce,
+		Ctx:        ctx,
+		Data:       data,
+		WasmEvents: wasmEvents,
+		GasUsed:    gasUsed,
+	}
+
+	return result, nil
 }

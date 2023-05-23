@@ -302,6 +302,11 @@ pub enum StdCosmWasmMsg {
         label: String,
         callback_sig: Option<Vec<u8>>,
     },
+    Migrate {
+        sender: HumanAddr,
+        code_id: String,
+        msg: String,
+    },
     #[serde(other, deserialize_with = "deserialize_ignore_any")]
     Other,
 }
@@ -315,6 +320,21 @@ pub fn deserialize_ignore_any<'de, D: serde::Deserializer<'de>, T: Default>(
 impl StdCosmWasmMsg {
     pub fn into_cosmwasm_msg(self) -> Result<CosmWasmMsg, EnclaveError> {
         match self {
+            Self::Migrate { sender, msg, .. } => {
+                let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
+                    warn!("failed to turn human addr to canonical addr when parsing CosmWasmMsg: {:?}", err);
+                    EnclaveError::FailedToDeserialize
+                })?;
+                let msg = Binary::from_base64(&msg).map_err(|err| {
+                    warn!(
+                        "failed to parse base64 msg when parsing CosmWasmMsg: {:?}",
+                        err
+                    );
+                    EnclaveError::FailedToDeserialize
+                })?;
+                let msg = msg.0;
+                Ok(CosmWasmMsg::Migrate { sender, msg })
+            }
             Self::Execute {
                 sender,
                 contract,
@@ -391,6 +411,10 @@ pub enum CosmWasmMsg {
         label: String,
         callback_sig: Option<Vec<u8>>,
     },
+    Migrate {
+        sender: CanonicalAddr,
+        msg: Vec<u8>,
+    },
     Other,
 }
 
@@ -398,6 +422,7 @@ impl CosmWasmMsg {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
         Self::try_parse_execute(bytes)
             .or_else(|_| Self::try_parse_instantiate(bytes))
+            .or_else(|_| Self::try_parse_migrate(bytes))
             .or_else(|_| {
                 warn!(
                     "got an error while trying to deserialize cosmwasm message bytes from protobuf: {}",
@@ -405,6 +430,26 @@ impl CosmWasmMsg {
                 );
                 Ok(CosmWasmMsg::Other)
             })
+    }
+    fn try_parse_migrate(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        use proto::cosmwasm::msg::MsgMigrateContract;
+
+        let raw_msg = MsgMigrateContract::parse_from_bytes(bytes)
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+        trace!(
+            "try_parse_instantiate sender: len={} val={:?}",
+            raw_msg.sender.len(),
+            raw_msg.sender
+        );
+
+        let sender = CanonicalAddr::from_human(&HumanAddr(raw_msg.sender))
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+        Ok(CosmWasmMsg::Migrate {
+            sender,
+            msg: raw_msg.msg,
+        })
     }
 
     fn try_parse_instantiate(bytes: &[u8]) -> Result<Self, EnclaveError> {
@@ -496,9 +541,9 @@ impl CosmWasmMsg {
 
     pub fn sender(&self) -> Option<&CanonicalAddr> {
         match self {
-            CosmWasmMsg::Execute { sender, .. } | CosmWasmMsg::Instantiate { sender, .. } => {
-                Some(sender)
-            }
+            CosmWasmMsg::Execute { sender, .. }
+            | CosmWasmMsg::Instantiate { sender, .. }
+            | CosmWasmMsg::Migrate { sender, .. } => Some(sender),
             CosmWasmMsg::Other => None,
         }
     }

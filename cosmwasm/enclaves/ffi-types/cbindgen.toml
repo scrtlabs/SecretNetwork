@@ -36,6 +36,7 @@ include = [
     "Ctx",
     "InitResult",
     "HandleResult",
+    "MigrateResult",
     "QueryResult",
     "OcallReturn",
     "HealthCheckResult",

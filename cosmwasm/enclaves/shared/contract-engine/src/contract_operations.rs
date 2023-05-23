@@ -93,6 +93,10 @@ pub fn init(
     let contract_hash = contract_code.hash();
     // let duration = start.elapsed();
     // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
+    debug!(
+        "******************** init RUNNING WITH CODE: {:?}",
+        contract_hash
+    );
 
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
@@ -255,13 +259,17 @@ pub fn migrate(
     admin: &[u8],
     admin_proof: &[u8],
 ) -> Result<MigrateSuccess, EnclaveError> {
-    trace!("Starting init");
+    debug!("Starting migrate");
 
     //let start = Instant::now();
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();
     // let duration = start.elapsed();
     // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
+    debug!(
+        "******************** migrate RUNNING WITH CODE: {:?}",
+        contract_hash
+    );
 
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
@@ -357,10 +365,7 @@ pub fn migrate(
     set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
 
     update_msg_counter(block_height);
-    //let start = Instant::now();
     let result = engine.migrate(&versioned_env, validated_msg);
-    // let duration = start.elapsed();
-    // trace!("Time elapsed in engine.init: {:?}", duration);
 
     *used_gas = engine.gas_used();
 
@@ -369,11 +374,6 @@ pub fn migrate(
     engine
         .flush_cache()
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
-
-    // TODO: copy cosmwasm's structures to enclave
-    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
-    // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
-    //let start = Instant::now();
 
     let output = post_process_output(
         output,
@@ -390,6 +390,11 @@ pub fn migrate(
     // trace!("Time elapsed in encrypt_output: {:?}", duration);
 
     // todo: can move the key to somewhere in the output message if we want
+
+    debug!(
+        "Migrate success: {:?}, {:?}",
+        contract_key, contract_key_proof
+    );
 
     Ok(MigrateSuccess {
         output,
@@ -414,6 +419,11 @@ pub fn handle(
     let contract_code = ContractCode::new(contract);
     let contract_hash = contract_code.hash();
 
+    debug!(
+        "******************** HANDLE RUNNING WITH CODE: {:?}",
+        contract_hash
+    );
+
     let base_env: BaseEnv = extract_base_env(env)?;
 
     #[cfg(feature = "light-client-validation")]
@@ -432,6 +442,7 @@ pub fn handle(
     validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
 
     if base_env.was_migrated() {
+        println!("Contract was migrated, setting keys to original one");
         let og_key = base_env.get_original_contract_key().unwrap(); // was_migrated checks that this won't fail
         contract_key = og_key.get_key();
 

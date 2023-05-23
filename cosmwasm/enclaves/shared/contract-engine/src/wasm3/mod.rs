@@ -268,7 +268,7 @@ impl Engine {
             .to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in environment.new_runtime is: {:?}", duration);
-        debug!("initialized runtime");
+        trace!("initialized runtime");
 
         // let start = Instant::now();
         let module = self
@@ -280,31 +280,31 @@ impl Engine {
         // "Time elapsed in environment.parse_module is: {:?}",
         // duration
         // );
-        debug!("parsed module");
+        trace!("parsed module");
 
         // let start = Instant::now();
         let mut instance = runtime.load_module(module).to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in runtime.load_module is: {:?}", duration);
-        debug!("created instance");
+        trace!("created instance");
 
         // let start = Instant::now();
         gas::set_gas_limit(&instance, self.gas_limit)?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in set_gas_limit is: {:?}", duration);
-        debug!("set gas limit");
+        trace!("set gas limit");
 
         // let start = Instant::now();
         Self::link_host_functions(&mut instance).to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in link_host_functions is: {:?}", duration);
-        debug!("linked functions");
+        trace!("linked functions");
 
         // let start = Instant::now();
         let result = func(&mut instance, &mut self.context);
         // let duration = start.elapsed();
         // trace!("Instance: elapsed time for running func is: {:?}", duration);
-        debug!("function returned {:?}", result);
+        trace!("function returned {:?}", result);
 
         self.used_gas = self
             .gas_limit
@@ -400,26 +400,26 @@ impl Engine {
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
-                    let (init, args) = (
+                    let (migrate, args) = (
                         instance
                             .find_function::<(u32, u32), u32>("migrate")
                             .to_enclave_result()?,
                         (env_ptr, msg_ptr),
                     );
-                    init.call_with_context(context, args)
+                    migrate.call_with_context(context, args)
                 }
                 CosmWasmApiVersion::V1 => {
                     let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
 
-                    let (init, args) = (
+                    let (migrate, args) = (
                         instance
-                            .find_function::<(u32, u32, u32), u32>("migrate")
+                            .find_function::<(u32, u32), u32>("migrate")
                             .to_enclave_result()?,
-                        (env_ptr, msg_info_ptr, msg_ptr),
+                        (env_ptr, msg_ptr),
                     );
                     // let start = Instant::now();
                     // let res =
-                    init.call_with_context(context, args)
+                    migrate.call_with_context(context, args)
                     // let duration = start.elapsed();
                     // trace!("Time elapsed in call_with_context is: {:?}", duration);
                     // res
@@ -516,13 +516,13 @@ impl Engine {
         let api_version = self.get_api_version();
 
         self.with_instance(|instance, context| {
-            debug!("starting handle");
+            trace!("starting handle");
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
             let msg_ptr = write_to_memory(instance, &msg)?;
-            debug!("handle written msg");
+            trace!("handle written msg");
             let env_ptr = write_to_memory(instance, &env_bytes)?;
-            debug!("handle written env");
+            trace!("handle written env");
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -536,7 +536,6 @@ impl Engine {
                 }
                 CosmWasmApiVersion::V1 => {
                     let export_name = HandleType::get_export_name(handle_type);
-
                     if handle_type == &HandleType::HANDLE_TYPE_EXECUTE {
                         let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
                         let (handle, args) = (
@@ -561,13 +560,13 @@ impl Engine {
                 }
             };
 
-            debug!("found handle");
+            trace!("found handle");
 
             let output_ptr = check_execution_result(instance, context, result)?;
-            debug!("called handle");
+            trace!("called handle");
 
             let output = read_from_memory(instance, output_ptr)?;
-            debug!("extracted handle output: {:?}", output);
+            trace!("extracted handle output: {:?}", output);
 
             Ok(output)
         })

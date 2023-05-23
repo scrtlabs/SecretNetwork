@@ -376,6 +376,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		return nil, nil, sdkerrors.Wrap(types.ErrAccountExists, existingAcct.GetAddress().String())
 	}
 
+	if admin == nil {
+		admin = creator
+	}
+
 	// deposit initial contract funds
 	if !deposit.IsZero() {
 		if k.bankKeeper.BlockedAddr(creator) {
@@ -422,6 +426,9 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	response, key, adminProof, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
 	consumeGas(ctx, gasUsed)
 
+	println("Got admin proof: *******************************", hex.EncodeToString(adminProof))
+	println("Got new key: *******************************", hex.EncodeToString(key))
+
 	if err != nil {
 		switch res := response.(type) { //nolint:gocritic
 		case v1wasmTypes.DataWithInternalReplyInfo:
@@ -444,8 +451,15 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		createdAt := types.NewAbsoluteTxPosition(ctx)
 		contractInfo := types.NewContractInfo(codeID, creator, admin, adminProof, label, createdAt)
 
-		k.storeContractInfo(ctx, contractAddress, &contractInfo)
-		store.Set(types.GetContractEnclaveKey(contractAddress), key)
+		historyEntry := contractInfo.InitialHistory(initMsg)
+		k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
+		//k.addToContractCreatorSecondaryIndex(ctx, creator, historyEntry.Updated, contractAddress)
+		k.appendToContractHistory(ctx, contractAddress, historyEntry)
+
+		k.setContractInfo(ctx, contractAddress, &contractInfo)
+		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
+			Key: key,
+		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
 		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
@@ -484,9 +498,16 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 			sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)),
 		))
 
+		historyEntry := contractInfo.InitialHistory(initMsg)
+		k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
+		//k.addToContractCreatorSecondaryIndex(ctx, creator, historyEntry.Updated, contractAddress)
+		k.appendToContractHistory(ctx, contractAddress, historyEntry)
+
 		// persist instance
-		k.storeContractInfo(ctx, contractAddress, &contractInfo)
-		store.Set(types.GetContractEnclaveKey(contractAddress), key)
+		k.setContractInfo(ctx, contractAddress, &contractInfo)
+		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
+			Key: key,
+		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
@@ -545,6 +566,13 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	contractKey, err := k.GetContractKey(ctx, contractAddress)
 	if err != nil {
 		return nil, err
+	}
+
+	println("Running with contract key: ******************************* ", hex.EncodeToString(contractKey.Key))
+
+	if contractKey.Original != nil {
+		println("Running with OG contract key: ******************************* ", hex.EncodeToString(contractKey.Original.Key))
+		println("Running with OG Proof: ******************************* ", hex.EncodeToString(contractKey.Original.Proof))
 	}
 
 	env := types.NewEnv(ctx, caller, coins, contractAddress, &contractKey, random)
@@ -1200,6 +1228,9 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	response, newContractKey, proof, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, admin, adminProof)
 	consumeGas(ctx, gasUsed)
 
+	println("Got admin proof: *******************************", hex.EncodeToString(proof))
+	println("Got new key: *******************************", hex.EncodeToString(newContractKey))
+
 	// update contract key with new one
 	k.SetContractKey(ctx, contractAddress, &types.ContractKey{
 		Key: newContractKey,
@@ -1228,7 +1259,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	historyEntry := contractInfo.AddMigration(ctx, newCodeID, msg)
 	k.appendToContractHistory(ctx, contractAddress, historyEntry)
 	k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
-	k.storeContractInfo(ctx, contractAddress, &contractInfo)
+	k.setContractInfo(ctx, contractAddress, &contractInfo)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeMigrate,
@@ -1251,8 +1282,9 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return data, nil
 	case *v1wasmTypes.Response:
 		ctx.EventManager().EmitEvent(sdk.NewEvent(
-			types.EventTypeExecute,
+			types.EventTypeMigrate,
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+			sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(newCodeID, 10)),
 		))
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
@@ -1323,12 +1355,6 @@ func (k Keeper) GetContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress)
 func (k Keeper) addToContractCodeSecondaryIndex(ctx sdk.Context, contractAddress sdk.AccAddress, entry types.ContractCodeHistoryEntry) {
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetContractByCreatedSecondaryIndexKey(contractAddress, entry), []byte{})
-}
-
-// storeContractInfo persists the ContractInfo. No secondary index updated here.
-func (k Keeper) storeContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
-	store := ctx.KVStore(k.storeKey)
-	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(contract))
 }
 
 func (k Keeper) GetStoreKey() sdk.StoreKey {

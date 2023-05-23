@@ -106,7 +106,7 @@ enclave {
             uintptr_t msg_len
         );
 
-        public HandleResult ecall_migrate(
+        public MigrateResult ecall_migrate(
             Ctx context,
             uint64_t gas_limit,
             [out] uint64_t* used_gas,

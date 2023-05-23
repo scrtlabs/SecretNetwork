@@ -350,6 +350,9 @@ func TestEnv(t *testing.T) {
 				// require.Len(t, actualMessageInfo.Random, 44)
 				// require.NotEqual(t, firstRandom, actualMessageInfo.Random)
 			} else {
+
+				contractKey, _ := keeper.GetContractKey(ctx, contractAddress)
+
 				requireEvents(t,
 					[]ContractEvent{
 						{
@@ -364,7 +367,7 @@ func TestEnv(t *testing.T) {
 									ctx.ChainID(),
 									walletA.String(),
 									contractAddress.String(),
-									base64.StdEncoding.EncodeToString(keeper.GetContractKey(ctx, contractAddress)),
+									base64.StdEncoding.EncodeToString(contractKey.Key),
 									calcCodeHash(testContract.WasmFilePath),
 								),
 							},

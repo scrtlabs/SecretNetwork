@@ -17,13 +17,13 @@ type Env struct {
 }
 
 type ContractKey struct {
-	Key      []byte               `json:"key"`
-	Original ContractKeyWithProof `json:"original,omitempty"`
+	Key      []byte                `json:"key"`
+	Original *ContractKeyWithProof `json:"original,omitempty"`
 }
 
 type ContractKeyWithProof struct {
-	Key   []byte `json:"key"`
-	Proof []byte `json:"proof"`
+	Key   []byte `json:"key,omitempty"`
+	Proof []byte `json:"proof,omitempty"`
 }
 
 type TransactionInfo struct {
