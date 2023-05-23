@@ -56,7 +56,7 @@ func ibcChannelConnectHelper(
 			OpenConfirm: nil,
 		}
 
-		msg := ibcchanneltypes.MsgChannelOpenAck{
+		sdkMsg := ibcchanneltypes.MsgChannelOpenAck{
 			PortId:                channel.Endpoint.PortID,
 			ChannelId:             channel.Endpoint.ChannelID,
 			CounterpartyChannelId: channel.CounterpartyEndpoint.ChannelID,
@@ -66,7 +66,7 @@ func ibcChannelConnectHelper(
 			Signer:                relayer.String(),
 		}
 
-		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 	} else {
 		ibcChannelConnectMsg = v1types.IBCChannelConnectMsg{
 			OpenAck: nil,
@@ -75,7 +75,7 @@ func ibcChannelConnectHelper(
 			},
 		}
 
-		msg := ibcchanneltypes.MsgChannelOpenConfirm{
+		sdkMsg := ibcchanneltypes.MsgChannelOpenConfirm{
 			PortId:      channel.Endpoint.PortID,
 			ChannelId:   channel.Endpoint.ChannelID,
 			ProofAck:    []byte{},
@@ -83,7 +83,7 @@ func ibcChannelConnectHelper(
 			Signer:      relayer.String(),
 		}
 
-		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 	}
 
 	err := keeper.OnConnectChannel(ctx, contract, ibcChannelConnectMsg)
@@ -132,7 +132,7 @@ func ibcChannelOpenHelper(
 			OpenInit: nil,
 		}
 
-		msg := ibcchanneltypes.MsgChannelOpenTry{
+		sdkMsg := ibcchanneltypes.MsgChannelOpenTry{
 			PortId:            channel.Endpoint.PortID,
 			PreviousChannelId: "",
 			Channel: ibcchanneltypes.Channel{
@@ -150,7 +150,7 @@ func ibcChannelOpenHelper(
 			ProofHeight:         ibcclienttypes.Height{},
 			Signer:              relayer.String(),
 		}
-		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 	} else {
 		ibcChannelOpenMsg = v1types.IBCChannelOpenMsg{
 			OpenTry: nil,
@@ -159,7 +159,7 @@ func ibcChannelOpenHelper(
 			},
 		}
 
-		msg := ibcchanneltypes.MsgChannelOpenInit{
+		sdkMsg := ibcchanneltypes.MsgChannelOpenInit{
 			PortId: channel.Endpoint.PortID,
 			Channel: ibcchanneltypes.Channel{
 				State:    ibcchanneltypes.INIT,
@@ -173,7 +173,7 @@ func ibcChannelOpenHelper(
 			},
 			Signer: relayer.String(),
 		}
-		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 	}
 
 	res, err := keeper.OnOpenChannel(ctx, contract, ibcChannelOpenMsg)
@@ -218,14 +218,14 @@ func ibcChannelCloseHelper(
 			CloseInit: nil,
 		}
 
-		msg := ibcchanneltypes.MsgChannelCloseConfirm{
+		sdkMsg := ibcchanneltypes.MsgChannelCloseConfirm{
 			PortId:      channel.Endpoint.PortID,
 			ChannelId:   channel.Endpoint.ChannelID,
 			ProofInit:   []byte{},
 			ProofHeight: ibcclienttypes.Height{},
 			Signer:      relayer.String(),
 		}
-		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 	} else {
 		ibcChannelCloseMsg = v1types.IBCChannelCloseMsg{
 			CloseConfirm: nil,
@@ -234,12 +234,12 @@ func ibcChannelCloseHelper(
 			},
 		}
 
-		msg := ibcchanneltypes.MsgChannelCloseInit{
+		sdkMsg := ibcchanneltypes.MsgChannelCloseInit{
 			PortId:    channel.Endpoint.PortID,
 			ChannelId: channel.Endpoint.ChannelID,
 			Signer:    relayer.String(),
 		}
-		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
+		ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 	}
 
 	err := keeper.OnCloseChannel(ctx, contract, ibcChannelCloseMsg)
@@ -323,10 +323,10 @@ func ibcPacketReceiveHelper(
 
 	ibcPacketReceiveMsg := v1types.IBCPacketReceiveMsg{
 		Packet:  internalPacket,
-		Relayer: "relayer",
+		Relayer: relayer.String(),
 	}
 
-	msg := ibcchanneltypes.MsgRecvPacket{
+	sdkMsg := ibcchanneltypes.MsgRecvPacket{
 		Packet: ibcchanneltypes.Packet{
 			Sequence:           internalPacket.Sequence,
 			SourcePort:         internalPacket.Src.PortID,
@@ -342,7 +342,7 @@ func ibcPacketReceiveHelper(
 		Signer:          relayer.String(),
 	}
 
-	ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &msg)
+	ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 
 	res, err := keeper.OnRecvPacket(ctx, contractAddr, ibcPacketReceiveMsg)
 
@@ -368,8 +368,15 @@ func ibcPacketReceiveHelper(
 }
 
 func ibcPacketAckHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey, gas uint64, originalPacket v1types.IBCPacket, ack []byte,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	relayer sdk.AccAddress,
+	relayerPrivkey crypto.PrivKey,
+	gas uint64,
+	originalPacket v1types.IBCPacket,
+	ack []byte,
 ) (sdk.Context, []ContractEvent, cosmwasm.StdError) {
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -387,8 +394,27 @@ func ibcPacketAckHelper(
 			Data: ack,
 		},
 		OriginalPacket: originalPacket,
-		Relayer:        "relayer",
+		Relayer:        relayer.String(),
 	}
+
+	sdkMsg := ibcchanneltypes.MsgAcknowledgement{
+		Packet: ibcchanneltypes.Packet{
+			Sequence:           originalPacket.Sequence,
+			SourcePort:         originalPacket.Src.PortID,
+			SourceChannel:      originalPacket.Src.ChannelID,
+			DestinationPort:    originalPacket.Dest.PortID,
+			DestinationChannel: originalPacket.Dest.ChannelID,
+			Data:               originalPacket.Data,
+			TimeoutHeight:      ibcclienttypes.Height{},
+			TimeoutTimestamp:   originalPacket.Timeout.Timestamp,
+		},
+		Acknowledgement: ack,
+		ProofAcked:      nil,
+		ProofHeight:     ibcclienttypes.Height{},
+		Signer:          relayer.String(),
+	}
+
+	ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 
 	err := keeper.OnAckPacket(ctx, contractAddr, ibcPacketAckMsg)
 
@@ -405,8 +431,14 @@ func ibcPacketAckHelper(
 }
 
 func ibcPacketTimeoutHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, creatorPrivKey crypto.PrivKey, gas uint64, originalPacket v1types.IBCPacket,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	relayer sdk.AccAddress,
+	relayerPrivkey crypto.PrivKey,
+	gas uint64,
+	originalPacket v1types.IBCPacket,
 ) (sdk.Context, []ContractEvent, cosmwasm.StdError) {
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -421,8 +453,27 @@ func ibcPacketTimeoutHelper(
 
 	ibcPacketTimeoutMsg := v1types.IBCPacketTimeoutMsg{
 		Packet:  originalPacket,
-		Relayer: "relayer",
+		Relayer: relayer.String(),
 	}
+
+	sdkMsg := ibcchanneltypes.MsgTimeout{
+		Packet: ibcchanneltypes.Packet{
+			Sequence:           originalPacket.Sequence,
+			SourcePort:         originalPacket.Src.PortID,
+			SourceChannel:      originalPacket.Src.ChannelID,
+			DestinationPort:    originalPacket.Dest.PortID,
+			DestinationChannel: originalPacket.Dest.ChannelID,
+			Data:               originalPacket.Data,
+			TimeoutHeight:      ibcclienttypes.Height{},
+			TimeoutTimestamp:   originalPacket.Timeout.Timestamp,
+		},
+		ProofUnreceived:  nil,
+		ProofHeight:      ibcclienttypes.Height{},
+		NextSequenceRecv: 0,
+		Signer:           relayer.String(),
+	}
+
+	ctx = PrepareSignedTx(t, keeper, ctx, relayer, relayerPrivkey, &sdkMsg)
 
 	err := keeper.OnTimeoutPacket(ctx, contractAddr, ibcPacketTimeoutMsg)
 
@@ -1047,7 +1098,7 @@ func TestIBCPacketAck(t *testing.T) {
 			ack := make([]byte, 8)
 			binary.LittleEndian.PutUint64(ack, uint64(test.sequence))
 
-			ctx, events, err := ibcPacketAckHelper(t, keeper, ctx, contractAddress, privkeyA, defaultGasForIbcTests, ibcPacket, ack)
+			ctx, events, err := ibcPacketAckHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, defaultGasForIbcTests, ibcPacket, ack)
 
 			if !test.isSuccess {
 				require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
@@ -1170,7 +1221,7 @@ func TestIBCPacketTimeout(t *testing.T) {
 				[]byte{},
 			)
 
-			ctx, events, err := ibcPacketTimeoutHelper(t, keeper, ctx, contractAddress, privkeyA, defaultGasForIbcTests, ibcPacket)
+			ctx, events, err := ibcPacketTimeoutHelper(t, keeper, ctx, contractAddress, walletA, privkeyA, defaultGasForIbcTests, ibcPacket)
 
 			if !test.isSuccess {
 				require.Contains(t, fmt.Sprintf("%+v", err), "Intentional")
