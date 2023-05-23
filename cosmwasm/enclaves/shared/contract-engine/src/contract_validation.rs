@@ -912,7 +912,7 @@ fn verify_funds(msg: &CosmosMsg, sent_funds_msg: &[Coin]) -> bool {
                 };
 
                 // Check denom
-                if sent_funds_msg_coin.denom != denom {
+                if sent_funds_msg_coin.denom.to_lowercase() != denom.to_lowercase() {
                     trace!(
                         "Contract was called via ibc-hooks but sent_funds_msg_coin.denom != denom: {:?} != {:?}",
                         sent_funds_msg_coin.denom,
