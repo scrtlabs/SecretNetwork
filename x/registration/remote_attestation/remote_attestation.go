@@ -195,7 +195,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 	}
 
 	// 1. Check timestamp is within 24H
-	if qr.Timestamp != "" { //nolint:all
+	if qr.Timestamp != "" {
 		// timeFixed := qr.Timestamp + "+0000"
 		// timeFixed := qr.Timestamp + "Z"
 		// ts, _ := time.Parse(time.RFC3339, timeFixed)

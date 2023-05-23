@@ -4,10 +4,10 @@ package mock
 
 type MockEnclaveApi struct{} //nolint:revive
 
-func (MockEnclaveApi) LoadSeed(masterCert []byte, seed []byte, apiKey []byte) (bool, error) { //nolint:all
+func (MockEnclaveApi) LoadSeed(masterCert []byte, seed []byte, apiKey []byte) (bool, error) {
 	return true, nil
 }
 
-func (MockEnclaveApi) GetEncryptedSeed(masterCert []byte) ([]byte, error) { //nolint:all
+func (MockEnclaveApi) GetEncryptedSeed(masterCert []byte) ([]byte, error) {
 	return []byte(""), nil
 }
