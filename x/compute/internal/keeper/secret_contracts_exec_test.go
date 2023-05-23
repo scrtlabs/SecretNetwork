@@ -2367,8 +2367,6 @@ func TestLastMsgMarkerMultipleMsgsInATx(t *testing.T) {
 
 	results, err := execHelperMultipleMsgs(t, keeper, ctx, contractAddress, walletA, privKeyA, msgs, true, true, math.MaxUint64, 0)
 	require.NotEqual(t, nil, err)
-	println("Error: ", err)
-
 	require.Equal(t, 1, len(results))
 }
 
