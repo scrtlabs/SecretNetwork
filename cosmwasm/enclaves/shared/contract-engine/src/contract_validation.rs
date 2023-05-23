@@ -8,7 +8,7 @@ use cw_types_generic::BaseEnv;
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmosMsg, CosmosPubKey, FungibleTokenPacketData, HandleType, IbcHooksIncomingTransferWasmMsg,
+    ContractCode, CosmosMsg, CosmosPubKey, FungibleTokenPacketData, HandleType,
     SigInfo, SignDoc, StdSignDoc, IbcHooksIncomingTransferMsg,
 };
 use enclave_crypto::traits::VerifyingKey;
@@ -678,11 +678,20 @@ fn get_verified_msg<'sd>(
                     // TODO check timeout too? sequence + destination_channel + data should be enough
             }
             HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
-                let parsed = serde_json::from_slice::<IbcHooksIncomingTransferMsg>(data);
-                if parsed.is_err(){
-                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: data cannot be parsed as IbcHooksIncomingTransferMsg: {:?} Error: {:?}", String::from_utf8_lossy(data), parsed.err());
+                let fungible_token_packet_data = serde_json::from_slice::<FungibleTokenPacketData>(data);
+                if fungible_token_packet_data.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: data cannot be parsed as FungibleTokenPacketData: {:?} Error: {:?}", String::from_utf8_lossy(data), fungible_token_packet_data.err());
                     return false;
                 }
+                let fungible_token_packet_data= fungible_token_packet_data.unwrap();
+
+
+                let ibc_hooks_incoming_transfer_msg = serde_json::from_slice::<IbcHooksIncomingTransferMsg>(fungible_token_packet_data.memo.clone().unwrap_or("".into()).as_bytes());
+                if ibc_hooks_incoming_transfer_msg.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: fungible_token_packet_data.memo cannot be parsed as IbcHooksIncomingTransferMsg: {:?} Error: {:?}", fungible_token_packet_data.memo, ibc_hooks_incoming_transfer_msg.err());
+                    return false;
+                }
+                let ibc_hooks_incoming_transfer_msg = ibc_hooks_incoming_transfer_msg.unwrap();
                 
                 let send_msg_value = serde_json::from_slice::<serde_json::Value>(&sent_msg.msg);
                 if send_msg_value.is_err(){
@@ -690,7 +699,7 @@ fn get_verified_msg<'sd>(
                     return false;
                 }
 
-                parsed.unwrap().wasm.msg == send_msg_value.unwrap()
+                ibc_hooks_incoming_transfer_msg.wasm.msg == send_msg_value.unwrap()
             }
             _ => false,
         },
@@ -749,7 +758,7 @@ fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
                 };
 
                 // Parse data.memo as IbcHooksWasmMsg JSON
-                let wasm_msg: IbcHooksIncomingTransferWasmMsg = match serde_json::from_slice(memo.as_bytes()) {
+                let wasm_msg: IbcHooksIncomingTransferMsg = match serde_json::from_slice(memo.as_bytes()) {
                     Ok(wasm_msg) => wasm_msg,
                     Err(err) => {
                         trace!(
@@ -763,13 +772,13 @@ fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
 
                 // In ibc-hooks contract_address == packet_data.memo.wasm.contract == packet_data.receiver
                 let is_verified = *contract_address == packet_data.receiver
-                    && *contract_address == wasm_msg.contract;
+                    && *contract_address == wasm_msg.wasm.contract;
                 if !is_verified {
                     trace!(
                         "Contract address sent to enclave {:?} is not the same as in ibc-hooks packet receiver={:?} memo={:?}",
                         contract_address,
                         packet_data.receiver,
-                        wasm_msg.contract
+                        wasm_msg.wasm.contract
                     );
                 }
                 is_verified
@@ -991,7 +1000,7 @@ fn receiver_chain_is_source(source_port: &str, source_channel: &str, denom: &str
 
 /// GetDenomPrefix returns the receiving denomination prefix
 fn get_denom_prefix(port_id: &str, channel_id: &str) -> String {
-    format!("{}/{}", port_id, channel_id)
+    format!("{}/{}/", port_id, channel_id)
 }
 
 /// DenomTrace contains the base denomination for ICS20 fungible tokens and the

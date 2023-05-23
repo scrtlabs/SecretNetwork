@@ -4,7 +4,10 @@ use enclave_cosmos_types::types::HandleType;
 use enclave_ffi_types::EnclaveError;
 
 use crate::execute_message::parse_execute_message;
-use crate::ibc_message::{parse_ibc_receive_message, parse_plaintext_ibc_protocol_message};
+use crate::ibc_message::{
+    parse_ibc_hooks_incoming_transfer_message, parse_ibc_receive_message,
+    parse_plaintext_ibc_protocol_message,
+};
 use crate::reply_message::parse_reply_message;
 use crate::types::ParsedMessage;
 
@@ -31,9 +34,9 @@ pub fn parse_message(
 
             parse_plaintext_ibc_protocol_message(message)
         }
-        HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
-        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
-            parse_ibc_receive_message(message)
+        HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => parse_ibc_receive_message(message),
+        HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
+            parse_ibc_hooks_incoming_transfer_message(message)
         }
     };
 }

@@ -85,3 +85,21 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
         data_for_validation: None,
     })
 }
+
+pub fn parse_ibc_hooks_incoming_transfer_message(
+    message: &[u8],
+) -> Result<ParsedMessage, EnclaveError> {
+    Ok(ParsedMessage {
+        should_validate_sig_info: false,
+        should_validate_input: true,
+        was_msg_encrypted: false,
+        should_encrypt_output: false,
+        secret_msg: SecretMessage {
+            nonce: [0; 32],
+            user_public_key: [0; 32],
+            msg: message.into(),
+        },
+        decrypted_msg: message.into(),
+        data_for_validation: None,
+    })
+}

@@ -25,6 +25,9 @@ import (
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
+	ibcchanneltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 )
 
 func setupChainTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins, amount uint64) (sdk.Context, Keeper, []uint64, []string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
@@ -2370,7 +2373,7 @@ func TestLastMsgMarkerMultipleMsgsInATx(t *testing.T) {
 	require.Equal(t, 1, len(results))
 }
 
-func TestPlaintextInputWithIBCHooksFlag(t *testing.T) {
+func TestIBCHooksIncomingTransfer(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
@@ -2378,9 +2381,42 @@ func TestPlaintextInputWithIBCHooksFlag(t *testing.T) {
 			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"log_msg_sender":{}}`), sdk.NewCoins(), nil, cosmwasm.HandleTypeIbcWasmHooksIncomingTransfer)
+			// To send 1denom to the contract over IBC, we need to send FungibleTokenPacketData
+			// that specifies the denom after it was sent to the other chain.
+			data := ibctransfertypes.FungibleTokenPacketData{
+				// Denom is the denom after it was sent to the other chain
+				// and now it is coming back to Secret, but it's specifed as a full path denom
+				// because FungibleTokenPacketData had crafted on the other chain
+				Denom:    "transfer/channel-0/denom", // port_on_other_chain/channel_on_other_chain/base_denom
+				Amount:   "1",
+				Sender:   "ignored",
+				Receiver: contractAddress.String(), // must be the contract address, like in the memo
+				Memo:     fmt.Sprintf(`{"wasm":{"contract":"%s","msg":{"log_msg_sender":{}}}}`, contractAddress.String()),
+			}
+			dataBytes, err := json.Marshal(data)
+			require.NoError(t, err)
 
-			require.Empty(t, err)
+			sdkMsg := ibcchanneltypes.MsgRecvPacket{
+				Packet: ibcchanneltypes.Packet{
+					Sequence:           0,
+					SourcePort:         "transfer",  // port on the other chain
+					SourceChannel:      "channel-0", // channel on the other chain
+					DestinationPort:    "transfer",  // port on Secret
+					DestinationChannel: "channel-0", // channel on Secret
+					Data:               dataBytes,
+					TimeoutHeight:      ibcclienttypes.Height{},
+					TimeoutTimestamp:   0,
+				},
+				ProofCommitment: []byte{},
+				ProofHeight:     ibcclienttypes.Height{},
+				Signer:          walletA.String(),
+			}
+
+			ctx = PrepareSignedTx(t, keeper, ctx, walletA, privKeyA, &sdkMsg)
+
+			_, execErr := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"log_msg_sender":{}}`), sdk.NewCoins(sdk.NewInt64Coin("denom", 1)), nil, cosmwasm.HandleTypeIbcWasmHooksIncomingTransfer)
+
+			require.Empty(t, execErr)
 
 			events := tryDecryptWasmEvents(ctx, nil)
 
