@@ -13,7 +13,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
 
-func indexRunCmd(cmd *cobra.Command, args []string) error {
+func indexRunCmd(cmd *cobra.Command, args []string) error { //nolint:all
 	usageTemplate := `Usage:{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}
   

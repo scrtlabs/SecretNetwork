@@ -221,7 +221,7 @@ func (k Keeper) OnRecvPacket(
 			}
 
 			// note submessage reply results can overwrite the `Acknowledgement` data
-			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, ogTx, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, ogTx, verificationInfo)
 		}
 
 		// should never get here as it's already checked in
@@ -297,6 +297,6 @@ func (k Keeper) OnTimeoutPacket(
 func (k Keeper) handleIBCBasicContractResponse(ctx sdk.Context, addr sdk.AccAddress, ibcPortID string, inputMsg []byte, res *v1types.IBCBasicResponse) error {
 	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
 
-	_, err := k.handleContractResponse(ctx, addr, ibcPortID, res.Messages, res.Attributes, res.Events, nil, inputMsg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+	_, err := k.handleContractResponse(ctx, addr, ibcPortID, res.Messages, res.Attributes, res.Events, nil, inputMsg, verificationInfo)
 	return err
 }

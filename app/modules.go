@@ -48,7 +48,7 @@ var ModuleAccountPermissions = map[string][]string{
 	compute.ModuleName:             {authtypes.Burner},
 }
 
-func AppModules(
+func AppModules( //nolint:all
 	app *SecretNetworkApp,
 	encodingConfig EncodingConfig,
 	skipGenesisInvariants bool,

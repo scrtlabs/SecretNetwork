@@ -456,7 +456,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, contractAddress)
+	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 
 	if err != nil {
@@ -490,7 +490,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 			return nil, nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
 		}
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV010)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, initMsg, verificationInfo)
 		if err != nil {
 			return nil, nil, sdkerrors.Wrap(err, "dispatch")
 		}
@@ -527,7 +527,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, initMsg, verificationInfo)
 		if err != nil {
 			return nil, nil, sdkerrors.Wrap(err, "dispatch")
 		}
@@ -615,7 +615,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			return nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
 		}
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, verificationInfo, wasmTypes.CosmosMsgVersionV010)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, verificationInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "dispatch")
 		}
@@ -629,7 +629,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 		))
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, verificationInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "dispatch")
 		}
@@ -916,7 +916,6 @@ func (k *Keeper) handleContractResponse(
 	// sigInfo of the initial message that triggered the original contract call
 	// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.VerificationInfo,
-	ogCosmosMessageVersion wasmTypes.CosmosMsgVersion,
 ) ([]byte, error) {
 	events := types.ContractLogsToSdkEvents(logs, contractAddr)
 
@@ -933,7 +932,7 @@ func (k *Keeper) handleContractResponse(
 	}
 
 	responseHandler := NewContractResponseHandler(NewMessageDispatcher(k.messenger, k))
-	return responseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data, ogTx, ogSigInfo, ogCosmosMessageVersion)
+	return responseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data, ogTx, ogSigInfo)
 }
 
 func gasForContract(ctx sdk.Context) uint64 {
@@ -1049,7 +1048,7 @@ func gasMeter(ctx sdk.Context) MultipiedGasMeter {
 }
 
 type MsgDispatcher interface {
-	DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error)
+	DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
 }
 
 // ContractResponseHandler default implementation that first dispatches submessage then normal messages.
@@ -1064,9 +1063,9 @@ func NewContractResponseHandler(md MsgDispatcher) *ContractResponseHandler {
 }
 
 // Handle processes the data returned by a contract invocation.
-func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, messages []v1wasmTypes.SubMsg, origRspData []byte, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error) {
+func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, messages []v1wasmTypes.SubMsg, origRspData []byte, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
 	result := origRspData
-	switch rsp, err := h.md.DispatchSubmessages(ctx, contractAddr, ibcPort, messages, ogTx, ogSigInfo, ogCosmosMessageVersion); {
+	switch rsp, err := h.md.DispatchSubmessages(ctx, contractAddr, ibcPort, messages, ogTx, ogSigInfo); {
 	case err != nil:
 		return nil, sdkerrors.Wrap(err, "submessages")
 	case rsp != nil:
@@ -1126,7 +1125,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 		))
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, ogTx, ogSigInfo, wasmTypes.CosmosMsgVersionV1)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, ogTx, ogSigInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrReplyFailed, err.Error())
 		}

@@ -168,9 +168,9 @@ const (
 func IBCOrderToEnum(o IBCOrder) ibcchanneltypes.Order {
 	if o == Unordered {
 		return ibcchanneltypes.UNORDERED
-	} else {
-		return ibcchanneltypes.ORDERED
 	}
+
+	return ibcchanneltypes.ORDERED
 }
 
 // IBCTimeoutBlock Height is a monotonically increasing data type

@@ -18,7 +18,7 @@ var (
 )
 
 // NewMsgRegisterAccount creates a new MsgRegisterAccount instance
-func NewMsgRegisterAccount(owner, connectionID, counterpartyConnectionID string) *MsgRegisterAccount {
+func NewMsgRegisterAccount(owner, connectionID, counterpartyConnectionID string) *MsgRegisterAccount { //nolint:all
 	return &MsgRegisterAccount{
 		Owner:        owner,
 		ConnectionId: connectionID,
@@ -45,8 +45,8 @@ func (msg MsgRegisterAccount) GetSigners() []sdk.AccAddress {
 }
 
 // NewMsgSend creates a new MsgSend instance
-func NewMsgSubmitTx(owner sdk.AccAddress, sdkMsg sdk.Msg, connectionID, counterpartyConnectionID string) (*MsgSubmitTx, error) {
-	any, err := PackTxMsgAny(sdkMsg)
+func NewMsgSubmitTx(owner sdk.AccAddress, sdkMsg sdk.Msg, connectionID, counterpartyConnectionID string) (*MsgSubmitTx, error) { //nolint:all
+	anyObj, err := PackTxMsgAny(sdkMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func NewMsgSubmitTx(owner sdk.AccAddress, sdkMsg sdk.Msg, connectionID, counterp
 	return &MsgSubmitTx{
 		Owner:        owner,
 		ConnectionId: connectionID,
-		Msg:          any,
+		Msg:          anyObj,
 	}, nil
 }
 
@@ -65,12 +65,12 @@ func PackTxMsgAny(sdkMsg sdk.Msg) (*codectypes.Any, error) {
 		return nil, fmt.Errorf("can't proto marshal %T", sdkMsg)
 	}
 
-	any, err := codectypes.NewAnyWithValue(msg)
+	anyObj, err := codectypes.NewAnyWithValue(msg)
 	if err != nil {
 		return nil, err
 	}
 
-	return any, nil
+	return anyObj, nil
 }
 
 // UnpackInterfaces implements codectypes.UnpackInterfacesMessage

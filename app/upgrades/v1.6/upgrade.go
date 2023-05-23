@@ -17,7 +17,7 @@ var Upgrade = upgrades.Upgrade{
 	StoreUpgrades:        store.StoreUpgrades{},
 }
 
-func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
+func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator, //nolint:all
 ) upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx.Logger().Info(` _    _ _____   _____ _____            _____  ______ `)

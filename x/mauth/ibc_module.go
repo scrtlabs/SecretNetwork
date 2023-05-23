@@ -29,12 +29,12 @@ func NewIBCModule(k keeper.Keeper) IBCModule {
 // OnChanOpenInit implements the IBCModule interface
 func (im IBCModule) OnChanOpenInit(
 	ctx sdk.Context,
-	order channeltypes.Order,
-	connectionHops []string,
+	order channeltypes.Order, //nolint:all
+	connectionHops []string, //nolint:all
 	portID string,
 	channelID string,
 	chanCap *capabilitytypes.Capability,
-	counterparty channeltypes.Counterparty,
+	counterparty channeltypes.Counterparty, //nolint:all
 	version string,
 ) (string, error) {
 	err := im.keeper.ClaimCapability(ctx, chanCap, host.ChannelCapabilityPath(portID, channelID))
@@ -47,52 +47,52 @@ func (im IBCModule) OnChanOpenInit(
 
 // OnChanOpenTry implements the IBCModule interface
 func (im IBCModule) OnChanOpenTry(
-	ctx sdk.Context,
-	order channeltypes.Order,
-	connectionHops []string,
-	portID,
-	channelID string,
-	chanCap *capabilitytypes.Capability,
-	counterparty channeltypes.Counterparty,
-	counterpartyVersion string,
+	ctx sdk.Context, //nolint:all
+	order channeltypes.Order, //nolint:all
+	connectionHops []string, //nolint:all
+	portID, //nolint:all
+	channelID string, //nolint:all
+	chanCap *capabilitytypes.Capability, //nolint:all
+	counterparty channeltypes.Counterparty, //nolint:all
+	counterpartyVersion string, //nolint:all
 ) (version string, err error) {
 	return "", nil
 }
 
 // OnChanOpenAck implements the IBCModule interface
 func (im IBCModule) OnChanOpenAck(
-	ctx sdk.Context,
-	portID,
-	channelID string,
-	counterpartychannelID string,
-	counterpartyVersion string,
+	ctx sdk.Context, //nolint:all
+	portID, //nolint:all
+	channelID string, //nolint:all
+	counterpartychannelID string, //nolint:all
+	counterpartyVersion string, //nolint:all
 ) error {
 	return nil
 }
 
 // OnChanOpenConfirm implements the IBCModule interface
 func (im IBCModule) OnChanOpenConfirm(
-	ctx sdk.Context,
-	portID,
-	channelID string,
+	ctx sdk.Context, //nolint:all
+	portID, //nolint:all
+	channelID string, //nolint:all
 ) error {
 	return nil
 }
 
 // OnChanCloseInit implements the IBCModule interface
 func (im IBCModule) OnChanCloseInit(
-	ctx sdk.Context,
-	portID,
-	channelID string,
+	ctx sdk.Context, //nolint:all
+	portID, //nolint:all
+	channelID string, //nolint:all
 ) error {
 	return nil
 }
 
 // OnChanCloseConfirm implements the IBCModule interface
 func (im IBCModule) OnChanCloseConfirm(
-	ctx sdk.Context,
-	portID,
-	channelID string,
+	ctx sdk.Context, //nolint:all
+	portID, //nolint:all
+	channelID string, //nolint:all
 ) error {
 	return nil
 }
@@ -101,40 +101,40 @@ func (im IBCModule) OnChanCloseConfirm(
 // is returned if the packet data is successfully decoded and the receive application
 // logic returns without error.
 func (im IBCModule) OnRecvPacket(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	relayer sdk.AccAddress,
+	ctx sdk.Context, //nolint:all
+	packet channeltypes.Packet, //nolint:all
+	relayer sdk.AccAddress, //nolint:all
 ) ibcexported.Acknowledgement {
 	return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "cannot receive packet via interchain accounts authentication module"))
 }
 
 // OnAcknowledgementPacket implements the IBCModule interface
 func (im IBCModule) OnAcknowledgementPacket(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	acknowledgement []byte,
-	relayer sdk.AccAddress,
+	ctx sdk.Context, //nolint:all
+	packet channeltypes.Packet, //nolint:all
+	acknowledgement []byte, //nolint:all
+	relayer sdk.AccAddress, //nolint:all
 ) error {
 	return nil
 }
 
 // OnTimeoutPacket implements the IBCModule interface.
 func (im IBCModule) OnTimeoutPacket(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	relayer sdk.AccAddress,
+	ctx sdk.Context, //nolint:all
+	packet channeltypes.Packet, //nolint:all
+	relayer sdk.AccAddress, //nolint:all
 ) error {
 	return nil
 }
 
 // NegotiateAppVersion implements the IBCModule interface
 func (im IBCModule) NegotiateAppVersion(
-	ctx sdk.Context,
-	order channeltypes.Order,
-	connectionID string,
-	portID string,
-	counterparty channeltypes.Counterparty,
-	proposedVersion string,
+	ctx sdk.Context, //nolint:all
+	order channeltypes.Order, //nolint:all
+	connectionID string, //nolint:all
+	portID string, //nolint:all
+	counterparty channeltypes.Counterparty, //nolint:all
+	proposedVersion string, //nolint:all
 ) (string, error) {
 	return "", nil
 }

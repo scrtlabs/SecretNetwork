@@ -348,11 +348,8 @@ func updateTmParamsAndInit(mbm module.BasicManager, defaultNodeHome string) *cob
 
 		serverconfig.WriteConfigFile(appConfigFilePath, appConf)
 
-		if err := originalFunc(cmd, args); err != nil {
-			return err
-		}
-
-		return nil
+		err := originalFunc(cmd, args)
+		return err
 	}
 
 	cmd.RunE = wrappedFunc
