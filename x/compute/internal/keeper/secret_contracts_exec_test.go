@@ -2375,36 +2375,33 @@ func TestLastMsgMarkerMultipleMsgsInATx(t *testing.T) {
 
 func TestIBCHooksIncomingTransfer(t *testing.T) {
 	for _, test := range []struct {
-		testName    string
-		remoteDenom string // port_on_other_chain/channel_on_other_chain/base_denom or base_denom
-		localDenom  string // denom on Secret ("denom" or "ibc/...")
+		name string
+		// remoteDenom: "port_on_other_chain/channel_on_other_chain/base_denom" (e.g. transfer/channel-0/uscrt) or base_denom (e.g. uatom)
+		remoteDenom string
+		// localDenom: denom on Secret ("denom" or "ibc/...")
+		localDenom string
 	}{
 		{
-			testName:    "denom originated from Secret",
+			name:        "denom originated from Secret",
 			remoteDenom: "transfer/channel-0/denom",
 			localDenom:  "denom",
 		},
 		{
-			testName:    "denom is base denom of the other chain",
+			name:        "denom is base denom of the other chain",
 			remoteDenom: "uatom",
 			localDenom:  "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
 		},
 	} {
 		for _, testContract := range testContracts {
-			t.Run(test.testName, func(t *testing.T) {
+			t.Run(test.name, func(t *testing.T) {
 				t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 					ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins(sdk.NewInt64Coin(test.localDenom, 1)))
 
 					_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 					require.Empty(t, initErr)
 
-					// To send 1denom to the contract over IBC, we need to send FungibleTokenPacketData
-					// that specifies the denom after it was sent to the other chain.
 					data := ibctransfertypes.FungibleTokenPacketData{
-						// Denom is the denom after it was sent to the other chain
-						// and now it is coming back to Secret, but it's specifed as a full path denom
-						// because FungibleTokenPacketData had crafted on the other chain
-						Denom:    test.remoteDenom, //
+						Denom:    test.remoteDenom,
 						Amount:   "1",
 						Sender:   "ignored",
 						Receiver: contractAddress.String(), // must be the contract address, like in the memo
