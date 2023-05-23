@@ -396,8 +396,13 @@ pub struct FungibleTokenPacketData {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct IbcHooksIncomingTransferMsg {
+    pub wasm: IbcHooksIncomingTransferWasmMsg,
+}
 
-pub struct IbcHooksWasmMsg {
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+
+pub struct IbcHooksIncomingTransferWasmMsg {
     pub contract: HumanAddr,
     pub msg: serde_json::Value,
 }

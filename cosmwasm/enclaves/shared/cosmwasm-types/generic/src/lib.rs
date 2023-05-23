@@ -250,14 +250,3 @@ mod tests {
         assert_eq!(2 + 2, 4);
     }
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct IbcHooksIncomingTransferMsg {
-    pub wasm: IbcHooksIncomingTransferMsgWasm,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct IbcHooksIncomingTransferMsgWasm {
-    pub contract: String,
-    pub msg: serde_json::Value,
-}

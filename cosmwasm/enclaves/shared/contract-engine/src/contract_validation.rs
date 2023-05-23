@@ -1,4 +1,3 @@
-use cw_types_generic::IbcHooksIncomingTransferMsg;
 use cw_types_v1::ibc::{IbcPacketReceiveMsg};
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
@@ -9,8 +8,8 @@ use cw_types_generic::BaseEnv;
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmosMsg, CosmosPubKey, FungibleTokenPacketData, HandleType, IbcHooksWasmMsg,
-    SigInfo, SignDoc, StdSignDoc,
+    ContractCode, CosmosMsg, CosmosPubKey, FungibleTokenPacketData, HandleType, IbcHooksIncomingTransferWasmMsg,
+    SigInfo, SignDoc, StdSignDoc, IbcHooksIncomingTransferMsg,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
@@ -661,12 +660,14 @@ fn get_verified_msg<'sd>(
             data,
         } => match handle_type {
             HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
-                let parsed = serde_json::from_slice::<IbcPacketReceiveMsg>(&sent_msg.msg);
-                if parsed.is_err(){
-                    trace!("get_verified_msg HANDLE_TYPE_IBC_PACKET_RECEIVE: sent_msg.msg cannot be parsed as IbcPacketReceiveMsg: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), parsed.err());
-                    return false;
+                let parsed_sent_msg = serde_json::from_slice::<IbcPacketReceiveMsg>(&sent_msg.msg);
+                if parsed_sent_msg.is_err() {
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_PACKET_RECEIVE: sent_msg.msg cannot be parsed as IbcPacketReceiveMsg: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), parsed_sent_msg.err());
+
+                    trace!("Checking if sent_msg & data are encrypted");
+                    return &sent_msg.to_vec() == data;
                 }
-                let parsed = parsed.unwrap();
+                let parsed = parsed_sent_msg.unwrap();
                 
                 parsed.packet.data.as_slice() == data.as_slice()
                     && parsed.packet.sequence == *sequence
@@ -674,7 +675,7 @@ fn get_verified_msg<'sd>(
                     && parsed.packet.src.channel_id == *source_channel
                     && parsed.packet.dest.port_id == *destination_port
                     && parsed.packet.dest.channel_id == *destination_channel
-                   
+                    // TODO check timeout too? sequence + destination_channel + data should be enough
             }
             HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
                 let parsed = serde_json::from_slice::<IbcHooksIncomingTransferMsg>(data);
@@ -748,7 +749,7 @@ fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
                 };
 
                 // Parse data.memo as IbcHooksWasmMsg JSON
-                let wasm_msg: IbcHooksWasmMsg = match serde_json::from_slice(memo.as_bytes()) {
+                let wasm_msg: IbcHooksIncomingTransferWasmMsg = match serde_json::from_slice(memo.as_bytes()) {
                     Ok(wasm_msg) => wasm_msg,
                     Err(err) => {
                         trace!(
