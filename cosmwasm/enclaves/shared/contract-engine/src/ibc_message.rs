@@ -7,18 +7,16 @@ use log::{trace, warn};
 pub fn parse_plaintext_ibc_protocol_message(
     plaintext_message: &[u8],
 ) -> Result<ParsedMessage, EnclaveError> {
-    let scrt_msg = SecretMessage {
-        nonce: [0; 32],
-        user_public_key: [0; 32],
-        msg: plaintext_message.into(),
-    };
-
     Ok(ParsedMessage {
         should_validate_sig_info: false,
         should_validate_input: false,
         was_msg_encrypted: false,
         should_encrypt_output: false,
-        secret_msg: scrt_msg,
+        secret_msg: SecretMessage {
+            nonce: [0; 32],
+            user_public_key: [0; 32],
+            msg: plaintext_message.into(),
+        },
         decrypted_msg: plaintext_message.into(),
         data_for_validation: None,
     })
@@ -86,8 +84,10 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
     })
 }
 
+/// `parse_ibc_hooks_incoming_transfer_message()` is very similar to `parse_plaintext_ibc_protocol_message()`.
+/// The only difference is that it returns `should_validate_input: true`.
 pub fn parse_ibc_hooks_incoming_transfer_message(
-    message: &[u8],
+    plaintext_message: &[u8],
 ) -> Result<ParsedMessage, EnclaveError> {
     Ok(ParsedMessage {
         should_validate_sig_info: false,
@@ -97,9 +97,9 @@ pub fn parse_ibc_hooks_incoming_transfer_message(
         secret_msg: SecretMessage {
             nonce: [0; 32],
             user_public_key: [0; 32],
-            msg: message.into(),
+            msg: plaintext_message.into(),
         },
-        decrypted_msg: message.into(),
+        decrypted_msg: plaintext_message.into(),
         data_for_validation: None,
     })
 }
