@@ -10,7 +10,6 @@ use cw_types_v1::types::Env as V1Env;
 use cw_types_v1::types::MessageInfo as V1MessageInfo;
 use cw_types_v1::types::{self as v1types, Addr};
 use enclave_ffi_types::EnclaveError;
-use serde_json;
 
 pub const CONTRACT_KEY_LENGTH: usize = 64;
 

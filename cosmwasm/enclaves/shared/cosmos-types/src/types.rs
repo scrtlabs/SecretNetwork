@@ -530,7 +530,7 @@ impl CosmosMsg {
             raw_msg.sender
         );
 
-        if raw_msg.sender.len() == 0 {
+        if raw_msg.sender.is_empty() {
             warn!("try_parse_instantiate: sender address to instantiate was empty");
             return Err(EnclaveError::FailedToDeserialize);
         }
@@ -560,7 +560,7 @@ impl CosmosMsg {
             raw_msg.sender
         );
 
-        if raw_msg.sender.len() == 0 {
+        if raw_msg.sender.is_empty() {
             warn!("try_parse_execute: sender address to execute was empty");
             return Err(EnclaveError::FailedToDeserialize);
         }
@@ -571,7 +571,7 @@ impl CosmosMsg {
             raw_msg.contract
         );
 
-        if raw_msg.contract.len() == 0 {
+        if raw_msg.contract.is_empty() {
             warn!("try_parse_execute: contract address to execute was empty");
             return Err(EnclaveError::FailedToDeserialize);
         }

@@ -355,14 +355,14 @@ pub fn validate_basic_msg(
 }
 
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.
-#[allow(unused_variables)]
+#[allow(clippy::too_many_arguments)]
 pub fn verify_params(
     sig_info: &SigInfo,
     sent_funds: &[Coin],
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
     msg: &SecretMessage,
-    og_msg: &[u8],
+    _og_msg: &[u8],
     should_validate_sig_info: bool,
     should_validate_input: bool,
     handle_type: HandleType,
@@ -460,7 +460,7 @@ pub fn verify_params(
     }
 
     info!("Parameters verified successfully");
-    return Ok(());
+    Ok(())
 }
 
 fn get_signer(sign_info: &SigInfo, sender: &CanonicalAddr) -> Result<CosmosPubKey, EnclaveError> {
@@ -686,7 +686,7 @@ fn get_verified_msg<'sd>(
                 let fungible_token_packet_data= fungible_token_packet_data.unwrap();
 
 
-                let ibc_hooks_incoming_transfer_msg = serde_json::from_slice::<IbcHooksIncomingTransferMsg>(fungible_token_packet_data.memo.clone().unwrap_or("".into()).as_bytes());
+                let ibc_hooks_incoming_transfer_msg = serde_json::from_slice::<IbcHooksIncomingTransferMsg>(fungible_token_packet_data.memo.clone().unwrap_or_else(|| "".to_string()).as_bytes());
                 if ibc_hooks_incoming_transfer_msg.is_err(){
                     trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: fungible_token_packet_data.memo cannot be parsed as IbcHooksIncomingTransferMsg: {:?} Error: {:?}", fungible_token_packet_data.memo, ibc_hooks_incoming_transfer_msg.err());
                     return false;
@@ -873,12 +873,12 @@ fn verify_funds(msg: &CosmosMsg, sent_funds_msg: &[Coin]) -> bool {
                 // It needs to be converted to the local denom.
                 // Logic source: https://github.com/scrtlabs/SecretNetwork/blob/96b0ba7d6/x/ibc-hooks/wasm_hook.go#L483-L513
                 let denom: String = if receiver_chain_is_source(
-                    &source_port,
-                    &source_channel,
+                    source_port,
+                    source_channel,
                     &packet_data.denom,
                 ) {
                     // remove prefix added by sender chain
-                    let voucher_prefix = get_denom_prefix(&source_port, &source_channel);
+                    let voucher_prefix = get_denom_prefix(source_port, source_channel);
 
                     let unprefixed_denom: String = match packet_data
                         .denom
@@ -898,17 +898,15 @@ fn verify_funds(msg: &CosmosMsg, sent_funds_msg: &[Coin]) -> bool {
                     // The denomination used to send the coins is either the native denom or the hash of the path
                     // if the denomination is not native.
                     let denom_trace = parse_denom_trace(&unprefixed_denom);
-                    if denom_trace.path != "" {
+                    if !denom_trace.path.is_empty() {
                         denom_trace.ibc_denom()
                     } else {
                         unprefixed_denom
                     }
                 } else {
-                    let prefixed_denom = get_denom_prefix(&destination_port, &destination_channel)
+                    let prefixed_denom = get_denom_prefix(destination_port, destination_channel)
                         + &packet_data.denom;
-                    let denom = parse_denom_trace(&prefixed_denom).ibc_denom();
-
-                    denom
+                    parse_denom_trace(&prefixed_denom).ibc_denom()
                 };
 
                 // Check denom
@@ -924,9 +922,8 @@ fn verify_funds(msg: &CosmosMsg, sent_funds_msg: &[Coin]) -> bool {
                 true
             } else {
                 // Packet is for an IBC enabled contract
-
                 // No funds should be sent
-                sent_funds_msg.len() == 0
+                sent_funds_msg.is_empty()
             }
         }
     }
@@ -962,7 +959,7 @@ fn verify_message_params(
             // Going to pass null sender to the contract if all other checks pass.
         }
         CosmosMsg::Execute { .. } | CosmosMsg::Instantiate { .. } | CosmosMsg::Other => {
-            if msg.sender() != Some(&sender) {
+            if msg.sender() != Some(sender) {
                 warn!(
                     "message sender did not match cosmwasm message sender: {:?} {:?}",
                     sender, msg
@@ -1071,8 +1068,8 @@ fn parse_denom_trace(raw_denom: &str) -> DenomTrace {
     let (path, base_denom) = extract_path_and_base_from_full_denom(&denom_split);
 
     DenomTrace {
-        path: path.to_string(),
-        base_denom: base_denom.to_string(),
+        path,
+        base_denom,
     }
 }
 
