@@ -160,7 +160,8 @@ RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} 
 FROM $SCRT_RELEASE_BASE_IMAGE as release-image
 
 # wasmi-sgx-test script requirements
-RUN apt-get update && \
+RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \
