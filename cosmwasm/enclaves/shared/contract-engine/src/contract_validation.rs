@@ -362,6 +362,7 @@ pub fn verify_params(
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
     msg: &SecretMessage,
+    #[cfg(feature = "light-client-validation")]
     og_msg: &[u8],
     should_validate_sig_info: bool,
     should_validate_input: bool,

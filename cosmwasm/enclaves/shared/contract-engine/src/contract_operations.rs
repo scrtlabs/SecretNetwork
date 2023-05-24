@@ -111,6 +111,7 @@ pub fn init(
         &canonical_sender_address,
         contract_address,
         &secret_msg,
+        #[cfg(feature = "light-client-validation")]
         msg,
         true,
         true,
@@ -290,6 +291,7 @@ pub fn handle(
         &canonical_sender_address,
         contract_address,
         &secret_msg,
+        #[cfg(feature = "light-client-validation")]
         msg,
         should_validate_sig_info,
         should_validate_input,
