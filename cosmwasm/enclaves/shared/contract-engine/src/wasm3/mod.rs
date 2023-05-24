@@ -383,7 +383,7 @@ impl Engine {
         self.with_instance(|instance, context| {
             debug!("starting migrate, api version: {:?}", api_version);
 
-            let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
+            let (env_bytes, _msg_info_bytes) = env.get_wasm_ptrs()?;
 
             // let start = Instant::now();
             let env_ptr = write_to_memory(instance, &env_bytes)?;
@@ -409,8 +409,6 @@ impl Engine {
                     migrate.call_with_context(context, args)
                 }
                 CosmWasmApiVersion::V1 => {
-                    let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
-
                     let (migrate, args) = (
                         instance
                             .find_function::<(u32, u32), u32>("migrate")

@@ -9,7 +9,7 @@ use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::CanonicalAddr;
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
-use enclave_crypto::{sha_256, Ed25519PublicKey, KEY_MANAGER};
+use enclave_crypto::{sha_256, Ed25519PublicKey};
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 
@@ -76,6 +76,7 @@ fn generate_contract_key_proof(
     sha_256(&data_to_hash)
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub fn init(
     context: Ctx,       // need to pass this to read_db & write_db
     gas_limit: u64,     // gas limit for this execution
@@ -84,7 +85,7 @@ pub fn init(
     env: &[u8],         // blockchain state
     msg: &[u8],         // probably function call and args
     sig_info: &[u8],    // info about signature verification
-    admin: &[u8],       // admin's canonical address or null if no admin
+    _admin: &[u8],      // admin's canonical address or null if no admin
 ) -> Result<InitSuccess, EnclaveError> {
     trace!("Starting init");
 
@@ -256,7 +257,7 @@ pub fn migrate(
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
-    admin: &[u8],
+    _admin: &[u8],
     admin_proof: &[u8],
 ) -> Result<MigrateSuccess, EnclaveError> {
     debug!("Starting migrate");
@@ -302,7 +303,7 @@ pub fn migrate(
 
     let admin_sig = generate_admin_signature(&canonical_sender_address.0 .0, &og_contract_key);
 
-    if &admin_sig != admin_proof {
+    if admin_sig != admin_proof {
         error!("Failed to validate admin signature for migrate");
         return Err(EnclaveError::ValidationFailure);
     }

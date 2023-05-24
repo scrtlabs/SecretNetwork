@@ -912,10 +912,10 @@ func (k *Keeper) handleContractResponse(
 	logs []v010wasmTypes.LogAttribute,
 	evts v1wasmTypes.Events,
 	data []byte,
-// original TX in order to extract the first 64bytes of signing info
+	// original TX in order to extract the first 64bytes of signing info
 	ogTx []byte,
-// sigInfo of the initial message that triggered the original contract call
-// This is used mainly in replies in order to decrypt their data.
+	// sigInfo of the initial message that triggered the original contract call
+	// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.VerificationInfo,
 	ogCosmosMessageVersion wasmTypes.CosmosMsgVersion,
 ) ([]byte, error) {

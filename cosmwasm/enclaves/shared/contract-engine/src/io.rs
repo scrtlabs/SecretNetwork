@@ -128,11 +128,7 @@ pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) 
 
     let tx_encryption_ikm = enclave_io_key.current.diffie_hellman(user_public_key);
 
-    let tx_encryption_key = AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce);
-
-    // trace!("rust tx_encryption_key {:?}", tx_encryption_key.get());
-
-    tx_encryption_key
+    AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce)
 }
 
 fn encrypt_serializable<T>(
