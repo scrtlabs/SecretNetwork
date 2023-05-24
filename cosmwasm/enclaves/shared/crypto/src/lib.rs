@@ -19,7 +19,7 @@ pub mod traits;
 
 // mod aes_gcm;
 mod aes_siv;
-mod ed25519;
+pub mod ed25519;
 mod hmac;
 pub mod secp256k1;
 

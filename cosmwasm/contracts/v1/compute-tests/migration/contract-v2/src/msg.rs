@@ -10,6 +10,7 @@ pub enum InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     NewFunction {},
+    NewFunctionWithStorage {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]

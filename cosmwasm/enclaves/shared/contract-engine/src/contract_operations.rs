@@ -9,7 +9,7 @@ use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::CanonicalAddr;
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
-use enclave_crypto::{sha_256, Ed25519PublicKey};
+use enclave_crypto::{sha_256, Ed25519PublicKey, KEY_MANAGER};
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 
@@ -55,10 +55,10 @@ we need to allocate memory regions inside the VM's instance and copy
 `env` & `msg` into those memory regions inside the VM's instance.
 */
 
-fn generate_admin_signature(admin: &[u8], code_hash: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
+fn generate_admin_signature(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
     let mut data_to_hash = vec![];
     data_to_hash.extend_from_slice(admin);
-    data_to_hash.extend_from_slice(code_hash);
+    data_to_hash.extend_from_slice(contract_key);
     sha_256(&data_to_hash)
 }
 
@@ -106,8 +106,6 @@ pub fn init(
         verify_block_info(&base_env)?;
     }
 
-    let admin_sig = generate_admin_signature(admin, &contract_hash);
-
     // let duration = start.elapsed();
     // trace!("Time elapsed in extract_base_env is: {:?}", duration);
     let query_depth = extract_query_depth(env)?;
@@ -126,6 +124,8 @@ pub fn init(
         &contract_hash,
         &canonical_contract_address,
     )?;
+
+    let admin_sig = generate_admin_signature(&canonical_sender_address.0 .0, &contract_key);
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
@@ -279,12 +279,6 @@ pub fn migrate(
         verify_block_info(&base_env)?;
     }
 
-    let admin_sig = generate_admin_signature(admin, &contract_hash);
-
-    if &admin_sig != admin_proof {
-        error!("Failed to validate admin signature for migrate");
-    }
-
     // let duration = start.elapsed();
     // trace!("Time elapsed in extract_base_env is: {:?}", duration);
     let query_depth = extract_query_depth(env)?;
@@ -305,6 +299,14 @@ pub fn migrate(
     )?;
 
     let og_contract_key = base_env.get_contract_key()?;
+
+    let admin_sig = generate_admin_signature(&canonical_sender_address.0 .0, &og_contract_key);
+
+    if &admin_sig != admin_proof {
+        error!("Failed to validate admin signature for migrate");
+        return Err(EnclaveError::ValidationFailure);
+    }
+    debug!("validated migration proof successfully");
 
     let contract_key_proof = generate_contract_key_proof(
         &canonical_sender_address.0 .0,

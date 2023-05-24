@@ -912,10 +912,10 @@ func (k *Keeper) handleContractResponse(
 	logs []v010wasmTypes.LogAttribute,
 	evts v1wasmTypes.Events,
 	data []byte,
-	// original TX in order to extract the first 64bytes of signing info
+// original TX in order to extract the first 64bytes of signing info
 	ogTx []byte,
-	// sigInfo of the initial message that triggered the original contract call
-	// This is used mainly in replies in order to decrypt their data.
+// sigInfo of the initial message that triggered the original contract call
+// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.VerificationInfo,
 	ogCosmosMessageVersion wasmTypes.CosmosMsgVersion,
 ) ([]byte, error) {
@@ -1198,6 +1198,10 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return nil, err
 	}
 
+	if contractInfo.Admin.String() != caller.String() {
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, "requires migrate from admin")
+	}
+
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
 	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, &contractKey, random)
@@ -1217,9 +1221,6 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	response, newContractKey, proof, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, admin, adminProof)
 	consumeGas(ctx, gasUsed)
-
-	println("Got admin proof: *******************************", hex.EncodeToString(proof))
-	println("Got new key: *******************************", hex.EncodeToString(newContractKey))
 
 	// update contract key with new one
 	k.SetContractKey(ctx, contractAddress, &types.ContractKey{

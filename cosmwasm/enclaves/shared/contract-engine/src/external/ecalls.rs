@@ -482,7 +482,7 @@ pub unsafe extern "C" fn ecall_migrate(
                 err: EnclaveError::OutOfMemory,
             }
         } else {
-            error!("Call ecall_handle panicked unexpectedly!");
+            error!("Call ecall_migrate panicked unexpectedly!");
             MigrateResult::Failure {
                 err: EnclaveError::Panic,
             }
