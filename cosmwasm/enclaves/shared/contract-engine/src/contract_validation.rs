@@ -8,8 +8,8 @@ use cw_types_generic::BaseEnv;
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmosMsg, CosmosPubKey, FungibleTokenPacketData, HandleType,
-    SigInfo, SignDoc, StdSignDoc, IbcHooksIncomingTransferMsg,
+    ContractCode, CosmosSdkMsg, CosmosPubKey, FungibleTokenPacketData, HandleType,
+    SigInfo, SignDoc, StdSignDoc, IbcHooksIncomingTransferMsg, Packet, IbcHooksOutgoingTransferMemo, IBCLifecycleComplete, is_transfer_ack_error, IBCPacketAckMsg, IBCLifecycleCompleteOptions,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
@@ -393,7 +393,7 @@ pub fn verify_params(
         );
 
         //let start = Instant::now();
-        let sender_public_key = get_signer(sig_info, sender)?;
+        let sender_public_key = get_signer(sig_info, sender, handle_type)?;
         // let duration = start.elapsed();
         // trace!(
         //     "verify_params: Time elapsed in get_signer_and_messages: {:?}",
@@ -437,7 +437,7 @@ pub fn verify_params(
     }
 
     if should_validate_input {
-        let messages = get_messages(sig_info)?;
+        let messages = get_messages(sig_info, handle_type)?;
 
         // let start = Instant::now();
         let is_verified = verify_message_params(
@@ -464,11 +464,11 @@ pub fn verify_params(
     Ok(())
 }
 
-fn get_signer(sign_info: &SigInfo, sender: &CanonicalAddr) -> Result<CosmosPubKey, EnclaveError> {
+fn get_signer(sign_info: &SigInfo, sender: &CanonicalAddr, handle_type: HandleType) -> Result<CosmosPubKey, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
-            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
+            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), handle_type)?;
             trace!("sign doc: {:?}", sign_doc);
 
             // This verifies that signatures and sign bytes are self consistent
@@ -525,11 +525,11 @@ fn get_signer(sign_info: &SigInfo, sender: &CanonicalAddr) -> Result<CosmosPubKe
     }
 }
 
-fn get_messages(sign_info: &SigInfo) -> Result<Vec<CosmosMsg>, EnclaveError> {
+fn get_messages(sign_info: &SigInfo, handle_type: HandleType) -> Result<Vec<CosmosSdkMsg>, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
-            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
+            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), handle_type)?;
             trace!("sign doc: {:?}", sign_doc);
 
             Ok(sign_doc.body.messages)
@@ -540,7 +540,7 @@ fn get_messages(sign_info: &SigInfo) -> Result<Vec<CosmosMsg>, EnclaveError> {
                     warn!("failure to parse StdSignDoc: {:?}", err);
                     EnclaveError::FailedTxVerification
                 })?;
-            let messages: Result<Vec<CosmosMsg>, _> = sign_doc
+            let messages: Result<Vec<CosmosSdkMsg>, _> = sign_doc
                 .msgs
                 .iter()
                 .map(|x| x.clone().into_cosmwasm_msg())
@@ -576,7 +576,7 @@ fn get_messages(sign_info: &SigInfo) -> Result<Vec<CosmosMsg>, EnclaveError> {
                 );
                 EnclaveError::FailedTxVerification
             })?;
-            let messages: Result<Vec<CosmosMsg>, _> = sign_doc
+            let messages: Result<Vec<CosmosSdkMsg>, _> = sign_doc
                 .msgs
                 .iter()
                 .map(|x| x.clone().into_cosmwasm_msg())
@@ -638,27 +638,29 @@ fn verify_callback_sig_impl(
 
 /// Get the cosmwasm message that contains the encrypted message
 fn get_verified_msg<'sd>(
-    messages: &'sd [CosmosMsg],
+    messages: &'sd [CosmosSdkMsg],
     msg_sender: &CanonicalAddr,
     sent_msg: &SecretMessage,
     handle_type: HandleType,
-) -> Option<&'sd CosmosMsg> {
+) -> Option<&'sd CosmosSdkMsg> {
     trace!("get_verified_msg: {:?}", messages);
 
     messages.iter().find(|&m| match m {
-        CosmosMsg::Execute { msg, sender, .. }
-        | CosmosMsg::Instantiate {
+        CosmosSdkMsg::MsgExecuteContract { msg, sender, .. }
+        | CosmosSdkMsg::MsgInstantiateContract {
             init_msg: msg,
             sender,
             ..
         } => msg_sender == sender && &sent_msg.to_vec() == msg,
-        CosmosMsg::MsgRecvPacket {
+        CosmosSdkMsg::MsgRecvPacket {
+           packet: Packet {
             sequence,
             source_port,
             source_channel,
             destination_port,
             destination_channel,
             data,
+           }, ..
         } => match handle_type {
             HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
                 let parsed_sent_msg = serde_json::from_slice::<IbcPacketReceiveMsg>(&sent_msg.msg);
@@ -694,25 +696,70 @@ fn get_verified_msg<'sd>(
                 }
                 let ibc_hooks_incoming_transfer_msg = ibc_hooks_incoming_transfer_msg.unwrap();
                 
-                let send_msg_value = serde_json::from_slice::<serde_json::Value>(&sent_msg.msg);
-                if send_msg_value.is_err(){
-                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: sent_msg.msg cannot be parsed as serde_json::Value: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), send_msg_value.err());
+                let sent_msg_value = serde_json::from_slice::<serde_json::Value>(&sent_msg.msg);
+                if sent_msg_value.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: sent_msg.msg cannot be parsed as serde_json::Value: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), sent_msg_value.err());
                     return false;
                 }
 
-                ibc_hooks_incoming_transfer_msg.wasm.msg == send_msg_value.unwrap()
+                ibc_hooks_incoming_transfer_msg.wasm.msg == sent_msg_value.unwrap()
             }
             _ => false,
         },
-        CosmosMsg::Other => false,
+        CosmosSdkMsg::Other => false,
+        CosmosSdkMsg::MsgAcknowledgement { packet, acknowledgement, signer,.. } => {
+            match handle_type {
+                HandleType::HANDLE_TYPE_IBC_PACKET_ACK => {
+                    let ibc_packet_ack_msg = serde_json::from_slice::<IBCPacketAckMsg>(&sent_msg.msg);
+                    if ibc_packet_ack_msg.is_err(){
+                        trace!("get_verified_msg HANDLE_TYPE_IBC_PACKET_ACK: sent_msg.msg cannot be parsed as IBCPacketAckMsg: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), ibc_packet_ack_msg.err());
+                        return false;
+                    }
+                    let ibc_packet_ack_msg= ibc_packet_ack_msg.unwrap();
+
+                    ibc_packet_ack_msg.original_packet.src.channel_id == packet.source_channel &&
+                    ibc_packet_ack_msg.original_packet.src.port_id == packet.source_port &&
+                    ibc_packet_ack_msg.original_packet.dest.channel_id == packet.destination_channel &&
+                    ibc_packet_ack_msg.original_packet.dest.port_id == packet.destination_port &&
+                    ibc_packet_ack_msg.original_packet.sequence == packet.sequence &&
+                    ibc_packet_ack_msg.original_packet.data == packet.data &&
+                    ibc_packet_ack_msg.relayer == *signer &&
+                    ibc_packet_ack_msg.acknowledgement.data == *acknowledgement
+                },
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => {
+                    trace!("ASSAF 1");
+                    let ibc_lifecycle_complete = serde_json::from_slice::<IBCLifecycleComplete>(&sent_msg.msg);
+                if ibc_lifecycle_complete.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK: sent_msg.msg cannot be parsed as IBCLifecycleComplete: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), ibc_lifecycle_complete.err());
+                    return false;
+                }
+                let ibc_lifecycle_complete= ibc_lifecycle_complete.unwrap();
+
+                trace!("ASSAF 2 {:?}", ibc_lifecycle_complete);
+
+
+              match  ibc_lifecycle_complete {
+                IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCAck { channel, sequence, ack, success }) => 
+                    channel == packet.source_channel
+                    && sequence == packet.sequence
+                    && ack == String::from_utf8_lossy( acknowledgement)
+                    && success == !is_transfer_ack_error(acknowledgement)
+                ,
+                IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCTimeout { .. }) => false,
+            }
+                },
+            _ => false,
+
+            }
+        },
     })
 }
 
 /// Check that the contract listed in the cosmwasm message matches the one in env
-fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
+fn verify_contract(msg: &CosmosSdkMsg, contract_address: &HumanAddr) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     match msg {
-        CosmosMsg::Execute { contract, .. } => {
+        CosmosSdkMsg::MsgExecuteContract { contract, .. } => {
             info!("Verifying contract address..");
             let is_verified = contract_address == contract;
             if !is_verified {
@@ -724,11 +771,11 @@ fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
             }
             is_verified
         }
-        CosmosMsg::Instantiate { .. } => true,
-        CosmosMsg::Other => false,
-        CosmosMsg::MsgRecvPacket {
-            destination_port,
-            data,
+        CosmosSdkMsg::MsgInstantiateContract { .. } => true,
+        CosmosSdkMsg::Other => false,
+        CosmosSdkMsg::MsgRecvPacket {
+          packet:Packet{  destination_port,
+            data,..},
             ..
         } => {
             if destination_port == "transfer" {
@@ -793,7 +840,7 @@ fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
                     Some(contract_address) => contract_address,
                     None => {
                         trace!(
-                            "Contract was called via MsgRecvPacket but destination_port doesn't start with \"wasm.\": {:?}",
+                            "IBC-enabled Contract was called via MsgRecvPacket but destination_port doesn't start with \"wasm.\": {:?}",
                             destination_port,
                         );
                         return false;
@@ -803,32 +850,121 @@ fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
                 let is_verified = *contract_address == HumanAddr::from(contract_address_from_port);
                 if !is_verified {
                     trace!(
-                        "Contract address sent to enclave {:?} is not the same as extracted from MsgRecvPacket but destination_port: {:?}",
+                        "IBC-enabled Contract address sent to enclave {:?} is not the same as extracted from MsgRecvPacket but destination_port: {:?}",
                         contract_address,
                         contract_address_from_port,
                     );
                 }
                 is_verified
             }
+        },
+        CosmosSdkMsg::MsgAcknowledgement{
+            packet:Packet{ 
+                source_port,
+                data,..  },
+            ..
+        } => {
+            if source_port == "transfer" {
+// Packet was sent from a contract via the transfer port.
+// We're getting the ack here because the memo field contained `{"ibc_callback": "secret1contractAddr"}`,
+// and ibc-hooks routes the ack into `secret1contractAddr`.
+
+// Parse data as FungibleTokenPacketData JSON
+let packet_data: FungibleTokenPacketData = match serde_json::from_slice(
+    data.as_slice(),
+) {
+    Ok(packet_data) => packet_data,
+    Err(err) => {
+        trace!(
+            "Contract was called via ibc-hooks ack callback but packet_data cannot be parsed as FungibleTokenPacketData: {:?} Error: {:?}",
+            String::from_utf8_lossy(data.as_slice()),
+            err,
+        );
+        return false;
+    }
+};
+
+// memo must be set in ibc-hooks
+let memo = match packet_data.memo {
+    Some(memo) => memo,
+    None => {
+        trace!("Contract was called via ibc-hooks ack callback but packet_data.memo is empty");
+        return false;
+    }
+};
+
+// Parse data.memo as `{"ibc_callback": "secret1contractAddr"}` JSON
+let ibc_hooks_outgoing_memo: IbcHooksOutgoingTransferMemo = match serde_json::from_slice(memo.as_bytes()) {
+    Ok(wasm_msg) => wasm_msg,
+    Err(err) => {
+        trace!(
+            "Contract was called via ibc-hooks but packet_data.memo cannot be parsed as IbcHooksWasmMsg: {:?} Error: {:?}",
+            memo,
+            err,
+        );
+        return false;
+    }
+};
+
+let is_verified =  *contract_address == ibc_hooks_outgoing_memo.ibc_callback && *contract_address == packet_data.sender;
+if !is_verified {
+    trace!(
+        "Contract address sent to enclave {:?} is not the same as in ibc-hooks outgoing transfer callback address packet {:?}",
+        contract_address,
+        ibc_hooks_outgoing_memo.ibc_callback
+    );
+}
+is_verified
+            } else {
+                  // Packet was sent from an IBC enabled contract
+                // source_port is of the form "wasm.{contract_address}"
+
+                // Extract contract_address from source_port
+                // This also checks that source_port starts with "wasm."
+                let contract_address_from_port = match source_port.strip_prefix("wasm.") {
+                    Some(contract_address) => contract_address,
+                    None => {
+                        trace!(
+                            "IBC-enabled Contract was called via MsgAcknowledgement but source_port doesn't start with \"wasm.\": {:?}",
+                            source_port,
+                        );
+                        return false;
+                    }
+                };
+
+                let is_verified = *contract_address == HumanAddr::from(contract_address_from_port);
+                if !is_verified {
+                    trace!(
+                        "Contract address sent to enclave {:?} is not the same as extracted from MsgAcknowledgement but source_port: {:?}",
+                        contract_address,
+                        contract_address_from_port,
+                    );
+                }
+                is_verified
+            }
+
         }
     }
 }
 
 /// Check that the funds listed in the cosmwasm message matches the ones in env
-fn verify_funds(msg: &CosmosMsg, sent_funds_msg: &[Coin]) -> bool {
+fn verify_funds(msg: &CosmosSdkMsg, sent_funds_msg: &[Coin]) -> bool {
     match msg {
-        CosmosMsg::Execute { sent_funds, .. }
-        | CosmosMsg::Instantiate {
+        CosmosSdkMsg::MsgExecuteContract { sent_funds, .. }
+        | CosmosSdkMsg::MsgInstantiateContract {
             init_funds: sent_funds,
             ..
         } => sent_funds_msg == sent_funds,
-        CosmosMsg::Other => false,
-        CosmosMsg::MsgRecvPacket {
+        CosmosSdkMsg::Other => false,
+        CosmosSdkMsg::MsgRecvPacket {
+            packet: Packet {
             data,
             source_port,
             source_channel,
             destination_port,
             destination_channel,
+            ..
+            },
             ..
         } => {
             if destination_port == "transfer" {
@@ -927,11 +1063,16 @@ fn verify_funds(msg: &CosmosMsg, sent_funds_msg: &[Coin]) -> bool {
                 sent_funds_msg.is_empty()
             }
         }
+        CosmosSdkMsg::MsgAcknowledgement { .. } => {
+            
+                // No funds should be sent with a MsgAcknowledgement
+                sent_funds_msg.is_empty()
+        },
     }
 }
 
 fn verify_message_params(
-    messages: &[CosmosMsg],
+    messages: &[CosmosSdkMsg],
     sender: &CanonicalAddr,
     sent_funds: &[Coin],
     contract_address: &HumanAddr,
@@ -955,11 +1096,12 @@ fn verify_message_params(
     let msg = msg.unwrap();
 
     match msg {
-        CosmosMsg::MsgRecvPacket { .. } => {
+        CosmosSdkMsg::MsgRecvPacket{..} |
+        CosmosSdkMsg::MsgAcknowledgement{..}   => {
             // No sender to verify.
             // Going to pass null sender to the contract if all other checks pass.
         }
-        CosmosMsg::Execute { .. } | CosmosMsg::Instantiate { .. } | CosmosMsg::Other => {
+        CosmosSdkMsg::MsgExecuteContract { .. } | CosmosSdkMsg::MsgInstantiateContract { .. } | CosmosSdkMsg::Other => {
             if msg.sender() != Some(sender) {
                 warn!(
                     "message sender did not match cosmwasm message sender: {:?} {:?}",

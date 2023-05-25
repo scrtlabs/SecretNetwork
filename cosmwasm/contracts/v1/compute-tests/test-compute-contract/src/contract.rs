@@ -10,7 +10,9 @@ use cosmwasm_std::{
 use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
 
-use crate::msg::{ExecuteMsg, ExternalMessages, InstantiateMsg, QueryMsg, QueryRes};
+use crate::msg::{
+    ExecuteMsg, ExternalMessages, IBCLifecycleComplete, InstantiateMsg, QueryMsg, QueryRes,
+};
 use crate::state::{count, count_read, expiration, expiration_read};
 
 #[entry_point]
@@ -1293,6 +1295,33 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 })
                 .set_data(details[0].data.as_bytes()))
         }
+        ExecuteMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCAck {
+            channel,
+            sequence,
+            ack,
+            success,
+        }) => Ok(Response::default().add_attributes(vec![
+            ("ibc_lifecycle_complete.ibc_ack.channel", channel),
+            (
+                "ibc_lifecycle_complete.ibc_ack.sequence",
+                sequence.to_string(),
+            ),
+            ("ibc_lifecycle_complete.ibc_ack.ack", ack),
+            (
+                "ibc_lifecycle_complete.ibc_ack.success",
+                success.to_string(),
+            ),
+        ])),
+        ExecuteMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout {
+            channel,
+            sequence,
+        }) => Ok(Response::default().add_attributes(vec![
+            ("ibc_lifecycle_complete.ibc_timeout.channel", channel),
+            (
+                "ibc_lifecycle_complete.ibc_timeout.sequence",
+                sequence.to_string(),
+            ),
+        ])),
     }
 }
 

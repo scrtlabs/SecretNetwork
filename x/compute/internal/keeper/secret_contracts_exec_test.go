@@ -2451,3 +2451,58 @@ func TestIBCHooksIncomingTransfer(t *testing.T) {
 		}
 	}
 }
+
+func TestIBCHooksOutgoingTransferAck(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	data := ibctransfertypes.FungibleTokenPacketData{
+		Denom:    "ignored",
+		Amount:   "1",
+		Sender:   contractAddress.String(), // must be the contract address, like in the memo
+		Receiver: "ignored",
+		Memo:     fmt.Sprintf(`{"ibc_callback":"%s"}`, contractAddress.String()),
+	}
+	dataBytes, err := json.Marshal(data)
+	require.NoError(t, err)
+
+	sdkMsg := ibcchanneltypes.MsgAcknowledgement{
+		Packet: ibcchanneltypes.Packet{
+			Sequence:           0,
+			SourcePort:         "transfer",  // port on the other chain
+			SourceChannel:      "channel-0", // channel on the other chain
+			DestinationPort:    "transfer",  // port on Secret
+			DestinationChannel: "channel-0", // channel on Secret
+			Data:               dataBytes,
+			TimeoutHeight:      ibcclienttypes.Height{},
+			TimeoutTimestamp:   0,
+		},
+		Acknowledgement: []byte(`blabla`),
+		ProofAcked:      []byte{},
+		ProofHeight:     ibcclienttypes.Height{},
+		Signer:          walletA.String(),
+	}
+
+	ctx = PrepareSignedTx(t, keeper, ctx, walletA, privKeyA, &sdkMsg)
+
+	_, execErr := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"ibc_lifecycle_complete":{"ibc_ack":{"channel":"channel-0","sequence":0,"ack":"blabla","success":true}}}`), sdk.NewCoins(), nil, cosmwasm.HandleTypeIbcWasmHooksOutgoingTransferAck)
+
+	require.Empty(t, execErr)
+
+	events := tryDecryptWasmEvents(ctx, nil)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "ibc_lifecycle_complete.ibc_ack.channel", Value: "channel-0"},
+				{Key: "ibc_lifecycle_complete.ibc_ack.sequence", Value: "0"},
+				{Key: "ibc_lifecycle_complete.ibc_ack.ack", Value: "blabla"},
+				{Key: "ibc_lifecycle_complete.ibc_ack.success", Value: "true"},
+			},
+		},
+		events,
+	)
+}

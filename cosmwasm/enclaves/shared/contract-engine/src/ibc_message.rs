@@ -84,9 +84,9 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
     })
 }
 
-/// `parse_ibc_hooks_incoming_transfer_message()` is very similar to `parse_plaintext_ibc_protocol_message()`.
+/// `parse_plaintext_ibc_validated_message()` is very similar to `parse_plaintext_ibc_protocol_message()`.
 /// The only difference is that it returns `should_validate_input: true`.
-pub fn parse_ibc_hooks_incoming_transfer_message(
+pub fn parse_plaintext_ibc_validated_message(
     plaintext_message: &[u8],
 ) -> Result<ParsedMessage, EnclaveError> {
     Ok(ParsedMessage {
