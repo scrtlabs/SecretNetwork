@@ -22,7 +22,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
-	"github.com/cosmos/cosmos-sdk/store/iavl"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/authz"
@@ -310,29 +309,6 @@ func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
 func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
-	// Fix v1.9 mishap
-	if ctx.BlockHeight() < 8861820 {
-		for _, storeKey := range []string{
-			ibcswitchtypes.StoreKey,
-			ibcfeetypes.StoreKey,
-			packetforwardtypes.StoreKey,
-		} {
-			store := app.CommitMultiStore().GetCommitKVStore(app.AppKeepers.GetKey(storeKey)).(*iavl.Store)
-
-			if store.LastCommitID().Version >= ctx.BlockHeight() {
-				ctx.Logger().Info(fmt.Sprintf("Rolling back height %v for store %v\n", store.LastCommitID().Version, storeKey))
-				_, err := store.LoadVersionForOverwriting(ctx.BlockHeight() - 2)
-				if err != nil {
-					ctx.Logger().Error("Error: %+v\n", err)
-					panic(err)
-				}
-				store.Commit()
-				ctx.Logger().Info(fmt.Sprintf("Store %v is now at height %v\n", storeKey, store.LastCommitID().Version))
-			}
-
-		}
-	}
-
 	return app.mm.BeginBlock(ctx, req)
 }
 
