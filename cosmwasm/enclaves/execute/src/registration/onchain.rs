@@ -67,10 +67,10 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             &target_public_key.to_vec()
         );
 
-        let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis)
+        let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis, false)
             .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
-        let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current)
+        let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current, false)
             .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
         res.extend(&res_current);

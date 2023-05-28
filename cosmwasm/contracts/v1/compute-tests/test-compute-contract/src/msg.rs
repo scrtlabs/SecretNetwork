@@ -109,6 +109,7 @@ pub enum InstantiateMsg {
         code_hash: String,
     },
     GetEnv {},
+    TestRemoveDb {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

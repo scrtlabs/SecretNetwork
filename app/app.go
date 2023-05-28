@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -30,6 +31,7 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
+	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
 	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
@@ -99,6 +101,7 @@ var (
 		v1_7.Upgrade,
 		v1_8.Upgrade,
 		v1_9.Upgrade,
+		v1_10.Upgrade,
 	}
 )
 
@@ -457,6 +460,7 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
 	)
 }
 
@@ -474,6 +478,7 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		// custom modules
 		compute.ModuleName,
 		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
 
 		icatypes.ModuleName,
 		icaauthtypes.ModuleName,
@@ -486,6 +491,7 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		evidencetypes.ModuleName,
 		ibctransfertypes.ModuleName,
 		packetforwardtypes.ModuleName,
+
 		ibcfeetypes.ModuleName,
 		feegrant.ModuleName,
 	)
@@ -516,5 +522,6 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		packetforwardtypes.ModuleName,
 		compute.ModuleName,
 		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
 	)
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
+	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v4/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -46,6 +47,10 @@ import (
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
+
+type emergencyButton interface {
+	IsHalted(ctx sdk.Context) bool
+}
 
 type ResponseHandler interface {
 	// Handle processes the data returned by a contract invocation.
@@ -103,6 +108,7 @@ func NewKeeper(
 	portKeeper portkeeper.Keeper,
 	portSource types.ICS20TransferPortSource,
 	channelKeeper channelkeeper.Keeper,
+	ics4Wrapper transfertypes.ICS4Wrapper,
 	legacyMsgRouter sdk.Router,
 	msgRouter MessageRouter,
 	queryRouter GRPCQueryRouter,
@@ -127,10 +133,19 @@ func NewKeeper(
 		bankKeeper:       bankKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
-		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
-		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
-		HomeDir:          homeDir,
-		LastMsgManager:   lastMsgManager,
+		messenger: NewMessageHandler(
+			msgRouter,
+			legacyMsgRouter,
+			customEncoders,
+			channelKeeper,
+			ics4Wrapper,
+			capabilityKeeper,
+			portSource,
+			cdc,
+		),
+		queryGasLimit:  wasmConfig.SmartQueryGasLimit,
+		HomeDir:        homeDir,
+		LastMsgManager: lastMsgManager,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 

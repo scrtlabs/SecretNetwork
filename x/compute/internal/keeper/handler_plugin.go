@@ -9,9 +9,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibcclienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
 	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
 	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+
 	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
@@ -56,11 +58,16 @@ func NewSDKMessageHandler(router MessageRouter, legacyRouter sdk.Router, encoder
 // IBCRawPacketHandler handels IBC.SendPacket messages which are published to an IBC channel.
 type IBCRawPacketHandler struct {
 	channelKeeper    channelkeeper.Keeper
+	ics4Wrapper      transfertypes.ICS4Wrapper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
 }
 
-func NewIBCRawPacketHandler(chk channelkeeper.Keeper, cak capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
-	return IBCRawPacketHandler{channelKeeper: chk, capabilityKeeper: cak}
+func NewIBCRawPacketHandler(channelKeeper channelkeeper.Keeper, ics4Wrapper transfertypes.ICS4Wrapper, capabilityKeeper capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
+	return IBCRawPacketHandler{
+		channelKeeper:    channelKeeper,
+		ics4Wrapper:      ics4Wrapper,
+		capabilityKeeper: capabilityKeeper,
+	}
 }
 
 func NewMessageHandlerChain(first Messenger, others ...Messenger) *MessageHandlerChain {
@@ -78,6 +85,7 @@ func NewMessageHandler(
 	legacyMsgRouter sdk.Router,
 	customEncoders *MessageEncoders,
 	channelKeeper channelkeeper.Keeper,
+	ics4Wrapper transfertypes.ICS4Wrapper,
 	capabilityKeeper capabilitykeeper.ScopedKeeper,
 	portSource types.ICS20TransferPortSource,
 	unpacker codectypes.AnyUnpacker,
@@ -85,7 +93,7 @@ func NewMessageHandler(
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
 		NewSDKMessageHandler(msgRouter, legacyMsgRouter, encoders),
-		NewIBCRawPacketHandler(channelKeeper, capabilityKeeper),
+		NewIBCRawPacketHandler(channelKeeper, ics4Wrapper, capabilityKeeper),
 	)
 }
 
@@ -113,6 +121,7 @@ func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, cont
 	if msg.IBC == nil || msg.IBC.SendPacket == nil {
 		return nil, nil, types.ErrUnknownMsg
 	}
+
 	if contractIBCPortID == "" {
 		return nil, nil, sdkerrors.Wrapf(types.ErrUnsupportedForContract, "ibc not supported")
 	}
@@ -146,7 +155,7 @@ func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, cont
 		convertWasmIBCTimeoutHeightToCosmosHeight(msg.IBC.SendPacket.Timeout.Block),
 		msg.IBC.SendPacket.Timeout.Timestamp,
 	)
-	return nil, nil, h.channelKeeper.SendPacket(ctx, channelCap, packet)
+	return nil, nil, h.ics4Wrapper.SendPacket(ctx, channelCap, packet)
 }
 
 type (
