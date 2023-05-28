@@ -208,7 +208,7 @@ pub fn validate_msg(
 ) -> Result<ValidatedMessage, EnclaveError> {
     match handle_type {
         None => validate_basic_msg(msg, contract_hash, data_for_validation),
-        Some(h) => match is_ibc_msg(h.clone()) {
+        Some(h) => match is_ibc_msg(h) {
             false => validate_basic_msg(msg, contract_hash, data_for_validation),
             true => validate_ibc_msg(msg, contract_hash, data_for_validation, h),
         },
@@ -746,7 +746,7 @@ fn verify_and_get_sdk_msg<'sd>(
                     channel == packet.source_channel
                     && sequence == packet.sequence
                     && ack == String::from_utf8_lossy( acknowledgement)
-                    && success == !is_transfer_ack_error(acknowledgement),
+                    && success != is_transfer_ack_error(acknowledgement),
                 IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCTimeout { .. }) => false,
             }
                 },

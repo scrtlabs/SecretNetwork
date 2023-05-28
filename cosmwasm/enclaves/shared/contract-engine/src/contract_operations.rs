@@ -295,7 +295,7 @@ pub fn handle(
         msg,
         should_validate_sig_info,
         should_validate_input,
-        parsed_handle_type.clone(),
+        parsed_handle_type,
     )?;
 
     let mut validated_msg = decrypted_msg.clone();
@@ -305,7 +305,7 @@ pub fn handle(
             &decrypted_msg,
             &contract_hash,
             data_for_validation,
-            Some(parsed_handle_type.clone()),
+            Some(parsed_handle_type),
         )?;
         validated_msg = x.validated_msg;
         reply_params = x.reply_params;
