@@ -471,18 +471,18 @@ pub struct IBCPacketAckMsg {
 
 #[derive(Debug, Deserialize)]
 pub struct IBCAcknowledgement {
-    pub data: Vec<u8>,
+    pub data: Binary,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct IBCPacketTimeoutMsg {
-    pub original_packet: IBCPacket,
+    pub packet: IBCPacket,
     pub relayer: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct IBCPacket {
-    pub data: Vec<u8>,
+    pub data: Binary,
     pub src: IBCEndpoint,
     pub dest: IBCEndpoint,
     pub sequence: u64,
@@ -498,7 +498,7 @@ pub struct IBCEndpoint {
 #[derive(Debug, Deserialize)]
 pub struct IBCTimeout {
     pub block: Option<IBCTimeoutBlock>,
-    pub timestamp: Option<u64>,
+    pub timestamp: Option<Uint128>,
 }
 
 #[derive(Debug, Deserialize)]

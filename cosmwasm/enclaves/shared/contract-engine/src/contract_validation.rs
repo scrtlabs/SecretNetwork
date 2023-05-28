@@ -729,9 +729,9 @@ fn verify_and_get_sdk_msg<'sd>(
                     sent_msg_ack_msg.original_packet.dest.channel_id == packet.destination_channel &&
                     sent_msg_ack_msg.original_packet.dest.port_id == packet.destination_port &&
                     sent_msg_ack_msg.original_packet.sequence == packet.sequence &&
-                    sent_msg_ack_msg.original_packet.data == packet.data &&
+                    sent_msg_ack_msg.original_packet.data.0 == packet.data &&
                     sent_msg_ack_msg.relayer == *signer &&
-                    sent_msg_ack_msg.acknowledgement.data == *acknowledgement
+                    sent_msg_ack_msg.acknowledgement.data.0 == *acknowledgement
                 },
                 HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => {
                     let ibc_lifecycle_complete = serde_json::from_slice::<IBCLifecycleComplete>(&sent_msg.msg);
@@ -764,12 +764,12 @@ fn verify_and_get_sdk_msg<'sd>(
                     }
                     let sent_msg_timeout_msg= send_msg_timeout_msg.unwrap();
 
-                    sent_msg_timeout_msg.original_packet.src.channel_id == packet.source_channel &&
-                    sent_msg_timeout_msg.original_packet.src.port_id == packet.source_port &&
-                    sent_msg_timeout_msg.original_packet.dest.channel_id == packet.destination_channel &&
-                    sent_msg_timeout_msg.original_packet.dest.port_id == packet.destination_port &&
-                    sent_msg_timeout_msg.original_packet.sequence == packet.sequence &&
-                    sent_msg_timeout_msg.original_packet.data == packet.data &&
+                    sent_msg_timeout_msg.packet.src.channel_id == packet.source_channel &&
+                    sent_msg_timeout_msg.packet.src.port_id == packet.source_port &&
+                    sent_msg_timeout_msg.packet.dest.channel_id == packet.destination_channel &&
+                    sent_msg_timeout_msg.packet.dest.port_id == packet.destination_port &&
+                    sent_msg_timeout_msg.packet.sequence == packet.sequence &&
+                    sent_msg_timeout_msg.packet.data.0 == packet.data &&
                     sent_msg_timeout_msg.relayer == *signer
                 },
                 HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
