@@ -292,7 +292,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	//
 	// Therefore we'll initialize the Switch keeper and pass it to the Fee keeper as an ics4wrapper.
 	// That means that whenever a packet is being send via Fee as an ics4wrapper, it will go through the switch middleware first (ref: https://github.com/cosmos/ibc-go/blob/v4.3.0/modules/apps/29-fee/keeper/relay.go#L15-L18).
-	// Then we'll pass Fee as an ics4wrapper to everything eles.
+	// Then we'll pass Fee as an ics4wrapper to everything else.
 	//
 	// Compute: WASM Hooks -> Fee -> Switch
 	// Transfer: Packet Forward -> Fee -> Switch
