@@ -475,6 +475,12 @@ pub struct IBCAcknowledgement {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct IBCPacketTimeoutMsg {
+    pub original_packet: IBCPacket,
+    pub relayer: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct IBCPacket {
     pub data: Vec<u8>,
     pub src: IBCEndpoint,
@@ -546,7 +552,13 @@ pub enum CosmosSdkMsg {
         proof_height: Option<Height>,
         signer: String,
     },
-    // MsgTimeout {}, // TODO
+    MsgTimeout {
+        packet: Packet,
+        proof_unreceived: Vec<u8>,
+        proof_height: Option<Height>,
+        next_sequence_recv: u64,
+        signer: String,
+    },
     MsgRecvPacket {
         packet: Packet,
         proof_commitment: Vec<u8>,
@@ -571,17 +583,17 @@ impl CosmosSdkMsg {
             HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => Ok(CosmosSdkMsg::Other),
             HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => Ok(CosmosSdkMsg::Other),
             HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => Ok(CosmosSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => Self::try_parse_ibc_recv_packet(bytes),
-            HandleType::HANDLE_TYPE_IBC_PACKET_ACK => Self::try_parse_ibc_ack(bytes),
-            HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => Ok(CosmosSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
+            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
+            | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
                 Self::try_parse_ibc_recv_packet(bytes)
             }
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => {
+            HandleType::HANDLE_TYPE_IBC_PACKET_ACK
+            | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => {
                 Self::try_parse_ibc_ack(bytes)
             }
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
-                Ok(CosmosSdkMsg::Other)
+            HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
+            | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
+                Self::try_parse_ibc_timeout(bytes)
             }
         }
     }
@@ -638,9 +650,33 @@ impl CosmosSdkMsg {
         }
     }
 
-    // fn try_parse_msg_timeout(bytes: &[u8]) -> Result<Self, EnclaveError> {
-    //     todo!()
-    // }
+    fn try_parse_ibc_timeout(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        use proto::ibc::tx::MsgTimeout;
+
+        let raw_msg =
+            MsgTimeout::parse_from_bytes(bytes).map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+        match raw_msg.packet.clone().into_option() {
+            None => Err(EnclaveError::FailedToDeserialize),
+            Some(packet) => Ok(CosmosSdkMsg::MsgTimeout {
+                packet: Packet {
+                    sequence: packet.sequence,
+                    source_port: packet.source_port,
+                    source_channel: packet.source_channel,
+                    destination_port: packet.destination_port,
+                    destination_channel: packet.destination_channel,
+                    data: packet.data,
+                },
+                next_sequence_recv: raw_msg.next_sequence_recv,
+                proof_unreceived: raw_msg.proof_unreceived,
+                proof_height: raw_msg.proof_height.into_option().map(|height| Height {
+                    revision_number: height.revision_number,
+                    revision_height: height.revision_height,
+                }),
+                signer: raw_msg.signer,
+            }),
+        }
+    }
 
     fn try_parse_ibc_recv_packet(bytes: &[u8]) -> Result<Self, EnclaveError> {
         use proto::ibc::tx::MsgRecvPacket;
@@ -763,6 +799,7 @@ impl CosmosSdkMsg {
             | CosmosSdkMsg::MsgInstantiateContract { sender, .. } => Some(sender),
             CosmosSdkMsg::MsgRecvPacket { .. } => None,
             CosmosSdkMsg::MsgAcknowledgement { .. } => None,
+            CosmosSdkMsg::MsgTimeout { .. } => None,
             CosmosSdkMsg::Other => None,
         }
     }

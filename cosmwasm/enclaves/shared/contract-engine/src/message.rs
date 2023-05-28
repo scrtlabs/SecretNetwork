@@ -21,9 +21,7 @@ pub fn parse_message(
         HandleType::HANDLE_TYPE_REPLY => parse_reply_message(message),
         HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
         | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
-        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE
-        | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
-        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => {
             trace!(
                 "parsing {} msg (Should always be plaintext): {:?}",
                 HandleType::get_export_name(handle_type),
@@ -35,7 +33,9 @@ pub fn parse_message(
         HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => parse_ibc_receive_message(message),
         HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER
         | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
-        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => {
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK
+        | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
             parse_plaintext_ibc_validated_message(message)
         }
     };

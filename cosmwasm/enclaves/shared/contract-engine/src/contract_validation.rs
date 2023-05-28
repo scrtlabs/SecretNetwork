@@ -10,8 +10,8 @@ use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
     is_transfer_ack_error, ContractCode, CosmosPubKey, CosmosSdkMsg, FungibleTokenPacketData,
     HandleType, IBCLifecycleComplete, IBCLifecycleCompleteOptions, IBCPacketAckMsg,
-    IbcHooksIncomingTransferMsg, IbcHooksOutgoingTransferMemo, Packet, SigInfo, SignDoc,
-    StdSignDoc,
+    IBCPacketTimeoutMsg, IbcHooksIncomingTransferMsg, IbcHooksOutgoingTransferMemo, Packet,
+    SigInfo, SignDoc, StdSignDoc,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
@@ -679,7 +679,7 @@ fn verify_and_get_sdk_msg<'sd>(
                     return &sent_msg.to_vec() == data;
                 }
                 let parsed = parsed_sent_msg.unwrap();
-                
+
                 parsed.packet.data.as_slice() == data.as_slice()
                     && parsed.packet.sequence == *sequence
                     && parsed.packet.src.port_id == *source_port
@@ -703,7 +703,6 @@ fn verify_and_get_sdk_msg<'sd>(
                     return false;
                 }
                 let ibc_hooks_incoming_transfer_msg = ibc_hooks_incoming_transfer_msg.unwrap();
-                
                 let sent_msg_value = serde_json::from_slice::<serde_json::Value>(&sent_msg.msg);
                 if sent_msg_value.is_err(){
                     trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: sent_msg.msg cannot be parsed as serde_json::Value: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), sent_msg_value.err());
@@ -743,13 +742,49 @@ fn verify_and_get_sdk_msg<'sd>(
                 let ibc_lifecycle_complete= ibc_lifecycle_complete.unwrap();
 
               match  ibc_lifecycle_complete {
-                IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCAck { channel, sequence, ack, success }) => 
+                IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCAck { channel, sequence, ack, success }) =>
                     channel == packet.source_channel
                     && sequence == packet.sequence
                     && ack == String::from_utf8_lossy( acknowledgement)
-                    && success == !is_transfer_ack_error(acknowledgement)
-                ,
+                    && success == !is_transfer_ack_error(acknowledgement),
                 IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCTimeout { .. }) => false,
+            }
+                },
+            _ => false,
+
+            }
+        },
+        CosmosSdkMsg::MsgTimeout { packet, signer,.. } => {
+            match handle_type {
+                HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
+                    let send_msg_timeout_msg = serde_json::from_slice::<IBCPacketTimeoutMsg>(&sent_msg.msg);
+                    if send_msg_timeout_msg.is_err(){
+                        trace!("get_verified_msg HANDLE_TYPE_IBC_PACKET_TIMEOUT: sent_msg.msg cannot be parsed as IBCPacketTimeoutMsg: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), send_msg_timeout_msg.err());
+                        return false;
+                    }
+                    let sent_msg_timeout_msg= send_msg_timeout_msg.unwrap();
+
+                    sent_msg_timeout_msg.original_packet.src.channel_id == packet.source_channel &&
+                    sent_msg_timeout_msg.original_packet.src.port_id == packet.source_port &&
+                    sent_msg_timeout_msg.original_packet.dest.channel_id == packet.destination_channel &&
+                    sent_msg_timeout_msg.original_packet.dest.port_id == packet.destination_port &&
+                    sent_msg_timeout_msg.original_packet.sequence == packet.sequence &&
+                    sent_msg_timeout_msg.original_packet.data == packet.data &&
+                    sent_msg_timeout_msg.relayer == *signer
+                },
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
+                    let ibc_lifecycle_complete = serde_json::from_slice::<IBCLifecycleComplete>(&sent_msg.msg);
+                if ibc_lifecycle_complete.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT: sent_msg.msg cannot be parsed as IBCLifecycleComplete: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), ibc_lifecycle_complete.err());
+                    return false;
+                }
+                  let ibc_lifecycle_complete= ibc_lifecycle_complete.unwrap();
+
+              match  ibc_lifecycle_complete {
+                IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCAck {..}) =>  false                ,
+                IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCTimeout { channel, sequence  }) =>
+                channel == packet.source_channel
+                && sequence == packet.sequence,
             }
                 },
             _ => false,
@@ -873,10 +908,16 @@ fn verify_contract_address(msg: &CosmosSdkMsg, contract_address: &HumanAddr) -> 
                 source_port, data, ..
             },
             ..
+        }
+        | CosmosSdkMsg::MsgTimeout {
+            packet: Packet {
+                source_port, data, ..
+            },
+            ..
         } => {
             if source_port == "transfer" {
                 // Packet was sent from a contract via the transfer port.
-                // We're getting the ack here because the memo field contained `{"ibc_callback": "secret1contractAddr"}`,
+                // We're getting the ack (and timeout) here because the memo field contained `{"ibc_callback": "secret1contractAddr"}`,
                 // and ibc-hooks routes the ack into `secret1contractAddr`.
 
                 // Parse data as FungibleTokenPacketData JSON
@@ -1079,6 +1120,10 @@ fn verify_sent_funds(msg: &CosmosSdkMsg, sent_funds_msg: &[Coin]) -> bool {
             // No funds should be sent with a MsgAcknowledgement
             sent_funds_msg.is_empty()
         }
+        CosmosSdkMsg::MsgTimeout { .. } => {
+            // No funds should be sent with a MsgTimeout
+            sent_funds_msg.is_empty()
+        }
     }
 }
 
@@ -1090,7 +1135,7 @@ fn verify_message_params(
     sent_msg: &SecretMessage,
     handle_type: HandleType,
 ) -> bool {
-    info!("Verifying message...");
+    info!("Verifying sdk message against wasm input...");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
     let msg = verify_and_get_sdk_msg(messages, sender, sent_msg, handle_type);
@@ -1106,8 +1151,11 @@ fn verify_message_params(
     }
     let msg = msg.unwrap();
 
+    info!("Verifying message sender...");
     match msg {
-        CosmosSdkMsg::MsgRecvPacket { .. } | CosmosSdkMsg::MsgAcknowledgement { .. } => {
+        CosmosSdkMsg::MsgRecvPacket { .. }
+        | CosmosSdkMsg::MsgAcknowledgement { .. }
+        | CosmosSdkMsg::MsgTimeout { .. } => {
             // No sender to verify.
             // Going to pass null sender to the contract if all other checks pass.
         }
@@ -1124,13 +1172,13 @@ fn verify_message_params(
         }
     }
 
-    info!("Verifying contract address..");
+    info!("Verifying contract address...");
     if !verify_contract_address(msg, contract_address) {
         warn!("Contract address verification failed!");
         return false;
     }
 
-    info!("Verifying funds {:?}...",sent_funds);
+    info!("Verifying sent funds...");
     if !verify_sent_funds(msg, sent_funds) {
         warn!("Funds verification failed!");
         return false;

@@ -23,8 +23,6 @@ mod query_chain;
 mod random;
 mod reply_message;
 pub(crate) mod types;
-#[cfg(feature = "wasmi-engine")]
-mod wasm;
 #[cfg(feature = "wasm3")]
 mod wasm3;
 

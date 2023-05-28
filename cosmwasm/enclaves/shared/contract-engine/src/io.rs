@@ -1,5 +1,5 @@
-use core::fmt;
 use crate::contract_validation::ReplyParams;
+use core::fmt;
 
 /// This contains all the user-facing functions. In these functions we will be using
 /// the consensus_io_exchange_keypair and a user-generated key to create a symmetric key
@@ -241,7 +241,7 @@ pub fn finalize_raw_output(
     is_query_output: bool,
     is_ibc: bool,
     is_msg_encrypted: bool,
-) -> Result <Vec<u8>, EnclaveError> {
+) -> Result<Vec<u8>, EnclaveError> {
     let mut wasm_output = WasmOutput::default();
 
     match raw_output {
@@ -280,7 +280,7 @@ pub fn finalize_raw_output(
             });
             wasm_output.internal_reply_enclave_sig = internal_reply_enclave_sig;
             wasm_output.internal_msg_id = internal_msg_id;
-        },
+        }
         RawWasmOutput::OkV1 {
             ok,
             internal_reply_enclave_sig,
@@ -304,19 +304,19 @@ pub fn finalize_raw_output(
                     ok: Some(ok),
                 });
             }
-        },
+        }
         RawWasmOutput::QueryOkV010 { ok } | RawWasmOutput::QueryOkV1 { ok } => {
             wasm_output.query = Some(QueryOutput {
                 ok: Some(ok),
                 err: None,
             });
-        },
+        }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
             wasm_output.ibc_packet_receive = Some(IBCReceiveOutput {
                 err: None,
                 ok: Some(ok),
             });
-        },
+        }
         RawWasmOutput::OkIBCOpenChannel { ok } => {
             wasm_output.ibc_open_channel = Some(IBCOpenChannelOutput {
                 err: None,
@@ -446,10 +446,11 @@ pub fn set_all_logs_to_plaintext(raw_output: &mut RawWasmOutput) {
     }
 }
 
-fn deserialize_output(
-    output: Vec<u8>
-) -> Result<RawWasmOutput, EnclaveError> {
-    info!("output as received from contract: {:?}", String::from_utf8_lossy(&output));
+fn deserialize_output(output: Vec<u8>) -> Result<RawWasmOutput, EnclaveError> {
+    info!(
+        "output as received from contract: {:?}",
+        String::from_utf8_lossy(&output)
+    );
 
     let output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
         warn!("got an error while trying to deserialize output bytes from json");
@@ -487,8 +488,7 @@ fn encrypt_output(
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
     info!(
         "message nonce and public key for encryption: {:?} {:?}",
-        secret_msg.nonce,
-        secret_msg.user_public_key
+        secret_msg.nonce, secret_msg.user_public_key
     );
 
     match &mut output {
@@ -529,7 +529,12 @@ fn encrypt_output(
             }
         }
         RawWasmOutput::OkV1 { ok, .. } => {
-            encrypt_v1_non_result_fields(&mut ok.messages, &mut ok.attributes, &mut ok.events, secret_msg)?;
+            encrypt_v1_non_result_fields(
+                &mut ok.messages,
+                &mut ok.attributes,
+                &mut ok.events,
+                secret_msg,
+            )?;
             if let Some(data) = &mut ok.data {
                 if is_ibc_output {
                     warn!("IBC output should not contain any data");
@@ -545,7 +550,12 @@ fn encrypt_output(
             }
         }
         RawWasmOutput::OkIBCPacketReceive { ok } => {
-            encrypt_v1_non_result_fields(&mut ok.messages, &mut ok.attributes, &mut ok.events, secret_msg)?;
+            encrypt_v1_non_result_fields(
+                &mut ok.messages,
+                &mut ok.attributes,
+                &mut ok.events,
+                secret_msg,
+            )?;
 
             ok.acknowledgement = Binary::from_base64(&encrypt_serializable(
                 &encryption_key,
@@ -575,17 +585,14 @@ fn encrypt_v1_non_result_fields<T: Clone + fmt::Debug + PartialEq>(
     // v1: The attributes that will be emitted as part of a "wasm" event.
     for attr in attributes.iter_mut().filter(|attr| attr.encrypted) {
         attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
-        attr.value =
-            encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
+        attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
     }
 
     // v1: Extra, custom events separate from the main wasm one. These will have "wasm-"" prepended to the type.
     for event in events.iter_mut() {
         for attr in event.attributes.iter_mut().filter(|attr| attr.encrypted) {
-            attr.key =
-                encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
-            attr.value =
-                encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
+            attr.key = encrypt_preserialized_string(&encryption_key, &attr.key, &None, false)?;
+            attr.value = encrypt_preserialized_string(&encryption_key, &attr.value, &None, false)?;
         }
     }
 
@@ -599,8 +606,8 @@ fn encrypt_wasm_submsg<T: Clone + fmt::Debug + PartialEq>(
     // Messages other than Wasm (Bank, Staking, etc.) are kept plaintext
     if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
         match wasm_msg {
-            cw_types_v1::results::WasmMsg::Instantiate { msg, .. } |
-            cw_types_v1::results::WasmMsg::Execute { msg, .. } => {
+            cw_types_v1::results::WasmMsg::Instantiate { msg, .. }
+            | cw_types_v1::results::WasmMsg::Execute { msg, .. } => {
                 let mut msg_to_encrypt = SecretMessage {
                     msg: msg.as_slice().to_vec(),
                     nonce: secret_msg.nonce,
@@ -632,13 +639,9 @@ fn attach_reply_headers_to_submsgs(
     reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<RawWasmOutput, EnclaveError> {
     let sub_msgs = match &mut output {
-        RawWasmOutput::OkV1 { ok, .. } => {
-            &mut ok.messages
-        },
-        RawWasmOutput::OkIBCPacketReceive { ok } => {
-            &mut ok.messages
-        },
-        _ => return Ok(output)
+        RawWasmOutput::OkV1 { ok, .. } => &mut ok.messages,
+        RawWasmOutput::OkIBCPacketReceive { ok } => &mut ok.messages,
+        _ => return Ok(output),
     };
 
     for sub_msg in sub_msgs {
@@ -675,20 +678,26 @@ fn create_callback_sig_for_submsgs(
     contract_addr: &CanonicalAddr,
 ) -> Result<RawWasmOutput, EnclaveError> {
     let sub_msgs = match &mut output {
-        RawWasmOutput::OkV1 { ok, .. } => {
-            &mut ok.messages
-        },
-        RawWasmOutput::OkIBCPacketReceive { ok } => {
-            &mut ok.messages
-        },
-        _ => return Ok(output)
+        RawWasmOutput::OkV1 { ok, .. } => &mut ok.messages,
+        RawWasmOutput::OkIBCPacketReceive { ok } => &mut ok.messages,
+        _ => return Ok(output),
     };
 
     for sub_msg in sub_msgs {
         if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
             match wasm_msg {
-                cw_types_v1::results::WasmMsg::Execute { msg, callback_sig, funds, .. }
-                | cw_types_v1::results::WasmMsg::Instantiate { msg, callback_sig, funds, .. } => {
+                cw_types_v1::results::WasmMsg::Execute {
+                    msg,
+                    callback_sig,
+                    funds,
+                    ..
+                }
+                | cw_types_v1::results::WasmMsg::Instantiate {
+                    msg,
+                    callback_sig,
+                    funds,
+                    ..
+                } => {
                     *callback_sig = Some(create_callback_signature(
                         contract_addr,
                         &SecretMessage::from_slice(msg.as_slice())?.msg,
@@ -707,7 +716,6 @@ fn create_callback_sig_for_submsgs(
 
     Ok(output)
 }
-
 
 /// Adapt the output of a contract to be returned as a Reply message.
 /// If the contract's execution was not called from another contract, the output is returned as is.
@@ -731,7 +739,7 @@ fn adapt_output_for_reply(
     if reply_params.is_none() {
         // This message was not called from another contract,
         // no need to adapt output as a reply
-        return Ok(output)
+        return Ok(output);
     }
 
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
@@ -757,7 +765,7 @@ fn adapt_output_for_reply(
             });
 
             should_append_reply_params = false;
-        },
+        }
         RawWasmOutput::OkV1 { ok, .. } => {
             output_result = SubMsgResult::Ok(SubMsgResponse {
                 events: vec![],
@@ -765,14 +773,26 @@ fn adapt_output_for_reply(
             });
 
             should_append_reply_params = true;
-        },
-        _ => return Ok(output)
+        }
+        _ => return Ok(output),
     }
 
     match &mut output {
-        RawWasmOutput::Err { internal_msg_id, internal_reply_enclave_sig, .. } |
-        RawWasmOutput::OkV010 { internal_msg_id, internal_reply_enclave_sig, .. } |
-        RawWasmOutput::OkV1 { internal_msg_id, internal_reply_enclave_sig, .. } => {
+        RawWasmOutput::Err {
+            internal_msg_id,
+            internal_reply_enclave_sig,
+            ..
+        }
+        | RawWasmOutput::OkV010 {
+            internal_msg_id,
+            internal_reply_enclave_sig,
+            ..
+        }
+        | RawWasmOutput::OkV1 {
+            internal_msg_id,
+            internal_reply_enclave_sig,
+            ..
+        } => {
             let (msg_id, callback_sig) = get_reply_info_for_output(
                 output_result,
                 reply_params,
@@ -783,7 +803,7 @@ fn adapt_output_for_reply(
 
             *internal_msg_id = Some(msg_id);
             *internal_reply_enclave_sig = Some(callback_sig);
-        },
+        }
         _ => {}
     }
 
@@ -819,9 +839,7 @@ fn get_reply_info_for_output(
         EnclaveError::FailedToSerialize
     })?;
 
-    let sig = Binary::from(
-        create_callback_signature(sender_addr, &reply_json, &[]).as_slice(),
-    );
+    let sig = Binary::from(create_callback_signature(sender_addr, &reply_json, &[]).as_slice());
 
     trace!(
         "Generated internal callback signature for msg {:?} signature is: {:?}",
@@ -865,7 +883,11 @@ fn encrypt_v010_wasm_msg(
             msg_to_pass.encrypt_in_place()?;
             *msg = Binary::from(msg_to_pass.to_vec().as_slice());
 
-            *callback_sig = Some(create_callback_signature(contract_addr, &msg_to_pass.msg, send));
+            *callback_sig = Some(create_callback_signature(
+                contract_addr,
+                &msg_to_pass.msg,
+                send,
+            ));
         }
     }
 
@@ -881,16 +903,8 @@ fn attach_reply_headers_to_v1_wasm_msg(
     reply_params: &Option<Vec<ReplyParams>>,
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
-        cw_types_v1::results::WasmMsg::Execute {
-            msg,
-            code_hash,
-            ..
-        }
-        | cw_types_v1::results::WasmMsg::Instantiate {
-            msg,
-            code_hash,
-            ..
-        } => {
+        cw_types_v1::results::WasmMsg::Execute { msg, code_hash, .. }
+        | cw_types_v1::results::WasmMsg::Instantiate { msg, code_hash, .. } => {
             // On cosmwasm v1, submessages execute contracts whose results are sent back to the original caller by using "Reply".
             // Such submessages should be encrypted, but they weren't initially meant to be sent back to the enclave as an input of another contract.
             // To support "sending back" behavior, the enclave expects every encrypted input to be prepended by the recipient's contract hash.
