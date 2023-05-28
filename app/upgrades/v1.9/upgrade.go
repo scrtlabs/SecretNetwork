@@ -10,7 +10,7 @@ import (
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
-	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 )
 
@@ -20,8 +20,11 @@ var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
 	StoreUpgrades: store.StoreUpgrades{
-		Added:   []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, ibchookstypes.StoreKey},
-		Deleted: []string{"icamsgauth"},
+		Added: []string{
+			ibcpacketforwardtypes.StoreKey,
+			ibcfeetypes.ModuleName,
+			ibcswitchtypes.ModuleName,
+		},
 	},
 }
 
@@ -41,6 +44,7 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		ctx.Logger().Info(fmt.Sprintf("ibcfee module version %s set", fmt.Sprint(vm[ibcfeetypes.ModuleName])))
 
 		keepers.PacketForwardKeeper.SetParams(ctx, ibcpacketforwardtypes.DefaultParams())
+		keepers.IbcSwitchKeeper.SetParams(ctx, ibcswitchtypes.DefaultParams())
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}

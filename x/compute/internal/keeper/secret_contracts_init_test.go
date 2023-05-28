@@ -218,6 +218,14 @@ func TestInitPanic(t *testing.T) {
 	}
 }
 
+func TestRemoveKeyInCache(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, _, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"test_remove_db":{}}`, true, true, defaultGasForTests)
+
+	require.Nil(t, initErr.GenericErr)
+}
+
 func TestGasIsChargedForInitCallbackToInit(t *testing.T) {
 	for _, testContract := range testContracts {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {

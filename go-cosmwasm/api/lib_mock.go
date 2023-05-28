@@ -273,6 +273,10 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	return nil, nil
 }
 
+func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
+	return nil, nil
+}
+
 /**** To error module ***/
 
 //func errorWithMessage(err error, b C.Buffer) error {
