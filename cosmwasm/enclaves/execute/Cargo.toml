@@ -52,7 +52,6 @@ enclave_contract_engine = { path = "../shared/contract-engine" }
 enclave_crypto = { path = "../shared/crypto" }
 enclave_utils = { path = "../shared/utils" }
 enclave_cosmos_types = { path = "../shared/cosmos-types", optional = true }
-cosmos_proto = { path = "../shared/cosmos-proto" }
 
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"

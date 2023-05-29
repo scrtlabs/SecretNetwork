@@ -152,8 +152,9 @@ pub mod tests {
 
         let tx = cosmos_proto::registration::v1beta1::msg::RaAuthenticate::parse_from_bytes(
             tx_bytes.as_slice(),
-        )
-        .unwrap();
+        );
+
+        assert!(tx.is_ok());
     }
 
     pub fn check_parse_reg_from_tx() {

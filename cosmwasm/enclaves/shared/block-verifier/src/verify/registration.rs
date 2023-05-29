@@ -7,14 +7,6 @@ pub fn verify_reg_msg(certificate: &[u8]) -> bool {
     let next = verified_msgs.get_next();
 
     let result = if let Some(msg) = next {
-        // I assume @assaf will add the message type to the verified messages, so I'm going to leave this here for now
-        // without a check - it will fail in the parse either way
-
-        // if !check_message_is_reg(&msg) {
-        //     error!("Error failed to validate registration message - 0x7535");
-        //     false
-        // }
-
         match cosmos_proto::registration::v1beta1::msg::RaAuthenticate::parse_from_bytes(&msg) {
             Ok(ra_msg) => {
                 if ra_msg.certificate == certificate {
