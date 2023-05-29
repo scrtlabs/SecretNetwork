@@ -2,7 +2,6 @@
 /// These functions run on-chain and must be deterministic across all nodes
 ///
 use log::*;
-use sgx_types::{sgx_status_t, SgxResult};
 use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
