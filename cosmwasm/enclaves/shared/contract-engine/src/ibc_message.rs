@@ -7,17 +7,16 @@ use log::{trace, warn};
 pub fn parse_plaintext_ibc_protocol_message(
     plaintext_message: &[u8],
 ) -> Result<ParsedMessage, EnclaveError> {
-    let scrt_msg = SecretMessage {
-        nonce: [0; 32],
-        user_public_key: [0; 32],
-        msg: plaintext_message.into(),
-    };
-
     Ok(ParsedMessage {
         should_validate_sig_info: false,
+        should_validate_input: false,
         was_msg_encrypted: false,
         should_encrypt_output: false,
-        secret_msg: scrt_msg,
+        secret_msg: SecretMessage {
+            nonce: [0; 32],
+            user_public_key: [0; 32],
+            msg: plaintext_message.into(),
+        },
         decrypted_msg: plaintext_message.into(),
         data_for_validation: None,
     })
@@ -28,10 +27,10 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
     let mut parsed_encrypted_ibc_packet: IbcPacketReceiveMsg =
      serde_json::from_slice(message).map_err(|err| {
          warn!(
- "Got an error while trying to deserialize input bytes msg into IbcPacketReceiveMsg message {:?}: {}",
- String::from_utf8_lossy(message),
- err
-);
+            "Got an error while trying to deserialize input bytes msg into IbcPacketReceiveMsg message {:?}: {}",
+            String::from_utf8_lossy(message),
+            err
+        );
          EnclaveError::FailedToDeserialize
      })?;
 
@@ -70,6 +69,7 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
 
     Ok(ParsedMessage {
         should_validate_sig_info: false,
+        should_validate_input: true,
         was_msg_encrypted,
         should_encrypt_output: was_msg_encrypted,
         secret_msg,
@@ -80,6 +80,26 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
             );
             EnclaveError::FailedToSerialize
         })?,
+        data_for_validation: None,
+    })
+}
+
+/// `parse_ibc_hooks_incoming_transfer_message()` is very similar to `parse_plaintext_ibc_protocol_message()`.
+/// The only difference is that it returns `should_validate_input: true`.
+pub fn parse_ibc_hooks_incoming_transfer_message(
+    plaintext_message: &[u8],
+) -> Result<ParsedMessage, EnclaveError> {
+    Ok(ParsedMessage {
+        should_validate_sig_info: false,
+        should_validate_input: true,
+        was_msg_encrypted: false,
+        should_encrypt_output: false,
+        secret_msg: SecretMessage {
+            nonce: [0; 32],
+            user_public_key: [0; 32],
+            msg: plaintext_message.into(),
+        },
+        decrypted_msg: plaintext_message.into(),
         data_for_validation: None,
     })
 }

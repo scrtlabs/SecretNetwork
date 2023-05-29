@@ -157,6 +157,7 @@ fn wrap_results_as_parsed_message(
 
     Ok(ParsedMessage {
         should_validate_sig_info: true,
+        should_validate_input: true,
         was_msg_encrypted: true,
         should_encrypt_output: true,
         secret_msg: reply_secret_msg,
@@ -286,6 +287,7 @@ fn parse_plaintext_reply_message(
         // It's also not possible to validate with our current design, since contracts
         // don't know if their output is a reply to another contract, thus can't sign it as such
         should_validate_sig_info: false,
+        should_validate_input: false,
         was_msg_encrypted: false,
         should_encrypt_output: parsed_reply.was_orig_msg_encrypted,
         secret_msg: reply_secret_msg,

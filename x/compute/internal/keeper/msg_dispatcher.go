@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -22,7 +23,7 @@ import (
 
 type Messenger interface {
 	// DispatchMsg encodes the wasmVM message and dispatches it.
-	DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) (events []sdk.Event, data [][]byte, err error)
+	DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) (events []sdk.Event, data [][]byte, err error)
 }
 
 // Replyer is a subset of keeper that can handle replies to submessages
@@ -76,7 +77,7 @@ func sdkEventsToWasmVMEvents(events []sdk.Event) []v1wasmTypes.Event {
 }
 
 // dispatchMsgWithGasLimit sends a message with gas limit applied
-func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msg v1wasmTypes.CosmosMsg, gasLimit uint64, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) (events []sdk.Event, data [][]byte, err error) {
+func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msg v1wasmTypes.CosmosMsg, gasLimit uint64) (events []sdk.Event, data [][]byte, err error) {
 	limitedMeter := sdk.NewGasMeter(gasLimit)
 	subCtx := ctx.WithGasMeter(limitedMeter)
 
@@ -93,7 +94,7 @@ func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr
 			err = sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "SubMsg hit gas limit")
 		}
 	}()
-	events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg, ogCosmosMessageVersion)
+	events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg)
 
 	// make sure we charge the parent what was spent
 	spent := subCtx.GasMeter().GasConsumed()
@@ -185,7 +186,7 @@ func redactError(err error) (bool, error) {
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
 // that dispatched them, both on success as well as failure
-func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error) {
+func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
 
@@ -220,9 +221,9 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		var events []sdk.Event
 		var data [][]byte
 		if limitGas {
-			events, data, err = d.dispatchMsgWithGasLimit(subCtx, contractAddr, ibcPort, msg.Msg, *msg.GasLimit, ogCosmosMessageVersion)
+			events, data, err = d.dispatchMsgWithGasLimit(subCtx, contractAddr, ibcPort, msg.Msg, *msg.GasLimit)
 		} else {
-			events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg.Msg, ogCosmosMessageVersion)
+			events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg.Msg)
 		}
 
 		// if it succeeds, commit state changes from submessage, and pass on events to Event Manager

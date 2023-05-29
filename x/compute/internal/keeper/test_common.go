@@ -3,13 +3,14 @@ package keeper
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 
 	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -18,10 +19,14 @@ import (
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
-	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	feegrant "github.com/cosmos/cosmos-sdk/x/feegrant"
+	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	"github.com/cosmos/ibc-go/v4/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	ibcclient "github.com/cosmos/ibc-go/v4/modules/core/02-client/client"
 	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
 
@@ -91,7 +96,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
-	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
@@ -161,22 +165,31 @@ func (m MockIBCTransferKeeper) GetPort(ctx sdk.Context) string {
 }
 
 var ModuleBasics = module.NewBasicManager(
+	authz.AppModuleBasic{},
 	auth.AppModuleBasic{},
+	genutil.AppModuleBasic{},
 	bank.AppModuleBasic{},
 	capability.AppModuleBasic{},
 	staking.AppModuleBasic{},
 	mint.AppModuleBasic{},
 	distribution.AppModuleBasic{},
 	gov.NewAppModuleBasic(
-		paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
+		paramsclient.ProposalHandler,
+		distrclient.ProposalHandler,
+		upgradeclient.ProposalHandler,
+		upgradeclient.CancelProposalHandler,
+		ibcclient.UpdateClientProposalHandler,
+		ibcclient.UpgradeProposalHandler,
 	),
 	params.AppModuleBasic{},
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
-	// ibc.AppModuleBasic{},
 	upgrade.AppModuleBasic{},
 	evidence.AppModuleBasic{},
-	// transfer.AppModuleBasic{},
+	transfer.AppModuleBasic{},
+	vesting.AppModuleBasic{},
+	feegrantmodule.AppModuleBasic{},
+
 	registration.AppModuleBasic{},
 )
 
@@ -524,7 +537,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 
 	random := make([]byte, 32)
-	rand.Read(random)
+	_, _ = rand.Read(random)
 	keeper.SetRandomSeed(ctx, random)
 
 	am := module.NewManager( // minimal module set that we use for message/ query tests
@@ -598,18 +611,6 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract)
 	return res, nil
 }
 
-func PrepareIBCOpenAck(t *testing.T, keeper Keeper, ctx sdk.Context, ibcOpenAck v1types.IBCOpenAck, ibcOpenConfirm v1types.IBCOpenConfirm) sdk.Context {
-	channelConnectMsg := v1types.IBCChannelConnectMsg{
-		OpenAck:     &ibcOpenAck,
-		OpenConfirm: &ibcOpenConfirm,
-	}
-
-	txBytes, err := json.Marshal(channelConnectMsg)
-	require.NoError(t, err)
-
-	return ctx.WithTxBytes(txBytes)
-}
-
 func PrepareExecSignedTxWithMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	sender sdk.AccAddress, senderPrivKey crypto.PrivKey, secretMsgs [][]byte, contractAddress sdk.AccAddress, coins sdk.Coins,
@@ -674,6 +675,24 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator s
 		InitFunds: funds,
 	}
 	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
+
+	txBytes, err := newTx.Marshal()
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
+func PrepareSignedTx(t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	sender sdk.AccAddress,
+	snederPrivkey crypto.PrivKey,
+	msg sdk.Msg,
+) sdk.Context {
+	senderAccount, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	newTx := NewTestTx(msg, senderAccount, snederPrivkey)
 
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)

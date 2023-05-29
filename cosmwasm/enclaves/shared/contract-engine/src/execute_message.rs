@@ -12,6 +12,7 @@ pub fn parse_execute_message(message: &[u8]) -> Result<ParsedMessage, EnclaveErr
 
         return Ok(ParsedMessage {
             should_validate_sig_info: true,
+            should_validate_input: true,
             was_msg_encrypted: true,
             should_encrypt_output: true,
             secret_msg: decrypted_secret_msg.secret_msg,
@@ -35,6 +36,7 @@ pub fn parse_execute_message(message: &[u8]) -> Result<ParsedMessage, EnclaveErr
 
     Ok(ParsedMessage {
         should_validate_sig_info: true,
+        should_validate_input: true,
         was_msg_encrypted: false,
         should_encrypt_output: false,
         secret_msg,

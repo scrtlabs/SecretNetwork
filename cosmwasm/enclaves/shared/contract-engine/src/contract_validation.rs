@@ -1,4 +1,4 @@
-use cw_types_v1::ibc::IbcPacketReceiveMsg;
+use cw_types_v1::ibc::{IbcPacketReceiveMsg};
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
@@ -8,7 +8,8 @@ use cw_types_generic::BaseEnv;
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmWasmMsg, CosmosPubKey, HandleType, SigInfo, SignDoc, StdSignDoc,
+    ContractCode, CosmosMsg, CosmosPubKey, FungibleTokenPacketData, HandleType,
+    SigInfo, SignDoc, StdSignDoc, IbcHooksIncomingTransferMsg,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
@@ -20,6 +21,9 @@ use crate::types::SecretMessage;
 
 #[cfg(feature = "light-client-validation")]
 use block_verifier::VERIFIED_MESSAGES;
+
+use sha2::{Digest, Sha256};
+extern crate hex;
 
 pub type ContractKey = [u8; CONTRACT_KEY_LENGTH];
 
@@ -351,96 +355,115 @@ pub fn validate_basic_msg(
 }
 
 /// Verify all the parameters sent to the enclave match up, and were signed by the right account.
-#[allow(unused_variables)]
+#[allow(clippy::too_many_arguments)]
 pub fn verify_params(
     sig_info: &SigInfo,
     sent_funds: &[Coin],
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
     msg: &SecretMessage,
-    og_msg: &[u8],
+    _og_msg: &[u8],
+    should_validate_sig_info: bool,
+    should_validate_input: bool,
+    handle_type: HandleType,
 ) -> Result<(), EnclaveError> {
-    debug!("Verifying message signatures for: {:?}", sig_info);
+    if should_validate_sig_info {
+        debug!("Verifying message signatures for: {:?}", sig_info);
 
-    //let start = Instant::now();
-    // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
-    if let Some(callback_sig) = &sig_info.callback_sig {
-        return verify_callback_sig(callback_sig.as_slice(), sender, msg, sent_funds);
+        //let start = Instant::now();
+        // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
+        if let Some(callback_sig) = &sig_info.callback_sig {
+            return verify_callback_sig(callback_sig.as_slice(), sender, msg, sent_funds);
+        }
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_params: Time elapsed in verify_callback_sig: {:?}",
+        //     duration
+        // );
+        #[cfg(feature = "light-client-validation")]
+        if !check_msg_matches_state(og_msg) {
+            return Err(EnclaveError::ValidationFailure);
+        }
+        // check if sign_bytes are in approved tx list
+
+        trace!(
+            "Sign bytes are: {:?}",
+            String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
+        );
+
+        //let start = Instant::now();
+        let sender_public_key = get_signer(sig_info, sender)?;
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_params: Time elapsed in get_signer_and_messages: {:?}",
+        //     duration
+        // );
+
+        trace!(
+            "sender canonical address is: {:?}",
+            sender_public_key.get_address().0 .0
+        );
+        trace!("sender signature is: {:?}", sig_info.signature);
+        trace!("sign bytes are: {:?}", sig_info.sign_bytes);
+
+        //let start = Instant::now();
+        sender_public_key
+            .verify_bytes(
+                sig_info.sign_bytes.as_slice(),
+                sig_info.signature.as_slice(),
+                sig_info.sign_mode,
+            )
+            .map_err(|err| {
+                warn!("Signature verification failed: {:?}", err);
+                EnclaveError::FailedTxVerification
+            })?;
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_params: Time elapsed in verify_bytes: {:?}",
+        //     duration
+        // );
+
+        let signer_addr = sender_public_key.get_address();
+        if &signer_addr != sender {
+            warn!("Sender verification failed!");
+            trace!(
+                "Message sender {:?} does not match with the message signer {:?}",
+                sender,
+                signer_addr
+            );
+            return Err(EnclaveError::FailedTxVerification);
+        }
     }
-    // let duration = start.elapsed();
-    // trace!(
-    //     "verify_params: Time elapsed in verify_callback_sig: {:?}",
-    //     duration
-    // );
-    #[cfg(feature = "light-client-validation")]
-    if !check_msg_matches_state(og_msg) {
-        return Err(EnclaveError::ValidationFailure);
+
+    if should_validate_input {
+        let messages = get_messages(sig_info)?;
+
+        // let start = Instant::now();
+        let is_verified = verify_message_params(
+            &messages,
+            sender,
+            sent_funds,
+            contract_address,
+            msg,
+            handle_type,
+        );
+        // let duration = start.elapsed();
+        // trace!(
+        //     "verify_params: Time elapsed in verify_message_params: {:?}",
+        //     duration
+        // );
+
+        if !is_verified {
+            warn!("Parameter verification failed");
+            return Err(EnclaveError::FailedTxVerification);
+        }
     }
-    // check if sign_bytes are in approved tx list
 
-    trace!(
-        "Sign bytes are: {:?}",
-        String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
-    );
-
-    //let start = Instant::now();
-    let (sender_public_key, messages) = get_signer_and_messages(sig_info, sender)?;
-    // let duration = start.elapsed();
-    // trace!(
-    //     "verify_params: Time elapsed in get_signer_and_messages: {:?}",
-    //     duration
-    // );
-
-    trace!(
-        "sender canonical address is: {:?}",
-        sender_public_key.get_address().0 .0
-    );
-    trace!("sender signature is: {:?}", sig_info.signature);
-    trace!("sign bytes are: {:?}", sig_info.sign_bytes);
-
-    //let start = Instant::now();
-    sender_public_key
-        .verify_bytes(
-            sig_info.sign_bytes.as_slice(),
-            sig_info.signature.as_slice(),
-            sig_info.sign_mode,
-        )
-        .map_err(|err| {
-            warn!("Signature verification failed: {:?}", err);
-            EnclaveError::FailedTxVerification
-        })?;
-    // let duration = start.elapsed();
-    // trace!(
-    //     "verify_params: Time elapsed in verify_bytes: {:?}",
-    //     duration
-    // );
-
-    // let start = Instant::now();
-    if verify_message_params(
-        &messages,
-        sender,
-        sent_funds,
-        contract_address,
-        &sender_public_key,
-        msg,
-    ) {
-        info!("Parameters verified successfully");
-        return Ok(());
-    }
-    // let duration = start.elapsed();
-    // trace!(
-    //     "verify_params: Time elapsed in verify_message_params: {:?}",
-    //     duration
-    // );
-    warn!("Parameter verification failed");
-
-    Err(EnclaveError::FailedTxVerification)
+    info!("Parameters verified successfully");
+    Ok(())
 }
 
-fn get_signer_and_messages(
-    sign_info: &SigInfo,
-    sender: &CanonicalAddr,
-) -> Result<(CosmosPubKey, Vec<CosmWasmMsg>), EnclaveError> {
+fn get_signer(sign_info: &SigInfo, sender: &CanonicalAddr) -> Result<CosmosPubKey, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
@@ -457,7 +480,7 @@ fn get_signer_and_messages(
                         EnclaveError::FailedTxVerification
                     })?;
 
-            Ok((sender_public_key.clone(), sign_doc.body.messages))
+            Ok(sender_public_key.clone())
         }
         SIGN_MODE_LEGACY_AMINO_JSON => {
             use protobuf::well_known_types::Any as AnyProto;
@@ -472,17 +495,8 @@ fn get_signer_and_messages(
                 warn!("failure to parse pubkey: {:?}", err);
                 EnclaveError::FailedTxVerification
             })?;
-            let sign_doc: StdSignDoc = serde_json::from_slice(sign_info.sign_bytes.as_slice())
-                .map_err(|err| {
-                    warn!("failure to parse StdSignDoc: {:?}", err);
-                    EnclaveError::FailedTxVerification
-                })?;
-            let messages: Result<Vec<CosmWasmMsg>, _> = sign_doc
-                .msgs
-                .iter()
-                .map(|x| x.clone().into_cosmwasm_msg())
-                .collect();
-            Ok((public_key, messages?))
+
+            Ok(public_key)
         }
         SIGN_MODE_EIP_191 => {
             use protobuf::well_known_types::Any as AnyProto;
@@ -498,6 +512,41 @@ fn get_signer_and_messages(
                 EnclaveError::FailedTxVerification
             })?;
 
+            Ok(public_key)
+        }
+        _ => {
+            warn!(
+                "get_signer(): unsupported signature mode: {:?}",
+                sign_info.sign_mode
+            );
+            Err(EnclaveError::FailedTxVerification)
+        }
+    }
+}
+
+fn get_messages(sign_info: &SigInfo) -> Result<Vec<CosmosMsg>, EnclaveError> {
+    use cosmos_proto::tx::signing::SignMode::*;
+    match sign_info.sign_mode {
+        SIGN_MODE_DIRECT => {
+            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
+            trace!("sign doc: {:?}", sign_doc);
+
+            Ok(sign_doc.body.messages)
+        }
+        SIGN_MODE_LEGACY_AMINO_JSON => {
+            let sign_doc: StdSignDoc = serde_json::from_slice(sign_info.sign_bytes.as_slice())
+                .map_err(|err| {
+                    warn!("failure to parse StdSignDoc: {:?}", err);
+                    EnclaveError::FailedTxVerification
+                })?;
+            let messages: Result<Vec<CosmosMsg>, _> = sign_doc
+                .msgs
+                .iter()
+                .map(|x| x.clone().into_cosmwasm_msg())
+                .collect();
+            Ok(messages?)
+        }
+        SIGN_MODE_EIP_191 => {
             let sign_bytes_as_string = String::from_utf8_lossy(&sign_info.sign_bytes.0).to_string();
 
             trace!(
@@ -526,15 +575,18 @@ fn get_signer_and_messages(
                 );
                 EnclaveError::FailedTxVerification
             })?;
-            let messages: Result<Vec<CosmWasmMsg>, _> = sign_doc
+            let messages: Result<Vec<CosmosMsg>, _> = sign_doc
                 .msgs
                 .iter()
                 .map(|x| x.clone().into_cosmwasm_msg())
                 .collect();
-            Ok((public_key, messages?))
+            Ok(messages?)
         }
         _ => {
-            warn!("unsupported signature mode: {:?}", sign_info.sign_mode);
+            warn!(
+                "get_messages(): unsupported signature mode: {:?}",
+                sign_info.sign_mode
+            );
             Err(EnclaveError::FailedTxVerification)
         }
     }
@@ -585,26 +637,81 @@ fn verify_callback_sig_impl(
 
 /// Get the cosmwasm message that contains the encrypted message
 fn get_verified_msg<'sd>(
-    messages: &'sd [CosmWasmMsg],
+    messages: &'sd [CosmosMsg],
     msg_sender: &CanonicalAddr,
     sent_msg: &SecretMessage,
-) -> Option<&'sd CosmWasmMsg> {
+    handle_type: HandleType,
+) -> Option<&'sd CosmosMsg> {
+    trace!("get_verified_msg: {:?}", messages);
+
     messages.iter().find(|&m| match m {
-        CosmWasmMsg::Execute { msg, sender, .. }
-        | CosmWasmMsg::Instantiate {
+        CosmosMsg::Execute { msg, sender, .. }
+        | CosmosMsg::Instantiate {
             init_msg: msg,
             sender,
             ..
         } => msg_sender == sender && &sent_msg.to_vec() == msg,
-        CosmWasmMsg::Other => false,
+        CosmosMsg::MsgRecvPacket {
+            sequence,
+            source_port,
+            source_channel,
+            destination_port,
+            destination_channel,
+            data,
+        } => match handle_type {
+            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => {
+                let parsed_sent_msg = serde_json::from_slice::<IbcPacketReceiveMsg>(&sent_msg.msg);
+                if parsed_sent_msg.is_err() {
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_PACKET_RECEIVE: sent_msg.msg cannot be parsed as IbcPacketReceiveMsg: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), parsed_sent_msg.err());
+
+                    trace!("Checking if sent_msg & data are encrypted");
+                    return &sent_msg.to_vec() == data;
+                }
+                let parsed = parsed_sent_msg.unwrap();
+                
+                parsed.packet.data.as_slice() == data.as_slice()
+                    && parsed.packet.sequence == *sequence
+                    && parsed.packet.src.port_id == *source_port
+                    && parsed.packet.src.channel_id == *source_channel
+                    && parsed.packet.dest.port_id == *destination_port
+                    && parsed.packet.dest.channel_id == *destination_channel
+                    // TODO check timeout too? sequence + destination_channel + data should be enough
+            }
+            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
+                let fungible_token_packet_data = serde_json::from_slice::<FungibleTokenPacketData>(data);
+                if fungible_token_packet_data.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: data cannot be parsed as FungibleTokenPacketData: {:?} Error: {:?}", String::from_utf8_lossy(data), fungible_token_packet_data.err());
+                    return false;
+                }
+                let fungible_token_packet_data= fungible_token_packet_data.unwrap();
+
+
+                let ibc_hooks_incoming_transfer_msg = serde_json::from_slice::<IbcHooksIncomingTransferMsg>(fungible_token_packet_data.memo.clone().unwrap_or_else(|| "".to_string()).as_bytes());
+                if ibc_hooks_incoming_transfer_msg.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: fungible_token_packet_data.memo cannot be parsed as IbcHooksIncomingTransferMsg: {:?} Error: {:?}", fungible_token_packet_data.memo, ibc_hooks_incoming_transfer_msg.err());
+                    return false;
+                }
+                let ibc_hooks_incoming_transfer_msg = ibc_hooks_incoming_transfer_msg.unwrap();
+                
+                let send_msg_value = serde_json::from_slice::<serde_json::Value>(&sent_msg.msg);
+                if send_msg_value.is_err(){
+                    trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER: sent_msg.msg cannot be parsed as serde_json::Value: {:?} Error: {:?}", String::from_utf8_lossy(&sent_msg.msg), send_msg_value.err());
+                    return false;
+                }
+
+                ibc_hooks_incoming_transfer_msg.wasm.msg == send_msg_value.unwrap()
+            }
+            _ => false,
+        },
+        CosmosMsg::Other => false,
     })
 }
 
 /// Check that the contract listed in the cosmwasm message matches the one in env
-fn verify_contract(msg: &CosmWasmMsg, contract_address: &HumanAddr) -> bool {
+fn verify_contract(msg: &CosmosMsg, contract_address: &HumanAddr) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     match msg {
-        CosmWasmMsg::Execute { contract, .. } => {
+        CosmosMsg::Execute { contract, .. } => {
             info!("Verifying contract address..");
             let is_verified = contract_address == contract;
             if !is_verified {
@@ -616,53 +723,224 @@ fn verify_contract(msg: &CosmWasmMsg, contract_address: &HumanAddr) -> bool {
             }
             is_verified
         }
-        CosmWasmMsg::Instantiate { .. } => true,
-        CosmWasmMsg::Other => false,
+        CosmosMsg::Instantiate { .. } => true,
+        CosmosMsg::Other => false,
+        CosmosMsg::MsgRecvPacket {
+            destination_port,
+            data,
+            ..
+        } => {
+            if destination_port == "transfer" {
+                // Packet was routed here through ibc-hooks
+
+                // Parse data as FungibleTokenPacketData JSON
+                let packet_data: FungibleTokenPacketData = match serde_json::from_slice(
+                    data.as_slice(),
+                ) {
+                    Ok(packet_data) => packet_data,
+                    Err(err) => {
+                        trace!(
+                            "Contract was called via ibc-hooks but packet_data cannot be parsed as FungibleTokenPacketData: {:?} Error: {:?}",
+                            String::from_utf8_lossy(data.as_slice()),
+                            err,
+                        );
+                        return false;
+                    }
+                };
+
+                // memo must be set in ibc-hooks
+                let memo = match packet_data.memo {
+                    Some(memo) => memo,
+                    None => {
+                        trace!("Contract was called via ibc-hooks but packet_data.memo is empty");
+                        return false;
+                    }
+                };
+
+                // Parse data.memo as IbcHooksWasmMsg JSON
+                let wasm_msg: IbcHooksIncomingTransferMsg = match serde_json::from_slice(memo.as_bytes()) {
+                    Ok(wasm_msg) => wasm_msg,
+                    Err(err) => {
+                        trace!(
+                            "Contract was called via ibc-hooks but packet_data.memo cannot be parsed as IbcHooksWasmMsg: {:?} Error: {:?}",
+                            memo,
+                            err,
+                        );
+                        return false;
+                    }
+                };
+
+                // In ibc-hooks contract_address == packet_data.memo.wasm.contract == packet_data.receiver
+                let is_verified = *contract_address == packet_data.receiver
+                    && *contract_address == wasm_msg.wasm.contract;
+                if !is_verified {
+                    trace!(
+                        "Contract address sent to enclave {:?} is not the same as in ibc-hooks packet receiver={:?} memo={:?}",
+                        contract_address,
+                        packet_data.receiver,
+                        wasm_msg.wasm.contract
+                    );
+                }
+                is_verified
+            } else {
+                // Packet is for an IBC enabled contract
+                // destination_port is of the form "wasm.{contract_address}"
+
+                // Extract contract_address from destination_port
+                // This also checks that destination_port starts with "wasm."
+                let contract_address_from_port = match destination_port.strip_prefix("wasm.") {
+                    Some(contract_address) => contract_address,
+                    None => {
+                        trace!(
+                            "Contract was called via MsgRecvPacket but destination_port doesn't start with \"wasm.\": {:?}",
+                            destination_port,
+                        );
+                        return false;
+                    }
+                };
+
+                let is_verified = *contract_address == HumanAddr::from(contract_address_from_port);
+                if !is_verified {
+                    trace!(
+                        "Contract address sent to enclave {:?} is not the same as extracted from MsgRecvPacket but destination_port: {:?}",
+                        contract_address,
+                        contract_address_from_port,
+                    );
+                }
+                is_verified
+            }
+        }
     }
 }
 
 /// Check that the funds listed in the cosmwasm message matches the ones in env
-fn verify_funds(msg: &CosmWasmMsg, sent_funds_msg: &[Coin]) -> bool {
+fn verify_funds(msg: &CosmosMsg, sent_funds_msg: &[Coin]) -> bool {
     match msg {
-        CosmWasmMsg::Execute { sent_funds, .. }
-        | CosmWasmMsg::Instantiate {
+        CosmosMsg::Execute { sent_funds, .. }
+        | CosmosMsg::Instantiate {
             init_funds: sent_funds,
             ..
         } => sent_funds_msg == sent_funds,
-        CosmWasmMsg::Other => false,
+        CosmosMsg::Other => false,
+        CosmosMsg::MsgRecvPacket {
+            data,
+            source_port,
+            source_channel,
+            destination_port,
+            destination_channel,
+            ..
+        } => {
+            if destination_port == "transfer" {
+                // Packet was routed here through ibc-hooks
+
+                // Should be just one coin
+                if sent_funds_msg.len() != 1 {
+                    trace!(
+                        "Contract was called via ibc-hooks but sent_funds_msg.len() != 1: {:?}",
+                        sent_funds_msg,
+                    );
+                    return false;
+                }
+
+                let sent_funds_msg_coin = &sent_funds_msg[0];
+
+                // Parse data as FungibleTokenPacketData JSON
+                let packet_data: FungibleTokenPacketData = match serde_json::from_slice(
+                    data.as_slice(),
+                ) {
+                    Ok(packet_data) => packet_data,
+                    Err(err) => {
+                        trace!(
+                            "Contract was called via ibc-hooks but packet_data cannot be parsed as FungibleTokenPacketData: {:?} Error: {:?}",
+                            String::from_utf8_lossy(data.as_slice()),
+                            err,
+                        );
+                        return false;
+                    }
+                };
+
+                // Check amount
+                if sent_funds_msg_coin.amount != packet_data.amount {
+                    trace!(
+                        "Contract was called via ibc-hooks but sent_funds_msg_coin.amount != packet_data.amount: {:?} != {:?}",
+                        sent_funds_msg_coin.amount,
+                        packet_data.amount,
+                    );
+                    return false;
+                }
+
+                // The packet's denom is the denom in the sender chain.
+                // It needs to be converted to the local denom.
+                // Logic source: https://github.com/scrtlabs/SecretNetwork/blob/96b0ba7d6/x/ibc-hooks/wasm_hook.go#L483-L513
+                let denom: String = if receiver_chain_is_source(
+                    source_port,
+                    source_channel,
+                    &packet_data.denom,
+                ) {
+                    // remove prefix added by sender chain
+                    let voucher_prefix = get_denom_prefix(source_port, source_channel);
+
+                    let unprefixed_denom: String = match packet_data
+                        .denom
+                        .strip_prefix(&voucher_prefix)
+                    {
+                        Some(unprefixed_denom) => unprefixed_denom.to_string(),
+                        None => {
+                            trace!(
+                                "Contract was called via ibc-hooks but packet_data.denom doesn't start with voucher_prefix: {:?} != {:?}",
+                                packet_data.denom,
+                                voucher_prefix,
+                            );
+                            return false;
+                        }
+                    };
+
+                    // The denomination used to send the coins is either the native denom or the hash of the path
+                    // if the denomination is not native.
+                    let denom_trace = parse_denom_trace(&unprefixed_denom);
+                    if !denom_trace.path.is_empty() {
+                        denom_trace.ibc_denom()
+                    } else {
+                        unprefixed_denom
+                    }
+                } else {
+                    let prefixed_denom = get_denom_prefix(destination_port, destination_channel)
+                        + &packet_data.denom;
+                    parse_denom_trace(&prefixed_denom).ibc_denom()
+                };
+
+                // Check denom
+                if sent_funds_msg_coin.denom.to_lowercase() != denom.to_lowercase() {
+                    trace!(
+                        "Contract was called via ibc-hooks but sent_funds_msg_coin.denom != denom: {:?} != {:?}",
+                        sent_funds_msg_coin.denom,
+                        denom,
+                    );
+                    return false;
+                }
+
+                true
+            } else {
+                // Packet is for an IBC enabled contract
+                // No funds should be sent
+                sent_funds_msg.is_empty()
+            }
+        }
     }
 }
 
 fn verify_message_params(
-    messages: &[CosmWasmMsg],
+    messages: &[CosmosMsg],
     sender: &CanonicalAddr,
     sent_funds: &[Coin],
     contract_address: &HumanAddr,
-    signer_public_key: &CosmosPubKey,
     sent_msg: &SecretMessage,
+    handle_type: HandleType,
 ) -> bool {
-    debug!("Verifying sender..");
-
-    // let msg_sender = match CanonicalAddr::from_human(&env.message.sender) {
-    //     Ok(msg_sender) => msg_sender,
-    //     _ => return false,
-    // };
-
-    let signer_addr = signer_public_key.get_address();
-    if &signer_addr != sender {
-        warn!("Sender verification failed!");
-        trace!(
-            "Message sender {:?} does not match with the message signer {:?}",
-            sender,
-            signer_addr
-        );
-        return false;
-    }
-
-    info!("Verifying message..");
+    info!("Verifying message...");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
-    let msg = get_verified_msg(messages, sender, sent_msg);
+    let msg = get_verified_msg(messages, sender, sent_msg, handle_type);
     if msg.is_none() {
         debug!("Message verification failed!");
         trace!(
@@ -675,14 +953,23 @@ fn verify_message_params(
     }
     let msg = msg.unwrap();
 
-    if msg.sender() != Some(&signer_addr) {
-        warn!(
-            "message signer did not match cosmwasm message sender: {:?} {:?}",
-            signer_addr, msg
-        );
-        return false;
+    match msg {
+        CosmosMsg::MsgRecvPacket { .. } => {
+            // No sender to verify.
+            // Going to pass null sender to the contract if all other checks pass.
+        }
+        CosmosMsg::Execute { .. } | CosmosMsg::Instantiate { .. } | CosmosMsg::Other => {
+            if msg.sender() != Some(sender) {
+                warn!(
+                    "message sender did not match cosmwasm message sender: {:?} {:?}",
+                    sender, msg
+                );
+                return false;
+            }
+        }
     }
 
+    info!("Verifying contract address..");
     if !verify_contract(msg, contract_address) {
         warn!("Contract address verification failed!");
         return false;
@@ -695,4 +982,136 @@ fn verify_message_params(
     }
 
     true
+}
+
+/// ReceiverChainIsSource returns true if the denomination originally came
+/// from the receiving chain and false otherwise.
+fn receiver_chain_is_source(source_port: &str, source_channel: &str, denom: &str) -> bool {
+    // The prefix passed in should contain the SourcePort and SourceChannel.
+    // If the receiver chain originally sent the token to the sender chain
+    // the denom will have the sender's SourcePort and SourceChannel as the
+    // prefix.
+    let voucher_prefix = get_denom_prefix(source_port, source_channel);
+    denom.starts_with(&voucher_prefix)
+}
+
+/// GetDenomPrefix returns the receiving denomination prefix
+fn get_denom_prefix(port_id: &str, channel_id: &str) -> String {
+    format!("{}/{}/", port_id, channel_id)
+}
+
+/// DenomTrace contains the base denomination for ICS20 fungible tokens and the
+/// source tracing information path.
+struct DenomTrace {
+    /// path defines the chain of port/channel identifiers used for tracing the
+    /// source of the fungible token.
+    path: String,
+    /// base denomination of the relayed fungible token.
+    base_denom: String,
+}
+
+impl DenomTrace {
+    /// Hash returns the hex bytes of the SHA256 hash of the DenomTrace fields using the following formula:
+    /// hash = sha256(tracePath + "/" + baseDenom)
+    pub fn hash(&self) -> Vec<u8> {
+        let hash = Sha256::digest(self.get_full_denom_path().as_bytes());
+        hash.to_vec()
+    }
+
+    /// IBCDenom a coin denomination for an ICS20 fungible token in the format
+    /// 'ibc/{hash(tracePath + baseDenom)}'. If the trace is empty, it will return the base denomination.
+    pub fn ibc_denom(&self) -> String {
+        if !self.path.is_empty() {
+            format!("ibc/{}", hex::encode(self.hash()))
+        } else {
+            self.base_denom.clone()
+        }
+    }
+
+    /// GetFullDenomPath returns the full denomination according to the ICS20 specification:
+    /// tracePath + "/" + baseDenom
+    /// If there exists no trace then the base denomination is returned.
+    pub fn get_full_denom_path(&self) -> String {
+        if self.path.is_empty() {
+            self.base_denom.clone()
+        } else {
+            self.get_prefix() + &self.base_denom
+        }
+    }
+
+    // GetPrefix returns the receiving denomination prefix composed by the trace info and a separator.
+    fn get_prefix(&self) -> String {
+        return format!("{}/", self.path);
+    }
+}
+
+/// ParseDenomTrace parses a string with the ibc prefix (denom trace) and the base denomination
+/// into a DenomTrace type.
+///
+/// Examples:
+///
+/// - "portidone/channel-0/uatom" => DenomTrace{Path: "portidone/channel-0", BaseDenom: "uatom"}
+/// - "portidone/channel-0/portidtwo/channel-1/uatom" => DenomTrace{Path: "portidone/channel-0/portidtwo/channel-1", BaseDenom: "uatom"}
+/// - "portidone/channel-0/gamm/pool/1" => DenomTrace{Path: "portidone/channel-0", BaseDenom: "gamm/pool/1"}
+/// - "gamm/pool/1" => DenomTrace{Path: "", BaseDenom: "gamm/pool/1"}
+/// - "uatom" => DenomTrace{Path: "", BaseDenom: "uatom"}
+fn parse_denom_trace(raw_denom: &str) -> DenomTrace {
+    let denom_split: Vec<&str> = raw_denom.split('/').collect();
+
+    if denom_split.len() == 1 {
+        return DenomTrace {
+            path: "".to_string(),
+            base_denom: raw_denom.to_string(),
+        };
+    }
+
+    let (path, base_denom) = extract_path_and_base_from_full_denom(&denom_split);
+
+    DenomTrace {
+        path,
+        base_denom,
+    }
+}
+
+/// extract_path_and_base_from_full_denom returns the trace path and the base denom from
+/// the elements that constitute the complete denom.
+fn extract_path_and_base_from_full_denom(full_denom_items: &[&str]) -> (String, String) {
+    let mut path = vec![];
+    let mut base_denom = vec![];
+
+    let length = full_denom_items.len();
+    let mut i = 0;
+
+    while i < length {
+        // The IBC specification does not guarantee the expected format of the
+        // destination port or destination channel identifier. A short term solution
+        // to determine base denomination is to expect the channel identifier to be the
+        // one ibc-go specifies. A longer term solution is to separate the path and base
+        // denomination in the ICS20 packet. If an intermediate hop prefixes the full denom
+        // with a channel identifier format different from our own, the base denomination
+        // will be incorrectly parsed, but the token will continue to be treated correctly
+        // as an IBC denomination. The hash used to store the token internally on our chain
+        // will be the same value as the base denomination being correctly parsed.
+        if i < length - 1 && length > 2 && is_valid_channel_id(full_denom_items[i + 1]) {
+            path.push(full_denom_items[i].to_owned());
+            path.push(full_denom_items[i + 1].to_owned());
+            i += 2;
+        } else {
+            base_denom = full_denom_items[i..].to_vec();
+            break;
+        }
+    }
+
+    (path.join("/"), base_denom.join("/"))
+}
+
+/// IsValidChannelID checks if a channelID is valid and can be parsed to the channel
+/// identifier format.
+fn is_valid_channel_id(channel_id: &str) -> bool {
+    parse_channel_sequence(channel_id).is_some()
+}
+
+/// ParseChannelSequence parses the channel sequence from the channel identifier.
+fn parse_channel_sequence(channel_id: &str) -> Option<&str> {
+    channel_id.strip_prefix("channel-")
 }

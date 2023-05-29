@@ -5,7 +5,7 @@
 Different behaviors on Secret vs. Osmosis:
 
 - When receiving a token over IBC, instead of the scrambled sender on the Osmosis, on Secret the contract sees the sender as an empty string.
-- When using `ibc_callback` with `IbcMsg::Transfer` from a non IBC contract, on Secret the ack/timeout will be sent to the `execute` endpoint instead of to the `sudo` endpoint. 
+- When using `ibc_callback` with `IbcMsg::Transfer` from a non IBC contract, on Secret the ack/timeout will be sent to the `execute` endpoint instead of to the `sudo` endpoint.
 
 ## Wasm Hooks
 
@@ -70,8 +70,8 @@ ICS20 is JSON native, so we use JSON for the memo format.
   "data": {
     "denom": "denom on counterparty chain (e.g. uatom)", // will be transformed to the local denom (ibc/...)
     "amount": "1000",
-    "sender": "addr on counterparty chain", // will be transformed
-    "receiver": "contract addr or blank",
+    "sender": "addr on counterparty chain", // will be ignored and shown to the contract as a null sender (cannot be verifed over IBC)
+    "receiver": "secret1contractAddr",
     "memo": {
       "wasm": {
         "contract": "secret1contractAddr",
@@ -91,7 +91,7 @@ An ICS20 packet is formatted correctly for wasmhooks iff the following all hold:
 - `memo` has at least one key, with value `"wasm"`
 - `memo["wasm"]` has exactly two entries, `"contract"` and `"msg"`
 - `memo["wasm"]["msg"]` is a valid JSON object
-- `receiver == "" || receiver == memo["wasm"]["contract"]`
+- `receiver == memo["wasm"]["contract"]`
 
 We consider an ICS20 packet as directed towards wasmhooks iff all of the following hold:
 

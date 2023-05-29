@@ -16,10 +16,12 @@ pub struct SecretMessage {
 
 pub struct ParsedMessage {
     pub should_validate_sig_info: bool,
+    pub should_validate_input: bool,
     pub was_msg_encrypted: bool,
     pub should_encrypt_output: bool,
     pub secret_msg: SecretMessage,
     pub decrypted_msg: Vec<u8>,
+    /// data_for_validation is only used when the input is an output of a reply
     pub data_for_validation: Option<Vec<u8>>,
 }
 

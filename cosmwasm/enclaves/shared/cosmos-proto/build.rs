@@ -55,6 +55,14 @@ mod protobuf {
             .expect(&format!("could not canonicalize {:?}", path))
     }
 
+    fn from_ibc(path: &str) -> PathBuf {
+        let mut full_path = PathBuf::from("../../../../third_party/proto/ibc");
+        full_path.push(path);
+        full_path
+            .canonicalize()
+            .expect(&format!("could not canonicalize {:?}", path))
+    }
+
     pub fn build_protobuf_parsers() {
         let protoc_err_msg = "protoc failed to generate protobuf parsers";
         let mut library_dir = dirs::home_dir().unwrap();
@@ -96,6 +104,15 @@ mod protobuf {
                 "src/cosmwasm",
                 &[from_base("proto/secret/compute/v1beta1/msg.proto")],
             ),
+            (
+                "src/ibc",
+                &[
+                    from_ibc("core/channel/v1/tx.proto"),
+                    from_ibc("core/channel/v1/channel.proto"),
+                    from_ibc("core/client/v1/client.proto"),
+                ],
+            ),
+            ("src/ibc", &[from_cosmos("upgrade/v1beta1/upgrade.proto")]),
         ];
 
         for (out_dir, inputs) in directories {
