@@ -133,12 +133,10 @@ echo "UPGRADE_BLOCK = ${UPGRADE_BLOCK}"
 
 Apply the upgrade.
 
-Wait until you see `ERR CONSENSUS FAILURE!!! err="UPGRADE \"v1.9\" NEEDED at height` in BOTH of the logs, then run:
-
-Copy binaries from v1.9 chain to v1.8 chain.
-
+Wait until you see `ERR CONSENSUS FAILURE!!! err="UPGRADE \"v1.9\" NEEDED at height` in BOTH of the logs,
+then, from the root directory of the project, run:
 ```bash
-FEATURES="verify-validator-whitelist,light-client-validation,random" SGX_MODE=SW make build-linux
+FEATURES="light-client-validation,random" SGX_MODE=SW make build-linux
 
 # Copy binaries from host to current v1.8 chain
 
@@ -151,6 +149,7 @@ docker cp go-cosmwasm/api/libgo_cosmwasm.so                        bootstrap:/tm
 docker cp secretd                                                  node:/tmp/upgrade-bin
 docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           node:/tmp/upgrade-bin
 docker cp go-cosmwasm/api/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
+# These two should be brought from the external repo or from a previous localsecret
 docker cp docs/librandom_api.so                                    node:/usr/lib
 docker cp docs/tendermint_enclave.signed.so                        node:/usr/lib
 
@@ -166,9 +165,11 @@ docker exec node bash -c 'cat /tmp/upgrade-bin/libgo_cosmwasm.so                
 rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin
 docker cp bootstrap:/root/.secretd/config/priv_validator_key.json /tmp/upgrade-bin/.
 docker cp /tmp/upgrade-bin/priv_validator_key.json node:/root/.secretd/config/priv_validator_key.json
+```
 
+Then, restart secretd from the node you just killed:
+```bash
 source /opt/sgxsdk/environment && RUST_BACKTRACE=1 LOG_LEVEL="trace" secretd start --rpc.laddr tcp://0.0.0.0:26657
-
 ```
 
 You should see `INF applying upgrade "v1.9" at height` in the logs, following by blocks continute to stream.
