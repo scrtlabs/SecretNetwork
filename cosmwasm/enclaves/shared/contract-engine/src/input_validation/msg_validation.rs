@@ -144,7 +144,7 @@ pub fn verify_ibc_packet_ack(
 pub fn verify_ibc_wasm_hooks_outgoing_transfer_ack(
     sent_msg: &SecretMessage,
     packet: &Packet,
-    acknowledgement: &Vec<u8>,
+    acknowledgement: &[u8],
 ) -> bool {
     let ibc_lifecycle_complete = serde_json::from_slice::<IBCLifecycleComplete>(&sent_msg.msg);
     if ibc_lifecycle_complete.is_err() {

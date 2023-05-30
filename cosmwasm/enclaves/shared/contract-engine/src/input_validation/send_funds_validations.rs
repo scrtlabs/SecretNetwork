@@ -49,10 +49,10 @@ pub fn verify_sent_funds(msg: &CosmosSdkMsg, sent_funds_msg: &[Coin]) -> bool {
 fn verify_sent_funds_ibc_wasm_hooks_incoming_transfer(
     sent_funds_msg: &[Coin],
     data: &Vec<u8>,
-    source_port: &String,
-    source_channel: &String,
-    destination_port: &String,
-    destination_channel: &String,
+    source_port: &str,
+    source_channel: &str,
+    destination_port: &str,
+    destination_channel: &str,
 ) -> bool {
     // Should be just one coin
     if sent_funds_msg.len() != 1 {

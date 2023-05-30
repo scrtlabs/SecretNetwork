@@ -129,10 +129,10 @@ fn verify_contract_address_msg_recv_packet(
 ) -> bool {
     if destination_port == "transfer" {
         // Packet was routed here through ibc-hooks
-        return verify_contract_address_ibc_wasm_hooks_incoming_transfer(data, contract_address);
+        verify_contract_address_ibc_wasm_hooks_incoming_transfer(data, contract_address)
     } else {
         // Packet is for an IBC enabled contract
-        return verify_contract_address_ibc_contract(destination_port, contract_address);
+        verify_contract_address_ibc_contract(destination_port, contract_address)
     }
 }
 
