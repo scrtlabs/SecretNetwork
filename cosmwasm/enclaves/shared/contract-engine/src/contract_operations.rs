@@ -265,8 +265,8 @@ pub fn handle(
     trace!("Handle type is {:?}", parsed_handle_type);
 
     let ParsedMessage {
-        should_validate_sig_info,
-        should_validate_input,
+        should_verify_sig_info,
+        should_verify_input,
         was_msg_encrypted,
         should_encrypt_output,
         secret_msg,
@@ -293,8 +293,8 @@ pub fn handle(
         &secret_msg,
         #[cfg(feature = "light-client-validation")]
         msg,
-        should_validate_sig_info,
-        should_validate_input,
+        should_verify_sig_info,
+        should_verify_input,
         parsed_handle_type,
     )?;
 

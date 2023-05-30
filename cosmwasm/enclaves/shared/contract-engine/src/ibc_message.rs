@@ -8,8 +8,8 @@ pub fn parse_plaintext_ibc_protocol_message(
     plaintext_message: &[u8],
 ) -> Result<ParsedMessage, EnclaveError> {
     Ok(ParsedMessage {
-        should_validate_sig_info: false,
-        should_validate_input: false,
+        should_verify_sig_info: false,
+        should_verify_input: false,
         was_msg_encrypted: false,
         should_encrypt_output: false,
         secret_msg: SecretMessage {
@@ -68,8 +68,8 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
         };
 
     Ok(ParsedMessage {
-        should_validate_sig_info: false,
-        should_validate_input: true,
+        should_verify_sig_info: false,
+        should_verify_input: true,
         was_msg_encrypted,
         should_encrypt_output: was_msg_encrypted,
         secret_msg,
@@ -85,13 +85,13 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
 }
 
 /// `parse_plaintext_ibc_validated_message()` is very similar to `parse_plaintext_ibc_protocol_message()`.
-/// The only difference is that it returns `should_validate_input: true`.
+/// The only difference is that it returns `should_verify_input: true`.
 pub fn parse_plaintext_ibc_validated_message(
     plaintext_message: &[u8],
 ) -> Result<ParsedMessage, EnclaveError> {
     Ok(ParsedMessage {
-        should_validate_sig_info: false,
-        should_validate_input: true,
+        should_verify_sig_info: false,
+        should_verify_input: true,
         was_msg_encrypted: false,
         should_encrypt_output: false,
         secret_msg: SecretMessage {

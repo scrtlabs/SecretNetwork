@@ -364,11 +364,11 @@ pub fn verify_params(
     contract_address: &HumanAddr,
     msg: &SecretMessage,
     #[cfg(feature = "light-client-validation")] og_msg: &[u8],
-    should_validate_sig_info: bool,
-    should_validate_input: bool,
+    should_verify_sig_info: bool,
+    should_verify_input: bool,
     handle_type: HandleType,
 ) -> Result<(), EnclaveError> {
-    if should_validate_sig_info {
+    if should_verify_sig_info {
         debug!("Verifying message signatures for: {:?}", sig_info);
 
         if let Some(callback_sig) = &sig_info.callback_sig {
@@ -383,7 +383,7 @@ pub fn verify_params(
         verify_signature(sig_info, sender, handle_type)?;
     }
 
-    if should_validate_input {
+    if should_verify_input {
         verify_input(
             sig_info,
             sent_funds,

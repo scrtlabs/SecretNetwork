@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Coin, Uint64};
+use cosmwasm_std::{Binary, Coin};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
