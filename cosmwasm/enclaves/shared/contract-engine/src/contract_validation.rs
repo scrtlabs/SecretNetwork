@@ -356,7 +356,6 @@ pub fn validate_basic_msg(
     })
 }
 
-/// Verify all the parameters sent to the enclave match up, and were signed by the right account.
 #[allow(clippy::too_many_arguments)]
 pub fn verify_params(
     sig_info: &SigInfo,
@@ -372,96 +371,90 @@ pub fn verify_params(
     if should_validate_sig_info {
         debug!("Verifying message signatures for: {:?}", sig_info);
 
-        //let start = Instant::now();
-        // If there's no callback signature - it's not a callback and there has to be a tx signer + signature
         if let Some(callback_sig) = &sig_info.callback_sig {
             return verify_callback_sig(callback_sig.as_slice(), sender, msg, sent_funds);
         }
-        // let duration = start.elapsed();
-        // trace!(
-        //     "verify_params: Time elapsed in verify_callback_sig: {:?}",
-        //     duration
-        // );
+
         #[cfg(feature = "light-client-validation")]
         if !check_msg_matches_state(og_msg) {
             return Err(EnclaveError::ValidationFailure);
         }
-        // check if sign_bytes are in approved tx list
 
-        trace!(
-            "Sign bytes are: {:?}",
-            String::from_utf8_lossy(sig_info.sign_bytes.as_slice())
-        );
-
-        //let start = Instant::now();
-        let sender_public_key = get_signer(sig_info, sender, handle_type)?;
-        // let duration = start.elapsed();
-        // trace!(
-        //     "verify_params: Time elapsed in get_signer_and_messages: {:?}",
-        //     duration
-        // );
-
-        trace!(
-            "sender canonical address is: {:?}",
-            sender_public_key.get_address().0 .0
-        );
-        trace!("sender signature is: {:?}", sig_info.signature);
-        trace!("sign bytes are: {:?}", sig_info.sign_bytes);
-
-        //let start = Instant::now();
-        sender_public_key
-            .verify_bytes(
-                sig_info.sign_bytes.as_slice(),
-                sig_info.signature.as_slice(),
-                sig_info.sign_mode,
-            )
-            .map_err(|err| {
-                warn!("Signature verification failed: {:?}", err);
-                EnclaveError::FailedTxVerification
-            })?;
-        // let duration = start.elapsed();
-        // trace!(
-        //     "verify_params: Time elapsed in verify_bytes: {:?}",
-        //     duration
-        // );
-
-        let signer_addr = sender_public_key.get_address();
-        if &signer_addr != sender {
-            warn!("Sender verification failed!");
-            trace!(
-                "Message sender {:?} does not match with the message signer {:?}",
-                sender,
-                signer_addr
-            );
-            return Err(EnclaveError::FailedTxVerification);
-        }
+        verify_signature(sig_info, sender, handle_type)?;
     }
 
     if should_validate_input {
-        let messages = get_messages(sig_info, handle_type)?;
-
-        // let start = Instant::now();
-        let is_verified = verify_message_params(
-            &messages,
-            sender,
+        verify_input(
+            sig_info,
             sent_funds,
+            sender,
             contract_address,
             msg,
             handle_type,
-        );
-        // let duration = start.elapsed();
-        // trace!(
-        //     "verify_params: Time elapsed in verify_message_params: {:?}",
-        //     duration
-        // );
-
-        if !is_verified {
-            warn!("Parameter verification failed");
-            return Err(EnclaveError::FailedTxVerification);
-        }
+        )?;
     }
 
     info!("Parameters verified successfully");
+
+    Ok(())
+}
+
+fn verify_signature(
+    sig_info: &SigInfo,
+    sender: &CanonicalAddr,
+    handle_type: HandleType,
+) -> Result<(), EnclaveError> {
+    let sender_public_key = get_signer(sig_info, sender, handle_type)?;
+
+    sender_public_key
+        .verify_bytes(
+            sig_info.sign_bytes.as_slice(),
+            sig_info.signature.as_slice(),
+            sig_info.sign_mode,
+        )
+        .map_err(|err| {
+            warn!("Signature verification failed: {:?}", err);
+            EnclaveError::FailedTxVerification
+        })?;
+
+    let signer_addr = sender_public_key.get_address();
+    if &signer_addr != sender {
+        warn!("Sender verification failed!");
+        trace!(
+            "Message sender {:?} does not match with the message signer {:?}",
+            sender,
+            signer_addr
+        );
+        return Err(EnclaveError::FailedTxVerification);
+    }
+
+    Ok(())
+}
+
+fn verify_input(
+    sig_info: &SigInfo,
+    sent_funds: &[Coin],
+    sender: &CanonicalAddr,
+    contract_address: &HumanAddr,
+    msg: &SecretMessage,
+    handle_type: HandleType,
+) -> Result<(), EnclaveError> {
+    let messages = get_messages(sig_info, handle_type)?;
+
+    let is_verified = verify_message_params(
+        &messages,
+        sender,
+        sent_funds,
+        contract_address,
+        msg,
+        handle_type,
+    );
+
+    if !is_verified {
+        warn!("Parameter verification failed");
+        return Err(EnclaveError::FailedTxVerification);
+    }
+
     Ok(())
 }
 
