@@ -15,6 +15,7 @@ mod errors;
 mod execute_message;
 pub mod external;
 mod gas;
+mod ibc_denom_utils;
 mod ibc_message;
 mod io;
 mod message;
