@@ -1,4 +1,4 @@
-FROM baiduxlab/sgx-rust:2004-1.1.3
+FROM ghcr.io/scrtlabs/sgx-rust:2004-1.1.5
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
