@@ -7,9 +7,8 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG TEST=enigmampc/rocksdb:v6.24.2
-ARG SCRT_BASE_IMAGE_ENCLAVE=enigmampc/rocksdb:v6.24.2-1.1.5
-ARG SCRT_RELEASE_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
+ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-base:20.04-2.17-6.24.2
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.17
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
@@ -91,7 +90,7 @@ RUN git submodule update --remote
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U=${FEATURES_U} make build
 
 # ***************** COMPILE SECRETD ************** #
-FROM $TEST AS compile-secretd
+FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-secretd
 
 ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
