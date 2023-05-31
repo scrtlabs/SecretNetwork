@@ -280,6 +280,18 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktx
 	switch signData := signatures[pkIndex].Data.(type) {
 	case *sdktxsigning.SingleSignatureData:
 		signMode = signData.SignMode
+		if signMode == sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED {
+			// Some shitness with IBC txs' internals - they are not registered properly with the app,
+			// and I think that it's something in the ibc-go repo that needs to be fixed.
+			// For some txs (e.g. MsgChannelOpenInit), we can unmarsal it into parsedTx
+			// but signMode turns out to be SIGN_MODE_UNSPECIFIED which is not true
+			// and always should be SignMode_SIGN_MODE_DIRECT (as IBC txs don't support Amino encoding)
+			// which causes `modeHandler.GetSignBytes()` down the line to fail with "can't verify sign mode SIGN_MODE_UNSPECIFIED"
+			// this is a stop gap solution, however we should investigate why this is happening
+			// and fix the `k.cdc.Unmarshal(ctx.TxBytes(), &parsedTx)` above, which will maybe allow us to remove
+			// the rawTx parsing code
+			signMode = sdktxsigning.SignMode_SIGN_MODE_DIRECT
+		}
 	case *sdktxsigning.MultiSignatureData:
 		signMode = sdktxsigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON
 	}
