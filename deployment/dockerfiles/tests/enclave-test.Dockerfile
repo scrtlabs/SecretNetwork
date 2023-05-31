@@ -1,4 +1,4 @@
-FROM ghcr.io/scrtlabs/sgx-rust:2004-1.1.5
+FROM ghcr.io/scrtlabs/sgx-base:20.04-2.17-6.24.2
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
