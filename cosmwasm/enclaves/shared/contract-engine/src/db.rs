@@ -1,6 +1,4 @@
-use enclave_crypto::consts::{
-    CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES, STATE_ENCRYPTION_VERSION,
-};
+use enclave_crypto::consts::{CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES};
 use enclave_crypto::key_manager::SeedsHolder;
 use log::*;
 
@@ -440,7 +438,6 @@ pub fn remove_from_encrypted_state(
 
     Ok(gas_used_first_remove + gas_used_second_remove)
 }
-
 
 fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] {
     let mut data = field_name.to_vec();
