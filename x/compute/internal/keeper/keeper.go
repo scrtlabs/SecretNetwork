@@ -226,7 +226,7 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktx
 			}
 
 			parsedTx = sdktx.Tx{
-				Body:       nil,
+				Body:       nil, // parsing rawTx.BodyBytes is the reason for the error, and it isn't used anyway
 				AuthInfo:   &txAuthInfo,
 				Signatures: rawTx.Signatures,
 			}
