@@ -100,6 +100,7 @@ pub struct Context {
     user_public_key: Ed25519PublicKey,
     kv_cache: KvCache,
     last_error: Option<WasmEngineError>,
+    #[allow(dead_code)]
     timestamp: u64,
 }
 
@@ -1773,6 +1774,7 @@ fn host_ed25519_sign(
     Ok(to_low_half(ptr_to_region_in_wasm_vm) as i64)
 }
 
+#[allow(dead_code)]
 fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     let mut encryption_salt: Vec<u8> = vec![];
 
