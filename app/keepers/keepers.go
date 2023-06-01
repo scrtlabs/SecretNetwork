@@ -55,6 +55,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	icaauthkeeper "github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
+  icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	ibcpacketforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 	ibcpacketforwardkeeper "github.com/strangelove-ventures/packet-forward-middleware/v4/router/keeper"
@@ -65,7 +66,8 @@ import (
 
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
-	ibchooks "github.com/scrtlabs/SecretNetwork/x/ibc-hooks"
+
+  ibchooks "github.com/scrtlabs/SecretNetwork/x/ibc-hooks"
 	ibchookskeeper "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
 	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
@@ -370,6 +372,11 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.ICAHostKeeper = &icaHostKeeper
 
+	icaAuthKeeper := icaauthkeeper.NewKeeper(appCodec, ak.keys[icaauthtypes.StoreKey], *ak.ICAControllerKeeper, ak.ScopedICAAuthKeeper)
+	ak.ICAAuthKeeper = &icaAuthKeeper
+
+	icaAuthIBCModule := icaauth.NewIBCModule(*ak.ICAAuthKeeper)
+
 	icaHostIBCModule := icahost.NewIBCModule(*ak.ICAHostKeeper)
 
 	// Create Transfer Keepers
@@ -412,7 +419,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 
 	// initialize ICA module with mock module as the authentication module on the controller side
 	var icaControllerStack porttypes.IBCModule
-	icaControllerStack = icacontroller.NewIBCMiddleware(icaControllerStack, *ak.ICAControllerKeeper)
+	icaControllerStack = icacontroller.NewIBCMiddleware(icaAuthIBCModule, *ak.ICAControllerKeeper)
 	icaControllerStack = ibcfee.NewIBCMiddleware(icaControllerStack, ak.IbcFeeKeeper)
 	icaControllerStack = ibcswitch.NewIBCMiddleware(icaControllerStack, ak.IbcSwitchKeeper)
 
@@ -488,7 +495,6 @@ func (ak *SecretAppKeepers) InitKeys() {
 		feegrant.StoreKey,
 		authzkeeper.StoreKey,
 		icahosttypes.StoreKey,
-		icacontrollertypes.StoreKey,
 		ibcpacketforwardtypes.StoreKey,
 		ibcfeetypes.StoreKey,
 		ibcswitch.StoreKey,
