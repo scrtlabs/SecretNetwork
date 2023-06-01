@@ -475,6 +475,13 @@ pub struct IBCAcknowledgement {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct IncentivizedAcknowledgement {
+    pub app_acknowledgement: Binary,
+    pub forward_relayer_address: String,
+    pub underlying_app_success: bool,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct IBCPacketTimeoutMsg {
     pub packet: IBCPacket,
     pub relayer: String,

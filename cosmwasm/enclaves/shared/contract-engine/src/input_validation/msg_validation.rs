@@ -3,7 +3,7 @@ use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use enclave_cosmos_types::types::{
     is_transfer_ack_error, CosmosSdkMsg, FungibleTokenPacketData, HandleType, IBCLifecycleComplete,
     IBCLifecycleCompleteOptions, IBCPacketAckMsg, IBCPacketTimeoutMsg, IbcHooksIncomingTransferMsg,
-    Packet,
+    IncentivizedAcknowledgement, Packet,
 };
 
 use log::*;
@@ -131,14 +131,32 @@ pub fn verify_ibc_packet_ack(
     }
     let sent_msg_ack_msg = send_msg_ack_msg.unwrap();
 
-    sent_msg_ack_msg.original_packet.src.channel_id == packet.source_channel
+    let incentivized_acknowledgement =
+        serde_json::from_slice::<IncentivizedAcknowledgement>(&acknowledgement);
+    let is_ack_verified = match incentivized_acknowledgement {
+        Ok(incentivized_acknowledgement) => {
+            trace!("get_verified_msg HANDLE_TYPE_IBC_PACKET_ACK is an IncentivizedAcknowledgement, using app_acknowledgement");
+
+            sent_msg_ack_msg.acknowledgement.data
+                == incentivized_acknowledgement.app_acknowledgement
+        }
+        Err(_) => {
+            trace!(
+                "get_verified_msg HANDLE_TYPE_IBC_PACKET_ACK is not an IncentivizedAcknowledgement, continuing with acknowledgement"
+            );
+
+            sent_msg_ack_msg.acknowledgement.data.0 == *acknowledgement
+        }
+    };
+
+    is_ack_verified
+        && sent_msg_ack_msg.original_packet.src.channel_id == packet.source_channel
         && sent_msg_ack_msg.original_packet.src.port_id == packet.source_port
         && sent_msg_ack_msg.original_packet.dest.channel_id == packet.destination_channel
         && sent_msg_ack_msg.original_packet.dest.port_id == packet.destination_port
         && sent_msg_ack_msg.original_packet.sequence == packet.sequence
         && sent_msg_ack_msg.original_packet.data.0 == packet.data
         && sent_msg_ack_msg.relayer == *signer
-        && sent_msg_ack_msg.acknowledgement.data.0 == *acknowledgement
 }
 
 pub fn verify_ibc_wasm_hooks_outgoing_transfer_ack(
