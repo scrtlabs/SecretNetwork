@@ -34,6 +34,7 @@ import (
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	packetforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
+	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 )
 
 var ModuleAccountPermissions = map[string][]string{
@@ -80,5 +81,6 @@ func AppModules(
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper),
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
 		ibcswitch.NewAppModule(app.AppKeepers.IbcSwitchKeeper),
+		icaauth.NewAppModule(appCodec, *app.AppKeepers.ICAAuthKeeper),
 	}
 }
