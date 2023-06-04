@@ -243,7 +243,7 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktx
 	}
 
 	pkIndex := -1
-	if sender == nil {
+	if sender == nil || sender.Equals(types.ZeroSender) {
 		// We are in a situation where the contract gets a null msg.sender,
 		// however we still need to get the sign bytes for verification against the wasm input msg inside the enclave.
 		// There can be multiple signers on the tx, for example one can be the msg.sender and the another can be the gas fee payer. Another example is if this tx also contains MsgMultiSend which supports multiple msg.senders thus requiring multiple signers.

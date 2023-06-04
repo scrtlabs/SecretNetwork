@@ -289,3 +289,13 @@ contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
 # The WASM VM memory cache size in number of cached modules. Can safely go up to 15, but not recommended for validators
 contract-memory-enclave-cache-size = "{{ .WASMConfig.EnclaveCacheSize }}"
 `
+
+// ZeroSender is a valid 20 byte canonical address that's used to bypass the x/compute checks
+// and later on is ignored by the enclave, which passes a null sender to the contract
+// This is used in OnAcknowledgementPacketOverride & OnTimeoutPacketOverride
+var ZeroSender = sdk.AccAddress{
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+}

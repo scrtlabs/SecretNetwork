@@ -6,7 +6,7 @@ import (
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	wasm "github.com/scrtlabs/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,7 +14,7 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 
-	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	computetypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
 
@@ -24,12 +24,12 @@ type ContractAck struct {
 }
 
 type WasmHooks struct {
-	ContractKeeper      *wasm.Keeper
+	ContractKeeper      *compute.Keeper
 	ibcHooksKeeper      *keeper.Keeper
 	bech32PrefixAccAddr string
 }
 
-func NewWasmHooks(ibcHooksKeeper *keeper.Keeper, contractKeeper *wasm.Keeper, bech32PrefixAccAddr string) WasmHooks {
+func NewWasmHooks(ibcHooksKeeper *keeper.Keeper, contractKeeper *compute.Keeper, bech32PrefixAccAddr string) WasmHooks {
 	return WasmHooks{
 		ContractKeeper:      contractKeeper,
 		ibcHooksKeeper:      ibcHooksKeeper,
@@ -105,13 +105,13 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 	funds := sdk.NewCoins(sdk.NewCoin(denom, amount))
 
 	// Execute the contract
-	execMsg := wasm.MsgExecuteContract{
+	execMsg := compute.MsgExecuteContract{
 		Sender:    sdk.MustAccAddressFromBech32(senderBech32), // emptied out later by the enclave
 		Contract:  contractAddr,
 		Msg:       msgBytes,
 		SentFunds: funds,
 	}
-	response, err := h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksIncomingTransfer)
+	response, err := h.execWasmMsg(ctx, &execMsg, computetypes.HandleTypeIbcWasmHooksIncomingTransfer)
 	if err != nil {
 		return NewEmitErrorAcknowledgement(ctx, types.ErrWasmError, err.Error())
 	}
@@ -125,7 +125,7 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 	return channeltypes.NewResultAcknowledgement(bz)
 }
 
-func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *wasm.MsgExecuteContract, handleType wasmtypes.HandleType) (*sdk.Result, error) {
+func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *compute.MsgExecuteContract, handleType computetypes.HandleType) (*sdk.Result, error) {
 	if err := execMsg.ValidateBasic(); err != nil {
 		return nil, fmt.Errorf(types.ErrBadExecutionMsg, err.Error())
 	}
@@ -302,16 +302,6 @@ func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap
 	return nil
 }
 
-// zeroSender is a valid 20 byte canonical address that's used to bypass the x/compute checks
-// and later on is ignored by the enclave, which passes a null sender to the contract
-// This is used in OnAcknowledgementPacketOverride & OnTimeoutPacketOverride
-var zeroSender = sdk.AccAddress{
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-}
-
 type (
 	IbcLifecycleComplete struct {
 		IbcLifecycleCompleteContainer `json:"ibc_lifecycle_complete"`
@@ -384,14 +374,14 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 		return err
 	}
 
-	execMsg := wasm.MsgExecuteContract{
+	execMsg := compute.MsgExecuteContract{
 		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
-		Sender:    zeroSender,
+		Sender:    compute.ZeroSender,
 		Contract:  contractAddr,
 		Msg:       msg,
 		SentFunds: sdk.NewCoins(),
 	}
-	_, err = h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksOutgoingTransferAck)
+	_, err = h.execWasmMsg(ctx, &execMsg, computetypes.HandleTypeIbcWasmHooksOutgoingTransferAck)
 	if err != nil {
 		// error processing the callback
 		// ToDo: Open Question: Should we also delete the callback here?
@@ -436,14 +426,14 @@ func (h WasmHooks) OnTimeoutPacketOverride(im IBCMiddleware, ctx sdk.Context, pa
 		return err
 	}
 
-	execMsg := wasm.MsgExecuteContract{
+	execMsg := compute.MsgExecuteContract{
 		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
-		Sender:    zeroSender,
+		Sender:    compute.ZeroSender,
 		Contract:  contractAddr,
 		Msg:       msg,
 		SentFunds: sdk.NewCoins(),
 	}
-	_, err = h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout)
+	_, err = h.execWasmMsg(ctx, &execMsg, computetypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout)
 	if err != nil {
 		// error processing the callback. This could be because the contract doesn't implement the message type to
 		// process the callback. Retrying this will not help, so we can delete the callback from storage.
