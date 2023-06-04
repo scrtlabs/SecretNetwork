@@ -132,7 +132,7 @@ pub fn verify_ibc_packet_ack(
     let sent_msg_ack_msg = send_msg_ack_msg.unwrap();
 
     let incentivized_acknowledgement =
-        serde_json::from_slice::<IncentivizedAcknowledgement>(&acknowledgement);
+        serde_json::from_slice::<IncentivizedAcknowledgement>(acknowledgement);
     let is_ack_verified = match incentivized_acknowledgement {
         Ok(incentivized_acknowledgement) => {
             trace!("get_verified_msg HANDLE_TYPE_IBC_PACKET_ACK is an IncentivizedAcknowledgement, using app_acknowledgement");
