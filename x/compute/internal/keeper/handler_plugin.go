@@ -9,7 +9,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibcclienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
 	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
 	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
@@ -58,11 +57,11 @@ func NewSDKMessageHandler(router MessageRouter, legacyRouter sdk.Router, encoder
 // IBCRawPacketHandler handels IBC.SendPacket messages which are published to an IBC channel.
 type IBCRawPacketHandler struct {
 	channelKeeper    channelkeeper.Keeper
-	ics4Wrapper      transfertypes.ICS4Wrapper
+	ics4Wrapper      ibctransfertypes.ICS4Wrapper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
 }
 
-func NewIBCRawPacketHandler(channelKeeper channelkeeper.Keeper, ics4Wrapper transfertypes.ICS4Wrapper, capabilityKeeper capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
+func NewIBCRawPacketHandler(channelKeeper channelkeeper.Keeper, ics4Wrapper ibctransfertypes.ICS4Wrapper, capabilityKeeper capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
 	return IBCRawPacketHandler{
 		channelKeeper:    channelKeeper,
 		ics4Wrapper:      ics4Wrapper,
@@ -85,7 +84,7 @@ func NewMessageHandler(
 	legacyMsgRouter sdk.Router,
 	customEncoders *MessageEncoders,
 	channelKeeper channelkeeper.Keeper,
-	ics4Wrapper transfertypes.ICS4Wrapper,
+	ics4Wrapper ibctransfertypes.ICS4Wrapper,
 	capabilityKeeper capabilitykeeper.ScopedKeeper,
 	portSource types.ICS20TransferPortSource,
 	unpacker codectypes.AnyUnpacker,
