@@ -249,24 +249,8 @@ func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap
 		return i.channel.SendPacket(ctx, chanCap, packet) // continue
 	}
 
-	// We remove the callback metadata from the memo as it has already been processed.
+	// Originally, Osmosis removed the callback metadata from the memo as it had already fulfilled its purpose for them. We cannot do this on Secret, as later on the enclave needs to verify the contract address, and the only way to do this is to parse the memo of the original packet (which is signed by the relayer along with the ack/timeout) and compare it to the contract address that was given to the enclave.
 
-	// If the only available key in the memo is the callback, we should remove the memo
-	// from the data completely so the packet is sent without it.
-	// This way receiver chains that are on old versions of IBC will be able to process the packet
-
-	callbackRaw := metadata[types.IBCCallbackKey] // This will be used later.
-	delete(metadata, types.IBCCallbackKey)
-	bzMetadata, err := json.Marshal(metadata)
-	if err != nil {
-		return sdkerrors.Wrap(err, "Send packet with callback error")
-	}
-	stringMetadata := string(bzMetadata)
-	if stringMetadata == "{}" {
-		data.Memo = ""
-	} else {
-		data.Memo = stringMetadata
-	}
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return sdkerrors.Wrap(err, "Send packet with callback error")
@@ -289,7 +273,7 @@ func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap
 	}
 
 	// Make sure the callback contract is a string and a valid bech32 addr. If it isn't, ignore this packet
-	contract, ok := callbackRaw.(string)
+	contract, ok := metadata[types.IBCCallbackKey].(string)
 	if !ok {
 		return nil
 	}
