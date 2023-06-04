@@ -63,24 +63,13 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 		return NewEmitErrorAcknowledgement(ctx, types.ErrMsgValidation)
 	}
 
-	// Calculate the receiver / contract caller based on the packet's channel and sender
-	// Assaf: on Secret this later gets emptied out by the enclave.
-	// We cannot allow unsigned calls to MsgExecute,
-	// otherwise attackers would be able to run MsgExecute with a falsified sender.
-	channel := packet.GetDestChannel()
-	sender := data.GetSender()
-	senderBech32, err := keeper.DeriveIntermediateSender(channel, sender, h.bech32PrefixAccAddr)
-	if err != nil {
-		return NewEmitErrorAcknowledgement(ctx, types.ErrBadSender, fmt.Sprintf("cannot convert sender address %s/%s to bech32: %s", channel, sender, err.Error()))
-	}
-
 	// The funds sent on this packet need to be transferred to the intermediary account for the sender.
 	// For this, we override the ICS20 packet's Receiver (essentially hijacking the funds to this new address)
 	// and execute the underlying OnRecvPacket() call (which should eventually land on the transfer app's
-	// relay.go and send the sunds to the intermediary account.
+	// relay.go and send the funds to the intermediary account.
 	//
 	// If that succeeds, we make the contract call
-	data.Receiver = senderBech32
+	data.Receiver = compute.ZeroSender.String()
 	bz, err := json.Marshal(data)
 	if err != nil {
 		return NewEmitErrorAcknowledgement(ctx, types.ErrMarshaling, err.Error())
@@ -106,7 +95,8 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 
 	// Execute the contract
 	execMsg := compute.MsgExecuteContract{
-		Sender:    sdk.MustAccAddressFromBech32(senderBech32), // emptied out later by the enclave
+		// Sender is ignored by the enclave, the contract sees a null msg.sender
+		Sender:    compute.ZeroSender,
 		Contract:  contractAddr,
 		Msg:       msgBytes,
 		SentFunds: funds,
@@ -359,7 +349,7 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 	}
 
 	execMsg := compute.MsgExecuteContract{
-		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
+		// Sender is ignored by the enclave, the contract sees a null msg.sender
 		Sender:    compute.ZeroSender,
 		Contract:  contractAddr,
 		Msg:       msg,
@@ -411,7 +401,7 @@ func (h WasmHooks) OnTimeoutPacketOverride(im IBCMiddleware, ctx sdk.Context, pa
 	}
 
 	execMsg := compute.MsgExecuteContract{
-		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
+		// Sender is ignored by the enclave, the contract sees a null msg.sender
 		Sender:    compute.ZeroSender,
 		Contract:  contractAddr,
 		Msg:       msg,
