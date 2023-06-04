@@ -448,19 +448,28 @@ pub enum IBCLifecycleCompleteOptions {
 }
 
 pub fn is_transfer_ack_error(acknowledgement: &[u8]) -> bool {
-    if let Ok(ack_err) = serde_json::from_slice::<AcknowledgementError>(acknowledgement) {
-        if !ack_err.error.is_empty() {
-            return true;
+    match serde_json::from_slice::<AcknowledgementError>(acknowledgement) {
+        Ok(ack_err) => {
+            if ack_err.error.is_some() {
+                return true;
+            }
         }
+        Err(_err) => {}
     }
     false
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct AcknowledgementError {
-    #[serde(rename = "error")]
-    pub error: String,
+    pub error: Option<String>,
 }
+
+// // This is needed to make sure that fields other than error are ignored as we don't care about them
+// impl Default for AcknowledgementError {
+//     fn default() -> Self {
+//         Self { error: None }
+//     }
+// }
 
 #[derive(Debug, Deserialize)]
 pub struct IBCPacketAckMsg {

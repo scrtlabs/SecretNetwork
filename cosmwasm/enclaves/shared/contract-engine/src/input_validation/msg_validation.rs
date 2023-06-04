@@ -1,4 +1,4 @@
-use cw_types_v010::types::CanonicalAddr;
+use cw_types_v010::{encoding::Binary, types::CanonicalAddr};
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use enclave_cosmos_types::types::{
     is_transfer_ack_error, CosmosSdkMsg, FungibleTokenPacketData, HandleType, IBCLifecycleComplete,
@@ -178,14 +178,25 @@ pub fn verify_ibc_wasm_hooks_outgoing_transfer_ack(
             ack,
             success,
         }) => {
+            let ack_as_string = serde_json::from_slice::<String>(ack.as_bytes());
+            if ack_as_string.is_err() {
+                trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK: ack cannot be parsed as String: {:?} Error: {:?}", ack, ack_as_string.err());
+                return false;
+            }
+            let ack_as_string = ack_as_string.unwrap();
+            let ack_as_binary = Binary::from_base64(&ack_as_string);
+            if ack_as_binary.is_err() {
+                trace!("get_verified_msg HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK: ack_as_string cannot be parsed as Binary: {:?} Error: {:?}", ack_as_string, ack_as_binary.err());
+                return false;
+            }
+            let ack_as_binary = ack_as_binary.unwrap();
+
             channel == packet.source_channel
                 && sequence == packet.sequence
-                && ack == String::from_utf8_lossy(acknowledgement)
+                && ack_as_binary.as_slice() == acknowledgement
                 && success != is_transfer_ack_error(acknowledgement)
         }
-        IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCTimeout {
-            ..
-        }) => false,
+        _ => false,
     }
 }
 
@@ -222,12 +233,10 @@ pub fn verify_ibc_wasm_hooks_outgoing_transfer_timeout(
     let ibc_lifecycle_complete = ibc_lifecycle_complete.unwrap();
 
     match ibc_lifecycle_complete {
-        IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCAck {
-            ..
-        }) => false,
         IBCLifecycleComplete::IBCLifecycleComplete(IBCLifecycleCompleteOptions::IBCTimeout {
             channel,
             sequence,
         }) => channel == packet.source_channel && sequence == packet.sequence,
+        _ => false,
     }
 }
