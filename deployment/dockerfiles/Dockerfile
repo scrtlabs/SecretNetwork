@@ -77,12 +77,9 @@ ARG FEATURES_U
 ARG SGX_MODE=${SGX_MODE}
 ENV FEATURES_U=${FEATURES_U}
 
-RUN git clone --branch main https://github.com/scrtlabs/tm-secret-enclave.git
+RUN git clone --branch v1.9.3 --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
 
 WORKDIR tm-secret-enclave
-
-RUN git fetch
-RUN git checkout tags/v1.9.0
 
 RUN git submodule init
 RUN git submodule update --remote
@@ -159,7 +156,8 @@ RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} 
 FROM $SCRT_RELEASE_BASE_IMAGE as release-image
 
 # wasmi-sgx-test script requirements
-RUN apt-get update && \
+RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \

@@ -10,6 +10,8 @@ pub mod wasm_messages;
 
 pub use wasm_messages::VERIFIED_MESSAGES;
 
+pub use verify::registration;
+
 mod txs;
 
 #[cfg(any(feature = "verify-validator-whitelist", feature = "test"))]
@@ -51,6 +53,9 @@ pub mod tests {
             crate::wasm_messages::tests::parse_tx_multiple_msg_non_wasm();
             crate::wasm_messages::tests::parse_tx_multisig();
             crate::wasm_messages::tests::check_message_is_wasm();
+            crate::wasm_messages::tests::check_message_is_reg();
+            crate::wasm_messages::tests::check_parse_reg_bytes();
+            crate::wasm_messages::tests::check_parse_reg_from_tx();
             crate::wasm_messages::tests::test_check_message_not_wasm();
             crate::wasm_messages::tests::test_wasm_msg_tracker();
             crate::wasm_messages::tests::test_wasm_msg_tracker_multiple_msgs();

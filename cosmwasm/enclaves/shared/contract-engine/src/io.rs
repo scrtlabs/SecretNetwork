@@ -454,7 +454,7 @@ fn deserialize_output(output: Vec<u8>) -> Result<RawWasmOutput, EnclaveError> {
         EnclaveError::FailedToDeserialize
     })?;
 
-    info!("Output after deserialization: {:?}", output);
+    trace!("Output after deserialization: {:?}", output);
 
     Ok(output)
 }
@@ -482,9 +482,10 @@ fn encrypt_output(
     // Therefore if reply_recipient_contract_hash is "Some", we append it to any encrypted data besides submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
-    info!(
+    trace!(
         "message nonce and public key for encryption: {:?} {:?}",
-        secret_msg.nonce, secret_msg.user_public_key
+        secret_msg.nonce,
+        secret_msg.user_public_key
     );
 
     match &mut output {

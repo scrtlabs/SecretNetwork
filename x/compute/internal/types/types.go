@@ -315,6 +315,16 @@ contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
 contract-memory-enclave-cache-size = "{{ .WASMConfig.EnclaveCacheSize }}"
 `
 
+// ZeroSender is a valid 20 byte canonical address that's used to bypass the x/compute checks
+// and later on is ignored by the enclave, which passes a null sender to the contract
+// This is used in OnAcknowledgementPacketOverride & OnTimeoutPacketOverride
+var ZeroSender = sdk.AccAddress{
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+}
+
 func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
 	return ContractCodeHistoryEntry{
 		Operation: ContractCodeHistoryOperationTypeInit,

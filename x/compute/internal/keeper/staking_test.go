@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
@@ -292,7 +293,7 @@ func TestBonding(t *testing.T) {
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -339,7 +340,7 @@ func TestUnbonding(t *testing.T) {
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// update height a bit
@@ -356,7 +357,7 @@ func TestUnbonding(t *testing.T) {
 	unbondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, unbondBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, unbondBz, contractAddr, nil)
-	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -415,7 +416,7 @@ func TestReinvest(t *testing.T) {
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// update height a bit to solidify the delegation
@@ -432,7 +433,7 @@ func TestReinvest(t *testing.T) {
 	reinvestBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, reinvestBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, reinvestBz, contractAddr, nil)
-	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)

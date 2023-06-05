@@ -9,7 +9,7 @@ import (
 	v170registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v170"
 )
 
-func Migrate(appState types.AppMap, clientCtx client.Context) types.AppMap {
+func Migrate(appState types.AppMap, _ client.Context) types.AppMap {
 	legacyAminoCodec := codec.NewLegacyAmino()
 
 	if appState[v120registration.ModuleName] != nil {

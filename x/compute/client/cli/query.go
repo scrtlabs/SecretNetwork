@@ -143,7 +143,7 @@ func GetCmdCodeHashByContractAddress() *cobra.Command {
 			}
 
 			addr := hex.EncodeToString(res)
-			fmt.Printf("0x%s", addr)
+			fmt.Printf("0x%s\n", addr)
 			return nil
 		},
 	}
@@ -334,7 +334,7 @@ func CmdDecryptText() *cobra.Command {
 				return fmt.Errorf("error while trying to decrypt the output data: %w", err)
 			}
 
-			fmt.Printf("Decrypted data: %s", dataPlaintextB64Bz)
+			fmt.Printf("Decrypted data: %s\n", dataPlaintextB64Bz)
 			return nil
 		},
 	}

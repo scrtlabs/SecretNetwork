@@ -1,6 +1,7 @@
 package v1types
 
 import (
+	ibcchanneltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010msgtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 )
@@ -163,6 +164,14 @@ const (
 	Unordered = "ORDER_UNORDERED"
 	Ordered   = "ORDER_ORDERED"
 )
+
+func IBCOrderToEnum(o IBCOrder) ibcchanneltypes.Order {
+	if o == Unordered {
+		return ibcchanneltypes.UNORDERED
+	}
+
+	return ibcchanneltypes.ORDERED
+}
 
 // IBCTimeoutBlock Height is a monotonically increasing data type
 // that can be compared against another Height for the purposes of updating and

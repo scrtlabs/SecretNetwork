@@ -1,12 +1,34 @@
 # CHANGELOG
 
+# 1.10.0 (Unreleased - WIP)
+
+- Added ibc-hooks middleware by Osmosis.
+  - WASM Hooks: allows ICS-20 token transfers to initiate contract calls, serving various use cases.
+    - Example: Sending tokens to Secret and immediately wrapping them as SNIP-20 token. For example, `ATOM on Hub -> ATOM on Secret -> sATOMS on Secret` (2 transactions on 2 chains) now becomes `ATOM on Hub -> sATOM on Secret` (1 transaction).
+    - Example: Cross-chain swaps. Using IBC Hooks, an AMM on Secret can atomically swap tokens that originated on a different chain and are headed to Secret. The AMM can also send those tokens back to the originating chain.
+    - [Axelar GMP](https://docs.axelar.dev/dev/general-message-passing/overview): Using IBC Hooks, a contract on Ethereum can call a contract on Secret and get a response back.
+  - Ack callbacks: allow non-IBC contracts that send an `IbcMsg::Transfer` to listen for the ack/timeout of the token transfer. This allows these contracts to definitively know whether the transfer was successful or not and act accordingly (refund if failed, continue if succeeded). See usage example [here](https://github.com/scrtlabs/secret.js/blob/4293219/test/ibc-hooks-contract/src/contract.rs#L47-L91).
+- Added and optional `memo` field to `IbcMsg::Transfer`, to ease to use of the IBC Hooks ack callbacks feature. See usage example [here](https://github.com/scrtlabs/secret.js/blob/4293219/test/ibc-hooks-contract/src/contract.rs#L60-L63).
+
+# 1.9.3
+
+- Bump ibc-go from v4.3.0 to v4.3.1 ([Huckleberry](https://forum.cosmos.network/t/ibc-security-advisory-huckleberry/10731/1) security patch)
+
+# 1.9.2
+
+- Fix the v1.9.0 upgrade
+
+# 1.9.1
+
+- An atempt to fix the v1.9.0 upgrade
+
 # 1.9.0
 
 - New Feature: Randomness injection for secret contracts.
   - Eliminates the need for contracts to bootstrap their own entropy pool.
   - Unique for every contract call.
   - Useful in lotteries, gaming, secure authentication protocols, protocols where unpredictable outcomes are essential for fairness and security, and much more.
-  For more infomation on how to use this feature, see the documentation
+    For more infomation on how to use this feature, see the documentation
 - New Feature: FinalizeTx.
   - Contracts can force the transaction to finalize at a certain point, otherwise revert.
   - Example: protect against sandwich attacks and potential transaction rollbacks.
