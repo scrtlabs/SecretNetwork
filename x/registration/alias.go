@@ -66,5 +66,5 @@ type (
 	EnclaveApi           = enclave.Api
 	MasterKey            = types.MasterKey
 	Key                  = types.Key
-	RegistrationNodeInfo = types.RegistrationNodeInfo
+	RegistrationNodeInfo = types.RegistrationNodeInfo //nolint:all
 )

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -140,7 +139,6 @@ func (w *Wasmer) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
-	contractAddress sdk.AccAddress,
 ) (interface{}, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {

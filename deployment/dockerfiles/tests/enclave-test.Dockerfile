@@ -1,6 +1,7 @@
 FROM ghcr.io/scrtlabs/sgx-base:20.04-2.17-6.24.2
 
-RUN apt-get update && \
+RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     clang && \

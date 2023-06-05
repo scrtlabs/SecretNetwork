@@ -95,6 +95,7 @@ var (
 	CodeKeyPrefix        = types.CodeKeyPrefix
 	ContractKeyPrefix    = types.ContractKeyPrefix
 	ContractStorePrefix  = types.ContractStorePrefix
+	ZeroSender           = types.ZeroSender
 )
 
 type (

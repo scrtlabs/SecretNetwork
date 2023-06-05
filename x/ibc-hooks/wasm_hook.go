@@ -6,7 +6,7 @@ import (
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	wasm "github.com/scrtlabs/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,7 +14,7 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 
-	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	computetypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
 
@@ -24,12 +24,12 @@ type ContractAck struct {
 }
 
 type WasmHooks struct {
-	ContractKeeper      *wasm.Keeper
+	ContractKeeper      *compute.Keeper
 	ibcHooksKeeper      *keeper.Keeper
 	bech32PrefixAccAddr string
 }
 
-func NewWasmHooks(ibcHooksKeeper *keeper.Keeper, contractKeeper *wasm.Keeper, bech32PrefixAccAddr string) WasmHooks {
+func NewWasmHooks(ibcHooksKeeper *keeper.Keeper, contractKeeper *compute.Keeper, bech32PrefixAccAddr string) WasmHooks {
 	return WasmHooks{
 		ContractKeeper:      contractKeeper,
 		ibcHooksKeeper:      ibcHooksKeeper,
@@ -63,24 +63,13 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 		return NewEmitErrorAcknowledgement(ctx, types.ErrMsgValidation)
 	}
 
-	// Calculate the receiver / contract caller based on the packet's channel and sender
-	// Assaf: on Secret this later gets emptied out by the enclave.
-	// We cannot allow unsigned calls to MsgExecute,
-	// otherwise attackers would be able to run MsgExecute with a falsified sender.
-	channel := packet.GetDestChannel()
-	sender := data.GetSender()
-	senderBech32, err := keeper.DeriveIntermediateSender(channel, sender, h.bech32PrefixAccAddr)
-	if err != nil {
-		return NewEmitErrorAcknowledgement(ctx, types.ErrBadSender, fmt.Sprintf("cannot convert sender address %s/%s to bech32: %s", channel, sender, err.Error()))
-	}
-
 	// The funds sent on this packet need to be transferred to the intermediary account for the sender.
 	// For this, we override the ICS20 packet's Receiver (essentially hijacking the funds to this new address)
 	// and execute the underlying OnRecvPacket() call (which should eventually land on the transfer app's
-	// relay.go and send the sunds to the intermediary account.
+	// relay.go and send the funds to the intermediary account.
 	//
 	// If that succeeds, we make the contract call
-	data.Receiver = senderBech32
+	data.Receiver = compute.ZeroSender.String()
 	bz, err := json.Marshal(data)
 	if err != nil {
 		return NewEmitErrorAcknowledgement(ctx, types.ErrMarshaling, err.Error())
@@ -105,13 +94,14 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 	funds := sdk.NewCoins(sdk.NewCoin(denom, amount))
 
 	// Execute the contract
-	execMsg := wasm.MsgExecuteContract{
-		Sender:    sdk.MustAccAddressFromBech32(senderBech32), // emptied out later by the enclave
+	execMsg := compute.MsgExecuteContract{
+		// Sender is ignored by the enclave, the contract sees a null msg.sender
+		Sender:    compute.ZeroSender,
 		Contract:  contractAddr,
 		Msg:       msgBytes,
 		SentFunds: funds,
 	}
-	response, err := h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksIncomingTransfer)
+	response, err := h.execWasmMsg(ctx, &execMsg, computetypes.HandleTypeIbcWasmHooksIncomingTransfer)
 	if err != nil {
 		return NewEmitErrorAcknowledgement(ctx, types.ErrWasmError, err.Error())
 	}
@@ -125,7 +115,7 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 	return channeltypes.NewResultAcknowledgement(bz)
 }
 
-func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *wasm.MsgExecuteContract, handleType wasmtypes.HandleType) (*sdk.Result, error) {
+func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *compute.MsgExecuteContract, handleType computetypes.HandleType) (*sdk.Result, error) {
 	if err := execMsg.ValidateBasic(); err != nil {
 		return nil, fmt.Errorf(types.ErrBadExecutionMsg, err.Error())
 	}
@@ -249,24 +239,8 @@ func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap
 		return i.channel.SendPacket(ctx, chanCap, packet) // continue
 	}
 
-	// We remove the callback metadata from the memo as it has already been processed.
+	// Originally, Osmosis removed the callback metadata from the memo as it had already fulfilled its purpose for them. We cannot do this on Secret, as later on the enclave needs to verify the contract address, and the only way to do this is to parse the memo of the original packet (which is signed by the relayer along with the ack/timeout) and compare it to the contract address that was given to the enclave.
 
-	// If the only available key in the memo is the callback, we should remove the memo
-	// from the data completely so the packet is sent without it.
-	// This way receiver chains that are on old versions of IBC will be able to process the packet
-
-	callbackRaw := metadata[types.IBCCallbackKey] // This will be used later.
-	delete(metadata, types.IBCCallbackKey)
-	bzMetadata, err := json.Marshal(metadata)
-	if err != nil {
-		return sdkerrors.Wrap(err, "Send packet with callback error")
-	}
-	stringMetadata := string(bzMetadata)
-	if stringMetadata == "{}" {
-		data.Memo = ""
-	} else {
-		data.Memo = stringMetadata
-	}
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return sdkerrors.Wrap(err, "Send packet with callback error")
@@ -289,7 +263,7 @@ func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap
 	}
 
 	// Make sure the callback contract is a string and a valid bech32 addr. If it isn't, ignore this packet
-	contract, ok := callbackRaw.(string)
+	contract, ok := metadata[types.IBCCallbackKey].(string)
 	if !ok {
 		return nil
 	}
@@ -300,16 +274,6 @@ func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap
 
 	h.ibcHooksKeeper.StorePacketCallback(ctx, packet.GetSourceChannel(), packet.GetSequence(), contract)
 	return nil
-}
-
-// zeroSender is a valid 20 byte canonical address that's used to bypass the x/compute checks
-// and later on is ignored by the enclave, which passes a null sender to the contract
-// This is used in OnAcknowledgementPacketOverride & OnTimeoutPacketOverride
-var zeroSender = sdk.AccAddress{
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
 }
 
 type (
@@ -384,14 +348,14 @@ func (h WasmHooks) OnAcknowledgementPacketOverride(im IBCMiddleware, ctx sdk.Con
 		return err
 	}
 
-	execMsg := wasm.MsgExecuteContract{
-		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
-		Sender:    zeroSender,
+	execMsg := compute.MsgExecuteContract{
+		// Sender is ignored by the enclave, the contract sees a null msg.sender
+		Sender:    compute.ZeroSender,
 		Contract:  contractAddr,
 		Msg:       msg,
 		SentFunds: sdk.NewCoins(),
 	}
-	_, err = h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksOutgoingTransferAck)
+	_, err = h.execWasmMsg(ctx, &execMsg, computetypes.HandleTypeIbcWasmHooksOutgoingTransferAck)
 	if err != nil {
 		// error processing the callback
 		// ToDo: Open Question: Should we also delete the callback here?
@@ -436,14 +400,14 @@ func (h WasmHooks) OnTimeoutPacketOverride(im IBCMiddleware, ctx sdk.Context, pa
 		return err
 	}
 
-	execMsg := wasm.MsgExecuteContract{
-		// Sender is ignored by the enclave, which passes a null msg.sender to the contract
-		Sender:    zeroSender,
+	execMsg := compute.MsgExecuteContract{
+		// Sender is ignored by the enclave, the contract sees a null msg.sender
+		Sender:    compute.ZeroSender,
 		Contract:  contractAddr,
 		Msg:       msg,
 		SentFunds: sdk.NewCoins(),
 	}
-	_, err = h.execWasmMsg(ctx, &execMsg, wasmtypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout)
+	_, err = h.execWasmMsg(ctx, &execMsg, computetypes.HandleTypeIbcWasmHooksOutgoingTransferTimeout)
 	if err != nil {
 		// error processing the callback. This could be because the contract doesn't implement the message type to
 		// process the callback. Retrying this will not help, so we can delete the callback from storage.

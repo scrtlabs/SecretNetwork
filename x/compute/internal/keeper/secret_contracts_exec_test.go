@@ -25,6 +25,9 @@ import (
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
+	ibcchanneltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 )
 
 func setupChainTest(t *testing.T, wasmPath string, additionalCoinsInWallets sdk.Coins, amount uint64) (sdk.Context, Keeper, []uint64, []string, sdk.AccAddress, crypto.PrivKey, sdk.AccAddress, crypto.PrivKey) {
@@ -2367,37 +2370,434 @@ func TestLastMsgMarkerMultipleMsgsInATx(t *testing.T) {
 
 	results, err := execHelperMultipleMsgs(t, keeper, ctx, contractAddress, walletA, privKeyA, msgs, true, true, math.MaxUint64, 0)
 	require.NotEqual(t, nil, err)
-	println("Error: ", err)
-
 	require.Equal(t, 1, len(results))
 }
 
-func TestPlaintextInputWithIBCHooksFlag(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
+func TestIBCHooksIncomingTransfer(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		// remoteDenom: "port_on_other_chain/channel_on_other_chain/base_denom" (e.g. transfer/channel-0/uscrt) or base_denom (e.g. uatom)
+		remoteDenom string
+		// localDenom: denom on Secret ("denom" or "ibc/...")
+		localDenom string
+	}{
+		{
+			name:        "denom originated from Secret",
+			remoteDenom: "transfer/channel-0/denom",
+			localDenom:  "denom",
+		},
+		{
+			name:        "denom is base denom of the other chain",
+			remoteDenom: "uatom",
+			localDenom:  "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+		},
+	} {
+		for _, testContract := range testContracts {
+			t.Run(test.name, func(t *testing.T) {
+				t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+					ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins(sdk.NewInt64Coin(test.localDenom, 1)))
 
-			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
+					_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
+					require.Empty(t, initErr)
+
+					data := ibctransfertypes.FungibleTokenPacketData{
+						Denom:    test.remoteDenom,
+						Amount:   "1",
+						Sender:   "ignored",
+						Receiver: contractAddress.String(), // must be the contract address, like in the memo
+						Memo:     fmt.Sprintf(`{"wasm":{"contract":"%s","msg":{"log_msg_sender":{}}}}`, contractAddress.String()),
+					}
+					dataBytes, err := json.Marshal(data)
+					require.NoError(t, err)
+
+					sdkMsg := ibcchanneltypes.MsgRecvPacket{
+						Packet: ibcchanneltypes.Packet{
+							Sequence:           0,
+							SourcePort:         "transfer",  // port on the other chain
+							SourceChannel:      "channel-0", // channel on the other chain
+							DestinationPort:    "transfer",  // port on Secret
+							DestinationChannel: "channel-0", // channel on Secret
+							Data:               dataBytes,
+							TimeoutHeight:      ibcclienttypes.Height{},
+							TimeoutTimestamp:   0,
+						},
+						ProofCommitment: []byte{},
+						ProofHeight:     ibcclienttypes.Height{},
+						Signer:          walletA.String(),
+					}
+
+					ctx = PrepareSignedTx(t, keeper, ctx, walletA, privKeyA, &sdkMsg)
+
+					_, execErr := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"log_msg_sender":{}}`), sdk.NewCoins(sdk.NewInt64Coin(test.localDenom, 1)), nil, cosmwasm.HandleTypeIbcWasmHooksIncomingTransfer)
+
+					require.Empty(t, execErr)
+
+					events := tryDecryptWasmEvents(ctx, nil)
+
+					requireEvents(t,
+						[]ContractEvent{
+							{
+								{Key: "contract_address", Value: contractAddress.String()},
+								{
+									Key:   "msg.sender",
+									Value: "",
+								},
+							},
+						},
+						events,
+					)
+				})
+			})
+		}
+	}
+}
+
+func TestIBCHooksOutgoingTransferAck(t *testing.T) {
+	for _, test := range []struct {
+		name                  string
+		sdkMsgSrcPort         string
+		sdkMsgSrcChannel      string
+		sdkMsgDestPort        string
+		sdkMsgDestChannel     string
+		sdkMsgAck             string
+		wasmInputSrcChannel   string
+		wasmInputAck          string
+		wasmInputCoin         sdk.Coins
+		ics20PacketSender     string
+		ics20PacketMemoSender string
+		err                   string
+	}{
+		{
+			name:                  "happy path",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			sdkMsgAck:             `{"result":"AQ=="}`,
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputAck:          "\\\"eyJyZXN1bHQiOiJBUT09In0=\\\"",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "",
+			ics20PacketMemoSender: "",
+			err:                   "",
+		},
+		{
+			name:                  "contract address mismatch",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			sdkMsgAck:             `{"result":"AQ=="}`,
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputAck:          "\\\"eyJyZXN1bHQiOiJBUT09In0=\\\"",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "secret1e8fnfznmgm67nud2uf2lrcvuy40pcdhrerph7v",
+			ics20PacketMemoSender: "",
+			err:                   "failed to verify transaction",
+		},
+		{
+			name:                  "contract address mismatch 2",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			sdkMsgAck:             `{"result":"AQ=="}`,
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputAck:          "\\\"eyJyZXN1bHQiOiJBUT09In0=\\\"",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "",
+			ics20PacketMemoSender: "secret1e8fnfznmgm67nud2uf2lrcvuy40pcdhrerph7v",
+			err:                   "failed to verify transaction",
+		},
+		{
+			name:                  "contract address mismatch 3",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			sdkMsgAck:             `{"result":"AQ=="}`,
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputAck:          "\\\"eyJyZXN1bHQiOiJBUT09In0=\\\"",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "secret19e75l25r6sa6nhdf4lggjmgpw0vmpfvsw5cnpe",
+			ics20PacketMemoSender: "secret1e8fnfznmgm67nud2uf2lrcvuy40pcdhrerph7v",
+			err:                   "failed to verify transaction",
+		},
+		{
+			name:                  "channel mismatch",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			sdkMsgAck:             `{"result":"AQ=="}`,
+			wasmInputSrcChannel:   "channel-1",
+			wasmInputAck:          "\\\"eyJyZXN1bHQiOiJBUT09In0=\\\"",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "",
+			ics20PacketMemoSender: "",
+			err:                   "failed to verify transaction",
+		},
+		{
+			name:                  "no coins should be sent",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			sdkMsgAck:             `{"result":"AQ=="}`,
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputAck:          "\\\"eyJyZXN1bHQiOiJBUT09In0=\\\"",
+			wasmInputCoin:         sdk.NewCoins(sdk.NewInt64Coin("denom", 1)),
+			ics20PacketSender:     "",
+			ics20PacketMemoSender: "",
+			err:                   "failed to verify transaction",
+		},
+		{
+			name:                  "ack mismatch",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			sdkMsgAck:             "yadayada",
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputAck:          "\\\"eyJyZXN1bHQiOiJBUT09In0=\\\"",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "",
+			ics20PacketMemoSender: "",
+			err:                   "failed to verify transaction",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"log_msg_sender":{}}`), sdk.NewCoins(), nil, cosmwasm.HandleTypeIbcWasmHooksIncomingTransfer)
+			testIcs20PacketSender := test.ics20PacketSender
+			if testIcs20PacketSender == "" {
+				testIcs20PacketSender = contractAddress.String()
+			}
 
-			require.Empty(t, err)
+			testIcs20PacketMemoSender := test.ics20PacketMemoSender
+			if testIcs20PacketMemoSender == "" {
+				testIcs20PacketMemoSender = contractAddress.String()
+			}
 
-			events := tryDecryptWasmEvents(ctx, nil)
+			data := ibctransfertypes.FungibleTokenPacketData{
+				Denom:    "ignored",
+				Amount:   "1",
+				Sender:   testIcs20PacketSender, // must be the contract address, like in the memo
+				Receiver: "ignored",
+				Memo:     fmt.Sprintf(`{"ibc_callback":"%s"}`, testIcs20PacketMemoSender),
+			}
+			dataBytes, err := json.Marshal(data)
+			require.NoError(t, err)
 
-			requireEvents(t,
-				[]ContractEvent{
-					{
-						{Key: "contract_address", Value: contractAddress.String()},
+			sdkMsg := ibcchanneltypes.MsgAcknowledgement{
+				Packet: ibcchanneltypes.Packet{
+					Sequence:           0,
+					SourcePort:         test.sdkMsgSrcPort,     // port on Secret
+					SourceChannel:      test.sdkMsgSrcChannel,  // channel on Secret
+					DestinationPort:    test.sdkMsgDestPort,    // port on the other chain
+					DestinationChannel: test.sdkMsgDestChannel, // channel on the other chain
+					Data:               dataBytes,
+					TimeoutHeight:      ibcclienttypes.Height{},
+					TimeoutTimestamp:   0,
+				},
+				Acknowledgement: []byte(test.sdkMsgAck),
+				ProofAcked:      []byte{},
+				ProofHeight:     ibcclienttypes.Height{},
+				Signer:          walletA.String(),
+			}
+
+			ctx = PrepareSignedTx(t, keeper, ctx, walletA, privKeyA, &sdkMsg)
+
+			_, execErr := keeper.Execute(ctx,
+				contractAddress,
+				walletA,
+				[]byte(
+					fmt.Sprintf(`{"ibc_lifecycle_complete":{"ibc_ack":{"channel":"%s","sequence":0,"ack":"%s","success":true}}}`,
+						test.wasmInputSrcChannel,
+						test.wasmInputAck,
+					)),
+				test.wasmInputCoin,
+				nil,
+				cosmwasm.HandleTypeIbcWasmHooksOutgoingTransferAck,
+			)
+
+			if test.err == "" {
+				require.Empty(t, execErr)
+				events := tryDecryptWasmEvents(ctx, nil)
+				requireEvents(t,
+					[]ContractEvent{
 						{
-							Key:   "msg.sender",
-							Value: "",
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "ibc_lifecycle_complete.ibc_ack.channel", Value: test.sdkMsgSrcChannel},
+							{Key: "ibc_lifecycle_complete.ibc_ack.sequence", Value: "0"},
+							{Key: "ibc_lifecycle_complete.ibc_ack.ack", Value: strings.ReplaceAll(test.wasmInputAck, "\\", "")},
+							{Key: "ibc_lifecycle_complete.ibc_ack.success", Value: "true"},
 						},
 					},
+					events,
+				)
+			} else {
+				require.Contains(t, execErr.Error(), test.err)
+			}
+		})
+	}
+}
+
+func TestIBCHooksOutgoingTransferTimeout(t *testing.T) {
+	for _, test := range []struct {
+		name                  string
+		sdkMsgSrcPort         string
+		sdkMsgSrcChannel      string
+		sdkMsgDestPort        string
+		sdkMsgDestChannel     string
+		wasmInputSrcChannel   string
+		wasmInputCoin         sdk.Coins
+		ics20PacketSender     string
+		ics20PacketMemoSender string
+		err                   string
+	}{
+		{
+			name:                "happy path",
+			sdkMsgSrcPort:       "transfer",
+			sdkMsgSrcChannel:    "channel-0",
+			sdkMsgDestPort:      "transfer",
+			sdkMsgDestChannel:   "channel-1",
+			wasmInputSrcChannel: "channel-0",
+			wasmInputCoin:       sdk.NewCoins(),
+			err:                 "",
+		},
+		{
+			name:                  "contract address mismatch",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "secret1e8fnfznmgm67nud2uf2lrcvuy40pcdhrerph7v",
+			ics20PacketMemoSender: "",
+			err:                   "failed to verify transaction",
+		},
+		{
+			name:                  "contract address mismatch 2",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "",
+			ics20PacketMemoSender: "secret1e8fnfznmgm67nud2uf2lrcvuy40pcdhrerph7v",
+			err:                   "failed to verify transaction",
+		},
+		{
+			name:                  "contract address mismatch 3",
+			sdkMsgSrcPort:         "transfer",
+			sdkMsgSrcChannel:      "channel-0",
+			sdkMsgDestPort:        "transfer",
+			sdkMsgDestChannel:     "channel-1",
+			wasmInputSrcChannel:   "channel-0",
+			wasmInputCoin:         sdk.NewCoins(),
+			ics20PacketSender:     "secret19e75l25r6sa6nhdf4lggjmgpw0vmpfvsw5cnpe",
+			ics20PacketMemoSender: "secret1e8fnfznmgm67nud2uf2lrcvuy40pcdhrerph7v",
+			err:                   "failed to verify transaction",
+		},
+		{
+			name:                "channel mismatch",
+			sdkMsgSrcPort:       "transfer",
+			sdkMsgSrcChannel:    "channel-0",
+			sdkMsgDestPort:      "transfer",
+			sdkMsgDestChannel:   "channel-1",
+			wasmInputSrcChannel: "channel-1",
+			wasmInputCoin:       sdk.NewCoins(),
+			err:                 "failed to verify transaction",
+		},
+		{
+			name:                "no coins should be sent",
+			sdkMsgSrcPort:       "transfer",
+			sdkMsgSrcChannel:    "channel-0",
+			sdkMsgDestPort:      "transfer",
+			sdkMsgDestChannel:   "channel-1",
+			wasmInputSrcChannel: "channel-0",
+			wasmInputCoin:       sdk.NewCoins(sdk.NewInt64Coin("denom", 1)),
+			err:                 "failed to verify transaction",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+			require.Empty(t, initErr)
+
+			testIcs20PacketSender := test.ics20PacketSender
+			if testIcs20PacketSender == "" {
+				testIcs20PacketSender = contractAddress.String()
+			}
+
+			testIcs20PacketMemoSender := test.ics20PacketMemoSender
+			if testIcs20PacketMemoSender == "" {
+				testIcs20PacketMemoSender = contractAddress.String()
+			}
+
+			data := ibctransfertypes.FungibleTokenPacketData{
+				Denom:    "ignored",
+				Amount:   "1",
+				Sender:   testIcs20PacketSender, // must be the contract address, like in the memo
+				Receiver: "ignored",
+				Memo:     fmt.Sprintf(`{"ibc_callback":"%s"}`, testIcs20PacketMemoSender),
+			}
+			dataBytes, err := json.Marshal(data)
+			require.NoError(t, err)
+
+			sdkMsg := ibcchanneltypes.MsgTimeout{
+				Packet: ibcchanneltypes.Packet{
+					Sequence:           0,
+					SourcePort:         test.sdkMsgSrcPort,     // port on Secret
+					SourceChannel:      test.sdkMsgSrcChannel,  // channel on Secret
+					DestinationPort:    test.sdkMsgDestPort,    // port on the other chain
+					DestinationChannel: test.sdkMsgDestChannel, // channel on the other chain
+					Data:               dataBytes,
+					TimeoutHeight:      ibcclienttypes.Height{},
+					TimeoutTimestamp:   0,
 				},
-				events,
+				ProofUnreceived: []byte{},
+				ProofHeight:     ibcclienttypes.Height{},
+				Signer:          walletA.String(),
+			}
+
+			ctx = PrepareSignedTx(t, keeper, ctx, walletA, privKeyA, &sdkMsg)
+
+			_, execErr := keeper.Execute(ctx,
+				contractAddress,
+				walletA,
+				[]byte(
+					fmt.Sprintf(`{"ibc_lifecycle_complete":{"ibc_timeout":{"channel":"%s","sequence":0}}}`,
+						test.wasmInputSrcChannel,
+					)),
+				test.wasmInputCoin,
+				nil,
+				cosmwasm.HandleTypeIbcWasmHooksOutgoingTransferTimeout,
 			)
+
+			if test.err == "" {
+				require.Empty(t, execErr)
+				events := tryDecryptWasmEvents(ctx, nil)
+				requireEvents(t,
+					[]ContractEvent{
+						{
+							{Key: "contract_address", Value: contractAddress.String()},
+							{Key: "ibc_lifecycle_complete.ibc_timeout.channel", Value: test.sdkMsgSrcChannel},
+							{Key: "ibc_lifecycle_complete.ibc_timeout.sequence", Value: "0"},
+						},
+					},
+					events,
+				)
+			} else {
+				require.Contains(t, execErr.Error(), test.err)
+			}
 		})
 	}
 }

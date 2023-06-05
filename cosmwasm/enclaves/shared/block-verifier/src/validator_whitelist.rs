@@ -36,7 +36,13 @@ impl ValidatorList {
 }
 
 pub fn whitelisted_validators_in_block(untrusted_block: &UntrustedBlockState) -> bool {
-    untrusted_block.validators.validators().iter().filter(|&a| {VALIDATOR_WHITELIST.contains(&a.address.to_string())}).count() >= VALIDATOR_THRESHOLD
+    untrusted_block
+        .validators
+        .validators()
+        .iter()
+        .filter(|&a| VALIDATOR_WHITELIST.contains(&a.address.to_string()))
+        .count()
+        >= VALIDATOR_THRESHOLD
 }
 
 #[cfg(feature = "test")]
