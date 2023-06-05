@@ -56,6 +56,7 @@ import (
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	icaauthkeeper "github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
+  icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	ibcpacketforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 	ibcpacketforwardkeeper "github.com/strangelove-ventures/packet-forward-middleware/v4/router/keeper"
@@ -66,7 +67,8 @@ import (
 
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
-	ibchooks "github.com/scrtlabs/SecretNetwork/x/ibc-hooks"
+
+  ibchooks "github.com/scrtlabs/SecretNetwork/x/ibc-hooks"
 	ibchookskeeper "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
 	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
