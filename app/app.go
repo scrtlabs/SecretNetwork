@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+	v1_9b "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.9b"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 	"io"
@@ -99,6 +100,7 @@ var (
 		v1_7.Upgrade,
 		v1_8.Upgrade,
 		v1_9.Upgrade,
+		v1_9b.Upgrade,
 	}
 )
 
