@@ -1,4 +1,4 @@
-package v1_9
+package v1_10
 
 import (
 	"fmt"
@@ -7,23 +7,19 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
-	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
-	ibcpacketforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
+	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
 
-const upgradeName = "v1.9"
+const upgradeName = "v1.10"
 
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
 	StoreUpgrades: store.StoreUpgrades{
 		Added: []string{
-			ibcpacketforwardtypes.StoreKey,
-			ibcfeetypes.ModuleName,
-			ibcswitchtypes.ModuleName,
+			ibchookstypes.StoreKey,
 		},
 	},
 }
@@ -38,14 +34,10 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		ctx.Logger().Info(`| |__| | |    | |__| | | \ \  / ____ \| |__| | |____ `)
 		ctx.Logger().Info(` \____/|_|     \_____|_|  \_\/_/    \_\_____/|______|`)
 
+		// WASM Hooks doesn't require any initialization code:
+		// https://github.com/osmosis-labs/osmosis/blob/8b4c62a26/app/upgrades/v14/upgrades.go#L12-L21
+
 		ctx.Logger().Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
-
-		vm[ibcfeetypes.ModuleName] = mm.Modules[ibcfeetypes.ModuleName].ConsensusVersion()
-		ctx.Logger().Info(fmt.Sprintf("ibcfee module version %s set", fmt.Sprint(vm[ibcfeetypes.ModuleName])))
-
-		keepers.PacketForwardKeeper.SetParams(ctx, ibcpacketforwardtypes.DefaultParams())
-		keepers.IbcSwitchKeeper.SetParams(ctx, ibcswitchtypes.DefaultParams())
-
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
 }

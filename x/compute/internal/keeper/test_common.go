@@ -590,7 +590,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateC
 }
 
 func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract) (*sdk.Result, error) {
-	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig)
+	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, cosmwasm.HandleTypeExecute)
 	if err != nil {
 		return res, err
 	}

@@ -2371,3 +2371,33 @@ func TestLastMsgMarkerMultipleMsgsInATx(t *testing.T) {
 
 	require.Equal(t, 1, len(results))
 }
+
+func TestPlaintextInputWithIBCHooksFlag(t *testing.T) {
+	for _, testContract := range testContracts {
+		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
+
+			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
+			require.Empty(t, initErr)
+
+			_, err := keeper.Execute(ctx, contractAddress, walletA, []byte(`{"log_msg_sender":{}}`), sdk.NewCoins(), nil, cosmwasm.HandleTypeIbcWasmHooksIncomingTransfer)
+
+			require.Empty(t, err)
+
+			events := tryDecryptWasmEvents(ctx, nil)
+
+			requireEvents(t,
+				[]ContractEvent{
+					{
+						{Key: "contract_address", Value: contractAddress.String()},
+						{
+							Key:   "msg.sender",
+							Value: "",
+						},
+					},
+				},
+				events,
+			)
+		})
+	}
+}

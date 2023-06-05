@@ -229,7 +229,7 @@ clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-find -name '*.so' -delete
+	-find -name '*.so' -not -path './third_party/*' -delete
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/

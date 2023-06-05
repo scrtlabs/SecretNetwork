@@ -18,6 +18,7 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -470,7 +471,7 @@ func TestMultiSigExecute(t *testing.T) {
 
 	_ = multisigTxCreatorForExisting(t, &ctx, multisigAccount, accounts, 4, &sdkMsg)
 
-	execRes, err := keeper.Execute(ctx, contractAddress, multisigAccount.address, execMsgBz, funds, nil)
+	execRes, err := keeper.Execute(ctx, contractAddress, multisigAccount.address, execMsgBz, funds, nil, wasmtypes.HandleTypeExecute)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, true, false)
 	}
@@ -529,7 +530,7 @@ func TestMultiSigCallbacks(t *testing.T) {
 
 	_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 2, &sdkMsg)
 
-	execRes, err := keeper.Execute(ctx, contractAddress, multisigAddr.address, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	execRes, err := keeper.Execute(ctx, contractAddress, multisigAddr.address, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil, wasmtypes.HandleTypeExecute)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, true, false)
 	}
@@ -993,7 +994,7 @@ func TestWrongContractAddress(t *testing.T) {
 
 	ctx = PrepareExecSignedTx(t, keeper, ctx, walletA, privKeyA, execMsgBz, contractAddress, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)))
 
-	_, err = keeper.Execute(ctx, differentContractAddress, walletA, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+	_, err = keeper.Execute(ctx, differentContractAddress, walletA, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil, wasmtypes.HandleTypeExecute)
 	if err != nil {
 		err = extractInnerError(t, err, nonce, false, false)
 	}

@@ -6,9 +6,9 @@ use cw_types_v010::encoding::Binary;
 
 use cw_types_v010::types as v010types;
 use cw_types_v010::types::{Env as V010Env, HumanAddr};
-use cw_types_v1::types as v1types;
 use cw_types_v1::types::Env as V1Env;
 use cw_types_v1::types::MessageInfo as V1MessageInfo;
+use cw_types_v1::types::{self as v1types, Addr};
 use enclave_ffi_types::EnclaveError;
 
 pub const CONTRACT_KEY_LENGTH: usize = 64;
@@ -226,6 +226,17 @@ impl CwEnv {
                 })?;
 
                 Ok((env_bytes, msg_bytes))
+            }
+        }
+    }
+
+    pub fn set_msg_sender(&mut self, msg_sender: &str) {
+        match self {
+            CwEnv::V010Env { env } => {
+                env.message.sender = HumanAddr::from(msg_sender);
+            }
+            CwEnv::V1Env { msg_info, .. } => {
+                msg_info.sender = Addr::unchecked(msg_sender);
             }
         }
     }

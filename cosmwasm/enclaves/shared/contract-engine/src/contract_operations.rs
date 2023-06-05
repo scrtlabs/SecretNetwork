@@ -35,7 +35,7 @@ use super::contract_validation::{
 };
 use super::gas::WasmCosts;
 use super::io::{
-    post_process_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    finalize_raw_output, manipulate_callback_sig_for_plaintext, post_process_output,
     set_all_logs_to_plaintext,
 };
 use super::types::{IoNonce, SecretMessage};
@@ -254,8 +254,8 @@ pub fn handle(
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
-    // The flow of handle is now used for multiple messages (such ash Handle, Reply)
-    // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
+    // The flow of handle is now used for multiple messages (such ash Handle, Reply, IBC)
+    // When the message is handle, we expect it always to be encrypted while in Reply & IBC it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
     trace!("Handle type is {:?}", parsed_handle_type);
@@ -275,11 +275,12 @@ pub fn handle(
     };
 
     // There is no signature to verify when the input isn't signed.
-    // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
-    // The following messages go through handle but the data isn't signed:
-    //  * Replies from other sdk modules (WASM replies are signed)
+    // Receiving an unsigned messages is only possible in Handle (Init tx are always signed).
+    // All of these scenarios go through here but the data isn't signed:
+    // - Plaintext replies (resulting from an IBC call)
+    // - IBC WASM Hooks
+    // - (In the future:) ICA
     if should_validate_sig_info {
-        // Verify env parameters against the signed tx
         verify_params(
             &parsed_sig_info,
             sent_funds,
@@ -322,6 +323,29 @@ pub fn handle(
         .clone()
         .into_versioned_env(&engine.get_api_version());
 
+    // We want to allow executing contracts with plaintext input via IBC,
+    // even though the sender of an IBC packet cannot be verified.
+    // But we don't want malicious actors using this enclave setting to fake any sender they want.
+    // Therefore we'll use a null sender if it cannot be verified.
+    match parsed_handle_type {
+        // Execute: msg.sender was already verified
+        HandleType::HANDLE_TYPE_EXECUTE => {}
+        // Reply & IBC stuff: no msg.sender, set it to null just in case
+        HandleType::HANDLE_TYPE_REPLY
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
+        | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
+        // WASM Hooks: cannot verify sender, set it to null 
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
+            versioned_env.set_msg_sender("")
+        }
+    }
+
     #[cfg(feature = "random")]
     set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
 
@@ -361,8 +385,7 @@ pub fn handle(
             manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
         set_all_logs_to_plaintext(&mut raw_output);
 
-        output =
-            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false)?;
+        output = finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false)?;
     }
 
     Ok(HandleSuccess { output })

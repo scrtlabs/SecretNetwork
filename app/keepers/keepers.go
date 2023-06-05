@@ -55,6 +55,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	icaauthkeeper "github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
+  icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	ibcpacketforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 	ibcpacketforwardkeeper "github.com/strangelove-ventures/packet-forward-middleware/v4/router/keeper"
@@ -62,9 +63,13 @@ import (
 
 	ibcfeekeeper "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/keeper"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
-	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
+
+  ibchooks "github.com/scrtlabs/SecretNetwork/x/ibc-hooks"
+	ibchookskeeper "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
+	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
 
 type SecretAppKeepers struct {
@@ -88,6 +93,7 @@ type SecretAppKeepers struct {
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   ibctransferkeeper.Keeper
 
+	IbcHooksKeeper      *ibchookskeeper.Keeper
 	IbcFeeKeeper        ibcfeekeeper.Keeper
 	PacketForwardKeeper *ibcpacketforwardkeeper.Keeper
 	IbcSwitchKeeper     *ibcswitch.Keeper
@@ -284,11 +290,14 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	// 1. Everything should go through our IBC Switch middleware
 	// 2. Everything should go through the IBC Fee middleware
 	// 3. IBC Transfer should go through the IBC Packet Forward middleware
-	// 4. (In the future:) IBC Transfer should go through the IBC Hooks middleware
+	// 4. IBC Transfer should go through the IBC Hooks middleware
 	//
 	// Therefore we'll initialize the Switch keeper and pass it to the Fee keeper as an ics4wrapper.
 	// That means that whenever a packet is being send via Fee as an ics4wrapper, it will go through the switch middleware first (ref: https://github.com/cosmos/ibc-go/blob/v4.3.0/modules/apps/29-fee/keeper/relay.go#L15-L18).
-	// Then we'll pass Fee as an ics4wrapper to everything eles.
+	// Then we'll pass Fee as an ics4wrapper to everything else.
+	//
+	// Compute: WASM Hooks -> Fee -> Switch
+	// Transfer: Packet Forward -> Fee -> Switch
 	//
 	// Note: we need to make sure that every underlying IBC app/middleware that we're adding uses the ics4wrapper to send packets, and not the IBC channel keeper.
 
@@ -321,6 +330,20 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.DistrKeeper,
 		ak.BankKeeper,
 		ak.IbcFeeKeeper,
+	)
+
+	// Setup the ICS4Wrapper used by the hooks middleware
+	// Configure the hooks keeper
+	hooksKeeper := ibchookskeeper.NewKeeper(
+		ak.keys[ibchookstypes.StoreKey],
+	)
+	ak.IbcHooksKeeper = &hooksKeeper
+
+	// The compute keeper in wasmHooks will be set later on
+	wasmHooks := ibchooks.NewWasmHooks(&hooksKeeper, nil, sdk.GetConfig().GetBech32AccountAddrPrefix())
+	ibcHooksICS4Wrapper := ibchooks.NewICS4Middleware(
+		ak.IbcFeeKeeper,
+		&wasmHooks,
 	)
 
 	icaControllerKeeper := icacontrollerkeeper.NewKeeper(
@@ -387,6 +410,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ibcpacketforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,
 	)
 	transferStack = ibcfee.NewIBCMiddleware(transferStack, ak.IbcFeeKeeper)
+	transferStack = ibchooks.NewIBCMiddleware(transferStack, &ibcHooksICS4Wrapper)
 	transferStack = ibcswitch.NewIBCMiddleware(transferStack, ak.IbcSwitchKeeper)
 
 	var icaHostStack porttypes.IBCModule
@@ -418,7 +442,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		ak.IbcKeeper.PortKeeper,
 		ak.TransferKeeper,
 		ak.IbcKeeper.ChannelKeeper,
-		ak.IbcFeeKeeper,
+		ibcHooksICS4Wrapper,
 		app.Router(),
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
@@ -430,6 +454,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		&app.LastTxManager,
 	)
 	ak.ComputeKeeper = &computeKeeper
+	wasmHooks.ContractKeeper = ak.ComputeKeeper
 
 	// Create fee enabled wasm ibc Stack
 	var computeStack porttypes.IBCModule
@@ -473,6 +498,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		ibcpacketforwardtypes.StoreKey,
 		ibcfeetypes.StoreKey,
 		ibcswitch.StoreKey,
+		ibchookstypes.StoreKey,
 	)
 
 	ak.tKeys = sdk.NewTransientStoreKeys(paramstypes.TStoreKey)

@@ -31,6 +31,7 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
+	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
 	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
@@ -100,6 +101,7 @@ var (
 		v1_7.Upgrade,
 		v1_8.Upgrade,
 		v1_9.Upgrade,
+		v1_10.Upgrade,
 	}
 )
 
