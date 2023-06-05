@@ -169,7 +169,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 		sgxAttestationCertPath := filepath.Join(sgxSecretsFolder, types.AttestationCertPath)
 		if !fileExists(sgxAttestationCertPath) {
 			fmt.Printf("Failed to create legacy seed file. Attestation certificate does not exist in %s. Try to re-initialize the enclave\n", sgxAttestationCertPath)
-			return;
+			return
 		}
 
 		cert, err := os.ReadFile(sgxAttestationCertPath)
@@ -179,7 +179,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 		key, err := ra.UNSAFE_VerifyRaCert(cert)
 		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to get key from cert")))
+			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Failed to get key from cert"))
 		}
 
 		err = createOldSecret(key, legacySeedPath, enclave)

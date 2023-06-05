@@ -32,9 +32,9 @@ import (
 	ibc "github.com/cosmos/ibc-go/v4/modules/core"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
+	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	packetforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
-	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 )
 
 var ModuleAccountPermissions = map[string][]string{

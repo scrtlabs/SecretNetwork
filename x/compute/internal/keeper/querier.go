@@ -19,7 +19,7 @@ type GrpcQuerier struct {
 }
 
 func (q GrpcQuerier) ContractHistory(ctx context.Context, request *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 

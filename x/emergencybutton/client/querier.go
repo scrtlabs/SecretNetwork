@@ -14,7 +14,7 @@ type Querier struct {
 }
 
 func (q Querier) Params(ctx sdk.Context,
-	req types.ParamsRequest,
+	_ types.ParamsRequest,
 ) (*types.ParamsResponse, error) {
 	params := q.K.GetParams(ctx)
 	return &types.ParamsResponse{Params: params}, nil
