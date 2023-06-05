@@ -1,4 +1,4 @@
-FROM baiduxlab/sgx-rust:2004-1.1.3
+FROM ghcr.io/scrtlabs/sgx-base:20.04-2.17-6.24.2
 
 RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
     apt-get update && \

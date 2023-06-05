@@ -210,6 +210,7 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 		if isAuth {
 			return k.getRegistrationInfo(ctx, publicKey).EncryptedSeed, nil
 		}
+
 		encSeed, err = k.enclave.GetEncryptedSeed(certificate)
 		if err != nil {
 			// return 0, sdkerrors.Wrap(err, "cosmwasm create")
