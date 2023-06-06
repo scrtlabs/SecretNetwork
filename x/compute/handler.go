@@ -27,6 +27,12 @@ func NewHandler(k Keeper) sdk.Handler {
 			return handleInstantiate(ctx, k, msg)
 		case *MsgExecuteContract:
 			return handleExecute(ctx, k, msg)
+		case *MsgMigrateContract:
+			return handleMigrate(ctx, k, msg)
+		case *MsgUpdateAdmin:
+			return handleUpdateAdmin(ctx, k, msg)
+		case *MsgClearAdmin:
+			return handleClearAdmin(ctx, k, msg)
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
 			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
@@ -85,7 +91,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 	custom := sdk.Events{sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
 		sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", msg.CodeID)),
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddr.String()),
 	)}
@@ -127,7 +133,7 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 	custom := sdk.Events{sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
 		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.Contract.String()),
 	)}
 	events = append(events, custom.ToABCIEvents()...)
@@ -135,4 +141,78 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 	res.Events = events
 
 	return res, nil
+}
+
+func handleMigrate(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.Result, error) {
+	res, err := k.Migrate(
+		ctx,
+		sdk.MustAccAddressFromBech32(msg.Contract),
+		sdk.MustAccAddressFromBech32(msg.Sender),
+		msg.CodeID,
+		msg.Msg,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events := filteredMessageEvents(ctx.EventManager())
+	custom := sdk.Events{sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+		sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", msg.CodeID)),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.Contract),
+	)}
+	events = append(events, custom.ToABCIEvents()...)
+
+	return &sdk.Result{
+		Data:   res,
+		Events: events,
+	}, nil
+}
+
+func handleUpdateAdmin(ctx sdk.Context, k Keeper, msg *MsgUpdateAdmin) (*sdk.Result, error) {
+	err := k.UpdateContractAdmin(
+		ctx,
+		sdk.MustAccAddressFromBech32(msg.Contract),
+		sdk.MustAccAddressFromBech32(msg.Sender),
+		sdk.MustAccAddressFromBech32(msg.NewAdmin),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events := filteredMessageEvents(ctx.EventManager())
+	custom := sdk.Events{sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.Contract),
+	)}
+	events = append(events, custom.ToABCIEvents()...)
+
+	return &sdk.Result{Events: events}, nil
+}
+
+func handleClearAdmin(ctx sdk.Context, k Keeper, msg *MsgClearAdmin) (*sdk.Result, error) {
+	err := k.UpdateContractAdmin(
+		ctx,
+		sdk.MustAccAddressFromBech32(msg.Contract),
+		sdk.MustAccAddressFromBech32(msg.Sender),
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events := filteredMessageEvents(ctx.EventManager())
+	custom := sdk.Events{sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.Contract),
+	)}
+	events = append(events, custom.ToABCIEvents()...)
+
+	return &sdk.Result{Events: events}, nil
 }

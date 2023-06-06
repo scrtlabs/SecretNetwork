@@ -107,6 +107,9 @@ type (
 	MsgInstantiateContract     = types.MsgInstantiateContract
 	MsgExecuteContract         = types.MsgExecuteContract
 	MsgExecuteContractResponse = types.MsgExecuteContractResponse
+	MsgMigrateContract         = types.MsgMigrateContract
+	MsgUpdateAdmin             = types.MsgUpdateAdmin
+	MsgClearAdmin              = types.MsgClearAdmin
 	Model                      = types.Model
 	CodeInfo                   = types.CodeInfo
 	ContractInfo               = types.ContractInfo
