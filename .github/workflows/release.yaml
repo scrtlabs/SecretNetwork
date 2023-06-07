@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [rocksdb, goleveldb]
+        db_backend: [goleveldb]
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
@@ -74,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [goleveldb, rocksdb]
+        db_backend: [goleveldb]
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_MAINNET }}
       API_KEY: ${{ secrets.API_KEY_MAINNET }}
@@ -304,13 +304,7 @@ jobs:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
       - uses: actions/download-artifact@v3
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
-      - uses: actions/download-artifact@v3
-        with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
-      - uses: actions/download-artifact@v3
-        with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
       - uses: actions/download-artifact@v3
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
@@ -320,9 +314,7 @@ jobs:
           prerelease: true
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
