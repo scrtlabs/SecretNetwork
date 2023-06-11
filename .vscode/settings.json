@@ -40,6 +40,5 @@
   "[go]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "golang.go"
-  },
-  "rust-analyzer.showUnlinkedFileNotification": false
+  }
 }
