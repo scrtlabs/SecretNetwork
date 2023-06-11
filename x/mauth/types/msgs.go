@@ -18,7 +18,7 @@ var (
 )
 
 // NewMsgRegisterAccount creates a new MsgRegisterAccount instance
-func NewMsgRegisterAccount(owner, connectionID, counterpartyConnectionID string) *MsgRegisterAccount {
+func NewMsgRegisterAccount(owner, connectionID, _ string) *MsgRegisterAccount {
 	return &MsgRegisterAccount{
 		Owner:        owner,
 		ConnectionId: connectionID,
@@ -45,7 +45,7 @@ func (msg MsgRegisterAccount) GetSigners() []sdk.AccAddress {
 }
 
 // NewMsgSend creates a new MsgSend instance
-func NewMsgSubmitTx(owner sdk.AccAddress, sdkMsg sdk.Msg, connectionID, counterpartyConnectionID string) (*MsgSubmitTx, error) {
+func NewMsgSubmitTx(owner sdk.AccAddress, sdkMsg sdk.Msg, connectionID, _ string) (*MsgSubmitTx, error) {
 	anyObj, err := PackTxMsgAny(sdkMsg)
 	if err != nil {
 		return nil, err

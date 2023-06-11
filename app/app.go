@@ -230,7 +230,7 @@ func NewSecretNetworkApp(
 
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
-	app.mm = module.NewManager(AppModules(app, encodingConfig, skipGenesisInvariants)...)
+	app.mm = module.NewManager(Modules(app, encodingConfig, skipGenesisInvariants)...)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
