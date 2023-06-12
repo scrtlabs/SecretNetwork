@@ -6,5 +6,5 @@ run-localsecret:
 	docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up
 
 kill-localsecret:
-	docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml stop 
-	docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml rm -f 
+	docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml kill
+	docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml rm -f
