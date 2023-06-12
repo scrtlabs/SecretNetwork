@@ -310,6 +310,7 @@ pub enum StdCosmWasmMsg {
         init_funds: Vec<Coin>,
         label: String,
         callback_sig: Option<Vec<u8>>,
+        admin: HumanAddr,
     },
     Migrate {
         sender: HumanAddr,
@@ -390,6 +391,7 @@ impl StdCosmWasmMsg {
                 label,
                 callback_sig,
                 code_id: _,
+                admin,
             } => {
                 let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
                     warn!("failed to turn human addr to canonical addr when parsing CosmWasmMsg: {:?}", err);
@@ -409,6 +411,7 @@ impl StdCosmWasmMsg {
                     init_funds,
                     label,
                     callback_sig,
+                    admin,
                 })
             }
             Self::Other => Ok(CosmosSdkMsg::Other),
@@ -584,6 +587,7 @@ pub enum CosmosSdkMsg {
         init_funds: Vec<Coin>,
         label: String,
         callback_sig: Option<Vec<u8>>,
+        admin: HumanAddr,
     },
     MsgMigrateContract {
         sender: CanonicalAddr,
@@ -803,6 +807,7 @@ impl CosmosSdkMsg {
             init_funds,
             label: raw_msg.label,
             callback_sig,
+            admin: HumanAddr(raw_msg.admin),
         })
     }
 
