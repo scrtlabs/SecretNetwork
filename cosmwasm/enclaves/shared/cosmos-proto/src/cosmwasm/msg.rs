@@ -470,7 +470,7 @@ pub struct MsgInstantiateContract {
     pub init_msg: ::std::vec::Vec<u8>,
     pub init_funds: ::protobuf::RepeatedField<super::coin::Coin>,
     pub callback_sig: ::std::vec::Vec<u8>,
-    pub admin: ::std::vec::Vec<u8>,
+    pub admin: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -657,10 +657,10 @@ impl MsgInstantiateContract {
         ::std::mem::replace(&mut self.callback_sig, ::std::vec::Vec::new())
     }
 
-    // bytes admin = 8;
+    // string admin = 8;
 
 
-    pub fn get_admin(&self) -> &[u8] {
+    pub fn get_admin(&self) -> &str {
         &self.admin
     }
     pub fn clear_admin(&mut self) {
@@ -668,19 +668,19 @@ impl MsgInstantiateContract {
     }
 
     // Param is passed by value, moved
-    pub fn set_admin(&mut self, v: ::std::vec::Vec<u8>) {
+    pub fn set_admin(&mut self, v: ::std::string::String) {
         self.admin = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_admin(&mut self) -> &mut ::std::vec::Vec<u8> {
+    pub fn mut_admin(&mut self) -> &mut ::std::string::String {
         &mut self.admin
     }
 
     // Take field
-    pub fn take_admin(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.admin, ::std::vec::Vec::new())
+    pub fn take_admin(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.admin, ::std::string::String::new())
     }
 }
 
@@ -724,7 +724,7 @@ impl ::protobuf::Message for MsgInstantiateContract {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.callback_sig)?;
                 },
                 8 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.admin)?;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.admin)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -761,7 +761,7 @@ impl ::protobuf::Message for MsgInstantiateContract {
             my_size += ::protobuf::rt::bytes_size(7, &self.callback_sig);
         }
         if !self.admin.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(8, &self.admin);
+            my_size += ::protobuf::rt::string_size(8, &self.admin);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -793,7 +793,7 @@ impl ::protobuf::Message for MsgInstantiateContract {
             os.write_bytes(7, &self.callback_sig)?;
         }
         if !self.admin.is_empty() {
-            os.write_bytes(8, &self.admin)?;
+            os.write_string(8, &self.admin)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -868,7 +868,7 @@ impl ::protobuf::Message for MsgInstantiateContract {
                 |m: &MsgInstantiateContract| { &m.callback_sig },
                 |m: &mut MsgInstantiateContract| { &mut m.callback_sig },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "admin",
                 |m: &MsgInstantiateContract| { &m.admin },
                 |m: &mut MsgInstantiateContract| { &mut m.admin },
@@ -2771,7 +2771,7 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     SMByteCode\x12\x16\n\x06source\x18\x03\x20\x01(\tR\x06source\x12\x18\n\
     \x07builder\x18\x04\x20\x01(\tR\x07builder:\x04\x88\xa0\x1f\0\";\n\x14Ms\
     gStoreCodeResponse\x12#\n\x07code_id\x18\x01\x20\x01(\x04R\x06codeIdB\n\
-    \xe2\xde\x1f\x06CodeID\"\xd6\x03\n\x16MsgInstantiateContract\x12I\n\x06s\
+    \xe2\xde\x1f\x06CodeID\"\xa3\x03\n\x16MsgInstantiateContract\x12I\n\x06s\
     ender\x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-github.com/cosmos/co\
     smos-sdk/types.AccAddress\x12,\n\x12callback_code_hash\x18\x02\x20\x01(\
     \tR\x10callbackCodeHash\x12#\n\x07code_id\x18\x03\x20\x01(\x04R\x06codeI\
@@ -2780,39 +2780,38 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     unds\x18\x06\x20\x03(\x0b2\x19.cosmos.base.v1beta1.CoinR\tinitFundsB0\
     \xaa\xdf\x1f(github.com/cosmos/cosmos-sdk/types.Coins\xc8\xde\x1f\0\x122\
     \n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\
-    \x0bCallbackSig\x12G\n\x05admin\x18\x08\x20\x01(\x0cR\x05adminB1\xfa\xde\
-    \x1f-github.com/cosmos/cosmos-sdk/types.AccAddress:\x04\x88\xa0\x1f\0\"N\
-    \n\x1eMsgInstantiateContractResponse\x12\x18\n\x07address\x18\x01\x20\
-    \x01(\tR\x07address\x12\x12\n\x04data\x18\x02\x20\x01(\x0cR\x04data\"\
-    \x94\x03\n\x12MsgExecuteContract\x12I\n\x06sender\x18\x01\x20\x01(\x0cR\
-    \x06senderB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\
-    \x12M\n\x08contract\x18\x02\x20\x01(\x0cR\x08contractB1\xfa\xde\x1f-gith\
-    ub.com/cosmos/cosmos-sdk/types.AccAddress\x12\x10\n\x03msg\x18\x03\x20\
-    \x01(\x0cR\x03msg\x12,\n\x12callback_code_hash\x18\x04\x20\x01(\tR\x10ca\
-    llbackCodeHash\x12j\n\nsent_funds\x18\x05\x20\x03(\x0b2\x19.cosmos.base.\
-    v1beta1.CoinR\tsentFundsB0\xaa\xdf\x1f(github.com/cosmos/cosmos-sdk/type\
-    s.Coins\xc8\xde\x1f\0\x122\n\x0ccallback_sig\x18\x06\x20\x01(\x0cR\x0bca\
-    llbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig:\x04\x88\xa0\x1f\0\"0\n\x1aMsg\
-    ExecuteContractResponse\x12\x12\n\x04data\x18\x01\x20\x01(\x0cR\x04data\
-    \"\x7f\n\x12MsgMigrateContract\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\
-    \x06sender\x12\x1a\n\x08contract\x18\x02\x20\x01(\tR\x08contract\x12#\n\
-    \x07code_id\x18\x03\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\x06CodeID\x12\
-    \x10\n\x03msg\x18\x04\x20\x01(\x0cR\x03msg\"0\n\x1aMsgMigrateContractRes\
-    ponse\x12\x12\n\x04data\x18\x01\x20\x01(\x0cR\x04data\"a\n\x0eMsgUpdateA\
-    dmin\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\x1b\n\tnew_ad\
-    min\x18\x02\x20\x01(\tR\x08newAdmin\x12\x1a\n\x08contract\x18\x03\x20\
-    \x01(\tR\x08contract\"\x18\n\x16MsgUpdateAdminResponse\"C\n\rMsgClearAdm\
-    in\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\x1a\n\x08contra\
-    ct\x18\x03\x20\x01(\tR\x08contract\"\x17\n\x15MsgClearAdminResponse2\xcb\
-    \x03\n\x03Msg\x12_\n\tStoreCode\x12$.secret.compute.v1beta1.MsgStoreCode\
-    \x1a,.secret.compute.v1beta1.MsgStoreCodeResponse\x12}\n\x13InstantiateC\
-    ontract\x12..secret.compute.v1beta1.MsgInstantiateContract\x1a6.secret.c\
-    ompute.v1beta1.MsgInstantiateContractResponse\x12q\n\x0fExecuteContract\
-    \x12*.secret.compute.v1beta1.MsgExecuteContract\x1a2.secret.compute.v1be\
-    ta1.MsgExecuteContractResponse\x12q\n\x0fMigrateContract\x12*.secret.com\
-    pute.v1beta1.MsgMigrateContract\x1a2.secret.compute.v1beta1.MsgMigrateCo\
-    ntractResponseB<Z:github.com/scrtlabs/SecretNetwork/x/compute/internal/t\
-    ypesb\x06proto3\
+    \x0bCallbackSig\x12\x14\n\x05admin\x18\x08\x20\x01(\tR\x05admin:\x04\x88\
+    \xa0\x1f\0\"N\n\x1eMsgInstantiateContractResponse\x12\x18\n\x07address\
+    \x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04data\x18\x02\x20\x01(\x0cR\
+    \x04data\"\x94\x03\n\x12MsgExecuteContract\x12I\n\x06sender\x18\x01\x20\
+    \x01(\x0cR\x06senderB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.Ac\
+    cAddress\x12M\n\x08contract\x18\x02\x20\x01(\x0cR\x08contractB1\xfa\xde\
+    \x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x12\x10\n\x03msg\x18\
+    \x03\x20\x01(\x0cR\x03msg\x12,\n\x12callback_code_hash\x18\x04\x20\x01(\
+    \tR\x10callbackCodeHash\x12j\n\nsent_funds\x18\x05\x20\x03(\x0b2\x19.cos\
+    mos.base.v1beta1.CoinR\tsentFundsB0\xaa\xdf\x1f(github.com/cosmos/cosmos\
+    -sdk/types.Coins\xc8\xde\x1f\0\x122\n\x0ccallback_sig\x18\x06\x20\x01(\
+    \x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig:\x04\x88\xa0\x1f\0\
+    \"0\n\x1aMsgExecuteContractResponse\x12\x12\n\x04data\x18\x01\x20\x01(\
+    \x0cR\x04data\"\x7f\n\x12MsgMigrateContract\x12\x16\n\x06sender\x18\x01\
+    \x20\x01(\tR\x06sender\x12\x1a\n\x08contract\x18\x02\x20\x01(\tR\x08cont\
+    ract\x12#\n\x07code_id\x18\x03\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\
+    \x06CodeID\x12\x10\n\x03msg\x18\x04\x20\x01(\x0cR\x03msg\"0\n\x1aMsgMigr\
+    ateContractResponse\x12\x12\n\x04data\x18\x01\x20\x01(\x0cR\x04data\"a\n\
+    \x0eMsgUpdateAdmin\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\
+    \x1b\n\tnew_admin\x18\x02\x20\x01(\tR\x08newAdmin\x12\x1a\n\x08contract\
+    \x18\x03\x20\x01(\tR\x08contract\"\x18\n\x16MsgUpdateAdminResponse\"C\n\
+    \rMsgClearAdmin\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\
+    \x1a\n\x08contract\x18\x03\x20\x01(\tR\x08contract\"\x17\n\x15MsgClearAd\
+    minResponse2\xcb\x03\n\x03Msg\x12_\n\tStoreCode\x12$.secret.compute.v1be\
+    ta1.MsgStoreCode\x1a,.secret.compute.v1beta1.MsgStoreCodeResponse\x12}\n\
+    \x13InstantiateContract\x12..secret.compute.v1beta1.MsgInstantiateContra\
+    ct\x1a6.secret.compute.v1beta1.MsgInstantiateContractResponse\x12q\n\x0f\
+    ExecuteContract\x12*.secret.compute.v1beta1.MsgExecuteContract\x1a2.secr\
+    et.compute.v1beta1.MsgExecuteContractResponse\x12q\n\x0fMigrateContract\
+    \x12*.secret.compute.v1beta1.MsgMigrateContract\x1a2.secret.compute.v1be\
+    ta1.MsgMigrateContractResponseB<Z:github.com/scrtlabs/SecretNetwork/x/co\
+    mpute/internal/typesb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;
