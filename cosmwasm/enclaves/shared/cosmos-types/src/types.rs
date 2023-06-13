@@ -310,6 +310,7 @@ pub enum AminoSdkMsg {
         init_funds: Vec<Coin>,
         label: String,
         callback_sig: Option<Vec<u8>>,
+        #[serde(default)]
         admin: HumanAddr,
     },
     #[serde(alias = "wasm/MsgMigrateContract")]
