@@ -56,7 +56,7 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 }
 
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(codeID uint64, creator sdk.AccAddress, admin sdk.AccAddress, adminProof []byte, label string, createdAt *AbsoluteTxPosition) ContractInfo {
+func NewContractInfo(codeID uint64, creator sdk.AccAddress, admin string, adminProof []byte, label string, createdAt *AbsoluteTxPosition) ContractInfo {
 	return ContractInfo{
 		CodeID:     codeID,
 		Creator:    creator,
@@ -343,9 +343,4 @@ func (c *ContractInfo) AddMigration(ctx sdk.Context, codeID uint64, msg []byte) 
 	}
 	c.CodeID = codeID
 	return h
-}
-
-// AdminAddr convert into sdk.AccAddress or nil when not set
-func (c *ContractInfo) AdminAddr() sdk.AccAddress {
-	return c.Admin
 }

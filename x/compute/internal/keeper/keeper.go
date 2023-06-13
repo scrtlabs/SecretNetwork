@@ -510,7 +510,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 		// persist instance
 		createdAt := types.NewAbsoluteTxPosition(ctx)
-		contractInfo := types.NewContractInfo(codeID, creator, admin, adminProof, label, createdAt)
+		contractInfo := types.NewContractInfo(codeID, creator, admin.String(), adminProof, label, createdAt)
 
 		historyEntry := contractInfo.InitialHistory(initMsg)
 		k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
@@ -537,7 +537,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	case *v1wasmTypes.Response:
 		// persist instance first
 		createdAt := types.NewAbsoluteTxPosition(ctx)
-		contractInfo := types.NewContractInfo(codeID, creator, admin, adminProof, label, createdAt)
+		contractInfo := types.NewContractInfo(codeID, creator, admin.String(), adminProof, label, createdAt)
 
 		// check for IBC flag
 		report, err := k.wasmer.AnalyzeCode(codeInfo.CodeHash)
@@ -1208,10 +1208,10 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 	if contractInfo == nil {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown contract")
 	}
-	if contractInfo.Admin.String() != caller.String() {
+	if contractInfo.Admin != caller.String() {
 		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "caller is not the admin")
 	}
-	contractInfo.Admin = newAdmin
+	contractInfo.Admin = newAdmin.String()
 	k.setContractInfo(ctx, contractAddress, contractInfo)
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeUpdateContractAdmin,
@@ -1264,7 +1264,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return nil, err
 	}
 
-	if contractInfo.Admin.String() != caller.String() {
+	if contractInfo.Admin != caller.String() {
 		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, "requires migrate from admin")
 	}
 
@@ -1274,6 +1274,11 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	adminProof := k.GetContractInfo(ctx, contractAddress).AdminProof
 	admin := k.GetContractInfo(ctx, contractAddress).Admin
+
+	adminAddr, err := sdk.AccAddressFromBech32(admin)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
+	}
 
 	// prepare querier
 	querier := QueryHandler{
@@ -1285,7 +1290,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, newContractKey, proof, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, admin, adminProof)
+	response, newContractKey, proof, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminAddr, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	// update contract key with new one

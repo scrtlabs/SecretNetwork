@@ -697,7 +697,7 @@ type v1QueryResponse struct {
 	Get GetResponse `json:"get"`
 }
 
-func MigrateHelper(
+func migrateHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	newCodeId uint64,
 	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, migrateMsg string,
@@ -727,7 +727,7 @@ func MigrateHelper(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
+	ctx = prepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
 
 	// reset value before test
 	keeper.LastMsgManager.SetMarker(false)

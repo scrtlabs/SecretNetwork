@@ -1,9 +1,10 @@
 package keeper
 
 import (
-	"github.com/stretchr/testify/require"
 	"math"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -19,7 +20,7 @@ func TestMigrateContract(t *testing.T) {
 	require.Empty(t, execErr)
 	require.Empty(t, data)
 
-	_, err := MigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"migrate":{}}`, true, true, math.MaxUint64)
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"migrate":{}}`, true, true, math.MaxUint64)
 	require.Empty(t, err)
 
 	_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"new_function":{}}`, true, true, defaultGasForTests, 0)
@@ -38,7 +39,7 @@ func TestMigrateWithStorage(t *testing.T) {
 	require.Empty(t, execErr)
 	require.Empty(t, data)
 
-	_, err := MigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"migrate":{}}`, true, true, math.MaxUint64)
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"migrate":{}}`, true, true, math.MaxUint64)
 	require.Empty(t, err)
 
 	_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"new_function_with_storage":{}}`, true, true, defaultGasForTests, 0)
@@ -57,6 +58,6 @@ func TestMigrateContractFromDifferentAccount(t *testing.T) {
 	require.Empty(t, execErr)
 	require.Empty(t, data)
 
-	_, err := MigrateHelper(t, keeper, ctx, newCodeId, contractAddress, WalletB, privKeyB, `{"migrate":{}}`, false, true, math.MaxUint64)
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, WalletB, privKeyB, `{"migrate":{}}`, false, true, math.MaxUint64)
 	require.NotNil(t, err)
 }
