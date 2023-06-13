@@ -8,7 +8,7 @@ use cw_types_generic::BaseEnv;
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmosPubKey, CosmosSdkMsg, HandleType, SigInfo, SignDoc, StdSignDoc,
+    ContractCode, CosmosPubKey, DirectSdkMsg, HandleType, SigInfo, SignDoc, StdSignDoc,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
@@ -526,7 +526,7 @@ fn get_signer(
 fn get_messages(
     sign_info: &SigInfo,
     handle_type: HandleType,
-) -> Result<Vec<CosmosSdkMsg>, EnclaveError> {
+) -> Result<Vec<DirectSdkMsg>, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
@@ -541,7 +541,7 @@ fn get_messages(
                     warn!("failure to parse StdSignDoc: {:?}", err);
                     EnclaveError::FailedTxVerification
                 })?;
-            let messages: Result<Vec<CosmosSdkMsg>, _> = sign_doc
+            let messages: Result<Vec<DirectSdkMsg>, _> = sign_doc
                 .msgs
                 .iter()
                 .map(|x| x.clone().into_cosmwasm_msg())
@@ -577,7 +577,7 @@ fn get_messages(
                 );
                 EnclaveError::FailedTxVerification
             })?;
-            let messages: Result<Vec<CosmosSdkMsg>, _> = sign_doc
+            let messages: Result<Vec<DirectSdkMsg>, _> = sign_doc
                 .msgs
                 .iter()
                 .map(|x| x.clone().into_cosmwasm_msg())
@@ -638,7 +638,7 @@ fn verify_callback_sig_impl(
 }
 
 fn verify_message_params(
-    messages: &[CosmosSdkMsg],
+    messages: &[DirectSdkMsg],
     sender: &CanonicalAddr,
     sent_funds: &[Coin],
     contract_address: &HumanAddr,

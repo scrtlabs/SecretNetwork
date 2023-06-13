@@ -220,7 +220,7 @@ pub struct StdSignDoc {
     pub account_number: String,
     pub chain_id: String,
     pub memo: String,
-    pub msgs: Vec<AminoJsonCosmosMsg>,
+    pub msgs: Vec<AminoSdkMsg>,
     pub sequence: String,
 }
 
@@ -257,7 +257,7 @@ impl SignDoc {
 
 #[derive(Debug)]
 pub struct TxBody {
-    pub messages: Vec<DirectCosmosMsg>,
+    pub messages: Vec<DirectSdkMsg>,
     // Leaving this here for discoverability. We can use this, but don't verify it today.
     #[allow(dead_code)]
     memo: (),
@@ -279,7 +279,7 @@ impl TxBody {
         let messages = tx_body
             .messages
             .into_iter()
-            .map(|any| DirectCosmosMsg::from_bytes(&any.value, handle_type))
+            .map(|any| DirectSdkMsg::from_bytes(&any.value, handle_type))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(TxBody {
@@ -292,7 +292,7 @@ impl TxBody {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case", tag = "type", content = "value")]
-pub enum AminoJsonCosmosMsg {
+pub enum AminoSdkMsg {
     #[serde(alias = "wasm/MsgExecuteContract")]
     Execute {
         sender: HumanAddr,
@@ -330,8 +330,8 @@ pub fn deserialize_ignore_any<'de, D: serde::Deserializer<'de>, T: Default>(
     serde::de::IgnoredAny::deserialize(deserializer).map(|_| T::default())
 }
 
-impl AminoJsonCosmosMsg {
-    pub fn into_cosmwasm_msg(self) -> Result<DirectCosmosMsg, EnclaveError> {
+impl AminoSdkMsg {
+    pub fn into_cosmwasm_msg(self) -> Result<DirectSdkMsg, EnclaveError> {
         match self {
             Self::Migrate {
                 sender,
@@ -340,21 +340,29 @@ impl AminoJsonCosmosMsg {
                 code_id,
             } => {
                 let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
-                    warn!("failed to turn human addr to canonical addr when parsing CosmWasmMsg: {:?}", err);
+                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = Binary::from_base64(&msg).map_err(|err| {
                     warn!(
-                        "failed to parse base64 msg when parsing CosmWasmMsg: {:?}",
+                        "failed to parse base64 msg when parsing DirectSdkMsg: {:?}",
                         err
                     );
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = msg.0;
-                Ok(DirectCosmosMsg::MsgMigrateContract {
+                let code_id = code_id.parse::<u64>().map_err(|err| {
+                    warn!(
+                        "failed to parse code_id as u64 when parsing DirectSdkMsg: {:?}",
+                        err
+                    );
+                    EnclaveError::FailedToDeserialize
+                })?;
+                Ok(DirectSdkMsg::MsgMigrateContract {
                     sender,
                     msg,
                     contract,
+                    code_id,
                 })
             }
             Self::Execute {
@@ -365,18 +373,18 @@ impl AminoJsonCosmosMsg {
                 callback_sig,
             } => {
                 let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
-                    warn!("failed to turn human addr to canonical addr when parsing CosmWasmMsg: {:?}", err);
+                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = Binary::from_base64(&msg).map_err(|err| {
                     warn!(
-                        "failed to parse base64 msg when parsing CosmWasmMsg: {:?}",
+                        "failed to parse base64 msg when parsing DirectSdkMsg: {:?}",
                         err
                     );
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = msg.0;
-                Ok(DirectCosmosMsg::MsgExecuteContract {
+                Ok(DirectSdkMsg::MsgExecuteContract {
                     sender,
                     contract,
                     msg,
@@ -390,23 +398,31 @@ impl AminoJsonCosmosMsg {
                 init_funds,
                 label,
                 callback_sig,
-                code_id: _,
+                code_id,
                 admin,
             } => {
                 let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
-                    warn!("failed to turn human addr to canonical addr when parsing CosmWasmMsg: {:?}", err);
+                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
                     EnclaveError::FailedToDeserialize
                 })?;
                 let init_msg = Binary::from_base64(&init_msg).map_err(|err| {
                     warn!(
-                        "failed to parse base64 init_msg when parsing CosmWasmMsg: {:?}",
+                        "failed to parse base64 init_msg when parsing DirectSdkMsg: {:?}",
                         err
                     );
                     EnclaveError::FailedToDeserialize
                 })?;
                 let init_msg = init_msg.0;
-                Ok(DirectCosmosMsg::MsgInstantiateContract {
+                let code_id = code_id.parse::<u64>().map_err(|err| {
+                    warn!(
+                        "failed to parse code_id as u64 when parsing DirectSdkMsg: {:?}",
+                        err
+                    );
+                    EnclaveError::FailedToDeserialize
+                })?;
+                Ok(DirectSdkMsg::MsgInstantiateContract {
                     sender,
+                    code_id,
                     init_msg,
                     init_funds,
                     label,
@@ -414,7 +430,7 @@ impl AminoJsonCosmosMsg {
                     admin,
                 })
             }
-            Self::Other => Ok(DirectCosmosMsg::Other),
+            Self::Other => Ok(DirectSdkMsg::Other),
         }
     }
 }
@@ -572,7 +588,7 @@ pub struct Packet {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum DirectCosmosMsg {
+pub enum DirectSdkMsg {
     // CosmWasm:
     MsgExecuteContract {
         sender: CanonicalAddr,
@@ -588,11 +604,13 @@ pub enum DirectCosmosMsg {
         label: String,
         callback_sig: Option<Vec<u8>>,
         admin: HumanAddr,
+        code_id: u64,
     },
     MsgMigrateContract {
         sender: CanonicalAddr,
         contract: HumanAddr,
         msg: Vec<u8>,
+        code_id: u64,
     },
     // IBC:
     // MsgChannelOpenInit {}, // TODO
@@ -625,7 +643,7 @@ pub enum DirectCosmosMsg {
     Other,
 }
 
-impl DirectCosmosMsg {
+impl DirectSdkMsg {
     pub fn from_bytes(bytes: &[u8], handle_type: HandleType) -> Result<Self, EnclaveError> {
         // Assaf: This function needs a refactor, as some protobufs are
         // compatible, e.g. try_parse_execute succeeds in parsing MsgRecvPacket as
@@ -635,10 +653,10 @@ impl DirectCosmosMsg {
             HandleType::HANDLE_TYPE_EXECUTE => Self::try_parse_execute(bytes)
                 .or_else(|_| Self::try_parse_instantiate(bytes))
                 .or_else(|_| Self::try_parse_migrate(bytes)),
-            HandleType::HANDLE_TYPE_REPLY => Ok(DirectCosmosMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => Ok(DirectCosmosMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => Ok(DirectCosmosMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => Ok(DirectCosmosMsg::Other),
+            HandleType::HANDLE_TYPE_REPLY => Ok(DirectSdkMsg::Other),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => Ok(DirectSdkMsg::Other),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => Ok(DirectSdkMsg::Other),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => Ok(DirectSdkMsg::Other),
             HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
             | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
                 Self::try_parse_ibc_recv_packet(bytes)
@@ -686,7 +704,7 @@ impl DirectCosmosMsg {
 
         match raw_msg.packet.clone().into_option() {
             None => Err(EnclaveError::FailedToDeserialize),
-            Some(packet) => Ok(DirectCosmosMsg::MsgAcknowledgement {
+            Some(packet) => Ok(DirectSdkMsg::MsgAcknowledgement {
                 packet: Packet {
                     sequence: packet.sequence,
                     source_port: packet.source_port,
@@ -714,7 +732,7 @@ impl DirectCosmosMsg {
 
         match raw_msg.packet.clone().into_option() {
             None => Err(EnclaveError::FailedToDeserialize),
-            Some(packet) => Ok(DirectCosmosMsg::MsgTimeout {
+            Some(packet) => Ok(DirectSdkMsg::MsgTimeout {
                 packet: Packet {
                     sequence: packet.sequence,
                     source_port: packet.source_port,
@@ -742,7 +760,7 @@ impl DirectCosmosMsg {
 
         match raw_msg.packet.into_option() {
             None => Err(EnclaveError::FailedToDeserialize),
-            Some(packet) => Ok(DirectCosmosMsg::MsgRecvPacket {
+            Some(packet) => Ok(DirectSdkMsg::MsgRecvPacket {
                 packet: Packet {
                     sequence: packet.sequence,
                     source_port: packet.source_port,
@@ -776,10 +794,11 @@ impl DirectCosmosMsg {
         let sender = CanonicalAddr::from_human(&HumanAddr(raw_msg.sender))
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
-        Ok(DirectCosmosMsg::MsgMigrateContract {
+        Ok(DirectSdkMsg::MsgMigrateContract {
             sender,
             msg: raw_msg.msg,
             contract: HumanAddr(raw_msg.contract),
+            code_id: raw_msg.code_id,
         })
     }
 
@@ -799,13 +818,14 @@ impl DirectCosmosMsg {
 
         let callback_sig = Some(raw_msg.callback_sig);
 
-        Ok(DirectCosmosMsg::MsgInstantiateContract {
+        Ok(DirectSdkMsg::MsgInstantiateContract {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
             init_msg: raw_msg.init_msg,
             init_funds,
             label: raw_msg.label,
             callback_sig,
             admin: HumanAddr(raw_msg.admin),
+            code_id: raw_msg.code_id,
         })
     }
 
@@ -841,7 +861,7 @@ impl DirectCosmosMsg {
 
         let callback_sig = Some(raw_msg.callback_sig);
 
-        Ok(DirectCosmosMsg::MsgExecuteContract {
+        Ok(DirectSdkMsg::MsgExecuteContract {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
             contract,
             msg: raw_msg.msg,
@@ -874,13 +894,13 @@ impl DirectCosmosMsg {
 
     pub fn sender(&self) -> Option<&CanonicalAddr> {
         match self {
-            DirectCosmosMsg::MsgExecuteContract { sender, .. }
-            | DirectCosmosMsg::MsgInstantiateContract { sender, .. }
-            | DirectCosmosMsg::MsgMigrateContract { sender, .. } => Some(sender),
-            DirectCosmosMsg::MsgRecvPacket { .. } => None,
-            DirectCosmosMsg::MsgAcknowledgement { .. } => None,
-            DirectCosmosMsg::MsgTimeout { .. } => None,
-            DirectCosmosMsg::Other => None,
+            DirectSdkMsg::MsgExecuteContract { sender, .. }
+            | DirectSdkMsg::MsgInstantiateContract { sender, .. }
+            | DirectSdkMsg::MsgMigrateContract { sender, .. } => Some(sender),
+            DirectSdkMsg::MsgRecvPacket { .. } => None,
+            DirectSdkMsg::MsgAcknowledgement { .. } => None,
+            DirectSdkMsg::MsgTimeout { .. } => None,
+            DirectSdkMsg::Other => None,
         }
     }
 }

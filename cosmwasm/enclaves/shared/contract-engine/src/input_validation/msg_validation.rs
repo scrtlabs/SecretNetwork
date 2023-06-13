@@ -1,7 +1,7 @@
 use cw_types_v010::{encoding::Binary, types::CanonicalAddr};
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use enclave_cosmos_types::types::{
-    is_transfer_ack_error, CosmosSdkMsg, FungibleTokenPacketData, HandleType, IBCLifecycleComplete,
+    is_transfer_ack_error, DirectSdkMsg, FungibleTokenPacketData, HandleType, IBCLifecycleComplete,
     IBCLifecycleCompleteOptions, IBCPacketAckMsg, IBCPacketTimeoutMsg, IbcHooksIncomingTransferMsg,
     IncentivizedAcknowledgement, Packet,
 };
@@ -12,32 +12,32 @@ use crate::types::SecretMessage;
 
 /// Get the cosmwasm message that contains the encrypted message
 pub fn verify_and_get_sdk_msg<'sd>(
-    messages: &'sd [CosmosSdkMsg],
+    messages: &'sd [DirectSdkMsg],
     msg_sender: &CanonicalAddr,
     sent_msg: &SecretMessage,
     handle_type: HandleType,
-) -> Option<&'sd CosmosSdkMsg> {
+) -> Option<&'sd DirectSdkMsg> {
     trace!("get_verified_msg: {:?}", messages);
 
     messages.iter().find(|&m| match m {
-        CosmosSdkMsg::Other => false,
-        CosmosSdkMsg::MsgExecuteContract { msg, sender, .. }
-        | CosmosSdkMsg::MsgInstantiateContract {
+        DirectSdkMsg::Other => false,
+        DirectSdkMsg::MsgExecuteContract { msg, sender, .. }
+        | DirectSdkMsg::MsgInstantiateContract {
             init_msg: msg,
             sender,
             ..
         }
-        | CosmosSdkMsg::MsgMigrateContract { msg, sender, .. } => {
+        | DirectSdkMsg::MsgMigrateContract { msg, sender, .. } => {
             msg_sender == sender && &sent_msg.to_vec() == msg
         }
-        CosmosSdkMsg::MsgRecvPacket { packet, .. } => match handle_type {
+        DirectSdkMsg::MsgRecvPacket { packet, .. } => match handle_type {
             HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => verify_ibc_packet_recv(sent_msg, packet),
             HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
                 verify_ibc_wasm_hooks_incoming_transfer(sent_msg, packet)
             }
             _ => false,
         },
-        CosmosSdkMsg::MsgAcknowledgement {
+        DirectSdkMsg::MsgAcknowledgement {
             packet,
             acknowledgement,
             signer,
@@ -51,7 +51,7 @@ pub fn verify_and_get_sdk_msg<'sd>(
             }
             _ => false,
         },
-        CosmosSdkMsg::MsgTimeout { packet, signer, .. } => match handle_type {
+        DirectSdkMsg::MsgTimeout { packet, signer, .. } => match handle_type {
             HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
                 verify_ibc_packet_timeout(sent_msg, packet, signer)
             }

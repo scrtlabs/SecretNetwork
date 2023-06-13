@@ -1,23 +1,23 @@
 use cw_types_v010::types::HumanAddr;
 use enclave_cosmos_types::types::{
-    CosmosSdkMsg, FungibleTokenPacketData, IbcHooksIncomingTransferMsg,
+    DirectSdkMsg, FungibleTokenPacketData, IbcHooksIncomingTransferMsg,
     IbcHooksOutgoingTransferMemo, Packet,
 };
 use log::*;
 
 /// Check that the contract listed in the cosmos sdk message matches the one in env
-pub fn verify_contract_address(msg: &CosmosSdkMsg, contract_address: &HumanAddr) -> bool {
+pub fn verify_contract_address(msg: &DirectSdkMsg, contract_address: &HumanAddr) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     match msg {
-        CosmosSdkMsg::MsgExecuteContract { contract, .. } => {
+        DirectSdkMsg::MsgExecuteContract { contract, .. } => {
             verify_msg_execute_contract_address(contract_address, contract)
         }
-        CosmosSdkMsg::MsgMigrateContract { contract, .. } => {
+        DirectSdkMsg::MsgMigrateContract { contract, .. } => {
             verify_msg_migrate_contract_address(contract_address, contract)
         }
         // During sending an instantiate message the contract address is not yet known
-        CosmosSdkMsg::MsgInstantiateContract { .. } => true,
-        CosmosSdkMsg::MsgRecvPacket {
+        DirectSdkMsg::MsgInstantiateContract { .. } => true,
+        DirectSdkMsg::MsgRecvPacket {
             packet:
                 Packet {
                     destination_port,
@@ -26,19 +26,19 @@ pub fn verify_contract_address(msg: &CosmosSdkMsg, contract_address: &HumanAddr)
                 },
             ..
         } => verify_contract_address_msg_recv_packet(destination_port, data, contract_address),
-        CosmosSdkMsg::MsgAcknowledgement {
+        DirectSdkMsg::MsgAcknowledgement {
             packet: Packet {
                 source_port, data, ..
             },
             ..
         }
-        | CosmosSdkMsg::MsgTimeout {
+        | DirectSdkMsg::MsgTimeout {
             packet: Packet {
                 source_port, data, ..
             },
             ..
         } => verify_contract_address_msg_ack_or_timeout(source_port, data, contract_address),
-        CosmosSdkMsg::Other => false,
+        DirectSdkMsg::Other => false,
     }
 }
 

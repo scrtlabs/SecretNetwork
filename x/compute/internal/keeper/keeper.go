@@ -1343,12 +1343,6 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 		return data, nil
 	case *v1wasmTypes.Response:
-		ctx.EventManager().EmitEvent(sdk.NewEvent(
-			types.EventTypeMigrate,
-			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
-			sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(newCodeID, 10)),
-		))
-
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, verificationInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "dispatch")

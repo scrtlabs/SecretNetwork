@@ -1,18 +1,18 @@
 use crate::ibc_denom_utils::{get_denom_prefix, parse_denom_trace, receiver_chain_is_source};
 use cw_types_v010::types::Coin;
-use enclave_cosmos_types::types::{CosmosSdkMsg, FungibleTokenPacketData, Packet};
+use enclave_cosmos_types::types::{DirectSdkMsg, FungibleTokenPacketData, Packet};
 use log::*;
 
 /// Check that the funds listed in the cosmwasm message matches the ones in env
-pub fn verify_sent_funds(msg: &CosmosSdkMsg, sent_funds_msg: &[Coin]) -> bool {
+pub fn verify_sent_funds(msg: &DirectSdkMsg, sent_funds_msg: &[Coin]) -> bool {
     match msg {
-        CosmosSdkMsg::MsgExecuteContract { sent_funds, .. }
-        | CosmosSdkMsg::MsgInstantiateContract {
+        DirectSdkMsg::MsgExecuteContract { sent_funds, .. }
+        | DirectSdkMsg::MsgInstantiateContract {
             init_funds: sent_funds,
             ..
         } => sent_funds_msg == sent_funds,
-        CosmosSdkMsg::Other => false,
-        CosmosSdkMsg::MsgRecvPacket {
+        DirectSdkMsg::Other => false,
+        DirectSdkMsg::MsgRecvPacket {
             packet:
                 Packet {
                     data,
@@ -40,9 +40,9 @@ pub fn verify_sent_funds(msg: &CosmosSdkMsg, sent_funds_msg: &[Coin]) -> bool {
                 sent_funds_msg.is_empty()
             }
         }
-        CosmosSdkMsg::MsgAcknowledgement { .. }
-        | CosmosSdkMsg::MsgTimeout { .. }
-        | CosmosSdkMsg::MsgMigrateContract { .. } => sent_funds_msg.is_empty(),
+        DirectSdkMsg::MsgAcknowledgement { .. }
+        | DirectSdkMsg::MsgTimeout { .. }
+        | DirectSdkMsg::MsgMigrateContract { .. } => sent_funds_msg.is_empty(),
     }
 }
 
