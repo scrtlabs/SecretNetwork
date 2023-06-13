@@ -14,7 +14,7 @@ func TestMigrateContract(t *testing.T) {
 
 	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[migrateContractV2], walletA)
 
-	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
 
 	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"test":{}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, execErr)
@@ -33,7 +33,7 @@ func TestMigrateWithStorage(t *testing.T) {
 
 	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[migrateContractV2], walletA)
 
-	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
 
 	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"test":{}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, execErr)
@@ -52,7 +52,7 @@ func TestMigrateContractFromDifferentAccount(t *testing.T) {
 
 	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[migrateContractV2], walletA)
 
-	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
 
 	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"test":{}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, execErr)

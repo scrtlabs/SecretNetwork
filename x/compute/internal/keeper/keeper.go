@@ -403,7 +403,7 @@ func V010MsgsToV1SubMsgs(contractAddr string, msgs []v010wasmTypes.CosmosMsg) ([
 }
 
 // Instantiate creates an instance of a WASM contract
-func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddress, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, []byte, error) {
+func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.AccAddress, initMsg []byte, label string, deposit sdk.Coins, callbackSig []byte) (sdk.AccAddress, []byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "instantiate")
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: init")

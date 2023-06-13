@@ -79,7 +79,7 @@ func TestDistributionRewards(t *testing.T) {
 	initBz, err = testEncrypt(t, keeper, ctx, nil, govId, initBz)
 	require.NoError(t, err)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, govId, nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, creatorPrivKey, initBz, govId, nil)
 	govAddr, _, err := keeper.Instantiate(ctx, govId, creator, creator, initBz, "gidi gov", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)

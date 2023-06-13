@@ -676,7 +676,7 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	return ctx.WithTxBytes(txBytes)
 }
 
-func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
+func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, admin sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
 	require.NoError(t, err)
 
@@ -686,7 +686,7 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator s
 		Label:     "demo contract 1",
 		InitMsg:   encMsg,
 		InitFunds: funds,
-		Admin:     creator.String(),
+		Admin:     admin.String(),
 	}
 	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
 

@@ -81,7 +81,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	_, _, contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, string(initMsgBz), true, false, defaultGasForTests)
+	_, _, contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, nil, creatorPriv, string(initMsgBz), true, false, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	return contractAddr, creator, ctx, keeper

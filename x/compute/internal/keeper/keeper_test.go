@@ -356,7 +356,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			}
 
 			// when
-			_, _, addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
+			_, _, addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, nil, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
 			// then
 			if spec.expError {
 				require.Error(t, err)
@@ -457,7 +457,7 @@ func TestExecute(t *testing.T) {
 
 	gasBefore := ctx.GasMeter().GasConsumed()
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, contractID, deposit)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, creatorPrivKey, initMsgBz, contractID, deposit)
 	// create with no balance is also legal
 	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", deposit, nil)
 
@@ -582,7 +582,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: bob, Beneficiary: fred})
 			require.NoError(t, err)
 
-			_, _, contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
+			_, _, contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, nil, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
 			require.Empty(t, err)
 
 			wasmCalls := int64(-1)
@@ -673,7 +673,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, nil, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
 
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"panic":{}}`))
 	require.NoError(t, err)
@@ -839,7 +839,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	}
 	initMsgBz, err := json.Marshal(initMsg)
 
-	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, nil, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002

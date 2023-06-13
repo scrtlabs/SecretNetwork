@@ -592,15 +592,15 @@ func execTxBuilderImpl(
 
 func initHelper(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
+	codeID uint64, creator, admin sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, sdk.NewCoins(), shouldSkipAttributes...)
+	return initHelperImpl(t, keeper, ctx, codeID, creator, admin, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, sdk.NewCoins(), shouldSkipAttributes...)
 }
 
 func initHelperImpl(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
+	codeID uint64, creator, admin sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
 	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, sentFunds sdk.Coins, shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
@@ -628,9 +628,9 @@ func initHelperImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, sentFunds)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, admin, creatorPrivKey, initMsgBz, codeID, sentFunds)
 	// make the label a random base64 string, because why not?
-	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator, creator, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sentFunds, nil)
+	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator, admin, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sentFunds, nil)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happened

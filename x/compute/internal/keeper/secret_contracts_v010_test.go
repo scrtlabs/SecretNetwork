@@ -18,7 +18,7 @@ func TestSanity(t *testing.T) {
 	// init
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, initMsg, true, false, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, err)
 	// require.Empty(t, initEvents)
 
@@ -62,7 +62,7 @@ func TestSanity(t *testing.T) {
 func TestEncryptedAndPlaintextLogs(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[plaintextLogsContract], sdk.NewCoins())
 
-	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{}`, true, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
 
 	_, _, _, events, _, err := execHelperCustomWasmCount(t, keeper, ctx, addr, walletA, privKeyA, "{}", true, false, defaultGasForTests, 0, 1)
@@ -85,7 +85,7 @@ func TestEncryptedAndPlaintextLogs(t *testing.T) {
 func TestContractTryToSendFundsFromSomeoneElse(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v010Contract], sdk.NewCoins())
 
-	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, false, defaultGasForTests, 17)
@@ -113,9 +113,9 @@ func TestV010BankMsgSendFrom(t *testing.T) {
 			var contractAddress sdk.AccAddress
 
 			if callType == "init" {
-				_, _, _, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, defaultGasForTests, -1, sdk.NewCoins())
+				_, _, _, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, nil, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, defaultGasForTests, -1, sdk.NewCoins())
 			} else {
-				_, _, contractAddress, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests, -1, sdk.NewCoins())
+				_, _, contractAddress, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests, -1, sdk.NewCoins())
 
 				_, _, _, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","from":"%s","amount":[{"amount":"1","denom":"denom"}]}}`, walletB.String(), walletA.String()), false, false, math.MaxUint64, 0)
 			}
@@ -150,9 +150,9 @@ func TestBankMsgBurn(t *testing.T) {
 						var contractAddress sdk.AccAddress
 
 						if callType == "init" {
-							_, _, _, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_burn":{"amount":[{"amount":"1","denom":"denom"}]}}`), false, false, defaultGasForTests, -1, test.sentFunds)
+							_, _, _, _, err = initHelperImpl(t, keeper, ctx, codeID, walletA, nil, privKeyA, fmt.Sprintf(`{"bank_msg_burn":{"amount":[{"amount":"1","denom":"denom"}]}}`), false, false, defaultGasForTests, -1, test.sentFunds)
 						} else {
-							_, _, contractAddress, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests, -1, test.sentFunds)
+							_, _, contractAddress, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, false, false, defaultGasForTests, -1, test.sentFunds)
 
 							_, _, _, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_burn":{"amount":[{"amount":"1","denom":"denom"}]}}`), false, false, math.MaxUint64, 0)
 						}

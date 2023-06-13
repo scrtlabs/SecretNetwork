@@ -63,7 +63,7 @@ func TestQueryContractLabel(t *testing.T) {
 
 	label := "banana"
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, contractID, deposit)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, privCreator, initMsgBz, contractID, deposit)
 
 	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, label, deposit, nil)
 	require.NoError(t, err)

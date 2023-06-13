@@ -447,7 +447,7 @@ func TestMultiSigExecute(t *testing.T) {
 		multisigAccount.address, walletB.String(),
 	)
 
-	_, _, contractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, false, defaultGasForTests)
+	_, _, contractAddress, _, error := initHelper(t, keeper, ctx, codeID, walletB, nil, privKeyB, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, error)
 
 	execMsg := fmt.Sprintf(`{"transfer":{"amount":"10","recipient":"%s"}}`, walletB.String())
@@ -497,7 +497,7 @@ func TestMultiSigCallbacks(t *testing.T) {
 	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.Coins{})
 
 	// init
-	_, _, contractAddress, initEvents, error := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, contractAddress, initEvents, error := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, error)
 
 	require.Equal(t,
@@ -901,7 +901,7 @@ func TestWrongFundsNoFunds(t *testing.T) {
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, nil, privKeyA, initMsgBz, codeID, nil)
 
 	_, _, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
@@ -925,7 +925,7 @@ func TestWrongFundsSomeFunds(t *testing.T) {
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
+	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, nil, privKeyA, initMsgBz, codeID, sdk.NewCoins(sdk.NewInt64Coin("denom", 200)))
 
 	_, _, err = keeper.Instantiate(ctx, codeID, walletA, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
@@ -959,7 +959,7 @@ func TestWrongMessage(t *testing.T) {
 	notTheRealMsgBz, err := wasmCtx.Encrypt(notReallyTheMsg.Serialize())
 	require.NoError(t, err)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, privKeyA, initMsgBz, codeID, nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, nil, privKeyA, initMsgBz, codeID, nil)
 
 	_, _, err = keeper.Instantiate(ctx, codeID, walletA, nil, notTheRealMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 1000)), nil)
 	if err != nil {
@@ -974,9 +974,9 @@ func TestWrongContractAddress(t *testing.T) {
 
 	initMsg := fmt.Sprintf(`{"decimals":10,"initial_balances":[{"address":"%s","amount":"108"},{"address":"%s","amount":"53"}],"name":"ReuvenPersonalRustCoin","symbol":"RPRC"}`, walletA.String(), walletB.String())
 
-	_, _, contractAddress, _, stderr := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, false, defaultGasForTests)
+	_, _, contractAddress, _, stderr := initHelper(t, keeper, ctx, codeID, walletB, nil, privKeyB, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, stderr)
-	_, _, differentContractAddress, _, stderr := initHelper(t, keeper, ctx, codeID, walletB, privKeyB, initMsg, true, false, defaultGasForTests)
+	_, _, differentContractAddress, _, stderr := initHelper(t, keeper, ctx, codeID, walletB, nil, privKeyB, initMsg, true, false, defaultGasForTests)
 	require.Empty(t, stderr)
 
 	require.NotEqual(t, contractAddress, differentContractAddress)
