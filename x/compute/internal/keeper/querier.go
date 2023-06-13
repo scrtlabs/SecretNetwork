@@ -18,9 +18,15 @@ type GrpcQuerier struct {
 	keeper Keeper
 }
 
-func (q GrpcQuerier) ContractHistory(ctx context.Context, request *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
-	// TODO implement me
-	panic("implement me")
+func (q GrpcQuerier) ContractHistory(c context.Context, req *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
+	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryContractHistoryResponse{
+		Entries: q.keeper.GetContractHistory(sdk.UnwrapSDKContext(c), contractAddress),
+	}, nil
 }
 
 func NewGrpcQuerier(keeper Keeper) GrpcQuerier {
@@ -29,11 +35,6 @@ func NewGrpcQuerier(keeper Keeper) GrpcQuerier {
 
 func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryByContractAddressRequest) (*types.QueryContractInfoResponse, error) {
 	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	err = sdk.VerifyAddressFormat(contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -73,10 +74,6 @@ func (q GrpcQuerier) ContractsByCodeId(c context.Context, req *types.QueryByCode
 func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecretContractRequest) (*types.QuerySecretContractResponse, error) {
 	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := sdk.VerifyAddressFormat(contractAddress); err != nil {
 		return nil, err
 	}
 
@@ -130,10 +127,6 @@ func (q GrpcQuerier) CodeHashByContractAddress(c context.Context, req *types.Que
 		return nil, err
 	}
 
-	if err := sdk.VerifyAddressFormat(contractAddress); err != nil {
-		return nil, err
-	}
-
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 
 	codeHashBz, err := queryCodeHashByAddress(ctx, contractAddress, q.keeper)
@@ -168,10 +161,6 @@ func (q GrpcQuerier) CodeHashByCodeId(c context.Context, req *types.QueryByCodeI
 func (q GrpcQuerier) LabelByAddress(c context.Context, req *types.QueryByContractAddressRequest) (*types.QueryContractLabelResponse, error) {
 	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := sdk.VerifyAddressFormat(contractAddress); err != nil {
 		return nil, err
 	}
 
