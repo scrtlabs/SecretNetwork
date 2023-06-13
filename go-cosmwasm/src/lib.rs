@@ -490,7 +490,7 @@ fn do_init(
     let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
     let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
-    let admin = unsafe { admin.read() }.ok_or_else(|| Error::empty_arg(ADMIN_ARG))?;
+    let admin = unsafe { admin.read() }.unwrap_or_default();
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;

@@ -440,10 +440,6 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		return nil, nil, sdkerrors.Wrap(types.ErrAccountExists, existingAcct.GetAddress().String())
 	}
 
-	if admin == nil {
-		admin = creator
-	}
-
 	// deposit initial contract funds
 	if !deposit.IsZero() {
 		if k.bankKeeper.BlockedAddr(creator) {
