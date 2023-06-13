@@ -21,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
+	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/authz"
@@ -415,6 +416,19 @@ func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
 func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	//////////////// EXPERIMENT ////////////////
+	multiStore := app.BaseApp.CommitMultiStore()
+	rootMulti, ok := multiStore.(*rootmulti.Store)
+	if !ok {
+		println("TOMMM oops")
+	} else {
+		stores := rootMulti.GetStores()
+		for k, v := range stores {
+			fmt.Printf("TOMMM root multi stores\nk: %+v\nhash: %+v\n", k.Name(), v.LastCommitID().Hash)
+		}
+	}
+	//////////////// EXPERIMENT ////////////////
+
 	return app.mm.BeginBlock(ctx, req)
 }
 
