@@ -733,16 +733,11 @@ func GetCmdGetContractHistory() *cobra.Command {
 				return err
 			}
 
-			pageReq, err := client.ReadPageRequest(withPageKeyDecoded(cmd.Flags()))
-			if err != nil {
-				return err
-			}
 			queryClient := types.NewQueryClient(clientCtx)
 			res, err := queryClient.ContractHistory(
 				context.Background(),
 				&types.QueryContractHistoryRequest{
 					ContractAddress: args[0],
-					Pagination:      pageReq,
 				},
 			)
 			if err != nil {
