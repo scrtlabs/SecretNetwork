@@ -28,6 +28,24 @@ func TestMigrateContract(t *testing.T) {
 	require.Empty(t, data)
 }
 
+func TestContractInfoAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[migrateContractV1], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+
+	info := keeper.GetContractInfo(ctx, contractAddress)
+	require.Equal(t, walletA.String(), info.Admin)
+}
+
+func TestContractInfoNullAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[migrateContractV1], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+
+	info := keeper.GetContractInfo(ctx, contractAddress)
+	require.Equal(t, sdk.AccAddress{}.String(), info.Admin)
+}
+
 func TestMigrateWithStorage(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[migrateContractV1], sdk.NewCoins())
 
