@@ -220,7 +220,7 @@ pub struct StdSignDoc {
     pub account_number: String,
     pub chain_id: String,
     pub memo: String,
-    pub msgs: Vec<StdCosmWasmMsg>,
+    pub msgs: Vec<AminoJsonCosmosMsg>,
     pub sequence: String,
 }
 
@@ -257,7 +257,7 @@ impl SignDoc {
 
 #[derive(Debug)]
 pub struct TxBody {
-    pub messages: Vec<CosmosSdkMsg>,
+    pub messages: Vec<DirectCosmosMsg>,
     // Leaving this here for discoverability. We can use this, but don't verify it today.
     #[allow(dead_code)]
     memo: (),
@@ -279,7 +279,7 @@ impl TxBody {
         let messages = tx_body
             .messages
             .into_iter()
-            .map(|any| CosmosSdkMsg::from_bytes(&any.value, handle_type))
+            .map(|any| DirectCosmosMsg::from_bytes(&any.value, handle_type))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(TxBody {
@@ -292,7 +292,7 @@ impl TxBody {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case", tag = "type", content = "value")]
-pub enum StdCosmWasmMsg {
+pub enum AminoJsonCosmosMsg {
     #[serde(alias = "wasm/MsgExecuteContract")]
     Execute {
         sender: HumanAddr,
@@ -312,6 +312,7 @@ pub enum StdCosmWasmMsg {
         callback_sig: Option<Vec<u8>>,
         admin: HumanAddr,
     },
+    #[serde(alias = "wasm/MsgMigrateContract")]
     Migrate {
         sender: HumanAddr,
         contract: HumanAddr,
@@ -329,8 +330,8 @@ pub fn deserialize_ignore_any<'de, D: serde::Deserializer<'de>, T: Default>(
     serde::de::IgnoredAny::deserialize(deserializer).map(|_| T::default())
 }
 
-impl StdCosmWasmMsg {
-    pub fn into_cosmwasm_msg(self) -> Result<CosmosSdkMsg, EnclaveError> {
+impl AminoJsonCosmosMsg {
+    pub fn into_cosmwasm_msg(self) -> Result<DirectCosmosMsg, EnclaveError> {
         match self {
             Self::Migrate {
                 sender,
@@ -350,10 +351,9 @@ impl StdCosmWasmMsg {
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = msg.0;
-                Ok(CosmosSdkMsg::MsgMigrateContract {
+                Ok(DirectCosmosMsg::MsgMigrateContract {
                     sender,
                     msg,
-                    code_id,
                     contract,
                 })
             }
@@ -376,7 +376,7 @@ impl StdCosmWasmMsg {
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = msg.0;
-                Ok(CosmosSdkMsg::MsgExecuteContract {
+                Ok(DirectCosmosMsg::MsgExecuteContract {
                     sender,
                     contract,
                     msg,
@@ -405,7 +405,7 @@ impl StdCosmWasmMsg {
                     EnclaveError::FailedToDeserialize
                 })?;
                 let init_msg = init_msg.0;
-                Ok(CosmosSdkMsg::MsgInstantiateContract {
+                Ok(DirectCosmosMsg::MsgInstantiateContract {
                     sender,
                     init_msg,
                     init_funds,
@@ -414,7 +414,7 @@ impl StdCosmWasmMsg {
                     admin,
                 })
             }
-            Self::Other => Ok(CosmosSdkMsg::Other),
+            Self::Other => Ok(DirectCosmosMsg::Other),
         }
     }
 }
@@ -572,7 +572,7 @@ pub struct Packet {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum CosmosSdkMsg {
+pub enum DirectCosmosMsg {
     // CosmWasm:
     MsgExecuteContract {
         sender: CanonicalAddr,
@@ -592,7 +592,6 @@ pub enum CosmosSdkMsg {
     MsgMigrateContract {
         sender: CanonicalAddr,
         contract: HumanAddr,
-        code_id: u64,
         msg: Vec<u8>,
     },
     // IBC:
@@ -626,7 +625,7 @@ pub enum CosmosSdkMsg {
     Other,
 }
 
-impl CosmosSdkMsg {
+impl DirectCosmosMsg {
     pub fn from_bytes(bytes: &[u8], handle_type: HandleType) -> Result<Self, EnclaveError> {
         // Assaf: This function needs a refactor, as some protobufs are
         // compatible, e.g. try_parse_execute succeeds in parsing MsgRecvPacket as
@@ -636,10 +635,10 @@ impl CosmosSdkMsg {
             HandleType::HANDLE_TYPE_EXECUTE => Self::try_parse_execute(bytes)
                 .or_else(|_| Self::try_parse_instantiate(bytes))
                 .or_else(|_| Self::try_parse_migrate(bytes)),
-            HandleType::HANDLE_TYPE_REPLY => Ok(CosmosSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => Ok(CosmosSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => Ok(CosmosSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => Ok(CosmosSdkMsg::Other),
+            HandleType::HANDLE_TYPE_REPLY => Ok(DirectCosmosMsg::Other),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => Ok(DirectCosmosMsg::Other),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => Ok(DirectCosmosMsg::Other),
+            HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => Ok(DirectCosmosMsg::Other),
             HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
             | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
                 Self::try_parse_ibc_recv_packet(bytes)
@@ -687,7 +686,7 @@ impl CosmosSdkMsg {
 
         match raw_msg.packet.clone().into_option() {
             None => Err(EnclaveError::FailedToDeserialize),
-            Some(packet) => Ok(CosmosSdkMsg::MsgAcknowledgement {
+            Some(packet) => Ok(DirectCosmosMsg::MsgAcknowledgement {
                 packet: Packet {
                     sequence: packet.sequence,
                     source_port: packet.source_port,
@@ -715,7 +714,7 @@ impl CosmosSdkMsg {
 
         match raw_msg.packet.clone().into_option() {
             None => Err(EnclaveError::FailedToDeserialize),
-            Some(packet) => Ok(CosmosSdkMsg::MsgTimeout {
+            Some(packet) => Ok(DirectCosmosMsg::MsgTimeout {
                 packet: Packet {
                     sequence: packet.sequence,
                     source_port: packet.source_port,
@@ -743,7 +742,7 @@ impl CosmosSdkMsg {
 
         match raw_msg.packet.into_option() {
             None => Err(EnclaveError::FailedToDeserialize),
-            Some(packet) => Ok(CosmosSdkMsg::MsgRecvPacket {
+            Some(packet) => Ok(DirectCosmosMsg::MsgRecvPacket {
                 packet: Packet {
                     sequence: packet.sequence,
                     source_port: packet.source_port,
@@ -777,10 +776,9 @@ impl CosmosSdkMsg {
         let sender = CanonicalAddr::from_human(&HumanAddr(raw_msg.sender))
             .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
-        Ok(CosmosSdkMsg::MsgMigrateContract {
+        Ok(DirectCosmosMsg::MsgMigrateContract {
             sender,
             msg: raw_msg.msg,
-            code_id: raw_msg.code_id,
             contract: HumanAddr(raw_msg.contract),
         })
     }
@@ -801,7 +799,7 @@ impl CosmosSdkMsg {
 
         let callback_sig = Some(raw_msg.callback_sig);
 
-        Ok(CosmosSdkMsg::MsgInstantiateContract {
+        Ok(DirectCosmosMsg::MsgInstantiateContract {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
             init_msg: raw_msg.init_msg,
             init_funds,
@@ -843,7 +841,7 @@ impl CosmosSdkMsg {
 
         let callback_sig = Some(raw_msg.callback_sig);
 
-        Ok(CosmosSdkMsg::MsgExecuteContract {
+        Ok(DirectCosmosMsg::MsgExecuteContract {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
             contract,
             msg: raw_msg.msg,
@@ -876,13 +874,13 @@ impl CosmosSdkMsg {
 
     pub fn sender(&self) -> Option<&CanonicalAddr> {
         match self {
-            CosmosSdkMsg::MsgExecuteContract { sender, .. }
-            | CosmosSdkMsg::MsgInstantiateContract { sender, .. }
-            | CosmosSdkMsg::MsgMigrateContract { sender, .. } => Some(sender),
-            CosmosSdkMsg::MsgRecvPacket { .. } => None,
-            CosmosSdkMsg::MsgAcknowledgement { .. } => None,
-            CosmosSdkMsg::MsgTimeout { .. } => None,
-            CosmosSdkMsg::Other => None,
+            DirectCosmosMsg::MsgExecuteContract { sender, .. }
+            | DirectCosmosMsg::MsgInstantiateContract { sender, .. }
+            | DirectCosmosMsg::MsgMigrateContract { sender, .. } => Some(sender),
+            DirectCosmosMsg::MsgRecvPacket { .. } => None,
+            DirectCosmosMsg::MsgAcknowledgement { .. } => None,
+            DirectCosmosMsg::MsgTimeout { .. } => None,
+            DirectCosmosMsg::Other => None,
         }
     }
 }
