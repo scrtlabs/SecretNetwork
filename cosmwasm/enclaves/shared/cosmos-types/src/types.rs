@@ -315,7 +315,7 @@ pub enum StdCosmWasmMsg {
     Migrate {
         sender: HumanAddr,
         contract: HumanAddr,
-        code_id: u64,
+        code_id: String,
         msg: String,
     },
     // The core IBC messages don't support Amino
