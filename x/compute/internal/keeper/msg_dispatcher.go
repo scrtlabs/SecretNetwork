@@ -160,6 +160,7 @@ func redactError(err error) (bool, error) {
 		e := strings.ReplaceAll(err.Error(), "encrypted: ", "")
 		e = strings.ReplaceAll(e, ": execute contract failed", "")
 		e = strings.ReplaceAll(e, ": instantiate contract failed", "")
+		e = strings.ReplaceAll(e, ": migrate contract failed", "")
 		return false, fmt.Errorf("%s", e)
 	}
 

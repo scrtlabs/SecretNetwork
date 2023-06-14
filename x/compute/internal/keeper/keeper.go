@@ -1301,7 +1301,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			}
 		}
 
-		return result, sdkerrors.Wrap(types.ErrExecuteFailed, migrateErr.Error())
+		return result, sdkerrors.Wrap(types.ErrMigrationFailed, migrateErr.Error())
 	}
 
 	// update contract key with new one
@@ -1348,7 +1348,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 		return data, nil
 	default:
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, fmt.Sprintf("cannot detect response type: %+v", res))
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }
 
