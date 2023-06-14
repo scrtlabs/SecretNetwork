@@ -413,13 +413,13 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	modeInfoBytes := []byte{}
 	pkBytes := []byte{}
 	signerSig := []byte{}
-	var err error
+	var initError error
 
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
 	if callbackSig == nil {
-		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetTxInfo(ctx, creator)
-		if err != nil {
-			return nil, nil, err
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, initError = k.GetTxInfo(ctx, creator)
+		if initError != nil {
+			return nil, nil, initError
 		}
 	}
 
@@ -483,21 +483,21 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	response, key, adminProof, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
+	response, key, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
 	consumeGas(ctx, gasUsed)
 
-	if err != nil {
+	if initError != nil {
 		switch res := response.(type) { //nolint:gocritic
 		case v1wasmTypes.DataWithInternalReplyInfo:
-			result, e := json.Marshal(res)
-			if e != nil {
-				return nil, nil, sdkerrors.Wrap(e, "couldn't marshal internal reply info")
+			result, jsonError := json.Marshal(res)
+			if jsonError != nil {
+				return nil, nil, sdkerrors.Wrap(jsonError, "couldn't marshal internal reply info")
 			}
 
-			return contractAddress, result, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
+			return contractAddress, result, sdkerrors.Wrap(types.ErrInstantiateFailed, initError.Error())
 		}
 
-		return contractAddress, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
+		return contractAddress, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, initError.Error())
 	}
 
 	switch res := response.(type) {
@@ -640,11 +640,12 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	if execErr != nil {
 		var result sdk.Result
+		var jsonError error
 		switch res := response.(type) { //nolint:gocritic
 		case v1wasmTypes.DataWithInternalReplyInfo:
-			result.Data, err = json.Marshal(res)
-			if err != nil {
-				return nil, sdkerrors.Wrap(err, "couldn't marshal internal reply info")
+			result.Data, jsonError = json.Marshal(res)
+			if jsonError != nil {
+				return nil, sdkerrors.Wrap(jsonError, "couldn't marshal internal reply info")
 			}
 		}
 
@@ -1286,8 +1287,22 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, newContractKey, proof, gasUsed, err := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminAddr, adminProof)
+	response, newContractKey, proof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminAddr, adminProof)
 	consumeGas(ctx, gasUsed)
+
+	if migrateErr != nil {
+		var result []byte
+		var jsonError error
+		switch res := response.(type) { //nolint:gocritic
+		case v1wasmTypes.DataWithInternalReplyInfo:
+			result, jsonError = json.Marshal(res)
+			if jsonError != nil {
+				return nil, sdkerrors.Wrap(jsonError, "couldn't marshal internal reply info")
+			}
+		}
+
+		return result, sdkerrors.Wrap(types.ErrExecuteFailed, migrateErr.Error())
+	}
 
 	// update contract key with new one
 	k.SetContractKey(ctx, contractAddress, &types.ContractKey{
@@ -1297,19 +1312,6 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			Proof: proof,
 		},
 	})
-
-	if err != nil {
-		var result []byte
-		switch res := response.(type) { //nolint:gocritic
-		case v1wasmTypes.DataWithInternalReplyInfo:
-			result, err = json.Marshal(res)
-			if err != nil {
-				return nil, sdkerrors.Wrap(err, "couldn't marshal internal reply info")
-			}
-		}
-
-		return result, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
-	}
 
 	// delete old secondary index entry
 	k.removeFromContractCodeSecondaryIndex(ctx, contractAddress, k.getLastContractHistoryEntry(ctx, contractAddress))

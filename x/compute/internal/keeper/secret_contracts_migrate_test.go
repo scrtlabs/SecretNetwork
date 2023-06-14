@@ -79,3 +79,18 @@ func TestMigrateContractFromDifferentAccount(t *testing.T) {
 	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, WalletB, privKeyB, `{"migrate":{}}`, false, true, math.MaxUint64)
 	require.NotNil(t, err)
 }
+
+func TestMigrateVmError(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[migrateContractV1], sdk.NewCoins())
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[migrateContractV2], walletA)
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
+
+	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"test":{}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+	require.Empty(t, data)
+
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"yolo":{}}`, true, true, math.MaxUint64)
+	require.Contains(t, err.Error(), "Error parsing into type migrate_contract_v2::msg::MigrateMsg: unknown variant `yolo`")
+}

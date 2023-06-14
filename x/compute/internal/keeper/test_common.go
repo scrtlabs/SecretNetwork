@@ -165,6 +165,17 @@ type ErrorResult struct {
 	Generic  error
 }
 
+func (a ErrorResult) Error() string {
+	switch {
+	case a.CosmWasm != nil:
+		return a.CosmWasm.Error()
+	case a.Generic != nil:
+		return a.Generic.Error()
+	default:
+		panic("unknown error variant")
+	}
+}
+
 type MockIBCTransferKeeper struct {
 	GetPortFn func(ctx sdk.Context) string
 }
