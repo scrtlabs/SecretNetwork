@@ -87,6 +87,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
@@ -447,7 +448,7 @@ func storesRootsFromMultiStore(rootMulti *rootmulti.Store) [][]byte {
 			continue
 		}
 
-		kvs.Pairs = append(kvs.Pairs, kv.Pair{Key: []byte(k.Name()), Value: v.LastCommitID().Hash})
+		kvs.Pairs = append(kvs.Pairs, kv.Pair{Key: []byte(k.Name()), Value: tmhash.Sum(v.LastCommitID().Hash)})
 	}
 
 	// Have to sort in order to calculate the correct AppHash
