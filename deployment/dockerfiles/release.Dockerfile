@@ -1,5 +1,5 @@
 ARG SCRT_BIN_IMAGE=rust-go-base-image
-ARG SCRT_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
+ARG SCRT_BASE_IMAGE=ghcr.io/scrtlabs/sgx-base:20.04-2.17-6.24.2
 
 FROM $SCRT_BIN_IMAGE AS build-env-rust-go
 

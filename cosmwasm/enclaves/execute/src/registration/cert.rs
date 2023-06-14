@@ -328,11 +328,19 @@ pub fn verify_ra_cert(
                 }
             };
 
-            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
+            let legacy_v15_mr_enclave = [
+                0xcbu8, 0x51u8, 0x84u8, 0x07u8, 0x76u8, 0x85u8, 0x1eu8, 0x1eu8, 0xccu8, 0x29u8,
+                0xc9u8, 0x1fu8, 0xb4u8, 0x71, 0x23u8, 0xedu8, 0xadu8, 0xfeu8, 0x86u8, 0x1au8,
+                0xe0u8, 0x5du8, 0xe4u8, 0x4eu8, 0x31u8, 0x2fu8, 0xfcu8, 0x19, 0x5du8, 0xb9u8,
+                0x79u8, 0xf8u8,
+            ];
+            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave
+                && report.sgx_quote_body.isv_enclave_report.mr_enclave != legacy_v15_mr_enclave
+            {
                 error!("Got a different mr_enclave than expected. Invalid certificate");
                 warn!(
                     "received: {:?} \n expected: {:?}",
-                    report.sgx_quote_body.isv_enclave_report.mr_enclave, this_mr_enclave
+                    report.sgx_quote_body.isv_enclave_report.mr_enclave, &this_mr_enclave
                 );
                 return Err(NodeAuthResult::MrEnclaveMismatch);
             }
