@@ -5,6 +5,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/capability"
@@ -32,6 +33,7 @@ import (
 	ibc "github.com/cosmos/ibc-go/v4/modules/core"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
+	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	packetforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 )
@@ -50,7 +52,7 @@ var ModuleAccountPermissions = map[string][]string{
 	compute.ModuleName:             {authtypes.Burner},
 }
 
-func AppModules(
+func Modules(
 	app *SecretNetworkApp,
 	encodingConfig EncodingConfig,
 	skipGenesisInvariants bool,
@@ -60,6 +62,7 @@ func AppModules(
 	return []module.AppModule{
 		genutil.NewAppModule(app.AppKeepers.AccountKeeper, app.AppKeepers.StakingKeeper, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
 		auth.NewAppModule(appCodec, *app.AppKeepers.AccountKeeper, authsims.RandomGenesisAccounts),
+		vesting.NewAppModule(*app.AppKeepers.AccountKeeper, app.AppKeepers.BankKeeper),
 		bank.NewAppModule(appCodec, *app.AppKeepers.BankKeeper, app.AppKeepers.AccountKeeper),
 		capability.NewAppModule(appCodec, *app.AppKeepers.CapabilityKeeper),
 		crisis.NewAppModule(app.AppKeepers.CrisisKeeper, skipGenesisInvariants),
@@ -80,5 +83,6 @@ func AppModules(
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper),
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
 		ibcswitch.NewAppModule(app.AppKeepers.IbcSwitchKeeper),
+		icaauth.NewAppModule(appCodec, *app.AppKeepers.ICAAuthKeeper),
 	}
 }

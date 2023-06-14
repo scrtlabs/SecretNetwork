@@ -33,11 +33,7 @@ func DefaultParams() Params {
 
 // validate params.
 func (p Params) Validate() error {
-	if err := validatePauserAddress(p.PauserAddress); err != nil {
-		return err
-	}
-
-	return nil
+	return validatePauserAddress(p.PauserAddress)
 }
 
 // Implements params.ParamSet.

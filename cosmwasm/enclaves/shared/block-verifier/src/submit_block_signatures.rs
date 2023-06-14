@@ -120,7 +120,7 @@ pub unsafe fn submit_block_signatures_impl(
             sgx_status_t::SGX_ERROR_INVALID_PARAMETER
         }));
 
-        message_verifier.append_wasm_from_tx(parsed_tx);
+        message_verifier.append_msg_from_tx(parsed_tx);
     }
 
     message_verifier.set_block_info(

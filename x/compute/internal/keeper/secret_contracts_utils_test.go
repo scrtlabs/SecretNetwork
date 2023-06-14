@@ -543,7 +543,7 @@ func execTxBuilderImpl(
 		nonce := msg[0:32]
 
 		gasBefore := ctx.GasMeter().GasConsumed()
-		execResult, err := keeper.Execute(ctx, contractAddress, txSender, msg, coins, nil)
+		execResult, err := keeper.Execute(ctx, contractAddress, txSender, msg, coins, nil, cosmwasm.HandleTypeExecute)
 		gasAfter := ctx.GasMeter().GasConsumed()
 		gasUsed := gasAfter - gasBefore
 

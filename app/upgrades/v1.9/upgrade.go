@@ -2,6 +2,7 @@ package v1_9
 
 import (
 	"fmt"
+
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -18,7 +19,13 @@ const upgradeName = "v1.9"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades: store.StoreUpgrades{Added: []string{ibcpacketforwardtypes.StoreKey, ibcfeetypes.ModuleName, ibcswitchtypes.ModuleName}},
+	StoreUpgrades: store.StoreUpgrades{
+		Added: []string{
+			ibcpacketforwardtypes.StoreKey,
+			ibcfeetypes.ModuleName,
+			ibcswitchtypes.ModuleName,
+		},
+	},
 }
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,

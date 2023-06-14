@@ -81,7 +81,7 @@ impl Default for WasmCosts {
             external_secp256k1_sign: 100000,
             external_ed25519_sign: 75000,
             external_check_gas_used: 8192,
-            external_minimum_gas_evaporate: 8000
+            external_minimum_gas_evaporate: 8000,
         }
     }
 }
