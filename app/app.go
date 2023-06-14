@@ -1,11 +1,13 @@
 package app
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
@@ -23,6 +25,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/kv"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
@@ -424,12 +427,61 @@ func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBegin
 	} else {
 		stores := rootMulti.GetStores()
 		for k, v := range stores {
-			fmt.Printf("TOMMM root multi stores\nk: %+v\nhash: %+v\n", k.Name(), v.LastCommitID().Hash)
+			fmt.Printf("TOMMM store %s hash: %+v\n", k.Name(), v.LastCommitID().Hash)
 		}
 	}
+
+	fmt.Printf("TOMMM respective app hash: %+v\n", rootMulti.LastCommitID().Hash)
 	//////////////// EXPERIMENT ////////////////
 
 	return app.mm.BeginBlock(ctx, req)
+}
+
+func storesRootsFromMultiStore(rootMulti *rootmulti.Store) [][]byte {
+	stores := rootMulti.GetStores()
+	kvs := kv.Pairs{}
+
+	for k, v := range stores {
+		// Stores of type StoreTypeTransient don't participate in AppHash calculation
+		if v.GetStoreType() == sdk.StoreTypeTransient {
+			continue
+		}
+
+		kvs.Pairs = append(kvs.Pairs, kv.Pair{Key: []byte(k.Name()), Value: v.LastCommitID().Hash})
+	}
+
+	// Have to sort in order to calculate the correct AppHash
+	sort.Sort(kvs)
+
+	storeRoots := make([][]byte, len(kvs.Pairs))
+	for i, kvp := range kvs.Pairs {
+		storeRoots[i] = pairBytes(kvp)
+	}
+
+	return storeRoots
+}
+
+// This is a copy of an internal cosmos-sdk function: https://github.com/scrtlabs/cosmos-sdk/blob/1b9278476b3ac897d8ebb90241008476850bf212/store/internal/maps/maps.go#LL152C1-L152C1
+// pairBytes returns key || value, with both the
+// key and value length prefixed.
+func pairBytes(kv kv.Pair) []byte {
+	// In the worst case:
+	// * 8 bytes to Uvarint encode the length of the key
+	// * 8 bytes to Uvarint encode the length of the value
+	// So preallocate for the worst case, which will in total
+	// be a maximum of 14 bytes wasted, if len(key)=1, len(value)=1,
+	// but that's going to rare.
+	buf := make([]byte, 8+len(kv.Key)+8+len(kv.Value))
+
+	// Encode the key, prefixed with its length.
+	nlk := binary.PutUvarint(buf, uint64(len(kv.Key)))
+	nk := copy(buf[nlk:], kv.Key)
+
+	// Encode the value, prefixing with its length.
+	nlv := binary.PutUvarint(buf[nlk+nk:], uint64(len(kv.Value)))
+	nv := copy(buf[nlk+nk+nlv:], kv.Value)
+
+	return buf[:nlk+nk+nlv+nv]
 }
 
 // EndBlocker application updates every end block
