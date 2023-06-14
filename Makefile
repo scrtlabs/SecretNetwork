@@ -416,7 +416,7 @@ build-bench-contract:
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/bench-contract
 	cp $(TEST_CONTRACT_V1_PATH)/bench-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 
-build-test-contract:
+build-test-contracts:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update
 	# sudo apt install -y binaryen
@@ -426,14 +426,19 @@ build-test-contract:
 	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/ibc-test-contract
 	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v1
+	mv $(TEST_CONTRACT_V1_PATH)/migration/contract-v1/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v2
+	mv $(TEST_CONTRACT_V1_PATH)/migration/contract-v2/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 
-prep-go-tests: build-test-contract bin-data-sw
+
+prep-go-tests: build-test-contracts bin-data-sw
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 
-go-tests: build-test-contract bin-data-sw
+go-tests: build-test-contracts bin-data-sw
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
@@ -442,7 +447,7 @@ go-tests: build-test-contract bin-data-sw
 	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
 	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
-go-tests-hw: build-test-contract bin-data
+go-tests-hw: build-test-contracts bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=HW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
@@ -457,7 +462,7 @@ go-tests-hw: build-test-contract bin-data
 enclave-tests:
 	$(MAKE) -C cosmwasm/enclaves/test run
 
-build-all-test-contracts: build-test-contract
+build-all-test-contracts: build-test-contracts
 	cd $(CW_CONTRACTS_V010_PATH)/gov && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os $(CW_CONTRACTS_V010_PATH)/gov/target/wasm32-unknown-unknown/release/gov.wasm -o $(TEST_CONTRACT_PATH)/gov.wasm
 
@@ -483,7 +488,7 @@ build-all-test-contracts: build-test-contract
 	wasm-opt -Os .$(CW_CONTRACTS_V010_PATH)/hackatom/target/wasm32-unknown-unknown/release/hackatom.wasm -o $(TEST_CONTRACT_PATH)/contract.wasm
 	cat $(TEST_CONTRACT_PATH)/contract.wasm | gzip > $(TEST_CONTRACT_PATH)/contract.wasm.gzip
 
-build-erc20-contract: build-test-contract
+build-erc20-contract: build-test-contracts
 	cd .$(CW_CONTRACTS_V010_PATH)/erc20 && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os .$(CW_CONTRACTS_V010_PATH)/erc20/target/wasm32-unknown-unknown/release/cw_erc20.wasm -o ./erc20.wasm
 

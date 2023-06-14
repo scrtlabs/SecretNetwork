@@ -17,4 +17,5 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum MigrateMsg {
     Migrate {},
+    StdError {},
 }

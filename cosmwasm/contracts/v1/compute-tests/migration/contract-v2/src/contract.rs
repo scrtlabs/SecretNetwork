@@ -1,5 +1,5 @@
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 
 #[entry_point]
 pub fn instantiate(
@@ -38,6 +38,7 @@ pub fn execute(
 pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response> {
     match msg {
         MigrateMsg::Migrate {} => Ok(Response::default()),
+        MigrateMsg::StdError {} => Err(StdError::generic_err("this is an std error")),
     }
 }
 
