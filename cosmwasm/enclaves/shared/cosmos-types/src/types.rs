@@ -202,6 +202,16 @@ impl HandleType {
     }
 }
 
+#[allow(non_camel_case_types)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Copy)]
+pub enum VerifyParamsType {
+    HandleType(HandleType),
+    Init,
+    Migrate,
+    UpdateAdmin,
+    ClearAdmin,
+}
+
 // This is called `VerificationInfo` on the Go side
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct SigInfo {
@@ -233,7 +243,10 @@ pub struct SignDoc {
 }
 
 impl SignDoc {
-    pub fn from_bytes(bytes: &[u8], handle_type: HandleType) -> Result<Self, EnclaveError> {
+    pub fn from_bytes(
+        bytes: &[u8],
+        verify_params_type: VerifyParamsType,
+    ) -> Result<Self, EnclaveError> {
         let raw_sign_doc = proto::tx::tx::SignDoc::parse_from_bytes(bytes).map_err(|err| {
             warn!(
                 "got an error while trying to deserialize sign doc bytes from protobuf: {}: {}",
@@ -243,7 +256,7 @@ impl SignDoc {
             EnclaveError::FailedToDeserialize
         })?;
 
-        let body = TxBody::from_bytes(&raw_sign_doc.body_bytes, handle_type)?;
+        let body = TxBody::from_bytes(&raw_sign_doc.body_bytes, verify_params_type)?;
         let auth_info = AuthInfo::from_bytes(&raw_sign_doc.auth_info_bytes)?;
 
         Ok(Self {
@@ -266,7 +279,10 @@ pub struct TxBody {
 }
 
 impl TxBody {
-    pub fn from_bytes(bytes: &[u8], handle_type: HandleType) -> Result<Self, EnclaveError> {
+    pub fn from_bytes(
+        bytes: &[u8],
+        verify_params_type: VerifyParamsType,
+    ) -> Result<Self, EnclaveError> {
         let tx_body = proto::tx::tx::TxBody::parse_from_bytes(bytes).map_err(|err| {
             warn!(
                 "got an error while trying to deserialize cosmos message body bytes from protobuf: {}: {}",
@@ -279,7 +295,7 @@ impl TxBody {
         let messages = tx_body
             .messages
             .into_iter()
-            .map(|any| DirectSdkMsg::from_bytes(&any.value, handle_type))
+            .map(|any| DirectSdkMsg::from_bytes(&any.value, verify_params_type))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(TxBody {
@@ -645,31 +661,44 @@ pub enum DirectSdkMsg {
 }
 
 impl DirectSdkMsg {
-    pub fn from_bytes(bytes: &[u8], handle_type: HandleType) -> Result<Self, EnclaveError> {
+    pub fn from_bytes(
+        bytes: &[u8],
+        verify_params_type: VerifyParamsType,
+    ) -> Result<Self, EnclaveError> {
         // Assaf: This function needs a refactor, as some protobufs are
         // compatible, e.g. try_parse_execute succeeds in parsing MsgRecvPacket as
         // MsgExecuteContract, so for now for each field of MsgExecuteContract we also need
         // to add a sanity check
-        match handle_type {
-            HandleType::HANDLE_TYPE_EXECUTE => Self::try_parse_execute(bytes)
-                .or_else(|_| Self::try_parse_instantiate(bytes))
-                .or_else(|_| Self::try_parse_migrate(bytes)),
-            HandleType::HANDLE_TYPE_REPLY => Ok(DirectSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN => Ok(DirectSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT => Ok(DirectSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE => Ok(DirectSdkMsg::Other),
-            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
-            | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
-                Self::try_parse_ibc_recv_packet(bytes)
+        match verify_params_type {
+            VerifyParamsType::Init => Self::try_parse_instantiate(bytes),
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_EXECUTE) => {
+                Self::try_parse_execute(bytes)
             }
-            HandleType::HANDLE_TYPE_IBC_PACKET_ACK
-            | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => {
-                Self::try_parse_ibc_ack(bytes)
+            VerifyParamsType::Migrate => Self::try_parse_migrate(bytes),
+            VerifyParamsType::UpdateAdmin => Ok(DirectSdkMsg::Other),
+            VerifyParamsType::ClearAdmin => Ok(DirectSdkMsg::Other),
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_REPLY) => Ok(DirectSdkMsg::Other),
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN) => {
+                Ok(DirectSdkMsg::Other)
             }
-            HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
-            | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
-                Self::try_parse_ibc_timeout(bytes)
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT) => {
+                Ok(DirectSdkMsg::Other)
             }
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE) => {
+                Ok(DirectSdkMsg::Other)
+            }
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE)
+            | VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER,
+            ) => Self::try_parse_ibc_recv_packet(bytes),
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_ACK)
+            | VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK,
+            ) => Self::try_parse_ibc_ack(bytes),
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT)
+            | VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT,
+            ) => Self::try_parse_ibc_timeout(bytes),
         }
     }
 

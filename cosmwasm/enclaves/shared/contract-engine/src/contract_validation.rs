@@ -9,6 +9,7 @@ use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
     ContractCode, CosmosPubKey, DirectSdkMsg, HandleType, SigInfo, SignDoc, StdSignDoc,
+    VerifyParamsType,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
@@ -366,7 +367,8 @@ pub fn verify_params(
     #[cfg(feature = "light-client-validation")] og_msg: &[u8],
     should_verify_sig_info: bool,
     should_verify_input: bool,
-    handle_type: HandleType,
+    verify_params_type: VerifyParamsType,
+    admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
     if should_verify_sig_info {
         debug!("Verifying message signatures for: {:?}", sig_info);
@@ -380,7 +382,7 @@ pub fn verify_params(
             return Err(EnclaveError::ValidationFailure);
         }
 
-        verify_signature(sig_info, sender, handle_type)?;
+        verify_signature(sig_info, sender, verify_params_type)?;
     }
 
     if should_verify_input {
@@ -390,7 +392,8 @@ pub fn verify_params(
             sender,
             contract_address,
             msg,
-            handle_type,
+            verify_params_type,
+            admin,
         )?;
     }
 
@@ -402,9 +405,9 @@ pub fn verify_params(
 fn verify_signature(
     sig_info: &SigInfo,
     sender: &CanonicalAddr,
-    handle_type: HandleType,
+    verify_params_type: VerifyParamsType,
 ) -> Result<(), EnclaveError> {
-    let sender_public_key = get_signer(sig_info, sender, handle_type)?;
+    let sender_public_key = get_signer(sig_info, sender, verify_params_type)?;
 
     sender_public_key
         .verify_bytes(
@@ -437,9 +440,10 @@ fn verify_input(
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
     msg: &SecretMessage,
-    handle_type: HandleType,
+    verify_params_types: VerifyParamsType,
+    admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
-    let messages = get_messages(sig_info, handle_type)?;
+    let messages = get_messages(sig_info, verify_params_types)?;
 
     let is_verified = verify_message_params(
         &messages,
@@ -447,7 +451,8 @@ fn verify_input(
         sent_funds,
         contract_address,
         msg,
-        handle_type,
+        verify_params_types,
+        admin,
     );
 
     if !is_verified {
@@ -461,12 +466,13 @@ fn verify_input(
 fn get_signer(
     sign_info: &SigInfo,
     sender: &CanonicalAddr,
-    handle_type: HandleType,
+    verify_params_type: VerifyParamsType,
 ) -> Result<CosmosPubKey, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
-            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), handle_type)?;
+            let sign_doc =
+                SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), verify_params_type)?;
             trace!("sign doc: {:?}", sign_doc);
 
             // This verifies that signatures and sign bytes are self consistent
@@ -525,12 +531,13 @@ fn get_signer(
 
 fn get_messages(
     sign_info: &SigInfo,
-    handle_type: HandleType,
+    verify_params_types: VerifyParamsType,
 ) -> Result<Vec<DirectSdkMsg>, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
-            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), handle_type)?;
+            let sign_doc =
+                SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), verify_params_types)?;
             trace!("sign doc: {:?}", sign_doc);
 
             Ok(sign_doc.body.messages)
@@ -643,12 +650,13 @@ fn verify_message_params(
     sent_funds: &[Coin],
     contract_address: &HumanAddr,
     sent_msg: &SecretMessage,
-    handle_type: HandleType,
+    verify_params_types: VerifyParamsType,
+    admin: Option<&CanonicalAddr>,
 ) -> bool {
     info!("Verifying sdk message against wasm input...");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
-    let sdk_msg = verify_and_get_sdk_msg(messages, sender, sent_msg, handle_type);
+    let sdk_msg = verify_and_get_sdk_msg(messages, sender, sent_msg, verify_params_types, admin);
     if sdk_msg.is_none() {
         debug!("Message verification failed!");
         trace!(

@@ -8,7 +8,7 @@ use cw_types_generic::{BaseAddr, BaseEnv};
 use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::CanonicalAddr;
 
-use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo};
+use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo, VerifyParamsType};
 use enclave_crypto::{sha_256, Ed25519PublicKey};
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
@@ -85,7 +85,7 @@ pub fn init(
     env: &[u8],         // blockchain state
     msg: &[u8],         // probably function call and args
     sig_info: &[u8],    // info about signature verification
-    _admin: &[u8],      // admin's canonical address or null if no admin
+    admin: &[u8],       // admin's canonical address or null if no admin
 ) -> Result<InitSuccess, EnclaveError> {
     trace!("Starting init");
 
@@ -118,6 +118,7 @@ pub fn init(
 
     let canonical_contract_address = to_canonical(contract_address)?;
     let canonical_sender_address = to_canonical(sender)?;
+    let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
 
     let contract_key = generate_contract_key(
         &canonical_sender_address,
@@ -143,7 +144,8 @@ pub fn init(
         msg,
         true,
         true,
-        HandleType::HANDLE_TYPE_EXECUTE, // same behavior as execute
+        VerifyParamsType::Init,
+        Some(&canonical_admin_address),
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -261,7 +263,7 @@ pub fn migrate(
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
-    _admin: &[u8],
+    admin: &[u8],
     admin_proof: &[u8],
 ) -> Result<MigrateSuccess, EnclaveError> {
     debug!("Starting migrate");
@@ -295,6 +297,7 @@ pub fn migrate(
 
     let canonical_contract_address = to_canonical(contract_address)?;
     let canonical_sender_address = to_canonical(sender)?;
+    let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
 
     let contract_key = generate_contract_key(
         &canonical_sender_address,
@@ -335,7 +338,8 @@ pub fn migrate(
         msg,
         true,
         true,
-        HandleType::HANDLE_TYPE_EXECUTE, // same behavior as execute
+        VerifyParamsType::Migrate,
+        Some(&canonical_admin_address),
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -499,7 +503,8 @@ pub fn handle(
         msg,
         should_verify_sig_info,
         should_verify_input,
-        parsed_handle_type,
+        VerifyParamsType::HandleType(parsed_handle_type),
+        None,
     )?;
 
     let mut validated_msg = decrypted_msg.clone();

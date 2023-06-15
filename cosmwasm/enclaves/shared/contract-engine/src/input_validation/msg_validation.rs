@@ -1,9 +1,12 @@
-use cw_types_v010::{encoding::Binary, types::CanonicalAddr};
+use cw_types_v010::{
+    encoding::Binary,
+    types::{CanonicalAddr, HumanAddr},
+};
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use enclave_cosmos_types::types::{
     is_transfer_ack_error, DirectSdkMsg, FungibleTokenPacketData, HandleType, IBCLifecycleComplete,
     IBCLifecycleCompleteOptions, IBCPacketAckMsg, IBCPacketTimeoutMsg, IbcHooksIncomingTransferMsg,
-    IncentivizedAcknowledgement, Packet,
+    IncentivizedAcknowledgement, Packet, VerifyParamsType,
 };
 
 use log::*;
@@ -13,28 +16,39 @@ use crate::types::SecretMessage;
 /// Get the cosmwasm message that contains the encrypted message
 pub fn verify_and_get_sdk_msg<'sd>(
     messages: &'sd [DirectSdkMsg],
-    msg_sender: &CanonicalAddr,
+    sent_sender: &CanonicalAddr,
     sent_msg: &SecretMessage,
-    handle_type: HandleType,
+    verify_params_types: VerifyParamsType,
+    sent_admin: Option<&CanonicalAddr>,
 ) -> Option<&'sd DirectSdkMsg> {
-    trace!("get_verified_msg: {:?}", messages);
+    trace!("verify_and_get_sdk_msg: {:?}", messages);
 
     messages.iter().find(|&m| match m {
         DirectSdkMsg::Other => false,
-        DirectSdkMsg::MsgExecuteContract { msg, sender, .. }
-        | DirectSdkMsg::MsgInstantiateContract {
+        DirectSdkMsg::MsgInstantiateContract {
             init_msg: msg,
             sender,
+            admin,
             ..
+        } => {
+            let empty_canon = &CanonicalAddr(Binary(vec![]));
+            let empty_human = HumanAddr("".to_string());
+            let sent_admin = sent_admin.unwrap_or(empty_canon);
+            let sent_admin = &HumanAddr::from_canonical(sent_admin).unwrap_or(empty_human);
+
+            sent_admin == admin && sent_sender == sender && &sent_msg.to_vec() == msg
         }
+        DirectSdkMsg::MsgExecuteContract { msg, sender, .. }
         | DirectSdkMsg::MsgMigrateContract { msg, sender, .. } => {
-            msg_sender == sender && &sent_msg.to_vec() == msg
+            sent_sender == sender && &sent_msg.to_vec() == msg
         }
-        DirectSdkMsg::MsgRecvPacket { packet, .. } => match handle_type {
-            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => verify_ibc_packet_recv(sent_msg, packet),
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
-                verify_ibc_wasm_hooks_incoming_transfer(sent_msg, packet)
+        DirectSdkMsg::MsgRecvPacket { packet, .. } => match verify_params_types {
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE) => {
+                verify_ibc_packet_recv(sent_msg, packet)
             }
+            VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER,
+            ) => verify_ibc_wasm_hooks_incoming_transfer(sent_msg, packet),
             _ => false,
         },
         DirectSdkMsg::MsgAcknowledgement {
@@ -42,22 +56,22 @@ pub fn verify_and_get_sdk_msg<'sd>(
             acknowledgement,
             signer,
             ..
-        } => match handle_type {
-            HandleType::HANDLE_TYPE_IBC_PACKET_ACK => {
+        } => match verify_params_types {
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_ACK) => {
                 verify_ibc_packet_ack(sent_msg, packet, acknowledgement, signer)
             }
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => {
-                verify_ibc_wasm_hooks_outgoing_transfer_ack(sent_msg, packet, acknowledgement)
-            }
+            VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK,
+            ) => verify_ibc_wasm_hooks_outgoing_transfer_ack(sent_msg, packet, acknowledgement),
             _ => false,
         },
-        DirectSdkMsg::MsgTimeout { packet, signer, .. } => match handle_type {
-            HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
+        DirectSdkMsg::MsgTimeout { packet, signer, .. } => match verify_params_types {
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT) => {
                 verify_ibc_packet_timeout(sent_msg, packet, signer)
             }
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
-                verify_ibc_wasm_hooks_outgoing_transfer_timeout(sent_msg, packet)
-            }
+            VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT,
+            ) => verify_ibc_wasm_hooks_outgoing_transfer_timeout(sent_msg, packet),
             _ => false,
         },
     })
