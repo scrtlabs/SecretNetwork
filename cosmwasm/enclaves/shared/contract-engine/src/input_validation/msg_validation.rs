@@ -40,7 +40,9 @@ pub fn verify_and_get_sdk_msg<'sd>(
         }
         DirectSdkMsg::MsgExecuteContract { msg, sender, .. }
         | DirectSdkMsg::MsgMigrateContract { msg, sender, .. } => {
-            sent_sender == sender && &sent_msg.to_vec() == msg
+            let empty_canon = &CanonicalAddr(Binary(vec![]));
+            let sent_admin = sent_admin.unwrap_or(empty_canon);
+            sent_sender == sender && sent_admin == sender && &sent_msg.to_vec() == msg
         }
         DirectSdkMsg::MsgRecvPacket { packet, .. } => match verify_params_types {
             VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE) => {
