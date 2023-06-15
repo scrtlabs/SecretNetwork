@@ -10,6 +10,7 @@ import (
 	"sort"
 
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
+	gocosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -420,25 +421,27 @@ func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 
 // BeginBlocker application updates every begin block
 func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
-	//////////////// EXPERIMENT ////////////////
 	multiStore := app.BaseApp.CommitMultiStore()
 	rootMulti, ok := multiStore.(*rootmulti.Store)
 	if !ok {
-		println("TOMMM oops")
+		panic("app's multi store is not of type *rootmulti.Store")
 	} else {
-		stores := rootMulti.GetStores()
-		for k, v := range stores {
-			fmt.Printf("TOMMM store %s hash: %+v\n", k.Name(), v.LastCommitID().Hash)
+		storeRoots := storesRootsFromMultiStore(rootMulti)
+		rootsBytes, err := storeRoots.Marshal()
+		if err != nil {
+			panic(err)
+		}
+
+		err = gocosmwasm.SubmitModulesStoreRoots(rootsBytes)
+		if err != nil {
+			panic(err)
 		}
 	}
-
-	fmt.Printf("TOMMM respective app hash: %+v\n", rootMulti.LastCommitID().Hash)
-	//////////////// EXPERIMENT ////////////////
 
 	return app.mm.BeginBlock(ctx, req)
 }
 
-func storesRootsFromMultiStore(rootMulti *rootmulti.Store) [][]byte {
+func storesRootsFromMultiStore(rootMulti *rootmulti.Store) kv.Pairs { //[][]byte {
 	stores := rootMulti.GetStores()
 	kvs := kv.Pairs{}
 
@@ -454,12 +457,14 @@ func storesRootsFromMultiStore(rootMulti *rootmulti.Store) [][]byte {
 	// Have to sort in order to calculate the correct AppHash
 	sort.Sort(kvs)
 
-	storeRoots := make([][]byte, len(kvs.Pairs))
-	for i, kvp := range kvs.Pairs {
-		storeRoots[i] = pairBytes(kvp)
-	}
+	return kvs
 
-	return storeRoots
+	// storeRoots := make([][]byte, len(kvs.Pairs))
+	// for i, kvp := range kvs.Pairs {
+	// 	storeRoots[i] = pairBytes(kvp)
+	// }
+
+	// return storeRoots
 }
 
 // This is a copy of an internal cosmos-sdk function: https://github.com/scrtlabs/cosmos-sdk/blob/1b9278476b3ac897d8ebb90241008476850bf212/store/internal/maps/maps.go#LL152C1-L152C1

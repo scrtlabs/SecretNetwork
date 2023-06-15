@@ -43,6 +43,25 @@ macro_rules! validate_input_length {
     };
 }
 
+#[no_mangle]
+#[allow(unused_variables)]
+pub unsafe extern "C" fn ecall_submit_store_roots(
+    in_roots: *const u8,
+    in_roots_len: u32,
+) -> sgx_status_t {
+    validate_input_length!(in_roots_len, "roots", MAX_VARIABLE_LENGTH);
+    validate_const_ptr!(
+        in_roots,
+        in_roots_len as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+
+    let store_roots_slice = slice::from_raw_parts(in_roots, in_roots_len as usize);
+    debug!("store_roots_slice: {:?}", store_roots_slice);
+
+    return sgx_status_t::SGX_SUCCESS;
+}
+
 /// # Safety
 ///  This function reads buffers which must be correctly initialized by the caller,
 /// see safety section of slice::[from_raw_parts](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html#safety)
@@ -214,7 +233,10 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
             }
         }
 
-        message_verifier.set_block_info(signed_header.header.height.value(), signed_header.header.time.unix_timestamp_nanos());
+        message_verifier.set_block_info(
+            signed_header.header.height.value(),
+            signed_header.header.time.unix_timestamp_nanos(),
+        );
     }
 
     #[cfg(feature = "random")]

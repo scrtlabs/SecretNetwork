@@ -117,6 +117,12 @@ enclave {
   //          [in, count=in_next_validator_set_len] const uint8_t* in_next_validator_set,
 //            uintptr_t in_next_validator_set_len
         );
+
+        public sgx_status_t ecall_submit_store_roots(
+            [in, count=in_roots_len] const uint8_t* in_roots,
+            uintptr_t in_roots_len
+        );
+
     };
 
     untrusted {
