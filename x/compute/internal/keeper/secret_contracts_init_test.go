@@ -1051,3 +1051,65 @@ func TestInitCreateNewContract(t *testing.T) {
 		})
 	}
 }
+
+func TestInputAdminMismatch(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		inputNil bool
+		txNil    bool
+	}{
+		{
+			name:     "tx is nil",
+			inputNil: true,
+			txNil:    false,
+		},
+		{
+			name:     "input is nil",
+			inputNil: false,
+			txNil:    true,
+		},
+		{
+			name:     "happy path 1",
+			inputNil: false,
+			txNil:    false,
+		},
+		{
+			name:     "happy path 2",
+			inputNil: true,
+			txNil:    true,
+		},
+	} {
+		for _, testContract := range testContracts {
+			t.Run(test.name, func(t *testing.T) {
+				t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+					ctx, keeper, codeID, codeHash, walletA, privWalletA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
+
+					initMsg := []byte(codeHash + `{"nop":{}}`)
+					enc, _ := wasmCtx.Encrypt(initMsg)
+
+					inputAdmin := walletA
+					if test.inputNil {
+						inputAdmin = nil
+					}
+					txAdmin := walletA
+					if test.txNil {
+						txAdmin = nil
+					}
+
+					ctx = PrepareInitSignedTx(t, keeper, ctx, walletA, txAdmin, privWalletA, enc, codeID, nil)
+					_, _, err := keeper.Instantiate(ctx, codeID, walletA, inputAdmin, enc, "some label", nil, nil)
+
+					if test.inputNil != test.txNil {
+						nonce := enc[0:32]
+						innerErr := extractInnerError(t, err, nonce, false, testContract.IsCosmWasmV1)
+
+						require.Error(t, innerErr)
+						require.Contains(t, innerErr.Error(), "Execution error: Enclave: failed to verify transaction signature")
+					} else {
+						require.Empty(t, err)
+					}
+				})
+			})
+		}
+	}
+}
