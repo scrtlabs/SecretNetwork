@@ -15,7 +15,7 @@ verify-validator-whitelist = []
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
 ] }
-sgx_trts = {rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_trts = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
@@ -24,16 +24,10 @@ tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", branch =
 tendermint-light-client-verifier = { git = "https://github.com/scrtlabs/tendermint-rs", branch = "fix-val-set-parsing", default-features = false }
 lazy_static = "1.4.0"
 log = "0.4.17"
-
-enclave_crypto = {path ="../crypto"}
-enclave_utils = {path ="../utils"}
-
-cosmos_proto = {path="../cosmos-proto"}
-
+enclave_crypto = { path = "../crypto" }
+enclave_utils = { path = "../utils" }
+cosmos_proto = { path = "../cosmos-proto" }
 protobuf = { version = "2.25.2" }
 hex = { version = "0.4.3" }
-
-# cosmrs = { version = "0.11.0", default-features = false }
-
-
-
+cosmos-sdk-proto = { version = "0.16.0", default-features = false }
+integer-encoding = "3.0.4"
