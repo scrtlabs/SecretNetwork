@@ -174,8 +174,9 @@ pub fn read_from_encrypted_state(
         &encrypted_key_bytes,
         block_height,
     ) {
-        Ok((maybe_encrypted_value_bytes, maybe_proof, gas_used)) => {
+        Ok((maybe_encrypted_value_bytes, maybe_proof, maybe_mp_key, gas_used)) => {
             debug!("merkle proof returned from read_db(): {:?}", maybe_proof);
+            debug!("full key returned from read_db(): {:?}", maybe_mp_key);
             match maybe_encrypted_value_bytes {
                 Some(encrypted_value_bytes) => {
                     let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
@@ -221,8 +222,9 @@ pub fn read_from_encrypted_state(
     let gas_used_second_read: u64;
     (maybe_plaintext_value, gas_used_second_read) =
         match read_db(context, &scrambled_field_name, block_height) {
-            Ok((encrypted_value, proof, gas_used)) => {
+            Ok((encrypted_value, proof, mp_key, gas_used)) => {
                 debug!("proof returned from read_db(): {:?}", proof);
+                debug!("full key returned from read_db(): {:?}", mp_key);
                 match encrypted_value {
                     Some(plaintext_value) => {
                         match decrypt_value_old(
@@ -319,14 +321,15 @@ fn read_db(
     context: &Ctx,
     key: &[u8],
     block_height: u64,
-) -> Result<(Option<Vec<u8>>, Option<Vec<u8>>, u64), WasmEngineError> {
+) -> Result<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>, u64), WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut value_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut proof_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
+    let mut mp_key_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
 
-    let (value, proof) = unsafe {
+    let (value, proof, mp_key) = unsafe {
         let status = ocalls::ocall_read_db(
             (&mut ocall_return) as *mut _,
             context.unsafe_clone(),
@@ -335,6 +338,7 @@ fn read_db(
             block_height,
             value_buffer.as_mut_ptr(),
             proof_buffer.as_mut_ptr(),
+            mp_key_buffer.as_mut_ptr(),
             key.as_ptr(),
             key.len(),
         );
@@ -353,9 +357,11 @@ fn read_db(
             OcallReturn::Success => {
                 let value_buffer = value_buffer.assume_init();
                 let proof_buffer = proof_buffer.assume_init();
+                let mp_key_buffer = mp_key_buffer.assume_init();
                 (
                     ecalls::recover_buffer(value_buffer)?,
                     ecalls::recover_buffer(proof_buffer)?,
+                    ecalls::recover_buffer(mp_key_buffer)?,
                 )
             }
             OcallReturn::Failure => {
@@ -365,7 +371,7 @@ fn read_db(
         }
     };
 
-    Ok((value, proof, gas_used))
+    Ok((value, proof, mp_key, gas_used))
 }
 
 /// Safe wrapper around reads from the contract storage

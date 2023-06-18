@@ -132,6 +132,7 @@ enclave {
             uint64_t block_height,
             [out] EnclaveBuffer* value,
             [out] EnclaveBuffer* proof,
+            [out] EnclaveBuffer* mp_key,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
         ) allow (ecall_allocate);

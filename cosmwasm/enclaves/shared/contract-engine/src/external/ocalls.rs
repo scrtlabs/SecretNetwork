@@ -18,6 +18,7 @@ extern "C" {
         block_height: u64,
         value: *mut EnclaveBuffer,
         proof: *mut EnclaveBuffer,
+        mp_key: *mut EnclaveBuffer,
         key: *const u8,
         key_len: usize,
     ) -> sgx_status_t;

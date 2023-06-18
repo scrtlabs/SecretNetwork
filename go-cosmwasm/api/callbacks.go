@@ -19,7 +19,7 @@ typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *ca
 typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, uint32_t query_depth, Buffer *result, Buffer *errOut);
 
 // forward declarations (db)
-GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, uint64_t block_height, Buffer key, Buffer *val, Buffer *merkle_p, Buffer *errOut);
+GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, uint64_t block_height, Buffer key, Buffer *val, Buffer *merkle_p, Buffer *mp_key, Buffer *errOut);
 GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
 GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
 GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
@@ -139,7 +139,7 @@ func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 }
 
 //export cGet
-func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, key C.Buffer, val *C.Buffer, merkle_p *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, key C.Buffer, val *C.Buffer, merkle_p *C.Buffer, mp_key *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
@@ -152,7 +152,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, 
 
 	gasBefore := gm.GasConsumed()
 
-	v, proof, err := getWithProof(kv, k, int64(block_height))
+	v, proof, mpKey, err := getWithProof(kv, k, int64(block_height))
 	if err != nil {
 		panic(fmt.Sprintf("error getting merkle proof: %s", err.Error()))
 	}
@@ -171,6 +171,9 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, 
 
 	if proof != nil {
 		*merkle_p = allocateRust(proof)
+	}
+	if mpKey != nil {
+		*mp_key = allocateRust(mpKey)
 	}
 
 	return C.GoResult_Ok
