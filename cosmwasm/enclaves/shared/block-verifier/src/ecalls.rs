@@ -1,5 +1,6 @@
 use cosmos_sdk_proto::cosmos::base::kv::v1beta1::{Pair, Pairs};
 use cosmos_sdk_proto::traits::Message;
+use enclave_crypto::hash::sha;
 use integer_encoding::VarInt;
 use std::slice;
 use tendermint::block::Commit;
@@ -9,7 +10,7 @@ use tendermint_proto::Protobuf;
 
 use sgx_types::sgx_status_t;
 
-use crate::{txs, verify_block};
+use crate::{txs, verify_block, READ_PROOFER};
 use log::{debug, error};
 
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
@@ -74,14 +75,35 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
     let store_roots: Pairs = Pairs::decode(store_roots_slice).unwrap();
     let mut store_roots_bytes = vec![];
 
+    // Make sure that the provided AppHash contains the provided compute store root
+    // The AppHash merkle is built using sha256(root) of every module
+    let compute_h = sha::sha_256(compute_root_slice);
+    if !store_roots
+        .pairs
+        .as_slice()
+        .iter()
+        .any(|p| p.value == compute_h.to_vec())
+    {
+        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+    };
+
     // Encode all key-value pairs to bytes
     for root in store_roots.pairs {
+        debug!("TOMMM key: {:?}", String::from_utf8_lossy(&root.key));
+        debug!("TOMMM val: {:?}", root.value);
         store_roots_bytes.push(pair_to_bytes(root));
     }
-
     let h = merkle::simple_hash_from_byte_vectors(store_roots_bytes);
+
     debug!("received app_hash: {:?}", h);
     debug!("received compute_root: {:?}", compute_root_slice);
+    debug!(
+        "TOMMM hashed compute_root: {:?}",
+        sha::sha_256(compute_root_slice)
+    );
+
+    let mut rp = READ_PROOFER.lock().unwrap();
+    rp.app_hash = h;
 
     return sgx_status_t::SGX_SUCCESS;
 }
