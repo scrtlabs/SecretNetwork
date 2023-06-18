@@ -84,6 +84,7 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
         .iter()
         .any(|p| p.value == compute_h.to_vec())
     {
+        error!("could not verify compute store root!");
         return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     };
 
@@ -249,7 +250,7 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     #[cfg(feature = "random")]
     let validator_hash = validator_set.hash();
 
-    let signed_header = SignedHeader::new(header, commit).unwrap();
+    let signed_header = SignedHeader::new(header.clone(), commit).unwrap();
     let untrusted_block = tendermint_light_client_verifier::types::UntrustedBlockState {
         signed_header: &signed_header,
         validators: &validator_set,
@@ -322,6 +323,11 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         };
 
         decrypted_random.copy_from_slice(&*decrypted);
+    }
+
+    if READ_PROOFER.lock().unwrap().app_hash != header.app_hash.as_bytes() {
+        error!("error verifying app hash!");
+        return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     }
 
     debug!(
