@@ -104,7 +104,7 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DB_vtable {
-  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, uint64_t, Buffer, Buffer*, Buffer*, Buffer*);
+  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, uint64_t, Buffer, Buffer*, Buffer*, Buffer*, Buffer*);
   int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, Buffer*);
   int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
   int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, int32_t, GoIter*, Buffer*);

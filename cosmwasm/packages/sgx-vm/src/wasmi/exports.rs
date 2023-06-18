@@ -48,6 +48,7 @@ pub extern "C" fn ocall_read_db(
     block_height: u64,
     value: *mut EnclaveBuffer,
     proof: *mut EnclaveBuffer,
+    mp_key: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,
 ) -> OcallReturn {
@@ -59,6 +60,7 @@ pub extern "C" fn ocall_read_db(
         block_height,
         value,
         proof,
+        mp_key,
         key,
         key_len,
     )
@@ -94,6 +96,7 @@ fn ocall_read_db_concrete(
     height: u64,
     value: *mut EnclaveBuffer,
     proof: *mut EnclaveBuffer,
+    mp_key: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,
 ) -> OcallReturn {
@@ -105,19 +108,27 @@ fn ocall_read_db_concrete(
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
         .map(
-            |result| -> Result<(EnclaveBuffer, EnclaveBuffer), OcallReturn> {
+            |result| -> Result<(EnclaveBuffer, EnclaveBuffer, EnclaveBuffer), OcallReturn> {
                 match result {
-                    Ok(((value, proof), gas_cost)) => {
+                    Ok(((value, proof, mp_key), gas_cost)) => {
                         unsafe { *gas_used = gas_cost };
 
-                        if let (Some(value), Some(proof)) = (value, proof) {
-                            let val = alloc_impl(&value).map_err(|_| OcallReturn::Failure);
-                            let p = alloc_impl(&proof).map_err(|_| OcallReturn::Failure);
-
-                            val.and_then(|val| p.and_then(|p| Ok((val, p))))
+                        let value_buf = if let Some(value) = value {
+                            alloc_impl(&value).map_err(|_| OcallReturn::Failure)?
                         } else {
-                            Ok((EnclaveBuffer::default(), EnclaveBuffer::default()))
-                        }
+                            EnclaveBuffer::default()
+                        };
+                        let proof_buf = if let Some(proof) = proof {
+                            alloc_impl(&proof).map_err(|_| OcallReturn::Failure)?
+                        } else {
+                            EnclaveBuffer::default()
+                        };
+                        let mp_key_buf = if let Some(mp_key) = mp_key {
+                            alloc_impl(&mp_key).map_err(|_| OcallReturn::Failure)?
+                        } else {
+                            EnclaveBuffer::default()
+                        };
+                        Ok((value_buf, proof_buf, mp_key_buf))
                     }
                     Err(err) => {
                         unsafe { store_vm_error(err, vm_error) };
@@ -128,10 +139,11 @@ fn ocall_read_db_concrete(
         )
         // Return the result or report the error
         .map(|result| match result {
-            Ok((value_buffer, proof_buffer)) => {
+            Ok((value_buffer, proof_buffer, mp_key_buffer)) => {
                 unsafe {
                     *value = value_buffer;
-                    *proof = proof_buffer
+                    *proof = proof_buffer;
+                    *mp_key = mp_key_buffer
                 };
                 OcallReturn::Success
             }
@@ -389,7 +401,7 @@ struct ExportImplementations {
         context: Ctx,
         height: u64,
         key: &[u8],
-    ) -> VmResult<((Option<Vec<u8>>, Option<Vec<u8>>), u64)>,
+    ) -> VmResult<((Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>), u64)>,
     query_chain: fn(
         context: Ctx,
         query: &[u8],
@@ -449,7 +461,7 @@ fn ocall_read_db_impl<S, Q>(
     mut context: Ctx,
     height: u64,
     key: &[u8],
-) -> VmResult<((Option<Vec<u8>>, Option<Vec<u8>>), u64)>
+) -> VmResult<((Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>), u64)>
 where
     S: Storage,
     Q: Querier,
