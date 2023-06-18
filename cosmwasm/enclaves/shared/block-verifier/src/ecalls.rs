@@ -48,6 +48,10 @@ macro_rules! validate_input_length {
     };
 }
 
+/// # Safety
+///  This function reads buffers which must be correctly initialized by the caller,
+/// see safety section of slice::[from_raw_parts](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html#safety)
+///
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn ecall_submit_store_roots(
@@ -106,7 +110,7 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
     let mut rp = READ_PROOFER.lock().unwrap();
     rp.app_hash = h;
 
-    return sgx_status_t::SGX_SUCCESS;
+    sgx_status_t::SGX_SUCCESS
 }
 
 // This is a copy of a cosmos-sdk function: https://github.com/scrtlabs/cosmos-sdk/blob/1b9278476b3ac897d8ebb90241008476850bf212/store/internal/maps/maps.go#LL152C1-L152C1
@@ -128,7 +132,7 @@ fn pair_to_bytes(kv: Pair) -> Vec<u8> {
     buf.extend_from_slice(&(kv.value.len()).encode_var_vec());
     buf.extend_from_slice(&kv.value);
 
-    return buf;
+    buf
 }
 
 /// # Safety
