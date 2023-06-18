@@ -177,17 +177,21 @@ pub fn read_from_encrypted_state(
         Ok((maybe_encrypted_value_bytes, maybe_proof, maybe_mp_key, gas_used)) => {
             debug!("merkle proof returned from read_db(): {:?}", maybe_proof);
             debug!("full key returned from read_db(): {:?}", maybe_mp_key);
+            debug!(
+                "enc value returned from read_db(): {:?}",
+                maybe_encrypted_value_bytes
+            );
             match maybe_encrypted_value_bytes {
                 Some(encrypted_value_bytes) => {
                     let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
-                    warn!(
-                        "read_db() got an error while trying to read_from_encrypted_state the value {:?} for key {:?}, stopping wasm: {:?}",
-                        encrypted_value_bytes,
-                        encrypted_key_bytes,
-                        err.to_string()
-                    );
-                    WasmEngineError::DecryptionError
-                })?;
+                        warn!(
+                            "read_db() got an error while trying to read_from_encrypted_state the value {:?} for key {:?}, stopping wasm: {:?}",
+                            encrypted_value_bytes,
+                            encrypted_key_bytes,
+                            err.to_string()
+                        );
+                        WasmEngineError::DecryptionError
+                    })?;
 
                     match decrypt_value_new(
                         &encrypted_key.data,

@@ -10,10 +10,12 @@ extern "C" {
         retval: *mut sgx_status_t,
         in_roots: *const u8,
         in_roots_len: u32,
+        in_compute_root: *const u8,
+        in_compute_root_len: u32,
     ) -> sgx_status_t;
 }
 
-pub fn untrusted_submit_store_roots(roots: &[u8]) -> SgxResult<()> {
+pub fn untrusted_submit_store_roots(roots: &[u8], compute_root: &[u8]) -> SgxResult<()> {
     debug!("Hello from just before - untrusted_submit_store_roots");
 
     const RETRY_LIMIT: i32 = 3;
@@ -22,7 +24,7 @@ pub fn untrusted_submit_store_roots(roots: &[u8]) -> SgxResult<()> {
 
     // this is here so we can
     loop {
-        let (retval, status) = submit_store_roots_impl(roots)?;
+        let (retval, status) = submit_store_roots_impl(roots, compute_root)?;
         if status != sgx_status_t::SGX_SUCCESS {
             return Err(status);
         } else if retval != sgx_status_t::SGX_SUCCESS {
@@ -47,7 +49,10 @@ pub fn untrusted_submit_store_roots(roots: &[u8]) -> SgxResult<()> {
     }
 }
 
-fn submit_store_roots_impl(roots: &[u8]) -> SgxResult<(sgx_status_t, sgx_status_t)> {
+fn submit_store_roots_impl(
+    roots: &[u8],
+    compute_root: &[u8],
+) -> SgxResult<(sgx_status_t, sgx_status_t)> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -59,7 +64,15 @@ fn submit_store_roots_impl(roots: &[u8]) -> SgxResult<(sgx_status_t, sgx_status_
     let mut retval = sgx_status_t::SGX_SUCCESS;
 
     // let status = unsafe { ecall_get_encrypted_seed(eid, &mut retval, cert, cert_len, & mut seed) };
-    let status =
-        unsafe { ecall_submit_store_roots(eid, &mut retval, roots.as_ptr(), roots.len() as u32) };
+    let status = unsafe {
+        ecall_submit_store_roots(
+            eid,
+            &mut retval,
+            roots.as_ptr(),
+            roots.len() as u32,
+            compute_root.as_ptr(),
+            compute_root.len() as u32,
+        )
+    };
     Ok((retval, status))
 }

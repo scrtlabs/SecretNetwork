@@ -432,7 +432,10 @@ func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBegin
 			panic(err)
 		}
 
-		err = gocosmwasm.SubmitModulesStoreRoots(rootsBytes)
+		computeKv := rootMulti.GetCommitKVStore(sdk.NewKVStoreKey(compute.StoreKey))
+		computeRoot := computeKv.LastCommitID().Hash
+
+		err = gocosmwasm.SubmitModulesStoreRoots(rootsBytes, computeRoot)
 		if err != nil {
 			panic(err)
 		}
@@ -458,13 +461,6 @@ func storesRootsFromMultiStore(rootMulti *rootmulti.Store) kv.Pairs { //[][]byte
 	sort.Sort(kvs)
 
 	return kvs
-
-	// storeRoots := make([][]byte, len(kvs.Pairs))
-	// for i, kvp := range kvs.Pairs {
-	// 	storeRoots[i] = pairBytes(kvp)
-	// }
-
-	// return storeRoots
 }
 
 // This is a copy of an internal cosmos-sdk function: https://github.com/scrtlabs/cosmos-sdk/blob/1b9278476b3ac897d8ebb90241008476850bf212/store/internal/maps/maps.go#LL152C1-L152C1
