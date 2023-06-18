@@ -68,12 +68,14 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 	return receiveVector(res), nil
 }
 
-func SubmitModulesStoreRoots(roots []byte) error {
+func SubmitModulesStoreRoots(roots []byte, computeRoot []byte) error {
 	errmsg := C.Buffer{}
 	rootsSlice := sendSlice(roots)
 	defer freeAfterSend(rootsSlice)
+	computeRootSlice := sendSlice(computeRoot)
+	defer freeAfterSend(computeRootSlice)
 
-	_, err := C.submit_store_roots(rootsSlice, &errmsg)
+	_, err := C.submit_store_roots(rootsSlice, computeRootSlice, &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
 	}

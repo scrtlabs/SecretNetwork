@@ -43,7 +43,7 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []by
 	return nil, nil
 }
 
-func SubmitModulesStoreRoots(roots []byte) error {
+func SubmitModulesStoreRoots(roots []byte, computeRoot []byte) error {
 	return nil
 }
 

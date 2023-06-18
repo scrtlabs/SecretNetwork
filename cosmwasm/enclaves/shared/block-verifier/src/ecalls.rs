@@ -52,6 +52,8 @@ macro_rules! validate_input_length {
 pub unsafe extern "C" fn ecall_submit_store_roots(
     in_roots: *const u8,
     in_roots_len: u32,
+    in_compute_root: *const u8,
+    in_compute_root_len: u32,
 ) -> sgx_status_t {
     validate_input_length!(in_roots_len, "roots", MAX_VARIABLE_LENGTH);
     validate_const_ptr!(
@@ -59,8 +61,15 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
         in_roots_len as usize,
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     );
+    validate_input_length!(in_compute_root_len, "roots", MAX_VARIABLE_LENGTH);
+    validate_const_ptr!(
+        in_compute_root,
+        in_compute_root_len as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
 
     let store_roots_slice = slice::from_raw_parts(in_roots, in_roots_len as usize);
+    let compute_root_slice = slice::from_raw_parts(in_compute_root, in_compute_root_len as usize);
 
     let store_roots: Pairs = Pairs::decode(store_roots_slice).unwrap();
     let mut store_roots_bytes = vec![];
@@ -72,6 +81,7 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
 
     let h = merkle::simple_hash_from_byte_vectors(store_roots_bytes);
     debug!("received app_hash: {:?}", h);
+    debug!("received compute_root: {:?}", compute_root_slice);
 
     return sgx_status_t::SGX_SUCCESS;
 }

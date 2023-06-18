@@ -221,4 +221,4 @@ Buffer submit_block_signatures(Buffer header,
                                Buffer random,
                                Buffer *err);
 
-bool submit_store_roots(Buffer roots, Buffer *err);
+bool submit_store_roots(Buffer roots, Buffer compute_root, Buffer *err);

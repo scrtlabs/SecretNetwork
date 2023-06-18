@@ -14,7 +14,8 @@
     "integration-tests/contract-v0.10/Cargo.toml",
     "go-cosmwasm/Cargo.toml",
     "integration-tests/contract-v0.10/Cargo.toml",
-    "check-hw/Cargo.toml"
+    "check-hw/Cargo.toml",
+    "./cosmwasm/enclaves/shared/block-verifier/Cargo.toml"
   ],
   "rust-analyzer.diagnostics.experimental.enable": true,
   "rust-analyzer.rustfmt.rangeFormatting.enable": true,
