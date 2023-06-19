@@ -329,8 +329,12 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
         decrypted_random.copy_from_slice(&*decrypted);
     }
 
-    if READ_PROOFER.lock().unwrap().app_hash != header.app_hash.as_bytes() {
+    // AppHash calculation is different for the first block
+    let rp = READ_PROOFER.lock().unwrap();
+    if header.height.value() != 1 && rp.app_hash != header.app_hash.as_bytes() {
         error!("error verifying app hash!");
+        debug!("calculated app_hash bytes {:?}", rp.app_hash);
+        debug!("header app_hash bytes {:?}", header.app_hash.as_bytes());
         return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
     }
 
