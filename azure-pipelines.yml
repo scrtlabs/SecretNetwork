@@ -28,100 +28,104 @@ variables:
   FEATURES: "light-client-validation,random"
   FEATURES_TESTS_LOCAL: "random"
 
-steps:
-  - checkout: "self"
-    submodules: true
-    displayName: "Checkout Repository and Submodules"
-  - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
-    displayName: "Save api keys"
+jobs:
+- job: RunTests
+  displayName: Run Hardware Tests
+  timeoutInMinutes: 120
+  steps:
+    - checkout: "self"
+      submodules: true
+      displayName: "Checkout Repository and Submodules"
+    - script: echo $(spid) > spid.txt; echo $(api-key-dev) > api_key.txt
+      displayName: "Save api keys"
 
-  - task: Docker@2
-    displayName: "Build base image"
-    inputs:
-      command: build
-      repository: '$(baseImageRepository)'
-      tags: |
-        $(tag)
-        latest
-      buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target compile-secretd
-      dockerfile: '$(dockerfilePath)'
+    - task: Docker@2
+      displayName: "Build base image"
+      inputs:
+        command: build
+        repository: '$(baseImageRepository)'
+        tags: |
+          $(tag)
+          latest
+        buildContext: .
+        arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target compile-secretd
+        dockerfile: '$(dockerfilePath)'
 
-  - task: Docker@2
-    displayName: "Build base image for system tests"
-    inputs:
-      command: build
-      repository: '$(baseImageRepositoryLocalTests)'
-      tags: |
-        $(tag)
-        latest
-      buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepositoryLocalTests) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES_TESTS_LOCAL) --target compile-secretd
-      dockerfile: '$(dockerfilePath)'
+    - task: Docker@2
+      displayName: "Build base image for system tests"
+      inputs:
+        command: build
+        repository: '$(baseImageRepositoryLocalTests)'
+        tags: |
+          $(tag)
+          latest
+        buildContext: .
+        arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepositoryLocalTests) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES_TESTS_LOCAL) --target compile-secretd
+        dockerfile: '$(dockerfilePath)'
 
-  - script: |
-      cp deployment/ci/bootstrap_init.sh deployment/docker/testnet/bootstrap_init.sh
-      cp deployment/ci/node_init.sh deployment/docker/testnet/node_init.sh
-      cp deployment/ci/startup.sh deployment/docker/testnet/startup.sh
-      cp deployment/ci/node_key.json deployment/docker/testnet/node_key.json
-    displayName: Overwrite node scripts
+    - script: |
+        cp deployment/ci/bootstrap_init.sh deployment/docker/testnet/bootstrap_init.sh
+        cp deployment/ci/node_init.sh deployment/docker/testnet/node_init.sh
+        cp deployment/ci/startup.sh deployment/docker/testnet/startup.sh
+        cp deployment/ci/node_key.json deployment/docker/testnet/node_key.json
+      displayName: Overwrite node scripts
 
-  - task: Docker@2
-    displayName: "Build release image"
-    inputs:
-      command: build
-      repository: '$(nodeImageRepository)'
-      tags: latest
-      buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target release-image
-      Dockerfile: deployment/dockerfiles/Dockerfile
+    - task: Docker@2
+      displayName: "Build release image"
+      inputs:
+        command: build
+        repository: '$(nodeImageRepository)'
+        tags: latest
+        buildContext: .
+        arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SCRT_BIN_IMAGE=$(baseImageRepository):$(tag) --cache-from $(nodeImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target release-image
+        Dockerfile: deployment/dockerfiles/Dockerfile
 
-  - task: Docker@2
-    displayName: "Build enclave tests"
-    inputs:
-      command: build
-      repository: rust-enclave-test
-      tags: latest
-      buildContext: .
-      arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/tests/enclave-test.Dockerfile
+    - task: Docker@2
+      displayName: "Build enclave tests"
+      inputs:
+        command: build
+        repository: rust-enclave-test
+        tags: latest
+        buildContext: .
+        arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --build-arg SGX_MODE=HW
+        Dockerfile: deployment/dockerfiles/tests/enclave-test.Dockerfile
 
-  - task: Docker@2
-    displayName: "Build Integration tests image"
-    inputs:
-      command: build
-      repository: integration-tests
-      tags: latest
-      buildContext: .
-      arguments: --build-arg SGX_MODE=HW
-      Dockerfile: deployment/dockerfiles/tests/integration-tests.Dockerfile
+    - task: Docker@2
+      displayName: "Build Integration tests image"
+      inputs:
+        command: build
+        repository: integration-tests
+        tags: latest
+        buildContext: .
+        arguments: --build-arg SGX_MODE=HW
+        Dockerfile: deployment/dockerfiles/tests/integration-tests.Dockerfile
 
-  - task: Docker@2
-    displayName: "Build System tests image"
-    inputs:
-      command: build
-      repository: tests-base-image
-      tags: latest
-      buildContext: .
-      arguments: --build-arg SGX_MODE=HW --build-arg CI_BASE_IMAGE=$(baseImageRepositoryLocalTests):latest
-      Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
+    - task: Docker@2
+      displayName: "Build System tests image"
+      inputs:
+        command: build
+        repository: tests-base-image
+        tags: latest
+        buildContext: .
+        arguments: --build-arg SGX_MODE=HW --build-arg CI_BASE_IMAGE=$(baseImageRepositoryLocalTests):latest
+        Dockerfile: deployment/dockerfiles/tests/system-tests.Dockerfile
 
-  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
-    displayName: "Run system tests (go tests)"
+    - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from base aesm base
+      displayName: "Run system tests (go tests)"
 
-  - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
-    displayName: "Run benchmarks"
+    - script: export DOCKER_CLIENT_TIMEOUT=120 && export COMPOSE_HTTP_TIMEOUT=120 && docker-compose --compatibility -f deployment/ci/docker-compose.ci.yaml up --exit-code-from bench aesm bench
+      displayName: "Run benchmarks"
 
-  - script: |
-      docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests aesm bootstrap node-no-tests integration-tests
-    displayName: "Run integration tests (new)"
+    - script: |
+        docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from integration-tests aesm bootstrap node-no-tests integration-tests
+      displayName: "Run integration tests (new)"
 
-  - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
-    displayName: "Run integration tests (old)"
+    - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from node aesm bootstrap node
+      displayName: "Run integration tests (old)"
 
-  - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from enclave-test aesm enclave-test
-    displayName: "Run enclave tests"
+    - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility up --exit-code-from enclave-test aesm enclave-test
+      displayName: "Run enclave tests"
 
-  - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility down
-    condition: always()
-    displayName: "Shutdown"
+    - script: docker-compose -f deployment/ci/docker-compose.ci.yaml --compatibility down
+      condition: always()
+      displayName: "Shutdown"
