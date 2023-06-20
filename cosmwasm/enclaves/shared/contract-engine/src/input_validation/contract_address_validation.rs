@@ -9,13 +9,12 @@ use log::*;
 pub fn verify_contract_address(msg: &DirectSdkMsg, contract_address: &HumanAddr) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     match msg {
-        DirectSdkMsg::MsgExecuteContract { contract, .. } => {
-            verify_msg_execute_contract_address(contract_address, contract)
-        }
-        DirectSdkMsg::MsgMigrateContract { contract, .. } => {
-            verify_msg_migrate_contract_address(contract_address, contract)
+        DirectSdkMsg::MsgExecuteContract { contract, .. }
+        | DirectSdkMsg::MsgMigrateContract { contract, .. } => {
+            verify_msg_execute_or_migrate_contract_address(contract_address, contract)
         }
         // During sending an instantiate message the contract address is not yet known
+        // so we cannot extract it from the message and compare it to the one in env
         DirectSdkMsg::MsgInstantiateContract { .. } => true,
         DirectSdkMsg::MsgRecvPacket {
             packet:
@@ -42,25 +41,15 @@ pub fn verify_contract_address(msg: &DirectSdkMsg, contract_address: &HumanAddr)
     }
 }
 
-fn verify_msg_execute_contract_address(contract_address: &HumanAddr, contract: &HumanAddr) -> bool {
-    info!("Verifying contract address...");
+fn verify_msg_execute_or_migrate_contract_address(
+    contract_address: &HumanAddr,
+    contract: &HumanAddr,
+) -> bool {
+    info!("verifying contract address...");
     let is_verified = contract_address == contract;
     if !is_verified {
         trace!(
-            "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
-            contract_address,
-            *contract
-        );
-    }
-    is_verified
-}
-
-fn verify_msg_migrate_contract_address(contract_address: &HumanAddr, contract: &HumanAddr) -> bool {
-    info!("Verifying contract address...");
-    let is_verified = contract_address == contract;
-    if !is_verified {
-        trace!(
-            "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
+            "contract address sent to enclave {:?} is not the same as the signed one {:?}",
             contract_address,
             *contract
         );

@@ -55,7 +55,7 @@ we need to allocate memory regions inside the VM's instance and copy
 `env` & `msg` into those memory regions inside the VM's instance.
 */
 
-fn generate_admin_signature(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
+fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
     let mut data_to_hash = vec![];
     data_to_hash.extend_from_slice(admin);
     data_to_hash.extend_from_slice(contract_key);
@@ -127,7 +127,7 @@ pub fn init(
         &canonical_contract_address,
     )?;
 
-    let admin_sig = generate_admin_signature(&canonical_admin_address.0 .0, &contract_key);
+    let admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &contract_key);
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
@@ -223,7 +223,7 @@ pub fn init(
     Ok(InitSuccess {
         output,
         contract_key,
-        admin_proof: admin_sig,
+        admin_proof,
     })
 }
 
@@ -308,9 +308,9 @@ pub fn migrate(
 
     let og_contract_key = base_env.get_contract_key()?;
 
-    let admin_sig = generate_admin_signature(&canonical_sender_address.0 .0, &og_contract_key);
+    let sneder_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
 
-    if admin_sig != admin_proof {
+    if sneder_admin_proof != admin_proof {
         error!("Failed to validate admin signature for migrate");
         return Err(EnclaveError::ValidationFailure);
     }

@@ -33,15 +33,19 @@ pub fn verify_and_get_sdk_msg<'sd>(
         } => {
             let empty_canon = &CanonicalAddr(Binary(vec![]));
             let empty_human = HumanAddr("".to_string());
+
             let sent_admin = sent_admin.unwrap_or(empty_canon);
             let sent_admin = &HumanAddr::from_canonical(sent_admin).unwrap_or(empty_human);
 
             sent_admin == admin && sent_sender == sender && &sent_msg.to_vec() == msg
         }
-        DirectSdkMsg::MsgExecuteContract { msg, sender, .. }
-        | DirectSdkMsg::MsgMigrateContract { msg, sender, .. } => {
+        DirectSdkMsg::MsgExecuteContract { msg, sender, .. } => {
+            sent_sender == sender && &sent_msg.to_vec() == msg
+        }
+        DirectSdkMsg::MsgMigrateContract { msg, sender, .. } => {
             let empty_canon = &CanonicalAddr(Binary(vec![]));
             let sent_admin = sent_admin.unwrap_or(empty_canon);
+
             sent_sender == sender && sent_admin == sender && &sent_msg.to_vec() == msg
         }
         DirectSdkMsg::MsgRecvPacket { packet, .. } => match verify_params_types {
