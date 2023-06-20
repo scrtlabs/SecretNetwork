@@ -9,7 +9,7 @@ use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::CanonicalAddr;
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo, VerifyParamsType};
-use enclave_crypto::{sha_256, Ed25519PublicKey};
+use enclave_crypto::{sha_256, Ed25519PublicKey, KEY_MANAGER};
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 
@@ -59,20 +59,30 @@ fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypt
     let mut data_to_hash = vec![];
     data_to_hash.extend_from_slice(admin);
     data_to_hash.extend_from_slice(contract_key);
+
+    let admin_proof_secret = KEY_MANAGER.get_admin_proof_secret().unwrap();
+
+    data_to_hash.extend_from_slice(admin_proof_secret.get());
+
     sha_256(&data_to_hash)
 }
 
 fn generate_contract_key_proof(
-    address: &[u8],
+    contract_address: &[u8],
     code_hash: &[u8],
     prev_contract_key: &[u8],
     new_contract_key: &[u8],
 ) -> [u8; enclave_crypto::HASH_SIZE] {
     let mut data_to_hash = vec![];
-    data_to_hash.extend_from_slice(address);
+    data_to_hash.extend_from_slice(contract_address);
     data_to_hash.extend_from_slice(code_hash);
     data_to_hash.extend_from_slice(prev_contract_key);
     data_to_hash.extend_from_slice(new_contract_key);
+
+    let contract_key_proof_secret = KEY_MANAGER.get_contract_key_proof_secret().unwrap();
+
+    data_to_hash.extend_from_slice(contract_key_proof_secret.get());
+
     sha_256(&data_to_hash)
 }
 
@@ -126,8 +136,6 @@ pub fn init(
         &contract_hash,
         &canonical_contract_address,
     )?;
-
-    let admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &contract_key);
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
@@ -220,6 +228,8 @@ pub fn init(
 
     // todo: can move the key to somewhere in the output message if we want
 
+    let admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &contract_key);
+
     Ok(InitSuccess {
         output,
         contract_key,
@@ -311,17 +321,10 @@ pub fn migrate(
     let sneder_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
 
     if sneder_admin_proof != admin_proof {
-        error!("Failed to validate admin signature for migrate");
+        error!("Failed to validate sender as current admin for migrate");
         return Err(EnclaveError::ValidationFailure);
     }
-    debug!("validated migration proof successfully");
-
-    let contract_key_proof = generate_contract_key_proof(
-        &canonical_sender_address.0 .0,
-        &contract_code.hash(),
-        &og_contract_key,
-        &contract_key,
-    );
+    debug!("Validated migration proof successfully");
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
@@ -406,6 +409,13 @@ pub fn migrate(
 
     // todo: can move the key to somewhere in the output message if we want
 
+    let contract_key_proof = generate_contract_key_proof(
+        &canonical_sender_address.0 .0,
+        &contract_code.hash(),
+        &og_contract_key,
+        &contract_key,
+    );
+
     debug!(
         "Migrate success: {:?}, {:?}",
         contract_key, contract_key_proof
@@ -414,7 +424,7 @@ pub fn migrate(
     Ok(MigrateSuccess {
         output,
         new_contract_key: contract_key,
-        proof: contract_key_proof,
+        contract_key_proof,
     })
 }
 

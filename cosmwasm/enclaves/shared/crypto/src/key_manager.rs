@@ -38,6 +38,8 @@ pub struct Keychain {
     #[cfg(feature = "random")]
     pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
+    admin_proof_secret: Option<AESKey>,
+    contract_key_proof_secret: Option<AESKey>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -89,6 +91,8 @@ impl Keychain {
             initial_randomness_seed: None,
             #[cfg(feature = "random")]
             random_encryption_key: None,
+            admin_proof_secret: None,
+            contract_key_proof_secret: None,
         };
 
         let _ = x.generate_consensus_master_keys();
@@ -192,6 +196,20 @@ impl Keychain {
     pub fn get_registration_key(&self) -> Result<KeyPair, CryptoError> {
         self.registration_key.ok_or_else(|| {
             error!("Error accessing registration_key (does not exist, or was not initialized)");
+            CryptoError::ParsingError
+        })
+    }
+
+    pub fn get_admin_proof_secret(&self) -> Result<AESKey, CryptoError> {
+        self.admin_proof_secret.ok_or_else(|| {
+            error!("Error accessing admin_proof_secret (does not exist, or was not initialized)");
+            CryptoError::ParsingError
+        })
+    }
+
+    pub fn get_contract_key_proof_secret(&self) -> Result<AESKey, CryptoError> {
+        self.contract_key_proof_secret.ok_or_else(|| {
+            error!("Error accessing contract_key_proof_secret (does not exist, or was not initialized)");
             CryptoError::ParsingError
         })
     }
@@ -434,6 +452,32 @@ impl Keychain {
 
             self.write_randomness_keys();
         }
+
+        let admin_proof_secret = self
+            .consensus_seed
+            .unwrap()
+            .current
+            .derive_key_from_this(&ADMIN_PROOF_SECRET_DERIVE_ORDER.to_be_bytes());
+
+        self.admin_proof_secret = Some(admin_proof_secret);
+
+        trace!(
+            "initial_randomness_seed: {:?}",
+            hex::encode(admin_proof_secret.get())
+        );
+
+        let contract_key_proof_secret = self
+            .consensus_seed
+            .unwrap()
+            .current
+            .derive_key_from_this(&CONTRACT_KEY_PROOF_SECRET_DERIVE_ORDER.to_be_bytes());
+
+        self.contract_key_proof_secret = Some(contract_key_proof_secret);
+
+        trace!(
+            "initial_randomness_seed: {:?}",
+            hex::encode(contract_key_proof_secret.get())
+        );
 
         Ok(())
     }

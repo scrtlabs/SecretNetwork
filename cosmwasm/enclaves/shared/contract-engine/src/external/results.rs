@@ -85,7 +85,7 @@ pub struct MigrateSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
     pub new_contract_key: [u8; 64],
-    pub proof: [u8; 32],
+    pub contract_key_proof: [u8; 32],
 }
 
 pub fn result_migrate_success_to_result(
@@ -95,7 +95,7 @@ pub fn result_migrate_success_to_result(
         Ok(MigrateSuccess {
             output,
             new_contract_key,
-            proof,
+            contract_key_proof,
         }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
@@ -114,7 +114,7 @@ pub fn result_migrate_success_to_result(
             MigrateResult::Success {
                 output: user_buffer,
                 new_contract_key,
-                proof,
+                contract_key_proof,
             }
         }
         Err(err) => MigrateResult::Failure { err },
