@@ -109,6 +109,7 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
 
     let mut rp = READ_PROOFER.lock().unwrap();
     rp.app_hash = h;
+    rp.store_merkle_root = compute_root_slice.to_vec();
 
     sgx_status_t::SGX_SUCCESS
 }

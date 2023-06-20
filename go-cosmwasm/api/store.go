@@ -38,6 +38,9 @@ func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byt
 	result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight - 1})
 
 	// result.ProofOps.Ops should always contain only one proof
+	if result.ProofOps == nil {
+		return nil, nil, nil, fmt.Errorf("error in retrieving key: %+v, got: %s", key, result.Log)
+	}
 	if len(result.ProofOps.Ops) != 1 {
 		return nil, nil, nil, fmt.Errorf("error in retrieving proof for key: %+v, got: %+v", key, result.ProofOps.Ops)
 	}

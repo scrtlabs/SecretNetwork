@@ -10,7 +10,7 @@ pub mod ecalls;
 pub mod validator_whitelist;
 pub mod wasm_messages;
 
-mod read_proofs;
+pub mod read_proofs;
 mod txs;
 
 use lazy_static::lazy_static;

@@ -1,22 +1,19 @@
+use block_verifier::read_proofs::{comm_proof_from_bytes, verify_read};
 use enclave_crypto::consts::{
     CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES, STATE_ENCRYPTION_VERSION,
 };
 use enclave_crypto::key_manager::SeedsHolder;
-use log::*;
-
-use sgx_types::sgx_status_t;
-
-use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
-
 use enclave_crypto::{sha_256, AESKey, Kdf, SIVEncryptable, KEY_MANAGER};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
+use enclave_utils::kv_cache::KvCache;
+use log::*;
+use serde::{Deserialize, Serialize};
+use sgx_types::sgx_status_t;
 
 use crate::external::{ecalls, ocalls};
 
-use enclave_utils::kv_cache::KvCache;
-
 use super::contract_validation::ContractKey;
 use super::errors::WasmEngineError;
-use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct EncryptedKey {
@@ -174,13 +171,7 @@ pub fn read_from_encrypted_state(
         &encrypted_key_bytes,
         block_height,
     ) {
-        Ok((maybe_encrypted_value_bytes, maybe_proof, maybe_mp_key, gas_used)) => {
-            debug!("merkle proof returned from read_db(): {:?}", maybe_proof);
-            debug!("full key returned from read_db(): {:?}", maybe_mp_key);
-            debug!(
-                "enc value returned from read_db(): {:?}",
-                maybe_encrypted_value_bytes
-            );
+        Ok((maybe_encrypted_value_bytes, gas_used)) => {
             match maybe_encrypted_value_bytes {
                 Some(encrypted_value_bytes) => {
                     let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
@@ -226,9 +217,7 @@ pub fn read_from_encrypted_state(
     let gas_used_second_read: u64;
     (maybe_plaintext_value, gas_used_second_read) =
         match read_db(context, &scrambled_field_name, block_height) {
-            Ok((encrypted_value, proof, mp_key, gas_used)) => {
-                debug!("proof returned from read_db(): {:?}", proof);
-                debug!("full key returned from read_db(): {:?}", mp_key);
+            Ok((encrypted_value, gas_used)) => {
                 match encrypted_value {
                     Some(plaintext_value) => {
                         match decrypt_value_old(
@@ -325,7 +314,7 @@ fn read_db(
     context: &Ctx,
     key: &[u8],
     block_height: u64,
-) -> Result<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>, u64), WasmEngineError> {
+) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
     let mut value_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut proof_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
@@ -375,7 +364,18 @@ fn read_db(
         }
     };
 
-    Ok((value, proof, mp_key, gas_used))
+    if let (Some(proof), Some(mp_key)) = (proof, mp_key) {
+        let comm_proof =
+            comm_proof_from_bytes(&proof).map_err(|_| WasmEngineError::HostMisbehavior)?;
+        if !verify_read(&mp_key, value.clone(), &comm_proof) {
+            error!("could not verify merkle proof");
+            return Err(WasmEngineError::HostMisbehavior);
+        }
+
+        Ok((value, gas_used))
+    } else {
+        Err(WasmEngineError::HostMisbehavior)
+    }
 }
 
 /// Safe wrapper around reads from the contract storage
