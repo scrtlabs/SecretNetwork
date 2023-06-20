@@ -9,23 +9,6 @@ trigger:
       - "docs/*"
       - ".gitignore"
       - "LICENSE"
-
-pool:
-  name: 
-
-
-variables:
-  baseImageRepository: 'azcr.io/enigmampc/ci-base-image'
-  baseImageRepositoryLocalTests: 'azcr.io/enigmampc/ci-base-image-local'
-  nodeImageRepository: 'azcr.io/enigmampc/ci-node-image'
-  containerRegistry: 'enigmampcdocker'
-  dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/Dockerfile'
-  tag: '$(Build.BuildId)'
-  DOCKER_BUILDKIT: 1
-  SGX_MODE: "HW"
-  FEATURES: "light-client-validation,random"
-  FEATURES_TESTS_LOCAL: "random"
-
 jobs:
 - job: RunTests
   displayName: Run Hardware Tests
@@ -34,6 +17,17 @@ jobs:
     name: "sgx scale set new"
   workspace:
     clean: all # what to clean up before the job runs
+  variables:
+    baseImageRepository: 'azcr.io/enigmampc/ci-base-image'
+    baseImageRepositoryLocalTests: 'azcr.io/enigmampc/ci-base-image-local'
+    nodeImageRepository: 'azcr.io/enigmampc/ci-node-image'
+    containerRegistry: 'enigmampcdocker'
+    dockerfilePath: '$(Build.SourcesDirectory)/deployment/dockerfiles/Dockerfile'
+    tag: '$(Build.BuildId)'
+    DOCKER_BUILDKIT: 1
+    SGX_MODE: "HW"
+    FEATURES: "light-client-validation,random"
+    FEATURES_TESTS_LOCAL: "random"
 
   steps:
     - checkout: "self"
