@@ -9,7 +9,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 )
 
-const upgradeName = "v1.9"
+const upgradeName = "v1.9b"
 
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
