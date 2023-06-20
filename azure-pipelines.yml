@@ -11,10 +11,8 @@ trigger:
       - "LICENSE"
 
 pool:
-  name: "sgx scale set new"
+  name: 
 
-workspace:
-  clean: all # what to clean up before the job runs
 
 variables:
   baseImageRepository: 'azcr.io/enigmampc/ci-base-image'
@@ -32,6 +30,11 @@ jobs:
 - job: RunTests
   displayName: Run Hardware Tests
   timeoutInMinutes: 120
+  pool: 
+    name: "sgx scale set new"
+  workspace:
+    clean: all # what to clean up before the job runs
+
   steps:
     - checkout: "self"
       submodules: true
