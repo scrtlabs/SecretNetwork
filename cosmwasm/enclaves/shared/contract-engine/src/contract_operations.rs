@@ -127,7 +127,7 @@ pub fn init(
         &canonical_contract_address,
     )?;
 
-    let admin_sig = generate_admin_signature(&canonical_sender_address.0 .0, &contract_key);
+    let admin_sig = generate_admin_signature(&canonical_admin_address.0 .0, &contract_key);
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
