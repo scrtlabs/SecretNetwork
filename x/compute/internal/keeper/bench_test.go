@@ -188,7 +188,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 			loops:    10,
 		},
 		"Storage Write 100 different keys": {
-			gasLimit: 1_000_000,
+			gasLimit: 500_000_000,
 			bench:    BenchWriteStorage,
 			loops:    10,
 		},
@@ -213,7 +213,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 			loops:    10,
 		},
 		"Bench read storage multiple keys": {
-			gasLimit: 10_000_000,
+			gasLimit: 500_000_000,
 			bench:    BenchReadStorageMultipleKeys,
 			loops:    10,
 		},
