@@ -48,7 +48,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     let _ = match msg {
         ExecuteMsg::Noop {} => Ok(()),
         ExecuteMsg::BenchCPU {} => do_cpu_loop(5000),
-        ExecuteMsg::BenchReadStorage {} => bench_read_storage_same_key(deps, 100),
+        ExecuteMsg::BenchReadStorage {} => bench_read_storage_same_key(deps, 100000),
         ExecuteMsg::BenchWriteStorage {} => bench_write_storage_different_key(deps, 10000),
         ExecuteMsg::BenchReadStorageMultipleKeys {} => bench_read_storage_different_key(deps, 10000),
         ExecuteMsg::BenchAllocate {} => do_allocate_large_memory(),

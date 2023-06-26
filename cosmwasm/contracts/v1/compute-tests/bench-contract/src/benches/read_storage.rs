@@ -7,8 +7,8 @@ const READ_LARGE_STORAGE_KEY: &[u8] = b"large_storage_key";
 pub fn bench_read_storage_same_key(deps: DepsMut, keys: u64) -> StdResult<()> {
     deps.storage.set(b"test.key", b"test.value");
 
-    for _ in 1..keys {
-        deps.storage.get(b"test.key");
+    for _ in 0..keys {
+        deps.storage.get(b"test.key").unwrap();
     }
 
     Ok(())
@@ -17,8 +17,13 @@ pub fn bench_read_storage_same_key(deps: DepsMut, keys: u64) -> StdResult<()> {
 /// call this test only after setting up the test with write storage, so the keys are populated
 pub fn bench_read_storage_different_key(deps: DepsMut, keys: u64) -> StdResult<()> {
     for i in 0..keys {
-        deps.storage.get(&i.to_be_bytes()).unwrap();
+        let x = deps.storage.get(&i.to_be_bytes()).unwrap();
+        if x == (keys+1).to_be_bytes() {
+            panic!("waaaaat");
+        }
     }
+
+    deps.api.debug("HELLO");
 
     Ok(())
 }
@@ -27,7 +32,7 @@ pub fn bench_read_storage_different_key(deps: DepsMut, keys: u64) -> StdResult<(
 pub fn bench_read_large_key_from_storage(deps: DepsMut, keys: u64) -> StdResult<()> {
     // deps.storage.set(b"test.key", crate::benches::LARGE_VALUE);
     for _ in 0..keys {
-        deps.storage.get(READ_LARGE_STORAGE_KEY);
+        deps.storage.get(READ_LARGE_STORAGE_KEY).unwrap();
     }
 
     Ok(())

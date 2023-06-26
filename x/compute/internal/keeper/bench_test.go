@@ -300,7 +300,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
+			// contractAddr, creator, creatorPriv, ctx, keeper := initBenchContract(t)
 			timer := NewBenchTimer(name, tc.bench)
 			timer.SetBaselineValues(AvgGasBase, time.Duration(math.Floor(AvgTimeBase)))
 			// make sure we set a limit before calling
@@ -312,7 +312,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 			for i := uint64(1); i < tc.loops+1; i++ {
 				start := time.Now()
 				// call bench
-				_, _, qErr, _, gasUsed, _ := execHelper(
+				_, _, data, _, gasUsed, execError := execHelper(
 					t,
 					keeper,
 					ctx,
@@ -327,7 +327,8 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 					false,
 				)
 				elapsed := time.Since(start)
-				require.Empty(t, qErr)
+				require.Empty(t, execError)
+				require.Empty(t, data)
 				timer.AppendResult(elapsed, gasUsed)
 			}
 			timers[name] = timer
