@@ -112,6 +112,22 @@ func Migrate(
 	return nil, 0, nil
 }
 
+func UpdateAdmin(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	sigInfo []byte,
+	admin []byte,
+	adminProof []byte,
+) ([]byte, error) {
+	return nil, nil
+}
+
 func Instantiate(
 	cache Cache,
 	code_id []byte,

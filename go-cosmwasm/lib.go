@@ -493,3 +493,35 @@ func (w *Wasmer) Migrate(
 
 	return nil, nil, nil, gasUsed, fmt.Errorf("instantiate: cannot detect response type (v0.10 or v1)")
 }
+
+// UpdateAdmin will update or clear a contract admin.
+func (w *Wasmer) UpdateAdmin(
+	newCodeId CodeHash,
+	env types.Env,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	sigInfo types.VerificationInfo,
+	admin []byte,
+	adminProof []byte,
+	// newAdminProof, error
+) ([]byte, error) {
+	paramBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, err
+	}
+
+	sigInfoBin, err := json.Marshal(sigInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	newAdminProof, err := api.UpdateAdmin(w.cache, newCodeId, paramBin, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, admin, adminProof)
+	if err != nil {
+		return nil, err
+	}
+
+	return newAdminProof, nil
+}

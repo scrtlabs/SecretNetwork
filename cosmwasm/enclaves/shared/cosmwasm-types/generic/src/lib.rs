@@ -5,13 +5,14 @@ use serde::{Deserialize, Serialize};
 use cw_types_v010::encoding::Binary;
 
 use cw_types_v010::types as v010types;
-use cw_types_v010::types::{ContractKeyWithProof, Env as V010Env, HumanAddr};
+use cw_types_v010::types::{Env as V010Env, HumanAddr};
 use cw_types_v1::types::Env as V1Env;
 use cw_types_v1::types::MessageInfo as V1MessageInfo;
 use cw_types_v1::types::{self as v1types, Addr};
 use enclave_ffi_types::EnclaveError;
 
 pub const CONTRACT_KEY_LENGTH: usize = 64;
+pub const CONTRACT_KEY_PROOF_LENGTH: usize = 32;
 
 /// CosmwasmApiVersion is used to decide how to handle contract inputs and outputs
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
@@ -39,15 +40,9 @@ pub type BaseCanoncalAddr = v010types::CanonicalAddr;
 pub struct BaseEnv(pub V010Env);
 
 impl BaseEnv {
-    pub fn get_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
-        let contract_key = if let Some(b64_key) = &self.0.contract_key {
-            base64::decode(&b64_key.key).map_err(|err| {
-                warn!(
-                    "got an error while trying to decode contract key {:?}: {}",
-                    b64_key, err
-                );
-                EnclaveError::FailedContractAuthentication
-            })?
+    pub fn get_current_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+        let contract_key = if let Some(contract_key) = &self.0.contract_key {
+            &contract_key.key.0
         } else {
             warn!("Contract execute with empty contract key");
             return Err(EnclaveError::FailedContractAuthentication);
@@ -59,7 +54,7 @@ impl BaseEnv {
         }
 
         let mut key_as_bytes = [0u8; CONTRACT_KEY_LENGTH];
-        key_as_bytes.copy_from_slice(&contract_key);
+        key_as_bytes.copy_from_slice(contract_key);
 
         Ok(key_as_bytes)
     }
@@ -72,11 +67,27 @@ impl BaseEnv {
         }
     }
 
-    pub fn get_original_contract_key(&self) -> Option<ContractKeyWithProof> {
+    pub fn get_original_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
         if let Some(key) = &self.0.contract_key {
-            key.original.clone()
+            if self.was_migrated() {
+                Ok(key.original.clone().unwrap().get_key())
+            } else {
+                self.get_current_contract_key()
+            }
         } else {
-            None
+            Err(EnclaveError::FailedContractAuthentication)
+        }
+    }
+
+    pub fn get_contract_key_proof(&self) -> Result<[u8; CONTRACT_KEY_PROOF_LENGTH], EnclaveError> {
+        if let Some(key) = &self.0.contract_key {
+            if self.was_migrated() {
+                Ok(key.original.clone().unwrap().get_proof())
+            } else {
+                Err(EnclaveError::FailedContractAuthentication)
+            }
+        } else {
+            Err(EnclaveError::FailedContractAuthentication)
         }
     }
 

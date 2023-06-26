@@ -68,9 +68,9 @@ pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
 }
 
 #[cfg(feature = "light-client-validation")]
-pub fn check_msg_matches_state(msg: &[u8]) -> bool {
-    let mut verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
-    let remaining_msgs = verified_msgs.remaining();
+pub fn check_msg_matches_state(msg: &SecretMessage) -> bool {
+    let mut verified_wasm_msgs = VERIFIED_MESSAGES.lock().unwrap();
+    let remaining_msgs = verified_wasm_msgs.remaining();
 
     if remaining_msgs == 0 {
         error!("Failed to validate message, error 0x3555");
@@ -80,9 +80,10 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
     // Msgs might fail in the sdk before they reach the enclave. In this case we need to run through
     // all the messages available before we can determine that there has been a failure
     // this isn't an attack vector since this can happen anyway by manipulating the state between executions
-    while verified_msgs.remaining() > 0 {
-        if let Some(expected_msg) = verified_msgs.get_next() {
-            if is_subslice(&expected_msg, msg) {
+    let raw_msg = msg.to_vec();
+    while verified_wasm_msgs.remaining() > 0 {
+        if let Some(expected_msg) = verified_wasm_msgs.get_next() {
+            if is_subslice(&expected_msg, &raw_msg) {
                 return true;
             }
         }
@@ -92,11 +93,14 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
 
     // if this message fails to verify we have to fail the rest of the TX, so we won't get any
     // other messages
-    verified_msgs.clear();
+    verified_wasm_msgs.clear();
 
     false
 }
 
+/// contract_key is a unique key for each contract
+/// it's used in state encryption to prevent the same
+/// encryption keys from being used for different contracts
 pub fn generate_contract_key(
     sender: &CanonicalAddr,
     block_height: &u64,
@@ -115,7 +119,7 @@ pub fn generate_contract_key(
         // otherwise we'd have to migrate all the contract_keys every time we rotate the seed
         // which is doable but requires one more ecall & just unnecessary
         // actually using consensus_state_ikm might be entirely unnecessary here but it's too
-        // painful at this point to change the protocol to remove it
+        // painful at this point to change the validation protocol to remove it
         &consensus_state_ikm.genesis,
         &sender_id,
         contract_hash,
@@ -364,7 +368,6 @@ pub fn verify_params(
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
     msg: &SecretMessage,
-    #[cfg(feature = "light-client-validation")] og_msg: &[u8],
     should_verify_sig_info: bool,
     should_verify_input: bool,
     verify_params_type: VerifyParamsType,
@@ -378,7 +381,7 @@ pub fn verify_params(
         }
 
         #[cfg(feature = "light-client-validation")]
-        if !check_msg_matches_state(og_msg) {
+        if !check_msg_matches_state(msg) {
             return Err(EnclaveError::ValidationFailure);
         }
 
@@ -443,10 +446,10 @@ fn verify_input(
     verify_params_types: VerifyParamsType,
     admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
-    let messages = get_messages(sig_info, verify_params_types)?;
+    let sdk_messages = get_sdk_messages(sig_info, verify_params_types)?;
 
-    let is_verified = verify_message_params(
-        &messages,
+    let is_verified = verify_input_params(
+        &sdk_messages,
         sender,
         sent_funds,
         contract_address,
@@ -529,7 +532,7 @@ fn get_signer(
     }
 }
 
-fn get_messages(
+fn get_sdk_messages(
     sign_info: &SigInfo,
     verify_params_types: VerifyParamsType,
 ) -> Result<Vec<DirectSdkMsg>, EnclaveError> {
@@ -644,30 +647,40 @@ fn verify_callback_sig_impl(
     true
 }
 
-fn verify_message_params(
-    messages: &[DirectSdkMsg],
+fn verify_input_params(
+    sdk_messages: &[DirectSdkMsg],
     sender: &CanonicalAddr,
     sent_funds: &[Coin],
     contract_address: &HumanAddr,
-    sent_msg: &SecretMessage,
+    sent_wasm_input: &SecretMessage,
     verify_params_types: VerifyParamsType,
     admin: Option<&CanonicalAddr>,
 ) -> bool {
     info!("Verifying sdk message against wasm input...");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
-    let sdk_msg = verify_and_get_sdk_msg(messages, sender, sent_msg, verify_params_types, admin);
-    if sdk_msg.is_none() {
-        debug!("Message verification failed!");
-        trace!(
-            "Message sent to contract {:?} by {:?} does not match any signed messages {:?}",
-            sent_msg.to_vec(),
-            sender,
-            messages
-        );
-        return false;
-    }
-    let sdk_msg = sdk_msg.unwrap();
+    let sdk_msg = verify_and_get_sdk_msg(
+        sdk_messages,
+        sender,
+        contract_address,
+        sent_wasm_input,
+        verify_params_types,
+        admin,
+    );
+
+    let sdk_msg = match sdk_msg {
+        Some(sdk_msg) => sdk_msg,
+        None => {
+            debug!("Message verification failed!");
+            trace!(
+                "Message sent to contract {:?} by {:?} does not match any signed messages {:?}",
+                sent_wasm_input.to_vec(),
+                sender,
+                sdk_messages
+            );
+            return false;
+        }
+    };
 
     info!("Verifying message sender...");
     if let Some(value) = verify_sender(sdk_msg, sender) {

@@ -2,7 +2,7 @@ use sgx_types::sgx_status_t;
 
 use enclave_ffi_types::{
     EnclaveError, HandleResult, InitResult, MigrateResult, QueryResult, UntrustedVmError,
-    UserSpaceBuffer,
+    UpdateAdminResult, UserSpaceBuffer,
 };
 
 use crate::external::ocalls::ocall_allocate;
@@ -80,7 +80,7 @@ pub fn result_handle_success_to_handleresult(
     }
 }
 
-/// This struct is returned from a handle method.
+/// This struct is returned from a migrate method.
 pub struct MigrateSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
@@ -118,6 +118,20 @@ pub fn result_migrate_success_to_result(
             }
         }
         Err(err) => MigrateResult::Failure { err },
+    }
+}
+
+/// This struct is returned from a migrate method.
+pub struct UpdateAdminSuccess {
+    pub admin_proof: [u8; 32],
+}
+
+pub fn result_update_admin_success_to_result(
+    result: Result<UpdateAdminSuccess, EnclaveError>,
+) -> UpdateAdminResult {
+    match result {
+        Ok(UpdateAdminSuccess { admin_proof }) => UpdateAdminResult::Success { admin_proof },
+        Err(err) => UpdateAdminResult::Failure { err },
     }
 }
 

@@ -15,15 +15,16 @@ use crate::types::SecretMessage;
 
 /// Get the cosmwasm message that contains the encrypted message
 pub fn verify_and_get_sdk_msg<'sd>(
-    messages: &'sd [DirectSdkMsg],
+    sdk_messages: &'sd [DirectSdkMsg],
     sent_sender: &CanonicalAddr,
-    sent_msg: &SecretMessage,
+    sent_contract_address: &HumanAddr,
+    sent_wasm_input: &SecretMessage,
     verify_params_types: VerifyParamsType,
     sent_admin: Option<&CanonicalAddr>,
 ) -> Option<&'sd DirectSdkMsg> {
-    trace!("verify_and_get_sdk_msg: {:?}", messages);
+    trace!("verify_and_get_sdk_msg: {:?}", sdk_messages);
 
-    messages.iter().find(|&m| match m {
+    sdk_messages.iter().find(|&m| match m {
         DirectSdkMsg::Other => false,
         DirectSdkMsg::MsgInstantiateContract {
             init_msg: msg,
@@ -37,24 +38,56 @@ pub fn verify_and_get_sdk_msg<'sd>(
             let sent_admin = sent_admin.unwrap_or(empty_canon);
             let sent_admin = &HumanAddr::from_canonical(sent_admin).unwrap_or(empty_human);
 
-            sent_admin == admin && sent_sender == sender && &sent_msg.to_vec() == msg
+            sent_admin == admin && sent_sender == sender && &sent_wasm_input.to_vec() == msg
         }
-        DirectSdkMsg::MsgExecuteContract { msg, sender, .. } => {
-            sent_sender == sender && &sent_msg.to_vec() == msg
+        DirectSdkMsg::MsgExecuteContract {
+            msg,
+            sender,
+            contract,
+            ..
+        } => {
+            sent_sender == sender
+                && sent_contract_address == contract
+                && &sent_wasm_input.to_vec() == msg
         }
-        DirectSdkMsg::MsgMigrateContract { msg, sender, .. } => {
+        DirectSdkMsg::MsgMigrateContract {
+            msg,
+            sender,
+            contract,
+            ..
+        } => {
             let empty_canon = &CanonicalAddr(Binary(vec![]));
             let sent_admin = sent_admin.unwrap_or(empty_canon);
 
-            sent_sender == sender && sent_admin == sender && &sent_msg.to_vec() == msg
+            sent_sender == sender
+                && sent_admin == sender
+                && sent_contract_address == contract
+                && &sent_wasm_input.to_vec() == msg
+        }
+        DirectSdkMsg::MsgUpdateAdmin {
+            sender,
+            new_admin,
+            contract,
+        } => {
+            let empty_canon = &CanonicalAddr(Binary(vec![]));
+            let empty_human = HumanAddr("".to_string());
+            let sent_admin = &HumanAddr::from_canonical(sent_admin.unwrap_or(empty_canon))
+                .unwrap_or(empty_human);
+
+            sent_sender == sender && sent_admin == new_admin && sent_contract_address == contract
+        }
+        DirectSdkMsg::MsgClearAdmin { sender, contract } => {
+            sent_sender == sender
+                && sent_admin == Some(&CanonicalAddr(Binary(vec![])))
+                && sent_contract_address == contract
         }
         DirectSdkMsg::MsgRecvPacket { packet, .. } => match verify_params_types {
             VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE) => {
-                verify_ibc_packet_recv(sent_msg, packet)
+                verify_ibc_packet_recv(sent_wasm_input, packet)
             }
             VerifyParamsType::HandleType(
                 HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER,
-            ) => verify_ibc_wasm_hooks_incoming_transfer(sent_msg, packet),
+            ) => verify_ibc_wasm_hooks_incoming_transfer(sent_wasm_input, packet),
             _ => false,
         },
         DirectSdkMsg::MsgAcknowledgement {
@@ -64,20 +97,24 @@ pub fn verify_and_get_sdk_msg<'sd>(
             ..
         } => match verify_params_types {
             VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_ACK) => {
-                verify_ibc_packet_ack(sent_msg, packet, acknowledgement, signer)
+                verify_ibc_packet_ack(sent_wasm_input, packet, acknowledgement, signer)
             }
             VerifyParamsType::HandleType(
                 HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK,
-            ) => verify_ibc_wasm_hooks_outgoing_transfer_ack(sent_msg, packet, acknowledgement),
+            ) => verify_ibc_wasm_hooks_outgoing_transfer_ack(
+                sent_wasm_input,
+                packet,
+                acknowledgement,
+            ),
             _ => false,
         },
         DirectSdkMsg::MsgTimeout { packet, signer, .. } => match verify_params_types {
             VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT) => {
-                verify_ibc_packet_timeout(sent_msg, packet, signer)
+                verify_ibc_packet_timeout(sent_wasm_input, packet, signer)
             }
             VerifyParamsType::HandleType(
                 HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT,
-            ) => verify_ibc_wasm_hooks_outgoing_transfer_timeout(sent_msg, packet),
+            ) => verify_ibc_wasm_hooks_outgoing_transfer_timeout(sent_wasm_input, packet),
             _ => false,
         },
     })

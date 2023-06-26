@@ -95,7 +95,7 @@ pub struct Context {
     gas_costs: WasmCosts,
     query_depth: u32,
     operation: ContractOperation,
-    contract_key: ContractKey,
+    og_contract_key: ContractKey,
     user_nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     kv_cache: KvCache,
@@ -214,7 +214,7 @@ impl Engine {
         gas_limit: u64,
         gas_costs: WasmCosts,
         contract_code: &ContractCode,
-        contract_key: ContractKey,
+        og_contract_key: ContractKey,
         operation: ContractOperation,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
@@ -230,7 +230,7 @@ impl Engine {
             gas_used_externally: 0,
             gas_costs,
             operation,
-            contract_key,
+            og_contract_key,
             user_nonce,
             user_public_key,
             kv_cache,
@@ -633,7 +633,7 @@ impl Engine {
                     &k,
                     &v,
                     &self.context.context,
-                    &self.context.contract_key,
+                    &self.context.og_contract_key,
                     &get_encryption_salt(self.context.timestamp),
                 )
                 .unwrap();
@@ -907,7 +907,7 @@ fn host_read_db(
     let (value, used_gas) = read_from_encrypted_state(
         &state_key_name,
         &context.context,
-        &context.contract_key,
+        &context.og_contract_key,
         match context.operation {
             ContractOperation::Init => true,
             ContractOperation::Handle => true,
@@ -956,7 +956,7 @@ fn host_remove_db(
     context.kv_cache.remove(&state_key_name);
 
     let used_gas =
-        remove_from_encrypted_state(&state_key_name, &context.context, &context.contract_key)?;
+        remove_from_encrypted_state(&state_key_name, &context.context, &context.og_contract_key)?;
     context.use_gas_externally(used_gas);
 
     Ok(())

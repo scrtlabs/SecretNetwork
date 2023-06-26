@@ -42,7 +42,9 @@ pub fn verify_sent_funds(msg: &DirectSdkMsg, sent_funds_msg: &[Coin]) -> bool {
         }
         DirectSdkMsg::MsgAcknowledgement { .. }
         | DirectSdkMsg::MsgTimeout { .. }
-        | DirectSdkMsg::MsgMigrateContract { .. } => sent_funds_msg.is_empty(),
+        | DirectSdkMsg::MsgMigrateContract { .. }
+        | DirectSdkMsg::MsgUpdateAdmin { .. }
+        | DirectSdkMsg::MsgClearAdmin { .. } => sent_funds_msg.is_empty(),
     }
 }
 

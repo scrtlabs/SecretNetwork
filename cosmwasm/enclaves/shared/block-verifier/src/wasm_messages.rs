@@ -9,6 +9,9 @@ pub fn message_is_wasm(msg: &protobuf::well_known_types::Any) -> bool {
         msg.type_url.as_str(),
         "/secret.compute.v1beta1.MsgExecuteContract"
             | "/secret.compute.v1beta1.MsgInstantiateContract"
+            | "/secret.compute.v1beta1.MsgMigrateContract"
+            | "/secret.compute.v1beta1.MsgUpdateAdmin"
+            | "/secret.compute.v1beta1.MsgClearAdmin"
     )
 }
 

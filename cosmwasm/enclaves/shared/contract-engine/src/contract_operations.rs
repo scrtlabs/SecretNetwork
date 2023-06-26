@@ -19,7 +19,9 @@ use crate::cosmwasm_config::ContractOperation;
 use crate::contract_validation::verify_block_info;
 
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
-use crate::external::results::{HandleSuccess, InitSuccess, MigrateSuccess, QuerySuccess};
+use crate::external::results::{
+    HandleSuccess, InitSuccess, MigrateSuccess, QuerySuccess, UpdateAdminSuccess,
+};
 use crate::message::{is_ibc_msg, parse_message};
 use crate::types::ParsedMessage;
 
@@ -130,7 +132,10 @@ pub fn init(
     let canonical_sender_address = to_canonical(sender)?;
     let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
 
-    let contract_key = generate_contract_key(
+    // contract_key is a unique key for each contract
+    // it's used in state encryption to prevent the same
+    // encryption keys from being used for different contracts
+    let og_contract_key = generate_contract_key(
         &canonical_sender_address,
         &block_height,
         &contract_hash,
@@ -148,8 +153,6 @@ pub fn init(
         &canonical_sender_address,
         contract_address,
         &secret_msg,
-        #[cfg(feature = "light-client-validation")]
-        msg,
         true,
         true,
         VerifyParamsType::Init,
@@ -176,7 +179,7 @@ pub fn init(
         context,
         gas_limit,
         &contract_code,
-        &contract_key,
+        &og_contract_key,
         ContractOperation::Init,
         query_depth,
         secret_msg.nonce,
@@ -191,7 +194,12 @@ pub fn init(
     versioned_env.set_contract_hash(&contract_hash);
 
     #[cfg(feature = "random")]
-    set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
+    set_random_in_env(
+        block_height,
+        &og_contract_key,
+        &mut engine,
+        &mut versioned_env,
+    );
 
     update_msg_counter(block_height);
     //let start = Instant::now();
@@ -228,11 +236,11 @@ pub fn init(
 
     // todo: can move the key to somewhere in the output message if we want
 
-    let admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &contract_key);
+    let admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &og_contract_key);
 
     Ok(InitSuccess {
         output,
-        contract_key,
+        contract_key: og_contract_key,
         admin_proof,
     })
 }
@@ -309,18 +317,11 @@ pub fn migrate(
     let canonical_sender_address = to_canonical(sender)?;
     let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
 
-    let contract_key = generate_contract_key(
-        &canonical_sender_address,
-        &block_height,
-        &contract_hash,
-        &canonical_contract_address,
-    )?;
+    let og_contract_key = base_env.get_original_contract_key()?;
 
-    let og_contract_key = base_env.get_contract_key()?;
+    let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
 
-    let sneder_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
-
-    if sneder_admin_proof != admin_proof {
+    if admin_proof != sender_admin_proof {
         error!("Failed to validate sender as current admin for migrate");
         return Err(EnclaveError::ValidationFailure);
     }
@@ -337,8 +338,6 @@ pub fn migrate(
         &canonical_sender_address,
         contract_address,
         &secret_msg,
-        #[cfg(feature = "light-client-validation")]
-        msg,
         true,
         true,
         VerifyParamsType::Migrate,
@@ -365,7 +364,7 @@ pub fn migrate(
         context,
         gas_limit,
         &contract_code,
-        &contract_key,
+        &og_contract_key,
         ContractOperation::Migrate,
         query_depth,
         secret_msg.nonce,
@@ -379,8 +378,20 @@ pub fn migrate(
 
     versioned_env.set_contract_hash(&contract_hash);
 
+    let new_contract_key = generate_contract_key(
+        &canonical_sender_address,
+        &block_height,
+        &contract_hash,
+        &canonical_contract_address,
+    )?;
+
     #[cfg(feature = "random")]
-    set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
+    set_random_in_env(
+        block_height,
+        &new_contract_key,
+        &mut engine,
+        &mut versioned_env,
+    );
 
     update_msg_counter(block_height);
     let result = engine.migrate(&versioned_env, validated_msg);
@@ -410,21 +421,78 @@ pub fn migrate(
     // todo: can move the key to somewhere in the output message if we want
 
     let contract_key_proof = generate_contract_key_proof(
-        &canonical_sender_address.0 .0,
+        &canonical_contract_address.0 .0,
         &contract_code.hash(),
         &og_contract_key,
-        &contract_key,
+        &new_contract_key,
     );
 
     debug!(
         "Migrate success: {:?}, {:?}",
-        contract_key, contract_key_proof
+        new_contract_key, contract_key_proof
     );
 
     Ok(MigrateSuccess {
         output,
-        new_contract_key: contract_key,
+        new_contract_key,
         contract_key_proof,
+    })
+}
+
+pub fn update_admin(
+    env: &[u8],
+    sig_info: &[u8],
+    admin: &[u8],
+    admin_proof: &[u8],
+) -> Result<UpdateAdminSuccess, EnclaveError> {
+    debug!("Starting update_admin");
+
+    let base_env: BaseEnv = extract_base_env(env)?;
+
+    #[cfg(feature = "light-client-validation")]
+    {
+        verify_block_info(&base_env)?;
+    }
+
+    let (sender, contract_address, _block_height, sent_funds) = base_env.get_verification_params();
+
+    let canonical_sender_address = to_canonical(sender)?;
+    let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
+
+    let og_contract_key = base_env.get_original_contract_key()?;
+
+    let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
+
+    if sender_admin_proof != admin_proof {
+        error!("Failed to validate sender as current admin for update_admin");
+        return Err(EnclaveError::ValidationFailure);
+    }
+    debug!("Validated update_admin proof successfully");
+
+    let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
+
+    verify_params(
+        &parsed_sig_info,
+        sent_funds,
+        &canonical_sender_address,
+        contract_address,
+        &SecretMessage {
+            nonce: [0; 32],
+            user_public_key: [0; 32],
+            msg: vec![],
+        },
+        true,
+        true,
+        VerifyParamsType::UpdateAdmin,
+        Some(&canonical_admin_address),
+    )?;
+
+    let new_admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &og_contract_key);
+
+    debug!("update_admin success: {:?}", new_admin_proof);
+
+    Ok(UpdateAdminSuccess {
+        admin_proof: new_admin_proof,
     })
 }
 
@@ -462,16 +530,32 @@ pub fn handle(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let mut contract_key = base_env.get_contract_key()?;
-
+    // contract_key is unique for each contract
+    // it's used in state encryption to prevent the same
+    // encryption keys from being used for different contracts
+    let mut contract_key = base_env.get_current_contract_key()?;
     validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
 
     if base_env.was_migrated() {
-        println!("Contract was migrated, setting keys to original one");
-        let og_key = base_env.get_original_contract_key().unwrap(); // was_migrated checks that this won't fail
-        contract_key = og_key.get_key();
+        println!("Contract was migrated, validating proof");
 
-        // validate proof
+        // was_migrated checks that these won't fail
+        let og_contract_key = base_env.get_original_contract_key()?;
+        let sent_contract_key_proof = base_env.get_contract_key_proof()?;
+
+        let contract_key_proof = generate_contract_key_proof(
+            &canonical_contract_address.0 .0,
+            &contract_code.hash(),
+            &og_contract_key,
+            &contract_key, // this is already validated
+        );
+
+        if sent_contract_key_proof != contract_key_proof {
+            error!("Failed to validate contract key proof for a migrated contract");
+            return Err(EnclaveError::ValidationFailure);
+        }
+
+        contract_key = og_contract_key; // used in engine for state encryption
     }
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
@@ -509,8 +593,6 @@ pub fn handle(
         &canonical_sender_address,
         contract_address,
         &secret_msg,
-        #[cfg(feature = "light-client-validation")]
-        msg,
         should_verify_sig_info,
         should_verify_input,
         VerifyParamsType::HandleType(parsed_handle_type),
@@ -668,7 +750,7 @@ pub fn query(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let contract_key = base_env.get_contract_key()?;
+    let contract_key = base_env.get_current_contract_key()?;
 
     validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
 
@@ -719,7 +801,7 @@ fn start_engine(
     context: Ctx,
     gas_limit: u64,
     contract_code: &ContractCode,
-    contract_key: &ContractKey,
+    og_contract_key: &ContractKey,
     operation: ContractOperation,
     query_depth: u32,
     nonce: IoNonce,
@@ -731,7 +813,7 @@ fn start_engine(
         gas_limit,
         WasmCosts::default(),
         contract_code,
-        *contract_key,
+        *og_contract_key,
         operation,
         nonce,
         user_public_key,

@@ -9,7 +9,7 @@ use sgx_types::sgx_status_t;
 
 use enclave_ffi_types::{
     Ctx, EnclaveBuffer, EnclaveError, HandleResult, HealthCheckResult, InitResult, MigrateResult,
-    QueryResult, RuntimeConfiguration,
+    QueryResult, RuntimeConfiguration, UpdateAdminResult,
 };
 
 use enclave_utils::{oom_handler, validate_const_ptr, validate_mut_ptr};
@@ -17,6 +17,7 @@ use enclave_utils::{oom_handler, validate_const_ptr, validate_mut_ptr};
 use crate::external::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
     result_migrate_success_to_result, result_query_success_to_queryresult,
+    result_update_admin_success_to_result,
 };
 
 lazy_static! {
@@ -477,7 +478,7 @@ pub unsafe extern "C" fn ecall_migrate(
         *used_gas = gas_limit / 2;
 
         if oom_handler::get_then_clear_oom_happened() {
-            error!("Call ecall_handle failed because the enclave ran out of memory!");
+            error!("Call ecall_migrate failed because the enclave ran out of memory!");
             MigrateResult::Failure {
                 err: EnclaveError::OutOfMemory,
             }
@@ -486,6 +487,61 @@ pub unsafe extern "C" fn ecall_migrate(
             MigrateResult::Failure {
                 err: EnclaveError::Panic,
             }
+        }
+    }
+}
+
+/// # Safety
+/// Always use protection
+#[no_mangle]
+pub unsafe extern "C" fn ecall_update_admin(
+    env: *const u8,
+    env_len: usize,
+    sig_info: *const u8,
+    sig_info_len: usize,
+    admin: *const u8,
+    admin_len: usize,
+    admin_proof: *const u8,
+    admin_proof_len: usize,
+) -> UpdateAdminResult {
+    if let Err(err) = oom_handler::register_oom_handler() {
+        error!("Could not register OOM handler!");
+        return UpdateAdminResult::Failure { err };
+    }
+
+    let failed_call =
+        || result_update_admin_success_to_result(Err(EnclaveError::FailedFunctionCall));
+    validate_const_ptr!(env, env_len as usize, failed_call());
+    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
+    validate_const_ptr!(admin, admin_len as usize, failed_call());
+    validate_const_ptr!(admin_proof, admin_proof_len as usize, failed_call());
+
+    let env = std::slice::from_raw_parts(env, env_len);
+    let sig_info = std::slice::from_raw_parts(sig_info, sig_info_len);
+    let admin = std::slice::from_raw_parts(admin, admin_len);
+    let admin_proof = std::slice::from_raw_parts(admin_proof, admin_proof_len);
+
+    let result = panic::catch_unwind(|| {
+        let result = crate::contract_operations::update_admin(env, sig_info, admin, admin_proof);
+        result_update_admin_success_to_result(result)
+    });
+
+    if let Err(err) = oom_handler::restore_safety_buffer() {
+        error!("Could not restore OOM safety buffer!");
+        return UpdateAdminResult::Failure { err };
+    }
+
+    if let Ok(res) = result {
+        res
+    } else if oom_handler::get_then_clear_oom_happened() {
+        error!("Call ecall_update_admin failed because the enclave ran out of memory!");
+        UpdateAdminResult::Failure {
+            err: EnclaveError::OutOfMemory,
+        }
+    } else {
+        error!("Call ecall_update_admin panicked unexpectedly!");
+        UpdateAdminResult::Failure {
+            err: EnclaveError::Panic,
         }
     }
 }

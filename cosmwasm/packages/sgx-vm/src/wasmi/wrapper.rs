@@ -10,11 +10,15 @@ use crate::enclave::ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
 
-use enclave_ffi_types::{Ctx, HandleResult, InitResult, MigrateResult, QueryResult};
+use enclave_ffi_types::{
+    Ctx, HandleResult, InitResult, MigrateResult, QueryResult, UpdateAdminResult,
+};
 
 use sgx_types::sgx_status_t;
 
-use crate::wasmi::results::{migrate_result_to_vm_result, MigrateSuccess};
+use crate::wasmi::results::{
+    migrate_result_to_vm_result, update_admin_result_to_vm_result, MigrateSuccess,
+};
 use log::*;
 use serde::Deserialize;
 
@@ -22,7 +26,7 @@ use super::exports::FullContext;
 use super::imports;
 use super::results::{
     handle_result_to_vm_result, init_result_to_vm_result, query_result_to_vm_result, HandleSuccess,
-    InitSuccess, QuerySuccess,
+    InitSuccess, QuerySuccess, UpdateAdminSuccess,
 };
 
 pub struct Module<S, Q>
@@ -102,7 +106,7 @@ where
         admin_proof: &[u8],
     ) -> VmResult<MigrateSuccess> {
         trace!(
-            "init() called with env: {:?} msg: {:?} gas_left: {}",
+            "migrate() called with env: {:?} msg: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
             String::from_utf8_lossy(msg),
             self.gas_left()
@@ -151,6 +155,53 @@ where
             sgx_status_t::SGX_SUCCESS => {
                 let migrate_result = unsafe { migrate_result.assume_init() };
                 migrate_result_to_vm_result(migrate_result)
+            }
+            failure_status => Err(EnclaveError::sdk_err(failure_status).into()),
+        }
+    }
+
+    pub fn update_admin(
+        &mut self,
+        env: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+        admin_proof: &[u8],
+    ) -> VmResult<UpdateAdminSuccess> {
+        trace!(
+            "update_admin() called with env: {:?}",
+            String::from_utf8_lossy(env),
+        );
+
+        let mut update_admin_result = MaybeUninit::<UpdateAdminResult>::uninit();
+
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = ENCLAVE_DOORBELL
+            .get_access(1) // This can never be recursive
+            .ok_or_else(Self::busy_enclave_err)?;
+        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+
+        let status = unsafe {
+            imports::ecall_update_admin(
+                enclave.geteid(),
+                update_admin_result.as_mut_ptr(),
+                env.as_ptr(),
+                env.len(),
+                sig_info.as_ptr(),
+                sig_info.len(),
+                admin.as_ptr(),
+                admin.len(),
+                admin_proof.as_ptr(),
+                admin_proof.len(),
+            )
+        };
+
+        trace!("update_admin() returned");
+
+        match status {
+            sgx_status_t::SGX_SUCCESS => {
+                let update_admin_result = unsafe { update_admin_result.assume_init() };
+                update_admin_result_to_vm_result(update_admin_result)
             }
             failure_status => Err(EnclaveError::sdk_err(failure_status).into()),
         }

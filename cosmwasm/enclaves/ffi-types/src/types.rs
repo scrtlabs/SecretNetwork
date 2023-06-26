@@ -338,6 +338,17 @@ pub enum MigrateResult {
     },
 }
 
+#[repr(C)]
+pub enum UpdateAdminResult {
+    Success {
+        admin_proof: [u8; 32],
+    },
+    Failure {
+        /// The error that happened in the enclave
+        err: EnclaveError,
+    },
+}
+
 /// This struct is returned from ecall_query.
 /// cbindgen:prefix-with-name
 #[repr(C)]

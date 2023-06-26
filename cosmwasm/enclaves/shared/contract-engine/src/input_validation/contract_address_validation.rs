@@ -10,7 +10,9 @@ pub fn verify_contract_address(msg: &DirectSdkMsg, contract_address: &HumanAddr)
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     match msg {
         DirectSdkMsg::MsgExecuteContract { contract, .. }
-        | DirectSdkMsg::MsgMigrateContract { contract, .. } => {
+        | DirectSdkMsg::MsgMigrateContract { contract, .. }
+        | DirectSdkMsg::MsgUpdateAdmin { contract, .. }
+        | DirectSdkMsg::MsgClearAdmin { contract, .. } => {
             verify_msg_execute_or_migrate_contract_address(contract_address, contract)
         }
         // During sending an instantiate message the contract address is not yet known

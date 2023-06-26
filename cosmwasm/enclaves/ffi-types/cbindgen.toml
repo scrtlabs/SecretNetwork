@@ -37,6 +37,7 @@ include = [
     "InitResult",
     "HandleResult",
     "MigrateResult",
+    "UpdateAdminResult",
     "QueryResult",
     "OcallReturn",
     "HealthCheckResult",

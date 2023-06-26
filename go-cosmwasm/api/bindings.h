@@ -237,3 +237,15 @@ Buffer submit_block_signatures(Buffer header,
                                Buffer txs,
                                Buffer random,
                                Buffer *err);
+
+Buffer update_admin(cache_t *cache,
+                    Buffer contract_id,
+                    Buffer params,
+                    DB db,
+                    GoApi api,
+                    GoQuerier querier,
+                    uint64_t gas_limit,
+                    Buffer *err,
+                    Buffer sig_info,
+                    Buffer admin,
+                    Buffer admin_proof);

@@ -20,6 +20,9 @@ use super::encoding::Binary;
 
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
 
+pub const CONTRACT_KEY_LENGTH: usize = 64;
+pub const CONTRACT_KEY_PROOF_LENGTH: usize = 32;
+
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct HumanAddr(pub String);
 
@@ -102,29 +105,27 @@ impl fmt::Display for CanonicalAddr {
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractKey {
-    pub key: String,
+    pub key: Binary,
     pub original: Option<ContractKeyWithProof>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractKeyWithProof {
-    pub key: String,
-    pub proof: String,
+    pub key: Binary,
+    pub proof: Binary,
 }
 
 impl ContractKeyWithProof {
-    pub fn get_key(&self) -> [u8; 64] {
-        let mut output = [0u8; 64];
-        let decoded = base64::decode(&self.key).unwrap();
-        output.copy_from_slice(&decoded);
+    pub fn get_key(&self) -> [u8; CONTRACT_KEY_LENGTH] {
+        let mut output = [0u8; CONTRACT_KEY_LENGTH];
+        output.copy_from_slice(&self.key.0);
 
         output
     }
 
-    pub fn decode_proof(&self) -> [u8; 32] {
-        let mut output = [0u8; 32];
-        let decoded = base64::decode(&self.proof).unwrap();
-        output.copy_from_slice(&decoded);
+    pub fn get_proof(&self) -> [u8; CONTRACT_KEY_PROOF_LENGTH] {
+        let mut output = [0u8; CONTRACT_KEY_PROOF_LENGTH];
+        output.copy_from_slice(&self.proof.0);
 
         output
     }

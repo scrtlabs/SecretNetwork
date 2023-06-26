@@ -338,6 +338,17 @@ where
         Ok(result.into_output())
     }
 
+    pub fn call_update_admin(
+        &mut self,
+        env: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+        admin_proof: &[u8],
+    ) -> VmResult<Vec<u8>> {
+        let result = self.inner.update_admin(env, sig_info, admin, admin_proof)?;
+        Ok(result.into_output())
+    }
+
     pub fn call_init(
         &mut self,
         env: &[u8],

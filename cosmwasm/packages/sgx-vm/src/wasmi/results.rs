@@ -1,6 +1,6 @@
 use super::exports;
 use crate::VmResult;
-use enclave_ffi_types::{HandleResult, InitResult, MigrateResult, QueryResult};
+use enclave_ffi_types::{HandleResult, InitResult, MigrateResult, QueryResult, UpdateAdminResult};
 
 /// This struct is returned from module initialization.
 pub struct InitSuccess {
@@ -50,7 +50,14 @@ pub fn migrate_result_to_vm_result(other: MigrateResult) -> VmResult<MigrateSucc
     }
 }
 
-/// This struct is returned from a handle method.
+pub fn update_admin_result_to_vm_result(other: UpdateAdminResult) -> VmResult<UpdateAdminSuccess> {
+    match other {
+        UpdateAdminResult::Success { admin_proof } => Ok(UpdateAdminSuccess { admin_proof }),
+        UpdateAdminResult::Failure { err } => Err(err.into()),
+    }
+}
+
+/// This struct is returned from a migrate method.
 pub struct MigrateSuccess {
     /// A pointer to the output of the execution
     output: Vec<u8>,
@@ -64,6 +71,17 @@ impl MigrateSuccess {
         out_vec.extend_from_slice(&self.contract_key_proof);
         out_vec.extend_from_slice(&self.output);
         out_vec
+    }
+}
+
+/// This struct is returned from a migrate method.
+pub struct UpdateAdminSuccess {
+    admin_proof: [u8; 32],
+}
+
+impl UpdateAdminSuccess {
+    pub fn into_output(self) -> Vec<u8> {
+        self.admin_proof.to_vec()
     }
 }
 

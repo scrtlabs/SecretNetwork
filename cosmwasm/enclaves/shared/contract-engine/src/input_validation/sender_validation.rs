@@ -13,6 +13,8 @@ pub fn verify_sender(sdk_msg: &DirectSdkMsg, sent_sender: &CanonicalAddr) -> Opt
         DirectSdkMsg::MsgExecuteContract { .. }
         | DirectSdkMsg::MsgInstantiateContract { .. }
         | DirectSdkMsg::MsgMigrateContract { .. }
+        | DirectSdkMsg::MsgUpdateAdmin { .. }
+        | DirectSdkMsg::MsgClearAdmin { .. }
         | DirectSdkMsg::Other => {
             if sdk_msg.sender() != Some(sent_sender) {
                 trace!(

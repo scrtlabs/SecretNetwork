@@ -203,6 +203,55 @@ func Migrate(
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
+func UpdateAdmin(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	sigInfo []byte,
+	admin []byte,
+	adminProof []byte,
+) ([]byte, error) {
+	id := sendSlice(code_id)
+	defer freeAfterSend(id)
+	p := sendSlice(params)
+	defer freeAfterSend(p)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+
+	s := sendSlice(sigInfo)
+	defer freeAfterSend(s)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	errmsg := C.Buffer{}
+
+	adminBuffer := sendSlice(admin)
+	defer freeAfterSend(adminBuffer)
+
+	adminProofBuffer := sendSlice(adminProof)
+	defer freeAfterSend(adminProofBuffer)
+
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
+
+	res, err := C.update_admin(cache.ptr, id, p, db, a, q, u64(gasLimit), &errmsg, s, adminBuffer, adminProofBuffer)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), nil
+}
+
 func Instantiate(
 	cache Cache,
 	code_id []byte,

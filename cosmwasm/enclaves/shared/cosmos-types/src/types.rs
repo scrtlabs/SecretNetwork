@@ -208,8 +208,9 @@ pub enum VerifyParamsType {
     HandleType(HandleType),
     Init,
     Migrate,
+    /// UpdateAdmin is used both for updating the admin and clearing the admin
+    /// (by passing an empty admin address)
     UpdateAdmin,
-    ClearAdmin,
 }
 
 // This is called `VerificationInfo` on the Go side
@@ -336,6 +337,15 @@ pub enum AminoSdkMsg {
         code_id: String,
         msg: String,
     },
+    MsgUpdateAdmin {
+        sender: HumanAddr,
+        new_admin: HumanAddr,
+        contract: HumanAddr,
+    },
+    MsgClearAdmin {
+        sender: HumanAddr,
+        contract: HumanAddr,
+    },
     // The core IBC messages don't support Amino
     #[serde(other, deserialize_with = "deserialize_ignore_any")]
     Other,
@@ -375,6 +385,7 @@ impl AminoSdkMsg {
                     );
                     EnclaveError::FailedToDeserialize
                 })?;
+
                 Ok(DirectSdkMsg::MsgMigrateContract {
                     sender,
                     msg,
@@ -401,6 +412,7 @@ impl AminoSdkMsg {
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = msg.0;
+
                 Ok(DirectSdkMsg::MsgExecuteContract {
                     sender,
                     contract,
@@ -437,6 +449,7 @@ impl AminoSdkMsg {
                     );
                     EnclaveError::FailedToDeserialize
                 })?;
+
                 Ok(DirectSdkMsg::MsgInstantiateContract {
                     sender,
                     code_id,
@@ -446,6 +459,30 @@ impl AminoSdkMsg {
                     callback_sig,
                     admin,
                 })
+            }
+            AminoSdkMsg::MsgUpdateAdmin {
+                sender,
+                new_admin,
+                contract,
+            } => {
+                let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
+                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
+                    EnclaveError::FailedToDeserialize
+                })?;
+
+                Ok(DirectSdkMsg::MsgUpdateAdmin {
+                    sender,
+                    new_admin,
+                    contract,
+                })
+            }
+            AminoSdkMsg::MsgClearAdmin { sender, contract } => {
+                let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
+                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
+                    EnclaveError::FailedToDeserialize
+                })?;
+
+                Ok(DirectSdkMsg::MsgClearAdmin { sender, contract })
             }
             Self::Other => Ok(DirectSdkMsg::Other),
         }
@@ -629,6 +666,15 @@ pub enum DirectSdkMsg {
         msg: Vec<u8>,
         code_id: u64,
     },
+    MsgUpdateAdmin {
+        sender: CanonicalAddr,
+        new_admin: HumanAddr,
+        contract: HumanAddr,
+    },
+    MsgClearAdmin {
+        sender: CanonicalAddr,
+        contract: HumanAddr,
+    },
     // IBC:
     // MsgChannelOpenInit {}, // TODO
     // MsgChannelOpenTry {}, // TODO
@@ -675,8 +721,7 @@ impl DirectSdkMsg {
                 Self::try_parse_execute(bytes)
             }
             VerifyParamsType::Migrate => Self::try_parse_migrate(bytes),
-            VerifyParamsType::UpdateAdmin => Ok(DirectSdkMsg::Other),
-            VerifyParamsType::ClearAdmin => Ok(DirectSdkMsg::Other),
+            VerifyParamsType::UpdateAdmin => Self::try_parse_update_admin(bytes),
             VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_REPLY) => Ok(DirectSdkMsg::Other),
             VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN) => {
                 Ok(DirectSdkMsg::Other)
@@ -832,6 +877,51 @@ impl DirectSdkMsg {
         })
     }
 
+    fn try_parse_update_admin(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        use proto::cosmwasm::msg::{MsgClearAdmin, MsgUpdateAdmin};
+
+        // We first try to parse as MsgUpdateAdmin, if that fails we try to parse as MsgClearAdmin
+        // The order is important as MsgClearAdmin is a subset of MsgUpdateAdmin and can succeed parsing MsgUpdateAdmin bytes as MsgClearAdmin
+
+        let raw_msg = MsgUpdateAdmin::parse_from_bytes(bytes);
+
+        if let Ok(raw_msg) = raw_msg {
+            trace!(
+                "try_parse_update_admin sender: len={} val={:?}",
+                raw_msg.sender.len(),
+                raw_msg.sender
+            );
+
+            let sender = CanonicalAddr::from_human(&HumanAddr(raw_msg.sender))
+                .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+            let new_admin = HumanAddr(raw_msg.new_admin);
+
+            Ok(DirectSdkMsg::MsgUpdateAdmin {
+                sender,
+                new_admin,
+                contract: HumanAddr(raw_msg.contract),
+            })
+        } else {
+            let raw_update_msg = MsgClearAdmin::parse_from_bytes(bytes)
+                .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+            trace!(
+                "try_parse_migrate sender: len={} val={:?}",
+                raw_update_msg.sender.len(),
+                raw_update_msg.sender
+            );
+
+            let sender = CanonicalAddr::from_human(&HumanAddr(raw_update_msg.sender))
+                .map_err(|_| EnclaveError::FailedToDeserialize)?;
+
+            Ok(DirectSdkMsg::MsgClearAdmin {
+                sender,
+                contract: HumanAddr(raw_update_msg.contract),
+            })
+        }
+    }
+
     fn try_parse_instantiate(bytes: &[u8]) -> Result<Self, EnclaveError> {
         use proto::cosmwasm::msg::MsgInstantiateContract;
 
@@ -926,7 +1016,9 @@ impl DirectSdkMsg {
         match self {
             DirectSdkMsg::MsgExecuteContract { sender, .. }
             | DirectSdkMsg::MsgInstantiateContract { sender, .. }
-            | DirectSdkMsg::MsgMigrateContract { sender, .. } => Some(sender),
+            | DirectSdkMsg::MsgMigrateContract { sender, .. }
+            | DirectSdkMsg::MsgUpdateAdmin { sender, .. }
+            | DirectSdkMsg::MsgClearAdmin { sender, .. } => Some(sender),
             DirectSdkMsg::MsgRecvPacket { .. } => None,
             DirectSdkMsg::MsgAcknowledgement { .. } => None,
             DirectSdkMsg::MsgTimeout { .. } => None,

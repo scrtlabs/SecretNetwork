@@ -21,8 +21,8 @@ use crate::error::{clear_error, handle_c_error, handle_c_error_default, set_erro
 
 use cosmwasm_sgx_vm::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{
-    call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, features_from_csv, Checksum,
-    CosmCache, Extern,
+    call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, call_update_admin_raw,
+    features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_genesis_seed,
@@ -572,6 +572,72 @@ fn do_migrate(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_migrate_raw(&mut instance, params, msg, sig_info, admin, admin_proof);
     *gas_used = instance.create_gas_report().used_internally;
+    instance.recycle();
+    Ok(res?)
+}
+
+#[no_mangle]
+pub extern "C" fn update_admin(
+    cache: *mut cache_t,
+    contract_id: Buffer,
+    params: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    err: Option<&mut Buffer>,
+    sig_info: Buffer,
+    admin: Buffer,
+    admin_proof: Buffer,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_update_admin(
+                c,
+                contract_id,
+                params,
+                db,
+                api,
+                querier,
+                gas_limit,
+                sig_info,
+                admin,
+                admin_proof,
+            )
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn do_update_admin(
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
+    code_id: Buffer,
+    params: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    sig_info: Buffer,
+    admin: Buffer,
+    admin_proof: Buffer,
+) -> Result<Vec<u8>, Error> {
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .try_into()?;
+    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
+    let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
+    let admin = unsafe { admin.read() }.ok_or_else(|| Error::empty_arg(ADMIN_ARG))?;
+    let admin_proof =
+        unsafe { admin_proof.read() }.ok_or_else(|| Error::empty_arg(ADMIN_PROOF_ARG))?;
+
+    let deps = to_extern(db, api, querier);
+    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_update_admin_raw(&mut instance, params, sig_info, admin, admin_proof);
     instance.recycle();
     Ok(res?)
 }

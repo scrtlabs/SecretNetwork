@@ -1201,15 +1201,60 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 }
 
 func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, newAdmin sdk.AccAddress) error {
-	contractInfo := k.GetContractInfo(ctx, contractAddress)
-	if contractInfo == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "unknown contract")
+	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "update-contract-admin")
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: update-contract-admin")
+
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return err
 	}
 	if contractInfo.Admin != caller.String() {
 		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "caller is not the admin")
 	}
+
+	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, caller)
+	if err != nil {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	}
+
+	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+
+	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, &contractKey, nil)
+
+	currentAdminProof := k.GetContractInfo(ctx, contractAddress).AdminProof
+	currentAdmin := k.GetContractInfo(ctx, contractAddress).Admin
+
+	currentAdminAddress, err := sdk.AccAddressFromBech32(currentAdmin)
+	if err != nil {
+		return err
+	}
+
+	// prepare querier
+	// TODO: this is unnecessary, get rid of this
+	querier := QueryHandler{
+		Ctx:     ctx,
+		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
+	}
+
+	// instantiate wasm contract
+	gas := gasForContract(ctx)
+
+	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, currentAdminAddress, currentAdminProof)
+
+	if updateAdminErr != nil {
+		return updateAdminErr
+	}
+
 	contractInfo.Admin = newAdmin.String()
-	k.setContractInfo(ctx, contractAddress, contractInfo)
+	contractInfo.AdminProof = newAdminProof
+	k.setContractInfo(ctx, contractAddress, &contractInfo)
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeUpdateContractAdmin,
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
