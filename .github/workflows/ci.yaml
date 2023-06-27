@@ -71,7 +71,7 @@ jobs:
           ./scripts/install-wasm-tools.sh
       - name: Build Contracts
         run: |
-          make build-test-contract
+          make build-test-contracts
           cp x/compute/internal/keeper/testdata/erc20.wasm .
       - uses: actions/upload-artifact@v3
         with:

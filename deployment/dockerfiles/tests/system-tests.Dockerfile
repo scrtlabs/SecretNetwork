@@ -11,7 +11,7 @@ COPY cosmwasm cosmwasm
 COPY Makefile .
 COPY x x
 
-RUN . /root/.cargo/env && make build-test-contract
+RUN . /root/.cargo/env && make build-test-contracts
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm
