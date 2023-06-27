@@ -2,7 +2,6 @@ use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
-#[cfg(feature = "light-client-validation")]
 use cw_types_generic::BaseEnv;
 
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
@@ -154,7 +153,7 @@ pub fn generate_contract_id(
     authentication_key.sign_sha_256(&input_data)
 }
 
-pub fn validate_contract_key(
+pub fn validate_current_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
     contract_address: &CanonicalAddr,
     contract_code: &ContractCode,
@@ -191,6 +190,66 @@ pub fn validate_contract_key(
         warn!("got an error while trying to deserialize output bytes");
         Err(EnclaveError::FailedContractAuthentication)
     }
+}
+
+/// validate_contract_key validates the contract key against the contract address and code hash. If the contract was previously migrated, it also validates the contract key proof against the original contract key.
+pub fn validate_contract_key(
+    base_env: &BaseEnv,
+    canonical_contract_address: &CanonicalAddr,
+    contract_code: &ContractCode,
+) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+    let current_contract_key: [u8; CONTRACT_KEY_LENGTH] = base_env.get_current_contract_key()?;
+
+    validate_current_contract_key(
+        &current_contract_key,
+        canonical_contract_address,
+        contract_code,
+    )?;
+
+    if base_env.was_migrated() {
+        println!("Contract was migrated, validating proof");
+
+        let og_contract_key: [u8; CONTRACT_KEY_LENGTH] = base_env.get_original_contract_key()?;
+        let sent_contract_key_proof = base_env.get_contract_key_proof()?;
+
+        let contract_key_proof = generate_contract_key_proof(
+            &canonical_contract_address.0 .0,
+            &contract_code.hash(),
+            &og_contract_key,
+            &current_contract_key, // this is already validated
+        );
+
+        if sent_contract_key_proof != contract_key_proof {
+            error!("Failed to validate contract key proof for a migrated contract");
+            return Err(EnclaveError::ValidationFailure);
+        }
+
+        // og_contract_key is always used in engine for state encryption
+        Ok(og_contract_key)
+    } else {
+        // og_contract_key is always used in engine for state encryption
+        // contract wasn't previously migrated, thus og_contract_key == current_contract_key
+        Ok(current_contract_key)
+    }
+}
+
+pub fn generate_contract_key_proof(
+    contract_address: &[u8],
+    code_hash: &[u8],
+    prev_contract_key: &[u8],
+    new_contract_key: &[u8],
+) -> [u8; enclave_crypto::HASH_SIZE] {
+    let mut data_to_hash = vec![];
+    data_to_hash.extend_from_slice(contract_address);
+    data_to_hash.extend_from_slice(code_hash);
+    data_to_hash.extend_from_slice(prev_contract_key);
+    data_to_hash.extend_from_slice(new_contract_key);
+
+    let contract_key_proof_secret = KEY_MANAGER.get_contract_key_proof_secret().unwrap();
+
+    data_to_hash.extend_from_slice(contract_key_proof_secret.get());
+
+    sha_256(&data_to_hash)
 }
 
 pub struct ValidatedMessage {

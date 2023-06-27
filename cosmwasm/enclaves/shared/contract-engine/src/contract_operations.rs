@@ -18,7 +18,7 @@ use crate::cosmwasm_config::ContractOperation;
 #[cfg(feature = "light-client-validation")]
 use crate::contract_validation::verify_block_info;
 
-use crate::contract_validation::{ReplyParams, ValidatedMessage};
+use crate::contract_validation::{generate_contract_key_proof, ReplyParams, ValidatedMessage};
 use crate::external::results::{
     HandleSuccess, InitSuccess, MigrateSuccess, QuerySuccess, UpdateAdminSuccess,
 };
@@ -65,25 +65,6 @@ fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypt
     let admin_proof_secret = KEY_MANAGER.get_admin_proof_secret().unwrap();
 
     data_to_hash.extend_from_slice(admin_proof_secret.get());
-
-    sha_256(&data_to_hash)
-}
-
-fn generate_contract_key_proof(
-    contract_address: &[u8],
-    code_hash: &[u8],
-    prev_contract_key: &[u8],
-    new_contract_key: &[u8],
-) -> [u8; enclave_crypto::HASH_SIZE] {
-    let mut data_to_hash = vec![];
-    data_to_hash.extend_from_slice(contract_address);
-    data_to_hash.extend_from_slice(code_hash);
-    data_to_hash.extend_from_slice(prev_contract_key);
-    data_to_hash.extend_from_slice(new_contract_key);
-
-    let contract_key_proof_secret = KEY_MANAGER.get_contract_key_proof_secret().unwrap();
-
-    data_to_hash.extend_from_slice(contract_key_proof_secret.get());
 
     sha_256(&data_to_hash)
 }
@@ -530,33 +511,8 @@ pub fn handle(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    // contract_key is unique for each contract
-    // it's used in state encryption to prevent the same
-    // encryption keys from being used for different contracts
-    let mut contract_key = base_env.get_current_contract_key()?;
-    validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
-
-    if base_env.was_migrated() {
-        println!("Contract was migrated, validating proof");
-
-        // was_migrated checks that these won't fail
-        let og_contract_key = base_env.get_original_contract_key()?;
-        let sent_contract_key_proof = base_env.get_contract_key_proof()?;
-
-        let contract_key_proof = generate_contract_key_proof(
-            &canonical_contract_address.0 .0,
-            &contract_code.hash(),
-            &og_contract_key,
-            &contract_key, // this is already validated
-        );
-
-        if sent_contract_key_proof != contract_key_proof {
-            error!("Failed to validate contract key proof for a migrated contract");
-            return Err(EnclaveError::ValidationFailure);
-        }
-
-        contract_key = og_contract_key; // used in engine for state encryption
-    }
+    let og_contract_key =
+        validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
@@ -619,7 +575,7 @@ pub fn handle(
         context,
         gas_limit,
         &contract_code,
-        &contract_key,
+        &og_contract_key,
         ContractOperation::Handle,
         query_depth,
         secret_msg.nonce,
@@ -655,7 +611,12 @@ pub fn handle(
     }
 
     #[cfg(feature = "random")]
-    set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
+    set_random_in_env(
+        block_height,
+        &og_contract_key,
+        &mut engine,
+        &mut versioned_env,
+    );
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -750,9 +711,8 @@ pub fn query(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let contract_key = base_env.get_current_contract_key()?;
-
-    validate_contract_key(&contract_key, &canonical_contract_address, &contract_code)?;
+    let og_contract_key =
+        validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
 
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
@@ -764,7 +724,7 @@ pub fn query(
         context,
         gas_limit,
         &contract_code,
-        &contract_key,
+        &og_contract_key,
         ContractOperation::Query,
         query_depth,
         secret_msg.nonce,
