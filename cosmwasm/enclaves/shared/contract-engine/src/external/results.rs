@@ -130,8 +130,10 @@ pub fn result_update_admin_success_to_result(
     result: Result<UpdateAdminSuccess, EnclaveError>,
 ) -> UpdateAdminResult {
     match result {
-        Ok(UpdateAdminSuccess { admin_proof }) => UpdateAdminResult::Success { admin_proof },
-        Err(err) => UpdateAdminResult::Failure { err },
+        Ok(UpdateAdminSuccess { admin_proof }) => {
+            UpdateAdminResult::UpdateAdminSuccess { admin_proof }
+        }
+        Err(err) => UpdateAdminResult::UpdateAdminFailure { err },
     }
 }
 

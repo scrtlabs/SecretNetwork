@@ -506,7 +506,7 @@ pub unsafe extern "C" fn ecall_update_admin(
 ) -> UpdateAdminResult {
     if let Err(err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
-        return UpdateAdminResult::Failure { err };
+        return UpdateAdminResult::UpdateAdminFailure { err };
     }
 
     let failed_call =
@@ -528,19 +528,19 @@ pub unsafe extern "C" fn ecall_update_admin(
 
     if let Err(err) = oom_handler::restore_safety_buffer() {
         error!("Could not restore OOM safety buffer!");
-        return UpdateAdminResult::Failure { err };
+        return UpdateAdminResult::UpdateAdminFailure { err };
     }
 
     if let Ok(res) = result {
         res
     } else if oom_handler::get_then_clear_oom_happened() {
         error!("Call ecall_update_admin failed because the enclave ran out of memory!");
-        UpdateAdminResult::Failure {
+        UpdateAdminResult::UpdateAdminFailure {
             err: EnclaveError::OutOfMemory,
         }
     } else {
         error!("Call ecall_update_admin panicked unexpectedly!");
-        UpdateAdminResult::Failure {
+        UpdateAdminResult::UpdateAdminFailure {
             err: EnclaveError::Panic,
         }
     }

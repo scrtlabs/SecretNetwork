@@ -52,8 +52,10 @@ pub fn migrate_result_to_vm_result(other: MigrateResult) -> VmResult<MigrateSucc
 
 pub fn update_admin_result_to_vm_result(other: UpdateAdminResult) -> VmResult<UpdateAdminSuccess> {
     match other {
-        UpdateAdminResult::Success { admin_proof } => Ok(UpdateAdminSuccess { admin_proof }),
-        UpdateAdminResult::Failure { err } => Err(err.into()),
+        UpdateAdminResult::UpdateAdminSuccess { admin_proof } => {
+            Ok(UpdateAdminSuccess { admin_proof })
+        }
+        UpdateAdminResult::UpdateAdminFailure { err } => Err(err.into()),
     }
 }
 

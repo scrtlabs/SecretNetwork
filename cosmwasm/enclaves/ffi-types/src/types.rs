@@ -340,10 +340,10 @@ pub enum MigrateResult {
 
 #[repr(C)]
 pub enum UpdateAdminResult {
-    Success {
+    UpdateAdminSuccess {
         admin_proof: [u8; 32],
     },
-    Failure {
+    UpdateAdminFailure {
         /// The error that happened in the enclave
         err: EnclaveError,
     },
