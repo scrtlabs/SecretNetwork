@@ -298,7 +298,7 @@ pub fn migrate(
     let canonical_sender_address = to_canonical(sender)?;
     let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
 
-    let og_contract_key = base_env.get_original_contract_key()?;
+    let og_contract_key = base_env.get_og_contract_key()?;
 
     let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
 
@@ -440,7 +440,7 @@ pub fn update_admin(
     let canonical_sender_address = to_canonical(sender)?;
     let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
 
-    let og_contract_key = base_env.get_original_contract_key()?;
+    let og_contract_key = base_env.get_og_contract_key()?;
 
     let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
 

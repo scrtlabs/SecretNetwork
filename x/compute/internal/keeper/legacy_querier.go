@@ -140,5 +140,5 @@ func queryContractKey(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) ([
 		return nil, nil
 	}
 
-	return res.Key, nil
+	return res.CurrentContractKey, nil
 }

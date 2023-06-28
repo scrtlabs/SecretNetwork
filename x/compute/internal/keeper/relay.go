@@ -45,7 +45,7 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 		sdk.AccAddress{}, /* there's no MessageInfo for IBC contract calls */
 		sdk.NewCoins(),   /* there's no MessageInfo for IBC contract calls */
 		contractAddress,
-		&contractKey,
+		contractKey,
 		random,
 	)
 

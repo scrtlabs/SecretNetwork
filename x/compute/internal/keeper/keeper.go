@@ -467,7 +467,17 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
 	// prepare env for contract instantiate call
-	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil, random)
+	env := types.NewEnv(ctx,
+		creator,
+		deposit,
+		contractAddress,
+		types.ContractKey{
+			OgContractKey:           nil,
+			CurrentContractKey:      nil,
+			CurrentContractKeyProof: nil,
+		},
+		random,
+	)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -483,7 +493,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	response, key, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
+	response, ogContractKey, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
 	consumeGas(ctx, gasUsed)
 
 	if initError != nil {
@@ -515,7 +525,9 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 
 		k.setContractInfo(ctx, contractAddress, &contractInfo)
 		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
-			Key: key,
+			OgContractKey:           ogContractKey,
+			CurrentContractKey:      nil,
+			CurrentContractKeyProof: nil,
 		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
@@ -563,7 +575,9 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		// persist instance
 		k.setContractInfo(ctx, contractAddress, &contractInfo)
 		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
-			Key: key,
+			OgContractKey:           ogContractKey,
+			CurrentContractKey:      nil,
+			CurrentContractKeyProof: nil,
 		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
@@ -625,7 +639,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return nil, err
 	}
 
-	env := types.NewEnv(ctx, caller, coins, contractAddress, &contractKey, random)
+	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, random)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -727,7 +741,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 		sdk.AccAddress{}, /* empty because it's unused in queries */
 		sdk.NewCoins(),   /* empty because it's unused in queries */
 		contractAddress,
-		&contractKey,
+		contractKey,
 		[]byte{0}, /* empty because it's unused in queries */
 	)
 	params.QueryDepth = queryDepth
@@ -1153,7 +1167,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
-	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, &contractKey, random)
+	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey, random)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -1224,7 +1238,7 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 		return err
 	}
 
-	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, &contractKey, nil)
+	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey, nil)
 
 	currentAdminProof := k.GetContractInfo(ctx, contractAddress).AdminProof
 	currentAdmin := k.GetContractInfo(ctx, contractAddress).Admin
@@ -1312,7 +1326,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
-	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, &contractKey, random)
+	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey, random)
 
 	adminProof := k.GetContractInfo(ctx, contractAddress).AdminProof
 	admin := k.GetContractInfo(ctx, contractAddress).Admin
@@ -1332,7 +1346,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, newContractKey, proof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminAddr, adminProof)
+	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminAddr, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {
@@ -1351,11 +1365,9 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	// update contract key with new one
 	k.SetContractKey(ctx, contractAddress, &types.ContractKey{
-		Key: newContractKey,
-		Original: &types.ContractKeyWithProof{
-			Key:   contractKey.Key,
-			Proof: proof,
-		},
+		OgContractKey:           contractKey.OgContractKey,
+		CurrentContractKey:      newContractKey,
+		CurrentContractKeyProof: newContractKeyProof,
 	})
 
 	// delete old secondary index entry

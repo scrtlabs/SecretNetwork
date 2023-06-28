@@ -11,19 +11,15 @@ type Env struct {
 	Block       BlockInfo        `json:"block"`
 	Message     MessageInfo      `json:"message"`
 	Contract    ContractInfo     `json:"contract"`
-	Key         *ContractKey     `json:"contract_key,omitempty"`
+	Key         ContractKey      `json:"contract_key"`
 	QueryDepth  uint32           `json:"query_depth"`
 	Transaction *TransactionInfo `json:"transaction,omitempty"`
 }
 
 type ContractKey struct {
-	Key      []byte                `json:"key"`
-	Original *ContractKeyWithProof `json:"original,omitempty"`
-}
-
-type ContractKeyWithProof struct {
-	Key   []byte `json:"key,omitempty"`
-	Proof []byte `json:"proof,omitempty"`
+	OgContractKey           []byte `protobuf:"bytes,1,opt,name=og_contract_key,json=ogContractKey,proto3" json:"og_contract_key,omitempty"`
+	CurrentContractKey      []byte `protobuf:"bytes,2,opt,name=current_contract_key,json=currentContractKey,proto3" json:"current_contract_key,omitempty"`
+	CurrentContractKeyProof []byte `protobuf:"bytes,3,opt,name=current_contract_key_proof,json=currentContractKeyProof,proto3" json:"current_contract_key_proof,omitempty"`
 }
 
 type TransactionInfo struct {

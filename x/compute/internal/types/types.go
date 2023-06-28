@@ -120,7 +120,7 @@ func (a *AbsoluteTxPosition) Bytes() []byte {
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey *ContractKey, random []byte) wasmTypes.Env {
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey ContractKey, random []byte) wasmTypes.Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -146,18 +146,10 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 		QueryDepth: 1,
 	}
 
-	if contractKey != nil {
-		env.Key = &wasmTypes.ContractKey{
-			Key:      contractKey.Key,
-			Original: nil,
-		}
-
-		if contractKey.Original != nil {
-			env.Key.Original = &wasmTypes.ContractKeyWithProof{
-				Proof: contractKey.Original.Proof,
-				Key:   contractKey.Original.Key,
-			}
-		}
+	env.Key = wasmTypes.ContractKey{
+		OgContractKey:           contractKey.OgContractKey,
+		CurrentContractKey:      contractKey.CurrentContractKey,
+		CurrentContractKeyProof: contractKey.CurrentContractKeyProof,
 	}
 
 	if txCounter, ok := TXCounter(ctx); ok {

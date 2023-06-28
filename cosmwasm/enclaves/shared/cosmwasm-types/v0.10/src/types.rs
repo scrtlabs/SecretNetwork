@@ -105,30 +105,12 @@ impl fmt::Display for CanonicalAddr {
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ContractKey {
-    pub key: Binary,
-    pub original: Option<ContractKeyWithProof>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
-pub struct ContractKeyWithProof {
-    pub key: Binary,
-    pub proof: Binary,
-}
-
-impl ContractKeyWithProof {
-    pub fn get_key(&self) -> [u8; CONTRACT_KEY_LENGTH] {
-        let mut output = [0u8; CONTRACT_KEY_LENGTH];
-        output.copy_from_slice(&self.key.0);
-
-        output
-    }
-
-    pub fn get_proof(&self) -> [u8; CONTRACT_KEY_PROOF_LENGTH] {
-        let mut output = [0u8; CONTRACT_KEY_PROOF_LENGTH];
-        output.copy_from_slice(&self.proof.0);
-
-        output
-    }
+    #[serde(default)]
+    pub og_contract_key: Option<Binary>,
+    #[serde(default)]
+    pub current_contract_key: Option<Binary>,
+    #[serde(default)]
+    pub current_contract_key_proof: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

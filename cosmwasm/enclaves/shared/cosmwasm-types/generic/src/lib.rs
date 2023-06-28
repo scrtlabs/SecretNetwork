@@ -40,53 +40,93 @@ pub type BaseCanoncalAddr = v010types::CanonicalAddr;
 pub struct BaseEnv(pub V010Env);
 
 impl BaseEnv {
-    pub fn get_current_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
-        let contract_key = if let Some(contract_key) = &self.0.contract_key {
-            &contract_key.key.0
-        } else {
-            warn!("Contract execute with empty contract key");
-            return Err(EnclaveError::FailedContractAuthentication);
-        };
-
-        if contract_key.len() != CONTRACT_KEY_LENGTH {
-            warn!("Contract execute with empty contract key");
-            return Err(EnclaveError::FailedContractAuthentication);
-        }
-
-        let mut key_as_bytes = [0u8; CONTRACT_KEY_LENGTH];
-        key_as_bytes.copy_from_slice(contract_key);
-
-        Ok(key_as_bytes)
-    }
-
     pub fn was_migrated(&self) -> bool {
-        if let Some(key) = &self.0.contract_key {
-            key.original.is_some()
+        if let Some(contract_key) = &self.0.contract_key {
+            contract_key.current_contract_key.is_some()
+                && contract_key.current_contract_key_proof.is_some()
+                && contract_key.og_contract_key.is_some() // this one might be unnecessary
         } else {
             false
         }
     }
 
-    pub fn get_original_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
-        if let Some(key) = &self.0.contract_key {
-            if self.was_migrated() {
-                Ok(key.original.clone().unwrap().get_key())
+    pub fn get_og_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+        if let Some(contract_key) = &self.0.contract_key {
+            let og_contract_key = if let Some(og_contract_key) = &contract_key.og_contract_key {
+                &og_contract_key.0
             } else {
-                self.get_current_contract_key()
+                warn!("Tried to get an empty og_contract_key");
+                return Err(EnclaveError::FailedContractAuthentication);
+            };
+
+            if og_contract_key.len() != CONTRACT_KEY_LENGTH {
+                warn!("Tried to get an empty og_contract_key");
+                return Err(EnclaveError::FailedContractAuthentication);
             }
+
+            let mut as_bytes: [u8; CONTRACT_KEY_LENGTH] = [0u8; CONTRACT_KEY_LENGTH];
+            as_bytes.copy_from_slice(og_contract_key);
+
+            Ok(as_bytes)
         } else {
+            warn!("Tried to get og_contract_key from an empty contract_key");
             Err(EnclaveError::FailedContractAuthentication)
         }
     }
 
-    pub fn get_contract_key_proof(&self) -> Result<[u8; CONTRACT_KEY_PROOF_LENGTH], EnclaveError> {
-        if let Some(key) = &self.0.contract_key {
-            if self.was_migrated() {
-                Ok(key.original.clone().unwrap().get_proof())
-            } else {
-                Err(EnclaveError::FailedContractAuthentication)
+    pub fn get_current_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+        if let Some(contract_key) = &self.0.contract_key {
+            let current_contract_key =
+                if let Some(current_contract_key) = &contract_key.current_contract_key {
+                    &current_contract_key.0
+                } else {
+                    if let Some(og_contract_key) = &contract_key.og_contract_key {
+                        &og_contract_key.0
+                    } else {
+                        warn!("Tried to get an empty current_contract_key & og_contract_key");
+                        return Err(EnclaveError::FailedContractAuthentication);
+                    }
+                };
+
+            if current_contract_key.len() != CONTRACT_KEY_LENGTH {
+                warn!("Tried to get an empty current_contract_key");
+                return Err(EnclaveError::FailedContractAuthentication);
             }
+
+            let mut as_bytes: [u8; CONTRACT_KEY_LENGTH] = [0u8; CONTRACT_KEY_LENGTH];
+            as_bytes.copy_from_slice(current_contract_key);
+
+            Ok(as_bytes)
         } else {
+            warn!("Tried to get current_contract_key from an empty contract_key");
+            Err(EnclaveError::FailedContractAuthentication)
+        }
+    }
+
+    pub fn get_current_contract_key_proof(
+        &self,
+    ) -> Result<[u8; CONTRACT_KEY_PROOF_LENGTH], EnclaveError> {
+        if let Some(contract_key) = &self.0.contract_key {
+            let current_contract_key_proof = if let Some(current_contract_key_proof) =
+                &contract_key.current_contract_key_proof
+            {
+                &current_contract_key_proof.0
+            } else {
+                warn!("Tried to get an empty current_contract_key_proof");
+                return Err(EnclaveError::FailedContractAuthentication);
+            };
+
+            if current_contract_key_proof.len() != CONTRACT_KEY_PROOF_LENGTH {
+                warn!("Tried to get an empty current_contract_key_proof");
+                return Err(EnclaveError::FailedContractAuthentication);
+            }
+
+            let mut as_bytes: [u8; CONTRACT_KEY_PROOF_LENGTH] = [0u8; CONTRACT_KEY_PROOF_LENGTH];
+            as_bytes.copy_from_slice(current_contract_key_proof);
+
+            Ok(as_bytes)
+        } else {
+            warn!("Tried to get current_contract_key_proof from an empty contract_key");
             Err(EnclaveError::FailedContractAuthentication)
         }
     }
@@ -136,7 +176,7 @@ impl BaseEnv {
                 contract: v010types::ContractInfo {
                     address: self.0.contract.address,
                 },
-                // to maintain compatability with v010 we just return none here - no contract would care
+                // to maintain compatability with v010 we just return none here - no contract should care
                 // about this anyway
                 contract_key: None,
                 contract_code_hash: self.0.contract_code_hash,

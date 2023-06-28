@@ -572,7 +572,7 @@ func execTxBuilderImpl(
 			return results, &errResult
 		}
 
-		// wasmEvents comes from all the callbacks as well
+		// wasmEvents come from all the callbacks as well
 		wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
 
 		// Data is the output of only the first call
@@ -643,7 +643,7 @@ func initHelperImpl(
 		return nil, ctx, nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
 	}
 
-	// wasmEvents comes from all the callbacks as well
+	// wasmEvents come from all the callbacks as well
 	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
 
 	// TODO check if we can extract the messages from ctx
@@ -765,7 +765,7 @@ func migrateHelper(
 		return result, &errResult
 	}
 
-	// wasmEvents comes from all the callbacks as well
+	// wasmEvents come from all the callbacks as well
 	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
 
 	// Data is the output of only the first call

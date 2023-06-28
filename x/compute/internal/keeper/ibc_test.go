@@ -94,7 +94,7 @@ func ibcChannelConnectHelper(
 		return ctx, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	// wasmEvents comes from all the callbacks as well
+	// wasmEvents come from all the callbacks as well
 	wasmEvents := tryDecryptWasmEvents(ctx, []byte{}, true)
 
 	return ctx, wasmEvents, cosmwasm.StdError{}
@@ -250,7 +250,7 @@ func ibcChannelCloseHelper(
 		return ctx, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	// wasmEvents comes from all the callbacks as well
+	// wasmEvents come from all the callbacks as well
 	wasmEvents := tryDecryptWasmEvents(ctx, []byte{}, true)
 
 	return ctx, wasmEvents, cosmwasm.StdError{}
@@ -348,7 +348,7 @@ func ibcPacketReceiveHelper(
 
 	require.NotZero(t, gasMeter.GetWasmCounter(), err)
 
-	// wasmEvents comes from all the callbacks as well
+	// wasmEvents come from all the callbacks as well
 	wasmEvents := tryDecryptWasmEvents(ctx, nonce, !shouldEncryptMsg)
 
 	if err != nil {
@@ -424,7 +424,7 @@ func ibcPacketAckHelper(
 		return ctx, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	// wasmEvents comes from all the callbacks as well
+	// wasmEvents come from all the callbacks as well
 	wasmEvents := tryDecryptWasmEvents(ctx, []byte{}, true)
 
 	return ctx, wasmEvents, cosmwasm.StdError{}
@@ -483,7 +483,7 @@ func ibcPacketTimeoutHelper(
 		return ctx, nil, cosmwasm.StdError{GenericErr: &cosmwasm.GenericErr{Msg: err.Error()}}
 	}
 
-	// wasmEvents comes from all the callbacks as well
+	// wasmEvents come from all the callbacks as well
 	wasmEvents := tryDecryptWasmEvents(ctx, []byte{}, true)
 
 	return ctx, wasmEvents, cosmwasm.StdError{}
