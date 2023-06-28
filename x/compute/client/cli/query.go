@@ -555,10 +555,11 @@ func GetCmdQuery() *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 
 	cmd := &cobra.Command{
-		Use:   "query [bech32_address_or_label] [query]", // TODO add --from wallet
-		Short: "Calls contract with given address with query data and prints the returned result",
-		Long:  "Calls contract with given address with query data and prints the returned result",
-		Args:  cobra.ExactArgs(2),
+		Use:     "query [bech32_address_or_label] [query]",
+		Short:   "Run a query on a contract",
+		Long:    "Calls contract with given address with query data and prints the returned result",
+		Aliases: []string{"smart"},
+		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
