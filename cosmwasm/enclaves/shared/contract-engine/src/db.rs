@@ -1,4 +1,3 @@
-use block_verifier::read_proofs::{comm_proof_from_bytes, verify_read};
 use enclave_crypto::consts::{
     CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES, STATE_ENCRYPTION_VERSION,
 };
@@ -7,6 +6,8 @@ use enclave_crypto::{sha_256, AESKey, Kdf, SIVEncryptable, KEY_MANAGER};
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
 use enclave_utils::kv_cache::KvCache;
 use log::*;
+#[cfg(feature = "read-verifier")]
+use read_verifier::read_proofs::{comm_proof_from_bytes, verify_read};
 use serde::{Deserialize, Serialize};
 use sgx_types::sgx_status_t;
 
@@ -364,6 +365,7 @@ fn read_db(
         }
     };
 
+    #[cfg(feature = "read-db-proofs")]
     if let (Some(proof), Some(mp_key)) = (proof, mp_key) {
         let comm_proof =
             comm_proof_from_bytes(&proof).map_err(|_| WasmEngineError::HostMisbehavior)?;
@@ -371,11 +373,12 @@ fn read_db(
             error!("could not verify merkle proof");
             return Err(WasmEngineError::HostMisbehavior);
         }
-
-        Ok((value, gas_used))
+        debug!("proof verified!");
     } else {
-        Err(WasmEngineError::HostMisbehavior)
+        return Err(WasmEngineError::HostMisbehavior);
     }
+
+    Ok((value, gas_used))
 }
 
 /// Safe wrapper around reads from the contract storage

@@ -39,7 +39,7 @@ func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byt
 
 	// result.ProofOps.Ops should always contain only one proof
 	if result.ProofOps == nil {
-		return nil, nil, nil, fmt.Errorf("error in retrieving key: %+v, got: %s", key, result.Log)
+		return nil, nil, nil, fmt.Errorf("error in retrieving key: %+v for height: %d, got: %s", key, blockHeight-1, result.Log)
 	}
 	if len(result.ProofOps.Ops) != 1 {
 		return nil, nil, nil, fmt.Errorf("error in retrieving proof for key: %+v, got: %+v", key, result.ProofOps.Ops)

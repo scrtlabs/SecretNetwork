@@ -21,13 +21,25 @@ production = [
   "log/max_level_warn",
   "log/release_max_level_warn",
   "block-verifier/production",
-  "block-verifier/verify-validator-whitelist"
+  "block-verifier/verify-validator-whitelist",
 ]
 debug-print = ["enclave_contract_engine/debug-print"]
-test = ["enclave_contract_engine/test", "enclave_crypto/test", "enclave_cosmos_types/test", "block-verifier/test"]
+test = [
+  "enclave_contract_engine/test",
+  "enclave_crypto/test",
+  "enclave_cosmos_types/test",
+  "block-verifier/test",
+]
 use_seed_service_on_bootstrap = []
 epid_whitelist_disabled = []
-light-client-validation = ["enclave_contract_engine/light-client-validation", "block-verifier/light-client-validation"]
+light-client-validation = [
+  "enclave_contract_engine/light-client-validation",
+  "block-verifier/light-client-validation",
+]
+read-db-proofs = [
+  "enclave_contract_engine/read-db-proofs",
+  "block-verifier/read-db-proofs",
+]
 random = ["enclave_contract_engine/random"]
 verify-validator-whitelist = ["block-verifier/verify-validator-whitelist"]
 
@@ -36,8 +48,8 @@ verify-validator-whitelist = ["block-verifier/verify-validator-whitelist"]
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
-    "backtrace",
-    "untrusted_time"
+  "backtrace",
+  "untrusted_time",
 ] }
 sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
@@ -54,7 +66,7 @@ enclave_utils = { path = "../shared/utils" }
 enclave_cosmos_types = { path = "../shared/cosmos-types", optional = true }
 
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
-  "derive"
+  "derive",
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 ctor = "0.1.13"
@@ -75,9 +87,12 @@ bit-vec = { version = "0.6", default-features = false }
 lazy_static = "1.4"
 hex = "0.4.2"
 log = "0.4.17"
-simple_logger = { version = "2.3.0", default-features = false, features = ["stderr"] }
+simple_logger = { version = "2.3.0", default-features = false, features = [
+  "stderr",
+] }
 
 block-verifier = { path = "../shared/block-verifier", default-features = false }
+read-verifier = { path = "../shared/read-verifier" }
 
 time = "=0.3.17"
 

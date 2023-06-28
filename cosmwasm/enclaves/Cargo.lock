@@ -209,17 +209,14 @@ dependencies = [
 name = "block-verifier"
 version = "0.1.0"
 dependencies = [
- "cosmos-sdk-proto",
  "cosmos_proto",
  "enclave_crypto",
  "enclave_utils",
  "hex",
- "ics23",
- "integer-encoding",
  "lazy_static",
  "log",
- "prost 0.11.9",
  "protobuf",
+ "read-verifier",
  "sgx_trts",
  "sgx_tstd",
  "sgx_types",
@@ -653,6 +650,7 @@ dependencies = [
  "pwasm-utils",
  "rand_chacha",
  "rand_core",
+ "read-verifier",
  "secp256k1 0.24.3",
  "serde 1.0.118",
  "serde_json 1.0.60",
@@ -1395,6 +1393,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "read-verifier"
+version = "0.1.0"
+dependencies = [
+ "cosmos-sdk-proto",
+ "enclave_crypto",
+ "enclave_utils",
+ "ics23",
+ "integer-encoding",
+ "lazy_static",
+ "log",
+ "prost 0.11.9",
+ "sgx_tstd",
+ "sgx_types",
+ "tendermint",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1587,6 +1602,7 @@ dependencies = [
  "num-bigint",
  "parity-wasm",
  "pwasm-utils",
+ "read-verifier",
  "rustls",
  "serde 1.0.118",
  "serde_json 1.0.60",

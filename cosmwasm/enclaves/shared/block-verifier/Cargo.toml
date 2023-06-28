@@ -10,6 +10,7 @@ random = []
 light-client-validation = []
 production = []
 verify-validator-whitelist = []
+read-db-proofs = ["read-verifier"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
@@ -19,6 +20,7 @@ sgx_trts = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://gi
 sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
+read-verifier = { path = "../read-verifier", optional = true }
 tendermint = { git = "https://github.com/scrtlabs/tendermint-rs", branch = "fix-val-set-parsing", default-features = false }
 tendermint-proto = { git = "https://github.com/scrtlabs/tendermint-rs", branch = "fix-val-set-parsing", default-features = false }
 tendermint-light-client-verifier = { git = "https://github.com/scrtlabs/tendermint-rs", branch = "fix-val-set-parsing", default-features = false }
@@ -29,11 +31,3 @@ enclave_utils = { path = "../utils" }
 cosmos_proto = { path = "../cosmos-proto" }
 protobuf = { version = "2.25.2" }
 hex = { version = "0.4.3" }
-cosmos-sdk-proto = { version = "0.16.0", default-features = false }
-integer-encoding = "3.0.4"
-ics23 = { version = "0.9.0", default-features = false, features = [
-    "host-functions",
-] }
-prost = { version = "0.11", default-features = false, features = [
-    "prost-derive",
-] }

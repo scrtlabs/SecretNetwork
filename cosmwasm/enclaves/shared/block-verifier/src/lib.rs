@@ -10,20 +10,16 @@ pub mod ecalls;
 pub mod validator_whitelist;
 pub mod wasm_messages;
 
-pub mod read_proofs;
 mod txs;
 
 use lazy_static::lazy_static;
 use log::debug;
-use read_proofs::ReadProofer;
-use std::sync::SgxMutex;
 use tendermint_light_client_verifier::types::UntrustedBlockState;
 use tendermint_light_client_verifier::{ProdVerifier, Verdict};
 pub use wasm_messages::VERIFIED_MESSAGES;
 
 lazy_static! {
     static ref VERIFIER: ProdVerifier = ProdVerifier::default();
-    static ref READ_PROOFER: SgxMutex<ReadProofer> = SgxMutex::new(ReadProofer::default());
 }
 
 pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
