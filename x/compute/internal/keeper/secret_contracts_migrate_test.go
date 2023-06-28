@@ -175,8 +175,6 @@ func TestAddrValidateFunctionAfterMigrate(t *testing.T) {
 }
 
 func TestRandomEnvAfterMigrate(t *testing.T) {
-	t.SkipNow() // TODO this shuold work...
-
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
