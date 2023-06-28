@@ -7,6 +7,7 @@
     "third_party/build/Cargo.toml",
     "cosmwasm/enclaves/Cargo.toml",
     "cosmwasm/contracts/v1/compute-tests/test-compute-contract/Cargo.toml",
+    "cosmwasm/contracts/v1/compute-tests/test-compute-contract-v2/Cargo.toml",
     "cosmwasm/contracts/v1/compute-tests/ibc-test-contract/Cargo.toml",
     "cosmwasm/contracts/v1/compute-tests/bench-contract/Cargo.toml",
     "cosmwasm/contracts/v010/compute-tests/test-compute-contract/Cargo.toml",

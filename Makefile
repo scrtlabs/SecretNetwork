@@ -424,6 +424,8 @@ build-test-contracts:
 	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract
 	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2
+	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/ibc-test-contract
 	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v1
