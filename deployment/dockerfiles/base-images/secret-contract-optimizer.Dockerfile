@@ -11,5 +11,5 @@ ENTRYPOINT ["/bin/bash", "-c", "\
     for w in ./optimized-wasm/*.wasm; do \
         wasm-opt -Oz $w -o $w ; \
     done && \
-    (cd ./optimized-wasm && gzip -n -9 -f * && rm *.wasm) \
+    (cd ./optimized-wasm && gzip -n -9 -f *) \
 "]
