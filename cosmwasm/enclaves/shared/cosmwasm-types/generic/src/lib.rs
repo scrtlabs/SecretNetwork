@@ -79,13 +79,11 @@ impl BaseEnv {
             let current_contract_key =
                 if let Some(current_contract_key) = &contract_key.current_contract_key {
                     &current_contract_key.0
+                } else if let Some(og_contract_key) = &contract_key.og_contract_key {
+                    &og_contract_key.0
                 } else {
-                    if let Some(og_contract_key) = &contract_key.og_contract_key {
-                        &og_contract_key.0
-                    } else {
-                        warn!("Tried to get an empty current_contract_key & og_contract_key");
-                        return Err(EnclaveError::FailedContractAuthentication);
-                    }
+                    warn!("Tried to get an empty current_contract_key & og_contract_key");
+                    return Err(EnclaveError::FailedContractAuthentication);
                 };
 
             if current_contract_key.len() != CONTRACT_KEY_LENGTH {
