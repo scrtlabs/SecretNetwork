@@ -31,10 +31,10 @@ backtraces = ["cosmwasm-std/backtraces"]
 with_floats = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "6c639b5", package = "secret-cosmwasm-std", features = [
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "c91d5f2", package = "secret-cosmwasm-std", features = [
   "random"
 ] }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "6c639b5", package = "secret-cosmwasm-storage" }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "c91d5f2", package = "secret-cosmwasm-storage" }
 schemars = "0.8.1"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",

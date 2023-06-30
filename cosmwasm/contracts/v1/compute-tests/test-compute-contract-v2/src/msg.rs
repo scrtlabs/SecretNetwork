@@ -115,6 +115,8 @@ pub enum InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    Nop {},
+    StdError {},
     IncrementTimes {
         times: u64,
     },
@@ -499,11 +501,4 @@ pub enum QueryRes {
 pub enum ExternalMessages {
     GetCountFromV1 {},
     QueryFromV1WithError {},
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum MigrateMsg {
-    Nop {},
-    StdError {},
 }
