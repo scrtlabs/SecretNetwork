@@ -357,17 +357,28 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
 func queryHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, input string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	input string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
 ) (string, cosmwasm.StdError) {
 	return queryHelperImpl(t, keeper, ctx, contractAddr, input, isErrorEncrypted, isV1Contract, gas, -1)
 }
 
 func queryHelperImpl(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, input string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	input string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	wasmCallCount int64,
 ) (string, cosmwasm.StdError) {
 	hash, err := keeper.GetContractHash(ctx, contractAddr)
 	require.NoError(t, err)
@@ -425,9 +436,19 @@ func queryHelperImpl(
 //}
 
 func execHelperCustomWasmCount(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coin int64,
+	wasmCallCount int64,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
 	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewCoin("denom", sdk.NewInt(coin))), wasmCallCount, shouldSkipAttributes...)
 
@@ -443,9 +464,19 @@ func execHelperCustomWasmCount(
 }
 
 func execHelperMultipleCoins(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCount int64, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coins sdk.Coins,
+	wasmCount int64,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
 	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, coins, wasmCount, shouldSkipAttributes...)
 
@@ -461,9 +492,18 @@ func execHelperMultipleCoins(
 }
 
 func execHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coin int64,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
 	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
 
@@ -478,17 +518,36 @@ func execHelper(
 }
 
 func execHelperMultipleMsgs(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg []string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsg []string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coin int64,
+	shouldSkipAttributes ...bool,
 ) ([]ExecResult, *ErrorResult) {
 	return execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
 }
 
 func execTxBuilderImpl(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsgs []string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsgs []string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coins sdk.Coins,
+	wasmCallCount int64,
+	shouldSkipAttributes ...bool,
 ) ([]ExecResult, *ErrorResult) {
 	hash, err := keeper.GetContractHash(ctx, contractAddress)
 	require.NoError(t, err)
@@ -591,17 +650,37 @@ func execTxBuilderImpl(
 }
 
 func initHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	codeID uint64, creator, admin sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	codeID uint64,
+	creator,
+	admin sdk.AccAddress,
+	creatorPrivKey crypto.PrivKey,
+	initMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	return initHelperImpl(t, keeper, ctx, codeID, creator, admin, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, sdk.NewCoins(), shouldSkipAttributes...)
 }
 
 func initHelperImpl(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	codeID uint64, creator, admin sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, sentFunds sdk.Coins, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	codeID uint64,
+	creator,
+	admin sdk.AccAddress,
+	creatorPrivKey crypto.PrivKey,
+	initMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	wasmCallCount int64,
+	sentFunds sdk.Coins,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
 	require.NoError(t, err)
@@ -698,10 +777,18 @@ type v1QueryResponse struct {
 }
 
 func migrateHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
 	newCodeId uint64,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, migrateMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, shouldSkipAttributes ...bool,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	migrateMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	wasmCallCount ...int64,
 ) (MigrateResult, *ErrorResult) {
 	codeInfo, err := keeper.GetCodeInfo(ctx, newCodeId)
 	require.NoError(t, err)
@@ -747,6 +834,13 @@ func migrateHelper(
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 
+	if len(wasmCallCount) == 0 {
+		// default, just check that at least 1 call happened
+		require.NotZero(t, gasMeter.GetWasmCounter(), err)
+	} else {
+		require.Equal(t, uint64(wasmCallCount[0]), gasMeter.GetWasmCounter(), err)
+	}
+
 	if err != nil {
 		result := MigrateResult{
 			Nonce:      nil,
@@ -766,7 +860,7 @@ func migrateHelper(
 	}
 
 	// wasmEvents come from all the callbacks as well
-	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce)
 
 	// Data is the output of only the first call
 	data := getDecryptedData(t, execResult, nonce)

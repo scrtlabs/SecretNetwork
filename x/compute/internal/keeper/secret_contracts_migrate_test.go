@@ -80,18 +80,18 @@ func TestWithStorageAfterMigrate(t *testing.T) {
 	require.Empty(t, data)
 }
 
-func TestContractFromDifferentAccountAfterMigrate(t *testing.T) {
+func TestMigrateContractFromNonAdminAccount(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, WalletB, privKeyB := setupTest(t, TestContractPaths[migrateContractV1], sdk.NewCoins())
 
 	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[migrateContractV2], walletA)
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
 
-	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, WalletB, privKeyB, `{"migrate":{}}`, false, true, math.MaxUint64)
-	require.NotNil(t, err)
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, WalletB, privKeyB, `{"migrate":{}}`, false, true, math.MaxUint64, 0)
+	require.Contains(t, err.Error(), "requires migrate from admin: migrate contract failed")
 }
 
-func TestVmErrorAfterMigrate(t *testing.T) {
+func TestVmErrorDuringMigrate(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[migrateContractV1], sdk.NewCoins())
 
 	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[migrateContractV2], walletA)
@@ -117,7 +117,7 @@ func TestStdErrorAfterMigrate(t *testing.T) {
 	require.Equal(t, err.Error(), "encrypted: Generic error: this is an std error")
 }
 
-/// copy of exec tests but with a migrate twist:
+/// copy of exec tests but doing it after a migration:
 
 func TestStateAfterMigrate(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
@@ -174,7 +174,7 @@ func TestAddrValidateFunctionAfterMigrate(t *testing.T) {
 	require.Equal(t, string(data), "\"Apple\"")
 }
 
-func TestRandomEnvAfterMigrate(t *testing.T) {
+func TestEnvAfterMigrate(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
@@ -217,98 +217,6 @@ func TestRandomEnvAfterMigrate(t *testing.T) {
 			},
 		},
 	)
-}
-
-func TestEnvAfterMigrate(t *testing.T) {
-	type ReturnedV1MessageInfo struct {
-		Sender    cosmwasm.HumanAddress `json:"sender"`
-		SentFunds cosmwasm.Coins        `json:"funds"`
-		// Random    string                `json:"random"`
-	}
-
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
-
-	_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
-	require.Empty(t, initErr)
-	require.Len(t, initEvents, 1)
-
-	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
-	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
-	require.Empty(t, migrateErr)
-
-	expectedV1Env := fmt.Sprintf(
-		`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
-		ctx.BlockHeight(),
-		// env.block.time is nanoseconds since unix epoch
-		ctx.BlockTime().UnixNano(),
-		ctx.ChainID(),
-		contractAddress.String(),
-		calcCodeHash(TestContractPaths[v1MigratedContract]),
-	)
-
-	_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, 1)
-	require.Empty(t, execErr)
-
-	if true {
-		requireEventsInclude(t,
-			execEvents,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{
-						Key:   "env",
-						Value: expectedV1Env,
-					},
-				},
-			},
-		)
-
-		execEvent := execEvents[0]
-		infoLogAttributeIndex := slices.IndexFunc(execEvent, func(c v010types.LogAttribute) bool { return c.Key == "info" })
-		infoLogAttribute := execEvent[infoLogAttributeIndex]
-
-		var actualMessageInfo ReturnedV1MessageInfo
-		_ = json.Unmarshal([]byte(infoLogAttribute.Value), &actualMessageInfo)
-
-		require.Equal(t, walletA.String(), actualMessageInfo.Sender)
-		require.Equal(t, cosmwasm.Coins{{Denom: "denom", Amount: "1"}}, actualMessageInfo.SentFunds)
-
-		// disabling random tests
-		// require.Len(t, actualMessageInfo.Random, 44)
-		// require.NotEqual(t, firstRandom, actualMessageInfo.Random)
-	} else {
-		requireEvents(t,
-			[]ContractEvent{
-				{
-					{Key: "contract_address", Value: contractAddress.String()},
-					{
-						Key: "env",
-						Value: fmt.Sprintf(
-							`{"block":{"height":%d,"time":%d,"chain_id":"%s"},"message":{"sender":"%s","sent_funds":[{"denom":"denom","amount":"1"}]},"contract":{"address":"%s"},"contract_key":null,"contract_code_hash":"%s"}`,
-							ctx.BlockHeight(),
-							// env.block.time is seconds since unix epoch
-							ctx.BlockTime().Unix(),
-							ctx.ChainID(),
-							walletA.String(),
-							contractAddress.String(),
-							calcCodeHash(TestContractPaths[v1MigratedContract]),
-						),
-					},
-				},
-			},
-			execEvents,
-		)
-	}
-
-	if true {
-		// only env (no msg info) in v1 query
-		queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get_env":{}}`, true, false, math.MaxUint64)
-		require.Empty(t, qErr)
-
-		require.Equal(t, expectedV1Env, queryRes)
-	} else {
-		// no env or msg info in v0.10 query
-	}
 }
 
 func TestNestedAttributeAfterMigrate(t *testing.T) {
@@ -899,24 +807,20 @@ func TestEd25519SignAfterMigrate(t *testing.T) {
 }
 
 func TestSleepAfterMigrate(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
-			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-			require.Empty(t, initErr)
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
 
-			newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
-			_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
-			require.Empty(t, migrateErr)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
 
-			_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"sleep":{"ms":3000}}`, false, true, defaultGasForTests, 0)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"sleep":{"ms":3000}}`, false, true, defaultGasForTests, 0)
 
-			require.Error(t, execErr)
-			require.Error(t, execErr.GenericErr)
-			require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
-		})
-	}
+	require.Error(t, execErr)
+	require.Error(t, execErr.GenericErr)
+	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestAllocateOnHeapFailBecauseMemoryLimitAfterMigrate(t *testing.T) {
@@ -929,9 +833,9 @@ func TestAllocateOnHeapFailBecauseMemoryLimitAfterMigrate(t *testing.T) {
 	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
 	require.Empty(t, migrateErr)
 
-	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"allocate_on_heap":{"bytes":13631488}}`, false, true, defaultGasForTests, 0)
+	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"allocate_on_heap":{"bytes":12582913}}`, false, true, defaultGasForTests, 0)
 
-	// this should fail with memory error because 13MiB is more than the allowed 12MiB
+	// this should fail with memory error because 12MiB+1 is more than the allowed 12MiB
 
 	require.Empty(t, data)
 
@@ -970,25 +874,25 @@ func TestAllocateOnHeapFailBecauseGasLimitAfterMigrate(t *testing.T) {
 }
 
 func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimitAfterMigrate(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
-			_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-			require.Empty(t, initErr)
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
 
-			_, _, data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, true, 9_000_000, 0)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
 
-			// this should fail with memory error because 1GiB is more
-			// than the allowed 12MiB, gas is 9mn so WASM gas is 900mn
-			// which is bigger than the 134mn from the previous test
+	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, true, 9_000_000, 0)
 
-			require.Empty(t, data)
+	// this should fail with memory error because 1GiB is more
+	// than the allowed 12MiB, gas is 9mn so WASM gas is 900mn
+	// which is bigger than the 134mn from the previous test
 
-			require.NotNil(t, execErr.GenericErr)
-			require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
-		})
-	}
+	require.Empty(t, data)
+
+	require.NotNil(t, execErr.GenericErr)
+	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestPassNullPointerToImportsAfterMigrate(t *testing.T) {
@@ -1015,11 +919,7 @@ func TestPassNullPointerToImportsAfterMigrate(t *testing.T) {
 			_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, true, defaultGasForTests, 0)
 
 			require.NotNil(t, execErr.GenericErr)
-			if true {
-				require.Contains(t, execErr.GenericErr.Msg, "execute contract failed")
-			} else {
-				require.Contains(t, execErr.GenericErr.Msg, "failed to read memory")
-			}
+			require.Contains(t, execErr.GenericErr.Msg, "execute contract failed")
 		})
 	}
 }
@@ -1657,32 +1557,28 @@ func TestGasIsChargedForExecCallbackToExecAfterMigrate(t *testing.T) {
 }
 
 func TestMsgSenderInCallbackAfterMigrate(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
-			_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-			require.Empty(t, err)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
 
-			newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
-			_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
-			require.Empty(t, migrateErr)
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
 
-			_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), newCodeHash), true, true, defaultGasForTests, 0)
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), newCodeHash), true, true, defaultGasForTests, 0)
 
-			require.Empty(t, err)
-			requireEvents(t, []ContractEvent{
-				{
-					{Key: "contract_address", Value: addr.String()},
-					{Key: "hi", Value: "hey"},
-				},
-				{
-					{Key: "contract_address", Value: addr.String()},
-					{Key: "msg.sender", Value: addr.String()},
-				},
-			}, events)
-		})
-	}
+	require.Empty(t, err)
+	requireEvents(t, []ContractEvent{
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "hi", Value: "hey"},
+		},
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "msg.sender", Value: addr.String()},
+		},
+	}, events)
 }
 
 func TestDepositToContractAfterMigrate(t *testing.T) {
@@ -1783,47 +1679,43 @@ func TestContractSendFundsToExecCallbackAfterMigrate(t *testing.T) {
 }
 
 func TestContractSendFundsToExecCallbackNotEnoughAfterMigrate(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
-			_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-			require.Empty(t, initErr)
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
 
-			newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
-			_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
-			require.Empty(t, migrateErr)
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
 
-			_, _, addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-			require.Empty(t, initErr)
+	_, _, addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
 
-			_, migrateErr = migrateHelper(t, keeper, ctx, newCodeId, addr2, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
-			require.Empty(t, migrateErr)
+	_, migrateErr = migrateHelper(t, keeper, ctx, newCodeId, addr2, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
 
-			contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-			walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+	contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+	walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-			require.Equal(t, "", contractCoinsBefore.String())
-			require.Equal(t, "", contract2CoinsBefore.String())
-			require.Equal(t, "200000denom", walletCoinsBefore.String())
+	require.Equal(t, "", contractCoinsBefore.String())
+	require.Equal(t, "", contract2CoinsBefore.String())
+	require.Equal(t, "200000denom", walletCoinsBefore.String())
 
-			_, _, _, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 19, newCodeHash), false, true, defaultGasForTests, 17)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 19, newCodeHash), false, true, defaultGasForTests, 17)
 
-			require.NotNil(t, execErr.GenericErr)
-			require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
+	require.NotNil(t, execErr.GenericErr)
+	require.Contains(t, execErr.GenericErr.Msg, "insufficient funds")
 
-			contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
-			contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
-			walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+	contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+	walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
 
-			// The state here should have been reverted by the APP but in go-tests we create our own keeper
-			// so it is not reverted in this case.
-			require.Equal(t, "17denom", contractCoinsAfter.String())
-			require.Equal(t, "", contract2CoinsAfter.String())
-			require.Equal(t, "199983denom", walletCoinsAfter.String())
-		})
-	}
+	// The state here should have been reverted by the APP but in go-tests we create our own keeper
+	// so it is not reverted in this case.
+	require.Equal(t, "17denom", contractCoinsAfter.String())
+	require.Equal(t, "", contract2CoinsAfter.String())
+	require.Equal(t, "199983denom", walletCoinsAfter.String())
 }
 
 func TestExecCallbackContractErrorAfterMigrate(t *testing.T) {
@@ -1999,23 +1891,19 @@ func TestExecContractErrorAfterMigrate(t *testing.T) {
 }
 
 func TestExecPanicAfterMigrate(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
-			_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-			require.Empty(t, initErr)
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
 
-			newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
-			_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
-			require.Empty(t, migrateErr)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
 
-			_, _, _, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"panic":{}}`, false, true, defaultGasForTests, 0)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"panic":{}}`, false, true, defaultGasForTests, 0)
 
-			require.NotNil(t, execErr.GenericErr)
-			require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
-		})
-	}
+	require.NotNil(t, execErr.GenericErr)
+	require.Contains(t, execErr.GenericErr.Msg, "the contract panicked")
 }
 
 func TestCanonicalizeAddressErrorsAfterMigrate(t *testing.T) {
@@ -2628,4 +2516,1610 @@ func TestIBCHooksOutgoingTransferTimeoutAfterMigrate(t *testing.T) {
 			}
 		})
 	}
+}
+
+/// copy of exec tests but doing it during a migration:
+
+func TestStateDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+
+	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+	require.Equal(t, "🍌", string(data))
+
+	_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"remove_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+
+	_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+	require.Empty(t, data)
+
+	_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+
+	_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+	require.Equal(t, "🍌", string(data))
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	migrateResult, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, math.MaxUint64)
+	require.Empty(t, err)
+	require.Equal(t, "🍌", string(migrateResult.Data))
+
+	migrateResult, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, true, defaultGasForTests)
+	require.Empty(t, execErr)
+
+	migrateResult, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests)
+	require.Empty(t, execErr)
+	require.Equal(t, "🍌", string(migrateResult.Data))
+
+	migrateResult, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"remove_state":{"key":"banana"}}`, true, true, defaultGasForTests)
+	require.Empty(t, execErr)
+
+	migrateResult, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests)
+	require.Empty(t, execErr)
+	require.Empty(t, string(migrateResult.Data))
+
+	migrateResult, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, true, defaultGasForTests)
+	require.Empty(t, execErr)
+
+	migrateResult, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests)
+	require.Empty(t, execErr)
+	require.Equal(t, "🍌", string(migrateResult.Data))
+
+	_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, execErr)
+	require.Equal(t, "🍌", string(data))
+}
+
+func TestAddrValidateFunctionDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	migrateResult, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"validate_address":{"addr":"%s"}}`, contractAddress), true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	resp, aErr := sdk.AccAddressFromBech32(string(migrateResult.Data))
+	require.Empty(t, aErr)
+	require.Equal(t, resp, contractAddress)
+
+	migrateResult, migrateErr = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"validate_address":{"addr":"secret18vd8fpwxzck93qlwghaj6arh4p7c5nyf7hmag8"}}`), true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+	require.Equal(t, string(migrateResult.Data), "\"Apple\"")
+}
+
+func TestEnvDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	migrateResult, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	migrateEvent := migrateResult.WasmEvents[0]
+	envAttributeIndex := slices.IndexFunc(migrateEvent, func(c v010types.LogAttribute) bool { return c.Key == "env" })
+	envAttribute := migrateEvent[envAttributeIndex]
+
+	var actualMigrateEnv cosmwasm.Env
+	json.Unmarshal([]byte(envAttribute.Value), &actualMigrateEnv)
+
+	expectedV1EnvMigrate := fmt.Sprintf(
+		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+		ctx.BlockHeight(),
+		// env.block.time is nanoseconds since unix epoch
+		ctx.BlockTime().UnixNano(),
+		ctx.ChainID(),
+		base64.StdEncoding.EncodeToString(actualMigrateEnv.Block.Random),
+		contractAddress.String(),
+		calcCodeHash(TestContractPaths[v1MigratedContract]),
+	)
+
+	requireEventsInclude(t,
+		migrateResult.WasmEvents,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{
+					Key:   "env",
+					Value: expectedV1EnvMigrate,
+				},
+			},
+		},
+	)
+}
+
+func TestNestedAttributeDuringMigrate(t *testing.T) {
+	// For more reference: https://github.com/scrtlabs/SecretNetwork/issues/1235
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	migrateResult, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_attribute_step1":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr2", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr4", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr_reply", Value: "🦄"},
+			},
+		},
+		migrateResult.WasmEvents,
+	)
+
+	require.Equal(t, string(migrateResult.Data), "\"reply\"")
+}
+
+func TestEmptyLogKeyValueDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	migrateResult, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"empty_log_key_value":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "my value is empty", Value: ""},
+				{Key: "", Value: "my key is empty"},
+			},
+		},
+		migrateResult.WasmEvents,
+	)
+}
+
+func TestExecNoLogsDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	migrateResult, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"no_logs":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+			},
+		},
+		migrateResult.WasmEvents,
+	)
+}
+
+func TestEmptyDataDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	migrateResult, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"empty_data":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+	require.Empty(t, migrateResult.Data)
+}
+
+func TestNoDataDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	migrateResult, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"no_data":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+	require.Empty(t, migrateResult.Data)
+}
+
+func TestUnicodeDataDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	migrateResult, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"unicode_data":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+	require.Equal(t, "🍆🥑🍄", string(migrateResult.Data))
+}
+
+func TestSecp256k1VerifyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// https://paulmillr.com/noble/
+
+	t.Run("CorrectCompactPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, true, math.MaxUint64)
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("CorrectLongPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectMsgHashCompactPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectMsgHashLongPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzas="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectSigCompactPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectSigLongPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BEZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo///ne03QpL+5WFHztzVceB3WD4QY/Ipl0UkHr/R8kDpVk=","sig":"rhZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectCompactPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"AoSdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXc","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectLongPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_verify":{"iterations":1,"pubkey":"BISdDHH9J0Bfb9pT8GFn+bW9cEVkgIh4bFsepMWmczXcFWl11YCgu65hzvNDQE2Qo1hwTMQ/42Xif8O/MrxzvxI=","sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+}
+
+func TestEd25519VerifyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// https://paulmillr.com/noble/
+	t.Run("Correct", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectMsg", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmUK"}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectSig", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_verify":{"iterations":1,"pubkey":"DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs=","sig":"8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","msg":"YXNzYWYgd2FzIGhlcmU="}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+}
+
+func TestEd25519BatchVerifyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// https://paulmillr.com/noble/
+	t.Run("Correct", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("100Correct", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU=","YXNzYWYgd2FzIGhlcmU="]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectPubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["DV1lgRdKw7nt4hvl8XkGZXMzU9S3uM9NLTK0h0qMbUs="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectMsg", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg=="],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("IncorrectSig", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDw=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "false"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("CorrectEmptySigsEmptyMsgsOnePubkey", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA="],"sigs":[],"msgs":[]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("CorrectEmpty", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":[]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("CorrectEmptyPubkeysEmptySigsOneMsg", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":[],"sigs":[],"msgs":["YXNzYWYgd2FzIGhlcmUK"]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("CorrectMultisig", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["LO2+Bt+/FIjomSaPB+I++LXkxgxwfnrKHLyvCic72rA=","2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["8O7nwhM71/B9srKwe8Ps39z5lAsLMMs6LxdvoPk0HXjEM97TNhKbdU6gEePT2MaaIUSiMEmoG28HIZMgMRTCDg==","bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg=="],"msgs":["YXNzYWYgd2FzIGhlcmU="]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("CorrectMultiMsgOneSigner", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_batch_verify":{"iterations":1,"pubkeys":["2ukhmWRNmcgCrB9fpLP9/HZVuJn6AhpITf455F4GsbM="],"sigs":["bp/N4Ub2WFk9SE9poZVEanU1l46WMrFkTd5wQIXi6QJKjvZUi7+GTzmTe8y2yzgpBI+GWQmt0/QwYbnSVxq/Cg==","uuNxLEzAYDbuJ+BiYN94pTqhD7UhvCJNbxAbnWz0B9DivkPXmqIULko0DddP2/tVXPtjJ90J20faiWCEC3QkDg=="],"msgs":["YXNzYWYgd2FzIGhlcmU=","cGVhY2Ugb3V0"]}}`, true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "result", Value: "true"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+}
+
+func TestSecp256k1RecoverPubkeyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// https://paulmillr.com/noble/
+	res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":0,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, true, defaultGasForTests)
+
+	require.Empty(t, err)
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "A0ZGrlBHMWtCMNAIbIrOxofwCxzZ0dxjT2yzWKwKmo//"},
+			},
+		},
+		res.WasmEvents,
+	)
+
+	res, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_recover_pubkey":{"iterations":1,"recovery_param":1,"sig":"/hZeEYHs9trj+Akeb+7p3UAtXjcDNYP9/D/hj/ALIUAG9bfrJltxkfpMz/9Jn5K3c5QjLuvaNT2jgr7P/AEW8A==","msg_hash":"ARp3VEHssUlDEwoW8AzdQYGKg90ENy8yWePKcjfjzao="}}`, true, true, defaultGasForTests)
+
+	require.Empty(t, err)
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "Ams198xOCEVnc/ESvxF2nxnE3AVFO8ahB22S1ZgX2vSR"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestSecp256k1SignDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// priv iadRiuRKNZvAXwolxqzJvr60uiMDJTxOEzEwV8OK2ao=
+	// pub ArQojoh5TVlSSNA1HFlH5HcQsv0jnrpeE7hgwR/N46nS
+	// msg d2VuIG1vb24=
+	// msg_hash K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA=
+
+	// https://paulmillr.com/noble/
+	res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"secp256k1_sign":{"iterations":1,"msg":"d2VuIG1vb24=","privkey":"iadRiuRKNZvAXwolxqzJvr60uiMDJTxOEzEwV8OK2ao="}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	signature := res.WasmEvents[0][1].Value
+
+	res, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"secp256k1_verify":{"iterations":1,"pubkey":"ArQojoh5TVlSSNA1HFlH5HcQsv0jnrpeE7hgwR/N46nS","sig":"%s","msg_hash":"K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA="}}`, signature), true, true, defaultGasForTests)
+
+	require.Empty(t, err)
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "true"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestEd25519SignDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// priv z01UNefH2yjRslwZMmcHssdHmdEjzVvbxjr+MloUEYo=
+	// pub jh58UkC0FDsiupZBLdaqKUqYubJbk3LDaruZiJiy0Po=
+	// msg d2VuIG1vb24=
+	// msg_hash K9vGEuzCYCUcIXlhMZu20ke2K4mJhreguYct5MqAzhA=
+
+	// https://paulmillr.com/noble/
+	res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"ed25519_sign":{"iterations":1,"msg":"d2VuIG1vb24=","privkey":"z01UNefH2yjRslwZMmcHssdHmdEjzVvbxjr+MloUEYo="}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	signature := res.WasmEvents[0][1].Value
+
+	res, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"ed25519_verify":{"iterations":1,"pubkey":"jh58UkC0FDsiupZBLdaqKUqYubJbk3LDaruZiJiy0Po=","sig":"%s","msg":"d2VuIG1vb24="}}`, signature), true, true, defaultGasForTests)
+
+	require.Empty(t, err)
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "result", Value: "true"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestSleepDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	_, execErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"sleep":{"ms":3000}}`, false, true, defaultGasForTests)
+
+	require.Error(t, execErr)
+	require.Error(t, execErr.CosmWasm.GenericErr)
+	require.Contains(t, execErr.CosmWasm.GenericErr.Msg, "the contract panicked")
+}
+
+func TestAllocateOnHeapFailBecauseMemoryLimitDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"allocate_on_heap":{"bytes":12582913}}`, false, true, defaultGasForTests)
+
+	// this should fail with memory error because 12MiB+1 is more than the allowed 12MiB
+
+	require.Empty(t, res.Data)
+
+	require.NotNil(t, err.CosmWasm.GenericErr)
+	require.Contains(t, err.CosmWasm.GenericErr.Msg, "the contract panicked")
+}
+
+func TestAllocateOnHeapFailBecauseGasLimitDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// ensure we get an out of gas panic
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		_, ok := r.(sdk.ErrorOutOfGas)
+		require.True(t, ok, "%+v", r)
+	}()
+
+	_, _ = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, true, 100_000)
+
+	// this should fail with out of gas because 1GiB will ask for
+	// 134,217,728 gas units (8192 per page times 16,384 pages)
+	// the default gas limit in ctx is 200,000 which translates into
+	// 20,000,000 WASM gas units, so before the memory_grow opcode is reached
+	// the gas metering sees a request that'll cost 134mn and the limit
+	// is 20mn, so it throws an out of gas exception
+
+	require.True(t, false)
+}
+
+func TestAllocateOnHeapMoreThanSGXHasFailBecauseMemoryLimitDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	res, execErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"allocate_on_heap":{"bytes":1073741824}}`, false, true, 9_000_000)
+
+	// this should fail with memory error because 1GiB is more
+	// than the allowed 12MiB, gas is 9mn so WASM gas is 900mn
+	// which is bigger than the 134mn from the previous test
+
+	require.Empty(t, res.Data)
+
+	require.NotNil(t, execErr.CosmWasm.GenericErr)
+	require.Contains(t, execErr.CosmWasm.GenericErr.Msg, "the contract panicked")
+}
+
+func TestPassNullPointerToImportsDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	tests := []string{
+		"read_db_key",
+		"write_db_key",
+		"write_db_value",
+		"remove_db_key",
+		"canonicalize_address_input",
+		"humanize_address_input",
+	}
+
+	for _, passType := range tests {
+		t.Run(passType, func(t *testing.T) {
+			_, execErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"pass_null_pointer_to_imports_should_throw":{"pass_type":"%s"}}`, passType), false, true, defaultGasForTests)
+
+			require.NotNil(t, execErr.CosmWasm.GenericErr)
+			require.Contains(t, execErr.CosmWasm.GenericErr.Msg, "migrate contract failed")
+		})
+	}
+}
+
+func TestV1ReplyLoopDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"sub_msg_loop":{"iter": 10}}`, true, true, math.MaxUint64)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(20), binary.BigEndian.Uint32(res.Data))
+}
+
+func TestBankMsgSendDuringMigrate(t *testing.T) {
+	for _, test := range []struct {
+		description    string
+		input          string
+		isSuccuss      bool
+		errorMsg       string
+		balancesBefore string
+		balancesAfter  string
+	}{
+		{
+			description:    "regular",
+			input:          `[{"amount":"2","denom":"denom"}]`,
+			isSuccuss:      true,
+			balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+			balancesAfter:  "4998assaf,199998denom 5000assaf,5002denom",
+		},
+		{
+			description:    "multi-coin",
+			input:          `[{"amount":"1","denom":"assaf"},{"amount":"1","denom":"denom"}]`,
+			isSuccuss:      true,
+			balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+			balancesAfter:  "4998assaf,199998denom 5001assaf,5001denom",
+		},
+		{
+			description:    "zero",
+			input:          `[{"amount":"0","denom":"denom"}]`,
+			isSuccuss:      false,
+			errorMsg:       "encrypted: dispatch: submessages: 0denom: invalid coins",
+			balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+			balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
+		},
+		{
+			description:    "insufficient funds",
+			input:          `[{"amount":"3","denom":"denom"}]`,
+			isSuccuss:      false,
+			balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+			balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
+			errorMsg:       "encrypted: dispatch: submessages: 2denom is smaller than 3denom: insufficient funds",
+		},
+		{
+			description:    "non-existing denom",
+			input:          `[{"amount":"1","denom":"blabla"}]`,
+			isSuccuss:      false,
+			balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+			balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
+			errorMsg:       "encrypted: dispatch: submessages: 0blabla is smaller than 1blabla: insufficient funds",
+		},
+		{
+			description:    "none",
+			input:          `[]`,
+			isSuccuss:      true,
+			balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
+			balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
+
+			walletACoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletBCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletB)
+
+			require.Equal(t, test.balancesBefore, walletACoinsBefore.String()+" "+walletBCoinsBefore.String())
+
+			var contractAddress sdk.AccAddress
+
+			_, _, contractAddress, _, _ = initHelperImpl(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, false, true, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 2), sdk.NewInt64Coin("assaf", 2)))
+
+			newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+			_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"bank_msg_send":{"to":"%s","amount":%s}}`, walletB.String(), test.input), false, true, math.MaxUint64)
+
+			if test.isSuccuss {
+				require.Empty(t, migrateErr)
+			} else {
+				require.NotEmpty(t, migrateErr)
+				require.Equal(t, migrateErr.Error(), test.errorMsg)
+			}
+
+			walletACoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+			walletBCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletB)
+
+			require.Equal(t, test.balancesAfter, walletACoinsAfter.String()+" "+walletBCoinsAfter.String())
+		})
+	}
+}
+
+func TestWasmMsgStructureDuringMigrate(t *testing.T) {
+	for _, from := range testContracts {
+		t.Run(fmt.Sprintf("from %s", from.CosmWasmVersion), func(t *testing.T) {
+			for _, to := range testContracts {
+				t.Run(fmt.Sprintf("to %s", to.CosmWasmVersion), func(t *testing.T) {
+					for _, firstCallType := range []string{"init", "exec"} {
+						t.Run(fmt.Sprintf("first call %s", firstCallType), func(t *testing.T) {
+							for _, secondCallType := range []string{"init", "exec"} {
+								t.Run(fmt.Sprintf("second call %s", secondCallType), func(t *testing.T) {
+									for _, test := range []struct {
+										description      string
+										msg              string
+										isSuccess        bool
+										isErrorEncrypted bool
+										expectedError    string
+									}{
+										{
+											description:      "Send invalid input",
+											msg:              `{\"blabla\":{}}`,
+											isSuccess:        false,
+											isErrorEncrypted: true,
+											expectedError:    "unknown variant",
+										},
+										{
+											description:      "Success",
+											msg:              `{\"wasm_msg\":{\"ty\": \"success\"}}`,
+											isSuccess:        true,
+											isErrorEncrypted: true,
+											expectedError:    "",
+										},
+										{
+											description:      "StdError",
+											msg:              `{\"wasm_msg\":{\"ty\": \"err\"}}`,
+											isSuccess:        false,
+											isErrorEncrypted: true,
+											expectedError:    "custom error",
+										},
+										{
+											description:      "Panic",
+											msg:              `{\"wasm_msg\":{\"ty\": \"panic\"}}`,
+											isSuccess:        false,
+											isErrorEncrypted: false,
+											expectedError:    "panicked",
+										},
+									} {
+										t.Run(test.description, func(t *testing.T) {
+											ctx, keeper, fromCodeID, _, walletA, privKeyA, _, _ := setupTest(t, from.WasmFilePath, sdk.NewCoins())
+
+											wasmCode, err := os.ReadFile(to.WasmFilePath)
+											require.NoError(t, err)
+
+											toCodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+											codeInfo, err := keeper.GetCodeInfo(ctx, toCodeID)
+											require.NoError(t, err)
+											toCodeHash := hex.EncodeToString(codeInfo.CodeHash)
+											require.NoError(t, err)
+
+											toAddress := sdk.AccAddress{}
+											if secondCallType != "init" {
+												_, _, toAddress, _, err = initHelper(t, keeper, ctx, toCodeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, to.IsCosmWasmV1, defaultGasForTests)
+												require.Empty(t, err)
+											}
+
+											fromAddress := sdk.AccAddress{}
+											if firstCallType == "init" {
+												_, _, _, _, err = initHelper(t, keeper, ctx, fromCodeID, walletA, walletA, privKeyA, fmt.Sprintf(`{"call_to_%s":{"code_id": %d, "addr": "%s", "code_hash": "%s", "label": "%s", "msg": "%s"}}`, secondCallType, toCodeID, toAddress, toCodeHash, "blabla", test.msg), test.isErrorEncrypted, true, defaultGasForTests)
+											} else if firstCallType == "exec" {
+												_, _, fromAddress, _, err = initHelper(t, keeper, ctx, fromCodeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, from.IsCosmWasmV1, defaultGasForTests)
+												require.Empty(t, err)
+
+												newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+												_, err = migrateHelper(t, keeper, ctx, newCodeId, fromAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_%s":{"code_id": %d, "addr": "%s", "code_hash": "%s", "label": "%s", "msg": "%s"}}`, secondCallType, toCodeID, toAddress, toCodeHash, "blabla", test.msg), test.isErrorEncrypted, true, math.MaxUint64)
+											}
+
+											if test.isSuccess {
+												require.Empty(t, err)
+											} else {
+												require.NotEmpty(t, err)
+												require.Contains(t, fmt.Sprintf("%+v", err), test.expectedError)
+											}
+										})
+									}
+								})
+							}
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestCosmosMsgCustomDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelperImpl(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, false, true, defaultGasForTests, -1, sdk.NewCoins())
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"cosmos_msg_custom":{}}`, false, true, math.MaxUint64)
+	require.Contains(t, migrateErr.Error(), "Custom variant not supported: invalid CosmosMsg from the contract")
+}
+
+func TestV1SendsFundsWithReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+
+	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, true, defaultGasForTests, 200)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"send_funds_with_reply":{}}`, true, true, math.MaxUint64)
+
+	require.Empty(t, migErr)
+}
+
+func TestV1SendsFundsWithErrorWithReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"send_funds_with_error_with_reply":{}}`, false, true, math.MaxUint64)
+
+	require.NotEmpty(t, err)
+	require.Contains(t, fmt.Sprintf("%+v", err), "an sdk error occoured while sending a sub-message")
+}
+
+func TestCallbackSanityDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, initEvents, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	requireEvents(t,
+		initEvents,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "init", Value: "🌈"},
+			},
+		},
+	)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":2,"y":3}}`, contractAddress.String(), newCodeHash), true, true, defaultGasForTests)
+	require.Empty(t, migErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "banana", Value: "🍌"},
+			},
+			{
+				{Key: "kiwi", Value: "🥝"},
+				{Key: "contract_address", Value: contractAddress.String()},
+			},
+			{
+				{Key: "watermelon", Value: "🍉"},
+				{Key: "contract_address", Value: contractAddress.String()},
+			},
+		},
+		res.WasmEvents,
+	)
+
+	require.Equal(t, []byte{2, 3}, res.Data)
+}
+
+func TestCodeHashExecCallExecDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	t.Run("GoodCodeHash", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, newCodeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+
+		var newContractBech32 string
+		for _, v := range res.WasmEvents[1] {
+			if v.Key == "contract_address" {
+				newContractBech32 = v.Value
+				break
+			}
+		}
+		require.NotEmpty(t, newContractBech32)
+
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: addr.String()},
+					{Key: "b", Value: "b"},
+				},
+				{
+					{Key: "contract_address", Value: newContractBech32},
+					{Key: "watermelon", Value: "🍉"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("EmptyCodeHash", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"failed to validate transaction",
+		)
+	})
+	t.Run("TooBigCodeHash", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr, newCodeHash, `{\"c\":{\"x\":1,\"y\":1}}`), true, true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		if true {
+			require.Contains(t,
+				err.Error(),
+				"v1_sanity_contract_v2::msg::ExecuteMsg: Expected to parse either a `true`, `false`, or a `null`.",
+			)
+		} else {
+			require.Contains(t,
+				err.Error(),
+				"parsing test_contract::contract::HandleMsg: Expected to parse either a `true`, `false`, or a `null`.",
+			)
+		}
+	})
+	t.Run("TooSmallCodeHash", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr, newCodeHash[0:63], `{\"c\":{\"x\":1,\"y\":1}}`), false, true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"failed to validate transaction",
+		)
+	})
+	t.Run("IncorrectCodeHash", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr, `{\"c\":{\"x\":1,\"y\":1}}`), false, true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"failed to validate transaction",
+		)
+	})
+}
+
+func TestGasIsChargedForExecCallbackToExecDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"a":{"contract_addr":"%s","code_hash":"%s","x":1,"y":2}}`, addr, newCodeHash), true, true, math.MaxUint64, 3)
+	require.Empty(t, migrateErr)
+}
+
+func TestMsgSenderInCallbackDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"callback_to_log_msg_sender":{"to":"%s","code_hash":"%s"}}`, addr.String(), newCodeHash), true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	requireEvents(t, []ContractEvent{
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "hi", Value: "hey"},
+		},
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "msg.sender", Value: addr.String()},
+		},
+	}, res.WasmEvents)
+}
+
+func TestContractSendFundsDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, true, defaultGasForTests, 17)
+
+	require.Empty(t, execErr)
+
+	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+	walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+
+	require.Equal(t, "17denom", contractCoinsBefore.String())
+	require.Equal(t, "199983denom", walletCoinsBefore.String())
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds":{"from":"%s","to":"%s","denom":"%s","amount":%d}}`, addr.String(), walletA.String(), "denom", 17), true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+	walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+
+	require.Equal(t, "", contractCoinsAfter.String())
+	require.Equal(t, "200000denom", walletCoinsAfter.String())
+}
+
+func TestContractSendFundsToExecCallbackDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+	contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+	walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+
+	require.Equal(t, "", contractCoinsBefore.String())
+	require.Equal(t, "", contract2CoinsBefore.String())
+	require.Equal(t, "200000denom", walletCoinsBefore.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, true, defaultGasForTests, 17)
+	require.Empty(t, execErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 17, codeHash), true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+	contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+	walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+
+	require.Equal(t, "", contractCoinsAfter.String())
+	require.Equal(t, "17denom", contract2CoinsAfter.String())
+	require.Equal(t, "199983denom", walletCoinsAfter.String())
+}
+
+func TestContractSendFundsToExecCallbackNotEnoughDuringMigrate(t *testing.T,
+) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	_, _, addr2, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	contractCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr)
+	contract2CoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+	walletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+
+	require.Equal(t, "", contractCoinsBefore.String())
+	require.Equal(t, "", contract2CoinsBefore.String())
+	require.Equal(t, "200000denom", walletCoinsBefore.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"deposit_to_contract":{}}`, false, true, defaultGasForTests, 17)
+	require.Empty(t, execErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_funds_to_exec_callback":{"to":"%s","denom":"%s","amount":%d,"code_hash":"%s"}}`, addr2.String(), "denom", 19, codeHash), false, true, defaultGasForTests)
+
+	require.NotNil(t, migrateErr.CosmWasm.GenericErr)
+	require.Contains(t, migrateErr.CosmWasm.GenericErr.Msg, "insufficient funds")
+
+	contractCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr)
+	contract2CoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, addr2)
+	walletCoinsAfter := keeper.bankKeeper.GetAllBalances(ctx, walletA)
+
+	// The state here should have been reverted by the app but in go-tests we create our own keeper
+	// so it is not reverted in this case.
+	require.Equal(t, "17denom", contractCoinsAfter.String())
+	require.Equal(t, "", contract2CoinsAfter.String())
+	require.Equal(t, "199983denom", walletCoinsAfter.String())
+}
+
+func TestExecCallbackContractErrorDuring(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_error":{"contract_addr":"%s","code_hash":"%s"}}`, contractAddress, newCodeHash), true, true, defaultGasForTests) // using the new code hash because migration is done by the time the callback is executed
+
+	require.NotNil(t, migErr.CosmWasm.GenericErr)
+	require.Contains(t, migErr.CosmWasm.GenericErr.Msg, "la la 🤯")
+	require.Empty(t, res.Data)
+}
+
+func TestExecCallbackBadParamDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"callback_contract_bad_param":{"contract_addr":"%s"}}`, contractAddress), true, true, defaultGasForTests)
+
+	require.NotNil(t, err.CosmWasm.GenericErr)
+	require.Contains(t, err.CosmWasm.GenericErr.Msg, "v1_sanity_contract_v2::msg::ExecuteMsg")
+	require.Contains(t, err.CosmWasm.GenericErr.Msg, "unknown variant `callback_contract_bad_param`")
+	require.Empty(t, res.Data)
+}
+
+func TestCallbackExecuteParamErrorDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	msg := fmt.Sprintf(`{"a":{"code_hash":"%s","contract_addr":"notanaddress","x":2,"y":3}}`, newCodeHash)
+
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, msg, false, true, defaultGasForTests)
+
+	require.Contains(t, err.Error(), "invalid address")
+}
+
+func TestExecuteIllegalInputErrorDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `bad input`, true, true, defaultGasForTests)
+
+	require.NotNil(t, err.CosmWasm.GenericErr)
+	require.Contains(t, err.CosmWasm.GenericErr.Msg, "Error parsing")
+}
+
+func TestExecContractErrorDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	t.Run("generic_err", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"generic_err"}}`, true, true, defaultGasForTests)
+
+		require.NotNil(t, err.CosmWasm.GenericErr)
+		require.Contains(t, err.CosmWasm.GenericErr.Msg, "la la 🤯")
+	})
+	t.Run("invalid_base64", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_base64"}}`, true, true, defaultGasForTests)
+
+		if true {
+			require.NotNil(t, err.CosmWasm.GenericErr)
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "ra ra 🤯")
+		} else {
+			require.NotNil(t, err.CosmWasm.InvalidBase64)
+			require.Equal(t, "ra ra 🤯", err.CosmWasm.InvalidBase64.Msg)
+		}
+	})
+	t.Run("invalid_utf8", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, true, defaultGasForTests)
+
+		if true {
+			require.NotNil(t, err.CosmWasm.GenericErr)
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "ka ka 🤯")
+		} else {
+			require.NotNil(t, err.CosmWasm.InvalidUtf8)
+			require.Equal(t, "ka ka 🤯", err.CosmWasm.InvalidUtf8.Msg)
+		}
+	})
+	t.Run("not_found", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"not_found"}}`, true, true, defaultGasForTests)
+
+		if true {
+			require.NotNil(t, err.CosmWasm.GenericErr)
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "za za 🤯")
+		} else {
+			require.NotNil(t, err.CosmWasm.NotFound)
+			require.Equal(t, "za za 🤯", err.CosmWasm.NotFound.Kind)
+		}
+	})
+	t.Run("parse_err", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"parse_err"}}`, true, true, defaultGasForTests)
+
+		if true {
+			require.NotNil(t, err.CosmWasm.GenericErr)
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "na na 🤯")
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "pa pa 🤯")
+		} else {
+			require.NotNil(t, err.CosmWasm.ParseErr)
+			require.Equal(t, "na na 🤯", err.CosmWasm.ParseErr.Target)
+			require.Equal(t, "pa pa 🤯", err.CosmWasm.ParseErr.Msg)
+		}
+	})
+	t.Run("serialize_err", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"serialize_err"}}`, true, true, defaultGasForTests)
+
+		if true {
+			require.NotNil(t, err.CosmWasm.GenericErr)
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "ba ba 🤯")
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "ga ga 🤯")
+		} else {
+			require.NotNil(t, err.CosmWasm.SerializeErr)
+			require.Equal(t, "ba ba 🤯", err.CosmWasm.SerializeErr.Source)
+			require.Equal(t, "ga ga 🤯", err.CosmWasm.SerializeErr.Msg)
+		}
+	})
+	t.Run("unauthorized", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"unauthorized"}}`, true, true, defaultGasForTests)
+
+		if true {
+			// Not supported in V1
+			require.NotNil(t, err.CosmWasm.GenericErr)
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "catch-all 🤯")
+		} else {
+			require.NotNil(t, err.CosmWasm.Unauthorized)
+		}
+	})
+	t.Run("underflow", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddr, walletA, privKeyA, `{"contract_error":{"error_type":"underflow"}}`, true, true, defaultGasForTests)
+
+		if true {
+			// Not supported in V1
+			require.NotNil(t, err.CosmWasm.GenericErr)
+			require.Contains(t, err.CosmWasm.GenericErr.Msg, "catch-all 🤯")
+		} else {
+			require.NotNil(t, err.CosmWasm.Underflow)
+			require.Equal(t, "minuend 🤯", err.CosmWasm.Underflow.Minuend)
+			require.Equal(t, "subtrahend 🤯", err.CosmWasm.Underflow.Subtrahend)
+		}
+	})
+}
+
+func TestExecPanicDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"panic":{}}`, false, true, defaultGasForTests)
+
+	require.NotNil(t, err.CosmWasm.GenericErr)
+	require.Contains(t, err.CosmWasm.GenericErr.Msg, "the contract panicked")
+}
+
+func TestCanonicalizeAddressErrorsDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, initEvents, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+	require.Equal(t, 1, len(initEvents))
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// this function should handle errors internally and return gracefully
+	res, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"test_canonicalize_address_errors":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	require.Equal(t, "🤟", string(res.Data))
+}
+
+func TestV1ReplyChainAllSuccessDuringMigrate(t *testing.T) {
+	amountOfContracts := uint64(5)
+	ctx, keeper, codeIds, codeHashes, walletA, privKeyA, _, _ := setupChainTest(t, TestContractPaths[v1Contract], sdk.NewCoins(), amountOfContracts)
+	contractAddresses := make([]sdk.AccAddress, amountOfContracts)
+
+	for i := uint64(0); i < amountOfContracts; i++ {
+		_, _, contractAddresses[i], _, _ = initHelper(t, keeper, ctx, codeIds[i], walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	}
+
+	executeDetails := make([]ExecuteDetails, amountOfContracts-1)
+	for i := uint64(1); i < amountOfContracts; i++ {
+		executeDetails[i-1] = ExecuteDetails{
+			ContractAddress: contractAddresses[i].String(),
+			ContractHash:    codeHashes[i], // using the original code hash as only contractAddresses[0] is being migrated
+			ShouldError:     false,
+			MsgId:           9000,
+			Data:            fmt.Sprintf("%d", i),
+		}
+	}
+
+	marshaledDetails, err := json.Marshal(executeDetails)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	res, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddresses[0], walletA, privKeyA, fmt.Sprintf(`{"execute_multiple_contracts":{"details":%s}}`, string(marshaledDetails)), true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	expectedFlow := ""
+	for i := uint64(amountOfContracts - 1); i > 0; i-- {
+		expectedFlow += contractAddresses[i].String() + " -> "
+	}
+
+	expectedFlow += contractAddresses[0].String()
+
+	require.Equal(t, expectedFlow, string(res.Data))
+}
+
+func TestV1ReplyChainPartiallyRepliedDuringMigrate(t *testing.T) {
+	amountOfContracts := uint64(10)
+	amountOfContractToBeReplied := uint64(5)
+
+	ctx, keeper, codeIds, codeHashes, walletA, privKeyA, _, _ := setupChainTest(t, TestContractPaths[v1Contract], sdk.NewCoins(), amountOfContracts)
+	contractAddresses := make([]sdk.AccAddress, amountOfContracts)
+
+	for i := uint64(0); i < amountOfContracts; i++ {
+		_, _, contractAddresses[i], _, _ = initHelper(t, keeper, ctx, codeIds[i], walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	}
+
+	executeDetails := make([]ExecuteDetails, amountOfContracts-1)
+	for i := uint64(1); i < amountOfContracts; i++ {
+		msgId := uint64(9000)
+		if i >= amountOfContractToBeReplied {
+			msgId = 0
+		}
+
+		executeDetails[i-1] = ExecuteDetails{
+			ContractAddress: contractAddresses[i].String(),
+			ContractHash:    codeHashes[i], // using the original code hash as only contractAddresses[0] is being migrated
+			ShouldError:     false,
+			MsgId:           msgId,
+			Data:            fmt.Sprintf("%d", i),
+		}
+	}
+
+	marshaledDetails, err := json.Marshal(executeDetails)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddresses[0], walletA, privKeyA, fmt.Sprintf(`{"execute_multiple_contracts":{"details": %s}}`, string(marshaledDetails)), true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	expectedFlow := ""
+
+	expectedFlow += fmt.Sprintf("%d", amountOfContractToBeReplied) + " -> "
+
+	for i := uint64(amountOfContractToBeReplied - 2); i > 0; i-- {
+		expectedFlow += contractAddresses[i].String() + " -> "
+	}
+
+	expectedFlow += contractAddresses[0].String()
+
+	require.Equal(t, expectedFlow, string(res.Data))
+}
+
+func TestV1ReplyChainWithErrorDuringMigrate(t *testing.T) {
+	amountOfContracts := uint64(5)
+	ctx, keeper, codeIds, codeHashes, walletA, privKeyA, _, _ := setupChainTest(t, TestContractPaths[v1Contract], sdk.NewCoins(), amountOfContracts)
+	contractAddresses := make([]sdk.AccAddress, amountOfContracts)
+
+	for i := uint64(0); i < amountOfContracts; i++ {
+		_, _, contractAddresses[i], _, _ = initHelper(t, keeper, ctx, codeIds[i], walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	}
+
+	executeDetails := make([]ExecuteDetails, amountOfContracts-1)
+	for i := uint64(1); i < amountOfContracts; i++ {
+		executeDetails[i-1] = ExecuteDetails{
+			ContractAddress: contractAddresses[i].String(),
+			ContractHash:    codeHashes[i], // using the original code hash as only contractAddresses[0] is being migrated
+			ShouldError:     false,
+			MsgId:           9000,
+			Data:            fmt.Sprintf("%d", i),
+		}
+	}
+
+	executeDetails[amountOfContracts-2].ShouldError = true
+
+	marshaledDetails, err := json.Marshal(executeDetails)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddresses[0], walletA, privKeyA, fmt.Sprintf(`{"execute_multiple_contracts":{"details": %s}}`, string(marshaledDetails)), true, true, math.MaxUint64)
+	require.Empty(t, migrateErr)
+
+	expectedFlow := "err -> "
+	for i := uint64(amountOfContracts - 4); i > 0; i-- {
+		expectedFlow += contractAddresses[i].String() + " -> "
+	}
+
+	expectedFlow += contractAddresses[0].String()
+
+	require.Equal(t, expectedFlow, string(res.Data))
+}
+
+func TestLastMsgMarkerDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop": {}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	// reset value before test
+	keeper.LastMsgManager.SetMarker(false)
+
+	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"last_msg_marker_nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, err)
+
+	require.True(t, keeper.LastMsgManager.GetMarker())
 }
