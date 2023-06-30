@@ -207,7 +207,7 @@ pub fn validate_contract_key(
     )?;
 
     if base_env.was_migrated() {
-        println!("Contract was migrated, validating proof");
+        trace!("Contract was migrated, validating proof");
 
         let og_contract_key: [u8; CONTRACT_KEY_LENGTH] = base_env.get_og_contract_key()?;
         let sent_contract_key_proof = base_env.get_current_contract_key_proof()?;
