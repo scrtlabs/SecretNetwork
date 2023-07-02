@@ -2293,8 +2293,8 @@ func TestCheckGas(t *testing.T) {
 	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	// 1031 is the sum of all the overhead that goes into a contract call beyond the base cost (reading/writing keys, calculations, etc)
-	baseContractUsage := types.InstanceCost + 1031
+	// 1097 is the sum of all the overhead that goes into a contract call beyond the base cost (reading/writing keys, calculations, etc)
+	baseContractUsage := types.InstanceCost + 1097
 
 	_, _, _, events, baseGasUsed, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"check_gas":{}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
