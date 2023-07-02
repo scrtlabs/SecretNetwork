@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 	"net/http"
@@ -444,7 +443,7 @@ func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBegin
 	return app.mm.BeginBlock(ctx, req)
 }
 
-func storesRootsFromMultiStore(rootMulti *rootmulti.Store) kv.Pairs { //[][]byte {
+func storesRootsFromMultiStore(rootMulti *rootmulti.Store) kv.Pairs {
 	stores := rootMulti.GetStores()
 	kvs := kv.Pairs{}
 
@@ -461,29 +460,6 @@ func storesRootsFromMultiStore(rootMulti *rootmulti.Store) kv.Pairs { //[][]byte
 	sort.Sort(kvs)
 
 	return kvs
-}
-
-// This is a copy of an internal cosmos-sdk function: https://github.com/scrtlabs/cosmos-sdk/blob/1b9278476b3ac897d8ebb90241008476850bf212/store/internal/maps/maps.go#LL152C1-L152C1
-// pairBytes returns key || value, with both the
-// key and value length prefixed.
-func pairBytes(kv kv.Pair) []byte {
-	// In the worst case:
-	// * 8 bytes to Uvarint encode the length of the key
-	// * 8 bytes to Uvarint encode the length of the value
-	// So preallocate for the worst case, which will in total
-	// be a maximum of 14 bytes wasted, if len(key)=1, len(value)=1,
-	// but that's going to rare.
-	buf := make([]byte, 8+len(kv.Key)+8+len(kv.Value))
-
-	// Encode the key, prefixed with its length.
-	nlk := binary.PutUvarint(buf, uint64(len(kv.Key)))
-	nk := copy(buf[nlk:], kv.Key)
-
-	// Encode the value, prefixing with its length.
-	nlv := binary.PutUvarint(buf[nlk+nk:], uint64(len(kv.Value)))
-	nv := copy(buf[nlk+nk+nlv:], kv.Value)
-
-	return buf[:nlk+nk+nlv+nv]
 }
 
 // EndBlocker application updates every end block
