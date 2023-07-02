@@ -337,11 +337,13 @@ pub enum AminoSdkMsg {
         code_id: String,
         msg: String,
     },
+    #[serde(alias = "wasm/MsgUpdateAdmin")]
     MsgUpdateAdmin {
         sender: HumanAddr,
         new_admin: HumanAddr,
         contract: HumanAddr,
     },
+    #[serde(alias = "wasm/MsgClearAdmin")]
     MsgClearAdmin {
         sender: HumanAddr,
         contract: HumanAddr,
