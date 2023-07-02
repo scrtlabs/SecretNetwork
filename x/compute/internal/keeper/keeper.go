@@ -526,7 +526,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		k.setContractInfo(ctx, contractAddress, &contractInfo)
 		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
 			OgContractKey:           ogContractKey,
-			CurrentContractKey:      nil,
+			CurrentContractKey:      ogContractKey,
 			CurrentContractKeyProof: nil,
 		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
@@ -576,7 +576,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		k.setContractInfo(ctx, contractAddress, &contractInfo)
 		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
 			OgContractKey:           ogContractKey,
-			CurrentContractKey:      nil,
+			CurrentContractKey:      ogContractKey,
 			CurrentContractKeyProof: nil,
 		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
@@ -1328,8 +1328,8 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey, random)
 
-	adminProof := k.GetContractInfo(ctx, contractAddress).AdminProof
-	admin := k.GetContractInfo(ctx, contractAddress).Admin
+	adminProof := contractInfo.AdminProof
+	admin := contractInfo.Admin
 
 	adminAddr, err := sdk.AccAddressFromBech32(admin)
 	if err != nil {
@@ -1376,6 +1376,8 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	historyEntry := contractInfo.AddMigration(ctx, newCodeID, msg)
 	k.appendToContractHistory(ctx, contractAddress, historyEntry)
 	k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
+
+	contractInfo.CodeID = newCodeID
 	k.setContractInfo(ctx, contractAddress, &contractInfo)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
