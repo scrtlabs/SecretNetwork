@@ -56,29 +56,21 @@ pub fn verify_and_get_sdk_msg<'sd>(
             contract,
             ..
         } => {
-            let empty_canon = &CanonicalAddr(Binary(vec![]));
-            let sent_admin = sent_admin.unwrap_or(empty_canon);
-
             sent_sender == sender
-                && sent_admin == sender
+                && sent_admin.is_some()
+                && sent_admin.unwrap() == sender
                 && sent_contract_address == contract
                 && &sent_wasm_input.to_vec() == msg
         }
         DirectSdkMsg::MsgUpdateAdmin {
-            sender,
-            new_admin,
-            contract,
-        } => {
-            let empty_canon = &CanonicalAddr(Binary(vec![]));
-            let empty_human = HumanAddr("".to_string());
-            let sent_admin = &HumanAddr::from_canonical(sent_admin.unwrap_or(empty_canon))
-                .unwrap_or(empty_human);
-
-            sent_sender == sender && sent_admin == new_admin && sent_contract_address == contract
+            sender, contract, ..
         }
-        DirectSdkMsg::MsgClearAdmin { sender, contract } => {
+        | DirectSdkMsg::MsgClearAdmin {
+            sender, contract, ..
+        } => {
             sent_sender == sender
-                && sent_admin == Some(&CanonicalAddr(Binary(vec![])))
+                && sent_admin.is_some()
+                && sent_admin.unwrap() == sender
                 && sent_contract_address == contract
         }
         DirectSdkMsg::MsgRecvPacket { packet, .. } => match verify_params_types {
