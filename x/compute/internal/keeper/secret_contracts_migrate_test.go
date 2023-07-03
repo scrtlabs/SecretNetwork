@@ -4111,7 +4111,7 @@ func TestV1ReplyChainWithErrorDuringMigrate(t *testing.T) {
 func TestLastMsgMarkerDuringMigrate(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
-	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop": {}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 
 	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
 
@@ -4122,4 +4122,858 @@ func TestLastMsgMarkerDuringMigrate(t *testing.T) {
 	require.Empty(t, err)
 
 	require.True(t, keeper.LastMsgManager.GetMarker())
+}
+
+func TestQueryInputParamErrorAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"call_to_query":{"addr":"blabla","code_hash":"yadayada","msg":"hi"}}`, true, true, defaultGasForTests)
+
+	require.NotNil(t, qErr.GenericErr)
+	require.Contains(t, qErr.Error(), "blabla: invalid address")
+}
+
+func TestQueryContractErrorAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	t.Run("generic_err", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddress, `{"contract_error":{"error_type":"generic_err"}}`, true, true, defaultGasForTests)
+
+		require.NotNil(t, err.GenericErr)
+		require.Contains(t, err.GenericErr.Msg, "la la 🤯")
+	})
+	t.Run("invalid_base64", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddress, `{"contract_error":{"error_type":"invalid_base64"}}`, true, true, defaultGasForTests)
+
+		require.NotNil(t, err.GenericErr)
+		require.Contains(t, err.GenericErr.Msg, "ra ra 🤯")
+	})
+	t.Run("invalid_utf8", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddress, `{"contract_error":{"error_type":"invalid_utf8"}}`, true, true, defaultGasForTests)
+
+		require.NotNil(t, err.GenericErr)
+		require.Contains(t, err.GenericErr.Msg, "ka ka 🤯")
+	})
+	t.Run("not_found", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddress, `{"contract_error":{"error_type":"not_found"}}`, true, true, defaultGasForTests)
+
+		require.NotNil(t, err.GenericErr)
+		require.Contains(t, err.GenericErr.Msg, "za za 🤯")
+	})
+	t.Run("parse_err", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddress, `{"contract_error":{"error_type":"parse_err"}}`, true, true, defaultGasForTests)
+
+		require.NotNil(t, err.GenericErr)
+		require.Contains(t, err.GenericErr.Msg, "na na 🤯")
+		require.Contains(t, err.GenericErr.Msg, "pa pa 🤯")
+	})
+	t.Run("serialize_err", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, contractAddress, `{"contract_error":{"error_type":"serialize_err"}}`, true, true, defaultGasForTests)
+
+		require.NotNil(t, err.GenericErr)
+		require.Contains(t, err.GenericErr.Msg, "ba ba 🤯")
+		require.Contains(t, err.GenericErr.Msg, "ga ga 🤯")
+	})
+}
+
+func TestQueryInputStructureErrorAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"call_to_query":{"invalidkey":"invalidval"}}`, true, true, defaultGasForTests)
+
+	require.NotEmpty(t, qErr)
+	require.Contains(t, qErr.Error(), "missing field `addr`")
+}
+
+func TestQueryPanicAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"panic":{}}`, false, true, defaultGasForTests)
+	require.NotEmpty(t, queryErr.GenericErr)
+	require.Contains(t, queryErr.Error(), "the contract panicked")
+}
+
+func TestExternalQueryWorksAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query":{"to":"%s","code_hash":"%s"}}`, addr.String(), newCodeHash), true, true, defaultGasForTests, 0)
+
+	require.Empty(t, execErr)
+	require.Equal(t, []byte{3}, data)
+}
+
+func TestExternalQueryWorksDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, true, math.MaxUint64)
+
+	require.Empty(t, migErr)
+	require.Equal(t, []byte{3}, res.Data)
+}
+
+func TestExternalQueryCalleePanicAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s","code_hash":"%s"}}`, addr.String(), newCodeHash), true, true, defaultGasForTests, 0)
+
+	require.NotNil(t, err.GenericErr)
+	require.Contains(t, err.GenericErr.Msg, "the contract panicked")
+}
+
+func TestExternalQueryCalleePanicDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_panic":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, true, math.MaxUint64)
+
+	require.NotEmpty(t, migErr)
+	require.NotNil(t, migErr.CosmWasm)
+	require.NotNil(t, migErr.CosmWasm.GenericErr)
+	require.Contains(t, migErr.CosmWasm.GenericErr.Msg, "the contract panicked")
+}
+
+func TestExternalQueryCalleeStdErrorAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s","code_hash":"%s"}}`, addr.String(), newCodeHash), true, true, defaultGasForTests, 0)
+
+	require.NotNil(t, err.GenericErr)
+	require.Contains(t, err.GenericErr.Msg, "la la 🤯")
+}
+
+func TestExternalQueryCalleeStdErrorDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_error":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, true, math.MaxUint64)
+
+	require.NotNil(t, migErr.CosmWasm)
+	require.NotNil(t, migErr.CosmWasm.GenericErr)
+	require.Contains(t, migErr.CosmWasm.GenericErr.Msg, "la la 🤯")
+}
+
+func TestExternalQueryCalleeDoesntExistAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, `{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4","code_hash":"bla bla"}}`, true, true, defaultGasForTests, 0)
+
+	require.NotNil(t, err.GenericErr)
+	require.Contains(t, err.GenericErr.Msg, "contract: not found")
+}
+
+func TestExternalQueryCalleeDoesntExistDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"send_external_query_error":{"to":"secret13l72vhjngmg55ykajxdnlalktwglyqjqv9pkq4","code_hash":"bla bla"}}`, true, true, math.MaxUint64)
+
+	require.NotNil(t, migErr.CosmWasm)
+	require.NotNil(t, migErr.CosmWasm.GenericErr)
+	require.Contains(t, migErr.CosmWasm.GenericErr.Msg, "contract: not found")
+}
+
+func TestExternalQueryBadSenderAbiAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s","code_hash":"%s"}}`, addr.String(), newCodeHash), true, true, defaultGasForTests, 0)
+
+	require.NotNil(t, err.GenericErr)
+	require.Contains(t, err.GenericErr.Msg, "v1_sanity_contract_v2::msg::QueryMsg")
+	require.Contains(t, err.GenericErr.Msg, "Invalid type")
+}
+
+func TestExternalQueryBadSenderAbiDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, true, math.MaxUint64)
+
+	require.NotNil(t, migErr.CosmWasm)
+	require.NotNil(t, migErr.CosmWasm.GenericErr)
+	require.Contains(t, migErr.CosmWasm.GenericErr.Msg, "v1_sanity_contract::msg::QueryMsg")
+	require.Contains(t, migErr.CosmWasm.GenericErr.Msg, "Invalid type")
+}
+
+func TestExternalQueryBadReceiverAbiAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s","code_hash":"%s"}}`, addr.String(), newCodeHash), true, true, defaultGasForTests, 0)
+
+	require.NotNil(t, err.GenericErr)
+	require.Contains(t, err.GenericErr.Msg, "alloc::string::String")
+	require.Contains(t, err.GenericErr.Msg, "Invalid type")
+}
+
+func TestExternalQueryBadReceiverAbiDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_bad_abi_receiver":{"to":"%s","code_hash":"%s"}}`, addr.String(), codeHash), true, true, math.MaxUint64)
+
+	require.NotNil(t, migErr.CosmWasm)
+	require.NotNil(t, migErr.CosmWasm.GenericErr)
+	require.Contains(t, migErr.CosmWasm.GenericErr.Msg, "alloc::string::String")
+	require.Contains(t, migErr.CosmWasm.GenericErr.Msg, "Invalid type")
+}
+
+func TestQueryRecursionLimitEnforcedInQueriesAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	data, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, true, 10*defaultGasForTests)
+
+	require.NotEmpty(t, data)
+	require.Equal(t, data, `"Recursion limit was correctly enforced"`)
+
+	require.Nil(t, err.GenericErr)
+}
+
+func TestQueryRecursionLimitEnforcedInHandlesAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), newCodeHash), true, true, 10*defaultGasForTests, 0)
+
+	require.NotEmpty(t, data)
+	require.Equal(t, string(data), `"Recursion limit was correctly enforced"`)
+
+	require.Nil(t, err.GenericErr)
+}
+
+func TestQueryRecursionLimitEnforcedInHandlesDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), codeHash), true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	require.NotEmpty(t, res.Data)
+	require.Equal(t, string(res.Data), `"Recursion limit was correctly enforced"`)
+}
+
+func TestQueryRecursionLimitEnforcedInInitsAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	// Initialize a contract that we will be querying
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	// Initialize the contract that will be running the test
+	_, _, addr, events, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, fmt.Sprintf(`{"send_external_query_recursion_limit":{"to":"%s","code_hash":"%s", "depth":1}}`, addr.String(), newCodeHash), true, true, 10*defaultGasForTests)
+	require.Empty(t, err)
+
+	require.Nil(t, err.GenericErr)
+
+	requireEvents(t, []ContractEvent{
+		{
+			{Key: "contract_address", Value: addr.String()},
+			{Key: "message", Value: "Recursion limit was correctly enforced"},
+		},
+	}, events)
+}
+
+func TestWriteToStorageDuringQueryAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"write_to_storage": {}}`, false, true, defaultGasForTests)
+	require.NotNil(t, queryErr.GenericErr)
+	require.Contains(t, queryErr.GenericErr.Msg, "contract tried to write to storage during a query")
+}
+
+func TestRemoveFromStorageDuringQueryAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, queryErr := queryHelper(t, keeper, ctx, addr, `{"remove_from_storage": {}}`, false, true, defaultGasForTests)
+	require.NotNil(t, queryErr.GenericErr)
+	require.Contains(t, queryErr.GenericErr.Msg, "contract tried to write to storage during a query")
+}
+
+func TestQueryGasPriceAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, _, gasUsed, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), newCodeHash, `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+	// require that more gas was used than the base 20K (10K for execute, another 10K for query)
+	require.Greater(t, gasUsed, uint64(20_000))
+}
+
+func TestQueryGasPriceDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	// require that more gas was used than the base 20K (10K for execute, another 10K for query)
+	require.Greater(t, res.GasUsed, uint64(20_000))
+}
+
+func TestCodeHashExecCallQueryAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	t.Run("GoodCodeHash", func(t *testing.T) {
+		_, _, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), newCodeHash, `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: addr.String()},
+					{Key: "c", Value: "2"},
+				},
+			},
+			events,
+		)
+	})
+	t.Run("EmptyCodeHash", func(t *testing.T) {
+		_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"failed to validate transaction",
+		)
+	})
+	t.Run("TooBigCodeHash", func(t *testing.T) {
+		_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), newCodeHash, `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
+
+		require.NotEmpty(t, err)
+		if true {
+			require.Contains(t,
+				err.Error(),
+				"Expected to parse either a `true`, `false`, or a `null`",
+			)
+		} else {
+			require.Contains(t,
+				err.Error(),
+				"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
+			)
+		}
+	})
+	t.Run("TooSmallCodeHash", func(t *testing.T) {
+		_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), newCodeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"failed to validate transaction",
+		)
+	})
+	t.Run("IncorrectCodeHash", func(t *testing.T) {
+		_, _, _, _, _, err = execHelper(t, keeper, ctx, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"failed to validate transaction",
+		)
+	})
+}
+
+func TestCodeHashExecCallQueryDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	t.Run("GoodCodeHash", func(t *testing.T) {
+		res, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, true, math.MaxUint64)
+
+		require.Empty(t, err)
+		requireEvents(t,
+			[]ContractEvent{
+				{
+					{Key: "contract_address", Value: addr.String()},
+					{Key: "c", Value: "2"},
+				},
+			},
+			res.WasmEvents,
+		)
+	})
+	t.Run("EmptyCodeHash", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, true, math.MaxUint64)
+
+		require.NotEmpty(t, err)
+		require.Contains(t, err.Error(), "failed to validate transaction")
+	})
+	t.Run("TooBigCodeHash", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), codeHash, `{\"receive_external_query\":{\"num\":1}}`), true, true, math.MaxUint64)
+
+		require.NotEmpty(t, err)
+		require.Contains(t, err.Error(), "failed to validate transaction")
+	})
+	t.Run("TooSmallCodeHash", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), codeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, true, math.MaxUint64)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"failed to validate transaction",
+		)
+	})
+	t.Run("IncorrectCodeHash", func(t *testing.T) {
+		_, err := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, true, math.MaxUint64)
+
+		require.NotEmpty(t, err)
+		require.Contains(t,
+			err.Error(),
+			"failed to validate transaction",
+		)
+	})
+}
+
+func TestCodeHashQueryCallQueryAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, addr, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, addr, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	t.Run("GoodCodeHash", func(t *testing.T) {
+		output, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), newCodeHash, `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests)
+
+		require.Empty(t, err)
+		require.Equal(t, "2", output)
+	})
+	t.Run("EmptyCodeHash", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t, err.Error(), "failed to validate transaction")
+	})
+	t.Run("TooBigCodeHash", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%sa","msg":"%s"}}`, addr.String(), newCodeHash, `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		if true {
+			require.Contains(t,
+				err.Error(),
+				"Expected to parse either a `true`, `false`, or a `null`",
+			)
+		} else {
+			require.Contains(t,
+				err.Error(),
+				"Got an error from query: ParseErr { target: \"test_contract::contract::QueryMsg\", msg: \"Expected to parse either a `true`, `false`, or a `null`.\", backtrace: None }",
+			)
+		}
+	})
+	t.Run("TooSmallCodeHash", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, addr.String(), newCodeHash[0:63], `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t, err.Error(), "failed to validate transaction")
+	})
+	t.Run("IncorrectCodeHash", func(t *testing.T) {
+		_, err := queryHelper(t, keeper, ctx, addr, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","msg":"%s"}}`, addr.String(), `{\"receive_external_query\":{\"num\":1}}`), true, true, defaultGasForTests)
+
+		require.NotEmpty(t, err)
+		require.Contains(t, err.Error(), "failed to validate transaction")
+	})
+}
+
+func TestV1EndpointsSanityAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(23), resp.Get.Count)
+}
+
+func TestV1EndpointsSanityDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(res.Data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(23), resp.Get.Count)
+}
+
+func TestLastMsgMarkerAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, err := execHelperMultipleMsgs(t, keeper, ctx, contractAddress, walletA, privKeyA, []string{`{"last_msg_marker":{}}`}, true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+
+	require.Equal(t, uint32(14), resp.Get.Count)
+}
+
+func TestLastMsgMarkerWithMoreThanOneTxAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"last_msg_marker":{}}`, true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+
+	_, _, _, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment_times":{"times": 5}}`, true, true, math.MaxUint64, 0)
+	require.Empty(t, err)
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+
+	require.Equal(t, uint32(19), resp.Get.Count)
+}
+
+func TestV1QueryWorksWithEnvAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":0}}`, true, true, defaultGasForTests)
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(0), resp.Get.Count)
+}
+
+func TestV1ReplySanityAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
+
+	_, _, data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"transfer_money":{"amount": 10213}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(data))
+
+	_, _, data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"recursive_reply":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(25), binary.BigEndian.Uint32(data))
+
+	_, _, data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"recursive_reply_fail":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(10), binary.BigEndian.Uint32(data))
+
+	_, _, data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(150), binary.BigEndian.Uint32(data))
+
+	_, _, data, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"init_new_contract_with_error":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(1337), binary.BigEndian.Uint32(data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(1337), resp.Get.Count)
+}
+
+func TestV1ReplySanityDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	res, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"increment":{"addition": 13}}`, true, true, math.MaxUint64)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(res.Data))
+
+	res, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"transfer_money":{"amount": 10213}}`, true, true, math.MaxUint64)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(23), binary.BigEndian.Uint32(res.Data))
+
+	res, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"recursive_reply":{}}`, true, true, math.MaxUint64)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(25), binary.BigEndian.Uint32(res.Data))
+
+	res, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"recursive_reply_fail":{}}`, true, true, math.MaxUint64)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(10), binary.BigEndian.Uint32(res.Data))
+
+	res, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"init_new_contract":{}}`, true, true, math.MaxUint64)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(150), binary.BigEndian.Uint32(res.Data))
+
+	res, err = migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"init_new_contract_with_error":{}}`, true, true, math.MaxUint64)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(1337), binary.BigEndian.Uint32(res.Data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	// assert result is 32 byte sha256 hash (if hashed), or contractAddr if not
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(1337), resp.Get.Count)
+}
+
+func TestV1QueryV010ContractAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	wasmCode, err := os.ReadFile(TestContractPaths[v010Contract])
+	require.NoError(t, err)
+
+	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, walletA, privKeyA, `{"init_from_v1":{"counter":190}}`, true, false, defaultGasForTests)
+	require.Empty(t, err)
+
+	msg := fmt.Sprintf(`{"query_v10":{"address":"%s", "code_hash":"%s"}}`, v010ContractAddress, v010CodeHash)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(190), binary.BigEndian.Uint32(data))
+}
+
+func TestV1QueryV010ContractDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	wasmCode, err := os.ReadFile(TestContractPaths[v010Contract])
+	require.NoError(t, err)
+
+	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
+	require.NoError(t, err)
+
+	codeInfo, err := keeper.GetCodeInfo(ctx, v010CodeID)
+	require.NoError(t, err)
+	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, walletA, privKeyA, `{"init_from_v1":{"counter":190}}`, true, false, defaultGasForTests)
+	require.Empty(t, err)
+
+	msg := fmt.Sprintf(`{"query_v10":{"address":"%s", "code_hash":"%s"}}`, v010ContractAddress, v010CodeHash)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, msg, true, true, math.MaxUint64)
+
+	require.Empty(t, migErr)
+	require.Equal(t, uint32(190), binary.BigEndian.Uint32(res.Data))
 }
