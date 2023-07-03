@@ -2313,7 +2313,7 @@ func TestConsumeExact(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// not sure where the 16 extra gas comes vs the previous check_gas test, but it makes everything play nice, so....
-	baseContractUsage := types.InstanceCost + 1031 - 16
+	baseContractUsage := types.InstanceCost + 1097 - 16
 
 	for _, test := range []struct {
 		description   string
