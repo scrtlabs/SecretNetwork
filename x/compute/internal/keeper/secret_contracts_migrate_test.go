@@ -14,6 +14,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+
 	"golang.org/x/exp/slices"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -4976,4 +4977,1407 @@ func TestV1QueryV010ContractDuringMigrate(t *testing.T) {
 
 	require.Empty(t, migErr)
 	require.Equal(t, uint32(190), binary.BigEndian.Uint32(res.Data))
+}
+
+func TestV1ReplyOnMultipleSubmessagesAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"multiple_sub_messages":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(102), binary.BigEndian.Uint32(data))
+}
+
+func TestV1ReplyOnMultipleSubmessagesDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"multiple_sub_messages":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	require.Equal(t, uint32(102), binary.BigEndian.Uint32(res.Data))
+}
+
+func TestV1MultipleSubmessagesNoReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"multiple_sub_messages_no_reply":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Equal(t, uint32(10), binary.BigEndian.Uint32(data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(16), resp.Get.Count)
+}
+
+func TestV1MultipleSubmessagesNoReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"multiple_sub_messages_no_reply":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	require.Empty(t, migErr)
+	require.Equal(t, uint32(10), binary.BigEndian.Uint32(res.Data))
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(16), resp.Get.Count)
+}
+
+func TestSendEncryptedAttributesFromExecuteWithoutSubmessageWithoutReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes":{}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+		},
+		events,
+	)
+}
+
+func TestSendEncryptedAttributesFromExecuteWithoutSubmessageWithoutReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_attributes":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestSendEncryptedAttributesFromExecuteWithSubmessageWithoutReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":0}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+		},
+		events,
+	)
+}
+
+func TestSendEncryptedAttributesFromExecuteWithSubmessageWithoutReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":0}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestV1SendsEncryptedAttributesFromExecuteWithSubmessageWithReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":2200}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr5", Value: "🤯"},
+				{Key: "attr6", Value: "🦄"},
+			},
+		},
+		events,
+	)
+}
+
+func TestV1SendsEncryptedAttributesFromExecuteWithSubmessageWithReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_attributes_with_submessage":{"id":2200}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr5", Value: "🤯"},
+				{Key: "attr6", Value: "🦄"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestSendPlaintextAttributesFromExecuteWithoutSubmessageWithoutReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes":{}}`, true, true, defaultGasForTests, 0, true)
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+		},
+		events,
+	)
+}
+
+func TestSendPlaintextAttributesFromExecuteWithoutSubmessageWithoutReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestSendPlaintextAttributesFromExecuteWithSubmessageWithoutReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":0}}`, true, true, defaultGasForTests, 0, true)
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+		},
+		events,
+	)
+}
+
+func TestSendPlaintextAttributesFromExecuteWithSubmessageWithoutReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":0}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	_, _, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, defaultGasForTests, 0, true)
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr5", Value: "🤯"},
+				{Key: "attr6", Value: "🦄"},
+			},
+		},
+		events,
+	)
+}
+
+func TestV1SendsPlaintextAttributesFromExecuteWithSubmessageWithReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_plaintext_attributes_with_submessage":{"id":2300}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr1", Value: "🦄"},
+				{Key: "attr2", Value: "🌈"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🍉"},
+				{Key: "attr4", Value: "🥝"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr5", Value: "🤯"},
+				{Key: "attr6", Value: "🦄"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	nonce, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_events":{}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	events := ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "🐙"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+}
+
+func TestV1SendsEncryptedEventsFromExecuteWithoutSubmessageWithoutReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_events":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	events := res.Ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "🐙"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+}
+
+func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	nonce, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_events_with_submessage":{"id":0}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	events := ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+	hadCyber3 := false
+	hadCyber4 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "🐙"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+
+		if e.Type == "wasm-cyber3" {
+			require.False(t, hadCyber3)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🤯"},
+					{Key: "attr2", Value: "🤟"},
+				},
+				attrs,
+			)
+
+			hadCyber3 = true
+		}
+
+		if e.Type == "wasm-cyber4" {
+			require.False(t, hadCyber4)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "😅"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber4 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+	require.True(t, hadCyber3)
+	require.True(t, hadCyber4)
+}
+
+func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithoutReplyuringDMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_events_with_submessage":{"id":0}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	events := res.Ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+	hadCyber3 := false
+	hadCyber4 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "🐙"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+
+		if e.Type == "wasm-cyber3" {
+			require.False(t, hadCyber3)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🤯"},
+					{Key: "attr2", Value: "🤟"},
+				},
+				attrs,
+			)
+
+			hadCyber3 = true
+		}
+
+		if e.Type == "wasm-cyber4" {
+			require.False(t, hadCyber4)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "😅"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber4 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+	require.True(t, hadCyber3)
+	require.True(t, hadCyber4)
+}
+
+func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+	nonce, ctx, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_events_with_submessage":{"id":2400}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	events := ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+	hadCyber3 := false
+	hadCyber4 := false
+	hadCyber5 := false
+	hadCyber6 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "🐙"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+
+		if e.Type == "wasm-cyber3" {
+			require.False(t, hadCyber3)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🤯"},
+					{Key: "attr2", Value: "🤟"},
+				},
+				attrs,
+			)
+
+			hadCyber3 = true
+		}
+
+		if e.Type == "wasm-cyber4" {
+			require.False(t, hadCyber4)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "😅"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber4 = true
+		}
+
+		if e.Type == "wasm-cyber5" {
+			require.False(t, hadCyber5)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "😗"},
+					{Key: "attr2", Value: "😋"},
+				},
+				attrs,
+			)
+
+			hadCyber5 = true
+		}
+
+		if e.Type == "wasm-cyber6" {
+			require.False(t, hadCyber6)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "😉"},
+					{Key: "attr4", Value: "😊"},
+				},
+				attrs,
+			)
+
+			hadCyber6 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+	require.True(t, hadCyber3)
+	require.True(t, hadCyber4)
+	require.True(t, hadCyber5)
+	require.True(t, hadCyber6)
+}
+
+func TestV1SendsEncryptedEventsFromExecuteWithSubmessageWithReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_events_with_submessage":{"id":2400}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	events := res.Ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+	hadCyber3 := false
+	hadCyber4 := false
+	hadCyber5 := false
+	hadCyber6 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "🐙"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+
+		if e.Type == "wasm-cyber3" {
+			require.False(t, hadCyber3)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🤯"},
+					{Key: "attr2", Value: "🤟"},
+				},
+				attrs,
+			)
+
+			hadCyber3 = true
+		}
+
+		if e.Type == "wasm-cyber4" {
+			require.False(t, hadCyber4)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "😅"},
+					{Key: "attr4", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber4 = true
+		}
+
+		if e.Type == "wasm-cyber5" {
+			require.False(t, hadCyber5)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "😗"},
+					{Key: "attr2", Value: "😋"},
+				},
+				attrs,
+			)
+
+			hadCyber5 = true
+		}
+
+		if e.Type == "wasm-cyber6" {
+			require.False(t, hadCyber6)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr3", Value: "😉"},
+					{Key: "attr4", Value: "😊"},
+				},
+				attrs,
+			)
+
+			hadCyber6 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+	require.True(t, hadCyber3)
+	require.True(t, hadCyber4)
+	require.True(t, hadCyber5)
+	require.True(t, hadCyber6)
+}
+
+func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+	nonce, ctx, _, logs, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_mixed_attributes_and_events":{}}`, true, true, defaultGasForTests, 0, true)
+	require.Empty(t, err)
+
+	events := ctx.EventManager().Events()
+
+	hadCyber1 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, false)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🐙"},
+				{Key: "attr4", Value: "🦄"},
+			},
+		},
+		logs,
+	)
+}
+
+func TestV1SendsMixedAttributesAndEventsFromExecuteWithoutSubmessageWithoutReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_mixed_attributes_and_events":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	events := res.Ctx.EventManager().Events()
+
+	hadCyber1 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, false)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🐙"},
+				{Key: "attr4", Value: "🦄"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+	nonce, ctx, _, logs, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_mixed_attributes_and_events_with_submessage":{"id":0}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	events := ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr5", Value: "🐙"},
+					{Key: "attr6", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🐙"},
+				{Key: "attr4", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr7", Value: "😅"},
+				{Key: "attr8", Value: "🦄"},
+			},
+		},
+		logs,
+	)
+}
+
+func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithoutReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_mixed_attributes_and_events_with_submessage":{"id":0}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	events := res.Ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr5", Value: "🐙"},
+					{Key: "attr6", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🐙"},
+				{Key: "attr4", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr7", Value: "😅"},
+				{Key: "attr8", Value: "🦄"},
+			},
+		},
+		res.WasmEvents,
+	)
+}
+
+func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReplyAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+	nonce, ctx, _, logs, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"add_mixed_attributes_and_events_with_submessage":{"id":2500}}`, true, true, defaultGasForTests, 0)
+	require.Empty(t, err)
+
+	events := ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+	hadCyber3 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr5", Value: "🐙"},
+					{Key: "attr6", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+
+		if e.Type == "wasm-cyber3" {
+			require.False(t, hadCyber3)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr9", Value: "🤯"},
+					{Key: "attr10", Value: "🤟"},
+				},
+				attrs,
+			)
+
+			hadCyber3 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+	require.True(t, hadCyber3)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🐙"},
+				{Key: "attr4", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr7", Value: "😅"},
+				{Key: "attr8", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr11", Value: "😉"},
+				{Key: "attr12", Value: "😊"},
+			},
+		},
+		logs,
+	)
+}
+
+func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReplyDuringMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"add_mixed_attributes_and_events_with_submessage":{"id":2500}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	events := res.Ctx.EventManager().Events()
+
+	hadCyber1 := false
+	hadCyber2 := false
+	hadCyber3 := false
+
+	for _, e := range events {
+		if e.Type == "wasm-cyber1" {
+			require.False(t, hadCyber1)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr1", Value: "🦄"},
+					{Key: "attr2", Value: "🌈"},
+				},
+				attrs,
+			)
+
+			hadCyber1 = true
+		}
+
+		if e.Type == "wasm-cyber2" {
+			require.False(t, hadCyber2)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr5", Value: "🐙"},
+					{Key: "attr6", Value: "🦄"},
+				},
+				attrs,
+			)
+
+			hadCyber2 = true
+		}
+
+		if e.Type == "wasm-cyber3" {
+			require.False(t, hadCyber3)
+			attrs, err := parseAndDecryptAttributes(e.Attributes, res.Nonce, true)
+			require.Empty(t, err)
+
+			requireLogAttributes(t,
+				[]v010types.LogAttribute{
+					{Key: "contract_address", Value: contractAddress.String()},
+					{Key: "attr9", Value: "🤯"},
+					{Key: "attr10", Value: "🤟"},
+				},
+				attrs,
+			)
+
+			hadCyber3 = true
+		}
+	}
+
+	require.True(t, hadCyber1)
+	require.True(t, hadCyber2)
+	require.True(t, hadCyber3)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr3", Value: "🐙"},
+				{Key: "attr4", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr7", Value: "😅"},
+				{Key: "attr8", Value: "🦄"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "attr11", Value: "😉"},
+				{Key: "attr12", Value: "😊"},
+			},
+		},
+		res.WasmEvents,
+	)
 }
