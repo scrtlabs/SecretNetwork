@@ -154,6 +154,11 @@ type MigrateResult struct {
 	GasUsed    uint64
 }
 
+type UpdateAdminResult struct {
+	Ctx     sdk.Context
+	GasUsed uint64
+}
+
 type ExecResult struct {
 	Nonce      []byte
 	Ctx        sdk.Context
@@ -713,13 +718,44 @@ func prepareMigrateSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contra
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
 	require.NoError(t, err)
 
-	initMsg := wasmtypes.MsgMigrateContract{
+	migrateMsg := wasmtypes.MsgMigrateContract{
 		Sender:   creator.String(),
 		CodeID:   codeID,
 		Contract: contractAddress,
 		Msg:      encMsg,
 	}
-	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
+	newTx := NewTestTx(&migrateMsg, creatorAcc, privKey)
+	txBytes, err := newTx.Marshal()
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
+func prepareUpdateAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, sender sdk.AccAddress, privKey crypto.PrivKey, newAdmin sdk.AccAddress) sdk.Context {
+	senderAccount, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	sdkMsg := wasmtypes.MsgUpdateAdmin{
+		Sender:   sender.String(),
+		Contract: contractAddress,
+		NewAdmin: newAdmin.String(),
+	}
+	newTx := NewTestTx(&sdkMsg, senderAccount, privKey)
+	txBytes, err := newTx.Marshal()
+	require.NoError(t, err)
+
+	return ctx.WithTxBytes(txBytes)
+}
+
+func prepareClearAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, sender sdk.AccAddress, privKey crypto.PrivKey) sdk.Context {
+	senderAccount, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	sdkMsg := wasmtypes.MsgClearAdmin{
+		Sender:   sender.String(),
+		Contract: contractAddress,
+	}
+	newTx := NewTestTx(&sdkMsg, senderAccount, privKey)
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 

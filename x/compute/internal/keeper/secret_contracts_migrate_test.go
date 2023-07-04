@@ -6381,3 +6381,307 @@ func TestV1SendsMixedAttributesAndEventsFromExecuteWithSubmessageWithReplyDuring
 		res.WasmEvents,
 	)
 }
+
+func TestCannotChangeAdminIfNotAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, privKeyB := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	t.Run("update: not admin", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletB, privKeyB, walletA, defaultGasForTests)
+
+		require.Equal(t, updateErr.Error(), "caller is not the admin: unauthorized")
+	})
+
+	t.Run("update: null admin", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletB, privKeyB, walletA, defaultGasForTests)
+
+		require.Equal(t, updateErr.Error(), "caller is not the admin: unauthorized")
+	})
+
+	t.Run("clear: not admin", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletB, privKeyB, nil, defaultGasForTests)
+
+		require.Equal(t, updateErr.Error(), "caller is not the admin: unauthorized")
+	})
+
+	t.Run("clear: null admin", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletB, privKeyB, nil, defaultGasForTests)
+
+		require.Equal(t, updateErr.Error(), "caller is not the admin: unauthorized")
+	})
+}
+
+func TestAdminCanChangeAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	t.Run("update", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletB, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletB.String())
+	})
+
+	t.Run("clear", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+	})
+}
+
+func TestFailMigrateAndChangeAfterClearAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractAddress)
+	require.Equal(t, info.Admin, walletA.String())
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests)
+	require.Nil(t, updateErr)
+
+	info = keeper.GetContractInfo(ctx, contractAddress)
+	require.Equal(t, info.Admin, "")
+
+	t.Run("migrate", func(t *testing.T) {
+		newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+		_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, 0)
+		require.Contains(t, migErr.Error(), "requires migrate from admin: migrate contract failed")
+	})
+
+	t.Run("update", func(t *testing.T) {
+		_, updateErr = updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletB, defaultGasForTests)
+		require.Equal(t, updateErr.Error(), "caller is not the admin: unauthorized")
+	})
+
+	t.Run("clear", func(t *testing.T) {
+		_, updateErr = updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests)
+		require.Equal(t, updateErr.Error(), "caller is not the admin: unauthorized")
+	})
+}
+
+func TestFailMigrateAndChangeAdminByOldAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractAddress)
+	require.Equal(t, info.Admin, walletA.String())
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletB, defaultGasForTests)
+	require.Nil(t, updateErr)
+
+	info = keeper.GetContractInfo(ctx, contractAddress)
+	require.Equal(t, info.Admin, walletB.String())
+
+	t.Run("migrate", func(t *testing.T) {
+		newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+		_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, 0)
+		require.Contains(t, migErr.Error(), "requires migrate from admin: migrate contract failed")
+	})
+
+	t.Run("update", func(t *testing.T) {
+		_, updateErr = updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletB, defaultGasForTests)
+		require.Equal(t, updateErr.Error(), "caller is not the admin: unauthorized")
+	})
+
+	t.Run("clear", func(t *testing.T) {
+		_, updateErr = updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests)
+		require.Equal(t, updateErr.Error(), "caller is not the admin: unauthorized")
+	})
+}
+
+func TestOldAdminCanChangeAdminByPassingOldProof(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	t.Run("update", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		oldAdminProof := info.AdminProof
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletB, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletB.String())
+
+		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletA, defaultGasForTests, oldAdminProof)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+	})
+
+	t.Run("clear", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		oldAdminProof := info.AdminProof
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletB, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletB.String())
+
+		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests, oldAdminProof)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+	})
+
+	t.Run("update after clear", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		oldAdminProof := info.AdminProof
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+
+		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletA, defaultGasForTests, oldAdminProof)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+	})
+
+	t.Run("clear after clear", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		oldAdminProof := info.AdminProof
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+
+		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests, oldAdminProof)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+	})
+}
+
+func TestOldAdminCanMigrateChangeAdminByPassingOldProof(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	t.Run("migrate", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		oldAdminProof := info.AdminProof
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletB, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletB.String())
+
+		newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+		_, migErr := fakeMigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, oldAdminProof)
+		require.Empty(t, migErr)
+
+		// admin is still walletB
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletB.String())
+
+		// but code is migrated
+		history := keeper.GetContractHistory(ctx, contractAddress)
+		require.Len(t, history, 2)
+		require.Equal(t, history[0].CodeID, codeID)
+		require.Equal(t, history[1].CodeID, newCodeId)
+	})
+
+	t.Run("migrate after clear", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		oldAdminProof := info.AdminProof
+
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+
+		newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+		_, migErr := fakeMigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, oldAdminProof)
+		require.Empty(t, migErr)
+
+		// admin is still nil
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, "")
+
+		// but code is migrated
+		history := keeper.GetContractHistory(ctx, contractAddress)
+		require.Len(t, history, 2)
+		require.Equal(t, history[0].CodeID, codeID)
+		require.Equal(t, history[1].CodeID, newCodeId)
+	})
+}
