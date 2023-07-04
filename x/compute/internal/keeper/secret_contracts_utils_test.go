@@ -919,7 +919,14 @@ func updateAdminHelper(
 	}, err
 }
 
-func fakeUpdateContractAdmin(ctx sdk.Context, k Keeper, contractAddress, caller, newAdmin sdk.AccAddress, fakeAdminProof []byte) error {
+func fakeUpdateContractAdmin(ctx sdk.Context,
+	k Keeper,
+	contractAddress,
+	caller,
+	newAdmin sdk.AccAddress,
+	adminToSend sdk.AccAddress,
+	adminProof []byte,
+) error {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "update-contract-admin")
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: update-contract-admin")
 
@@ -953,7 +960,7 @@ func fakeUpdateContractAdmin(ctx sdk.Context, k Keeper, contractAddress, caller,
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, caller, fakeAdminProof)
+	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminToSend, adminProof)
 
 	if updateAdminErr != nil {
 		return updateAdminErr
@@ -981,7 +988,8 @@ func fakeUpdateAdminHelper(
 	senderPrivkey crypto.PrivKey,
 	newAdmin sdk.AccAddress,
 	gas uint64,
-	fakeAdminProof []byte,
+	adminToSend sdk.AccAddress,
+	adminProof []byte,
 ) (UpdateAdminResult, error) {
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -1001,7 +1009,7 @@ func fakeUpdateAdminHelper(
 	}
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	err := fakeUpdateContractAdmin(ctx, keeper, contractAddress, sender, newAdmin, fakeAdminProof)
+	err := fakeUpdateContractAdmin(ctx, keeper, contractAddress, sender, newAdmin, adminToSend, adminProof)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 
@@ -1011,7 +1019,15 @@ func fakeUpdateAdminHelper(
 	}, err
 }
 
-func fakeMigrate(ctx sdk.Context, k Keeper, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte, fakeAdminProof []byte) ([]byte, error) {
+func fakeMigrate(ctx sdk.Context,
+	k Keeper,
+	contractAddress sdk.AccAddress,
+	caller sdk.AccAddress,
+	newCodeID uint64,
+	msg []byte,
+	adminToSend sdk.AccAddress,
+	adminProof []byte,
+) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "migrate")
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: migrate")
 
@@ -1067,7 +1083,7 @@ func fakeMigrate(ctx sdk.Context, k Keeper, contractAddress sdk.AccAddress, call
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, caller, fakeAdminProof)
+	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminToSend, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {
@@ -1144,7 +1160,8 @@ func fakeMigrateHelper(
 	isErrorEncrypted bool,
 	isV1Contract bool,
 	gas uint64,
-	fakeAdminProof []byte,
+	adminToSend sdk.AccAddress,
+	adminProof []byte,
 	wasmCallCount ...int64,
 ) (MigrateResult, *ErrorResult) {
 	codeInfo, err := keeper.GetCodeInfo(ctx, newCodeId)
@@ -1187,7 +1204,7 @@ func fakeMigrateHelper(
 	nonce := migrateMsgBz[0:32]
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	execResult, err := fakeMigrate(ctx, keeper, contractAddress, txSender, newCodeId, migrateMsgBz, fakeAdminProof)
+	execResult, err := fakeMigrate(ctx, keeper, contractAddress, txSender, newCodeId, migrateMsgBz, adminToSend, adminProof)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 

@@ -6548,7 +6548,7 @@ func TestOldAdminCanChangeAdminByPassingOldProof(t *testing.T) {
 		info = keeper.GetContractInfo(ctx, contractAddress)
 		require.Equal(t, info.Admin, walletB.String())
 
-		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletA, defaultGasForTests, oldAdminProof)
+		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletA, defaultGasForTests, walletA, oldAdminProof)
 		require.Nil(t, updateErr)
 
 		info = keeper.GetContractInfo(ctx, contractAddress)
@@ -6570,7 +6570,7 @@ func TestOldAdminCanChangeAdminByPassingOldProof(t *testing.T) {
 		info = keeper.GetContractInfo(ctx, contractAddress)
 		require.Equal(t, info.Admin, walletB.String())
 
-		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests, oldAdminProof)
+		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests, walletA, oldAdminProof)
 		require.Nil(t, updateErr)
 
 		info = keeper.GetContractInfo(ctx, contractAddress)
@@ -6592,7 +6592,7 @@ func TestOldAdminCanChangeAdminByPassingOldProof(t *testing.T) {
 		info = keeper.GetContractInfo(ctx, contractAddress)
 		require.Equal(t, info.Admin, "")
 
-		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletA, defaultGasForTests, oldAdminProof)
+		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, walletA, defaultGasForTests, walletA, oldAdminProof)
 		require.Nil(t, updateErr)
 
 		info = keeper.GetContractInfo(ctx, contractAddress)
@@ -6614,7 +6614,7 @@ func TestOldAdminCanChangeAdminByPassingOldProof(t *testing.T) {
 		info = keeper.GetContractInfo(ctx, contractAddress)
 		require.Equal(t, info.Admin, "")
 
-		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests, oldAdminProof)
+		_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, nil, defaultGasForTests, walletA, oldAdminProof)
 		require.Nil(t, updateErr)
 
 		info = keeper.GetContractInfo(ctx, contractAddress)
@@ -6641,7 +6641,7 @@ func TestOldAdminCanMigrateChangeAdminByPassingOldProof(t *testing.T) {
 		require.Equal(t, info.Admin, walletB.String())
 
 		newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
-		_, migErr := fakeMigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, oldAdminProof)
+		_, migErr := fakeMigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, walletA, oldAdminProof)
 		require.Empty(t, migErr)
 
 		// admin is still walletB
@@ -6671,7 +6671,7 @@ func TestOldAdminCanMigrateChangeAdminByPassingOldProof(t *testing.T) {
 		require.Equal(t, info.Admin, "")
 
 		newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
-		_, migErr := fakeMigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, oldAdminProof)
+		_, migErr := fakeMigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, walletA, oldAdminProof)
 		require.Empty(t, migErr)
 
 		// admin is still nil
@@ -6683,5 +6683,97 @@ func TestOldAdminCanMigrateChangeAdminByPassingOldProof(t *testing.T) {
 		require.Len(t, history, 2)
 		require.Equal(t, history[0].CodeID, codeID)
 		require.Equal(t, history[1].CodeID, newCodeId)
+	})
+}
+
+func TestEnclaveFailsAdminIsNotSender(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privkeyA, walletB, privkeyB := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	t.Run("migrate fails msg verify params", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletB, privkeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		// B is the admin
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletB.String())
+
+		bAdminProof := info.AdminProof
+
+		// now A is the admin
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletB, privkeyB, walletA, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		// A is the admin but B is the sender
+		// B passes old B's proof which is valid and should pass the proof check
+		// however the sender==admin check later on should fail
+		newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+		_, migErr := fakeMigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletB, privkeyB, `{"nop":{}}`, false, true, math.MaxUint64, walletA, bAdminProof)
+		require.Contains(t, migErr.Error(), "Enclave: failed to verify transaction signature: migrate contract failed")
+	})
+
+	t.Run("migrate fails admin proof check", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privkeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		// A is the admin but B is the sender
+		// B passes A's proof
+		newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+		_, migErr := fakeMigrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletB, privkeyB, `{"nop":{}}`, false, true, math.MaxUint64, walletA, info.AdminProof)
+		require.Contains(t, migErr.Error(), "Enclave: failed to validate transaction: migrate contract failed")
+	})
+
+	t.Run("change fails msg verify params", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletB, privkeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		// B is the admin
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletB.String())
+
+		bAdminProof := info.AdminProof
+
+		// now A is the admin
+		_, updateErr := updateAdminHelper(t, keeper, ctx, contractAddress, walletB, privkeyB, walletA, defaultGasForTests)
+		require.Nil(t, updateErr)
+
+		info = keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		// A is the admin but B is the sender
+		// B passes old B's proof which is valid and should pass the proof check
+		// however the sender==admin check later on should fail
+		t.Run("update", func(t *testing.T) {
+			_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletB, privkeyB, walletB, math.MaxUint64, walletA, bAdminProof)
+			require.Contains(t, updateErr.Error(), "Enclave: failed to verify transaction signature")
+		})
+		t.Run("clear", func(t *testing.T) {
+			_, updateErr = fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletB, privkeyB, nil, math.MaxUint64, walletA, bAdminProof)
+			require.Contains(t, updateErr.Error(), "Enclave: failed to verify transaction signature")
+		})
+	})
+
+	t.Run("change fails admin proof check", func(t *testing.T) {
+		_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privkeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+		require.Empty(t, err)
+
+		info := keeper.GetContractInfo(ctx, contractAddress)
+		require.Equal(t, info.Admin, walletA.String())
+
+		// A is the admin but B is the sender
+		// B passes A's proof
+		t.Run("update", func(t *testing.T) {
+			_, updateErr := fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletB, privkeyB, walletB, math.MaxUint64, walletA, info.AdminProof)
+			require.Contains(t, updateErr.Error(), "Enclave: failed to validate transaction")
+		})
+		t.Run("clear", func(t *testing.T) {
+			_, updateErr := fakeUpdateAdminHelper(t, keeper, ctx, contractAddress, walletB, privkeyB, nil, math.MaxUint64, walletA, info.AdminProof)
+			require.Contains(t, updateErr.Error(), "Enclave: failed to validate transaction")
+		})
 	})
 }
