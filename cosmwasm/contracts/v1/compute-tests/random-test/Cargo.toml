@@ -1,7 +1,7 @@
 [package]
 name = "v1-random-test"
 version = "0.0.1"
-authors = ["Enigma <info@enigma.co>"]
+authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "A Test contract intended to use in system tests for the Secret Netowrk"
 license = "MIT"
@@ -30,9 +30,10 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "8ee395ba033c392d7170c971df97f085edaed2d9", package = "secret-cosmwasm-std", features = ["random"] }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "8ee395ba033c392d7170c971df97f085edaed2d9", package = "secret-cosmwasm-std", features = [
+  "random"
+] }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "8ee395ba033c392d7170c971df97f085edaed2d9", package = "secret-cosmwasm-storage" }
-
 schemars = "0.8.1"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",

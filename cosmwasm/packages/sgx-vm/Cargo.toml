@@ -3,7 +3,7 @@ name = "cosmwasm-sgx-vm"
 version = "0.10.0"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
-    "Enigma Team <info@enigma.co>",
+    "SCRT Labs <info@scrtlabs.com>",
 ]
 edition = "2018"
 description = "VM bindings to run cosmwams contracts"
@@ -57,7 +57,6 @@ sha2 = "0.10.7"
 hex = "0.4"
 memmap = "0.7"
 parity-wasm = "0.41"
-
 # requirements specific to Secret Network
 lazy_static = "1.4"
 enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
