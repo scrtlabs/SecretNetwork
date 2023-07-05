@@ -517,14 +517,38 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, 
 		}
 
 		sdkMsg := types.MsgInstantiateContract{
-			Sender: sender,
-			CodeID: msg.Instantiate.CodeID,
-			// TODO: add this to CosmWasm
+			Sender:           sender,
+			CodeID:           msg.Instantiate.CodeID,
 			Label:            msg.Instantiate.Label,
 			CallbackCodeHash: msg.Instantiate.CallbackCodeHash,
 			InitMsg:          msg.Instantiate.Msg,
 			InitFunds:        coins,
 			CallbackSig:      msg.Instantiate.CallbackSignature,
+		}
+		return []sdk.Msg{&sdkMsg}, nil
+	case msg.Migrate != nil:
+		sdkMsg := types.MsgMigrateContract{
+			Sender:           sender.String(),
+			Contract:         msg.Migrate.Contract,
+			CodeID:           msg.Migrate.CodeID,
+			Msg:              msg.Migrate.Msg,
+			CallbackSig:      msg.Migrate.CallbackSignature,
+			CallbackCodeHash: msg.Migrate.CallbackCodeHash,
+		}
+		return []sdk.Msg{&sdkMsg}, nil
+	case msg.UpdateAdmin != nil:
+		sdkMsg := types.MsgUpdateAdmin{
+			Sender:           sender.String(),
+			Contract:         msg.UpdateAdmin.Contract,
+			NewAdmin:         msg.UpdateAdmin.NewAdmin,
+			CallbackSig:      msg.UpdateAdmin.CallbackSignature,
+		}
+		return []sdk.Msg{&sdkMsg}, nil
+	case msg.ClearAdmin != nil:
+		sdkMsg := types.MsgClearAdmin{
+			Sender:           sender.String(),
+			Contract:         msg.ClearAdmin.Contract,
+			CallbackSig:      msg.ClearAdmin.CallbackSignature,
 		}
 		return []sdk.Msg{&sdkMsg}, nil
 	default:

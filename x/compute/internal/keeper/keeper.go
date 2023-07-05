@@ -1214,7 +1214,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	}
 }
 
-func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, newAdmin sdk.AccAddress) error {
+func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, newAdmin sdk.AccAddress, callbackSig []byte) error {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "update-contract-admin")
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: update-contract-admin")
 
@@ -1226,12 +1226,21 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "caller is not the admin")
 	}
 
-	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, caller)
-	if err != nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	signBytes := []byte{}
+	signMode := sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED
+	modeInfoBytes := []byte{}
+	pkBytes := []byte{}
+	signerSig := []byte{}
+
+	// If no callback signature - we should send the actual msg sender sign bytes and signature
+	if callbackSig == nil {
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetTxInfo(ctx, caller)
+		if err != nil {
+			return err
+		}
 	}
 
-	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
 	contractKey, err := k.GetContractKey(ctx, contractAddress)
 	if err != nil {
@@ -1278,16 +1287,26 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 	return nil
 }
 
-func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte) ([]byte, error) {
+func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, newCodeID uint64, msg []byte, callbackSig []byte) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "migrate")
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: migrate")
 
-	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, caller)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	signBytes := []byte{}
+	signMode := sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED
+	modeInfoBytes := []byte{}
+	pkBytes := []byte{}
+	signerSig := []byte{}
+	var err error
+
+	// If no callback signature - we should send the actual msg sender sign bytes and signature
+	if callbackSig == nil {
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetTxInfo(ctx, caller)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
 	contractInfo, _, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {

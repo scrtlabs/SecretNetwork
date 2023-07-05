@@ -158,6 +158,7 @@ func handleMigrate(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.Res
 		sdk.MustAccAddressFromBech32(msg.Sender),
 		msg.CodeID,
 		msg.Msg,
+		msg.CallbackSig,
 	)
 	if err != nil {
 		return nil, err
@@ -185,6 +186,7 @@ func handleUpdateAdmin(ctx sdk.Context, k Keeper, msg *MsgUpdateAdmin) (*sdk.Res
 		sdk.MustAccAddressFromBech32(msg.Contract),
 		sdk.MustAccAddressFromBech32(msg.Sender),
 		sdk.MustAccAddressFromBech32(msg.NewAdmin),
+		msg.CallbackSig,
 	)
 	if err != nil {
 		return nil, err
@@ -208,6 +210,7 @@ func handleClearAdmin(ctx sdk.Context, k Keeper, msg *MsgClearAdmin) (*sdk.Resul
 		sdk.MustAccAddressFromBech32(msg.Contract),
 		sdk.MustAccAddressFromBech32(msg.Sender),
 		nil,
+		msg.CallbackSig,
 	)
 	if err != nil {
 		return nil, err

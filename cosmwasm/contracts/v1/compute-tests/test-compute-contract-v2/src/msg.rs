@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Coin};
+use cosmwasm_std::{Binary, Coin, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -426,6 +426,19 @@ pub enum ExecuteMsg {
     },
     #[serde(rename = "ibc_lifecycle_complete")]
     IBCLifecycleComplete(IBCLifecycleComplete),
+    SendMsgMigrateContract {
+        contract_addr: String,
+        new_code_id: Uint64,
+        callback_code_hash: String,
+        msg: Binary,
+    },
+    SendMsgClearAdmin {
+        contract_addr: String,
+    },
+    SendMsgUpdateAdmin {
+        contract_addr: String,
+        new_admin: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

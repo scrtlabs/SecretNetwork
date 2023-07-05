@@ -376,6 +376,20 @@ pub fn manipulate_callback_sig_for_plaintext(
                                     .collect::<Vec<cw_types_v010::types::Coin>>()[..],
                             ));
                         }
+                        cw_types_v1::results::WasmMsg::Migrate {
+                            callback_sig, msg, ..
+                        } => {
+                            *callback_sig = Some(create_callback_signature(
+                                contract_addr,
+                                &msg.as_slice().to_vec(),
+                                &[],
+                            ));
+                        }
+                        cw_types_v1::results::WasmMsg::ClearAdmin { callback_sig, .. }
+                        | cw_types_v1::results::WasmMsg::UpdateAdmin { callback_sig, .. } => {
+                            *callback_sig =
+                                Some(create_callback_signature(contract_addr, &vec![], &[]));
+                        }
                     }
                 }
             }
@@ -407,6 +421,20 @@ pub fn manipulate_callback_sig_for_plaintext(
                                     })
                                     .collect::<Vec<Coin>>()[..],
                             ));
+                        }
+                        cw_types_v1::results::WasmMsg::Migrate {
+                            callback_sig, msg, ..
+                        } => {
+                            *callback_sig = Some(create_callback_signature(
+                                contract_addr,
+                                &msg.as_slice().to_vec(),
+                                &[],
+                            ));
+                        }
+                        cw_types_v1::results::WasmMsg::ClearAdmin { callback_sig, .. }
+                        | cw_types_v1::results::WasmMsg::UpdateAdmin { callback_sig, .. } => {
+                            *callback_sig =
+                                Some(create_callback_signature(contract_addr, &vec![], &[]));
                         }
                     }
                 }
@@ -604,7 +632,8 @@ fn encrypt_wasm_submsg<T: Clone + fmt::Debug + PartialEq>(
     if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
         match wasm_msg {
             cw_types_v1::results::WasmMsg::Instantiate { msg, .. }
-            | cw_types_v1::results::WasmMsg::Execute { msg, .. } => {
+            | cw_types_v1::results::WasmMsg::Execute { msg, .. }
+            | cw_types_v1::results::WasmMsg::Migrate { msg, .. } => {
                 let mut msg_to_encrypt = SecretMessage {
                     msg: msg.as_slice().to_vec(),
                     nonce: secret_msg.nonce,
@@ -613,6 +642,8 @@ fn encrypt_wasm_submsg<T: Clone + fmt::Debug + PartialEq>(
                 msg_to_encrypt.encrypt_in_place()?;
                 *msg = Binary::from(msg_to_encrypt.to_vec().as_slice());
             }
+            cw_types_v1::results::WasmMsg::ClearAdmin { .. }
+            | cw_types_v1::results::WasmMsg::UpdateAdmin { .. } => {}
         }
     };
 
@@ -706,6 +737,19 @@ fn create_callback_sig_for_submsgs(
                             })
                             .collect::<Vec<Coin>>()[..],
                     ));
+                }
+                cw_types_v1::results::WasmMsg::Migrate {
+                    msg, callback_sig, ..
+                } => {
+                    *callback_sig = Some(create_callback_signature(
+                        contract_addr,
+                        &SecretMessage::from_slice(msg.as_slice())?.msg,
+                        &[],
+                    ));
+                }
+                cw_types_v1::results::WasmMsg::ClearAdmin { callback_sig, .. }
+                | cw_types_v1::results::WasmMsg::UpdateAdmin { callback_sig, .. } => {
+                    *callback_sig = Some(create_callback_signature(contract_addr, &vec![], &[]));
                 }
             }
         }
@@ -886,6 +930,34 @@ fn encrypt_v010_wasm_msg(
                 send,
             ));
         }
+        cw_types_v010::types::WasmMsg::Migrate {
+            msg,
+            callback_code_hash,
+            callback_sig,
+            ..
+        } => {
+            let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
+            hash_appended_msg.extend_from_slice(msg.as_slice());
+
+            let mut msg_to_pass = SecretMessage::from_base64(
+                Binary(hash_appended_msg).to_base64(),
+                nonce,
+                user_public_key,
+            )?;
+
+            msg_to_pass.encrypt_in_place()?;
+            *msg = Binary::from(msg_to_pass.to_vec().as_slice());
+
+            *callback_sig = Some(create_callback_signature(
+                contract_addr,
+                &msg_to_pass.msg,
+                &[],
+            ));
+        }
+        cw_types_v010::types::WasmMsg::UpdateAdmin { callback_sig, .. }
+        | cw_types_v010::types::WasmMsg::ClearAdmin { callback_sig, .. } => {
+            *callback_sig = Some(create_callback_signature(contract_addr, &vec![], &[]));
+        }
     }
 
     Ok(())
@@ -901,7 +973,8 @@ fn attach_reply_headers_to_v1_wasm_msg(
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
         cw_types_v1::results::WasmMsg::Execute { msg, code_hash, .. }
-        | cw_types_v1::results::WasmMsg::Instantiate { msg, code_hash, .. } => {
+        | cw_types_v1::results::WasmMsg::Instantiate { msg, code_hash, .. }
+        | cw_types_v1::results::WasmMsg::Migrate { msg, code_hash, .. } => {
             // On cosmwasm v1, submessages execute contracts whose results are sent back to the original caller by using "Reply".
             // Such submessages should be encrypted, but they weren't initially meant to be sent back to the enclave as an input of another contract.
             // To support "sending back" behavior, the enclave expects every encrypted input to be prepended by the recipient's contract hash.
@@ -929,6 +1002,8 @@ fn attach_reply_headers_to_v1_wasm_msg(
 
             *msg = Binary::from(hash_appended_msg.as_slice());
         }
+        cw_types_v1::results::WasmMsg::UpdateAdmin { .. }
+        | cw_types_v1::results::WasmMsg::ClearAdmin { .. } => {}
     }
 
     Ok(())

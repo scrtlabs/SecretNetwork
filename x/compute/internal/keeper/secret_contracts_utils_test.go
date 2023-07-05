@@ -835,7 +835,7 @@ func migrateHelper(
 	nonce := migrateMsgBz[0:32]
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	execResult, err := keeper.Migrate(ctx, contractAddress, txSender, newCodeId, migrateMsgBz)
+	execResult, err := keeper.Migrate(ctx, contractAddress, txSender, newCodeId, migrateMsgBz, nil)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 
@@ -909,7 +909,7 @@ func updateAdminHelper(
 	}
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	err := keeper.UpdateContractAdmin(ctx, contractAddress, sender, newAdmin)
+	err := keeper.UpdateContractAdmin(ctx, contractAddress, sender, newAdmin, nil)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 

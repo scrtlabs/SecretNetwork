@@ -1656,6 +1656,8 @@ pub struct MsgMigrateContract {
     pub contract: ::std::string::String,
     pub code_id: u64,
     pub msg: ::std::vec::Vec<u8>,
+    pub callback_sig: ::std::vec::Vec<u8>,
+    pub callback_code_hash: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1764,6 +1766,58 @@ impl MsgMigrateContract {
     pub fn take_msg(&mut self) -> ::std::vec::Vec<u8> {
         ::std::mem::replace(&mut self.msg, ::std::vec::Vec::new())
     }
+
+    // bytes callback_sig = 7;
+
+
+    pub fn get_callback_sig(&self) -> &[u8] {
+        &self.callback_sig
+    }
+    pub fn clear_callback_sig(&mut self) {
+        self.callback_sig.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_callback_sig(&mut self, v: ::std::vec::Vec<u8>) {
+        self.callback_sig = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_callback_sig(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.callback_sig
+    }
+
+    // Take field
+    pub fn take_callback_sig(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.callback_sig, ::std::vec::Vec::new())
+    }
+
+    // string callback_code_hash = 8;
+
+
+    pub fn get_callback_code_hash(&self) -> &str {
+        &self.callback_code_hash
+    }
+    pub fn clear_callback_code_hash(&mut self) {
+        self.callback_code_hash.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_callback_code_hash(&mut self, v: ::std::string::String) {
+        self.callback_code_hash = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_callback_code_hash(&mut self) -> &mut ::std::string::String {
+        &mut self.callback_code_hash
+    }
+
+    // Take field
+    pub fn take_callback_code_hash(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.callback_code_hash, ::std::string::String::new())
+    }
 }
 
 impl ::protobuf::Message for MsgMigrateContract {
@@ -1791,6 +1845,12 @@ impl ::protobuf::Message for MsgMigrateContract {
                 4 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.msg)?;
                 },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.callback_sig)?;
+                },
+                8 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.callback_code_hash)?;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -1815,6 +1875,12 @@ impl ::protobuf::Message for MsgMigrateContract {
         if !self.msg.is_empty() {
             my_size += ::protobuf::rt::bytes_size(4, &self.msg);
         }
+        if !self.callback_sig.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(7, &self.callback_sig);
+        }
+        if !self.callback_code_hash.is_empty() {
+            my_size += ::protobuf::rt::string_size(8, &self.callback_code_hash);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1832,6 +1898,12 @@ impl ::protobuf::Message for MsgMigrateContract {
         }
         if !self.msg.is_empty() {
             os.write_bytes(4, &self.msg)?;
+        }
+        if !self.callback_sig.is_empty() {
+            os.write_bytes(7, &self.callback_sig)?;
+        }
+        if !self.callback_code_hash.is_empty() {
+            os.write_string(8, &self.callback_code_hash)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1891,6 +1963,16 @@ impl ::protobuf::Message for MsgMigrateContract {
                 |m: &MsgMigrateContract| { &m.msg },
                 |m: &mut MsgMigrateContract| { &mut m.msg },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "callback_sig",
+                |m: &MsgMigrateContract| { &m.callback_sig },
+                |m: &mut MsgMigrateContract| { &mut m.callback_sig },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "callback_code_hash",
+                |m: &MsgMigrateContract| { &m.callback_code_hash },
+                |m: &mut MsgMigrateContract| { &mut m.callback_code_hash },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgMigrateContract>(
                 "MsgMigrateContract",
                 fields,
@@ -1911,6 +1993,8 @@ impl ::protobuf::Clear for MsgMigrateContract {
         self.contract.clear();
         self.code_id = 0;
         self.msg.clear();
+        self.callback_sig.clear();
+        self.callback_code_hash.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2092,6 +2176,7 @@ pub struct MsgUpdateAdmin {
     pub sender: ::std::string::String,
     pub new_admin: ::std::string::String,
     pub contract: ::std::string::String,
+    pub callback_sig: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -2185,6 +2270,32 @@ impl MsgUpdateAdmin {
     pub fn take_contract(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.contract, ::std::string::String::new())
     }
+
+    // bytes callback_sig = 7;
+
+
+    pub fn get_callback_sig(&self) -> &[u8] {
+        &self.callback_sig
+    }
+    pub fn clear_callback_sig(&mut self) {
+        self.callback_sig.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_callback_sig(&mut self, v: ::std::vec::Vec<u8>) {
+        self.callback_sig = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_callback_sig(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.callback_sig
+    }
+
+    // Take field
+    pub fn take_callback_sig(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.callback_sig, ::std::vec::Vec::new())
+    }
 }
 
 impl ::protobuf::Message for MsgUpdateAdmin {
@@ -2204,6 +2315,9 @@ impl ::protobuf::Message for MsgUpdateAdmin {
                 },
                 3 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.contract)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.callback_sig)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -2226,6 +2340,9 @@ impl ::protobuf::Message for MsgUpdateAdmin {
         if !self.contract.is_empty() {
             my_size += ::protobuf::rt::string_size(3, &self.contract);
         }
+        if !self.callback_sig.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(7, &self.callback_sig);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -2240,6 +2357,9 @@ impl ::protobuf::Message for MsgUpdateAdmin {
         }
         if !self.contract.is_empty() {
             os.write_string(3, &self.contract)?;
+        }
+        if !self.callback_sig.is_empty() {
+            os.write_bytes(7, &self.callback_sig)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -2294,6 +2414,11 @@ impl ::protobuf::Message for MsgUpdateAdmin {
                 |m: &MsgUpdateAdmin| { &m.contract },
                 |m: &mut MsgUpdateAdmin| { &mut m.contract },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "callback_sig",
+                |m: &MsgUpdateAdmin| { &m.callback_sig },
+                |m: &mut MsgUpdateAdmin| { &mut m.callback_sig },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgUpdateAdmin>(
                 "MsgUpdateAdmin",
                 fields,
@@ -2313,6 +2438,7 @@ impl ::protobuf::Clear for MsgUpdateAdmin {
         self.sender.clear();
         self.new_admin.clear();
         self.contract.clear();
+        self.callback_sig.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2450,6 +2576,7 @@ pub struct MsgClearAdmin {
     // message fields
     pub sender: ::std::string::String,
     pub contract: ::std::string::String,
+    pub callback_sig: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -2517,6 +2644,32 @@ impl MsgClearAdmin {
     pub fn take_contract(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.contract, ::std::string::String::new())
     }
+
+    // bytes callback_sig = 7;
+
+
+    pub fn get_callback_sig(&self) -> &[u8] {
+        &self.callback_sig
+    }
+    pub fn clear_callback_sig(&mut self) {
+        self.callback_sig.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_callback_sig(&mut self, v: ::std::vec::Vec<u8>) {
+        self.callback_sig = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_callback_sig(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.callback_sig
+    }
+
+    // Take field
+    pub fn take_callback_sig(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.callback_sig, ::std::vec::Vec::new())
+    }
 }
 
 impl ::protobuf::Message for MsgClearAdmin {
@@ -2533,6 +2686,9 @@ impl ::protobuf::Message for MsgClearAdmin {
                 },
                 3 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.contract)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.callback_sig)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -2552,6 +2708,9 @@ impl ::protobuf::Message for MsgClearAdmin {
         if !self.contract.is_empty() {
             my_size += ::protobuf::rt::string_size(3, &self.contract);
         }
+        if !self.callback_sig.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(7, &self.callback_sig);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -2563,6 +2722,9 @@ impl ::protobuf::Message for MsgClearAdmin {
         }
         if !self.contract.is_empty() {
             os.write_string(3, &self.contract)?;
+        }
+        if !self.callback_sig.is_empty() {
+            os.write_bytes(7, &self.callback_sig)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -2612,6 +2774,11 @@ impl ::protobuf::Message for MsgClearAdmin {
                 |m: &MsgClearAdmin| { &m.contract },
                 |m: &mut MsgClearAdmin| { &mut m.contract },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "callback_sig",
+                |m: &MsgClearAdmin| { &m.callback_sig },
+                |m: &mut MsgClearAdmin| { &mut m.callback_sig },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgClearAdmin>(
                 "MsgClearAdmin",
                 fields,
@@ -2630,6 +2797,7 @@ impl ::protobuf::Clear for MsgClearAdmin {
     fn clear(&mut self) {
         self.sender.clear();
         self.contract.clear();
+        self.callback_sig.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2793,25 +2961,33 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     -sdk/types.Coins\xc8\xde\x1f\0\x122\n\x0ccallback_sig\x18\x06\x20\x01(\
     \x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig:\x04\x88\xa0\x1f\0\
     \"0\n\x1aMsgExecuteContractResponse\x12\x12\n\x04data\x18\x01\x20\x01(\
-    \x0cR\x04data\"\x7f\n\x12MsgMigrateContract\x12\x16\n\x06sender\x18\x01\
-    \x20\x01(\tR\x06sender\x12\x1a\n\x08contract\x18\x02\x20\x01(\tR\x08cont\
-    ract\x12#\n\x07code_id\x18\x03\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\
-    \x06CodeID\x12\x10\n\x03msg\x18\x04\x20\x01(\x0cR\x03msg\"0\n\x1aMsgMigr\
-    ateContractResponse\x12\x12\n\x04data\x18\x01\x20\x01(\x0cR\x04data\"a\n\
-    \x0eMsgUpdateAdmin\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\
-    \x1b\n\tnew_admin\x18\x02\x20\x01(\tR\x08newAdmin\x12\x1a\n\x08contract\
-    \x18\x03\x20\x01(\tR\x08contract\"\x18\n\x16MsgUpdateAdminResponse\"C\n\
-    \rMsgClearAdmin\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\
-    \x1a\n\x08contract\x18\x03\x20\x01(\tR\x08contract\"\x17\n\x15MsgClearAd\
-    minResponse2\xcb\x03\n\x03Msg\x12_\n\tStoreCode\x12$.secret.compute.v1be\
-    ta1.MsgStoreCode\x1a,.secret.compute.v1beta1.MsgStoreCodeResponse\x12}\n\
+    \x0cR\x04data\"\xe1\x01\n\x12MsgMigrateContract\x12\x16\n\x06sender\x18\
+    \x01\x20\x01(\tR\x06sender\x12\x1a\n\x08contract\x18\x02\x20\x01(\tR\x08\
+    contract\x12#\n\x07code_id\x18\x03\x20\x01(\x04R\x06codeIdB\n\xe2\xde\
+    \x1f\x06CodeID\x12\x10\n\x03msg\x18\x04\x20\x01(\x0cR\x03msg\x122\n\x0cc\
+    allback_sig\x18\x07\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCal\
+    lbackSig\x12,\n\x12callback_code_hash\x18\x08\x20\x01(\tR\x10callbackCod\
+    eHash\"0\n\x1aMsgMigrateContractResponse\x12\x12\n\x04data\x18\x01\x20\
+    \x01(\x0cR\x04data\"\x95\x01\n\x0eMsgUpdateAdmin\x12\x16\n\x06sender\x18\
+    \x01\x20\x01(\tR\x06sender\x12\x1b\n\tnew_admin\x18\x02\x20\x01(\tR\x08n\
+    ewAdmin\x12\x1a\n\x08contract\x18\x03\x20\x01(\tR\x08contract\x122\n\x0c\
+    callback_sig\x18\x07\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCa\
+    llbackSig\"\x18\n\x16MsgUpdateAdminResponse\"w\n\rMsgClearAdmin\x12\x16\
+    \n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\x1a\n\x08contract\x18\x03\
+    \x20\x01(\tR\x08contract\x122\n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\
+    \x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig\"\x17\n\x15MsgClearAdmin\
+    Response2\x96\x05\n\x03Msg\x12_\n\tStoreCode\x12$.secret.compute.v1beta1\
+    .MsgStoreCode\x1a,.secret.compute.v1beta1.MsgStoreCodeResponse\x12}\n\
     \x13InstantiateContract\x12..secret.compute.v1beta1.MsgInstantiateContra\
     ct\x1a6.secret.compute.v1beta1.MsgInstantiateContractResponse\x12q\n\x0f\
     ExecuteContract\x12*.secret.compute.v1beta1.MsgExecuteContract\x1a2.secr\
     et.compute.v1beta1.MsgExecuteContractResponse\x12q\n\x0fMigrateContract\
     \x12*.secret.compute.v1beta1.MsgMigrateContract\x1a2.secret.compute.v1be\
-    ta1.MsgMigrateContractResponseB<Z:github.com/scrtlabs/SecretNetwork/x/co\
-    mpute/internal/typesb\x06proto3\
+    ta1.MsgMigrateContractResponse\x12e\n\x0bUpdateAdmin\x12&.secret.compute\
+    .v1beta1.MsgUpdateAdmin\x1a..secret.compute.v1beta1.MsgUpdateAdminRespon\
+    se\x12b\n\nClearAdmin\x12%.secret.compute.v1beta1.MsgClearAdmin\x1a-.sec\
+    ret.compute.v1beta1.MsgClearAdminResponseB<Z:github.com/scrtlabs/SecretN\
+    etwork/x/compute/internal/typesb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

@@ -1341,6 +1341,31 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 sequence.to_string(),
             ),
         ])),
+        ExecuteMsg::SendMsgMigrateContract {
+            contract_addr,
+            new_code_id,
+            callback_code_hash,
+            msg,
+        } => Ok(
+            Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+                contract_addr,
+                code_hash: callback_code_hash,
+                code_id: new_code_id.u64(),
+                msg,
+            })),
+        ),
+        ExecuteMsg::SendMsgClearAdmin { contract_addr } => {
+            Ok(Response::new().add_message(CosmosMsg::Wasm(WasmMsg::ClearAdmin { contract_addr })))
+        }
+        ExecuteMsg::SendMsgUpdateAdmin {
+            contract_addr,
+            new_admin,
+        } => Ok(
+            Response::new().add_message(CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
+                contract_addr,
+                admin: new_admin,
+            })),
+        ),
     }
 }
 
@@ -3680,5 +3705,30 @@ pub fn migrate(deps: DepsMut, env: Env, msg: ExecuteMsg) -> StdResult<Response> 
                 sequence.to_string(),
             ),
         ])),
+        ExecuteMsg::SendMsgMigrateContract {
+            contract_addr,
+            new_code_id,
+            callback_code_hash,
+            msg,
+        } => Ok(
+            Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+                contract_addr,
+                code_hash: callback_code_hash,
+                code_id: new_code_id.u64(),
+                msg,
+            })),
+        ),
+        ExecuteMsg::SendMsgClearAdmin { contract_addr } => {
+            Ok(Response::new().add_message(CosmosMsg::Wasm(WasmMsg::ClearAdmin { contract_addr })))
+        }
+        ExecuteMsg::SendMsgUpdateAdmin {
+            contract_addr,
+            new_admin,
+        } => Ok(
+            Response::new().add_message(CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
+                contract_addr,
+                admin: new_admin,
+            })),
+        ),
     }
 }

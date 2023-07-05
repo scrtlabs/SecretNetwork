@@ -120,7 +120,7 @@ func (m msgServer) MigrateContract(goCtx context.Context, msg *types.MsgMigrateC
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	data, err := m.keeper.Migrate(ctx, contractAddr, senderAddr, msg.CodeID, msg.Msg)
+	data, err := m.keeper.Migrate(ctx, contractAddr, senderAddr, msg.CodeID, msg.Msg, msg.CallbackSig)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (m msgServer) UpdateAdmin(goCtx context.Context, msg *types.MsgUpdateAdmin)
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	if err := m.keeper.UpdateContractAdmin(ctx, contractAddr, senderAddr, newAdminAddr); err != nil {
+	if err := m.keeper.UpdateContractAdmin(ctx, contractAddr, senderAddr, newAdminAddr, msg.CallbackSig); err != nil {
 		return nil, err
 	}
 
@@ -183,7 +183,7 @@ func (m msgServer) ClearAdmin(goCtx context.Context, msg *types.MsgClearAdmin) (
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	if err := m.keeper.UpdateContractAdmin(ctx, contractAddr, senderAddr, nil); err != nil {
+	if err := m.keeper.UpdateContractAdmin(ctx, contractAddr, senderAddr, nil, msg.CallbackSig); err != nil {
 		return nil, err
 	}
 

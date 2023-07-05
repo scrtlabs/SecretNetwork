@@ -6777,3 +6777,147 @@ func TestEnclaveFailsAdminIsNotSender(t *testing.T) {
 		})
 	})
 }
+
+func TestContractIsAdminOfAnotherContractMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractB.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"nop":{}}`))), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	history := keeper.GetContractHistory(ctx, contractB)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestContractIsAdminOfAnotherContractUpdateAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_update_admin":{"contract_addr":"%s","new_admin":"%s"}}`, contractB.String(), walletA.String()), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestContractIsAdminOfAnotherContractClearAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_clear_admin":{"contract_addr":"%s"}}`, contractB.String()), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, "")
+}
+
+func TestContractFailsToMigrateAnotherContractBecauseNotAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, walletA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractB.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"nop":{}}`))), false, true, math.MaxUint64, 0)
+	require.NotEmpty(t, execErr)
+	require.Contains(t, execErr.Error(), "requires migrate from admin: migrate contract failed")
+
+	history := keeper.GetContractHistory(ctx, contractB)
+	require.Len(t, history, 1)
+	require.Equal(t, history[0].CodeID, codeID)
+}
+
+func TestContractFailsToMigrateAnotherContractBecauseStdError(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractB.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"std_error":{}}`))), true, true, math.MaxUint64, 0)
+	require.NotEmpty(t, execErr)
+	require.Contains(t, execErr.Error(), "encrypted: Generic error: this is an std error")
+
+	history := keeper.GetContractHistory(ctx, contractB)
+	require.Len(t, history, 1)
+	require.Equal(t, history[0].CodeID, codeID)
+}
+
+func TestContractFailsToUpdateAdminOfAnotherContractBecauseNotAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, walletA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_update_admin":{"contract_addr":"%s","new_admin":"%s"}}`, contractB.String(), contractB.String()), false, true, math.MaxUint64, 0)
+	require.NotEmpty(t, execErr)
+	require.Equal(t, execErr.Error(), "encrypted: dispatch: submessages: caller is not the admin: unauthorized")
+
+	info = keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestContractFailsToClearAdminOfAnotherContractBecauseNotAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, walletA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_clear_admin":{"contract_addr":"%s"}}`, contractB.String()), false, true, math.MaxUint64, 0)
+	require.NotEmpty(t, execErr)
+	require.Equal(t, execErr.Error(), "encrypted: dispatch: submessages: caller is not the admin: unauthorized")
+
+	info = keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, walletA.String())
+}
