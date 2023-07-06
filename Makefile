@@ -421,17 +421,38 @@ build-test-contracts:
 	# sudo apt update
 	# sudo apt install -y binaryen
 	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract
-	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract.wasm
+	mv $(TEST_CONTRACT_V010_PATH)/test-compute-contract/contract.wasm $(TEST_COMPUTE_MODULE_PATH)/contract.wasm
+
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract_with_floats.wasm
+	mv $(TEST_CONTRACT_V010_PATH)/test-compute-contract/contract_with_floats.wasm $(TEST_COMPUTE_MODULE_PATH)/contract_with_floats.wasm
+
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/static-too-high-initial-memory.wasm
+	mv $(TEST_CONTRACT_V010_PATH)/test-compute-contract/static-too-high-initial-memory.wasm $(TEST_COMPUTE_MODULE_PATH)/static-too-high-initial-memory.wasm
+
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
+	mv $(TEST_CONTRACT_V010_PATH)/test-compute-contract/too-high-initial-memory.wasm $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
+
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract
-	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1-contract.wasm
+	mv $(TEST_CONTRACT_V1_PATH)/test-compute-contract/v1-contract.wasm $(TEST_COMPUTE_MODULE_PATH)/v1-contract.wasm
+
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2
-	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1-contract-v2.wasm
+	mv $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2/v1-contract-v2.wasm $(TEST_COMPUTE_MODULE_PATH)/v1-contract-v2.wasm
+
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/ibc-test-contract
-	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/ibc.wasm
+	mv $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/ibc.wasm $(TEST_COMPUTE_MODULE_PATH)/ibc.wasm
+
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v1
-	mv $(TEST_CONTRACT_V1_PATH)/migration/contract-v1/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v1.wasm
+	mv $(TEST_CONTRACT_V1_PATH)/migration/contract-v1/migrate_contract_v1.wasm $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v1.wasm
+
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v2
-	mv $(TEST_CONTRACT_V1_PATH)/migration/contract-v2/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
+	mv $(TEST_CONTRACT_V1_PATH)/migration/contract-v2/migrate_contract_v2.wasm $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
 
 
 prep-go-tests: build-test-contracts bin-data-sw

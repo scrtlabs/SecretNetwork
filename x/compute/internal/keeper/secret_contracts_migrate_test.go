@@ -6779,7 +6779,7 @@ func TestEnclaveFailsAdminIsNotSender(t *testing.T) {
 }
 
 func TestContractIsAdminOfAnotherContractMigrate(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -6801,7 +6801,7 @@ func TestContractIsAdminOfAnotherContractMigrate(t *testing.T) {
 }
 
 func TestContractIsAdminOfAnotherContractUpdateAdmin(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -6820,7 +6820,7 @@ func TestContractIsAdminOfAnotherContractUpdateAdmin(t *testing.T) {
 }
 
 func TestContractIsAdminOfAnotherContractClearAdmin(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -6839,7 +6839,7 @@ func TestContractIsAdminOfAnotherContractClearAdmin(t *testing.T) {
 }
 
 func TestContractFailsToMigrateAnotherContractBecauseNotAdmin(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -6861,7 +6861,7 @@ func TestContractFailsToMigrateAnotherContractBecauseNotAdmin(t *testing.T) {
 }
 
 func TestContractFailsToMigrateAnotherContractBecauseStdError(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -6883,7 +6883,7 @@ func TestContractFailsToMigrateAnotherContractBecauseStdError(t *testing.T) {
 }
 
 func TestContractFailsToUpdateAdminOfAnotherContractBecauseNotAdmin(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
@@ -6903,7 +6903,7 @@ func TestContractFailsToUpdateAdminOfAnotherContractBecauseNotAdmin(t *testing.T
 }
 
 func TestContractFailsToClearAdminOfAnotherContractBecauseNotAdmin(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
