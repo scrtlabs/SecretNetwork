@@ -247,5 +247,6 @@ Buffer update_admin(cache_t *cache,
                     uint64_t gas_limit,
                     Buffer *err,
                     Buffer sig_info,
-                    Buffer admin,
-                    Buffer admin_proof);
+                    Buffer current_admin,
+                    Buffer current_admin_proof,
+                    Buffer new_admin);

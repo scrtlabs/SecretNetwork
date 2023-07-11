@@ -14,6 +14,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"golang.org/x/exp/slices"
 
@@ -6778,7 +6779,7 @@ func TestEnclaveFailsAdminIsNotSender(t *testing.T) {
 	})
 }
 
-func TestContractIsAdminOfAnotherContractMigrate(t *testing.T) {
+func TestContractIsAdminOfAnotherContractMigrateFromExec(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
@@ -6800,7 +6801,56 @@ func TestContractIsAdminOfAnotherContractMigrate(t *testing.T) {
 	require.Equal(t, history[1].CodeID, newCodeId)
 }
 
-func TestContractIsAdminOfAnotherContractUpdateAdmin(t *testing.T) {
+func TestContractIsAdminOfAnotherContractMigrateFromReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"reply":true,"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractB.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"nop":{}}`))), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	history := keeper.GetContractHistory(ctx, contractB)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestContractIsAdminOfAnotherContractMigrateFromMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, execErr := migrateHelper(t, keeper, ctx, newCodeId, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractB.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"nop":{}}`))), true, true, math.MaxUint64)
+	require.Empty(t, execErr)
+
+	history := keeper.GetContractHistory(ctx, contractB)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+
+	history = keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestContractIsAdminOfAnotherContractUpdateAdminFromExec(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
@@ -6819,7 +6869,51 @@ func TestContractIsAdminOfAnotherContractUpdateAdmin(t *testing.T) {
 	require.Equal(t, info.Admin, walletA.String())
 }
 
-func TestContractIsAdminOfAnotherContractClearAdmin(t *testing.T) {
+func TestContractIsAdminOfAnotherContractUpdateAdminFromReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_update_admin":{"contract_addr":"%s","new_admin":"%s","reply":true}}`, contractB.String(), walletA.String()), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestContractIsAdminOfAnotherContractUpdateAdminFromMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, execErr := migrateHelper(t, keeper, ctx, newCodeId, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_update_admin":{"contract_addr":"%s","new_admin":"%s"}}`, contractB.String(), walletA.String()), true, true, math.MaxUint64)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, walletA.String())
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestContractIsAdminOfAnotherContractClearAdminFromExec(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
@@ -6836,6 +6930,50 @@ func TestContractIsAdminOfAnotherContractClearAdmin(t *testing.T) {
 
 	info = keeper.GetContractInfo(ctx, contractB)
 	require.Equal(t, info.Admin, "")
+}
+
+func TestContractIsAdminOfAnotherContractClearAdminFromReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_clear_admin":{"contract_addr":"%s","reply":true}}`, contractB.String()), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, "")
+}
+
+func TestContractIsAdminOfAnotherContractClearAdminFromMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, contractB, _, err := initHelper(t, keeper, ctx, codeID, walletA, contractA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, execErr := migrateHelper(t, keeper, ctx, newCodeId, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_clear_admin":{"contract_addr":"%s"}}`, contractB.String()), true, true, math.MaxUint64)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractB)
+	require.Equal(t, info.Admin, "")
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
 }
 
 func TestContractFailsToMigrateAnotherContractBecauseNotAdmin(t *testing.T) {
@@ -6920,4 +7058,334 @@ func TestContractFailsToClearAdminOfAnotherContractBecauseNotAdmin(t *testing.T)
 
 	info = keeper.GetContractInfo(ctx, contractB)
 	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestContractIsAdminOfItselfMigrateFromExec(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractA.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"nop":{}}`))), false, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestContractIsAdminOfItselfMigrateFromReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"reply":true,"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractA.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"nop":{}}`))), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestContractIsAdminOfItselfMigrateFromMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	newCodeId2, newCodeHash2 := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractA.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractA.String(), newCodeId2, newCodeHash2, base64.RawStdEncoding.EncodeToString([]byte(`{"nop":{}}`)))))), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 3)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[0].Operation, types.ContractCodeHistoryOperationTypeInit)
+	require.Equal(t, history[1].CodeID, newCodeId)
+	require.Equal(t, history[1].Operation, types.ContractCodeHistoryOperationTypeMigrate)
+	require.Equal(t, history[2].CodeID, newCodeId2)
+	require.Equal(t, history[2].Operation, types.ContractCodeHistoryOperationTypeMigrate)
+}
+
+func TestContractIsAdminOfItselfUpdateAdminFromExec(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_update_admin":{"contract_addr":"%s","new_admin":"%s"}}`, contractA.String(), walletA.String()), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestContractIsAdminOfItselfUpdateAdminFromReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_update_admin":{"contract_addr":"%s","new_admin":"%s","reply":true}}`, contractA.String(), walletA.String()), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestContractIsAdminOfItselfUpdateAdminFromMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractA.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"send_msg_update_admin":{"contract_addr":"%s","new_admin":"%s"}}`, contractA.String(), walletA.String())))), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestContractIsAdminOfItselfClearAdminFromExec(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_clear_admin":{"contract_addr":"%s"}}`, contractA.String()), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, "")
+}
+
+func TestContractIsAdminOfItselfClearAdminFromReply(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_clear_admin":{"contract_addr":"%s","reply":true}}`, contractA.String()), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, "")
+}
+
+func TestContractIsAdminOfItselfClearAdminFromMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, contractA.String())
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractA.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"send_msg_clear_admin":{"contract_addr":"%s"}}`, contractA.String())))), true, true, math.MaxUint64, 0)
+	require.Empty(t, execErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, "")
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestContractFailsToMigrateItselfBecauseNotAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractA.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"nop":{}}`))), false, true, math.MaxUint64, 0)
+	require.NotEmpty(t, execErr)
+	require.Contains(t, execErr.Error(), "requires migrate from admin: migrate contract failed")
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 1)
+	require.Equal(t, history[0].CodeID, codeID)
+}
+
+func TestContractFailsToMigrateItselfBecauseStdError(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, contractA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	newCodeId, newCodeHash := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_migrate_contract":{"contract_addr":"%s","new_code_id":"%d","callback_code_hash":"%s","msg":"%s"}}`, contractA.String(), newCodeId, newCodeHash, base64.RawStdEncoding.EncodeToString([]byte(`{"std_error":{}}`))), true, true, math.MaxUint64, 0)
+	require.NotEmpty(t, execErr)
+	require.Contains(t, execErr.Error(), "encrypted: Generic error: this is an std error")
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 1)
+	require.Equal(t, history[0].CodeID, codeID)
+}
+
+func TestContractFailsToUpdateAdminOfItselfBecauseNotAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_update_admin":{"contract_addr":"%s","new_admin":"%s"}}`, contractA.String(), walletA.String()), false, true, math.MaxUint64, 0)
+	require.NotEmpty(t, execErr)
+	require.Equal(t, execErr.Error(), "encrypted: dispatch: submessages: caller is not the admin: unauthorized")
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestContractFailsToClearAdminOfItselfBecauseNotAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractA, walletA, privKeyA, fmt.Sprintf(`{"send_msg_clear_admin":{"contract_addr":"%s"}}`, contractA.String()), false, true, math.MaxUint64, 0)
+	require.NotEmpty(t, execErr)
+	require.Equal(t, execErr.Error(), "encrypted: dispatch: submessages: caller is not the admin: unauthorized")
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestMigrateAfterUpdateAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, privKeyB := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, walletB, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletB.String())
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, execErr := migrateHelper(t, keeper, ctx, newCodeId, contractA, walletB, privKeyB, `{"nop":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, execErr)
+
+	history := keeper.GetContractHistory(ctx, contractA)
+	require.Len(t, history, 2)
+	require.Equal(t, history[0].CodeID, codeID)
+	require.Equal(t, history[1].CodeID, newCodeId)
+}
+
+func TestUpdateAdminAfterUpdateAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, privKeyB := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, walletB, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletB.String())
+
+	_, updateErr = updateAdminHelper(t, keeper, ctx, contractA, walletB, privKeyB, walletA, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+}
+
+func TestClearAdminAfterUpdateAdmin(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, walletB, privKeyB := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletA.String())
+
+	_, updateErr := updateAdminHelper(t, keeper, ctx, contractA, walletA, privKeyA, walletB, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, walletB.String())
+
+	_, updateErr = updateAdminHelper(t, keeper, ctx, contractA, walletB, privKeyB, nil, defaultGasForTests)
+	require.Empty(t, updateErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.Admin, "")
 }

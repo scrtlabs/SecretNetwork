@@ -213,8 +213,9 @@ func UpdateAdmin(
 	querier *Querier,
 	gasLimit uint64,
 	sigInfo []byte,
-	admin []byte,
-	adminProof []byte,
+	currentAdmin []byte,
+	currentAdminProof []byte,
+	newAdmin []byte,
 ) ([]byte, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -234,18 +235,21 @@ func UpdateAdmin(
 	q := buildQuerier(querier)
 	errmsg := C.Buffer{}
 
-	adminBuffer := sendSlice(admin)
-	defer freeAfterSend(adminBuffer)
+	currentAdminBuffer := sendSlice(currentAdmin)
+	defer freeAfterSend(currentAdminBuffer)
 
-	adminProofBuffer := sendSlice(adminProof)
-	defer freeAfterSend(adminProofBuffer)
+	currentAdminProofBuffer := sendSlice(currentAdminProof)
+	defer freeAfterSend(currentAdminProofBuffer)
+
+	newAdminBuffer := sendSlice(newAdmin)
+	defer freeAfterSend(newAdminBuffer)
 
 	//// This is done in order to ensure that goroutines don't
 	//// swap threads between recursive calls to the enclave.
 	//runtime.LockOSThread()
 	//defer runtime.UnlockOSThread()
 
-	res, err := C.update_admin(cache.ptr, id, p, db, a, q, u64(gasLimit), &errmsg, s, adminBuffer, adminProofBuffer)
+	res, err := C.update_admin(cache.ptr, id, p, db, a, q, u64(gasLimit), &errmsg, s, currentAdminBuffer, currentAdminProofBuffer, newAdminBuffer)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		return nil, errorWithMessage(err, errmsg)
 	}

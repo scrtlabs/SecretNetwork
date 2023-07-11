@@ -334,8 +334,8 @@ static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
 static SIG_INFO_ARG: &str = "sig_info";
-static ADMIN_ARG: &str = "admin";
-static ADMIN_PROOF_ARG: &str = "admin_proof";
+static CURRENT_ADMIN_ARG: &str = "current_admin";
+static CURRENT_ADMIN_PROOF_ARG: &str = "current_admin_proof";
 
 fn do_init_cache(
     data_dir: Buffer,
@@ -563,9 +563,9 @@ fn do_migrate(
     let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
     let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
-    let admin = unsafe { admin.read() }.ok_or_else(|| Error::empty_arg(ADMIN_ARG))?;
+    let admin = unsafe { admin.read() }.ok_or_else(|| Error::empty_arg(CURRENT_ADMIN_ARG))?;
     let admin_proof =
-        unsafe { admin_proof.read() }.ok_or_else(|| Error::empty_arg(ADMIN_PROOF_ARG))?;
+        unsafe { admin_proof.read() }.ok_or_else(|| Error::empty_arg(CURRENT_ADMIN_PROOF_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
@@ -587,8 +587,9 @@ pub extern "C" fn update_admin(
     gas_limit: u64,
     err: Option<&mut Buffer>,
     sig_info: Buffer,
-    admin: Buffer,
-    admin_proof: Buffer,
+    current_admin: Buffer,
+    current_admin_proof: Buffer,
+    new_admin: Buffer,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -601,8 +602,9 @@ pub extern "C" fn update_admin(
                 querier,
                 gas_limit,
                 sig_info,
-                admin,
-                admin_proof,
+                current_admin,
+                current_admin_proof,
+                new_admin,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -622,22 +624,32 @@ fn do_update_admin(
     querier: GoQuerier,
     gas_limit: u64,
     sig_info: Buffer,
-    admin: Buffer,
-    admin_proof: Buffer,
+    current_admin: Buffer,
+    current_admin_proof: Buffer,
+    new_admin: Buffer,
 ) -> Result<Vec<u8>, Error> {
     let code_id: Checksum = unsafe { code_id.read() }
         .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
     let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
     let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
-    let admin = unsafe { admin.read() }.ok_or_else(|| Error::empty_arg(ADMIN_ARG))?;
-    let admin_proof =
-        unsafe { admin_proof.read() }.ok_or_else(|| Error::empty_arg(ADMIN_PROOF_ARG))?;
+    let current_admin =
+        unsafe { current_admin.read() }.ok_or_else(|| Error::empty_arg(CURRENT_ADMIN_ARG))?;
+    let current_admin_proof = unsafe { current_admin_proof.read() }
+        .ok_or_else(|| Error::empty_arg(CURRENT_ADMIN_PROOF_ARG))?;
+    let new_admin = unsafe { new_admin.read() }.unwrap_or(&[]);
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_update_admin_raw(&mut instance, params, sig_info, admin, admin_proof);
+    let res = call_update_admin_raw(
+        &mut instance,
+        params,
+        sig_info,
+        current_admin,
+        current_admin_proof,
+        new_admin,
+    );
     instance.recycle();
     Ok(res?)
 }

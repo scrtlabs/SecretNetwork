@@ -414,9 +414,9 @@ func queryHelperImpl(
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happened
-		require.NotZero(t, gasMeter.GetWasmCounter(), err)
+		require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), "%+v", err)
 	}
 
 	if err != nil {
@@ -613,9 +613,9 @@ func execTxBuilderImpl(
 
 		if wasmCallCount < 0 {
 			// default, just check that at least 1 call happened
-			require.NotZero(t, gasMeter.GetWasmCounter(), err)
+			require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
 		} else {
-			require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
+			require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), "%+v", err)
 		}
 
 		if err != nil {
@@ -718,9 +718,9 @@ func initHelperImpl(
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happened
-		require.NotZero(t, gasMeter.GetWasmCounter(), err)
+		require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), "%+v", err)
 	}
 
 	if err != nil {
@@ -841,9 +841,9 @@ func migrateHelper(
 
 	if len(wasmCallCount) == 0 {
 		// default, just check that at least 1 call happened
-		require.NotZero(t, gasMeter.GetWasmCounter(), err)
+		require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount[0]), gasMeter.GetWasmCounter(), err)
+		require.Equal(t, uint64(wasmCallCount[0]), gasMeter.GetWasmCounter(), "%+v", err)
 	}
 
 	if err != nil {
@@ -924,8 +924,8 @@ func fakeUpdateContractAdmin(ctx sdk.Context,
 	contractAddress,
 	caller,
 	newAdmin sdk.AccAddress,
-	adminToSend sdk.AccAddress,
-	adminProof []byte,
+	currentAdminToSend sdk.AccAddress,
+	currentAdminProof []byte,
 ) error {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "update-contract-admin")
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: update-contract-admin")
@@ -960,7 +960,7 @@ func fakeUpdateContractAdmin(ctx sdk.Context,
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminToSend, adminProof)
+	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, currentAdminToSend, currentAdminProof, newAdmin)
 
 	if updateAdminErr != nil {
 		return updateAdminErr
@@ -988,8 +988,8 @@ func fakeUpdateAdminHelper(
 	senderPrivkey crypto.PrivKey,
 	newAdmin sdk.AccAddress,
 	gas uint64,
-	adminToSend sdk.AccAddress,
-	adminProof []byte,
+	currentAdminToSend sdk.AccAddress,
+	currentAdminProof []byte,
 ) (UpdateAdminResult, error) {
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -1009,7 +1009,7 @@ func fakeUpdateAdminHelper(
 	}
 
 	gasBefore := ctx.GasMeter().GasConsumed()
-	err := fakeUpdateContractAdmin(ctx, keeper, contractAddress, sender, newAdmin, adminToSend, adminProof)
+	err := fakeUpdateContractAdmin(ctx, keeper, contractAddress, sender, newAdmin, currentAdminToSend, currentAdminProof)
 	gasAfter := ctx.GasMeter().GasConsumed()
 	gasUsed := gasAfter - gasBefore
 
@@ -1210,9 +1210,9 @@ func fakeMigrateHelper(
 
 	if len(wasmCallCount) == 0 {
 		// default, just check that at least 1 call happened
-		require.NotZero(t, gasMeter.GetWasmCounter(), err)
+		require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount[0]), gasMeter.GetWasmCounter(), err)
+		require.Equal(t, uint64(wasmCallCount[0]), gasMeter.GetWasmCounter(), "%+v", err)
 	}
 
 	if err != nil {

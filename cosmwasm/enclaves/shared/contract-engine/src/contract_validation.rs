@@ -430,7 +430,8 @@ pub fn verify_params(
     should_verify_sig_info: bool,
     should_verify_input: bool,
     verify_params_type: VerifyParamsType,
-    admin: Option<&CanonicalAddr>,
+    current_admin: Option<&CanonicalAddr>,
+    new_admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
     if should_verify_sig_info {
         debug!("Verifying message signatures for: {:?}", sig_info);
@@ -455,7 +456,8 @@ pub fn verify_params(
             contract_address,
             msg,
             verify_params_type,
-            admin,
+            current_admin,
+            new_admin,
         )?;
     }
 
@@ -503,7 +505,8 @@ fn verify_input(
     contract_address: &HumanAddr,
     msg: &SecretMessage,
     verify_params_types: VerifyParamsType,
-    admin: Option<&CanonicalAddr>,
+    current_admin: Option<&CanonicalAddr>,
+    new_admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
     let sdk_messages = get_sdk_messages(sig_info, verify_params_types)?;
 
@@ -514,7 +517,8 @@ fn verify_input(
         contract_address,
         msg,
         verify_params_types,
-        admin,
+        current_admin,
+        new_admin,
     );
 
     if !is_verified {
@@ -713,7 +717,8 @@ fn verify_input_params(
     contract_address: &HumanAddr,
     sent_wasm_input: &SecretMessage,
     verify_params_types: VerifyParamsType,
-    admin: Option<&CanonicalAddr>,
+    current_admin: Option<&CanonicalAddr>,
+    new_admin: Option<&CanonicalAddr>,
 ) -> bool {
     info!("Verifying sdk message against wasm input...");
     // If msg is not found (is None) then it means message verification failed,
@@ -724,7 +729,8 @@ fn verify_input_params(
         contract_address,
         sent_wasm_input,
         verify_params_types,
-        admin,
+        current_admin,
+        new_admin,
     );
 
     let sdk_msg = match sdk_msg {

@@ -504,9 +504,9 @@ func (w *Wasmer) UpdateAdmin(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
-	admin []byte,
-	adminProof []byte,
-	// newAdminProof, error
+	currentAdmin []byte,
+	currentAdminProof []byte,
+	newAdmin []byte,
 ) ([]byte, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
@@ -518,7 +518,7 @@ func (w *Wasmer) UpdateAdmin(
 		return nil, err
 	}
 
-	newAdminProof, err := api.UpdateAdmin(w.cache, newCodeId, paramBin, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, admin, adminProof)
+	newAdminProof, err := api.UpdateAdmin(w.cache, newCodeId, paramBin, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, currentAdmin, currentAdminProof, newAdmin)
 	if err != nil {
 		return nil, err
 	}

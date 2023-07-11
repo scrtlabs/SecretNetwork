@@ -342,10 +342,17 @@ where
         &mut self,
         env: &[u8],
         sig_info: &[u8],
-        admin: &[u8],
-        admin_proof: &[u8],
+        current_admin: &[u8],
+        current_admin_proof: &[u8],
+        new_admin: &[u8],
     ) -> VmResult<Vec<u8>> {
-        let result = self.inner.update_admin(env, sig_info, admin, admin_proof)?;
+        let result = self.inner.update_admin(
+            env,
+            sig_info,
+            current_admin,
+            current_admin_proof,
+            new_admin,
+        )?;
         Ok(result.into_output())
     }
 

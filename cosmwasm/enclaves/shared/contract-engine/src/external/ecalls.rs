@@ -499,10 +499,12 @@ pub unsafe extern "C" fn ecall_update_admin(
     env_len: usize,
     sig_info: *const u8,
     sig_info_len: usize,
-    admin: *const u8,
-    admin_len: usize,
-    admin_proof: *const u8,
-    admin_proof_len: usize,
+    current_admin: *const u8,
+    current_admin_len: usize,
+    current_admin_proof: *const u8,
+    current_admin_proof_len: usize,
+    new_admin: *const u8,
+    new_admin_len: usize,
 ) -> UpdateAdminResult {
     if let Err(err) = oom_handler::register_oom_handler() {
         error!("Could not register OOM handler!");
@@ -513,16 +515,29 @@ pub unsafe extern "C" fn ecall_update_admin(
         || result_update_admin_success_to_result(Err(EnclaveError::FailedFunctionCall));
     validate_const_ptr!(env, env_len as usize, failed_call());
     validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
-    validate_const_ptr!(admin, admin_len as usize, failed_call());
-    validate_const_ptr!(admin_proof, admin_proof_len as usize, failed_call());
+    validate_const_ptr!(current_admin, current_admin_len as usize, failed_call());
+    validate_const_ptr!(
+        current_admin_proof,
+        current_admin_proof_len as usize,
+        failed_call()
+    );
+    // validate_const_ptr!(new_admin, new_admin_len as usize, failed_call());
 
     let env = std::slice::from_raw_parts(env, env_len);
     let sig_info = std::slice::from_raw_parts(sig_info, sig_info_len);
-    let admin = std::slice::from_raw_parts(admin, admin_len);
-    let admin_proof = std::slice::from_raw_parts(admin_proof, admin_proof_len);
+    let current_admin = std::slice::from_raw_parts(current_admin, current_admin_len);
+    let current_admin_proof =
+        std::slice::from_raw_parts(current_admin_proof, current_admin_proof_len);
+    let new_admin = std::slice::from_raw_parts(new_admin, new_admin_len);
 
     let result = panic::catch_unwind(|| {
-        let result = crate::contract_operations::update_admin(env, sig_info, admin, admin_proof);
+        let result = crate::contract_operations::update_admin(
+            env,
+            sig_info,
+            current_admin,
+            current_admin_proof,
+            new_admin,
+        );
         result_update_admin_success_to_result(result)
     });
 

@@ -491,9 +491,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		Caller:  contractAddress,
 	}
 
-	// instantiate wasm contract
-	gas := gasForContract(ctx)
-	response, ogContractKey, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, admin)
+	response, ogContractKey, adminProof, gasUsed, initError := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx), verificationInfo, admin)
 	consumeGas(ctx, gasUsed)
 
 	if initError != nil {
@@ -648,8 +646,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		Caller:  contractAddress,
 	}
 
-	gas := gasForContract(ctx)
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, handleType)
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), verificationInfo, handleType)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -1176,8 +1173,6 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		Caller:  contractAddress,
 	}
 
-	// instantiate wasm contract
-	gas := gasForContract(ctx)
 	marshaledReply, err := json.Marshal(reply)
 	marshaledReply = append(ogTx[0:64], marshaledReply...)
 
@@ -1185,7 +1180,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 		return nil, err
 	}
 
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, ogSigInfo, wasmTypes.HandleTypeReply)
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasForContract(ctx), ogSigInfo, wasmTypes.HandleTypeReply)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -1249,12 +1244,13 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 
 	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey, nil)
 
-	currentAdminProof := k.GetContractInfo(ctx, contractAddress).AdminProof
-	currentAdmin := k.GetContractInfo(ctx, contractAddress).Admin
-
-	currentAdminAddress, err := sdk.AccAddressFromBech32(currentAdmin)
+	currentAdminAddress, err := sdk.AccAddressFromBech32(contractInfo.Admin)
 	if err != nil {
 		return err
+	}
+
+	if newAdmin == nil {
+		newAdmin = sdk.AccAddress{}
 	}
 
 	// prepare querier
@@ -1265,10 +1261,7 @@ func (k Keeper) UpdateContractAdmin(ctx sdk.Context, contractAddress, caller, ne
 		Caller:  contractAddress,
 	}
 
-	// instantiate wasm contract
-	gas := gasForContract(ctx)
-
-	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, currentAdminAddress, currentAdminProof)
+	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), verificationInfo, currentAdminAddress, contractInfo.AdminProof, newAdmin)
 
 	if updateAdminErr != nil {
 		return updateAdminErr
@@ -1362,10 +1355,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		Caller:  contractAddress,
 	}
 
-	// instantiate wasm contract
-	gas := gasForContract(ctx)
-
-	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminAddr, adminProof)
+	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), verificationInfo, adminAddr, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {

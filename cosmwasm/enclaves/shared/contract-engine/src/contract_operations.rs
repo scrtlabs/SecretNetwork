@@ -138,6 +138,7 @@ pub fn init(
         true,
         VerifyParamsType::Init,
         Some(&canonical_admin_address),
+        None,
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -323,6 +324,7 @@ pub fn migrate(
         true,
         VerifyParamsType::Migrate,
         Some(&canonical_admin_address),
+        None,
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -423,8 +425,9 @@ pub fn migrate(
 pub fn update_admin(
     env: &[u8],
     sig_info: &[u8],
-    admin: &[u8],
-    admin_proof: &[u8],
+    current_admin: &[u8],
+    current_admin_proof: &[u8],
+    new_admin: &[u8],
 ) -> Result<UpdateAdminSuccess, EnclaveError> {
     debug!("Starting update_admin");
 
@@ -438,13 +441,14 @@ pub fn update_admin(
     let (sender, contract_address, _block_height, sent_funds) = base_env.get_verification_params();
 
     let canonical_sender_address = to_canonical(sender)?;
-    let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
+    let canonical_current_admin_address = CanonicalAddr::from_vec(current_admin.to_vec());
+    let canonical_new_admin_address = CanonicalAddr::from_vec(new_admin.to_vec());
 
     let og_contract_key = base_env.get_og_contract_key()?;
 
     let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
 
-    if sender_admin_proof != admin_proof {
+    if sender_admin_proof != current_admin_proof {
         error!("Failed to validate sender as current admin for update_admin");
         return Err(EnclaveError::ValidationFailure);
     }
@@ -465,10 +469,11 @@ pub fn update_admin(
         true,
         true,
         VerifyParamsType::UpdateAdmin,
-        Some(&canonical_admin_address),
+        Some(&canonical_current_admin_address),
+        Some(&canonical_new_admin_address),
     )?;
 
-    let new_admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &og_contract_key);
+    let new_admin_proof = generate_admin_proof(&canonical_new_admin_address.0 .0, &og_contract_key);
 
     debug!("update_admin success: {:?}", new_admin_proof);
 
@@ -552,6 +557,7 @@ pub fn handle(
         should_verify_sig_info,
         should_verify_input,
         VerifyParamsType::HandleType(parsed_handle_type),
+        None,
         None,
     )?;
 

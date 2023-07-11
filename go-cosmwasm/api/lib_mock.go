@@ -122,8 +122,9 @@ func UpdateAdmin(
 	querier *Querier,
 	gasLimit uint64,
 	sigInfo []byte,
-	admin []byte,
-	adminProof []byte,
+	currentAdmin []byte,
+	currentAdminProof []byte,
+	newAdmin []byte,
 ) ([]byte, error) {
 	return nil, nil
 }

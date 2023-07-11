@@ -46,10 +46,12 @@ extern "C" {
         env_len: usize,
         sig_info: *const u8,
         sig_info_len: usize,
-        admin: *const u8,
-        admin_len: usize,
-        admin_proof: *const u8,
-        admin_proof_len: usize,
+        current_admin: *const u8,
+        current_admin_len: usize,
+        current_admin_proof: *const u8,
+        current_admin_proof_len: usize,
+        new_admin: *const u8,
+        new_admin_len: usize,
     ) -> sgx_status_t;
 
     /// Trigger the init method in a wasm contract

@@ -95,14 +95,15 @@ pub fn call_update_admin_raw<S: Storage + 'static, A: Api + 'static, Q: Querier 
     instance: &mut Instance<S, A, Q>,
     env: &[u8],
     sig_info: &[u8],
-    admin: &[u8],
-    admin_proof: &[u8],
+    current_admin: &[u8],
+    current_admin_proof: &[u8],
+    new_admin: &[u8],
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(false);
     /*
     call_raw(instance, "init", &[env, msg], MAX_LENGTH_INIT)
     */
-    instance.call_update_admin(env, sig_info, admin, admin_proof)
+    instance.call_update_admin(env, sig_info, current_admin, current_admin_proof, new_admin)
 }
 
 /// Calls Wasm export "init" and returns raw data from the contract.

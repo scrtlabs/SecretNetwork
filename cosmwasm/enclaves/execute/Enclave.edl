@@ -129,10 +129,12 @@ enclave {
             uintptr_t env_len,
             [in, count=sig_info_len] const uint8_t* sig_info,
             uintptr_t sig_info_len,
-            [in, count=admin_len] const uint8_t* admin,
-            uintptr_t admin_len,
-            [in, count=admin_proof_len] const uint8_t* admin_proof,
-            uintptr_t admin_proof_len
+            [in, count=current_admin_len] const uint8_t* current_admin,
+            uintptr_t current_admin_len,
+            [in, count=current_admin_proof_len] const uint8_t* current_admin_proof,
+            uintptr_t current_admin_proof_len,
+            [in, count=new_admin_len] const uint8_t* new_admin,
+            uintptr_t new_admin_len
         );
 
         public HealthCheckResult ecall_health_check();

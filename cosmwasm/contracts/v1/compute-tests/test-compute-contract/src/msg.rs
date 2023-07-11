@@ -429,13 +429,22 @@ pub enum ExecuteMsg {
         new_code_id: Uint64,
         callback_code_hash: String,
         msg: Binary,
+        #[serde(default)]
+        reply: bool,
     },
     SendMsgClearAdmin {
         contract_addr: String,
+        #[serde(default)]
+        reply: bool,
     },
     SendMsgUpdateAdmin {
         contract_addr: String,
         new_admin: String,
+        #[serde(default)]
+        reply: bool,
+    },
+    Echo {
+        data: Binary,
     },
 }
 

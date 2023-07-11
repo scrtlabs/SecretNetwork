@@ -164,8 +164,9 @@ where
         &mut self,
         env: &[u8],
         sig_info: &[u8],
-        admin: &[u8],
-        admin_proof: &[u8],
+        current_admin: &[u8],
+        current_admin_proof: &[u8],
+        new_admin: &[u8],
     ) -> VmResult<UpdateAdminSuccess> {
         trace!(
             "update_admin() called with env: {:?}",
@@ -189,10 +190,12 @@ where
                 env.len(),
                 sig_info.as_ptr(),
                 sig_info.len(),
-                admin.as_ptr(),
-                admin.len(),
-                admin_proof.as_ptr(),
-                admin_proof.len(),
+                current_admin.as_ptr(),
+                current_admin.len(),
+                current_admin_proof.as_ptr(),
+                current_admin_proof.len(),
+                new_admin.as_ptr(),
+                new_admin.len(),
             )
         };
 
