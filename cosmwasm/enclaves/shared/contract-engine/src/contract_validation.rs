@@ -498,6 +498,7 @@ fn verify_signature(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn verify_input(
     sig_info: &SigInfo,
     sent_funds: &[Coin],
@@ -710,6 +711,7 @@ fn verify_callback_sig_impl(
     true
 }
 
+#[allow(clippy::too_many_arguments)]
 fn verify_input_params(
     sdk_messages: &[DirectSdkMsg],
     sender: &CanonicalAddr,

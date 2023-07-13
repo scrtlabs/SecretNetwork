@@ -24,7 +24,6 @@ use crate::txs::tx_from_bytes;
 use crate::wasm_messages::VERIFIED_MESSAGES;
 
 use crate::verify::validator_set::get_validator_set_for_height;
-use enclave_utils::validator_set::ValidatorSetForHeight;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
 const RANDOM_PROOF_LEN: u32 = 80;
@@ -33,6 +32,8 @@ const TX_THRESHOLD: usize = 100_000;
 
 #[no_mangle]
 #[allow(unused_variables)]
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe fn submit_block_signatures_impl(
     in_header: *const u8,
     in_header_len: u32,
