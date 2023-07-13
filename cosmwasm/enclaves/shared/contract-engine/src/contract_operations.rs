@@ -464,7 +464,7 @@ pub fn update_admin(
         &SecretMessage {
             nonce: [0; 32],
             user_public_key: [0; 32],
-            msg: vec![],
+            msg: vec![], // must be empty vec for callback_sig verification
         },
         true,
         true,

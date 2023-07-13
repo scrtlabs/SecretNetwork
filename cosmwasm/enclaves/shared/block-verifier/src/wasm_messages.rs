@@ -23,13 +23,13 @@ pub fn message_is_reg(msg: &protobuf::well_known_types::Any) -> bool {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct VerifiedWasmMessages {
+pub struct VerifiedBlockMessages {
     messages: VecDeque<Vec<u8>>,
     height: u64,
     time: i128,
 }
 
-impl VerifiedWasmMessages {
+impl VerifiedBlockMessages {
     pub fn get_next(&mut self) -> Option<Vec<u8>> {
         self.messages.pop_front()
     }
@@ -64,8 +64,8 @@ impl VerifiedWasmMessages {
 }
 
 lazy_static! {
-    pub static ref VERIFIED_MESSAGES: SgxMutex<VerifiedWasmMessages> =
-        SgxMutex::new(VerifiedWasmMessages::default());
+    pub static ref VERIFIED_BLOCK_MESSAGES: SgxMutex<VerifiedBlockMessages> =
+        SgxMutex::new(VerifiedBlockMessages::default());
 }
 
 #[cfg(feature = "test")]
@@ -203,21 +203,25 @@ pub mod tests {
 
         let ref_tx = tx.clone();
 
-        super::VERIFIED_MESSAGES
+        super::VERIFIED_BLOCK_MESSAGES
             .lock()
             .unwrap()
             .append_msg_from_tx(tx);
 
         assert_eq!(
-            super::VERIFIED_MESSAGES.lock().unwrap().remaining(),
+            super::VERIFIED_BLOCK_MESSAGES.lock().unwrap().remaining(),
             1 as usize
         );
         assert_eq!(
-            super::VERIFIED_MESSAGES.lock().unwrap().get_next().unwrap(),
+            super::VERIFIED_BLOCK_MESSAGES
+                .lock()
+                .unwrap()
+                .get_next()
+                .unwrap(),
             ref_tx.body.unwrap().messages[0].value
         );
         assert_eq!(
-            super::VERIFIED_MESSAGES.lock().unwrap().remaining(),
+            super::VERIFIED_BLOCK_MESSAGES.lock().unwrap().remaining(),
             0 as usize
         );
     }
@@ -231,29 +235,37 @@ pub mod tests {
 
         let ref_tx = tx.clone();
         let ref_msgs = ref_tx.body.unwrap().messages;
-        super::VERIFIED_MESSAGES
+        super::VERIFIED_BLOCK_MESSAGES
             .lock()
             .unwrap()
             .append_msg_from_tx(tx);
 
         assert_eq!(
-            super::VERIFIED_MESSAGES.lock().unwrap().remaining(),
+            super::VERIFIED_BLOCK_MESSAGES.lock().unwrap().remaining(),
             2 as usize
         );
         assert_eq!(
-            &super::VERIFIED_MESSAGES.lock().unwrap().get_next().unwrap(),
+            &super::VERIFIED_BLOCK_MESSAGES
+                .lock()
+                .unwrap()
+                .get_next()
+                .unwrap(),
             &ref_msgs[0].value
         );
         assert_eq!(
-            super::VERIFIED_MESSAGES.lock().unwrap().remaining(),
+            super::VERIFIED_BLOCK_MESSAGES.lock().unwrap().remaining(),
             1 as usize
         );
         assert_eq!(
-            &super::VERIFIED_MESSAGES.lock().unwrap().get_next().unwrap(),
+            &super::VERIFIED_BLOCK_MESSAGES
+                .lock()
+                .unwrap()
+                .get_next()
+                .unwrap(),
             &ref_msgs[1].value
         );
         assert_eq!(
-            super::VERIFIED_MESSAGES.lock().unwrap().remaining(),
+            super::VERIFIED_BLOCK_MESSAGES.lock().unwrap().remaining(),
             0 as usize
         );
     }

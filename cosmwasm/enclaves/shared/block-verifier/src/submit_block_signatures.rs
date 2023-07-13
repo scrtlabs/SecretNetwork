@@ -21,7 +21,7 @@ macro_rules! unwrap_or_return {
 }
 
 use crate::txs::tx_from_bytes;
-use crate::wasm_messages::VERIFIED_MESSAGES;
+use crate::wasm_messages::VERIFIED_BLOCK_MESSAGES;
 
 use crate::verify::validator_set::get_validator_set_for_height;
 
@@ -90,7 +90,7 @@ pub unsafe fn submit_block_signatures_impl(
 
     let txs = unwrap_or_return!(crate::verify::txs::validate_txs(txs_slice, &header));
 
-    let mut message_verifier = VERIFIED_MESSAGES.lock().unwrap();
+    let mut message_verifier = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
     if message_verifier.remaining() != 0 {
         // this will happen if a tx fails - the message queue doesn't get cleared.

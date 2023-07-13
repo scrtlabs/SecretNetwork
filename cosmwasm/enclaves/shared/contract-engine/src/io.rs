@@ -956,7 +956,11 @@ fn encrypt_v010_wasm_msg(
         }
         cw_types_v010::types::WasmMsg::UpdateAdmin { callback_sig, .. }
         | cw_types_v010::types::WasmMsg::ClearAdmin { callback_sig, .. } => {
-            *callback_sig = Some(create_callback_signature(contract_addr, &vec![], &[]));
+            *callback_sig = Some(create_callback_signature(
+                contract_addr,
+                &vec![], /* must be empty vec for callback_sig verification */
+                &[],
+            ));
         }
     }
 
@@ -1014,7 +1018,7 @@ pub fn create_callback_signature(
     msg_to_sign: &Vec<u8>,
     funds_to_send: &[Coin],
 ) -> Vec<u8> {
-    // Hash(Enclave_secret | sender(current contract) | msg_to_pass | sent_funds)
+    // Hash(Enclave_secret | msg_to_pass | sent_funds)
     let mut callback_sig_bytes = KEY_MANAGER
         .get_consensus_callback_secret()
         .unwrap()
@@ -1022,7 +1026,6 @@ pub fn create_callback_signature(
         .get()
         .to_vec();
 
-    //callback_sig_bytes.extend(contract_addr.as_slice());
     callback_sig_bytes.extend(msg_to_sign.as_slice());
     callback_sig_bytes.extend(serde_json::to_vec(funds_to_send).unwrap());
 

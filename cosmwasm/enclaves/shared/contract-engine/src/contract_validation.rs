@@ -23,7 +23,7 @@ use crate::message::is_ibc_msg;
 use crate::types::SecretMessage;
 
 #[cfg(feature = "light-client-validation")]
-use block_verifier::VERIFIED_MESSAGES;
+use block_verifier::VERIFIED_BLOCK_MESSAGES;
 
 extern crate hex;
 
@@ -52,7 +52,7 @@ fn is_subslice(larger: &[u8], smaller: &[u8]) -> bool {
 
 #[cfg(feature = "light-client-validation")]
 pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
-    let verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
+    let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     if verified_msgs.height() != base_env.0.block.height {
         error!("wrong height for this block - 0xF6AC");
         return Err(EnclaveError::ValidationFailure);
@@ -67,9 +67,10 @@ pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
 }
 
 #[cfg(feature = "light-client-validation")]
-pub fn check_msg_matches_state(msg: &SecretMessage) -> bool {
-    let mut verified_wasm_msgs = VERIFIED_MESSAGES.lock().unwrap();
-    let remaining_msgs = verified_wasm_msgs.remaining();
+/// WARNING: this function must be called at most once per message!
+pub fn check_msg_in_current_block(msg: &[u8]) -> bool {
+    let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+    let remaining_msgs = verified_msgs.remaining();
 
     if remaining_msgs == 0 {
         error!("Failed to validate message, error 0x3555");
@@ -79,10 +80,9 @@ pub fn check_msg_matches_state(msg: &SecretMessage) -> bool {
     // Msgs might fail in the sdk before they reach the enclave. In this case we need to run through
     // all the messages available before we can determine that there has been a failure
     // this isn't an attack vector since this can happen anyway by manipulating the state between executions
-    let raw_msg = msg.to_vec();
-    while verified_wasm_msgs.remaining() > 0 {
-        if let Some(expected_msg) = verified_wasm_msgs.get_next() {
-            if is_subslice(&expected_msg, &raw_msg) {
+    while verified_msgs.remaining() > 0 {
+        if let Some(expected_msg) = verified_msgs.get_next() {
+            if is_subslice(&expected_msg, msg) {
                 return true;
             }
         }
@@ -90,9 +90,8 @@ pub fn check_msg_matches_state(msg: &SecretMessage) -> bool {
 
     error!("Failed to validate message, error 0x3255");
 
-    // if this message fails to verify we have to fail the rest of the TX, so we won't get any
-    // other messages
-    verified_wasm_msgs.clear();
+    // if this message fails to verify we have to fail the rest of the block, so we won't get any other messages
+    verified_msgs.clear();
 
     false
 }
@@ -426,7 +425,7 @@ pub fn verify_params(
     sent_funds: &[Coin],
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
-    msg: &SecretMessage,
+    secret_msg: &SecretMessage,
     should_verify_sig_info: bool,
     should_verify_input: bool,
     verify_params_type: VerifyParamsType,
@@ -437,12 +436,7 @@ pub fn verify_params(
         debug!("Verifying message signatures for: {:?}", sig_info);
 
         if let Some(callback_sig) = &sig_info.callback_sig {
-            return verify_callback_sig(callback_sig.as_slice(), sender, msg, sent_funds);
-        }
-
-        #[cfg(feature = "light-client-validation")]
-        if !check_msg_matches_state(msg) {
-            return Err(EnclaveError::ValidationFailure);
+            return verify_callback_sig(callback_sig.as_slice(), sender, secret_msg, sent_funds);
         }
 
         verify_signature(sig_info, sender, verify_params_type)?;
@@ -454,7 +448,7 @@ pub fn verify_params(
             sent_funds,
             sender,
             contract_address,
-            msg,
+            secret_msg,
             verify_params_type,
             current_admin,
             new_admin,
@@ -504,7 +498,7 @@ fn verify_input(
     sent_funds: &[Coin],
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
-    msg: &SecretMessage,
+    secret_msg: &SecretMessage,
     verify_params_types: VerifyParamsType,
     current_admin: Option<&CanonicalAddr>,
     new_admin: Option<&CanonicalAddr>,
@@ -516,11 +510,11 @@ fn verify_input(
         sender,
         sent_funds,
         contract_address,
-        msg,
+        secret_msg,
         verify_params_types,
         current_admin,
         new_admin,
-    );
+    )?;
 
     if !is_verified {
         warn!("Parameter verification failed");
@@ -605,7 +599,7 @@ fn get_sdk_messages(
         SIGN_MODE_DIRECT => {
             let sign_doc =
                 SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), verify_params_types)?;
-            trace!("sign doc: {:?}", sign_doc);
+            trace!("direct sign doc: {:?}", sign_doc);
 
             Ok(sign_doc.body.messages)
         }
@@ -615,10 +609,11 @@ fn get_sdk_messages(
                     warn!("failure to parse StdSignDoc: {:?}", err);
                     EnclaveError::FailedTxVerification
                 })?;
+            trace!("amino sign doc: {:?}", sign_doc);
             let messages: Result<Vec<DirectSdkMsg>, _> = sign_doc
                 .msgs
                 .iter()
-                .map(|x| x.clone().into_cosmwasm_msg())
+                .map(|x| x.clone().into_direct_msg())
                 .collect();
             Ok(messages?)
         }
@@ -651,10 +646,13 @@ fn get_sdk_messages(
                 );
                 EnclaveError::FailedTxVerification
             })?;
+
+            trace!("eip191 sign doc: {:?}", sign_doc);
+
             let messages: Result<Vec<DirectSdkMsg>, _> = sign_doc
                 .msgs
                 .iter()
-                .map(|x| x.clone().into_cosmwasm_msg())
+                .map(|x| x.clone().into_direct_msg())
                 .collect();
             Ok(messages?)
         }
@@ -674,10 +672,10 @@ fn get_sdk_messages(
 fn verify_callback_sig(
     callback_signature: &[u8],
     sender: &CanonicalAddr,
-    msg: &SecretMessage,
+    secret_msg: &SecretMessage,
     sent_funds: &[Coin],
 ) -> Result<(), EnclaveError> {
-    if verify_callback_sig_impl(callback_signature, sender, msg, sent_funds) {
+    if verify_callback_sig_impl(callback_signature, sender, secret_msg, sent_funds) {
         info!("Message verified! msg.sender is the calling contract");
         return Ok(());
     }
@@ -689,20 +687,20 @@ fn verify_callback_sig(
 fn verify_callback_sig_impl(
     callback_signature: &[u8],
     sender: &CanonicalAddr,
-    msg: &SecretMessage,
+    secret_msg: &SecretMessage,
     sent_funds: &[Coin],
 ) -> bool {
     if callback_signature.is_empty() {
         return false;
     }
 
-    let callback_sig = create_callback_signature(sender, &msg.msg, sent_funds);
+    let callback_sig = create_callback_signature(sender, &secret_msg.msg, sent_funds);
 
     if callback_signature != callback_sig {
         trace!(
             "Contract signature does not match with the one sent: {:?}. Expected message to be signed: {:?}",
             callback_signature,
-            String::from_utf8_lossy(msg.msg.as_slice())
+            String::from_utf8_lossy(secret_msg.msg.as_slice())
         );
 
         return false;
@@ -721,7 +719,7 @@ fn verify_input_params(
     verify_params_types: VerifyParamsType,
     current_admin: Option<&CanonicalAddr>,
     new_admin: Option<&CanonicalAddr>,
-) -> bool {
+) -> Result<bool, EnclaveError> {
     info!("Verifying sdk message against wasm input...");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
@@ -745,26 +743,33 @@ fn verify_input_params(
                 sender,
                 sdk_messages
             );
-            return false;
+            return Ok(false);
         }
     };
 
+    if cfg!(feature = "light-client-validation") {
+        info!("Verifying message in signed block...");
+        if !check_msg_in_current_block(&sent_wasm_input.to_vec()) {
+            return Err(EnclaveError::ValidationFailure);
+        }
+    }
+
     info!("Verifying message sender...");
     if let Some(value) = verify_sender(sdk_msg, sender) {
-        return value;
+        return Ok(value);
     }
 
     info!("Verifying contract address...");
     if !verify_contract_address(sdk_msg, contract_address) {
         warn!("Contract address verification failed!");
-        return false;
+        return Ok(false);
     }
 
     info!("Verifying sent funds...");
     if !verify_sent_funds(sdk_msg, sent_funds) {
         warn!("Funds verification failed!");
-        return false;
+        return Ok(false);
     }
 
-    true
+    Ok(true)
 }

@@ -8,9 +8,7 @@ pub mod r#const;
 
 pub mod wasm_messages;
 
-pub use wasm_messages::VERIFIED_MESSAGES;
-
-pub use verify::registration;
+pub use wasm_messages::VERIFIED_BLOCK_MESSAGES;
 
 mod txs;
 

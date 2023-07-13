@@ -360,7 +360,7 @@ pub fn deserialize_ignore_any<'de, D: serde::Deserializer<'de>, T: Default>(
 }
 
 impl AminoSdkMsg {
-    pub fn into_cosmwasm_msg(self) -> Result<DirectSdkMsg, EnclaveError> {
+    pub fn into_direct_msg(self) -> Result<DirectSdkMsg, EnclaveError> {
         match self {
             Self::Migrate {
                 sender,
