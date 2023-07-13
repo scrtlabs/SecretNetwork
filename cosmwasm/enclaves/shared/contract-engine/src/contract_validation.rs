@@ -747,7 +747,8 @@ fn verify_input_params(
         }
     };
 
-    if cfg!(feature = "light-client-validation") {
+    #[cfg(feature = "light-client-validation")]
+    {
         info!("Verifying message in signed block...");
         if !check_msg_in_current_block(&sent_wasm_input.to_vec()) {
             return Err(EnclaveError::ValidationFailure);
