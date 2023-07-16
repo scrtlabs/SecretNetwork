@@ -7389,3 +7389,38 @@ func TestClearAdminAfterUpdateAdmin(t *testing.T) {
 	info = keeper.GetContractInfo(ctx, contractA)
 	require.Equal(t, info.Admin, "")
 }
+
+func TestContractBecmesIbcEnabledAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.IBCPortID, "")
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[ibcContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractA, walletA, privKeyA, `{}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.IBCPortID, "wasm."+contractA.String())
+}
+
+func TestContractNoLongerIbcEnabledAfterMigrate(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[ibcContract], sdk.NewCoins())
+
+	_, _, contractA, _, err := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"init":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, err)
+
+	info := keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.IBCPortID, "wasm."+contractA.String())
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	_, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractA, walletA, privKeyA, `{"nop":{}}`, false, true, math.MaxUint64, 0)
+	require.NotEmpty(t, migErr)
+	require.Contains(t, migErr.Error(), "requires ibc callbacks: migrate contract failed")
+
+	info = keeper.GetContractInfo(ctx, contractA)
+	require.Equal(t, info.IBCPortID, "wasm."+contractA.String())
+}
