@@ -103,19 +103,17 @@ func NewAppModule(keeper Keeper) AppModule {
 }
 
 // ConsensusVersion implements AppModule/ConsensusVersion.
-func (AppModule) ConsensusVersion() uint64 { return 1 }
+func (AppModule) ConsensusVersion() uint64 { return 2 }
 
 func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterMsgServer(configurator.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
 
-	// migrations go here (in the future when we have any)
-	// example:
-
-	// m := keeper.NewMigrator(am.keeper)
-	// if err := configurator.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
-	// 	panic(fmt.Sprintf("failed to migrate x/compute from version 1 to 2: %v", err))
-	// }
+	m := keeper.NewMigrator(am.keeper)
+	err := configurator.RegisterMigration(types.ModuleName, 1, m.Migrate1to2)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {

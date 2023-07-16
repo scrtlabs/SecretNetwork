@@ -883,7 +883,7 @@ func (k Keeper) setContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress,
 
 func (k Keeper) setContractCustomInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractCustomInfo) {
 	store := ctx.KVStore(k.storeKey)
-	store.Set(types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey)
+	k.SetContractKey(ctx, contractAddress, contract.EnclaveKey)
 	// println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey))
 	store.Set(types.GetContractLabelPrefix(contract.Label), contractAddress)
 	// println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress))
@@ -893,20 +893,23 @@ func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, typ
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.ContractKeyPrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	for ; iter.Valid(); iter.Next() {
-		var contract types.ContractInfo
-		k.cdc.MustUnmarshal(iter.Value(), &contract)
+		var contractInfo types.ContractInfo
+		k.cdc.MustUnmarshal(iter.Value(), &contractInfo)
 
-		enclaveId := ctx.KVStore(k.storeKey).Get(types.GetContractEnclaveKey(iter.Key()))
-		// println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(iter.Key()), enclaveId))
-		// println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contract.Label))
+		var contractAddress sdk.AccAddress = iter.Key()
+
+		contractKey, err := k.GetContractKey(ctx, contractAddress)
+		if err != nil {
+			panic(sdkerrors.Wrapf(err, "failed to get contract key for %s", contractAddress.String()))
+		}
 
 		contractCustomInfo := types.ContractCustomInfo{
-			EnclaveKey: enclaveId,
-			Label:      contract.Label,
+			EnclaveKey: &contractKey,
+			Label:      contractInfo.Label,
 		}
 
 		// cb returns true to stop early
-		if cb(iter.Key(), contract, contractCustomInfo) {
+		if cb(contractAddress, contractInfo, contractCustomInfo) {
 			break
 		}
 	}
