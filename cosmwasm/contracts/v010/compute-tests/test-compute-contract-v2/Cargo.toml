@@ -32,8 +32,8 @@ backtraces = ["cosmwasm-std/backtraces"]
 with_floats = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/SecretNetwork", rev = "TODO", package = "secret-cosmwasm-std" }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/SecretNetwork", rev = "TODO", package = "secret-cosmwasm-storage" }
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "0.10.1" }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "0.10.0" }
 schemars = "0.7"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",

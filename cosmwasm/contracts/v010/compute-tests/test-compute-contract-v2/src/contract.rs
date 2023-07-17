@@ -2,9 +2,9 @@ use cosmwasm_storage::{PrefixedStorage, ReadonlySingleton, Singleton};
 
 use cosmwasm_std::{
     log, plaintext_log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Empty, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResult, Querier,
-    QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg,
-    WasmQuery,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, MigrateResponse,
+    MigrateResult, Querier, QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult,
+    Storage, Uint128, WasmMsg, WasmQuery,
 };
 use secp256k1::Secp256k1;
 
@@ -14,7 +14,7 @@ use core::time;
 use mem::MaybeUninit;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{mem, thread};
+use std::{mem, thread, vec};
 
 //// consts
 
@@ -1916,9 +1916,634 @@ fn remove_from_storage_in_query<S: Storage, A: Api, Q: Querier>(
     Ok(Binary(vec![]))
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum MigrateMsg {
+    Nop {},
+}
+
 pub fn migrate<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    msg: MigrateMsg,
+    msg: HandleMsg,
 ) -> MigrateResult {
+    match msg {
+        HandleMsg::WasmMsg { ty } => {
+            if ty == "success" {
+                return Ok(MigrateResponse::default());
+            } else if ty == "err" {
+                return Err(StdError::generic_err("custom error"));
+            } else if ty == "panic" {
+                panic!()
+            }
+
+            return Err(StdError::generic_err("custom error"));
+        }
+        HandleMsg::A {
+            contract_addr,
+            code_hash,
+            x,
+            y,
+        } => Ok(a(deps, env, contract_addr, code_hash, x, y)),
+        HandleMsg::B {
+            contract_addr,
+            code_hash,
+            x,
+            y,
+        } => Ok(b(deps, env, contract_addr, code_hash, x, y)),
+        HandleMsg::C { x, y } => Ok(c(deps, env, x, y)),
+        HandleMsg::UnicodeData {} => Ok(unicode_data(deps, env)),
+        HandleMsg::EmptyLogKeyValue {} => Ok(empty_log_key_value(deps, env)),
+        HandleMsg::EmptyData {} => Ok(empty_data(deps, env)),
+        HandleMsg::NoData {} => Ok(no_data(deps, env)),
+        HandleMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
+        HandleMsg::NoLogs {} => Ok(MigrateResponse::default()),
+        HandleMsg::CallbackToInit { code_id, code_hash } => {
+            Ok(exec_callback_to_init(deps, env, code_id, code_hash))
+        }
+        HandleMsg::CallbackBadParams {
+            contract_addr,
+            code_hash,
+        } => Ok(exec_callback_bad_params(contract_addr, code_hash)),
+        HandleMsg::CallbackContractError {
+            contract_addr,
+            code_hash,
+        } => Ok(exec_with_callback_contract_error(contract_addr, code_hash)),
+        HandleMsg::SetState { key, value } => Ok(set_state(deps, key, value)),
+        HandleMsg::GetState { key } => Ok(get_state(deps, key)),
+        HandleMsg::RemoveState { key } => Ok(remove_state(deps, key)),
+        HandleMsg::TestCanonicalizeAddressErrors {} => test_canonicalize_address_errors(deps),
+        HandleMsg::Panic {} => panic!("panic in exec"),
+        HandleMsg::AllocateOnHeap { bytes } => Ok(allocate_on_heap(bytes as usize)),
+        HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
+            Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
+        }
+        HandleMsg::SendExternalQuery { to, code_hash } => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(vec![send_external_query(deps, to, code_hash)].into()),
+        }),
+        HandleMsg::SendExternalQueryDepthCounter {
+            to,
+            code_hash,
+            depth,
+        } => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(
+                vec![send_external_query_depth_counter(
+                    deps, to, depth, code_hash,
+                )]
+                .into(),
+            ),
+        }),
+        HandleMsg::SendExternalQueryRecursionLimit {
+            to,
+            code_hash,
+            depth,
+        } => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&send_external_query_recursion_limit(
+                deps, to, depth, code_hash,
+            )?)?),
+        }),
+        HandleMsg::SendExternalQueryPanic { to, code_hash } => {
+            send_external_query_panic(deps, to, code_hash)
+        }
+        HandleMsg::SendExternalQueryError { to, code_hash } => {
+            send_external_query_stderror(deps, to, code_hash)
+        }
+        HandleMsg::SendExternalQueryBadAbi { to, code_hash } => {
+            send_external_query_bad_abi(deps, to, code_hash)
+        }
+        HandleMsg::SendExternalQueryBadAbiReceiver { to, code_hash } => {
+            send_external_query_bad_abi_receiver(deps, to, code_hash)
+        }
+        HandleMsg::LogMsgSender {} => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![log("msg.sender", env.message.sender.to_string())],
+            data: None,
+        }),
+        HandleMsg::CallbackToLogMsgSender { to, code_hash } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to.clone(),
+                callback_code_hash: code_hash,
+                msg: Binary::from(r#"{"log_msg_sender":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![log("hi", "hey")],
+            data: None,
+        }),
+        HandleMsg::DepositToContract {} => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&env.message.sent_funds).unwrap()),
+        }),
+        HandleMsg::SendFunds {
+            amount,
+            from,
+            to,
+            denom,
+        } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Bank(BankMsg::Send {
+                from_address: from,
+                to_address: to,
+                amount: vec![Coin {
+                    amount: Uint128(amount as u128),
+                    denom: denom,
+                }],
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::BankMsgSend { to, amount, from } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Bank(BankMsg::Send {
+                from_address: from.unwrap_or(env.contract.address),
+                to_address: to,
+                amount,
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::CosmosMsgCustom {} => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Custom(Empty {})],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendFundsToInitCallback {
+            amount,
+            denom,
+            code_id,
+            code_hash,
+        } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
+                code_id: code_id,
+                callback_code_hash: code_hash,
+                label: String::from("yo"),
+                send: vec![Coin {
+                    amount: Uint128(amount as u128),
+                    denom: denom,
+                }],
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendFundsToExecCallback {
+            amount,
+            denom,
+            to,
+            code_hash,
+        } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                msg: Binary("{\"no_data\":{}}".as_bytes().to_vec()),
+                contract_addr: to,
+                callback_code_hash: code_hash,
+                send: vec![Coin {
+                    amount: Uint128(amount as u128),
+                    denom: denom,
+                }],
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::Sleep { ms } => {
+            thread::sleep(time::Duration::from_millis(ms));
+
+            Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            })
+        }
+        HandleMsg::WithFloats { x, y } => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(use_floats(x, y)),
+        }),
+        HandleMsg::CallToInit {
+            code_id,
+            code_hash,
+            label,
+            msg,
+        } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+                label: label,
+            })],
+            log: vec![log("a", "a")],
+            data: None,
+        }),
+        HandleMsg::CallToExec {
+            addr,
+            code_hash,
+            msg,
+        } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary(msg.as_bytes().into()),
+                send: vec![],
+            })],
+            log: vec![log("b", "b")],
+            data: None,
+        }),
+        HandleMsg::CallToQuery {
+            addr,
+            code_hash,
+            msg,
+        } => {
+            let answer: u32 = deps
+                .querier
+                .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: addr,
+                    callback_code_hash: code_hash,
+                    msg: Binary::from(msg.as_bytes().to_vec()),
+                }))
+                .map_err(|err| {
+                    StdError::generic_err(format!("Got an error from query: {:?}", err))
+                })?;
+
+            Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![log("c", format!("{}", answer))],
+                data: None,
+            })
+        }
+        HandleMsg::StoreReallyLongKey {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(REALLY_LONG, b"hello");
+            Ok(MigrateResponse::default())
+        }
+        HandleMsg::StoreReallyShortKey {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(b"a", b"hello");
+            Ok(MigrateResponse::default())
+        }
+        HandleMsg::StoreReallyLongValue {} => {
+            let mut store = PrefixedStorage::new(b"my_prefix", &mut deps.storage);
+            store.set(b"hello", REALLY_LONG);
+            Ok(MigrateResponse::default())
+        }
+        HandleMsg::Secp256k1Verify {
+            pubkey,
+            sig,
+            msg_hash,
+            iterations,
+        } => {
+            let mut res: MigrateResult = Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_verify(
+                    msg_hash.as_slice(),
+                    sig.as_slice(),
+                    pubkey.as_slice(),
+                ) {
+                    Ok(result) => Ok(MigrateResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", result))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Secp256k1VerifyFromCrate {
+            pubkey,
+            sig,
+            msg_hash,
+            iterations,
+        } => {
+            let mut res: MigrateResult = Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                let secp256k1_verifier = Secp256k1::verification_only();
+
+                let secp256k1_signature =
+                    secp256k1::Signature::from_compact(&sig.0).map_err(|err| {
+                        StdError::generic_err(format!("Malformed signature: {:?}", err))
+                    })?;
+                let secp256k1_pubkey = secp256k1::PublicKey::from_slice(pubkey.0.as_slice())
+                    .map_err(|err| StdError::generic_err(format!("Malformed pubkey: {:?}", err)))?;
+                let secp256k1_msg =
+                    secp256k1::Message::from_slice(&msg_hash.as_slice()).map_err(|err| {
+                        StdError::generic_err(format!(
+                            "Failed to create a secp256k1 message from signed_bytes: {:?}",
+                            err
+                        ))
+                    })?;
+
+                res = match secp256k1_verifier.verify(
+                    &secp256k1_msg,
+                    &secp256k1_signature,
+                    &secp256k1_pubkey,
+                ) {
+                    Ok(()) => Ok(MigrateResponse {
+                        messages: vec![],
+                        log: vec![log("result", "true")],
+                        data: None,
+                    }),
+                    Err(_err) => Ok(MigrateResponse {
+                        messages: vec![],
+                        log: vec![log("result", "false")],
+                        data: None,
+                    }),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Ed25519Verify {
+            pubkey,
+            sig,
+            msg,
+            iterations,
+        } => {
+            let mut res: MigrateResult = Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res =
+                    match deps
+                        .api
+                        .ed25519_verify(msg.as_slice(), sig.as_slice(), pubkey.as_slice())
+                    {
+                        Ok(result) => Ok(MigrateResponse {
+                            messages: vec![],
+                            log: vec![log("result", format!("{}", result))],
+                            data: None,
+                        }),
+                        Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                    };
+            }
+
+            return res;
+        }
+        HandleMsg::Ed25519BatchVerify {
+            pubkeys,
+            sigs,
+            msgs,
+            iterations,
+        } => {
+            let mut res: MigrateResult = Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.ed25519_batch_verify(
+                    msgs.iter()
+                        .map(|m| m.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                    sigs.iter()
+                        .map(|s| s.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                    pubkeys
+                        .iter()
+                        .map(|p| p.as_slice())
+                        .collect::<Vec<&[u8]>>()
+                        .as_slice(),
+                ) {
+                    Ok(result) => Ok(MigrateResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", result))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Secp256k1RecoverPubkey {
+            msg_hash,
+            sig,
+            recovery_param,
+            iterations,
+        } => {
+            let mut res: MigrateResult = Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_recover_pubkey(
+                    msg_hash.as_slice(),
+                    sig.as_slice(),
+                    recovery_param,
+                ) {
+                    Ok(result) => Ok(MigrateResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Secp256k1Sign {
+            msg,
+            privkey,
+            iterations,
+        } => {
+            let mut res: MigrateResult = Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.secp256k1_sign(msg.as_slice(), privkey.as_slice()) {
+                    Ok(result) => Ok(MigrateResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::Ed25519Sign {
+            msg,
+            privkey,
+            iterations,
+        } => {
+            let mut res: MigrateResult = Ok(MigrateResponse {
+                messages: vec![],
+                log: vec![],
+                data: None,
+            });
+
+            // loop for benchmarking
+            for _ in 0..iterations {
+                res = match deps.api.ed25519_sign(msg.as_slice(), privkey.as_slice()) {
+                    Ok(result) => Ok(MigrateResponse {
+                        messages: vec![],
+                        log: vec![log("result", format!("{}", Binary(result).to_base64()))],
+                        data: None,
+                    }),
+                    Err(err) => Err(StdError::generic_err(format!("{:?}", err))),
+                };
+            }
+
+            return res;
+        }
+        HandleMsg::ExecuteFromV1 { counter } => {
+            count(&mut deps.storage).save(&counter)?;
+
+            let mut resp = MigrateResponse::default();
+            resp.data = Some(
+                (count_read(&deps.storage).load()? as u32)
+                    .to_be_bytes()
+                    .into(),
+            );
+
+            Ok(resp)
+        }
+        HandleMsg::IncrementFromV1 { addition } => {
+            if addition == 0 {
+                return Err(StdError::generic_err("got wrong counter"));
+            }
+
+            let new_count = count(&mut deps.storage).load()? + addition;
+            count(&mut deps.storage).save(&new_count)?;
+
+            let mut resp = MigrateResponse::default();
+            resp.data = Some((new_count as u32).to_be_bytes().into());
+
+            Ok(resp)
+        }
+        HandleMsg::AddAttributes {} => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMoreAttributes {} => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![log("attr3", "🍉"), log("attr4", "🥝")],
+            data: None,
+        }),
+        HandleMsg::AddAttributesWithSubmessage {} => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![log("attr1", "🦄"), log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddPlaintextAttributes {} => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMorePlaintextAttributes {} => Ok(MigrateResponse {
+            messages: vec![],
+            log: vec![plaintext_log("attr3", "🍉"), plaintext_log("attr4", "🥝")],
+            data: None,
+        }),
+        HandleMsg::AddPlaintextAttributesWithSubmessage {} => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address,
+                callback_code_hash: env.contract_code_hash,
+                msg: Binary::from(r#"{"add_more_plaintext_attributes":{}}"#.as_bytes().to_vec()),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::AddMixedEventsAndAttributesFromV1 { addr, code_hash } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: addr,
+                callback_code_hash: code_hash,
+                msg: Binary::from(
+                    r#"{"add_more_mixed_attributes_and_events":{}}"#.as_bytes().to_vec(),
+                ),
+                send: vec![],
+            })],
+            log: vec![plaintext_log("attr1", "🦄"), plaintext_log("attr2", "🌈")],
+            data: None,
+        }),
+        HandleMsg::InitNewContract {} => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id: 1,
+                msg: Binary::from(
+                    "{\"counter\":{\"counter\":150, \"expires\":100}}"
+                        .as_bytes()
+                        .to_vec(),
+                ),
+                callback_code_hash: env.contract_code_hash,
+                send: vec![],
+                label: String::from("fi"),
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendMultipleFundsToExecCallback {
+            coins,
+            to,
+            code_hash,
+        } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: to,
+                msg: Binary::from("{\"no_data\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::SendMultipleFundsToInitCallback {
+            coins,
+            code_id,
+            code_hash,
+        } => Ok(MigrateResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id,
+                msg: Binary::from("{\"nop\":{}}".as_bytes().to_vec()),
+                callback_code_hash: code_hash,
+                send: coins,
+                label: "test".to_string(),
+            })],
+            log: vec![],
+            data: None,
+        }),
+        HandleMsg::GetEnv {} => Ok(MigrateResponse {
+            log: vec![log("env", serde_json_wasm::to_string(&env).unwrap())],
+            data: None,
+            messages: vec![],
+        }),
+    }
 }

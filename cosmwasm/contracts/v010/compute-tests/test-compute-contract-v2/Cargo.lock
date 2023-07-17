@@ -277,7 +277,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-contract"
+name = "test-contract-v2"
 version = "0.0.1"
 dependencies = [
  "schemars",
