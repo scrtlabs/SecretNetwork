@@ -15,7 +15,7 @@
   - The admin can update or clear the admin address.
   - The admins of contracts that were instantiated before v1.10 are hardcoded according to [proposal TODO](https://www.mintscan.io/secret/proposals/TODO).
   - Hardcoded admins can only be updated/cleared with a future gov proposal.
-  - When the new MsgMigrateContract is invoked, the `migrate()` function is being called on the new contract code, where the new contract can optionaly perform state migrations. See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/139a0eb18/cosmwasm/contracts/v1/compute-tests/migration/contract-v2/src/contract.rs#L37-L43).
+  - When the new MsgMigrateContract is invoked, the `migrate()` function is being called on the new contract code, where the new contract can optionally perform state migrations. See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/139a0eb18/cosmwasm/contracts/v1/compute-tests/migration/contract-v2/src/contract.rs#L37-L43).
 - Fixed a scenario where the enclave's light client might fail a valid node registration transaction.
 
 # 1.9.3
