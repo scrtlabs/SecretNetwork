@@ -31,7 +31,6 @@ jobs:
             }
             return nil, fmt.Errorf("Asset %s not found", name)
           }' >> ./x/registration/internal/types/reg_keys.go
-      run: 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
