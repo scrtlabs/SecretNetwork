@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "random")]
@@ -6,7 +8,7 @@ use cw_types_generic::{ContractFeature, CwEnv};
 use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
-use cw_types_v010::types::CanonicalAddr;
+use cw_types_v010::types::{CanonicalAddr, HumanAddr};
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo, VerifyParamsType};
 use enclave_crypto::{sha_256, Ed25519PublicKey, KEY_MANAGER};
@@ -254,6 +256,51 @@ fn to_canonical(contract_address: &BaseAddr) -> Result<CanonicalAddr, EnclaveErr
     })
 }
 
+lazy_static::lazy_static! {
+    static ref HARDCODED_CONTRACT_ADMINS: HashMap<&'static str, &'static str> = HashMap::from([
+        (
+            "secret1exampleContractAddress1",
+            "secret1ExampleAdminAddress1",
+        ),
+        (
+            "secret1exampleContractAddress2",
+            "secret1ExampleAdminAddress2",
+        ),
+    ]);
+}
+
+fn is_hardcoded_contract_admin(
+    contract: &CanonicalAddr,
+    admin: &CanonicalAddr,
+    admin_proof: &[u8],
+) -> bool {
+    if admin_proof != [0; enclave_crypto::HASH_SIZE] {
+        return false;
+    }
+
+    let contract = HumanAddr::from_canonical(contract);
+    if contract.is_err() {
+        trace!(
+            "is_hardcoded_contract_admin: failed to convert contract to human address: {:?}",
+            contract.err().unwrap()
+        );
+        return false;
+    }
+    let contract = contract.unwrap();
+
+    let admin = HumanAddr::from_canonical(admin);
+    if admin.is_err() {
+        trace!(
+            "is_hardcoded_contract_admin: failed to convert admin to human address: {:?}",
+            admin.err().unwrap()
+        );
+        return false;
+    }
+    let admin = admin.unwrap();
+
+    HARDCODED_CONTRACT_ADMINS.get(contract.as_str()) == Some(&admin.as_str())
+}
+
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub fn migrate(
     context: Ctx,
@@ -299,15 +346,24 @@ pub fn migrate(
     let canonical_sender_address = to_canonical(sender)?;
     let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
 
-    let og_contract_key = base_env.get_og_contract_key()?;
+    if !is_hardcoded_contract_admin(
+        &canonical_contract_address,
+        &canonical_admin_address,
+        admin_proof,
+    ) {
+        let og_contract_key = base_env.get_og_contract_key()?;
 
-    let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
+        let sender_admin_proof =
+            generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
 
-    if admin_proof != sender_admin_proof {
-        error!("Failed to validate sender as current admin for migrate");
-        return Err(EnclaveError::ValidationFailure);
+        if admin_proof != sender_admin_proof {
+            error!("Failed to validate sender as current admin for migrate");
+            return Err(EnclaveError::ValidationFailure);
+        }
+        debug!("Validated migrate proof successfully");
+    } else {
+        debug!("Found hardcoded admin for migrate");
     }
-    debug!("Validated migration proof successfully");
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
@@ -444,15 +500,24 @@ pub fn update_admin(
     let canonical_current_admin_address = CanonicalAddr::from_vec(current_admin.to_vec());
     let canonical_new_admin_address = CanonicalAddr::from_vec(new_admin.to_vec());
 
-    let og_contract_key = base_env.get_og_contract_key()?;
+    if !is_hardcoded_contract_admin(
+        &canonical_contract_address,
+        &canonical_admin_address,
+        admin_proof,
+    ) {
+        let og_contract_key = base_env.get_og_contract_key()?;
 
-    let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
+        let sender_admin_proof =
+            generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
 
-    if sender_admin_proof != current_admin_proof {
-        error!("Failed to validate sender as current admin for update_admin");
-        return Err(EnclaveError::ValidationFailure);
+        if sender_admin_proof != current_admin_proof {
+            error!("Failed to validate sender as current admin for update_admin");
+            return Err(EnclaveError::ValidationFailure);
+        }
+        debug!("Validated update_admin proof successfully");
+    } else {
+        debug!("Found hardcoded admin for update_admin");
     }
-    debug!("Validated update_admin proof successfully");
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
