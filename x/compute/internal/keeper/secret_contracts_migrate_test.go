@@ -26,6 +26,50 @@ import (
 	ibcchanneltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 )
 
+type MigrateTestContract struct {
+	CosmWasmVersionBefore string
+	CosmWasmVersionAfter  string
+	IsCosmWasmV1Before    bool
+	IsCosmWasmV1After     bool
+	WasmFilePathBefore    string
+	WasmFilePathAfter     string
+}
+
+var migrateTestContracts = []MigrateTestContract{
+	{
+		CosmWasmVersionBefore: "v0.10",
+		CosmWasmVersionAfter:  "v0.10",
+		IsCosmWasmV1Before:    false,
+		IsCosmWasmV1After:     false,
+		WasmFilePathBefore:    TestContractPaths[v010Contract],
+		WasmFilePathAfter:     TestContractPaths[v010MigratedContract],
+	},
+	{
+		CosmWasmVersionBefore: "v1",
+		CosmWasmVersionAfter:  "v1",
+		IsCosmWasmV1Before:    true,
+		IsCosmWasmV1After:     true,
+		WasmFilePathBefore:    TestContractPaths[v1Contract],
+		WasmFilePathAfter:     TestContractPaths[v1MigratedContract],
+	},
+	{
+		CosmWasmVersionBefore: "v0.10",
+		CosmWasmVersionAfter:  "v1",
+		IsCosmWasmV1Before:    false,
+		IsCosmWasmV1After:     true,
+		WasmFilePathBefore:    TestContractPaths[v010Contract],
+		WasmFilePathAfter:     TestContractPaths[v1MigratedContract],
+	},
+	{
+		CosmWasmVersionBefore: "v1",
+		CosmWasmVersionAfter:  "v0.10",
+		IsCosmWasmV1Before:    true,
+		IsCosmWasmV1After:     false,
+		WasmFilePathBefore:    TestContractPaths[v1Contract],
+		WasmFilePathAfter:     TestContractPaths[v010MigratedContract],
+	},
+}
+
 func TestContractAfterMigrate(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[migrateContractV1], sdk.NewCoins())
 
@@ -122,40 +166,40 @@ func TestStdErrorAfterMigrate(t *testing.T) {
 /// copy of exec tests but doing it after a migration:
 
 func TestStateAfterMigrate(t *testing.T) {
-	for _, testContract := range testContracts {
-		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
-			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
+	for _, testContract := range migrateTestContracts {
+		t.Run(testContract.CosmWasmVersionBefore+"->"+testContract.CosmWasmVersionAfter, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePathBefore, sdk.NewCoins())
 
-			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
+			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1Before, defaultGasForTests)
 			require.Empty(t, initErr)
 
-			_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, testContract.IsCosmWasmV1Before, defaultGasForTests, 0)
 			require.Empty(t, execErr)
 
-			_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1Before, defaultGasForTests, 0)
 			require.Empty(t, execErr)
 			require.Equal(t, "🍌", string(data))
 
-			newCodeId, _ := uploadCode(ctx, t, keeper, testContract.WasmFilePathV2, walletA)
+			newCodeId, _ := uploadCode(ctx, t, keeper, testContract.WasmFilePathAfter, walletA)
 
-			_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, math.MaxUint64)
+			_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1After, math.MaxUint64)
 			require.Empty(t, err)
 
-			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1After, defaultGasForTests, 0)
 			require.Empty(t, execErr)
 			require.Equal(t, "🍌", string(data))
 
-			_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"remove_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"remove_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1After, defaultGasForTests, 0)
 			require.Empty(t, execErr)
 
-			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1After, defaultGasForTests, 0)
 			require.Empty(t, execErr)
 			require.Empty(t, data)
 
-			_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, testContract.IsCosmWasmV1After, defaultGasForTests, 0)
 			require.Empty(t, execErr)
 
-			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1After, defaultGasForTests, 0)
 			require.Empty(t, execErr)
 			require.Equal(t, "🍌", string(data))
 		})
