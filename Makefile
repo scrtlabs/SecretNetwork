@@ -434,6 +434,11 @@ build-test-contracts:
 	rm -f $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
 	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/too-high-initial-memory.wasm $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
 
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2
+	
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract-v2.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2/contract-v2.wasm $(TEST_COMPUTE_MODULE_PATH)/contract-v2.wasm
+
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract
 	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1-contract.wasm
 	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/v1-contract.wasm $(TEST_COMPUTE_MODULE_PATH)/v1-contract.wasm

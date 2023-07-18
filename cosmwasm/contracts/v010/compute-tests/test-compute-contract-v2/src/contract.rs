@@ -1944,39 +1944,79 @@ pub fn migrate<S: Storage, A: Api, Q: Querier>(
             code_hash,
             x,
             y,
-        } => Ok(a(deps, env, contract_addr, code_hash, x, y)),
+        } => convert_handle_result_to_migrate_result(Ok(a(
+            deps,
+            env,
+            contract_addr,
+            code_hash,
+            x,
+            y,
+        ))),
         HandleMsg::B {
             contract_addr,
             code_hash,
             x,
             y,
-        } => Ok(b(deps, env, contract_addr, code_hash, x, y)),
-        HandleMsg::C { x, y } => Ok(c(deps, env, x, y)),
-        HandleMsg::UnicodeData {} => Ok(unicode_data(deps, env)),
-        HandleMsg::EmptyLogKeyValue {} => Ok(empty_log_key_value(deps, env)),
-        HandleMsg::EmptyData {} => Ok(empty_data(deps, env)),
-        HandleMsg::NoData {} => Ok(no_data(deps, env)),
+        } => convert_handle_result_to_migrate_result(Ok(b(
+            deps,
+            env,
+            contract_addr,
+            code_hash,
+            x,
+            y,
+        ))),
+        HandleMsg::C { x, y } => convert_handle_result_to_migrate_result(Ok(c(deps, env, x, y))),
+        HandleMsg::UnicodeData {} => {
+            convert_handle_result_to_migrate_result(Ok(unicode_data(deps, env)))
+        }
+        HandleMsg::EmptyLogKeyValue {} => {
+            convert_handle_result_to_migrate_result(Ok(empty_log_key_value(deps, env)))
+        }
+        HandleMsg::EmptyData {} => {
+            convert_handle_result_to_migrate_result(Ok(empty_data(deps, env)))
+        }
+        HandleMsg::NoData {} => convert_handle_result_to_migrate_result(Ok(no_data(deps, env))),
         HandleMsg::ContractError { error_type } => Err(map_string_to_error(error_type)),
         HandleMsg::NoLogs {} => Ok(MigrateResponse::default()),
         HandleMsg::CallbackToInit { code_id, code_hash } => {
-            Ok(exec_callback_to_init(deps, env, code_id, code_hash))
+            convert_handle_result_to_migrate_result(Ok(exec_callback_to_init(
+                deps, env, code_id, code_hash,
+            )))
         }
         HandleMsg::CallbackBadParams {
             contract_addr,
             code_hash,
-        } => Ok(exec_callback_bad_params(contract_addr, code_hash)),
+        } => convert_handle_result_to_migrate_result(Ok(exec_callback_bad_params(
+            contract_addr,
+            code_hash,
+        ))),
         HandleMsg::CallbackContractError {
             contract_addr,
             code_hash,
-        } => Ok(exec_with_callback_contract_error(contract_addr, code_hash)),
-        HandleMsg::SetState { key, value } => Ok(set_state(deps, key, value)),
-        HandleMsg::GetState { key } => Ok(get_state(deps, key)),
-        HandleMsg::RemoveState { key } => Ok(remove_state(deps, key)),
-        HandleMsg::TestCanonicalizeAddressErrors {} => test_canonicalize_address_errors(deps),
+        } => convert_handle_result_to_migrate_result(Ok(exec_with_callback_contract_error(
+            contract_addr,
+            code_hash,
+        ))),
+        HandleMsg::SetState { key, value } => {
+            convert_handle_result_to_migrate_result(Ok(set_state(deps, key, value)))
+        }
+        HandleMsg::GetState { key } => {
+            convert_handle_result_to_migrate_result(Ok(get_state(deps, key)))
+        }
+        HandleMsg::RemoveState { key } => {
+            convert_handle_result_to_migrate_result(Ok(remove_state(deps, key)))
+        }
+        HandleMsg::TestCanonicalizeAddressErrors {} => {
+            convert_handle_result_to_migrate_result(test_canonicalize_address_errors(deps))
+        }
         HandleMsg::Panic {} => panic!("panic in exec"),
-        HandleMsg::AllocateOnHeap { bytes } => Ok(allocate_on_heap(bytes as usize)),
+        HandleMsg::AllocateOnHeap { bytes } => {
+            convert_handle_result_to_migrate_result(Ok(allocate_on_heap(bytes as usize)))
+        }
         HandleMsg::PassNullPointerToImportsShouldThrow { pass_type } => {
-            Ok(pass_null_pointer_to_imports_should_throw(deps, pass_type))
+            convert_handle_result_to_migrate_result(Ok(pass_null_pointer_to_imports_should_throw(
+                deps, pass_type,
+            )))
         }
         HandleMsg::SendExternalQuery { to, code_hash } => Ok(MigrateResponse {
             messages: vec![],
@@ -2009,16 +2049,22 @@ pub fn migrate<S: Storage, A: Api, Q: Querier>(
             )?)?),
         }),
         HandleMsg::SendExternalQueryPanic { to, code_hash } => {
-            send_external_query_panic(deps, to, code_hash)
+            convert_handle_result_to_migrate_result(send_external_query_panic(deps, to, code_hash))
         }
         HandleMsg::SendExternalQueryError { to, code_hash } => {
-            send_external_query_stderror(deps, to, code_hash)
+            convert_handle_result_to_migrate_result(send_external_query_stderror(
+                deps, to, code_hash,
+            ))
         }
         HandleMsg::SendExternalQueryBadAbi { to, code_hash } => {
-            send_external_query_bad_abi(deps, to, code_hash)
+            convert_handle_result_to_migrate_result(send_external_query_bad_abi(
+                deps, to, code_hash,
+            ))
         }
         HandleMsg::SendExternalQueryBadAbiReceiver { to, code_hash } => {
-            send_external_query_bad_abi_receiver(deps, to, code_hash)
+            convert_handle_result_to_migrate_result(send_external_query_bad_abi_receiver(
+                deps, to, code_hash,
+            ))
         }
         HandleMsg::LogMsgSender {} => Ok(MigrateResponse {
             messages: vec![],
@@ -2546,4 +2592,14 @@ pub fn migrate<S: Storage, A: Api, Q: Querier>(
             messages: vec![],
         }),
     }
+}
+
+fn convert_handle_result_to_migrate_result(handle_result: HandleResult) -> MigrateResult {
+    let handle_response = handle_result?;
+    let migrate_response = MigrateResponse {
+        messages: handle_response.messages,
+        log: handle_response.log,
+        data: handle_response.data,
+    };
+    Ok(migrate_response)
 }
