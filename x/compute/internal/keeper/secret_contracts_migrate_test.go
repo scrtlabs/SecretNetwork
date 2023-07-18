@@ -122,36 +122,44 @@ func TestStdErrorAfterMigrate(t *testing.T) {
 /// copy of exec tests but doing it after a migration:
 
 func TestStateAfterMigrate(t *testing.T) {
-	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+	for _, testContract := range testContracts {
+		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
-	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-	require.Empty(t, initErr)
+			_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
+			require.Empty(t, initErr)
 
-	_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, true, defaultGasForTests, 0)
-	require.Empty(t, execErr)
+			_, _, _, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			require.Empty(t, execErr)
 
-	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+			_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Equal(t, "🍌", string(data))
 
-	_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, true, math.MaxUint64)
-	require.Empty(t, err)
+			newCodeId, _ := uploadCode(ctx, t, keeper, testContract.WasmFilePathV2, walletA)
 
-	_, _, data, _, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
-	require.Empty(t, execErr)
-	require.Equal(t, "🍌", string(data))
+			_, err := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, math.MaxUint64)
+			require.Empty(t, err)
 
-	_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"remove_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
-	require.Empty(t, execErr)
+			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Equal(t, "🍌", string(data))
 
-	_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
-	require.Empty(t, execErr)
-	require.Empty(t, data)
+			_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"remove_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			require.Empty(t, execErr)
 
-	_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, true, defaultGasForTests, 0)
-	require.Empty(t, execErr)
+			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Empty(t, data)
 
-	_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, true, defaultGasForTests, 0)
-	require.Empty(t, execErr)
-	require.Equal(t, "🍌", string(data))
+			_, _, _, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"set_state":{"key":"banana","value":"🍌"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+
+			_, _, data, _, _, execErr = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_state":{"key":"banana"}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 0)
+			require.Empty(t, execErr)
+			require.Equal(t, "🍌", string(data))
+		})
+	}
 }
 
 func TestAddrValidateFunctionAfterMigrate(t *testing.T) {

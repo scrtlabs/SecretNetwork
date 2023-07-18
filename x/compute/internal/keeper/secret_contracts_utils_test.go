@@ -36,6 +36,7 @@ type TestContract struct {
 	CosmWasmVersion string
 	IsCosmWasmV1    bool
 	WasmFilePath    string
+	WasmFilePathV2  string
 }
 
 var testContracts = []TestContract{
@@ -43,10 +44,12 @@ var testContracts = []TestContract{
 		CosmWasmVersion: "v0.10",
 		IsCosmWasmV1:    false,
 		WasmFilePath:    TestContractPaths[v010Contract],
+		WasmFilePathV2:  TestContractPaths[v010MigratedContract],
 	}, {
 		CosmWasmVersion: "v1",
 		IsCosmWasmV1:    true,
 		WasmFilePath:    TestContractPaths[v1Contract],
+		WasmFilePathV2:  TestContractPaths[v1MigratedContract],
 	},
 }
 

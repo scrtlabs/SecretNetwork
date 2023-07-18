@@ -110,6 +110,7 @@ pub enum InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    Nop {},
     WasmMsg {
         ty: String,
     },
@@ -675,6 +676,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> HandleResult {
     match msg {
+        HandleMsg::Nop {} => Ok(HandleResponse::default()),
         HandleMsg::WasmMsg { ty } => {
             if ty == "success" {
                 return Ok(HandleResponse::default());
@@ -1928,6 +1930,7 @@ pub fn migrate<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> MigrateResult {
     match msg {
+        HandleMsg::Nop {} => Ok(MigrateResponse::default()),
         HandleMsg::WasmMsg { ty } => {
             if ty == "success" {
                 return Ok(MigrateResponse::default());

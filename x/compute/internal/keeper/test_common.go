@@ -108,6 +108,7 @@ import (
 const (
 	hackAtomContract            = "hackatom.wasm"
 	v010Contract                = "contract.wasm"
+	v010MigratedContract        = "contract-v2.wasm"
 	v1Contract                  = "v1-contract.wasm"
 	v1MigratedContract          = "v1-contract-v2.wasm"
 	plaintextLogsContract       = "plaintext_logs.wasm"
@@ -127,6 +128,7 @@ const contractPath = "testdata"
 var TestContractPaths = map[string]string{
 	hackAtomContract:            filepath.Join(".", contractPath, hackAtomContract),
 	v010Contract:                filepath.Join(".", contractPath, v010Contract),
+	v010MigratedContract:        filepath.Join(".", contractPath, v010MigratedContract),
 	v1Contract:                  filepath.Join(".", contractPath, v1Contract),
 	v1MigratedContract:          filepath.Join(".", contractPath, v1MigratedContract),
 	plaintextLogsContract:       filepath.Join(".", contractPath, plaintextLogsContract),

@@ -437,7 +437,7 @@ func (w *Wasmer) Migrate(
 	proof := data[64:96]
 	data = data[96:]
 
-	var respV010orV1 V010orV1ContractInitResponse
+	var respV010orV1 ContractExecResponse
 	err = json.Unmarshal(data, &respV010orV1)
 
 	if err != nil {
@@ -491,7 +491,7 @@ func (w *Wasmer) Migrate(
 		}
 	}
 
-	return nil, nil, nil, gasUsed, fmt.Errorf("instantiate: cannot detect response type (v0.10 or v1)")
+	return nil, nil, nil, gasUsed, fmt.Errorf("migrate: cannot detect response type (v0.10 or v1)")
 }
 
 // UpdateAdmin will update or clear a contract admin.
