@@ -4,7 +4,7 @@ pub mod contract;
 mod wasm {
     use super::contract;
     use cosmwasm_std::{
-        do_handle, do_init, do_query, ExternalApi, ExternalQuerier, ExternalStorage,
+        do_handle, do_init, do_migrate, do_query, ExternalApi, ExternalQuerier, ExternalStorage,
     };
 
     #[no_mangle]
