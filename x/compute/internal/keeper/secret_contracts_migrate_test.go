@@ -7400,7 +7400,7 @@ func TestOldAdminCanChangeAdminByPassingOldProof(t *testing.T) {
 	}
 }
 
-func TestOldAdminCanMigrateChangeAdminByPassingOldProof(t *testing.T) {
+func TestOldAdminCanMigrateByPassingOldProof(t *testing.T) {
 	for _, testContract := range migrateTestContracts {
 		t.Run(testContract.CosmWasmVersionBefore+"->"+testContract.CosmWasmVersionAfter, func(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, walletB, _ := setupTest(t, testContract.WasmFilePathBefore, sdk.NewCoins())

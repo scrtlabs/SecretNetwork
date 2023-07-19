@@ -40,11 +40,11 @@ pub fn migrate_result_to_vm_result(other: MigrateResult) -> VmResult<MigrateSucc
         MigrateResult::Success {
             output,
             new_contract_key,
-            contract_key_proof,
+            new_contract_key_proof,
         } => Ok(MigrateSuccess {
             output: unsafe { exports::recover_buffer(output) }.unwrap_or_else(Vec::new),
             new_contract_key,
-            contract_key_proof,
+            new_contract_key_proof,
         }),
         MigrateResult::Failure { err } => Err(err.into()),
     }
@@ -52,8 +52,8 @@ pub fn migrate_result_to_vm_result(other: MigrateResult) -> VmResult<MigrateSucc
 
 pub fn update_admin_result_to_vm_result(other: UpdateAdminResult) -> VmResult<UpdateAdminSuccess> {
     match other {
-        UpdateAdminResult::UpdateAdminSuccess { admin_proof } => {
-            Ok(UpdateAdminSuccess { admin_proof })
+        UpdateAdminResult::UpdateAdminSuccess { new_admin_proof } => {
+            Ok(UpdateAdminSuccess { new_admin_proof })
         }
         UpdateAdminResult::UpdateAdminFailure { err } => Err(err.into()),
     }
@@ -64,13 +64,13 @@ pub struct MigrateSuccess {
     /// A pointer to the output of the execution
     output: Vec<u8>,
     new_contract_key: [u8; 64],
-    contract_key_proof: [u8; 32],
+    new_contract_key_proof: [u8; 32],
 }
 
 impl MigrateSuccess {
     pub fn into_output(self) -> Vec<u8> {
         let mut out_vec = self.new_contract_key.to_vec();
-        out_vec.extend_from_slice(&self.contract_key_proof);
+        out_vec.extend_from_slice(&self.new_contract_key_proof);
         out_vec.extend_from_slice(&self.output);
         out_vec
     }
@@ -78,12 +78,12 @@ impl MigrateSuccess {
 
 /// This struct is returned from a migrate method.
 pub struct UpdateAdminSuccess {
-    admin_proof: [u8; 32],
+    new_admin_proof: [u8; 32],
 }
 
 impl UpdateAdminSuccess {
     pub fn into_output(self) -> Vec<u8> {
-        self.admin_proof.to_vec()
+        self.new_admin_proof.to_vec()
     }
 }
 

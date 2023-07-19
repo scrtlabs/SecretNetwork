@@ -90,7 +90,7 @@ pub fn init(
     // let duration = start.elapsed();
     // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
     debug!(
-        "******************** init RUNNING WITH CODE: {:?}",
+        "******************** init RUNNING WITH CODE: {:x?}",
         contract_hash
     );
 
@@ -123,6 +123,7 @@ pub fn init(
         &block_height,
         &contract_hash,
         &canonical_contract_address,
+        None,
     )?;
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
@@ -173,7 +174,9 @@ pub fn init(
     // let duration = start.elapsed();
     // trace!("Time elapsed in start_engine: {:?}", duration);
 
-    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
+    let mut versioned_env = base_env
+        .clone()
+        .into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -321,7 +324,7 @@ pub fn migrate(
     // let duration = start.elapsed();
     // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
     debug!(
-        "******************** migrate RUNNING WITH CODE: {:?}",
+        "******************** migrate RUNNING WITH CODE: {:x?}",
         contract_hash
     );
 
@@ -422,6 +425,7 @@ pub fn migrate(
         &block_height,
         &contract_hash,
         &canonical_contract_address,
+        Some(&og_contract_key),
     )?;
 
     #[cfg(feature = "random")]
@@ -459,7 +463,7 @@ pub fn migrate(
 
     // todo: can move the key to somewhere in the output message if we want
 
-    let contract_key_proof = generate_contract_key_proof(
+    let new_contract_key_proof = generate_contract_key_proof(
         &canonical_contract_address.0 .0,
         &contract_code.hash(),
         &og_contract_key,
@@ -467,14 +471,14 @@ pub fn migrate(
     );
 
     debug!(
-        "Migrate success: {:?}, {:?}",
-        new_contract_key, contract_key_proof
+        "Migrate success: {:x?}, {:x?}",
+        new_contract_key, new_contract_key_proof
     );
 
     Ok(MigrateSuccess {
         output,
         new_contract_key,
-        contract_key_proof,
+        new_contract_key_proof,
     })
 }
 
@@ -546,9 +550,7 @@ pub fn update_admin(
 
     debug!("update_admin success: {:?}", new_admin_proof);
 
-    Ok(UpdateAdminSuccess {
-        admin_proof: new_admin_proof,
-    })
+    Ok(UpdateAdminSuccess { new_admin_proof })
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
@@ -568,7 +570,7 @@ pub fn handle(
     let contract_hash = contract_code.hash();
 
     debug!(
-        "******************** HANDLE RUNNING WITH CODE: {:?}",
+        "******************** HANDLE RUNNING WITH CODE: {:x?}",
         contract_hash
     );
 
@@ -585,8 +587,9 @@ pub fn handle(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let og_contract_key =
-        validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
+    validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
+
+    let og_contract_key = base_env.get_og_contract_key()?;
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
@@ -686,12 +689,15 @@ pub fn handle(
     }
 
     #[cfg(feature = "random")]
-    set_random_in_env(
-        block_height,
-        &og_contract_key,
-        &mut engine,
-        &mut versioned_env,
-    );
+    {
+        let contract_key_for_random = base_env.get_latest_contract_key()?;
+        set_random_in_env(
+            block_height,
+            &contract_key_for_random,
+            &mut engine,
+            &mut versioned_env,
+        );
+    }
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -786,14 +792,15 @@ pub fn query(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let og_contract_key =
-        validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
+    validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
 
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
 
     let ValidatedMessage { validated_msg, .. } =
         validate_msg(&decrypted_msg, &contract_hash, None, None)?;
+
+    let og_contract_key = base_env.get_og_contract_key()?;
 
     let mut engine = start_engine(
         context,

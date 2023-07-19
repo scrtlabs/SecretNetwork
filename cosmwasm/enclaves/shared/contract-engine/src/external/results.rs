@@ -85,7 +85,7 @@ pub struct MigrateSuccess {
     /// The output of the calculation
     pub output: Vec<u8>,
     pub new_contract_key: [u8; 64],
-    pub contract_key_proof: [u8; 32],
+    pub new_contract_key_proof: [u8; 32],
 }
 
 pub fn result_migrate_success_to_result(
@@ -95,7 +95,7 @@ pub fn result_migrate_success_to_result(
         Ok(MigrateSuccess {
             output,
             new_contract_key,
-            contract_key_proof,
+            new_contract_key_proof,
         }) => {
             let user_buffer = unsafe {
                 let mut user_buffer = std::mem::MaybeUninit::<UserSpaceBuffer>::uninit();
@@ -114,7 +114,7 @@ pub fn result_migrate_success_to_result(
             MigrateResult::Success {
                 output: user_buffer,
                 new_contract_key,
-                contract_key_proof,
+                new_contract_key_proof,
             }
         }
         Err(err) => MigrateResult::Failure { err },
@@ -123,15 +123,15 @@ pub fn result_migrate_success_to_result(
 
 /// This struct is returned from a migrate method.
 pub struct UpdateAdminSuccess {
-    pub admin_proof: [u8; 32],
+    pub new_admin_proof: [u8; 32],
 }
 
 pub fn result_update_admin_success_to_result(
     result: Result<UpdateAdminSuccess, EnclaveError>,
 ) -> UpdateAdminResult {
     match result {
-        Ok(UpdateAdminSuccess { admin_proof }) => {
-            UpdateAdminResult::UpdateAdminSuccess { admin_proof }
+        Ok(UpdateAdminSuccess { new_admin_proof }) => {
+            UpdateAdminResult::UpdateAdminSuccess { new_admin_proof }
         }
         Err(err) => UpdateAdminResult::UpdateAdminFailure { err },
     }

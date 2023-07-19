@@ -524,7 +524,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		k.setContractInfo(ctx, contractAddress, &contractInfo)
 		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
 			OgContractKey:           ogContractKey,
-			CurrentContractKey:      ogContractKey,
+			CurrentContractKey:      nil,
 			CurrentContractKeyProof: nil,
 		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
@@ -574,7 +574,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		k.setContractInfo(ctx, contractAddress, &contractInfo)
 		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
 			OgContractKey:           ogContractKey,
-			CurrentContractKey:      ogContractKey,
+			CurrentContractKey:      nil,
 			CurrentContractKeyProof: nil,
 		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
