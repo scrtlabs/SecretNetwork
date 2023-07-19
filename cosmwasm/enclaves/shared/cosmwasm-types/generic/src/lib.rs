@@ -79,10 +79,8 @@ impl BaseEnv {
             let current_contract_key =
                 if let Some(current_contract_key) = &contract_key.current_contract_key {
                     &current_contract_key.0
-                } else if let Some(og_contract_key) = &contract_key.og_contract_key {
-                    &og_contract_key.0
                 } else {
-                    warn!("Tried to get an empty current_contract_key & og_contract_key");
+                    warn!("Tried to get an empty current_contract_key");
                     return Err(EnclaveError::FailedContractAuthentication);
                 };
 
@@ -126,6 +124,16 @@ impl BaseEnv {
         } else {
             warn!("Tried to get current_contract_key_proof from an empty contract_key");
             Err(EnclaveError::FailedContractAuthentication)
+        }
+    }
+
+    /// get_latest_contract_key is used to get either current_contract_key or og_contract_key, in case there isn't a current_contract_key since the contract was never migrated.
+    /// This is used for seeding the random sent to the contract, and for verifying the admin when migrating and updating the admin.
+    pub fn get_latest_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+        if self.was_migrated() {
+            self.get_current_contract_key()
+        } else {
+            self.get_og_contract_key()
         }
     }
 

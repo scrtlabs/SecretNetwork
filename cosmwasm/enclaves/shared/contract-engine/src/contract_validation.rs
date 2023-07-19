@@ -104,6 +104,7 @@ pub fn generate_contract_key(
     block_height: &u64,
     contract_hash: &[u8; HASH_SIZE],
     contract_address: &CanonicalAddr,
+    og_contract_key: Option<&[u8; CONTRACT_KEY_LENGTH]>,
 ) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
 
@@ -122,6 +123,7 @@ pub fn generate_contract_key(
         &sender_id,
         contract_hash,
         &(contract_address.0).0,
+        og_contract_key,
     );
 
     contract_key[0..32].copy_from_slice(&sender_id);
@@ -143,12 +145,18 @@ pub fn generate_contract_id(
     sender_id: &[u8; HASH_SIZE],
     code_hash: &[u8; HASH_SIZE],
     contract_address: &[u8],
+    og_contract_key: Option<&[u8; CONTRACT_KEY_LENGTH]>,
 ) -> [u8; HASH_SIZE] {
     let authentication_key = consensus_state_ikm.derive_key_from_this(sender_id.as_ref());
 
     let mut input_data = sender_id.to_vec();
     input_data.extend_from_slice(code_hash);
     input_data.extend_from_slice(contract_address);
+
+    if let Some(og_contract_key) = og_contract_key {
+        input_data.extend_from_slice(og_contract_key);
+    }
+
     authentication_key.sign_sha_256(&input_data)
 }
 
@@ -156,6 +164,7 @@ pub fn validate_current_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
     contract_address: &CanonicalAddr,
     contract_code: &ContractCode,
+    og_contract_key: Option<&[u8; CONTRACT_KEY_LENGTH]>,
 ) -> Result<(), EnclaveError> {
     // parse contract key -> < signer_id || authentication_code >
     let mut signer_id: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
@@ -180,6 +189,7 @@ pub fn validate_current_contract_key(
         &signer_id,
         &contract_code.hash(),
         contract_address.as_slice(),
+        og_contract_key,
     );
 
     if calculated_authentication_id == expected_authentication_id {
@@ -196,19 +206,22 @@ pub fn validate_contract_key(
     base_env: &BaseEnv,
     canonical_contract_address: &CanonicalAddr,
     contract_code: &ContractCode,
-) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
-    let current_contract_key: [u8; CONTRACT_KEY_LENGTH] = base_env.get_current_contract_key()?;
-
-    validate_current_contract_key(
-        &current_contract_key,
-        canonical_contract_address,
-        contract_code,
-    )?;
+) -> Result<(), EnclaveError> {
+    let og_contract_key: [u8; CONTRACT_KEY_LENGTH] = base_env.get_og_contract_key()?;
 
     if base_env.was_migrated() {
         trace!("Contract was migrated, validating proof");
 
-        let og_contract_key: [u8; CONTRACT_KEY_LENGTH] = base_env.get_og_contract_key()?;
+        let current_contract_key: [u8; CONTRACT_KEY_LENGTH] =
+            base_env.get_current_contract_key()?;
+
+        validate_current_contract_key(
+            &current_contract_key,
+            canonical_contract_address,
+            contract_code,
+            Some(&og_contract_key),
+        )?;
+
         let sent_contract_key_proof = base_env.get_current_contract_key_proof()?;
 
         let contract_key_proof = generate_contract_key_proof(
@@ -223,25 +236,31 @@ pub fn validate_contract_key(
             return Err(EnclaveError::ValidationFailure);
         }
 
-        // og_contract_key is always used in engine for state encryption
-        Ok(og_contract_key)
+        Ok(())
     } else {
-        // og_contract_key is always used in engine for state encryption
-        // contract wasn't previously migrated, thus og_contract_key == current_contract_key
-        Ok(current_contract_key)
+        trace!("Contract still has original code, validating contract_key");
+
+        validate_current_contract_key(
+            &og_contract_key,
+            canonical_contract_address,
+            contract_code,
+            None,
+        )?;
+
+        Ok(())
     }
 }
 
 pub fn generate_contract_key_proof(
     contract_address: &[u8],
     code_hash: &[u8],
-    prev_contract_key: &[u8],
+    og_contract_key: &[u8],
     new_contract_key: &[u8],
 ) -> [u8; enclave_crypto::HASH_SIZE] {
     let mut data_to_hash = vec![];
     data_to_hash.extend_from_slice(contract_address);
     data_to_hash.extend_from_slice(code_hash);
-    data_to_hash.extend_from_slice(prev_contract_key);
+    data_to_hash.extend_from_slice(og_contract_key);
     data_to_hash.extend_from_slice(new_contract_key);
 
     let contract_key_proof_secret = KEY_MANAGER.get_contract_key_proof_secret().unwrap();

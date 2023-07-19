@@ -1086,7 +1086,7 @@ func fakeMigrate(ctx sdk.Context,
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminToSend, adminProof)
+	response, newContractKey, newContractKeyProof, newAdminProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminToSend, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {
@@ -1118,6 +1118,7 @@ func fakeMigrate(ctx sdk.Context,
 	k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
 
 	contractInfo.CodeID = newCodeID
+	contractInfo.AdminProof = newAdminProof
 	k.setContractInfo(ctx, contractAddress, &contractInfo)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(

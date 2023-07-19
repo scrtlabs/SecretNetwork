@@ -59,10 +59,13 @@ we need to allocate memory regions inside the VM's instance and copy
 `env` & `msg` into those memory regions inside the VM's instance.
 */
 
-fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
+fn generate_admin_proof(
+    admin: &[u8],
+    current_contract_key: &[u8],
+) -> [u8; enclave_crypto::HASH_SIZE] {
     let mut data_to_hash = vec![];
     data_to_hash.extend_from_slice(admin);
-    data_to_hash.extend_from_slice(contract_key);
+    data_to_hash.extend_from_slice(current_contract_key);
 
     let admin_proof_secret = KEY_MANAGER.get_admin_proof_secret().unwrap();
 
@@ -90,7 +93,7 @@ pub fn init(
     // let duration = start.elapsed();
     // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
     debug!(
-        "******************** init RUNNING WITH CODE: {:?}",
+        "******************** init RUNNING WITH CODE: {:x?}",
         contract_hash
     );
 
@@ -123,6 +126,7 @@ pub fn init(
         &block_height,
         &contract_hash,
         &canonical_contract_address,
+        None,
     )?;
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
@@ -173,7 +177,9 @@ pub fn init(
     // let duration = start.elapsed();
     // trace!("Time elapsed in start_engine: {:?}", duration);
 
-    let mut versioned_env = base_env.into_versioned_env(&engine.get_api_version());
+    let mut versioned_env = base_env
+        .clone()
+        .into_versioned_env(&engine.get_api_version());
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -321,7 +327,7 @@ pub fn migrate(
     // let duration = start.elapsed();
     // trace!("Time elapsed in ContractCode::new is: {:?}", duration);
     debug!(
-        "******************** migrate RUNNING WITH CODE: {:?}",
+        "******************** migrate RUNNING WITH CODE: {:x?}",
         contract_hash
     );
 
@@ -346,7 +352,7 @@ pub fn migrate(
     let canonical_sender_address = to_canonical(sender)?;
     let canonical_admin_address = CanonicalAddr::from_vec(admin.to_vec());
 
-    let og_contract_key = base_env.get_og_contract_key()?;
+    let latest_contract_key = base_env.get_latest_contract_key()?;
 
     if is_hardcoded_contract_admin(
         &canonical_contract_address,
@@ -356,7 +362,7 @@ pub fn migrate(
         debug!("Found hardcoded admin for migrate");
     } else {
         let sender_admin_proof =
-            generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
+            generate_admin_proof(&canonical_sender_address.0 .0, &latest_contract_key);
 
         if admin_proof != sender_admin_proof {
             error!("Failed to validate sender as current admin for migrate");
@@ -398,6 +404,8 @@ pub fn migrate(
     // let duration = start.elapsed();
     // trace!("Time elapsed in validate_msg: {:?}", duration);
 
+    let og_contract_key = base_env.get_og_contract_key()?;
+
     //let start = Instant::now();
     let mut engine = start_engine(
         context,
@@ -422,6 +430,7 @@ pub fn migrate(
         &block_height,
         &contract_hash,
         &canonical_contract_address,
+        Some(&og_contract_key),
     )?;
 
     #[cfg(feature = "random")]
@@ -459,22 +468,25 @@ pub fn migrate(
 
     // todo: can move the key to somewhere in the output message if we want
 
-    let contract_key_proof = generate_contract_key_proof(
+    let new_contract_key_proof = generate_contract_key_proof(
         &canonical_contract_address.0 .0,
         &contract_code.hash(),
         &og_contract_key,
         &new_contract_key,
     );
 
+    let new_admin_proof = generate_admin_proof(&canonical_admin_address.0 .0, &new_contract_key);
+
     debug!(
-        "Migrate success: {:?}, {:?}",
-        new_contract_key, contract_key_proof
+        "Migrate success: {:?}, {:?}, {:?}",
+        new_contract_key, new_contract_key_proof, new_admin_proof
     );
 
     Ok(MigrateSuccess {
         output,
         new_contract_key,
-        contract_key_proof,
+        new_contract_key_proof,
+        new_admin_proof,
     })
 }
 
@@ -513,9 +525,10 @@ pub fn update_admin(
         return Err(EnclaveError::ValidationFailure);
     }
 
-    let og_contract_key = base_env.get_og_contract_key()?;
+    let latest_contract_key = base_env.get_latest_contract_key()?;
 
-    let sender_admin_proof = generate_admin_proof(&canonical_sender_address.0 .0, &og_contract_key);
+    let sender_admin_proof =
+        generate_admin_proof(&canonical_sender_address.0 .0, &latest_contract_key);
 
     if sender_admin_proof != current_admin_proof {
         error!("Failed to validate sender as current admin for update_admin");
@@ -542,13 +555,12 @@ pub fn update_admin(
         Some(&canonical_new_admin_address),
     )?;
 
-    let new_admin_proof = generate_admin_proof(&canonical_new_admin_address.0 .0, &og_contract_key);
+    let new_admin_proof =
+        generate_admin_proof(&canonical_new_admin_address.0 .0, &latest_contract_key);
 
     debug!("update_admin success: {:?}", new_admin_proof);
 
-    Ok(UpdateAdminSuccess {
-        admin_proof: new_admin_proof,
-    })
+    Ok(UpdateAdminSuccess { new_admin_proof })
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
@@ -568,7 +580,7 @@ pub fn handle(
     let contract_hash = contract_code.hash();
 
     debug!(
-        "******************** HANDLE RUNNING WITH CODE: {:?}",
+        "******************** HANDLE RUNNING WITH CODE: {:x?}",
         contract_hash
     );
 
@@ -585,8 +597,9 @@ pub fn handle(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let og_contract_key =
-        validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
+    let og_contract_key = base_env.get_og_contract_key()?;
+
+    validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
@@ -686,12 +699,15 @@ pub fn handle(
     }
 
     #[cfg(feature = "random")]
-    set_random_in_env(
-        block_height,
-        &og_contract_key,
-        &mut engine,
-        &mut versioned_env,
-    );
+    {
+        let contract_key_for_random = base_env.get_latest_contract_key()?;
+        set_random_in_env(
+            block_height,
+            &contract_key_for_random,
+            &mut engine,
+            &mut versioned_env,
+        );
+    }
 
     versioned_env.set_contract_hash(&contract_hash);
 
@@ -786,14 +802,15 @@ pub fn query(
 
     let canonical_contract_address = to_canonical(contract_address)?;
 
-    let og_contract_key =
-        validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
+    validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
 
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
 
     let ValidatedMessage { validated_msg, .. } =
         validate_msg(&decrypted_msg, &contract_hash, None, None)?;
+
+    let og_contract_key = base_env.get_og_contract_key()?;
 
     let mut engine = start_engine(
         context,

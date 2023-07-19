@@ -2293,8 +2293,8 @@ func TestCheckGas(t *testing.T) {
 	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"Nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
-	// 1097 is the sum of all the overhead that goes into a contract call beyond the base cost (reading/writing keys, calculations, etc)
-	baseContractUsage := types.InstanceCost + 1097
+	// 1031 is the sum of all the overhead that goes into a contract call beyond the base cost (reading/writing keys, calculations, etc)
+	baseContractUsage := types.InstanceCost + 1031
 
 	_, _, _, events, baseGasUsed, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"check_gas":{}}`, true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
@@ -2313,7 +2313,7 @@ func TestConsumeExact(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// not sure where the 16 extra gas comes vs the previous check_gas test, but it makes everything play nice, so....
-	baseContractUsage := types.InstanceCost + 1097 - 16
+	baseContractUsage := types.InstanceCost + 1031 - 16
 
 	for _, test := range []struct {
 		description   string

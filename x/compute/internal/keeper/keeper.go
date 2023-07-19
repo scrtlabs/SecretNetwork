@@ -524,7 +524,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		k.setContractInfo(ctx, contractAddress, &contractInfo)
 		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
 			OgContractKey:           ogContractKey,
-			CurrentContractKey:      ogContractKey,
+			CurrentContractKey:      nil,
 			CurrentContractKeyProof: nil,
 		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
@@ -574,7 +574,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 		k.setContractInfo(ctx, contractAddress, &contractInfo)
 		k.SetContractKey(ctx, contractAddress, &types.ContractKey{
 			OgContractKey:           ogContractKey,
-			CurrentContractKey:      ogContractKey,
+			CurrentContractKey:      nil,
 			CurrentContractKeyProof: nil,
 		})
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
@@ -1358,7 +1358,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		Caller:  contractAddress,
 	}
 
-	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), verificationInfo, adminAddr, adminProof)
+	response, newContractKey, newContractKeyProof, newAdminProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gasForContract(ctx), verificationInfo, adminAddr, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {
@@ -1390,6 +1390,7 @@ func (k Keeper) Migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
 
 	contractInfo.CodeID = newCodeID
+	contractInfo.AdminProof = newAdminProof
 	k.setContractInfo(ctx, contractAddress, &contractInfo)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
