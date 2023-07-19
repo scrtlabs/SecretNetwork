@@ -83,6 +83,10 @@ jobs:
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm
       - uses: actions/upload-artifact@v3
         with:
+          name: contract-v2.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract-v2.wasm
+      - uses: actions/upload-artifact@v3
+        with:
           name: v1-contract.wasm
           path: cosmwasm/contracts/v1/compute-tests/test-compute-contract/v1-contract.wasm
       - uses: actions/upload-artifact@v3
@@ -139,6 +143,9 @@ jobs:
           name: contract.wasm
       - uses: actions/download-artifact@v3
         with:
+          name: contract-v2.wasm
+      - uses: actions/download-artifact@v3
+        with:
           name: v1-contract.wasm
           path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
@@ -162,6 +169,7 @@ jobs:
           # cp /opt/mount/librandom_api.so /usr/lib/librandom_api.so
           # cp /opt/mount/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
           cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
+          cp contract-v2.wasm ./x/compute/internal/keeper/testdata/contract-v2.wasm
           cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
           cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
