@@ -3,7 +3,7 @@
 package types
 
 func GetApiKey() ([]byte, error) {
-	apiKeyFile, err := Asset("api_key.txt") //nolint:typecheck
+	apiKeyFile, err := Asset("api_key.txt") //nolint:all
 	if err != nil {
 		return nil, err
 	}
@@ -12,7 +12,7 @@ func GetApiKey() ([]byte, error) {
 }
 
 func GetSpid() ([]byte, error) {
-	apiKeyFile, err := Asset("spid.txt") //nolint:typecheck
+	apiKeyFile, err := Asset("spid.txt") //nolint:all
 	if err != nil {
 		return nil, err
 	}
