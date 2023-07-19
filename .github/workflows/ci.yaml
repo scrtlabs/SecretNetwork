@@ -84,7 +84,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: contract-v2.wasm
-          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract-v2.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract-v2/contract-v2.wasm
       - uses: actions/upload-artifact@v3
         with:
           name: v1-contract.wasm
