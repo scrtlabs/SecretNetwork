@@ -163,7 +163,6 @@ pub fn init(
     // trace!("Time elapsed in engine.init: {:?}", duration);
 
     *used_gas = engine.gas_used();
-
     let output = result?;
 
     engine
@@ -331,7 +330,6 @@ pub fn handle(
 
     let mut output = result?;
 
-    // This gets refunded because it will get charged later by the sdk
     let refund_cache_gas = engine
         .flush_cache()
         .map_err(|_| EnclaveError::FailedFunctionCall)?;

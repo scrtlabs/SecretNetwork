@@ -10,49 +10,7 @@ use tendermint::merkle;
 
 use crate::READ_PROOFER;
 
-const MAX_VARIABLE_LENGTH: u32 = 100_000;
-
-// TODO this is the same macro as in `block-verifier` - dedup when possible
-macro_rules! validate_input_length {
-    ($input:expr, $var_name:expr, $constant:expr) => {
-        if $input > $constant {
-            error!(
-                "Error: {} ({}) is larger than the constant value ({})",
-                $var_name, $input, $constant
-            );
-            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-        }
-    };
-}
-
-/// # Safety
-///  This function reads buffers which must be correctly initialized by the caller,
-/// see safety section of slice::[from_raw_parts](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html#safety)
-///
-#[no_mangle]
-#[allow(unused_variables)]
-pub unsafe extern "C" fn ecall_submit_store_roots(
-    in_roots: *const u8,
-    in_roots_len: u32,
-    in_compute_root: *const u8,
-    in_compute_root_len: u32,
-) -> sgx_status_t {
-    validate_input_length!(in_roots_len, "roots", MAX_VARIABLE_LENGTH);
-    validate_const_ptr!(
-        in_roots,
-        in_roots_len as usize,
-        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
-    );
-    validate_input_length!(in_compute_root_len, "roots", MAX_VARIABLE_LENGTH);
-    validate_const_ptr!(
-        in_compute_root,
-        in_compute_root_len as usize,
-        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
-    );
-
-    let store_roots_slice = slice::from_raw_parts(in_roots, in_roots_len as usize);
-    let compute_root_slice = slice::from_raw_parts(in_compute_root, in_compute_root_len as usize);
-
+pub fn submit_store_roots(store_roots_slice: &[u8], compute_root_slice: &[u8]) -> sgx_status_t {
     let store_roots: Pairs = Pairs::decode(store_roots_slice).unwrap();
     let mut store_roots_bytes = vec![];
 

@@ -3,6 +3,11 @@ use cosmos_proto::tx::tx::Tx;
 use lazy_static::lazy_static;
 
 use std::sync::SgxMutex;
+
+lazy_static! {
+    pub static ref VERIFIED_MESSAGES: SgxMutex<VerifiedWasmMessages> =
+        SgxMutex::new(VerifiedWasmMessages::default());
+}
 // use cosmrs::{tx as cosmtx, Tx};
 // use enclave_utils::tx_bytes::TxBytesForHeight;
 // use log::error;
@@ -85,11 +90,6 @@ impl VerifiedWasmMessages {
     pub fn clear(&mut self) {
         self.messages.clear()
     }
-}
-
-lazy_static! {
-    pub static ref VERIFIED_MESSAGES: SgxMutex<VerifiedWasmMessages> =
-        SgxMutex::new(VerifiedWasmMessages::default());
 }
 
 #[cfg(feature = "test")]

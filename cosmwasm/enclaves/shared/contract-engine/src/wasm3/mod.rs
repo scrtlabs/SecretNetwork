@@ -1,3 +1,4 @@
+use alloc::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 
 use log::*;
@@ -24,9 +25,9 @@ use crate::query_chain::encrypt_and_query_chain;
 use crate::random::MSG_COUNTER;
 use crate::types::IoNonce;
 
+use crate::block_cache::BLOCK_CACHE;
 use gas::{get_exhausted_amount, get_remaining_gas, use_gas};
 use module_cache::create_module_instance;
-
 mod gas;
 pub mod module_cache;
 mod validation;
@@ -533,6 +534,16 @@ impl Engine {
         // todo: optimize to only charge for writes that change chain state
         let total_gas_to_refund = self.context.kv_cache.drain_gas_tracker();
 
+        debug!("Before saving to cache");
+        // store kv cache into the block cache - if we access this key later in the block we will want to
+        let mut block_cache = BLOCK_CACHE.lock().unwrap();
+        block_cache.insert(
+            self.context.contract_key.clone(),
+            self.context.kv_cache.clone(),
+        );
+
+        debug!("After saving to cache");
+
         let keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .context
             .kv_cache
@@ -798,9 +809,7 @@ fn host_read_db(
 
     debug!("db_read reading key {}", show_bytes(&state_key_name));
 
-    let value = context.kv_cache.read(&state_key_name);
-
-    if let Some(unwrapped) = value {
+    if let Some(unwrapped) = context.kv_cache.read(&state_key_name) {
         debug!("Got value from cache");
         let ptr_to_region_in_wasm_vm = write_to_memory(instance, &unwrapped).map_err(|err| {
             debug!(
@@ -811,6 +820,24 @@ fn host_read_db(
         })?;
 
         return Ok(ptr_to_region_in_wasm_vm as i32);
+    }
+
+    let block_cache = BLOCK_CACHE.lock().unwrap();
+
+    if let Some(kv_cache) = block_cache.get(context.contract_key.as_slice()) {
+        if let Some(unwrapped) = kv_cache.read(&state_key_name) {
+            debug!("Got value from cache");
+            let ptr_to_region_in_wasm_vm =
+                write_to_memory(instance, &unwrapped).map_err(|err| {
+                    debug!(
+                        "read_db() error while trying to allocate {} bytes for the value",
+                        unwrapped.len(),
+                    );
+                    err
+                })?;
+
+            return Ok(ptr_to_region_in_wasm_vm as i32);
+        }
     }
 
     debug!("Missed value in cache");

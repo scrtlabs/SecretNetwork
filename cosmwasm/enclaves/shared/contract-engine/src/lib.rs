@@ -5,8 +5,10 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate alloc;
 extern crate sgx_types;
 
+mod block_cache;
 mod contract_operations;
 mod contract_validation;
 mod cosmwasm_config;
@@ -24,6 +26,7 @@ mod wasm;
 #[cfg(feature = "wasm3")]
 mod wasm3;
 
+pub use block_cache::clear_block_cache;
 pub use contract_operations::{handle, init, query};
 
 #[cfg(feature = "test")]

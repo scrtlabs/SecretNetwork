@@ -15,6 +15,14 @@ pub struct db_t {
 // and then check it when converting to GoResult manually
 #[repr(C)]
 pub struct DB_vtable {
+    pub read_db_no_proof: extern "C" fn(
+        *mut db_t,
+        *mut gas_meter_t,
+        *mut u64,
+        Buffer,
+        *mut Buffer,
+        *mut Buffer,
+    ) -> i32,
     pub read_db: extern "C" fn(
         *mut db_t,
         *mut gas_meter_t,
@@ -63,6 +71,8 @@ impl Storage for DB {
         let mut mp_key_buf = Buffer::default();
         let mut err = Buffer::default();
         let mut used_gas = 0_u64;
+
+        #[cfg(feature = "read-db-proofs")]
         let go_result: GoResult = (self.vtable.read_db)(
             self.state,
             self.gas_meter,
@@ -75,6 +85,18 @@ impl Storage for DB {
             &mut err as *mut Buffer,
         )
         .into();
+
+        #[cfg(not(feature = "read-db-proofs"))]
+        let go_result: GoResult = (self.vtable.read_db_no_proof)(
+            self.state,
+            self.gas_meter,
+            &mut used_gas as *mut u64,
+            key_buf,
+            &mut result_buf as *mut Buffer,
+            &mut err as *mut Buffer,
+        )
+        .into();
+
         let gas_info = GasInfo::with_externally_used(used_gas);
         let _key = unsafe { key_buf.consume() };
 
