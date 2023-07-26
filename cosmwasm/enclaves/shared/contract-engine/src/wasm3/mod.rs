@@ -824,7 +824,7 @@ fn host_read_db(
 
     let block_cache = BLOCK_CACHE.lock().unwrap();
 
-    if let Some(kv_cache) = block_cache.get(context.contract_key.as_slice()) {
+    if let Some(kv_cache) = block_cache.get(&context.contract_key) {
         if let Some(unwrapped) = kv_cache.read(&state_key_name) {
             debug!("Got value from cache");
             let ptr_to_region_in_wasm_vm =
