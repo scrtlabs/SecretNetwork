@@ -943,7 +943,7 @@ func fakeUpdateContractAdmin(ctx sdk.Context,
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
 	}
 
-	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
 
 	contractKey, err := k.GetContractKey(ctx, contractAddress)
 	if err != nil {
@@ -963,7 +963,7 @@ func fakeUpdateContractAdmin(ctx sdk.Context,
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, currentAdminToSend, currentAdminProof, newAdmin)
+	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, sigInfo, currentAdminToSend, currentAdminProof, newAdmin)
 
 	if updateAdminErr != nil {
 		return updateAdminErr
@@ -1039,7 +1039,7 @@ func fakeMigrate(ctx sdk.Context,
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
 	}
 
-	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
 
 	contractInfo, _, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
@@ -1086,7 +1086,7 @@ func fakeMigrate(ctx sdk.Context,
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
 
-	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, adminToSend, adminProof)
+	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, sigInfo, adminToSend, adminProof)
 	consumeGas(ctx, gasUsed)
 
 	if migrateErr != nil {
@@ -1133,14 +1133,14 @@ func fakeMigrate(ctx sdk.Context,
 			return nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
 		}
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, verificationInfo)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, sigInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "dispatch")
 		}
 
 		return data, nil
 	case *v1wasmTypes.Response:
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, verificationInfo)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, sigInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "dispatch")
 		}

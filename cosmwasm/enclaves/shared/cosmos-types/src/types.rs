@@ -213,9 +213,9 @@ pub enum VerifyParamsType {
     UpdateAdmin,
 }
 
-// This is called `VerificationInfo` on the Go side
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct SigInfo {
+    pub tx_bytes: Binary,
     pub sign_bytes: Binary,
     #[serde(with = "SignModeDef")]
     pub sign_mode: proto::tx::signing::SignMode,
@@ -420,7 +420,6 @@ impl AminoSdkMsg {
                     contract,
                     msg,
                     sent_funds,
-                    callback_sig,
                 })
             }
             Self::Instantiate {
@@ -458,7 +457,6 @@ impl AminoSdkMsg {
                     init_msg,
                     init_funds,
                     label,
-                    callback_sig,
                     admin,
                 })
             }
@@ -518,7 +516,7 @@ pub struct IbcHooksOutgoingTransferMemo {
     pub ibc_callback: HumanAddr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Height {
     pub revision_number: u64,
     pub revision_height: u64,
@@ -629,7 +627,7 @@ pub struct IBCTimeoutBlock {
     pub height: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Packet {
     pub sequence: u64,
     pub source_port: String,
@@ -643,7 +641,7 @@ pub struct Packet {
     pub data: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum DirectSdkMsg {
     // CosmWasm:
     MsgExecuteContract {
@@ -651,14 +649,12 @@ pub enum DirectSdkMsg {
         contract: HumanAddr,
         msg: Vec<u8>,
         sent_funds: Vec<Coin>,
-        callback_sig: Option<Vec<u8>>,
     },
     MsgInstantiateContract {
         sender: CanonicalAddr,
         init_msg: Vec<u8>,
         init_funds: Vec<Coin>,
         label: String,
-        callback_sig: Option<Vec<u8>>,
         admin: HumanAddr,
         code_id: u64,
     },
@@ -945,7 +941,6 @@ impl DirectSdkMsg {
             init_msg: raw_msg.init_msg,
             init_funds,
             label: raw_msg.label,
-            callback_sig,
             admin: HumanAddr(raw_msg.admin),
             code_id: raw_msg.code_id,
         })
@@ -988,7 +983,6 @@ impl DirectSdkMsg {
             contract,
             msg: raw_msg.msg,
             sent_funds,
-            callback_sig,
         })
     }
 

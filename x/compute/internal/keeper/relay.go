@@ -27,7 +27,7 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 		return nil, err
 	}
 
-	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
 
 	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
@@ -56,7 +56,7 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	}
 
 	gas := gasForContract(ctx)
-	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, callType)
+	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, sigInfo, callType)
 	consumeGas(ctx, gasUsed)
 
 	return res, err
@@ -212,7 +212,7 @@ func (k Keeper) OnRecvPacket(
 			if err != nil {
 				return nil, err
 			}
-			verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
+			sigInfo := types.NewSigInfo([]byte{}, []byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
 
 			ogTx := msg.Packet.Data
 
@@ -223,7 +223,7 @@ func (k Keeper) OnRecvPacket(
 			}
 
 			// note submessage reply results can overwrite the `Acknowledgement` data
-			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, ogTx, verificationInfo)
+			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, ogTx, sigInfo)
 		}
 
 		// should never get here as it's already checked in
@@ -297,8 +297,8 @@ func (k Keeper) OnTimeoutPacket(
 }
 
 func (k Keeper) handleIBCBasicContractResponse(ctx sdk.Context, addr sdk.AccAddress, ibcPortID string, inputMsg []byte, res *v1types.IBCBasicResponse) error {
-	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
+	sigInfo := types.NewSigInfo([]byte{}, []byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
 
-	_, err := k.handleContractResponse(ctx, addr, ibcPortID, res.Messages, res.Attributes, res.Events, nil, inputMsg, verificationInfo)
+	_, err := k.handleContractResponse(ctx, addr, ibcPortID, res.Messages, res.Attributes, res.Events, nil, inputMsg, sigInfo)
 	return err
 }

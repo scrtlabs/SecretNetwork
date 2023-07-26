@@ -138,7 +138,7 @@ func (w *Wasmer) Instantiate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	sigInfo types.VerificationInfo,
+	sigInfo types.SigInfo,
 	admin []byte,
 	// data, contractKey, adminProof, gasUsed, error
 ) (interface{}, []byte, []byte, uint64, error) {
@@ -243,7 +243,7 @@ func (w *Wasmer) Execute(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	sigInfo types.VerificationInfo,
+	sigInfo types.SigInfo,
 	handleType types.HandleType,
 ) (interface{}, uint64, error) {
 	paramBin, err := json.Marshal(env)
@@ -413,7 +413,7 @@ func (w *Wasmer) Migrate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	sigInfo types.VerificationInfo,
+	sigInfo types.SigInfo,
 	admin []byte,
 	adminProof []byte,
 	// data, contractKey, adminProof, gasUsed, error
@@ -503,7 +503,7 @@ func (w *Wasmer) UpdateAdmin(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	sigInfo types.VerificationInfo,
+	sigInfo types.SigInfo,
 	currentAdmin []byte,
 	currentAdminProof []byte,
 	newAdmin []byte,

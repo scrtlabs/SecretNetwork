@@ -262,11 +262,18 @@ func (m SecretMsg) Serialize() []byte {
 	return append(m.CodeHash, m.Msg...)
 }
 
-func NewVerificationInfo(
-	signBytes []byte, signMode sdktxsigning.SignMode, modeInfo []byte, publicKey []byte, signature []byte, callbackSig []byte,
-) wasmTypes.VerificationInfo {
-	return wasmTypes.VerificationInfo{
-		Bytes:             signBytes,
+func NewSigInfo(
+	txBytes []byte,
+	signBytes []byte,
+	signMode sdktxsigning.SignMode,
+	modeInfo []byte,
+	publicKey []byte,
+	signature []byte,
+	callbackSig []byte,
+) wasmTypes.SigInfo {
+	return wasmTypes.SigInfo{
+		TxBytes:           txBytes,
+		SignBytes:         signBytes,
 		SignMode:          signMode.String(),
 		ModeInfo:          modeInfo,
 		Signature:         signature,

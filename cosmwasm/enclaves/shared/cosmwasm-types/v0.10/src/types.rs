@@ -23,10 +23,10 @@ use crate::consts::BECH32_PREFIX_ACC_ADDR;
 pub const CONTRACT_KEY_LENGTH: usize = 64;
 pub const CONTRACT_KEY_PROOF_LENGTH: usize = 32;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
 pub struct HumanAddr(pub String);
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
 pub struct CanonicalAddr(pub Binary);
 
 impl HumanAddr {

@@ -7,12 +7,13 @@ use cw_types_generic::BaseEnv;
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmosPubKey, DirectSdkMsg, HandleType, SigInfo, SignDoc, StdSignDoc,
+    ContractCode, CosmosPubKey, DirectSdkMsg, HandleType, SigInfo, SignDoc, StdSignDoc, TxBody,
     VerifyParamsType,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
+use protobuf::Message;
 
 use crate::input_validation::contract_address_validation::verify_contract_address;
 use crate::input_validation::msg_validation::verify_and_get_sdk_msg;
@@ -556,7 +557,8 @@ fn verify_input(
     current_admin: Option<&CanonicalAddr>,
     new_admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
-    let sdk_messages = get_sdk_messages(sig_info, verify_params_types)?;
+    let sdk_messages =
+        get_sdk_messages_and_verify_tx_bytes_with_sign_bytes(sig_info, verify_params_types)?;
 
     let is_verified = verify_input_params(
         sig_info,
@@ -644,12 +646,12 @@ fn get_signer(
     }
 }
 
-fn get_sdk_messages(
+fn get_sdk_messages_and_verify_tx_bytes_with_sign_bytes(
     sign_info: &SigInfo,
     verify_params_types: VerifyParamsType,
 ) -> Result<Vec<DirectSdkMsg>, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
-    match sign_info.sign_mode {
+    let sdk_messages_from_sign_bytes = match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
             let sign_doc =
                 SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), verify_params_types)?;
@@ -717,6 +719,38 @@ fn get_sdk_messages(
             );
             Err(EnclaveError::FailedTxVerification)
         }
+    }?;
+
+    // in order to use tx_bytes in the light client verification, we need to verify tx_bytes against sign_bytes which is verified against the sender's signature
+
+    trace!("verifying tx_bytes against sign_bytes");
+
+    let tx_raw_from_tx_bytes = cosmos_proto::tx::tx::TxRaw::parse_from_bytes(
+        sign_info.tx_bytes.as_slice(),
+    )
+    .map_err(|err| {
+        warn!("failed to parse TxRaw from tx_bytes: {:?}", err);
+        EnclaveError::FailedTxVerification
+    })?;
+
+    let sdk_messages_from_tx_bytes =
+        TxBody::from_bytes(&tx_raw_from_tx_bytes.body_bytes, verify_params_types)?.messages;
+
+    let is_verified = sdk_messages_from_sign_bytes == sdk_messages_from_tx_bytes;
+
+    if is_verified {
+        Ok(sdk_messages_from_sign_bytes)
+    } else {
+        trace!(
+            "sdk_messages_from_tx_bytes: {:?}",
+            sdk_messages_from_tx_bytes
+        );
+        trace!(
+            "sdk_messages_from_sign_bytes: {:?}",
+            sdk_messages_from_sign_bytes
+        );
+        trace!("failed to verify tx_bytes against sign_bytes");
+        Err(EnclaveError::FailedTxVerification)
     }
 }
 
@@ -805,7 +839,7 @@ fn verify_input_params(
     #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         info!("Verifying message in signed block...");
-        if !check_tx_in_current_block(sig_info.sign_bytes.as_slice()) {
+        if !check_tx_in_current_block(sig_info.tx_bytes.as_slice()) {
             return Err(EnclaveError::ValidationFailure);
         }
     }
@@ -816,7 +850,7 @@ fn verify_input_params(
         let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
         if is_skip_light_client_validation.is_err() {
             info!("Verifying message in signed block...");
-            if !check_tx_in_current_block(sig_info.sign_bytes.as_slice()) {
+            if !check_tx_in_current_block(sig_info.tx_bytes.as_slice()) {
                 return Err(EnclaveError::ValidationFailure);
             }
         }
