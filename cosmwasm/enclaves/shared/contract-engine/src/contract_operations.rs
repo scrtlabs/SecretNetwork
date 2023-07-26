@@ -97,9 +97,19 @@ pub fn init(
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(feature = "light-client-validation")]
+    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
     {
         verify_block_info(&base_env)?;
+    }
+    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    {
+        // allow skipping light client validation in tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
+        let is_skip_light_client_validation =
+            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
+        if is_skip_light_client_validation == "" {
+            verify_block_info(&base_env)?;
+        }
     }
 
     // let duration = start.elapsed();
@@ -331,9 +341,19 @@ pub fn migrate(
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(feature = "light-client-validation")]
+    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
     {
         verify_block_info(&base_env)?;
+    }
+    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    {
+        // allow skipping light client validation in tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
+        let is_skip_light_client_validation =
+            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
+        if is_skip_light_client_validation == "" {
+            verify_block_info(&base_env)?;
+        }
     }
 
     // let duration = start.elapsed();
@@ -493,9 +513,19 @@ pub fn update_admin(
 
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(feature = "light-client-validation")]
+    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
     {
         verify_block_info(&base_env)?;
+    }
+    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    {
+        // allow skipping light client validation in tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
+        let is_skip_light_client_validation =
+            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
+        if is_skip_light_client_validation == "" {
+            verify_block_info(&base_env)?;
+        }
     }
 
     let (sender, contract_address, _block_height, sent_funds) = base_env.get_verification_params();
@@ -576,9 +606,19 @@ pub fn handle(
 
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(feature = "light-client-validation")]
+    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
     {
         verify_block_info(&base_env)?;
+    }
+    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    {
+        // allow skipping light client validation in tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
+        let is_skip_light_client_validation =
+            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
+        if is_skip_light_client_validation == "" {
+            verify_block_info(&base_env)?;
+        }
     }
 
     let query_depth = extract_query_depth(env)?;

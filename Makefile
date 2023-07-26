@@ -165,7 +165,12 @@ build-secret: build-linux
 
 build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES),light-client-validation,test" FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+
+build-tm-secret-enclave:
+	git clone https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
+	cd /tmp/tm-secret-enclave && git checkout v1.9.3 && git submodule init && git submodule update --remote
+	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
@@ -239,7 +244,7 @@ clean:
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
-			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation" \
+			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation,test" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \
@@ -462,21 +467,19 @@ prep-go-tests: build-test-contracts bin-data-sw
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 
 go-tests: build-test-contracts bin-data-sw
+	SGX_MODE=SW $(MAKE) build-tm-secret-enclave
+	cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
-	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
-	rm -rf ./x/compute/internal/keeper/.sgx_secrets
-	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -tags sgx -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contracts bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
+	SGX_MODE=HW $(MAKE) build-tm-secret-enclave
+	cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=HW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	rm -rf ./x/compute/internal/keeper/.sgx_secrets
-	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=HW go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=HW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -tags sgx -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 # When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
 # rule in the Makefile in `enclaves/execute`. This is to speed up the compilation time of tests and speed up the

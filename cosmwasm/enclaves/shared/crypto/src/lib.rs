@@ -60,7 +60,7 @@ pub mod tests {
     }
 
     pub fn run_tests() {
-        let mut failures = 0;
+        let failures = 0;
 
         count_failures!(failures, {
             // todo: add encryption and other tests here

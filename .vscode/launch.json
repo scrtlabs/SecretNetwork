@@ -11,9 +11,14 @@
       "mode": "debug",
       "program": "${file}",
       "cwd": "${workspaceFolder}/x/compute/internal/keeper",
-      "env": { "SGX_MODE": "SW", "RUST_BACKTRACE": "1" },
+      "env": {
+        "SGX_MODE": "SW",
+        "RUST_BACKTRACE": "1"
+      },
       "args": [
         "test",
+        "-tags",
+        "sgx",
         "-timeout",
         "1200s",
         "-p",

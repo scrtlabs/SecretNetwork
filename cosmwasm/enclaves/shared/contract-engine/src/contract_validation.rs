@@ -766,11 +766,24 @@ fn verify_input_params(
         }
     };
 
-    #[cfg(feature = "light-client-validation")]
+    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
     {
         info!("Verifying message in signed block...");
         if !check_msg_in_current_block(&sent_wasm_input.to_vec()) {
             return Err(EnclaveError::ValidationFailure);
+        }
+    }
+    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    {
+        // allow skipping light client validation in tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
+        let is_skip_light_client_validation =
+            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
+        if is_skip_light_client_validation == "" {
+            info!("Verifying message in signed block...");
+            if !check_msg_in_current_block(&sent_wasm_input.to_vec()) {
+                return Err(EnclaveError::ValidationFailure);
+            }
         }
     }
 

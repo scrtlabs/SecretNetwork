@@ -113,6 +113,7 @@ func multisigTxCreatorForExisting(
 	txbytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 	*ctx = ctx.WithTxBytes(txbytes)
+	// updateLightClientHelper(t, *ctx)
 
 	return signmodeHandler
 }
@@ -202,7 +203,9 @@ func prepareInitSignedTxMultipleMsgs(
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func TestMultipleSigners(t *testing.T) {
@@ -621,6 +624,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	contractAddressA, _, err := keeper.Instantiate(
 		ctx,
@@ -725,6 +729,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	contractAddressA, _, err := keeper.Instantiate(
 		ctx,
@@ -872,6 +877,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	txBytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	_, _, err = keeper.Instantiate(
 		ctx,

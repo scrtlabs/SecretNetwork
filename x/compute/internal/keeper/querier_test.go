@@ -343,6 +343,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		require.NoError(t, err)
 
 		ctx = ctx.WithTxBytes(txBytes)
+		// updateLightClientHelper(t, ctx)
 
 		_, _, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
 		require.NoError(t, err)

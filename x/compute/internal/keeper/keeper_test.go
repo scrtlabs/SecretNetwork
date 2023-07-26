@@ -291,6 +291,7 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	// create with no balance is also legal
 	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
@@ -408,6 +409,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	addr, _, err := keeper.Instantiate(ctx, nonExistingCodeID, creator, nil, initMsgBz, "demo contract 2", nil, nil)
 	require.True(t, types.ErrNotFound.Is(err), err)
@@ -639,6 +641,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	_, err = keeper.Execute(ctx, nonExistingAddress, creator, msgBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.True(t, types.ErrNotFound.Is(err), err)
@@ -693,6 +696,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	// let's make sure we get a reasonable error, no panic/crash
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, topUp, nil, wasmtypes.HandleTypeExecute)
@@ -757,6 +761,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, msgBz, "demo contract 5", deposit, nil)
 	require.NoError(t, err)
@@ -802,6 +807,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	// this must fail
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil, nil, wasmtypes.HandleTypeExecute)
@@ -874,6 +880,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	start := time.Now()
 

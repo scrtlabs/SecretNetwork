@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 
 	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -32,8 +34,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	tmenclave "github.com/scrtlabs/tm-secret-enclave"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	tmtypes "github.com/tendermint/tendermint/types"
+
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -675,7 +680,9 @@ func PrepareExecSignedTxWithMultipleMsgs(
 	txBytes, err := preparedTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
@@ -693,7 +700,9 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, admin sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
@@ -713,7 +722,9 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, 
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func prepareMigrateSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64) sdk.Context {
@@ -730,7 +741,9 @@ func prepareMigrateSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contra
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func prepareUpdateAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, sender sdk.AccAddress, privKey crypto.PrivKey, newAdmin sdk.AccAddress) sdk.Context {
@@ -746,7 +759,9 @@ func prepareUpdateAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, co
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func prepareClearAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, sender sdk.AccAddress, privKey crypto.PrivKey) sdk.Context {
@@ -761,7 +776,9 @@ func prepareClearAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, con
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func PrepareSignedTx(t *testing.T,
@@ -779,7 +796,9 @@ func PrepareSignedTx(t *testing.T,
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
@@ -946,3 +965,77 @@ type protoTxProvider interface {
 //
 //	return protoProvider.GetProtoTx(), nil
 //}
+
+func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
+	blockData := tmproto.Data{
+		Txs: [][]byte{ctx.TxBytes()},
+	}
+	dataBz, err := blockData.Marshal()
+	require.NoError(t, err)
+
+	blockHeader := ctx.BlockHeader()
+
+	blockId := makeBlockIDRandom()
+
+	voteSet, valSet, vals := randVoteSet(ctx, 0, tmproto.PrecommitType, 1, 1)
+	commit, err := tmtypes.MakeCommit(blockId, blockHeader.Height, 0, voteSet, vals, time.Now())
+	require.NoError(t, err)
+
+	commitBz, err := commit.ToProto().Marshal()
+	require.NoError(t, err)
+
+	blockHeader.ProposerAddress = valSet.Proposer.Address
+
+	blockHeader.DataHash = tmtypes.Txs{ctx.TxBytes()}.Hash()
+	blockHeader.AppHash = make([]byte, sha256.Size) // make it up just to pass the length check
+	blockHeader.ValidatorsHash = valSet.Hash()      // unnecessary really
+
+	headerBz, err := blockHeader.Marshal()
+	require.NoError(t, err)
+
+	valSetProto, err := valSet.ToProto()
+	require.NoError(t, err)
+
+	valSetBytes, err := valSetProto.Marshal()
+	require.NoError(t, err)
+
+	// Note: SubmitValidatorSet must come before GetRandom, as the valSetHash is used
+	// in the random number encryption, and later on in the verification
+	err = tmenclave.SubmitValidatorSet(valSetBytes, uint64(blockHeader.Height))
+	require.NoError(t, err)
+
+	random, proof, err := tmenclave.GetRandom(blockHeader.AppHash, uint64(blockHeader.Height))
+	require.NoError(t, err)
+
+	randomAndProofBz := append(random, proof...) //nolint:all
+
+	_, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
+	require.NoError(t, err)
+}
+
+func randVoteSet(
+	ctx sdk.Context,
+	round int32,
+	signedMsgType tmproto.SignedMsgType,
+	numValidators int,
+	votingPower int64,
+) (*tmtypes.VoteSet, *tmtypes.ValidatorSet, []tmtypes.PrivValidator) {
+	valSet, privValidators := tmtypes.RandValidatorSet(numValidators, votingPower)
+	return tmtypes.NewVoteSet(ctx.ChainID(), ctx.BlockHeight(), round, signedMsgType, valSet), valSet, privValidators
+}
+
+func makeBlockIDRandom() tmtypes.BlockID {
+	var (
+		blockHash   = make([]byte, sha256.Size)
+		partSetHash = make([]byte, sha256.Size)
+	)
+	rand.Read(blockHash)   //nolint: errcheck // ignore errcheck for read
+	rand.Read(partSetHash) //nolint: errcheck // ignore errcheck for read
+	return tmtypes.BlockID{
+		Hash: blockHash,
+		PartSetHeader: tmtypes.PartSetHeader{
+			Total: 123,
+			Hash:  partSetHash,
+		},
+	}
+}
