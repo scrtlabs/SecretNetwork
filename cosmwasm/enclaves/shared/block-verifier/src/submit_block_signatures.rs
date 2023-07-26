@@ -1,5 +1,8 @@
 use std::slice;
 
+#[cfg(feature = "read-db-proofs")]
+use read_verifier::READ_PROOFER;
+
 use tendermint_proto::Protobuf;
 
 use sgx_types::sgx_status_t;
@@ -141,6 +144,18 @@ pub unsafe fn submit_block_signatures_impl(
         ));
 
         decrypted_random.copy_from_slice(&decrypted);
+    }
+
+    #[cfg(feature = "read-db-proofs")]
+    {
+        // AppHash calculation is different for the first block
+        let rp = READ_PROOFER.lock().unwrap();
+        if header.header.height.value() != 1 && rp.app_hash != header.header.app_hash.as_bytes() {
+            error!("error verifying app hash!");
+            debug!("calculated app_hash bytes {:?}", rp.app_hash);
+            debug!("header app_hash bytes {:?}", header.app_hash.as_bytes());
+            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+        }
     }
 
     debug!(

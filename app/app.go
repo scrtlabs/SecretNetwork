@@ -9,11 +9,9 @@ import (
 	"sort"
 
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
+	gocosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
-	"github.com/scrtlabs/SecretNetwork/app/keepers"
-	gocosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
-	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"

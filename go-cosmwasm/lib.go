@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"

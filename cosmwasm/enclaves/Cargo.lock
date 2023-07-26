@@ -223,12 +223,13 @@ dependencies = [
  "lazy_static",
  "log",
  "protobuf",
+ "read-verifier",
  "sgx_trts",
  "sgx_tstd",
  "sgx_types",
  "tendermint",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
 ]
 
 [[package]]
@@ -364,6 +365,17 @@ name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
+
+[[package]]
+name = "cosmos-sdk-proto"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4776e787b24d9568dd61d3237eeb4eb321d622fb881b858c7b82806420e87d4"
+dependencies = [
+ "prost 0.11.6",
+ "prost-types",
+ "tendermint-proto 0.27.0",
+]
 
 [[package]]
 name = "cosmos_proto"
@@ -645,6 +657,7 @@ dependencies = [
  "pwasm-utils",
  "rand_chacha",
  "rand_core",
+ "read-verifier",
  "secp256k1 0.24.2",
  "serde 1.0.118",
  "serde_json 1.0.60",
@@ -900,6 +913,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
+name = "ics23"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca44b684ce1859cff746ff46f5765ab72e12e3c06f76a8356db8f9a2ecf43f17"
+dependencies = [
+ "anyhow 1.0.66",
+ "bytes 1.4.0",
+ "hex",
+ "prost 0.11.6",
+ "ripemd",
+ "sha2 0.10.6",
+ "sha3",
+]
+
+[[package]]
 name = "id-arena"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -923,6 +951,12 @@ checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
 dependencies = [
  "cfg-if 1.0.0",
 ]
+
+[[package]]
+name = "integer-encoding"
+version = "3.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bb03732005da905c88227371639bf1ad885cc712789c011c31c5fb3ab3ccf02"
 
 [[package]]
 name = "itertools"
@@ -1324,6 +1358,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "read-verifier"
+version = "0.1.0"
+dependencies = [
+ "cosmos-sdk-proto",
+ "enclave_crypto",
+ "enclave_utils",
+ "ics23",
+ "integer-encoding",
+ "lazy_static",
+ "log",
+ "prost 0.11.6",
+ "sgx_tstd",
+ "sgx_types",
+ "tendermint",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1378,6 +1429,15 @@ dependencies = [
  "sgx_tstd",
  "spin",
  "untrusted",
+]
+
+[[package]]
+name = "ripemd"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd124222d17ad93a644ed9d011a40f4fb64aa54275c08cc216524a9ea82fb09f"
+dependencies = [
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -1493,6 +1553,7 @@ dependencies = [
  "num-bigint",
  "parity-wasm",
  "pwasm-utils",
+ "read-verifier",
  "rustls",
  "serde 1.0.118",
  "serde_json 1.0.60",
@@ -1870,7 +1931,7 @@ dependencies = [
  "signature",
  "subtle",
  "subtle-encoding",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "time",
  "zeroize",
 ]
@@ -1884,6 +1945,24 @@ dependencies = [
  "flex-error",
  "serde 1.0.147",
  "tendermint",
+ "time",
+]
+
+[[package]]
+name = "tendermint-proto"
+version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5895470f28c530f8ae8c4071bf8190304ce00bd131d25e81730453124a3375c"
+dependencies = [
+ "bytes 1.4.0",
+ "flex-error",
+ "num-derive",
+ "num-traits 0.2.15",
+ "prost 0.11.6",
+ "prost-types",
+ "serde 1.0.147",
+ "serde_bytes",
+ "subtle-encoding",
  "time",
 ]
 
