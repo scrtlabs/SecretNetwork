@@ -29,6 +29,12 @@ impl CacheMap {
         self.0.get(key)
     }
 
+    pub fn remove_from_kv_cache(&mut self, contract_key: &ContractKey, key: &[u8]) {
+        if let Some(kv_cache) = self.0.get_mut(contract_key) {
+            kv_cache.remove(key);
+        }
+    }
+
     #[allow(dead_code)]
     pub fn get_or_insert(&mut self, key: ContractKey) -> &mut KvCache {
         self.0.entry(key).or_insert_with(KvCache::new)

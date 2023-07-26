@@ -885,6 +885,12 @@ fn host_remove_db(
 
     debug!("db_remove removing key {}", show_bytes(&state_key_name));
 
+    // Also remove the key from the cache to avoid rewriting it
+    context.kv_cache.remove(&state_key_name);
+
+    let mut block_cache = BLOCK_CACHE.lock().unwrap();
+    block_cache.remove_from_kv_cache(&context.contract_key, &state_key_name);
+
     let used_gas =
         remove_from_encrypted_state(&state_key_name, &context.context, &context.contract_key)?;
     context.use_gas_externally(used_gas);
