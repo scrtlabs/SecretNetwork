@@ -68,7 +68,8 @@ pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
 
 #[cfg(feature = "light-client-validation")]
 /// WARNING: this function must be called at most once per message!
-pub fn check_msg_in_current_block(msg: &[u8]) -> bool {
+/// Checks if there's a msg in the light client that's contained in tx_sign_bytes
+pub fn check_tx_in_current_block(tx_sign_bytes: &[u8]) -> bool {
     let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     let remaining_msgs = verified_msgs.remaining();
 
@@ -81,14 +82,47 @@ pub fn check_msg_in_current_block(msg: &[u8]) -> bool {
     // all the messages available before we can determine that there has been a failure
     // this isn't an attack vector since this can happen anyway by manipulating the state between executions
     while verified_msgs.remaining() > 0 {
-        if let Some(expected_msg) = verified_msgs.get_next() {
-            if is_subslice(&expected_msg, msg) {
+        if let Some(verified_msg) = verified_msgs.get_next() {
+            trace!("input tx_sign_bytes: {:?}", hex::encode(&tx_sign_bytes));
+            trace!("light client msg: {:?}", hex::encode(&verified_msg));
+            if is_subslice(tx_sign_bytes, &verified_msg) {
                 return true;
             }
         }
     }
 
     error!("Failed to validate message, error 0x3255");
+
+    // if this message fails to verify we have to fail the rest of the block, so we won't get any other messages
+    verified_msgs.clear();
+
+    false
+}
+
+#[cfg(feature = "light-client-validation")]
+/// WARNING: this function must be called at most once per message!
+/// Checks if there's a msg in the light client that's containing cert
+pub fn check_cert_in_current_block(cert: &[u8]) -> bool {
+    let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+    let remaining_msgs = verified_msgs.remaining();
+
+    if remaining_msgs == 0 {
+        error!("Failed to validate message, error 0x4555");
+        return false;
+    }
+
+    // Msgs might fail in the sdk before they reach the enclave. In this case we need to run through
+    // all the messages available before we can determine that there has been a failure
+    // this isn't an attack vector since this can happen anyway by manipulating the state between executions
+    while verified_msgs.remaining() > 0 {
+        if let Some(verified_msg) = verified_msgs.get_next() {
+            if is_subslice(&verified_msg, cert) {
+                return true;
+            }
+        }
+    }
+
+    error!("Failed to validate message, error 0x4255");
 
     // if this message fails to verify we have to fail the rest of the block, so we won't get any other messages
     verified_msgs.clear();
@@ -525,6 +559,7 @@ fn verify_input(
     let sdk_messages = get_sdk_messages(sig_info, verify_params_types)?;
 
     let is_verified = verify_input_params(
+        sig_info,
         &sdk_messages,
         sender,
         sent_funds,
@@ -730,6 +765,7 @@ fn verify_callback_sig_impl(
 
 #[allow(clippy::too_many_arguments)]
 fn verify_input_params(
+    sig_info: &SigInfo,
     sdk_messages: &[DirectSdkMsg],
     sender: &CanonicalAddr,
     sent_funds: &[Coin],
@@ -766,22 +802,21 @@ fn verify_input_params(
         }
     };
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         info!("Verifying message in signed block...");
-        if !check_msg_in_current_block(&sent_wasm_input.to_vec()) {
+        if !check_tx_in_current_block(sig_info.sign_bytes.as_slice()) {
             return Err(EnclaveError::ValidationFailure);
         }
     }
-    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
-        // allow skipping light client validation in tests
+        // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation =
-            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
-        if is_skip_light_client_validation == "" {
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+        if is_skip_light_client_validation.is_err() {
             info!("Verifying message in signed block...");
-            if !check_msg_in_current_block(&sent_wasm_input.to_vec()) {
+            if !check_tx_in_current_block(sig_info.sign_bytes.as_slice()) {
                 return Err(EnclaveError::ValidationFailure);
             }
         }

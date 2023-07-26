@@ -165,7 +165,7 @@ build-secret: build-linux
 
 build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES),light-client-validation,test" FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES)" FEATURES_U="$(FEATURES_U) light-client-validation go-tests" $(MAKE) -C go-cosmwasm build-rust
 
 build-tm-secret-enclave:
 	git clone https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
@@ -244,7 +244,7 @@ clean:
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
-			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation,test" \
+			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \

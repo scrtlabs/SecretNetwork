@@ -33,7 +33,7 @@ production = ["cosmwasm-sgx-vm/production"]
 debug-print = ["cosmwasm-sgx-vm/debug-print"]
 # features that do nothing here but are just here for compatability with enclave
 light-client-validation = []
-test = []
+go-tests = []
 random = []
 verify-validator-whitelist = []
 

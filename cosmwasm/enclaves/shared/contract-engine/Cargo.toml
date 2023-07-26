@@ -8,6 +8,7 @@ edition = "2018"
 default = ["wasm3"]
 debug-print = []
 test = []
+go-tests = []
 wasm3 = []
 wasmi-engine = ["wasmi", "parity-wasm", "pwasm-utils"]
 light-client-validation = ["block-verifier"]

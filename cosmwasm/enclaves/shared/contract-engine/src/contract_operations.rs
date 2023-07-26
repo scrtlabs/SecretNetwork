@@ -97,17 +97,16 @@ pub fn init(
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         verify_block_info(&base_env)?;
     }
-    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
-        // allow skipping light client validation in tests
+        // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation =
-            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
-        if is_skip_light_client_validation == "" {
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+        if is_skip_light_client_validation.is_err() {
             verify_block_info(&base_env)?;
         }
     }
@@ -341,17 +340,16 @@ pub fn migrate(
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         verify_block_info(&base_env)?;
     }
-    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
-        // allow skipping light client validation in tests
+        // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation =
-            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
-        if is_skip_light_client_validation == "" {
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+        if is_skip_light_client_validation.is_err() {
             verify_block_info(&base_env)?;
         }
     }
@@ -513,17 +511,16 @@ pub fn update_admin(
 
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         verify_block_info(&base_env)?;
     }
-    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
-        // allow skipping light client validation in tests
+        // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation =
-            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
-        if is_skip_light_client_validation == "" {
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+        if is_skip_light_client_validation.is_err() {
             verify_block_info(&base_env)?;
         }
     }
@@ -606,17 +603,16 @@ pub fn handle(
 
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "test")))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         verify_block_info(&base_env)?;
     }
-    #[cfg(all(feature = "light-client-validation", feature = "test"))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
-        // allow skipping light client validation in tests
+        // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation =
-            std::env::var("SKIP_LIGHT_CLIENT_VALIDATION").unwrap_or_default();
-        if is_skip_light_client_validation == "" {
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+        if is_skip_light_client_validation.is_err() {
             verify_block_info(&base_env)?;
         }
     }

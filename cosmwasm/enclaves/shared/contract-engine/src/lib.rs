@@ -30,7 +30,7 @@ mod wasm3;
 
 pub use contract_operations::{handle, init, query};
 #[cfg(feature = "light-client-validation")]
-pub use contract_validation::check_msg_in_current_block;
+pub use contract_validation::{check_cert_in_current_block, check_tx_in_current_block};
 
 #[cfg(feature = "test")]
 pub mod tests {
