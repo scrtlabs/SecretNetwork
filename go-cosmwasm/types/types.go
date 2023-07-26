@@ -78,6 +78,9 @@ const (
 	HandleTypeIbcPacketReceive
 	HandleTypeIbcPacketAck
 	HandleTypeIbcPacketTimeout
+	HandleTypeIbcWasmHooksIncomingTransfer
+	HandleTypeIbcWasmHooksOutgoingTransferAck
+	HandleTypeIbcWasmHooksOutgoingTransferTimeout
 )
 
 type CosmosMsgVersion int

@@ -37,6 +37,10 @@ impl HumanAddr {
         self.0.is_empty()
     }
     pub fn from_canonical(canonical_addr: &CanonicalAddr) -> Result<Self, bech32::Error> {
+        if canonical_addr.is_empty() {
+            return Ok(HumanAddr::from(""));
+        }
+
         let human_addr_str = bech32::encode(
             BECH32_PREFIX_ACC_ADDR,
             canonical_addr.as_slice().to_base32(),
@@ -75,6 +79,10 @@ impl CanonicalAddr {
         self.0.is_empty()
     }
     pub fn from_human(human_addr: &HumanAddr) -> Result<Self, bech32::Error> {
+        if human_addr.is_empty() {
+            return Ok(CanonicalAddr(Binary(vec![])));
+        }
+
         let (decoded_prefix, data) = bech32::decode(human_addr.as_str())?;
         let canonical = Vec::<u8>::from_base32(&data)?;
 
@@ -124,7 +132,8 @@ pub struct BlockInfo {
     pub time: u64,
     pub chain_id: String,
     #[cfg(feature = "random")]
-    pub random: Binary,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub random: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]

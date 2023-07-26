@@ -195,13 +195,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 	}
 
 	// 1. Check timestamp is within 24H
-	if qr.Timestamp != "" {
-		// timeFixed := qr.Timestamp + "+0000"
-		// timeFixed := qr.Timestamp + "Z"
-		// ts, _ := time.Parse(time.RFC3339, timeFixed)
-		// now := time.Now().Unix()
-		// fmt.Println("Time diff = ", now-ts.Unix())
-	} else {
+	if qr.Timestamp == "" {
 		return nil, errors.New("Failed to fetch timestamp from attestation report")
 	}
 

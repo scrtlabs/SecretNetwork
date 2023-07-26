@@ -108,7 +108,7 @@ func NewAbsoluteTxPosition(ctx sdk.Context) *AbsoluteTxPosition {
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte) wasmTypes.Env {
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte, random []byte) wasmTypes.Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -122,7 +122,7 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 			Height:  uint64(ctx.BlockHeight()),
 			Time:    uint64(nano),
 			ChainID: ctx.ChainID(),
-			// Random:  random,
+			Random:  random,
 		},
 		Message: wasmTypes.MessageInfo{
 			Sender:    creator.String(),
@@ -289,3 +289,13 @@ contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
 # The WASM VM memory cache size in number of cached modules. Can safely go up to 15, but not recommended for validators
 contract-memory-enclave-cache-size = "{{ .WASMConfig.EnclaveCacheSize }}"
 `
+
+// ZeroSender is a valid 20 byte canonical address that's used to bypass the x/compute checks
+// and later on is ignored by the enclave, which passes a null sender to the contract
+// This is used in OnAcknowledgementPacketOverride & OnTimeoutPacketOverride
+var ZeroSender = sdk.AccAddress{
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+}

@@ -37,7 +37,7 @@ type BlockInfo struct {
 	// time in seconds since unix epoch - since cosmwasm 0.3
 	Time    uint64 `json:"time"`
 	ChainID string `json:"chain_id"`
-	// Random  []byte `json:"random"`
+	Random  []byte `json:"random"`
 }
 
 type MessageInfo struct {

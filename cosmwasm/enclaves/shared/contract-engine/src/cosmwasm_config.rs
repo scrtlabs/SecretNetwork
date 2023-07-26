@@ -5,6 +5,10 @@ pub mod api_marker {
     pub const V1: &str = "interface_version_8";
 }
 
+pub mod features {
+    pub const RANDOM: &str = "requires_random";
+}
+
 /// Right now ContractOperation is used to detect queris and prevent state changes
 #[derive(Clone, Copy, Debug)]
 pub enum ContractOperation {

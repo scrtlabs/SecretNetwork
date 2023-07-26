@@ -29,6 +29,7 @@ where
     Ibc(IbcMsg),
     Wasm(WasmMsg),
     Gov(GovMsg),
+    FinalizeTx(Empty),
 }
 
 /// The message types of the bank module.
@@ -72,6 +73,8 @@ pub enum IbcMsg {
         amount: Coin,
         /// when packet times out, measured on remote chain
         timeout: IbcTimeout,
+        /// optional memo
+        memo: Option<String>,
     },
     /// Sends an IBC packet with given data over the existing channel.
     /// Data should be encoded in a format defined by the channel version,

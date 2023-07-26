@@ -44,6 +44,12 @@ enclave {
             [out, count=96] uint8_t* seed
         );
 
+        public sgx_status_t ecall_get_genesis_seed(
+            [in, count=pk_len] const uint8_t* pk,
+            uintptr_t pk_len,
+            [out, count=48] uint8_t* seed
+        );
+
         public sgx_status_t ecall_init_node(
             [in, count=master_key_len] const uint8_t* master_key,
             uintptr_t master_key_len,

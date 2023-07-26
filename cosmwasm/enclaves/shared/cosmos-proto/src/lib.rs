@@ -41,3 +41,16 @@ pub mod cosmwasm {
 
     use super::base::coin;
 }
+
+pub mod ibc {
+    pub mod channel;
+    pub mod client;
+    pub mod tx;
+    pub mod upgrade;
+}
+
+pub mod registration {
+    pub mod v1beta1 {
+        pub mod msg;
+    }
+}

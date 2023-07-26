@@ -8,11 +8,12 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
-	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
-	channelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
-	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
+	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
+	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+
+	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -56,11 +57,16 @@ func NewSDKMessageHandler(router MessageRouter, legacyRouter sdk.Router, encoder
 // IBCRawPacketHandler handels IBC.SendPacket messages which are published to an IBC channel.
 type IBCRawPacketHandler struct {
 	channelKeeper    channelkeeper.Keeper
+	ics4Wrapper      ibctransfertypes.ICS4Wrapper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
 }
 
-func NewIBCRawPacketHandler(chk channelkeeper.Keeper, cak capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
-	return IBCRawPacketHandler{channelKeeper: chk, capabilityKeeper: cak}
+func NewIBCRawPacketHandler(channelKeeper channelkeeper.Keeper, ics4Wrapper ibctransfertypes.ICS4Wrapper, capabilityKeeper capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
+	return IBCRawPacketHandler{
+		channelKeeper:    channelKeeper,
+		ics4Wrapper:      ics4Wrapper,
+		capabilityKeeper: capabilityKeeper,
+	}
 }
 
 func NewMessageHandlerChain(first Messenger, others ...Messenger) *MessageHandlerChain {
@@ -78,6 +84,7 @@ func NewMessageHandler(
 	legacyMsgRouter sdk.Router,
 	customEncoders *MessageEncoders,
 	channelKeeper channelkeeper.Keeper,
+	ics4Wrapper ibctransfertypes.ICS4Wrapper,
 	capabilityKeeper capabilitykeeper.ScopedKeeper,
 	portSource types.ICS20TransferPortSource,
 	unpacker codectypes.AnyUnpacker,
@@ -85,7 +92,7 @@ func NewMessageHandler(
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
 		NewSDKMessageHandler(msgRouter, legacyMsgRouter, encoders),
-		NewIBCRawPacketHandler(channelKeeper, capabilityKeeper),
+		NewIBCRawPacketHandler(channelKeeper, ics4Wrapper, capabilityKeeper),
 	)
 }
 
@@ -93,9 +100,9 @@ func NewMessageHandler(
 // order to find the right one to process given message. If a handler cannot
 // process given message (returns ErrUnknownMsg), its result is ignored and the
 // next handler is executed.
-func (m MessageHandlerChain) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) ([]sdk.Event, [][]byte, error) {
+func (m MessageHandlerChain) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) ([]sdk.Event, [][]byte, error) {
 	for _, h := range m.handlers {
-		events, data, err := h.DispatchMsg(ctx, contractAddr, contractIBCPortID, msg, ogMessageVersion)
+		events, data, err := h.DispatchMsg(ctx, contractAddr, contractIBCPortID, msg)
 		switch {
 		case err == nil:
 			return events, data, nil
@@ -109,10 +116,11 @@ func (m MessageHandlerChain) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAd
 }
 
 // DispatchMsg publishes a raw IBC packet onto the channel.
-func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) (events []sdk.Event, data [][]byte, err error) {
+func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
 	if msg.IBC == nil || msg.IBC.SendPacket == nil {
 		return nil, nil, types.ErrUnknownMsg
 	}
+
 	if contractIBCPortID == "" {
 		return nil, nil, sdkerrors.Wrapf(types.ErrUnsupportedForContract, "ibc not supported")
 	}
@@ -146,7 +154,7 @@ func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, cont
 		convertWasmIBCTimeoutHeightToCosmosHeight(msg.IBC.SendPacket.Timeout.Block),
 		msg.IBC.SendPacket.Timeout.Timestamp,
 	)
-	return nil, nil, h.channelKeeper.SendPacket(ctx, channelCap, packet)
+	return nil, nil, h.ics4Wrapper.SendPacket(ctx, channelCap, packet)
 }
 
 type (
@@ -319,6 +327,7 @@ func EncodeIBCMsg(portSource types.ICS20TransferPortSource) func(ctx sdk.Context
 				Receiver:         msg.Transfer.ToAddress,
 				TimeoutHeight:    convertWasmIBCTimeoutHeightToCosmosHeight(msg.Transfer.Timeout.Block),
 				TimeoutTimestamp: msg.Transfer.Timeout.Timestamp,
+				Memo:             msg.Transfer.Memo,
 			}
 			return []sdk.Msg{msg}, nil
 		default:
@@ -352,7 +361,7 @@ func EncodeBankMsg(sender sdk.AccAddress, msg *v1wasmTypes.BankMsg) ([]sdk.Msg, 
 	return []sdk.Msg{&sdkMsg}, nil
 }
 
-func NoCustomMsg(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error) {
+func NoCustomMsg(_ sdk.AccAddress, _ json.RawMessage) ([]sdk.Msg, error) {
 	return nil, sdkerrors.Wrap(types.ErrInvalidMsg, "Custom variant not supported")
 }
 
@@ -465,12 +474,12 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk
 
 func EncodeStargateMsg(unpacker codectypes.AnyUnpacker) StargateEncoder {
 	return func(sender sdk.AccAddress, msg *v1wasmTypes.StargateMsg) ([]sdk.Msg, error) {
-		any := codectypes.Any{
+		anyObj := codectypes.Any{
 			TypeUrl: msg.TypeURL,
 			Value:   msg.Value,
 		}
 		var sdkMsg sdk.Msg
-		if err := unpacker.UnpackAny(&any, &sdkMsg); err != nil {
+		if err := unpacker.UnpackAny(&anyObj, &sdkMsg); err != nil {
 			return nil, sdkerrors.Wrap(types.ErrInvalidMsg, fmt.Sprintf("Cannot unpack proto message with type URL: %s", msg.TypeURL))
 		}
 		if err := codectypes.UnpackInterfaces(sdkMsg, unpacker); err != nil {
@@ -523,7 +532,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, 
 	}
 }
 
-func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) ([]sdk.Event, [][]byte, error) {
+func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) ([]sdk.Event, [][]byte, error) {
 	sdkMsgs, err := h.encoders.Encode(ctx, contractAddr, contractIBCPortID, msg)
 	if err != nil {
 		return nil, nil, err
