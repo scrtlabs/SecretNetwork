@@ -37,7 +37,7 @@ endif
 
 # move the secretNetwork parts to another Makefile. but call vendor here. 
 # then make SGX=1 and see if good. 
-# then add what's needed in ./Cargo.toml (regarding the enclave-ffi-types and sgx_types. (do i need xargo for sgx_types?? - check sgx-vm (i think not, but maybe it's dependant on compiling first 'enclaves/query|execute')))
+# then add what's needed in ./Cargo.toml (regarding the enclave-ffi-types and sgx_types. (do i need xargo for sgx_types?? - check sgx-vm (i think not, but maybe it's dependant on compiling first 'enclaves/execute')))
 vendor:
 	cargo vendor third_party/vendor --manifest-path third_party/build/Cargo.toml
 	# $(MAKE) -C ./src all

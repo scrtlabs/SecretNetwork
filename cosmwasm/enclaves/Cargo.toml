@@ -2,7 +2,6 @@
 members = [
   "ffi-types",
   "execute",
-  "query",
   "shared/contract-engine",
   "shared/cosmos-proto",
   "shared/cosmos-types",
@@ -28,8 +27,8 @@ rpath = false
 
 [patch.crates-io]
 rand_core = { git = "https://github.com/mesalock-linux/rand-sgx" }
-# zeroize = { rev = "2fdfbde87bd085c2f771c9e034fff136cc53fe31", git = "https://github.com/scrtlabs/zeroize" }
 
+# zeroize = { rev = "2fdfbde87bd085c2f771c9e034fff136cc53fe31", git = "https://github.com/scrtlabs/zeroize" }
 [patch.'https://github.com/apache/teaclave-sgx-sdk.git']
 # sgx_align_struct_attribute = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_align_struct_attribute" }
 sgx_alloc = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_alloc" }

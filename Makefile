@@ -32,7 +32,6 @@ TEST_COMPUTE_MODULE_PATH = ./x/compute/internal/keeper/testdata/
 
 ENCLAVE_PATH = cosmwasm/enclaves/
 EXECUTE_ENCLAVE_PATH = $(ENCLAVE_PATH)/execute/
-QUERY_ENCLAVE_PATH = $(ENCLAVE_PATH)/query/
 DOCKER_BUILD_ARGS ?=
 
 DOCKER_BUILDX_CHECK = $(@shell docker build --load test)
