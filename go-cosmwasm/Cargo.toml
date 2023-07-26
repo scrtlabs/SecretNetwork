@@ -39,6 +39,7 @@ query-node = ["cosmwasm-sgx-vm/query-node"]
 light-client-validation = []
 random = []
 verify-validator-whitelist = []
+read-db-proofs = []
 
 [dependencies]
 cosmwasm-std = { package = "secret-cosmwasm-std", features = ["iterator"], version = "0.10.1"}
