@@ -29,6 +29,7 @@ impl CacheMap {
         self.0.get(key)
     }
 
+    #[allow(dead_code)]
     pub fn get_or_insert(&mut self, key: ContractKey) -> &mut KvCache {
         self.0.entry(key).or_insert_with(KvCache::new)
     }

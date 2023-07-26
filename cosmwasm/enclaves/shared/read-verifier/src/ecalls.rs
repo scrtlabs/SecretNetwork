@@ -1,11 +1,9 @@
 use cosmos_sdk_proto::cosmos::base::kv::v1beta1::{Pair, Pairs};
 use cosmos_sdk_proto::traits::Message;
 use enclave_crypto::hash::sha;
-use enclave_utils::validate_const_ptr;
 use integer_encoding::VarInt;
 use log::{debug, error};
 use sgx_types::sgx_status_t;
-use std::slice;
 use tendermint::merkle;
 
 use crate::READ_PROOFER;

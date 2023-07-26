@@ -323,6 +323,7 @@ fn read_db(
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
 
+    #[allow(unused_variables)]
     let (value, proof, mp_key): (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>) = unsafe {
         let status = ocalls::ocall_read_db(
             (&mut ocall_return) as *mut _,

@@ -1,4 +1,3 @@
-use alloc::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 
 use log::*;
@@ -537,10 +536,7 @@ impl Engine {
         debug!("Before saving to cache");
         // store kv cache into the block cache - if we access this key later in the block we will want to
         let mut block_cache = BLOCK_CACHE.lock().unwrap();
-        block_cache.insert(
-            self.context.contract_key.clone(),
-            self.context.kv_cache.clone(),
-        );
+        block_cache.insert(self.context.contract_key, self.context.kv_cache.clone());
 
         debug!("After saving to cache");
 

@@ -166,7 +166,7 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     #[cfg(feature = "random")]
     let validator_hash = validator_set.hash();
 
-    let signed_header = SignedHeader::new(header.clone(), commit).unwrap();
+    let signed_header = SignedHeader::new(header, commit).unwrap();
     let untrusted_block = tendermint_light_client_verifier::types::UntrustedBlockState {
         signed_header: &signed_header,
         validators: &validator_set,
@@ -245,10 +245,15 @@ pub unsafe extern "C" fn ecall_submit_block_signatures(
     {
         // AppHash calculation is different for the first block
         let rp = READ_PROOFER.lock().unwrap();
-        if header.height.value() != 1 && rp.app_hash != header.app_hash.as_bytes() {
+        if signed_header.header.height.value() != 1
+            && rp.app_hash != signed_header.header.app_hash.as_bytes()
+        {
             error!("error verifying app hash!");
             debug!("calculated app_hash bytes {:?}", rp.app_hash);
-            debug!("header app_hash bytes {:?}", header.app_hash.as_bytes());
+            debug!(
+                "header app_hash bytes {:?}",
+                signed_header.header.app_hash.as_bytes()
+            );
             return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
         }
     }
