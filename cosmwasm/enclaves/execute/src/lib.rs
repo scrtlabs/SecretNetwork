@@ -11,6 +11,7 @@ use ctor::*;
 use enclave_utils::logger::get_log_level;
 
 pub use block_verifier::ecalls::ecall_submit_block_signatures;
+pub use read_verifier::ecalls::ecall_submit_store_roots;
 
 // Force linking to all the ecalls/ocalls in this package
 pub use enclave_contract_engine;
