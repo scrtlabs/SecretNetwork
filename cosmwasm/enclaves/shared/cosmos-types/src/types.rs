@@ -244,10 +244,7 @@ pub struct SignDoc {
 }
 
 impl SignDoc {
-    pub fn from_bytes(
-        bytes: &[u8],
-        verify_params_type: VerifyParamsType,
-    ) -> Result<Self, EnclaveError> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
         let raw_sign_doc = proto::tx::tx::SignDoc::parse_from_bytes(bytes).map_err(|err| {
             warn!(
                 "got an error while trying to deserialize sign doc bytes from protobuf: {}: {}",
@@ -257,7 +254,7 @@ impl SignDoc {
             EnclaveError::FailedToDeserialize
         })?;
 
-        let body = TxBody::from_bytes(&raw_sign_doc.body_bytes, verify_params_type)?;
+        let body = TxBody::from_bytes(&raw_sign_doc.body_bytes)?;
         let auth_info = AuthInfo::from_bytes(&raw_sign_doc.auth_info_bytes)?;
 
         Ok(Self {
@@ -280,10 +277,7 @@ pub struct TxBody {
 }
 
 impl TxBody {
-    pub fn from_bytes(
-        bytes: &[u8],
-        verify_params_type: VerifyParamsType,
-    ) -> Result<Self, EnclaveError> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, EnclaveError> {
         let tx_body = proto::tx::tx::TxBody::parse_from_bytes(bytes).map_err(|err| {
             warn!(
                 "got an error while trying to deserialize cosmos message body bytes from protobuf: {}: {}",
@@ -296,7 +290,7 @@ impl TxBody {
         let messages = tx_body
             .messages
             .into_iter()
-            .map(|any| DirectSdkMsg::from_bytes(&any.value, verify_params_type))
+            .map(|any| DirectSdkMsg::from_bytes(&any.type_url, &any.value))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(TxBody {
@@ -317,7 +311,6 @@ pub enum AminoSdkMsg {
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
         msg: String,
         sent_funds: Vec<Coin>,
-        callback_sig: Option<Vec<u8>>,
     },
     #[serde(alias = "wasm/MsgInstantiateContract")]
     Instantiate {
@@ -326,7 +319,6 @@ pub enum AminoSdkMsg {
         init_msg: String,
         init_funds: Vec<Coin>,
         label: String,
-        callback_sig: Option<Vec<u8>>,
         #[serde(default)]
         admin: HumanAddr,
     },
@@ -400,7 +392,6 @@ impl AminoSdkMsg {
                 contract,
                 msg,
                 sent_funds,
-                callback_sig,
             } => {
                 let sender = CanonicalAddr::from_human(&sender).map_err(|err| {
                     warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
@@ -427,7 +418,6 @@ impl AminoSdkMsg {
                 init_msg,
                 init_funds,
                 label,
-                callback_sig,
                 code_id,
                 admin,
             } => {
@@ -705,43 +695,17 @@ pub enum DirectSdkMsg {
 }
 
 impl DirectSdkMsg {
-    pub fn from_bytes(
-        bytes: &[u8],
-        verify_params_type: VerifyParamsType,
-    ) -> Result<Self, EnclaveError> {
-        // Assaf: This function needs a refactor, as some protobufs are
-        // compatible, e.g. try_parse_execute succeeds in parsing MsgRecvPacket as
-        // MsgExecuteContract, so for now for each field of MsgExecuteContract we also need
-        // to add a sanity check
-        match verify_params_type {
-            VerifyParamsType::Init => Self::try_parse_instantiate(bytes),
-            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_EXECUTE) => {
-                Self::try_parse_execute(bytes)
-            }
-            VerifyParamsType::Migrate => Self::try_parse_migrate(bytes),
-            VerifyParamsType::UpdateAdmin => Self::try_parse_update_admin(bytes),
-            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_REPLY) => Ok(DirectSdkMsg::Other),
-            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN) => {
-                Ok(DirectSdkMsg::Other)
-            }
-            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT) => {
-                Ok(DirectSdkMsg::Other)
-            }
-            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE) => {
-                Ok(DirectSdkMsg::Other)
-            }
-            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE)
-            | VerifyParamsType::HandleType(
-                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER,
-            ) => Self::try_parse_ibc_recv_packet(bytes),
-            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_ACK)
-            | VerifyParamsType::HandleType(
-                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK,
-            ) => Self::try_parse_ibc_ack(bytes),
-            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT)
-            | VerifyParamsType::HandleType(
-                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT,
-            ) => Self::try_parse_ibc_timeout(bytes),
+    pub fn from_bytes(type_url: &str, bytes: &[u8]) -> Result<Self, EnclaveError> {
+        match type_url {
+            "/secret.compute.v1beta1.MsgInstantiateContract" => Self::try_parse_instantiate(bytes),
+            "/secret.compute.v1beta1.MsgExecuteContract" => Self::try_parse_execute(bytes),
+            "/secret.compute.v1beta1.MsgMigrateContract" => Self::try_parse_migrate(bytes),
+            "/secret.compute.v1beta1.MsgUpdateAdmin" => Self::try_parse_update_admin(bytes),
+            "/secret.compute.v1beta1.MsgClearAdmin" => Self::try_parse_clear_admin(bytes),
+            "/ibc.core.channel.v1.MsgRecvPacket" => Self::try_parse_ibc_recv_packet(bytes),
+            "/ibc.core.channel.v1.MsgAcknowledgement" => Self::try_parse_ibc_ack(bytes),
+            "/ibc.core.channel.v1.MsgTimeout" => Self::try_parse_ibc_timeout(bytes),
+            _ => Ok(DirectSdkMsg::Other),
         }
     }
 
@@ -876,48 +840,44 @@ impl DirectSdkMsg {
     }
 
     fn try_parse_update_admin(bytes: &[u8]) -> Result<Self, EnclaveError> {
-        use proto::cosmwasm::msg::{MsgClearAdmin, MsgUpdateAdmin};
+        let raw_msg = proto::cosmwasm::msg::MsgUpdateAdmin::parse_from_bytes(bytes)
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
-        // We first try to parse as MsgUpdateAdmin, if that fails we try to parse as MsgClearAdmin
-        // The order is important as MsgClearAdmin is a subset of MsgUpdateAdmin and can succeed parsing MsgUpdateAdmin bytes as MsgClearAdmin
+        trace!(
+            "try_parse_update_admin sender: len={} val={:?}",
+            raw_msg.sender.len(),
+            raw_msg.sender
+        );
 
-        let raw_msg = MsgUpdateAdmin::parse_from_bytes(bytes);
+        let sender = CanonicalAddr::from_human(&HumanAddr(raw_msg.sender))
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
-        if let Ok(raw_msg) = raw_msg {
-            trace!(
-                "try_parse_update_admin sender: len={} val={:?}",
-                raw_msg.sender.len(),
-                raw_msg.sender
-            );
+        let new_admin = HumanAddr(raw_msg.new_admin);
 
-            let sender = CanonicalAddr::from_human(&HumanAddr(raw_msg.sender))
-                .map_err(|_| EnclaveError::FailedToDeserialize)?;
+        Ok(DirectSdkMsg::MsgUpdateAdmin {
+            sender,
+            new_admin,
+            contract: HumanAddr(raw_msg.contract),
+        })
+    }
 
-            let new_admin = HumanAddr(raw_msg.new_admin);
+    fn try_parse_clear_admin(bytes: &[u8]) -> Result<Self, EnclaveError> {
+        let raw_update_msg = proto::cosmwasm::msg::MsgClearAdmin::parse_from_bytes(bytes)
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
-            Ok(DirectSdkMsg::MsgUpdateAdmin {
-                sender,
-                new_admin,
-                contract: HumanAddr(raw_msg.contract),
-            })
-        } else {
-            let raw_update_msg = MsgClearAdmin::parse_from_bytes(bytes)
-                .map_err(|_| EnclaveError::FailedToDeserialize)?;
+        trace!(
+            "try_parse_clear_admin sender: len={} val={:?}",
+            raw_update_msg.sender.len(),
+            raw_update_msg.sender
+        );
 
-            trace!(
-                "try_parse_migrate sender: len={} val={:?}",
-                raw_update_msg.sender.len(),
-                raw_update_msg.sender
-            );
+        let sender = CanonicalAddr::from_human(&HumanAddr(raw_update_msg.sender))
+            .map_err(|_| EnclaveError::FailedToDeserialize)?;
 
-            let sender = CanonicalAddr::from_human(&HumanAddr(raw_update_msg.sender))
-                .map_err(|_| EnclaveError::FailedToDeserialize)?;
-
-            Ok(DirectSdkMsg::MsgClearAdmin {
-                sender,
-                contract: HumanAddr(raw_update_msg.contract),
-            })
-        }
+        Ok(DirectSdkMsg::MsgClearAdmin {
+            sender,
+            contract: HumanAddr(raw_update_msg.contract),
+        })
     }
 
     fn try_parse_instantiate(bytes: &[u8]) -> Result<Self, EnclaveError> {
@@ -933,8 +893,6 @@ impl DirectSdkMsg {
         );
 
         let init_funds = Self::parse_funds(raw_msg.init_funds)?;
-
-        let callback_sig = Some(raw_msg.callback_sig);
 
         Ok(DirectSdkMsg::MsgInstantiateContract {
             sender: CanonicalAddr(Binary(raw_msg.sender)),
@@ -975,8 +933,6 @@ impl DirectSdkMsg {
             })?;
 
         let sent_funds = Self::parse_funds(raw_msg.sent_funds)?;
-
-        let callback_sig = Some(raw_msg.callback_sig);
 
         Ok(DirectSdkMsg::MsgExecuteContract {
             sender: CanonicalAddr(Binary(raw_msg.sender)),

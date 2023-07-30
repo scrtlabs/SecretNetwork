@@ -93,28 +93,12 @@ pub unsafe fn submit_block_signatures_impl(
     let mut message_verifier = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
     if message_verifier.remaining() != 0 {
-        // this will happen if a tx fails - the message queue doesn't get cleared.
-        // todo: add clearing of message queue if a tx fails?
-        debug!(
-                "Wasm verified out of sync?? Adding new messages but old one is not empty?? - remaining: {}",
-                message_verifier.remaining()
-            );
-
-        // new tx, so messages should always be empty
+        // new block, clear messages
         message_verifier.clear();
     }
 
     for tx in txs.tx.iter() {
         // doing this a different way makes the code unreadable or requires creating a copy of
-        // tx. Feel free to change this if someone finds a better way
-        log::trace!(
-            "Got tx: {}",
-            if tx.len() < TX_THRESHOLD {
-                format!("{:?}", hex::encode(tx))
-            } else {
-                String::new()
-            }
-        );
 
         let parsed_tx = unwrap_or_return!(tx_from_bytes(tx.as_slice()).map_err(|_| {
             error!("Unable to parse tx bytes from proto");

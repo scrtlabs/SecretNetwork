@@ -493,7 +493,7 @@ pub fn verify_params(
             return verify_callback_sig(callback_sig.as_slice(), sender, secret_msg, sent_funds);
         }
 
-        verify_signature(sig_info, sender, verify_params_type)?;
+        verify_signature(sig_info, sender)?;
     }
 
     if should_verify_input {
@@ -514,12 +514,8 @@ pub fn verify_params(
     Ok(())
 }
 
-fn verify_signature(
-    sig_info: &SigInfo,
-    sender: &CanonicalAddr,
-    verify_params_type: VerifyParamsType,
-) -> Result<(), EnclaveError> {
-    let sender_public_key = get_signer(sig_info, sender, verify_params_type)?;
+fn verify_signature(sig_info: &SigInfo, sender: &CanonicalAddr) -> Result<(), EnclaveError> {
+    let sender_public_key = get_signer(sig_info, sender)?;
 
     sender_public_key
         .verify_bytes(
@@ -557,8 +553,9 @@ fn verify_input(
     current_admin: Option<&CanonicalAddr>,
     new_admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
-    let sdk_messages =
-        get_sdk_messages_and_verify_tx_bytes_with_sign_bytes(sig_info, verify_params_types)?;
+    let sdk_messages = get_sdk_messages_from_sign_bytes(sig_info)?;
+
+    verify_tx_bytes(sig_info, &sdk_messages)?;
 
     let is_verified = verify_input_params(
         sig_info,
@@ -580,16 +577,13 @@ fn verify_input(
     Ok(())
 }
 
-fn get_signer(
-    sign_info: &SigInfo,
-    sender: &CanonicalAddr,
-    verify_params_type: VerifyParamsType,
-) -> Result<CosmosPubKey, EnclaveError> {
+fn get_signer(sign_info: &SigInfo, sender: &CanonicalAddr) -> Result<CosmosPubKey, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
+    use protobuf::well_known_types::Any as AnyProto;
+
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
-            let sign_doc =
-                SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), verify_params_type)?;
+            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
             trace!("sign doc: {:?}", sign_doc);
 
             // This verifies that signatures and sign bytes are self consistent
@@ -605,9 +599,6 @@ fn get_signer(
             Ok(sender_public_key.clone())
         }
         SIGN_MODE_LEGACY_AMINO_JSON => {
-            use protobuf::well_known_types::Any as AnyProto;
-            use protobuf::Message;
-
             let any_pub_key =
                 AnyProto::parse_from_bytes(&sign_info.public_key.0).map_err(|err| {
                     warn!("failed to parse public key as Any: {:?}", err);
@@ -621,9 +612,6 @@ fn get_signer(
             Ok(public_key)
         }
         SIGN_MODE_EIP_191 => {
-            use protobuf::well_known_types::Any as AnyProto;
-            use protobuf::Message;
-
             let any_pub_key =
                 AnyProto::parse_from_bytes(&sign_info.public_key.0).map_err(|err| {
                     warn!("failed to parse public key as Any: {:?}", err);
@@ -646,15 +634,15 @@ fn get_signer(
     }
 }
 
-fn get_sdk_messages_and_verify_tx_bytes_with_sign_bytes(
+// extract sdk_messages from sign_bytes
+// sign_byte might be in Amino format
+fn get_sdk_messages_from_sign_bytes(
     sign_info: &SigInfo,
-    verify_params_types: VerifyParamsType,
 ) -> Result<Vec<DirectSdkMsg>, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
-    let sdk_messages_from_sign_bytes = match sign_info.sign_mode {
+    match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
-            let sign_doc =
-                SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), verify_params_types)?;
+            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
             trace!("direct sign doc: {:?}", sign_doc);
 
             Ok(sign_doc.body.messages)
@@ -719,27 +707,30 @@ fn get_sdk_messages_and_verify_tx_bytes_with_sign_bytes(
             );
             Err(EnclaveError::FailedTxVerification)
         }
-    }?;
+    }
+}
 
-    // in order to use tx_bytes in the light client verification, we need to verify tx_bytes against sign_bytes which is verified against the sender's signature
-
-    trace!("verifying tx_bytes against sign_bytes");
+/// in order to use tx_bytes in the light client verification, we need to verify tx_bytes against sign_bytes which is verified against the sender's signature
+fn verify_tx_bytes(
+    sig_info: &SigInfo,
+    sdk_messages_from_sign_bytes: &Vec<DirectSdkMsg>,
+) -> Result<(), EnclaveError> {
+    trace!("Verifying tx_bytes against sign_bytes...");
 
     let tx_raw_from_tx_bytes = cosmos_proto::tx::tx::TxRaw::parse_from_bytes(
-        sign_info.tx_bytes.as_slice(),
+        sig_info.tx_bytes.as_slice(),
     )
     .map_err(|err| {
         warn!("failed to parse TxRaw from tx_bytes: {:?}", err);
         EnclaveError::FailedTxVerification
     })?;
 
-    let sdk_messages_from_tx_bytes =
-        TxBody::from_bytes(&tx_raw_from_tx_bytes.body_bytes, verify_params_types)?.messages;
+    let sdk_messages_from_tx_bytes = TxBody::from_bytes(&tx_raw_from_tx_bytes.body_bytes)?.messages;
 
-    let is_verified = sdk_messages_from_sign_bytes == sdk_messages_from_tx_bytes;
+    let is_verified = sdk_messages_from_sign_bytes == &sdk_messages_from_tx_bytes;
 
     if is_verified {
-        Ok(sdk_messages_from_sign_bytes)
+        Ok(())
     } else {
         trace!(
             "sdk_messages_from_tx_bytes: {:?}",
