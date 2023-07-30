@@ -51,12 +51,6 @@ fn is_subslice(larger: &[u8], smaller: &[u8]) -> bool {
 }
 
 #[cfg(feature = "light-client-validation")]
-pub fn is_last_msg_in_block() -> bool {
-    let verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
-    return verified_msgs.remaining() == 0;
-}
-
-#[cfg(feature = "light-client-validation")]
 pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
     let verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
     if verified_msgs.height() != base_env.0.block.height {

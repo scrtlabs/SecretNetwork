@@ -23,6 +23,11 @@ macro_rules! validate_input_length {
     };
 }
 
+/// # Safety
+/// This function must only be called with valid pointers and lengths.
+/// - `in_roots` and `in_roots_len`: must point to a valid sequence of bytes representing roots.
+/// - `in_compute_root` and `in_compute_root_len`: must point to a valid sequence of bytes representing compute roots.
+/// It's the caller's responsibility to ensure that the pointers are valid and the lengths are correct.
 #[no_mangle]
 pub unsafe extern "C" fn ecall_app_begin_blocker(
     in_roots: *const u8,
@@ -55,5 +60,8 @@ pub unsafe extern "C" fn ecall_app_begin_blocker(
     }
 }
 
+/// # Safety
+/// This function's safety requirements depend on the expected implementation.
+/// Since the function body is empty, there are currently no specific safety concerns.
 #[no_mangle]
 pub unsafe extern "C" fn end_blocker() {}

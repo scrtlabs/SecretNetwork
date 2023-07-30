@@ -18,6 +18,8 @@ pub mod registration;
 mod sdk_entrypoints;
 mod tests;
 
+pub use sdk_entrypoints::ecall_app_begin_blocker;
+
 #[cfg(feature = "production")]
 #[ctor]
 fn init_logger() {

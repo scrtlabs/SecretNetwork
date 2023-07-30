@@ -1,7 +1,5 @@
 use sgx_types::sgx_status_t;
 
-pub use read_verifier::ecalls::ecall_submit_store_roots;
-
 /// # Safety
 ///  This function reads buffers which must be correctly initialized by the caller,
 /// see safety section of slice::[from_raw_parts](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html#safety)
