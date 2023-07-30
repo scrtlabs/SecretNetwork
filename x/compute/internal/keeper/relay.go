@@ -200,6 +200,16 @@ func (k Keeper) OnRecvPacket(
 		return nil, sdkerrors.Wrap(err, "ibc-recv-packet")
 	}
 
+	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
+		// We are in the mempool, the light client isn't updated yet so the enclave will fail this call.
+		// We don't want to run the contract in this case,
+		// as it will fail and will not enter the block due to IBC mempool optimization.
+		// Return nil to indicate success and bypass this IBC mempool optimization:
+		// https://github.com/cosmos/ibc-go/blob/v4.3.1/modules/core/ante/ante.go#L35
+		ctx.GasMeter().ConsumeGas(300_000, "add gas to relayer simulation")
+		return []byte{0} /* cannot be empty */, nil
+	}
+
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketReceive)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
@@ -255,6 +265,16 @@ func (k Keeper) OnAckPacket(
 		return sdkerrors.Wrap(err, "ibc-ack-packet")
 	}
 
+	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
+		// We are in the mempool, the light client isn't updated yet so the enclave will fail this call.
+		// We don't want to run the contract in this case,
+		// as it will fail and will not enter the block due to IBC mempool optimization.
+		// Return nil to indicate success and bypass this IBC mempool optimization:
+		// https://github.com/cosmos/ibc-go/blob/v4.3.1/modules/core/ante/ante.go#L45
+		ctx.GasMeter().ConsumeGas(300_000, "add gas to relayer simulation")
+		return nil
+	}
+
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketAck)
 	if err != nil {
 		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
@@ -282,6 +302,16 @@ func (k Keeper) OnTimeoutPacket(
 	msgBz, err := json.Marshal(msg)
 	if err != nil {
 		return sdkerrors.Wrap(err, "ibc-timeout-packet")
+	}
+
+	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
+		// We are in the mempool, the light client isn't updated yet so the enclave will fail this call.
+		// We don't want to run the contract in this case,
+		// as it will fail and will not enter the block due to IBC mempool optimization.
+		// Return nil to indicate success and bypass this IBC mempool optimization:
+		// https://github.com/cosmos/ibc-go/blob/v4.3.1/modules/core/ante/ante.go#L55
+		ctx.GasMeter().ConsumeGas(300_000, "add gas to relayer simulation")
+		return nil
 	}
 
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketTimeout)
