@@ -155,6 +155,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBlock) {
 	header, err := beginBlock.Header.Marshal()
 	if err != nil {
+		ctx.Logger().Error("Failed to marshal header")
 		panic(err)
 	}
 
@@ -162,7 +163,7 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 	// In this case Marshal will fail with a Seg Fault.
 	// The fix below it a temporary fix until we will investigate the issue in tendermint.
 	if beginBlock.Commit == nil {
-		ctx.Logger().Info(fmt.Sprintf("skipping commit submition to the enlave for block %d\n", beginBlock.Header.Height))
+		ctx.Logger().Info(fmt.Sprintf("Skipping commit submission to the enclave for block %d\n", beginBlock.Header.Height))
 		return
 	}
 
@@ -182,11 +183,11 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 		randomAndProof := append(beginBlock.Header.EncryptedRandom.Random, beginBlock.Header.EncryptedRandom.Proof...) //nolint:all
 		random, err := api.SubmitBlockSignatures(header, commit, data, randomAndProof)
 		if err != nil {
+			ctx.Logger().Error("Failed to submit block signatures")
 			panic(err)
 		}
 
 		am.keeper.SetRandomSeed(ctx, random)
-
 	} else {
 		println("No random got from TM header")
 	}
