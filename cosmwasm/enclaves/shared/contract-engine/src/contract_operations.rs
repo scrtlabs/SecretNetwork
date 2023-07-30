@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "random")]
+use cw_types_generic::{ContractFeature, CwEnv};
+
 use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
@@ -17,19 +20,22 @@ use crate::contract_validation::verify_block_info;
 
 use crate::contract_validation::{ReplyParams, ValidatedMessage};
 use crate::external::results::{HandleSuccess, InitSuccess, QuerySuccess};
-use crate::message::{is_ibc_msg, parse_message, ParsedMessage};
+use crate::message::{is_ibc_msg, parse_message};
+use crate::types::ParsedMessage;
 
 use crate::random::update_msg_counter;
 
 #[cfg(feature = "random")]
 use crate::random::derive_random;
+#[cfg(feature = "random")]
+use crate::wasm3::Engine;
 
 use super::contract_validation::{
     generate_contract_key, validate_contract_key, validate_msg, verify_params, ContractKey,
 };
 use super::gas::WasmCosts;
 use super::io::{
-    encrypt_output, finalize_raw_output, manipulate_callback_sig_for_plaintext,
+    finalize_raw_output, manipulate_callback_sig_for_plaintext, post_process_output,
     set_all_logs_to_plaintext,
 };
 use super::types::{IoNonce, SecretMessage};
@@ -105,7 +111,11 @@ pub fn init(
         &canonical_sender_address,
         contract_address,
         &secret_msg,
+        #[cfg(feature = "light-client-validation")]
         msg,
+        true,
+        true,
+        HandleType::HANDLE_TYPE_EXECUTE, // unused in init, but same behavior as execute
     )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in verify_params: {:?}", duration);
@@ -144,17 +154,7 @@ pub fn init(
     versioned_env.set_contract_hash(&contract_hash);
 
     #[cfg(feature = "random")]
-    {
-        debug!("Old random: {:?}", versioned_env.get_random());
-
-        versioned_env.set_random(derive_random(
-            &versioned_env.get_random(),
-            &contract_key,
-            block_height,
-        ));
-
-        debug!("New random: {:?}", versioned_env.get_random());
-    }
+    set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
 
     update_msg_counter(block_height);
     //let start = Instant::now();
@@ -173,7 +173,8 @@ pub fn init(
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/init_handle.rs#L129
     // TODO: ref: https://github.com/CosmWasm/cosmwasm/blob/b971c037a773bf6a5f5d08a88485113d9b9e8e7b/packages/std/src/query.rs#L13
     //let start = Instant::now();
-    let output = encrypt_output(
+
+    let output = post_process_output(
         output,
         &secret_msg,
         &canonical_contract_address,
@@ -183,6 +184,7 @@ pub fn init(
         false,
         false,
     )?;
+
     // let duration = start.elapsed();
     // trace!("Time elapsed in encrypt_output: {:?}", duration);
 
@@ -192,6 +194,23 @@ pub fn init(
         output,
         contract_key,
     })
+}
+
+#[cfg(feature = "random")]
+fn update_random_with_msg_counter(
+    block_height: u64,
+    contract_key: &[u8; 64],
+    versioned_env: &mut CwEnv,
+) {
+    let old_random = versioned_env.get_random();
+    debug!("Old random: {:?}", old_random);
+
+    // rand is None if env is v0.10
+    if let Some(rand) = old_random {
+        versioned_env.set_random(Some(derive_random(&rand, contract_key, block_height)));
+    }
+
+    debug!("New random: {:?}", versioned_env.get_random());
 }
 
 fn to_canonical(contract_address: &BaseAddr) -> Result<CanonicalAddr, EnclaveError> {
@@ -239,14 +258,15 @@ pub fn handle(
 
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
-    // The flow of handle is now used for multiple messages (such ash Handle, Reply)
-    // When the message is handle, we expect it always to be encrypted while in Reply for example it might be plaintext
+    // The flow of handle is now used for multiple messages (such ash Handle, Reply, IBC)
+    // When the message is handle, we expect it always to be encrypted while in Reply & IBC it might be plaintext
     let parsed_handle_type = HandleType::try_from(handle_type)?;
 
     trace!("Handle type is {:?}", parsed_handle_type);
 
     let ParsedMessage {
-        should_validate_sig_info,
+        should_verify_sig_info,
+        should_verify_input,
         was_msg_encrypted,
         should_encrypt_output,
         secret_msg,
@@ -260,20 +280,23 @@ pub fn handle(
     };
 
     // There is no signature to verify when the input isn't signed.
-    // Receiving unsigned messages is only possible in Handle. (Init tx are always signed)
-    // All of these functions go through handle but the data isn't signed:
-    //  Reply (that is not WASM reply)
-    if should_validate_sig_info {
-        // Verify env parameters against the signed tx
-        verify_params(
-            &parsed_sig_info,
-            sent_funds,
-            &canonical_sender_address,
-            contract_address,
-            &secret_msg,
-            msg,
-        )?;
-    }
+    // Receiving an unsigned messages is only possible in Handle (Init tx are always signed).
+    // All of these scenarios go through here but the data isn't signed:
+    // - Plaintext replies (resulting from an IBC call)
+    // - IBC WASM Hooks
+    // - (In the future:) ICA
+    verify_params(
+        &parsed_sig_info,
+        sent_funds,
+        &canonical_sender_address,
+        contract_address,
+        &secret_msg,
+        #[cfg(feature = "light-client-validation")]
+        msg,
+        should_verify_sig_info,
+        should_verify_input,
+        parsed_handle_type,
+    )?;
 
     let mut validated_msg = decrypted_msg.clone();
     let mut reply_params: Option<Vec<ReplyParams>> = None;
@@ -282,7 +305,7 @@ pub fn handle(
             &decrypted_msg,
             &contract_hash,
             data_for_validation,
-            Some(parsed_handle_type.clone()),
+            Some(parsed_handle_type),
         )?;
         validated_msg = x.validated_msg;
         reply_params = x.reply_params;
@@ -308,22 +331,36 @@ pub fn handle(
         .clone()
         .into_versioned_env(&engine.get_api_version());
 
-    #[cfg(feature = "random")]
-    {
-        debug!("Old random: {:?}", versioned_env.get_random());
-
-        versioned_env.set_random(derive_random(
-            &versioned_env.get_random(),
-            &contract_key,
-            block_height,
-        ));
-
-        debug!("New random: {:?}", versioned_env.get_random());
+    // We want to allow executing contracts with plaintext input via IBC,
+    // even though the sender of an IBC packet cannot be verified.
+    // But we don't want malicious actors using this enclave setting to fake any sender they want.
+    // Therefore we'll use a null sender if it cannot be verified.
+    match parsed_handle_type {
+        // Execute: msg.sender was already verified
+        HandleType::HANDLE_TYPE_EXECUTE => {}
+        // Reply & IBC stuff: no msg.sender, set it to null just in case
+        // WASM Hooks: cannot verify sender, set it to null
+        HandleType::HANDLE_TYPE_REPLY
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_OPEN
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CONNECT
+        | HandleType::HANDLE_TYPE_IBC_CHANNEL_CLOSE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE
+        | HandleType::HANDLE_TYPE_IBC_PACKET_ACK
+        | HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK
+        | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
+            versioned_env.set_msg_sender("")
+        }
     }
+
+    #[cfg(feature = "random")]
+    set_random_in_env(block_height, &contract_key, &mut engine, &mut versioned_env);
 
     versioned_env.set_contract_hash(&contract_hash);
 
     update_msg_counter(block_height);
+
     let result = engine.handle(&versioned_env, validated_msg, &parsed_handle_type);
 
     *used_gas = engine.gas_used();
@@ -340,7 +377,7 @@ pub fn handle(
         secret_msg.nonce, secret_msg.user_public_key
     );
     if should_encrypt_output {
-        output = encrypt_output(
+        output = post_process_output(
             output,
             &secret_msg,
             &canonical_contract_address,
@@ -355,23 +392,30 @@ pub fn handle(
             manipulate_callback_sig_for_plaintext(&canonical_contract_address, output)?;
         set_all_logs_to_plaintext(&mut raw_output);
 
-        let finalized_output =
-            finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false);
-        trace!(
-            "Wasm output for plaintext message is: {:?}",
-            finalized_output
-        );
-
-        output = serde_json::to_vec(&finalized_output).map_err(|err| {
-            debug!(
-                "got an error while trying to serialize output json into bytes {:?}: {}",
-                finalized_output, err
-            );
-            EnclaveError::FailedToSerialize
-        })?;
+        output = finalize_raw_output(raw_output, false, is_ibc_msg(parsed_handle_type), false)?;
     }
 
     Ok(HandleSuccess { output })
+}
+
+#[cfg(feature = "random")]
+fn set_random_in_env(
+    block_height: u64,
+    contract_key: &[u8; 64],
+    engine: &mut Engine,
+    versioned_env: &mut CwEnv,
+) {
+    {
+        if engine
+            .supported_features()
+            .contains(&ContractFeature::Random)
+        {
+            debug!("random is enabled by contract");
+            update_random_with_msg_counter(block_height, contract_key, versioned_env);
+        } else {
+            versioned_env.set_random(None);
+        }
+    }
 }
 
 fn extract_sig_info(sig_info: &[u8]) -> Result<SigInfo, EnclaveError> {
@@ -438,7 +482,7 @@ pub fn query(
     *used_gas = engine.gas_used();
     let output = result?;
 
-    let output = encrypt_output(
+    let output = post_process_output(
         output,
         &secret_msg,
         &CanonicalAddr(Binary(Vec::new())), // Not used for queries (can't init a new contract from a query)
@@ -484,7 +528,7 @@ fn extract_base_env(env: &[u8]) -> Result<BaseEnv, EnclaveError> {
     serde_json::from_slice(env)
         .map_err(|err| {
             warn!(
-                "error while deserializing env into json {:?}: {}",
+                "error while deserializing env from json {:?}: {}",
                 String::from_utf8_lossy(env),
                 err
             );

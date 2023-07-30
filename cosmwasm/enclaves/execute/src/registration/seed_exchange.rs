@@ -12,30 +12,32 @@ pub enum SeedType {
     Current,
 }
 
-pub fn encrypt_seed(new_node_pk: [u8; PUBLIC_KEY_SIZE], seed_type: SeedType) -> SgxResult<Vec<u8>> {
-    let shared_enc_key = KEY_MANAGER
-        .seed_exchange_key()
-        .unwrap()
-        .current
-        .diffie_hellman(&new_node_pk);
-
-    let authenticated_data: Vec<&[u8]> = vec![&new_node_pk];
+pub fn encrypt_seed(
+    new_node_pk: [u8; PUBLIC_KEY_SIZE],
+    seed_type: SeedType,
+    is_legacy: bool,
+) -> SgxResult<Vec<u8>> {
+    let base_seed = if is_legacy {
+        KEY_MANAGER.seed_exchange_key().unwrap().genesis
+    } else {
+        KEY_MANAGER.seed_exchange_key().unwrap().current
+    };
 
     let seed_to_share = match seed_type {
         SeedType::Genesis => KEY_MANAGER.get_consensus_seed().unwrap().genesis,
         SeedType::Current => KEY_MANAGER.get_consensus_seed().unwrap().current,
     };
 
+    let shared_enc_key = base_seed.diffie_hellman(&new_node_pk);
+
+    let authenticated_data: Vec<&[u8]> = vec![&new_node_pk];
+
     // encrypt the seed using the symmetric key derived in the previous stage
     // genesis seed is passed in registration
 
     trace!(
         "Public keys on encryption {:?} {:?}",
-        KEY_MANAGER
-            .seed_exchange_key()
-            .unwrap()
-            .current
-            .get_pubkey(),
+        base_seed.get_pubkey(),
         new_node_pk
     );
     let res = match AESKey::new_from_slice(&shared_enc_key)

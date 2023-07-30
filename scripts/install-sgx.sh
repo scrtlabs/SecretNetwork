@@ -21,9 +21,12 @@ elif (($UBUNTUVERSION < 18)); then
 elif (($UBUNTUVERSION < 20)); then
         DISTRO='bionic'
         OS='ubuntu18.04-server'
-else
+elif (($UBUNTUVERSION < 22)); then
         DISTRO='focal'
         OS='ubuntu20.04-server'
+else
+        DISTRO='jammy'
+        OS='ubuntu22.04-server'
 fi
 
 deps() {

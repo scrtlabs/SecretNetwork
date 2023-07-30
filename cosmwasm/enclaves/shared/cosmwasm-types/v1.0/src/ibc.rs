@@ -123,7 +123,7 @@ where
     pub events: Vec<Event>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IbcEndpoint {
     pub port_id: String,
     pub channel_id: String,
@@ -173,7 +173,7 @@ pub enum IbcChannelCloseMsg {
 }
 
 /// The message that is passed into `ibc_packet_receive`
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IbcPacketReceiveMsg {
     pub packet: IbcPacket,
     pub relayer: Addr,
@@ -188,7 +188,7 @@ impl IbcPacketReceiveMsg {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IbcPacket {
     /// The raw data sent from the other side in the packet
     pub data: Binary,
@@ -230,7 +230,7 @@ impl IbcAcknowledgement {
 /// In IBC each package must set at least one type of timeout:
 /// the timestamp or the block height. Using this rather complex enum instead of
 /// two timeout fields we ensure that at least one timeout is set.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub struct IbcTimeout {
     // use private fields to enforce the use of constructors, which ensure that at least one is set

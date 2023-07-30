@@ -58,6 +58,7 @@ jobs:
             CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
+            FEATURES="verify-validator-whitelist,light-client-validation,random"
           target: build-deb
       - name: Run .deb Package Image
         run: |
@@ -105,7 +106,7 @@ jobs:
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
-            FEATURES=production
+            FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
@@ -128,7 +129,7 @@ jobs:
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
-            FEATURES=production
+            FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
@@ -265,11 +266,14 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/check-objdump
         name: Check Mitigation flags in Cosmwasm Enclave
+        with:
+          version: "v1.9.0"
       - uses: ./.github/actions/check-objdump
         name: Check Mitigation flags in TM Enclave
         with:
           filename: "tendermint_enclave.signed.so"
-          min-fence: "10"
+          min-fence: "1000"
+          version: "v1.9.0"
 
   Release:
     needs:

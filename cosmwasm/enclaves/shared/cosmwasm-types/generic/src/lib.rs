@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "random")]
 use cw_types_v010::encoding::Binary;
 
-use cw_types_v010::types::{Env as V010Env, HumanAddr};
 use cw_types_v010::types as v010types;
-use cw_types_v1::types as v1types;
+use cw_types_v010::types::{Env as V010Env, HumanAddr};
 use cw_types_v1::types::Env as V1Env;
 use cw_types_v1::types::MessageInfo as V1MessageInfo;
+use cw_types_v1::types::{self as v1types, Addr};
 use enclave_ffi_types::EnclaveError;
 
 pub const CONTRACT_KEY_LENGTH: usize = 64;
@@ -22,6 +22,12 @@ pub enum CosmWasmApiVersion {
     V1,
     /// CosmWasm version invalid
     Invalid,
+}
+
+/// features that a contract requires
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
+pub enum ContractFeature {
+    Random,
 }
 
 pub type BaseAddr = HumanAddr;
@@ -94,7 +100,7 @@ impl BaseEnv {
                     time: v1types::Timestamp::from_nanos(self.0.block.time).seconds(),
                     chain_id: self.0.block.chain_id,
                     #[cfg(feature = "random")]
-                    random: self.0.block.random,
+                    random: None,
                 },
                 message: v010types::MessageInfo {
                     sender: self.0.message.sender,
@@ -120,6 +126,8 @@ impl BaseEnv {
                     // v1 env.block.time is nanoseconds since unix epoch
                     time: v1types::Timestamp::from_nanos(self.0.block.time),
                     chain_id: self.0.block.chain_id,
+                    #[cfg(feature = "random")]
+                    random: self.0.block.random,
                 },
                 contract: v1types::ContractInfo {
                     address: v1types::Addr::unchecked(self.0.contract.address.0),
@@ -136,8 +144,6 @@ impl BaseEnv {
                     .into_iter()
                     .map(|x| x.into())
                     .collect(),
-                #[cfg(feature = "random")]
-                random: self.0.block.random,
             },
         }
     }
@@ -151,6 +157,10 @@ pub enum CwEnv {
 }
 
 impl CwEnv {
+    pub fn is_v1(&self) -> bool {
+        matches!(self, CwEnv::V1Env { .. })
+    }
+
     pub fn get_contract_hash(&self) -> &String {
         match self {
             CwEnv::V010Env { env } => &env.contract_code_hash,
@@ -170,22 +180,20 @@ impl CwEnv {
     }
 
     #[cfg(feature = "random")]
-    pub fn set_random(&mut self, random: Binary) {
+    pub fn set_random(&mut self, random: Option<Binary>) {
         match self {
-            CwEnv::V010Env { env } => {
+            CwEnv::V010Env { .. } => {}
+            CwEnv::V1Env { env, .. } => {
                 env.block.random = random;
-            }
-            CwEnv::V1Env { msg_info, .. } => {
-                msg_info.random = random;
             }
         }
     }
 
     #[cfg(feature = "random")]
-    pub fn get_random(&self) -> Binary {
+    pub fn get_random(&self) -> Option<Binary> {
         match self {
-            CwEnv::V010Env { env } => env.block.random.clone(),
-            CwEnv::V1Env { msg_info, .. } => msg_info.random.clone(),
+            CwEnv::V010Env { .. } => None,
+            CwEnv::V1Env { env, .. } => env.block.random.clone(),
         }
     }
     pub fn get_wasm_ptrs(&self) -> Result<(Vec<u8>, Vec<u8>), EnclaveError> {
@@ -218,6 +226,17 @@ impl CwEnv {
                 })?;
 
                 Ok((env_bytes, msg_bytes))
+            }
+        }
+    }
+
+    pub fn set_msg_sender(&mut self, msg_sender: &str) {
+        match self {
+            CwEnv::V010Env { env } => {
+                env.message.sender = HumanAddr::from(msg_sender);
+            }
+            CwEnv::V1Env { msg_info, .. } => {
+                msg_info.sender = Addr::unchecked(msg_sender);
             }
         }
     }

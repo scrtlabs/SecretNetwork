@@ -1,9 +1,10 @@
+use core::cmp::max;
 use std::convert::{TryFrom, TryInto};
 
 use log::*;
 
 use bech32::{FromBase32, ToBase32};
-use cw_types_generic::{CosmWasmApiVersion, CwEnv};
+use cw_types_generic::{ContractFeature, CosmWasmApiVersion, CwEnv};
 use rand_chacha::ChaChaRng;
 use rand_core::SeedableRng;
 use wasm3::{Instance, Memory, Trap};
@@ -35,6 +36,7 @@ mod validation;
 type Wasm3RsError = wasm3::Error;
 type Wasm3RsResult<T> = Result<T, wasm3::Error>;
 
+use crate::wasm3::gas::EXPORT_GAS_LIMIT;
 use enclave_utils::kv_cache::KvCache;
 
 macro_rules! debug_err {
@@ -141,6 +143,24 @@ where
     }
 }
 
+fn link_fn_no_args<F, R>(
+    instance: &mut Instance<Context>,
+    name: &str,
+    mut func: F,
+) -> Wasm3RsResult<()>
+where
+    F: FnMut(&mut Context, &wasm3::Instance<Context>) -> Result<R, WasmEngineError> + 'static,
+    R: wasm3::Arg + 'static,
+{
+    let wrapped_func =
+        move |ctx: &mut Context, instance: &wasm3::Instance<Context>, _: ()| func(ctx, instance);
+
+    let wrapped_func = expect_context(wrapped_func);
+    instance
+        .link_function("env", name, wrapped_func)
+        .allow_missing_import()
+}
+
 fn link_fn<F, A, R>(instance: &mut Instance<Context>, name: &str, func: F) -> Wasm3RsResult<()>
 where
     F: FnMut(&mut Context, &wasm3::Instance<Context>, A) -> Result<R, WasmEngineError> + 'static,
@@ -184,6 +204,8 @@ pub struct Engine {
     environment: wasm3::Environment,
     code: Vec<u8>,
     api_version: CosmWasmApiVersion,
+    #[allow(dead_code)]
+    features: Vec<ContractFeature>,
 }
 
 impl Engine {
@@ -234,6 +256,7 @@ impl Engine {
             environment,
             code: versioned_code.code,
             api_version: versioned_code.version,
+            features: versioned_code.features,
         })
     }
 
@@ -317,6 +340,8 @@ impl Engine {
         link_fn(instance, "ed25519_batch_verify", host_ed25519_batch_verify)?;
         link_fn(instance, "secp256k1_sign", host_secp256k1_sign)?;
         link_fn(instance, "ed25519_sign", host_ed25519_sign)?;
+        link_fn_no_args(instance, "check_gas", host_check_gas_used)?;
+        link_fn(instance, "gas_evaporate", host_gas_evaporate)?;
 
         //    DbReadIndex = 0,
         //     DbWriteIndex = 1,
@@ -348,6 +373,11 @@ impl Engine {
 
     pub fn get_api_version(&self) -> CosmWasmApiVersion {
         self.api_version
+    }
+
+    #[allow(dead_code)]
+    pub fn supported_features(&self) -> &Vec<ContractFeature> {
+        &self.features
     }
 
     pub fn init(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
@@ -445,7 +475,7 @@ impl Engine {
                 CosmWasmApiVersion::V1 => {
                     let export_name = HandleType::get_export_name(handle_type);
 
-                    if handle_type == &HandleType::HANDLE_TYPE_EXECUTE {
+                    if export_name == "execute" {
                         let msg_info_ptr = write_to_memory(instance, &msg_info_bytes)?;
                         let (handle, args) = (
                             instance
@@ -1787,4 +1817,46 @@ fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     encryption_salt.extend(&msg_counter.counter.to_be_bytes());
 
     encryption_salt
+}
+
+fn host_gas_evaporate(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+    evaporate: i32,
+) -> WasmEngineResult<i32> {
+    const GAS_MULTIPLIER: u64 = 1000; // (cosmwasm gas : sdk gas)
+    let gas_requested = evaporate as u64 * GAS_MULTIPLIER;
+
+    use_gas(
+        instance,
+        max(
+            gas_requested,
+            context.gas_costs.external_minimum_gas_evaporate as u64,
+        ),
+    )?;
+
+    // return 0 == success
+    Ok(0)
+}
+
+fn host_check_gas_used(
+    context: &mut Context,
+    instance: &wasm3::Instance<Context>,
+) -> WasmEngineResult<i64> {
+    //
+    let used_gas = context.gas_costs.external_check_gas_used as u64;
+    use_gas(instance, used_gas)?;
+    // The gas limit actually gets modified - this is how we track the used gas
+    let gas_remaining: u64 = instance.get_global(EXPORT_GAS_LIMIT).unwrap_or_default();
+
+    let limit = context.gas_limit;
+    // return 0 == success
+    debug!(
+        "Reported gas remaining: {:?}, limit: {:?}",
+        gas_remaining, limit
+    );
+
+    let gas_used = limit.saturating_sub(gas_remaining) / 1000;
+
+    Ok(gas_used as i64)
 }
