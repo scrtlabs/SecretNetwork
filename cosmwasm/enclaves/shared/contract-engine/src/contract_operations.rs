@@ -248,14 +248,14 @@ fn update_random_with_msg_counter(
     versioned_env: &mut CwEnv,
 ) {
     let old_random = versioned_env.get_random();
-    debug!("Old random: {:?}", old_random);
+    debug!("Old random: {:x?}", old_random);
 
     // rand is None if env is v0.10
     if let Some(rand) = old_random {
         versioned_env.set_random(Some(derive_random(&rand, contract_key, block_height)));
     }
 
-    debug!("New random: {:?}", versioned_env.get_random());
+    debug!("New random: {:x?}", versioned_env.get_random());
 }
 
 fn to_canonical(contract_address: &BaseAddr) -> Result<CanonicalAddr, EnclaveError> {
@@ -752,7 +752,7 @@ pub fn handle(
     *used_gas = used_gas.saturating_sub(refund_cache_gas);
 
     debug!(
-        "(2) nonce just before encrypt_output: nonce = {:?} pubkey = {:?}",
+        "(2) nonce just before encrypt_output: nonce = {:x?} pubkey = {:x?}",
         secret_msg.nonce, secret_msg.user_public_key
     );
     if should_encrypt_output {
