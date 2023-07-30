@@ -183,8 +183,8 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-          $(MAKE) build-tm-secret-enclave
-	        cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
+          make build-tm-secret-enclave
+          cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ias_keys/develop
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
