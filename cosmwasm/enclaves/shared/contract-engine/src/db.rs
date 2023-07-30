@@ -324,6 +324,7 @@ fn read_db(
     let mut gas_used = 0_u64;
 
     let (value, proof, mp_key) = unsafe {
+        debug!("calling ocall_read_db");
         let status = ocalls::ocall_read_db(
             (&mut ocall_return) as *mut _,
             context.unsafe_clone(),
@@ -336,6 +337,8 @@ fn read_db(
             key.as_ptr(),
             key.len(),
         );
+
+        debug!("returned from ocall_read_db");
         match status {
             sgx_status_t::SGX_SUCCESS => { /* continue */ }
             error_status => {
@@ -347,6 +350,7 @@ fn read_db(
             }
         }
 
+        debug!("matching ocall return value");
         match ocall_return {
             OcallReturn::Success => {
                 let value_buffer = value_buffer.assume_init();
@@ -365,10 +369,13 @@ fn read_db(
         }
     };
 
+    debug!("is feature of read-db-proofs enabled?");
     #[cfg(feature = "read-db-proofs")]
     if let (Some(proof), Some(mp_key)) = (proof, mp_key) {
+        debug!("verifying merkle proof inside enclave");
         let comm_proof =
             comm_proof_from_bytes(&proof).map_err(|_| WasmEngineError::HostMisbehavior)?;
+        debug!("computed commitment proof from received proof");
         if !verify_read(&mp_key, value.clone(), &comm_proof) {
             error!("could not verify merkle proof");
             return Err(WasmEngineError::HostMisbehavior);

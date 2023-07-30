@@ -193,7 +193,25 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 	v := receiveSlice(val)
 
 	gasBefore := gm.GasConsumed()
+	fmt.Println("writing to db key:", key)
+	iavlStore, _, err := getInnerIavl(kv, k)
+	if err != nil {
+		fmt.Println("MYDEBUG ERRORRRRR getting iavl")
+		return C.GoResult_Ok
+	}
+
+	// Query height is (current - 1) because we will probably not have a proof in
+	// the current height (assuming we're mid execution)
+
+	versions := iavlStore.GetAllVersions()
+	fmt.Println("before write, existing versions:", versions)
+	fmt.Println("before write, so the latest one is:", versions[len(versions)-1])
+
 	kv.Set(k, v)
+
+	versions = iavlStore.GetAllVersions()
+	fmt.Println("after write, existing versions:", versions)
+	fmt.Println("after write, so the latest one is:", versions[len(versions)-1])
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 

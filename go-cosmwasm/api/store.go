@@ -15,14 +15,19 @@ type storeWithParent interface{ GetParent() sdk.KVStore }
 func getInnerIavl(store sdk.KVStore, key []byte) (iavlStore *iavl.Store, fullKey []byte, err error) {
 	switch st := store.(type) {
 	case prefix.Store: // Special case for a prefix store to get the prefixed key
+		fmt.Println("getting inner iavl from prefixed store")
 		return getInnerIavl(st.GetParent(), st.Key(key))
 	case storeWithParent:
+		fmt.Println("getting inner iavl from a child store")
 		return getInnerIavl(st.GetParent(), key)
 	case *cache.CommitKVStoreCache:
+		fmt.Println("getting inner iavl from a commit cache")
 		return getInnerIavl(st.CommitKVStore, key)
 	case *iavl.Store:
+		fmt.Println("getting final iavl")
 		return st, key, nil
 	default:
+		fmt.Println("error unwrapping iavl")
 		return nil, nil, fmt.Errorf("store type not supported: %+v", store)
 	}
 }
@@ -35,7 +40,14 @@ func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byt
 
 	// Query height is (current - 1) because we will probably not have a proof in
 	// the current height (assuming we're mid execution)
+
+	fmt.Println("get: getting existing versions:")
+	versions := iavlStore.GetAllVersions()
+	fmt.Println("existing versions:", versions)
+	fmt.Println("so the latest one is:", versions[len(versions)-1])
+	fmt.Println("would have queried:", blockHeight-1)
 	result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight - 1})
+	fmt.Println("result returned from version:", result.Height)
 
 	// result.ProofOps.Ops should always contain only one proof
 	if result.ProofOps == nil {
