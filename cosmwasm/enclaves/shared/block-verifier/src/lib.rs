@@ -53,7 +53,7 @@ pub mod tests {
             crate::wasm_messages::tests::check_parse_reg_bytes();
             crate::wasm_messages::tests::check_parse_reg_from_tx();
             crate::wasm_messages::tests::test_wasm_msg_tracker();
-            crate::wasm_messages::tests::test_wasm_msg_tracker_multiple_msgs();
+            crate::wasm_messages::tests::test_mix_wasm_bank_msg_tracker_multiple_msgs();
             crate::validator_whitelist::tests::test_parse_validators();
         });
 

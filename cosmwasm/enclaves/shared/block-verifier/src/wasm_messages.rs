@@ -174,7 +174,7 @@ pub mod tests {
         );
     }
 
-    pub fn test_wasm_msg_tracker_multiple_msgs() {
+    pub fn test_mix_wasm_bank_msg_tracker_multiple_msgs() {
         let tx_bytes_hex = TX_RAW_2_WASM_1_BANK_MSG;
 
         let tx_bytes = hex::decode(tx_bytes_hex).unwrap();
@@ -190,7 +190,7 @@ pub mod tests {
 
         assert_eq!(
             super::VERIFIED_BLOCK_MESSAGES.lock().unwrap().remaining(),
-            2 as usize
+            3 as usize
         );
         assert_eq!(
             &super::VERIFIED_BLOCK_MESSAGES
@@ -202,7 +202,7 @@ pub mod tests {
         );
         assert_eq!(
             super::VERIFIED_BLOCK_MESSAGES.lock().unwrap().remaining(),
-            1 as usize
+            2 as usize
         );
         assert_eq!(
             &super::VERIFIED_BLOCK_MESSAGES
@@ -214,7 +214,7 @@ pub mod tests {
         );
         assert_eq!(
             super::VERIFIED_BLOCK_MESSAGES.lock().unwrap().remaining(),
-            0 as usize
+            1 as usize
         );
     }
     //
