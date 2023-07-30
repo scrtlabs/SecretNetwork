@@ -625,8 +625,6 @@ pub fn handle(
 
     validate_contract_key(&base_env, &canonical_contract_address, &contract_code)?;
 
-    let og_contract_key = base_env.get_og_contract_key()?;
-
     let parsed_sig_info: SigInfo = extract_sig_info(sig_info)?;
 
     // The flow of handle is now used for multiple messages (such ash Handle, Reply, IBC)
@@ -681,6 +679,8 @@ pub fn handle(
         validated_msg = x.validated_msg;
         reply_params = x.reply_params;
     }
+
+    let og_contract_key = base_env.get_og_contract_key()?;
 
     // Although the operation here is not always handle it is irrelevant in this case
     // because it only helps to decide whether to check floating points or not

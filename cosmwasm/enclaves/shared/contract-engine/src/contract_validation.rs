@@ -231,7 +231,7 @@ pub fn validate_current_contract_key(
         trace!("Successfully authenticated the contract!");
         Ok(())
     } else {
-        warn!("got an error while trying to deserialize output bytes");
+        warn!("Failed to authenticated the contract");
         Err(EnclaveError::FailedContractAuthentication)
     }
 }

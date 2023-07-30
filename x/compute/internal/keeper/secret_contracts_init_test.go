@@ -1059,12 +1059,12 @@ func TestInputAdminMismatch(t *testing.T) {
 		txNil    bool
 	}{
 		{
-			name:     "tx is nil",
+			name:     "input is nil",
 			inputNil: true,
 			txNil:    false,
 		},
 		{
-			name:     "input is nil",
+			name:     "tx is nil",
 			inputNil: false,
 			txNil:    true,
 		},

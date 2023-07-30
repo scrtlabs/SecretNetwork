@@ -27,8 +27,6 @@ use crate::verify::validator_set::get_validator_set_for_height;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
 const RANDOM_PROOF_LEN: u32 = 80;
-const MAX_TXS_LENGTH: u32 = 10 * 1024 * 1024;
-const TX_THRESHOLD: usize = 100_000;
 
 #[no_mangle]
 #[allow(unused_variables)]
@@ -151,7 +149,6 @@ fn validate_inputs(
 ) -> Result<(), sgx_status_t> {
     validate_input_length!(in_header_len, "header", MAX_VARIABLE_LENGTH);
     validate_input_length!(in_commit_len, "commit", MAX_VARIABLE_LENGTH);
-    validate_input_length!(in_txs_len, "txs", MAX_TXS_LENGTH);
     validate_input_length!(
         in_encrypted_random_len,
         "encrypted random",

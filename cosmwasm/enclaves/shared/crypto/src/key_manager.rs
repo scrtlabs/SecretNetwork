@@ -462,7 +462,7 @@ impl Keychain {
         self.admin_proof_secret = Some(admin_proof_secret);
 
         trace!(
-            "initial_randomness_seed: {:?}",
+            "admin_proof_secret: {:?}",
             hex::encode(admin_proof_secret.get())
         );
 
@@ -475,7 +475,7 @@ impl Keychain {
         self.contract_key_proof_secret = Some(contract_key_proof_secret);
 
         trace!(
-            "initial_randomness_seed: {:?}",
+            "contract_key_proof_secret: {:?}",
             hex::encode(contract_key_proof_secret.get())
         );
 
