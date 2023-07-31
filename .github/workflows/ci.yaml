@@ -182,13 +182,14 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-          cp /opt/mount/tendermint_enclave.signed.so ./x/compute/internal/keeper
+          ls -l /opt/mount/
+          ls -l .
           mkdir -p ias_keys/develop
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
-          LOG_LEVEL=ERROR go test -v -tags "test sgx" ./x/compute/client/...
-          LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test sgx" ./x/compute/internal/...
+          LOG_LEVEL=ERROR go test -v -tags "test" ./x/compute/client/...
+          LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-20.04
@@ -284,7 +285,7 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES=debug-print,random,light-client-validation,go-tests,
+            FEATURES=debug-print,random,light-client-validation,go-tests
             SGX_MODE=SW
           target: build-localsecret
           cache-from: type=gha
