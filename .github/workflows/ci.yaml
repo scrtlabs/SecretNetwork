@@ -137,7 +137,6 @@ jobs:
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librandom_api.so /opt/mount/librandom_api.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/tendermint_enclave.signed.so /opt/mount/tendermint_enclave.signed.so
-
       - uses: actions/download-artifact@v3
         with:
           name: contract.wasm
@@ -174,18 +173,6 @@ jobs:
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
           cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
           find "$(pwd)" -name \*.wasm
-      - name: Cache xargo sysroot
-        uses: actions/cache@v3
-        with:
-          path: ~/.xargo
-          key: ${{ runner.os }}-xargo-sysroot
-      - name: Install xargo
-        run: |
-          cd cosmwasm/enclaves/execute/
-          cargo --version
-          rustc --version  
-          cargo +stable install xargo --version 0.3.25
-          xargo --version
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -195,8 +182,7 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-          make build-tm-secret-enclave
-          cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
+          cp /opt/mount/tendermint_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ias_keys/develop
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
@@ -298,7 +284,8 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES=debug-print,random,light-client-validation,go-tests
+            FEATURES="debug-print random light-client-validation go-tests"
+            FEATURES_U="debug-print random light-client-validation go-tests"
             SGX_MODE=SW
           target: build-localsecret
           cache-from: type=gha
