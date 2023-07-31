@@ -92,11 +92,11 @@ type GasMeter interface {
 /****** DB ********/
 
 var db_vtable = C.DB_vtable{
-	read_db:   (C.read_db_fn)(C.cGet_cgo),
-	read_db_no_proof:   (C.read_db_no_proof_fn)(C.cGetNoProof_cgo),
-	write_db:  (C.write_db_fn)(C.cSet_cgo),
-	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
-	scan_db:   (C.scan_db_fn)(C.cScan_cgo),
+	read_db:          (C.read_db_fn)(C.cGet_cgo),
+	read_db_no_proof: (C.read_db_no_proof_fn)(C.cGetNoProof_cgo),
+	write_db:         (C.write_db_fn)(C.cSet_cgo),
+	remove_db:        (C.remove_db_fn)(C.cDelete_cgo),
+	scan_db:          (C.scan_db_fn)(C.cScan_cgo),
 }
 
 type DBState struct {
