@@ -11,7 +11,7 @@ use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
 
 use crate::msg::{
-    ExecuteMsg, ExternalMessages, IBCLifecycleComplete, InstantiateMsg, QueryMsg, QueryRes,
+    ExecuteMsg, ExternalMessages, IBCLifecycleComplete, InstantiateMsg, QueryMsg, QueryRes, SudoMsg,
 };
 use crate::state::{count, count_read, expiration, expiration_read, PREFIX_TEST, TEST_KEY};
 
@@ -1314,33 +1314,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 })
                 .set_data(details[0].data.as_bytes()))
         }
-        ExecuteMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCAck {
-            channel,
-            sequence,
-            ack,
-            success,
-        }) => Ok(Response::default().add_attributes(vec![
-            ("ibc_lifecycle_complete.ibc_ack.channel", channel),
-            (
-                "ibc_lifecycle_complete.ibc_ack.sequence",
-                sequence.to_string(),
-            ),
-            ("ibc_lifecycle_complete.ibc_ack.ack", ack),
-            (
-                "ibc_lifecycle_complete.ibc_ack.success",
-                success.to_string(),
-            ),
-        ])),
-        ExecuteMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout {
-            channel,
-            sequence,
-        }) => Ok(Response::default().add_attributes(vec![
-            ("ibc_lifecycle_complete.ibc_timeout.channel", channel),
-            (
-                "ibc_lifecycle_complete.ibc_timeout.sequence",
-                sequence.to_string(),
-            ),
-        ])),
         ExecuteMsg::SendMsgMigrateContract {
             contract_addr,
             new_code_id,
@@ -3816,33 +3789,6 @@ pub fn migrate(deps: DepsMut, env: Env, msg: ExecuteMsg) -> StdResult<Response> 
                 })
                 .set_data(details[0].data.as_bytes()))
         }
-        ExecuteMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCAck {
-            channel,
-            sequence,
-            ack,
-            success,
-        }) => Ok(Response::default().add_attributes(vec![
-            ("ibc_lifecycle_complete.ibc_ack.channel", channel),
-            (
-                "ibc_lifecycle_complete.ibc_ack.sequence",
-                sequence.to_string(),
-            ),
-            ("ibc_lifecycle_complete.ibc_ack.ack", ack),
-            (
-                "ibc_lifecycle_complete.ibc_ack.success",
-                success.to_string(),
-            ),
-        ])),
-        ExecuteMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout {
-            channel,
-            sequence,
-        }) => Ok(Response::default().add_attributes(vec![
-            ("ibc_lifecycle_complete.ibc_timeout.channel", channel),
-            (
-                "ibc_lifecycle_complete.ibc_timeout.sequence",
-                sequence.to_string(),
-            ),
-        ])),
         ExecuteMsg::SendMsgMigrateContract {
             contract_addr,
             new_code_id,
@@ -3922,5 +3868,38 @@ pub fn migrate(deps: DepsMut, env: Env, msg: ExecuteMsg) -> StdResult<Response> 
             ),
         }
         ExecuteMsg::Echo { data } => Ok(Response::new().set_data(data)),
+    }
+}
+
+#[entry_point]
+pub fn sudo(_deps: DepsMut, _env: Env, msg: SudoMsg) -> StdResult<Response> {
+    match msg {
+        SudoMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCAck {
+            channel,
+            sequence,
+            ack,
+            success,
+        }) => Ok(Response::default().add_attributes(vec![
+            ("ibc_lifecycle_complete.ibc_ack.channel", channel),
+            (
+                "ibc_lifecycle_complete.ibc_ack.sequence",
+                sequence.to_string(),
+            ),
+            ("ibc_lifecycle_complete.ibc_ack.ack", ack),
+            (
+                "ibc_lifecycle_complete.ibc_ack.success",
+                success.to_string(),
+            ),
+        ])),
+        SudoMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout {
+            channel,
+            sequence,
+        }) => Ok(Response::default().add_attributes(vec![
+            ("ibc_lifecycle_complete.ibc_timeout.channel", channel),
+            (
+                "ibc_lifecycle_complete.ibc_timeout.sequence",
+                sequence.to_string(),
+            ),
+        ])),
     }
 }
