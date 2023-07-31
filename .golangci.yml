@@ -2,8 +2,10 @@ run:
   tests: false
   #   # timeout for analysis, e.g. 30s, 5m, default is 1m
   timeout: 5m
-  skip_files:
-    - x/registration/internal/types/ias_bin_sw.go
+  skip-files:
+    - x/registration/internal/types/reg_keys.go # uses auto generated code
+    - x/registration/internal/types/ias_bin.*?.go # auto generated
+
 linters:
   disable-all: true
   enable:
