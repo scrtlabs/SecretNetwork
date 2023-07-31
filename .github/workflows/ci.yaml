@@ -174,6 +174,18 @@ jobs:
           cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
           cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
           find "$(pwd)" -name \*.wasm
+      - name: Cache xargo sysroot
+        uses: actions/cache@v3
+        with:
+          path: ~/.xargo
+          key: ${{ runner.os }}-xargo-sysroot
+      - name: Install xargo
+        run: |
+          cd cosmwasm/enclaves/execute/
+          cargo --version
+          rustc --version  
+          cargo +stable install xargo --version 0.3.25
+          xargo --version
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
