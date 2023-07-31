@@ -179,12 +179,9 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           go test -v -tags "secretcli" ./x/registration/internal/...
       - name: Test x/compute
-        env:
-          LOG_LEVEL: ERROR
-          SKIP_LIGHT_CLIENT_VALIDATION: "TRUE"
-          SGX_MODE: SW
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
+          export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
           make build-tm-secret-enclave
           cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
@@ -192,6 +189,8 @@ jobs:
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
+          export LOG_LEVEL=ERROR
+          export SKIP_LIGHT_CLIENT_VALIDATION=TRUE
           go test -v -tags "test sgx" ./x/compute/client/...
           go test -p 1 -timeout 90m -v -tags "test sgx" ./x/compute/internal/...
 
@@ -292,8 +291,8 @@ jobs:
             FEATURES=debug-print,random,light-client-validation,go-tests
             SGX_MODE=SW
           target: build-localsecret
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localsecret.tar
       - name: Upload Image
         uses: actions/upload-artifact@v3
