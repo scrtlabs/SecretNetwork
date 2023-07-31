@@ -41,11 +41,13 @@ func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byt
 	// Query height is (current - 1) because we will probably not have a proof in
 	// the current height (assuming we're mid execution)
 
-	fmt.Println("get: getting existing versions:")
-	versions := iavlStore.GetAllVersions()
-	fmt.Println("existing versions:", versions)
-	fmt.Println("so the latest one is:", versions[len(versions)-1])
-	fmt.Println("would have queried:", blockHeight-1)
+	fmt.Println("get: blockheight minus 1 is:", blockHeight-1)
+	for i := blockHeight - 1; i >= 0; i-- {
+		fmt.Println("get: getting existing versions:", i)
+		version_exists := iavlStore.VersionExists(i)
+		fmt.Println("version", i, "exists:", version_exists)
+	}
+
 	result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight - 1})
 	fmt.Println("result returned from version:", result.Height)
 
