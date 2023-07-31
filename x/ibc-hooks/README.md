@@ -2,10 +2,7 @@
 
 ## Forked from https://github.com/osmosis-labs/osmosis/tree/512654fb35845f807cdc9179984db9e2afc2e564/x/ibc-hooks
 
-Different behaviors on Secret vs. Osmosis:
-
-- When receiving a token over IBC, instead of the scrambled sender on the Osmosis, on Secret the contract sees the sender as an empty string.
-- When using `ibc_callback` with `IbcMsg::Transfer` from a non IBC contract, on Secret the ack/timeout will be sent to the `execute` endpoint instead of to the `sudo` endpoint.
+The only different behavior on Secret vs. Osmosis is that when receiving a token over IBC, instead of the scrambled sender on the Osmosis, on Secret the contract sees the sender as an empty string.
 
 ## Wasm Hooks
 
@@ -153,7 +150,7 @@ received, it will notify the specified contract via a `execute` message.
 
 #### Interface for receiving the Acks and Timeouts
 
-The contract that awaits the callback should implement the following interface for a `execute` message:
+The contract that awaits the callback should implement the following interface for a sudo message:
 
 ```rust
 #[cw_serde]
@@ -178,12 +175,26 @@ pub enum IBCLifecycleComplete {
     },
 }
 
-/// Message type for `execute` entry_point
+/// Message type for `sudo` entry_point
 #[cw_serde]
-pub enum ExecuteMsg {
-    // Regular contract functions...
-    // ...
+pub enum SudoMsg {
     #[serde(rename = "ibc_lifecycle_complete")]
     IBCLifecycleComplete(IBCLifecycleComplete),
+}
+
+#[entry_point]
+pub fn sudo(_deps: DepsMut, _env: Env, msg: SudoMsg) -> StdResult<Response> {
+    match msg {
+        SudoMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCAck {
+            channel,
+            sequence,
+            ack,
+            success,
+        }) => todo!(),
+        SudoMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout {
+            channel,
+            sequence,
+        }) => todo!(),
+    }
 }
 ```
