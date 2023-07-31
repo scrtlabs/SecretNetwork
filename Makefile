@@ -172,7 +172,7 @@ _build-linux:
 run-dev: docs/tendermint_enclave.signed.so
 	SGX_MODE=SW $(MAKE) build-linux
 	cp go-cosmwasm/librust_cosmwasm_enclave.signed.so .
-	cp docs/tendermint_enclave.signed.so
+	cp docs/tendermint_enclave.signed.so .
 	SGX_MODE=SW ./scripts/start-node.sh
 
 build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
