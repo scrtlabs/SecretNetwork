@@ -2,7 +2,8 @@ run:
   tests: false
   #   # timeout for analysis, e.g. 30s, 5m, default is 1m
   timeout: 5m
-
+  skip_files:
+    - x/registration/internal/types/ias_bin_sw.go
 linters:
   disable-all: true
   enable:
