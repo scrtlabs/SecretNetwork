@@ -53,7 +53,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     #[cfg(all(
         feature = "light-client-validation",
-        or(not(feature = "go-tests"), feature = "production")
+        any(not(feature = "go-tests"), feature = "production")
     ))]
     {
         if !check_cert_in_current_block(cert_slice) {

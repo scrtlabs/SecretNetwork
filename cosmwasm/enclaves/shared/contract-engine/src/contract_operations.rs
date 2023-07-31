@@ -99,7 +99,7 @@ pub fn init(
 
     #[cfg(all(
         feature = "light-client-validation",
-        or(not(feature = "go-tests"), feature = "production")
+        any(not(feature = "go-tests"), feature = "production")
     ))]
     {
         verify_block_info(&base_env)?;
@@ -349,7 +349,7 @@ pub fn migrate(
 
     #[cfg(all(
         feature = "light-client-validation",
-        or(not(feature = "go-tests"), feature = "production")
+        any(not(feature = "go-tests"), feature = "production")
     ))]
     {
         verify_block_info(&base_env)?;
@@ -527,7 +527,7 @@ pub fn update_admin(
 
     #[cfg(all(
         feature = "light-client-validation",
-        or(not(feature = "go-tests"), feature = "production")
+        any(not(feature = "go-tests"), feature = "production")
     ))]
     {
         verify_block_info(&base_env)?;
@@ -626,7 +626,7 @@ pub fn handle(
 
     #[cfg(all(
         feature = "light-client-validation",
-        or(not(feature = "go-tests"), feature = "production")
+        any(not(feature = "go-tests"), feature = "production")
     ))]
     {
         verify_block_info(&base_env)?;

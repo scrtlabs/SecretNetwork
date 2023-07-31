@@ -829,7 +829,7 @@ fn verify_input_params(
 
     #[cfg(all(
         feature = "light-client-validation",
-        or(not(feature = "go-tests"), feature = "production")
+        any(not(feature = "go-tests"), feature = "production")
     ))]
     {
         info!("Verifying message in signed block...");
