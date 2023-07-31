@@ -201,10 +201,8 @@ jobs:
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
-          export LOG_LEVEL=ERROR
-          export SKIP_LIGHT_CLIENT_VALIDATION=TRUE
-          go test -v -tags "test sgx" ./x/compute/client/...
-          go test -p 1 -timeout 90m -v -tags "test sgx" ./x/compute/internal/...
+          LOG_LEVEL=ERROR go test -v -tags "test sgx" ./x/compute/client/...
+          LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test sgx" ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-20.04
@@ -303,8 +301,8 @@ jobs:
             FEATURES=debug-print,random,light-client-validation,go-tests
             SGX_MODE=SW
           target: build-localsecret
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localsecret.tar
       - name: Upload Image
         uses: actions/upload-artifact@v3
