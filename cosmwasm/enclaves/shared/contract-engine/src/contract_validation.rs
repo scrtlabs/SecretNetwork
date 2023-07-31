@@ -827,14 +827,21 @@ fn verify_input_params(
         }
     };
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
+    #[cfg(all(
+        feature = "light-client-validation",
+        or(not(feature = "go-tests"), feature = "production")
+    ))]
     {
         info!("Verifying message in signed block...");
         if !check_tx_in_current_block(sig_info.tx_bytes.as_slice()) {
             return Err(EnclaveError::ValidationFailure);
         }
     }
-    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
+    #[cfg(all(
+        feature = "light-client-validation",
+        feature = "go-tests",
+        not(feature = "production")
+    ))]
     {
         // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
