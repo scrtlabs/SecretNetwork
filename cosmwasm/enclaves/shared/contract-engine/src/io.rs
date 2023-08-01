@@ -1014,11 +1014,11 @@ fn attach_reply_headers_to_v1_wasm_msg(
 }
 
 pub fn create_callback_signature(
-    _contract_addr: &CanonicalAddr,
-    msg_to_sign: &Vec<u8>,
-    funds_to_send: &[Coin],
+    _sender: &CanonicalAddr,
+    msg_to_pass: &Vec<u8>,
+    sent_funds: &[Coin],
 ) -> Vec<u8> {
-    // Hash(Enclave_secret | msg_to_pass | sent_funds)
+    // sha256(enclave_secret | msg_to_pass | sent_funds)
     let mut callback_sig_bytes = KEY_MANAGER
         .get_consensus_callback_secret()
         .unwrap()
@@ -1026,8 +1026,8 @@ pub fn create_callback_signature(
         .get()
         .to_vec();
 
-    callback_sig_bytes.extend(msg_to_sign.as_slice());
-    callback_sig_bytes.extend(serde_json::to_vec(funds_to_send).unwrap());
+    callback_sig_bytes.extend(msg_to_pass.as_slice());
+    callback_sig_bytes.extend(serde_json::to_vec(sent_funds).unwrap());
 
     sha2::Sha256::digest(callback_sig_bytes.as_slice()).to_vec()
 }
