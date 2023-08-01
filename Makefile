@@ -468,19 +468,19 @@ prep-go-tests: build-test-contracts bin-data-sw
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 
 go-tests: build-test-contracts bin-data-sw
-	SGX_MODE=SW $(MAKE) build-tm-secret-enclave
-	cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
+	# SGX_MODE=SW $(MAKE) build-tm-secret-enclave
+	# cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -tags sgx -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 go-tests-hw: build-test-contracts bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
-	SGX_MODE=HW $(MAKE) build-tm-secret-enclave
-	cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
+	# SGX_MODE=HW $(MAKE) build-tm-secret-enclave
+	# cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=HW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	GOMAXPROCS=8 SGX_MODE=HW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -tags sgx -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=HW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 # When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
 # rule in the Makefile in `enclaves/execute`. This is to speed up the compilation time of tests and speed up the
