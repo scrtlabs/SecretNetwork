@@ -26,7 +26,7 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 COPY rust-toolchain rust-toolchain
 RUN rustup component add rust-src
-RUN --mount=type=cache,target=/root/.cargo/registry cargo install xargo --version 0.3.25
+RUN cargo install xargo --version 0.3.25
 
 # Add submodules
 COPY third_party third_party
@@ -53,7 +53,7 @@ ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
 COPY rust-toolchain rust-toolchain
 RUN rustup component add rust-src
-RUN --mount=type=cache,target=/root/.cargo/registry cargo install xargo --version 0.3.25
+RUN cargo install xargo --version 0.3.25
 
 # Add submodules
 COPY third_party third_party
@@ -64,7 +64,7 @@ COPY cosmwasm cosmwasm/
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
-RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
+RUN . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
 
 ENTRYPOINT ["/bin/bash"]
@@ -316,7 +316,7 @@ ENV FEATURES_U=${FEATURES_U}
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
 # Ignore $FEATURES because it should never be `production`
-RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
+RUN . /opt/sgxsdk/environment && env \
     && VERSION=${VERSION} FEATURES="" FEATURES_U=${FEATURES_U} SGX_MODE=HW make build-rust
 
 # Set working directory for the build
@@ -338,7 +338,7 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/check-hw
 
 COPY ./deployment/docker/builder/create_check_hw_tar.sh .
 
-RUN --mount=type=cache,target=/root/.cargo/registry . /opt/sgxsdk/environment && env && make
+RUN . /opt/sgxsdk/environment && env && make
 RUN cp ../go-cosmwasm/librust_cosmwasm_enclave.signed.so ./check_hw_enclave.so
 
 ENTRYPOINT ["/bin/bash", "create_check_hw_tar.sh"]
