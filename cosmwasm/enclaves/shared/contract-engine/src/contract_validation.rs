@@ -60,7 +60,7 @@ pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
     }
 
     if verified_msgs.time() != base_env.0.block.time as i128 {
-        error!("wrong height for this block - 0xF6AF");
+        error!("wrong time for this block - 0xF6AF");
         return Err(EnclaveError::ValidationFailure);
     }
 
