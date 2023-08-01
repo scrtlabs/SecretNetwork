@@ -507,6 +507,8 @@ pub fn verify_params(
         debug!("Verifying message signatures for: {:?}", sig_info);
 
         if let Some(callback_sig) = &sig_info.callback_sig {
+            // We return here if there's a callback signature.
+            // The sender is another contract in the same transaction, so there aren't any signed_bytes to verify or tx_bytes to check in the signed block.
             return verify_callback_sig(callback_sig.as_slice(), sender, secret_msg, sent_funds);
         }
 
