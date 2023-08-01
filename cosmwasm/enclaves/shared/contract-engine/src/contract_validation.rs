@@ -56,23 +56,6 @@ pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
     let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     if verified_msgs.height() != base_env.0.block.height {
         error!("wrong height for this block - 0xF6AC");
-
-        if cfg!(feature = "go-tests") {
-            error!("go-tests is on");
-        } else {
-            error!("go-tests is off");
-        }
-
-        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
-        if is_skip_light_client_validation.is_err() {
-            error!("SKIP_LIGHT_CLIENT_VALIDATION is not set");
-        } else {
-            error!(
-                "SKIP_LIGHT_CLIENT_VALIDATION is set to {}",
-                is_skip_light_client_validation.unwrap()
-            );
-        }
-
         return Err(EnclaveError::ValidationFailure);
     }
 
