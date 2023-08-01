@@ -62,10 +62,9 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
         let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
-        if is_skip_light_client_validation.is_err() {
-            if !check_cert_in_current_block(cert_slice) {
-                return NodeAuthResult::SignatureInvalid;
-            }
+
+        if is_skip_light_client_validation.is_err() && !check_cert_in_current_block(cert_slice) {
+            return NodeAuthResult::SignatureInvalid;
         }
     }
 
