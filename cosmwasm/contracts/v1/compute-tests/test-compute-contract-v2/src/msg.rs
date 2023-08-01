@@ -424,8 +424,6 @@ pub enum ExecuteMsg {
     ExecuteMultipleContracts {
         details: Vec<ExecuteDetails>,
     },
-    #[serde(rename = "ibc_lifecycle_complete")]
-    IBCLifecycleComplete(IBCLifecycleComplete),
     SendMsgMigrateContract {
         contract_addr: String,
         new_code_id: Uint64,
@@ -470,6 +468,13 @@ pub enum IBCLifecycleComplete {
         /// The sequence number that the packet was sent with
         sequence: u64,
     },
+}
+
+/// Message type for `sudo` entry_point
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum SudoMsg {
+    #[serde(rename = "ibc_lifecycle_complete")]
+    IBCLifecycleComplete(IBCLifecycleComplete),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

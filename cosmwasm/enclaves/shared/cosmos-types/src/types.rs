@@ -195,9 +195,9 @@ impl HandleType {
             HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => "ibc_packet_receive",
             HandleType::HANDLE_TYPE_IBC_PACKET_ACK => "ibc_packet_ack",
             HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => "ibc_packet_timeout",
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER
-            | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK
-            | HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => "execute",
+            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => "execute",
+            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => "sudo",
+            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => "sudo",
         }
     }
 }
