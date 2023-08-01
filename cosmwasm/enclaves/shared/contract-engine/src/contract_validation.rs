@@ -846,10 +846,7 @@ fn verify_input_params(
         }
     };
 
-    #[cfg(all(
-        feature = "light-client-validation",
-        any(not(feature = "go-tests"), feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         info!("Verifying message in signed block...");
         if !check_tx_in_current_block(sig_info.tx_bytes.as_slice()) {

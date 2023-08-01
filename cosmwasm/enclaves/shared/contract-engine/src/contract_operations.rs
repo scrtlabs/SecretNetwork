@@ -97,18 +97,11 @@ pub fn init(
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(
-        feature = "light-client-validation",
-        any(not(feature = "go-tests"), feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         verify_block_info(&base_env)?;
     }
-    #[cfg(all(
-        feature = "light-client-validation",
-        feature = "go-tests",
-        not(feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
         // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
@@ -347,18 +340,11 @@ pub fn migrate(
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(
-        feature = "light-client-validation",
-        any(not(feature = "go-tests"), feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         verify_block_info(&base_env)?;
     }
-    #[cfg(all(
-        feature = "light-client-validation",
-        feature = "go-tests",
-        not(feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
         // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
@@ -525,18 +511,11 @@ pub fn update_admin(
 
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(
-        feature = "light-client-validation",
-        any(not(feature = "go-tests"), feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         verify_block_info(&base_env)?;
     }
-    #[cfg(all(
-        feature = "light-client-validation",
-        feature = "go-tests",
-        not(feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
         // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
@@ -624,18 +603,11 @@ pub fn handle(
 
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(
-        feature = "light-client-validation",
-        any(not(feature = "go-tests"), feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
     {
         verify_block_info(&base_env)?;
     }
-    #[cfg(all(
-        feature = "light-client-validation",
-        feature = "go-tests",
-        not(feature = "production")
-    ))]
+    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
     {
         // allow skipping light client validation in go-tests
         // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set

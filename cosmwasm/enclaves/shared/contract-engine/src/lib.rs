@@ -67,3 +67,6 @@ pub mod tests {
         }
     }
 }
+
+#[cfg(all(feature = "go-tests", feature = "production"))]
+compile_error!("Cannot use 'go-tests' & 'production' features together.");
