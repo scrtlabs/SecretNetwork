@@ -59,16 +59,6 @@ we need to allocate memory regions inside the VM's instance and copy
 `env` & `msg` into those memory regions inside the VM's instance.
 */
 
-fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
-    let mut data_to_sign = vec![];
-    data_to_sign.extend_from_slice(admin);
-    data_to_sign.extend_from_slice(contract_key);
-
-    let admin_proof_secret = KEY_MANAGER.get_admin_proof_secret().unwrap();
-
-    admin_proof_secret.sign_sha_256(data_to_sign.as_slice())
-}
-
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub fn init(
     context: Ctx,       // need to pass this to read_db & write_db

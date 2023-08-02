@@ -335,6 +335,16 @@ pub fn validate_contract_key(
     }
 }
 
+fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
+    let mut data_to_sign = vec![];
+    data_to_sign.extend_from_slice(admin);
+    data_to_sign.extend_from_slice(contract_key);
+
+    let admin_proof_secret = KEY_MANAGER.get_admin_proof_secret().unwrap();
+
+    admin_proof_secret.sign_sha_256(data_to_sign.as_slice())
+}
+
 pub fn generate_contract_key_proof(
     contract_address: &[u8],
     code_hash: &[u8],
