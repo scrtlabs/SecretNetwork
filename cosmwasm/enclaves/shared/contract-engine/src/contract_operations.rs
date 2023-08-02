@@ -11,7 +11,7 @@ use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::{CanonicalAddr, HumanAddr};
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo, VerifyParamsType};
-use enclave_crypto::{sha_256, Ed25519PublicKey, Hmac, KEY_MANAGER};
+use enclave_crypto::Ed25519PublicKey;
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 
@@ -20,7 +20,9 @@ use crate::cosmwasm_config::ContractOperation;
 #[cfg(feature = "light-client-validation")]
 use crate::contract_validation::verify_block_info;
 
-use crate::contract_validation::{generate_contract_key_proof, ReplyParams, ValidatedMessage};
+use crate::contract_validation::{
+    generate_admin_proof, generate_contract_key_proof, ReplyParams, ValidatedMessage,
+};
 use crate::external::results::{
     HandleSuccess, InitSuccess, MigrateSuccess, QuerySuccess, UpdateAdminSuccess,
 };
@@ -314,10 +316,6 @@ fn is_hardcoded_contract_admin(
 /// The entire history of contracts that were deployed before v1.10 and have been migrated using the hardcoded admin feature.
 /// These contracts might have other contracts that call them with a wrong code_hash, because those other contracts have it stored from before the migration.
 pub fn is_code_hash_allowed(contract_address: &CanonicalAddr, code_hash: &str) -> bool {
-    if admin_proof != [0; enclave_crypto::HASH_SIZE] {
-        return false;
-    }
-
     let contract_address = HumanAddr::from_canonical(contract_address);
     if contract_address.is_err() {
         trace!(

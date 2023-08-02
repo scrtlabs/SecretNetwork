@@ -1,5 +1,3 @@
-use core::slice::SlicePattern;
-
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
@@ -336,7 +334,7 @@ pub fn validate_contract_key(
     }
 }
 
-fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
+pub fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
     let mut data_to_sign = vec![];
     data_to_sign.extend_from_slice(admin);
     data_to_sign.extend_from_slice(contract_key);
