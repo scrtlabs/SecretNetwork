@@ -53,6 +53,21 @@ fn is_subslice(larger: &[u8], smaller: &[u8]) -> bool {
 
 #[cfg(feature = "light-client-validation")]
 pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
+    #[cfg(feature = "go-tests")]
+    {
+        // allow skipping light client validation in go-tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set to TRUE
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+
+        if is_skip_light_client_validation
+            .unwrap_or_default()
+            .to_uppercase()
+            == "TRUE"
+        {
+            return Ok(());
+        }
+    }
+
     let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     if verified_msgs.height() != base_env.0.block.height {
         error!("wrong height for this block - 0xF6AC");
@@ -71,6 +86,23 @@ pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
 /// WARNING: this function must be called at most once per message!
 /// Checks if there's a msg in the light client that's contained in tx_sign_bytes
 pub fn check_tx_in_current_block(tx_sign_bytes: &[u8]) -> bool {
+    #[cfg(feature = "go-tests")]
+    {
+        // allow skipping light client validation in go-tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set to TRUE
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+
+        if is_skip_light_client_validation
+            .unwrap_or_default()
+            .to_uppercase()
+            == "TRUE"
+        {
+            return true;
+        }
+    }
+
+    info!("Verifying message in signed block...");
+
     let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     let remaining_msgs = verified_msgs.remaining();
 
@@ -104,6 +136,21 @@ pub fn check_tx_in_current_block(tx_sign_bytes: &[u8]) -> bool {
 /// WARNING: this function must be called at most once per message!
 /// Checks if there's a msg in the light client that's containing cert
 pub fn check_cert_in_current_block(cert: &[u8]) -> bool {
+    #[cfg(feature = "go-tests")]
+    {
+        // allow skipping light client validation in go-tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set to TRUE
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+
+        if is_skip_light_client_validation
+            .unwrap_or_default()
+            .to_uppercase()
+            == "TRUE"
+        {
+            return true;
+        }
+    }
+
     let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     let remaining_msgs = verified_msgs.remaining();
 
@@ -829,28 +876,9 @@ fn verify_input_params(
         }
     };
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
-    {
-        info!("Verifying message in signed block...");
-        if !check_tx_in_current_block(sig_info.tx_bytes.as_slice()) {
-            return Err(EnclaveError::ValidationFailure);
-        }
-    }
-    #[cfg(all(
-        feature = "light-client-validation",
-        feature = "go-tests",
-        not(feature = "production")
-    ))]
-    {
-        // allow skipping light client validation in go-tests
-        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
-        if is_skip_light_client_validation.is_err() {
-            info!("Verifying message in signed block...");
-            if !check_tx_in_current_block(sig_info.tx_bytes.as_slice()) {
-                return Err(EnclaveError::ValidationFailure);
-            }
-        }
+    #[cfg(feature = "light-client-validation")]
+    if !check_tx_in_current_block(sig_info.tx_bytes.as_slice()) {
+        return Err(EnclaveError::ValidationFailure);
     }
 
     info!("Verifying message sender...");

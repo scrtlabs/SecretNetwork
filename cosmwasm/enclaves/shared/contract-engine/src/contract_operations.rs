@@ -97,19 +97,8 @@ pub fn init(
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
-    {
-        verify_block_info(&base_env)?;
-    }
-    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
-    {
-        // allow skipping light client validation in go-tests
-        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
-        if is_skip_light_client_validation.is_err() {
-            verify_block_info(&base_env)?;
-        }
-    }
+    #[cfg(feature = "light-client-validation")]
+    verify_block_info(&base_env)?;
 
     // let duration = start.elapsed();
     // trace!("Time elapsed in extract_base_env is: {:?}", duration);
@@ -340,19 +329,8 @@ pub fn migrate(
     //let start = Instant::now();
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
-    {
-        verify_block_info(&base_env)?;
-    }
-    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
-    {
-        // allow skipping light client validation in go-tests
-        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
-        if is_skip_light_client_validation.is_err() {
-            verify_block_info(&base_env)?;
-        }
-    }
+    #[cfg(feature = "light-client-validation")]
+    verify_block_info(&base_env)?;
 
     // let duration = start.elapsed();
     // trace!("Time elapsed in extract_base_env is: {:?}", duration);
@@ -511,19 +489,8 @@ pub fn update_admin(
 
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
-    {
-        verify_block_info(&base_env)?;
-    }
-    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
-    {
-        // allow skipping light client validation in go-tests
-        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
-        if is_skip_light_client_validation.is_err() {
-            verify_block_info(&base_env)?;
-        }
-    }
+    #[cfg(feature = "light-client-validation")]
+    verify_block_info(&base_env)?;
 
     let (sender, contract_address, _block_height, sent_funds) = base_env.get_verification_params();
 
@@ -603,19 +570,8 @@ pub fn handle(
 
     let base_env: BaseEnv = extract_base_env(env)?;
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
-    {
-        verify_block_info(&base_env)?;
-    }
-    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
-    {
-        // allow skipping light client validation in go-tests
-        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
-        if is_skip_light_client_validation.is_err() {
-            verify_block_info(&base_env)?;
-        }
-    }
+    #[cfg(feature = "light-client-validation")]
+    verify_block_info(&base_env)?;
 
     let query_depth = extract_query_depth(env)?;
 

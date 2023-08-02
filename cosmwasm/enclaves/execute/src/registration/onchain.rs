@@ -51,21 +51,9 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
 
-    #[cfg(all(feature = "light-client-validation", not(feature = "go-tests")))]
-    {
-        if !check_cert_in_current_block(cert_slice) {
-            return NodeAuthResult::SignatureInvalid;
-        }
-    }
-    #[cfg(all(feature = "light-client-validation", feature = "go-tests"))]
-    {
-        // allow skipping light client validation in go-tests
-        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set
-        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
-
-        if is_skip_light_client_validation.is_err() && !check_cert_in_current_block(cert_slice) {
-            return NodeAuthResult::SignatureInvalid;
-        }
+    #[cfg(feature = "light-client-validation")]
+    if !check_cert_in_current_block(cert_slice) {
+        return NodeAuthResult::SignatureInvalid;
     }
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
