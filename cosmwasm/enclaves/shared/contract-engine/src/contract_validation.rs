@@ -1,3 +1,5 @@
+use core::slice::SlicePattern;
+
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
@@ -339,17 +341,15 @@ pub fn generate_contract_key_proof(
     og_contract_key: &[u8],
     new_contract_key: &[u8],
 ) -> [u8; enclave_crypto::HASH_SIZE] {
-    let mut data_to_hash = vec![];
-    data_to_hash.extend_from_slice(contract_address);
-    data_to_hash.extend_from_slice(code_hash);
-    data_to_hash.extend_from_slice(og_contract_key);
-    data_to_hash.extend_from_slice(new_contract_key);
+    let mut data_to_sign = vec![];
+    data_to_sign.extend_from_slice(contract_address);
+    data_to_sign.extend_from_slice(code_hash);
+    data_to_sign.extend_from_slice(og_contract_key);
+    data_to_sign.extend_from_slice(new_contract_key);
 
     let contract_key_proof_secret = KEY_MANAGER.get_contract_key_proof_secret().unwrap();
 
-    data_to_hash.extend_from_slice(contract_key_proof_secret.get());
-
-    sha_256(&data_to_hash)
+    contract_key_proof_secret.sign_sha_256(data_to_sign.as_slice())
 }
 
 pub struct ValidatedMessage {

@@ -11,7 +11,7 @@ use cw_types_v010::encoding::Binary;
 use cw_types_v010::types::{CanonicalAddr, HumanAddr};
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo, VerifyParamsType};
-use enclave_crypto::{sha_256, Ed25519PublicKey, KEY_MANAGER};
+use enclave_crypto::{sha_256, Ed25519PublicKey, Hmac, KEY_MANAGER};
 use enclave_ffi_types::{Ctx, EnclaveError};
 use log::*;
 
@@ -60,15 +60,13 @@ we need to allocate memory regions inside the VM's instance and copy
 */
 
 fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
-    let mut data_to_hash = vec![];
-    data_to_hash.extend_from_slice(admin);
-    data_to_hash.extend_from_slice(contract_key);
+    let mut data_to_sign = vec![];
+    data_to_sign.extend_from_slice(admin);
+    data_to_sign.extend_from_slice(contract_key);
 
     let admin_proof_secret = KEY_MANAGER.get_admin_proof_secret().unwrap();
 
-    data_to_hash.extend_from_slice(admin_proof_secret.get());
-
-    sha_256(&data_to_hash)
+    admin_proof_secret.sign_sha_256(data_to_sign.as_slice())
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
