@@ -1,10 +1,10 @@
-use cosmwasm_std::{Storage};
-use cosmwasm_storage::{
-    singleton, singleton_read, ReadonlySingleton, Singleton,
-};
+use cosmwasm_std::Storage;
+use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 
 pub const COUNT_KEY: &[u8] = b"count";
 pub const EXPIRATION_KEY: &[u8] = b"expire";
+pub const PREFIX_TEST: &[u8] = b"prefix";
+pub const TEST_KEY: &[u8] = b"key";
 
 pub fn count(storage: &mut dyn Storage) -> Singleton<u64> {
     singleton(storage, COUNT_KEY)
@@ -21,4 +21,3 @@ pub fn expiration(storage: &mut dyn Storage) -> Singleton<u64> {
 pub fn expiration_read(storage: &dyn Storage) -> ReadonlySingleton<u64> {
     singleton_read(storage, EXPIRATION_KEY)
 }
-

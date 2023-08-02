@@ -140,7 +140,6 @@ func (w *Wasmer) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	sigInfo types.VerificationInfo,
-	contractAddress sdk.AccAddress,
 ) (interface{}, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {

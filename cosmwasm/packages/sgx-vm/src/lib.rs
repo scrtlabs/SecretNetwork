@@ -43,7 +43,10 @@ pub use crate::traits::{Api, Extern, Querier, Storage};
 pub use crate::traits::StorageIterator;
 
 // Secret Network specific exports
-pub use crate::attestation::{create_attestation_report_u, untrusted_get_encrypted_seed};
+pub use crate::attestation::{
+    create_attestation_report_u, untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed,
+};
+
 pub use crate::proofs::untrusted_submit_store_roots;
 pub use crate::random::untrusted_submit_block_signatures;
 pub use crate::seed::{

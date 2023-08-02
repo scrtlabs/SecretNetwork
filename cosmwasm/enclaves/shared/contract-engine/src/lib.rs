@@ -5,29 +5,37 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate alloc;
 extern crate sgx_types;
 
+mod block_cache;
 mod contract_operations;
 mod contract_validation;
 mod cosmwasm_config;
 mod db;
 mod errors;
+mod execute_message;
 pub mod external;
 mod gas;
+mod ibc_denom_utils;
+mod ibc_message;
+mod input_validation;
 mod io;
 mod message;
+mod message_utils;
 mod query_chain;
 mod random;
+mod reply_message;
 pub(crate) mod types;
-#[cfg(feature = "wasmi-engine")]
-mod wasm;
 #[cfg(feature = "wasm3")]
 mod wasm3;
 
+pub use block_cache::clear_block_cache;
 pub use contract_operations::{handle, init, query};
 
 #[cfg(feature = "test")]
 pub mod tests {
+    use crate::block_cache;
     use crate::types;
 
     /// Catch failures like the standard test runner, and print similar information per test.
@@ -54,6 +62,9 @@ pub mod tests {
 
         count_failures!(failures, {
             types::tests::test_new_from_slice();
+            block_cache::tests::test_insert_into_cachemap();
+            block_cache::tests::test_merge_into_cachemap();
+            block_cache::tests::test_clear_cachemap();
         });
 
         if failures != 0 {

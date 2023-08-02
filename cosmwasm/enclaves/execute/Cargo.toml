@@ -10,7 +10,7 @@ name = "secret_enclave"
 crate-type = ["staticlib"]
 
 [features]
-default = ["SGX_MODE_SW"]
+default = ["SGX_MODE_SW", "random"]
 SGX_MODE_SW = []
 SGX_MODE_HW = []
 production = [
@@ -32,16 +32,13 @@ test = [
 ]
 use_seed_service_on_bootstrap = []
 epid_whitelist_disabled = []
-light-client-validation = [
-  "enclave_contract_engine/light-client-validation",
-  "block-verifier/light-client-validation",
-]
+light-client-validation = ["enclave_contract_engine/light-client-validation", "block-verifier"]
 read-db-proofs = [
   "enclave_contract_engine/read-db-proofs",
   "block-verifier/read-db-proofs",
 ]
-random = ["enclave_contract_engine/random"]
-verify-validator-whitelist = ["block-verifier/verify-validator-whitelist"]
+random = ["enclave_contract_engine/random", "enclave_crypto/random"]
+verify-validator-whitelist = ["block-verifier/verify-validator-whitelist", "light-client-validation"]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
@@ -91,7 +88,7 @@ simple_logger = { version = "2.3.0", default-features = false, features = [
   "stderr",
 ] }
 
-block-verifier = { path = "../shared/block-verifier", default-features = false }
+block-verifier = { path = "../shared/block-verifier", optional = true }
 read-verifier = { path = "../shared/read-verifier" }
 
 time = "=0.3.17"

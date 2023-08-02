@@ -42,6 +42,11 @@ impl KvCache {
         }
     }
 
+    pub fn remove(&mut self, key: &[u8]) {
+        self.writeable_cache.remove(key);
+        self.readable_cache.remove(key);
+    }
+
     pub fn drain_gas_tracker(&mut self) -> u64 {
         let gas_used = self.gas_tracker;
         self.gas_tracker = 0;
@@ -55,5 +60,19 @@ impl KvCache {
         self.readable_cache.clear();
 
         items
+    }
+
+    pub fn merge(&mut self, other: KvCache) {
+        for (key, value) in other.writeable_cache {
+            self.write(&key, &value);
+        }
+
+        for (key, value) in other.readable_cache {
+            self.store_in_ro_cache(&key, &value);
+        }
+
+        // merging gas_tracker could be simply taking the maximum of two or summing them up
+        // I am assuming summing here, please adjust it according to your needs
+        self.gas_tracker += other.gas_tracker;
     }
 }

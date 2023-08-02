@@ -104,6 +104,7 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DB_vtable {
+  int32_t (*read_db_no_proof)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*, Buffer*);
   int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, uint64_t, Buffer, Buffer*, Buffer*, Buffer*, Buffer*);
   int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, Buffer*);
   int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
@@ -156,6 +157,8 @@ bool create_attestation_report(Buffer api_key, Buffer *err, bool dry_run);
 void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
+
+Buffer get_encrypted_genesis_seed(Buffer pk, Buffer *err);
 
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 

@@ -21,7 +21,7 @@ type BaseAppParamManager interface {
 // An upgrade must implement this struct, and then set it in the app.go.
 // The app.go will then define the handler.
 type Upgrade struct {
-	// Upgrade version name, for the upgrade handler, e.g. `v1.4`
+	// UpgradeName defines the on-chain upgrade name for the upgrade, e.g. "v1.8", "v1.9", etc.
 	UpgradeName string
 
 	// CreateUpgradeHandler defines the function that creates an upgrade handler

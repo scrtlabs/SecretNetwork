@@ -44,6 +44,12 @@ enclave {
             [out, count=96] uint8_t* seed
         );
 
+        public sgx_status_t ecall_get_genesis_seed(
+            [in, count=pk_len] const uint8_t* pk,
+            uintptr_t pk_len,
+            [out, count=48] uint8_t* seed
+        );
+
         public sgx_status_t ecall_init_node(
             [in, count=master_key_len] const uint8_t* master_key,
             uintptr_t master_key_len,
@@ -118,7 +124,7 @@ enclave {
 //            uintptr_t in_next_validator_set_len
         );
 
-        public sgx_status_t ecall_submit_store_roots(
+        public SdkBeginBlockerResult ecall_app_begin_blocker(
             [in, count=in_roots_len] const uint8_t* in_roots,
             uintptr_t in_roots_len,
             [in, count=in_compute_root_len] const uint8_t* in_compute_root,

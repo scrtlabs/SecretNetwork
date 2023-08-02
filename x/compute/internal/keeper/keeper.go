@@ -2,22 +2,28 @@ package keeper
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
-	channelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
-	portkeeper "github.com/cosmos/ibc-go/v3/modules/core/05-port/keeper"
+	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
+	portkeeper "github.com/cosmos/ibc-go/v4/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	"golang.org/x/crypto/ripemd160" //nolint:staticcheck
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -28,15 +34,12 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/tendermint/tendermint/crypto"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	wasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm"
 
 	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -44,6 +47,10 @@ import (
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
+
+type emergencyButton interface {
+	IsHalted(ctx sdk.Context) bool
+}
 
 type ResponseHandler interface {
 	// Handle processes the data returned by a contract invocation.
@@ -75,6 +82,7 @@ type Keeper struct {
 	HomeDir       string
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
+	LastMsgManager *baseapp.LastMsgMarkerContainer
 }
 
 func moduleLogger(ctx sdk.Context) log.Logger {
@@ -100,6 +108,7 @@ func NewKeeper(
 	portKeeper portkeeper.Keeper,
 	portSource types.ICS20TransferPortSource,
 	channelKeeper channelkeeper.Keeper,
+	ics4Wrapper transfertypes.ICS4Wrapper,
 	legacyMsgRouter sdk.Router,
 	msgRouter MessageRouter,
 	queryRouter GRPCQueryRouter,
@@ -108,6 +117,7 @@ func NewKeeper(
 	supportedFeatures string,
 	customEncoders *MessageEncoders,
 	customPlugins *QueryPlugins,
+	lastMsgManager *baseapp.LastMsgMarkerContainer,
 ) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize)
 	if err != nil {
@@ -123,13 +133,27 @@ func NewKeeper(
 		bankKeeper:       bankKeeper,
 		portKeeper:       portKeeper,
 		capabilityKeeper: capabilityKeeper,
-		messenger:        NewMessageHandler(msgRouter, legacyMsgRouter, customEncoders, channelKeeper, capabilityKeeper, portSource, cdc),
-		queryGasLimit:    wasmConfig.SmartQueryGasLimit,
-		HomeDir:          homeDir,
+		messenger: NewMessageHandler(
+			msgRouter,
+			legacyMsgRouter,
+			customEncoders,
+			channelKeeper,
+			ics4Wrapper,
+			capabilityKeeper,
+			portSource,
+			cdc,
+		),
+		queryGasLimit:  wasmConfig.SmartQueryGasLimit,
+		HomeDir:        homeDir,
+		LastMsgManager: lastMsgManager,
 	}
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
+}
+
+func (k Keeper) GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer {
+	return k.LastMsgManager
 }
 
 // Create uploads and compiles a WASM contract, returning a short identifier for the contract
@@ -177,49 +201,78 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 	return nil
 }
 
-func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, sdktxsigning.SignMode, []byte, []byte, []byte, error) {
-	tx := sdktx.Tx{}
-	err := k.cdc.Unmarshal(ctx.TxBytes(), &tx)
+func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktxsigning.SignMode, []byte, []byte, []byte, error) {
+	var rawTx sdktx.TxRaw
+	var parsedTx sdktx.Tx
+	err := k.cdc.Unmarshal(ctx.TxBytes(), &parsedTx)
 	if err != nil {
-		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		if strings.Contains(err.Error(), "no concrete type registered for type URL /ibc") {
+			// We're here because the tx is an IBC tx, and the IBC module doesn't support Amino encoding.
+			// It fails decoding IBC messages with the error "no concrete type registered for type URL /ibc.core.channel.v1.MsgChannelOpenInit against interface *types.Msg".
+			// "concrete type" is used to refer to the mapping between the Go struct and the Amino type string (e.g. "cosmos-sdk/MsgSend")
+			// Therefore we'll manually rebuild the tx without parsing the body, as parsing it is unnecessary here anyway.
+			//
+			// NOTE: This does not support multisigned IBC txs (if that's even a thing).
+
+			err := k.cdc.Unmarshal(ctx.TxBytes(), &rawTx)
+			if err != nil {
+				return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode raw transaction from bytes: %s", err.Error()))
+			}
+
+			var txAuthInfo sdktx.AuthInfo
+			err = k.cdc.Unmarshal(rawTx.AuthInfoBytes, &txAuthInfo)
+			if err != nil {
+				return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction auth info from bytes: %s", err.Error()))
+			}
+
+			parsedTx = sdktx.Tx{
+				Body:       nil, // parsing rawTx.BodyBytes is the reason for the error, and it isn't used anyway
+				AuthInfo:   &txAuthInfo,
+				Signatures: rawTx.Signatures,
+			}
+		} else {
+			return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to decode transaction from bytes: %s", err.Error()))
+		}
 	}
 
-	// for MsgInstantiateContract, there is only one signer which is msg.Sender
-	// (https://github.com/scrtlabs/SecretNetwork/blob/d7813792fa07b93a10f0885eaa4c5e0a0a698854/x/compute/internal/types/msg.go#L192-L194)
-	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, signer)
-	if err != nil {
-		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
-	}
+	tx := authtx.WrapTx(&parsedTx).GetTx()
 
-	txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
-	modeHandler := txConfig.SignModeHandler()
-	signingData := authsigning.SignerData{
-		ChainID:       ctx.ChainID(),
-		AccountNumber: signerAcc.GetAccountNumber(),
-		Sequence:      signerAcc.GetSequence() - 1,
-	}
-
-	protobufTx := authtx.WrapTx(&tx).GetTx()
-
-	pubKeys, err := protobufTx.GetPubKeys()
+	pubKeys, err := tx.GetPubKeys()
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to get public keys for instantiate: %s", err.Error()))
 	}
 
 	pkIndex := -1
-	var _signers [][]byte // This is just used for the error message below
-	for index, pubKey := range pubKeys {
-		thisSigner := pubKey.Address().Bytes()
-		_signers = append(_signers, thisSigner)
-		if bytes.Equal(thisSigner, signer.Bytes()) {
-			pkIndex = index
+	if sender == nil || sender.Equals(types.ZeroSender) {
+		// We are in a situation where the contract gets a null msg.sender,
+		// however we still need to get the sign bytes for verification against the wasm input msg inside the enclave.
+		// There can be multiple signers on the tx, for example one can be the msg.sender and the another can be the gas fee payer. Another example is if this tx also contains MsgMultiSend which supports multiple msg.senders thus requiring multiple signers.
+		// Not sure if we should support this or if this even matters here, as we're most likely here because it's an incoming IBC tx and the signer is the relayer.
+		// For now we will just take the first signer.
+		// Also, because we're not decoding the tx body anymore, we can't use tx.GetSigners() here. Therefore we'll convert the pubkey into an address.
+
+		pubkeys, err := tx.GetPubKeys()
+		if err != nil {
+			return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve pubkeys from tx: %s", err.Error()))
+		}
+
+		pkIndex = 0
+		sender = sdk.AccAddress(pubkeys[pkIndex].Address())
+	} else {
+		var _signers [][]byte // This is just used for the error message below
+		for index, pubKey := range pubKeys {
+			thisSigner := pubKey.Address().Bytes()
+			_signers = append(_signers, thisSigner)
+			if bytes.Equal(thisSigner, sender.Bytes()) {
+				pkIndex = index
+			}
+		}
+		if pkIndex == -1 {
+			return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", sender, _signers))
 		}
 	}
-	if pkIndex == -1 {
-		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", signer, _signers))
-	}
 
-	signatures, err := protobufTx.GetSignaturesV2()
+	signatures, err := tx.GetSignaturesV2()
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to get signatures: %s", err.Error()))
 	}
@@ -227,12 +280,46 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	switch signData := signatures[pkIndex].Data.(type) {
 	case *sdktxsigning.SingleSignatureData:
 		signMode = signData.SignMode
+		if signMode == sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED {
+			// Some shitness with IBC txs' internals - they are not registered properly with the app,
+			// and I think that it's something in the ibc-go repo that needs to be fixed.
+			// For some txs (e.g. MsgChannelOpenInit), we can unmarsal it into parsedTx
+			// but signMode turns out to be SIGN_MODE_UNSPECIFIED which is not true
+			// and always should be SignMode_SIGN_MODE_DIRECT (as IBC txs don't support Amino encoding)
+			// which causes `modeHandler.GetSignBytes()` down the line to fail with "can't verify sign mode SIGN_MODE_UNSPECIFIED"
+			// this is a stop gap solution, however we should investigate why this is happening
+			// and fix the `k.cdc.Unmarshal(ctx.TxBytes(), &parsedTx)` above, which will maybe allow us to remove
+			// the rawTx parsing code
+			signMode = sdktxsigning.SignMode_SIGN_MODE_DIRECT
+		}
 	case *sdktxsigning.MultiSignatureData:
 		signMode = sdktxsigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON
 	}
-	signBytes, err := modeHandler.GetSignBytes(signMode, signingData, protobufTx)
+
+	signerAcc, err := ante.GetSignerAcc(ctx, k.accountKeeper, sender)
 	if err != nil {
-		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to retrieve account by address: %s", err.Error()))
+	}
+
+	var signBytes []byte
+
+	if rawTx.BodyBytes != nil && rawTx.AuthInfoBytes != nil {
+		signBytes, err = authtx.DirectSignBytes(rawTx.BodyBytes, rawTx.AuthInfoBytes, ctx.ChainID(), signerAcc.GetAccountNumber())
+		if err != nil {
+			return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+		}
+	} else {
+		signingData := authsigning.SignerData{
+			ChainID:       ctx.ChainID(),
+			AccountNumber: signerAcc.GetAccountNumber(),
+			Sequence:      signerAcc.GetSequence() - 1,
+		}
+		txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
+		modeHandler := txConfig.SignModeHandler()
+		signBytes, err = modeHandler.GetSignBytes(signMode, signingData, tx)
+		if err != nil {
+			return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+		}
 	}
 
 	modeInfoBytes, err := sdktxsigning.SignatureDataToProto(signatures[pkIndex].Data).Marshal()
@@ -250,7 +337,7 @@ func (k Keeper) GetSignerInfo(ctx sdk.Context, signer sdk.AccAddress) ([]byte, s
 	if err != nil {
 		return nil, 0, nil, nil, nil, sdkerrors.Wrap(types.ErrSigFailed, "couldn't marshal public key")
 	}
-	return signBytes, signMode, modeInfoBytes, pkBytes, tx.Signatures[pkIndex], nil
+	return signBytes, signMode, modeInfoBytes, pkBytes, parsedTx.Signatures[pkIndex], nil
 }
 
 func V010MsgToV1SubMsg(contractAddress string, msg v010wasmTypes.CosmosMsg) (v1wasmTypes.SubMsg, error) {
@@ -330,7 +417,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
 	if callbackSig == nil {
-		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetSignerInfo(ctx, creator)
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetTxInfo(ctx, creator)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -347,7 +434,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 		return nil, nil, sdkerrors.Wrap(types.ErrAccountExists, label)
 	}
 
-	contractAddress := k.generateContractAddress(ctx, codeID)
+	contractAddress := k.generateContractAddress(ctx, codeID, creator)
 	existingAcct := k.accountKeeper.GetAccount(ctx, contractAddress)
 	if existingAcct != nil {
 		return nil, nil, sdkerrors.Wrap(types.ErrAccountExists, existingAcct.GetAddress().String())
@@ -377,10 +464,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(bz, &codeInfo)
 
-	// random := k.GetRandomSeed(ctx, ctx.BlockHeight())
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
 	// prepare env for contract instantiate call
-	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil /*, random*/)
+	env := types.NewEnv(ctx, creator, deposit, contractAddress, nil, random)
 
 	// create prefixed data store
 	// 0x03 | contractAddress (sdk.AccAddress)
@@ -396,7 +483,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, contractAddress)
+	response, key, gasUsed, err := k.wasmer.Instantiate(codeInfo.CodeHash, env, initMsg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo)
 	consumeGas(ctx, gasUsed)
 
 	if err != nil {
@@ -430,7 +517,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 			return nil, nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
 		}
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV010)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, initMsg, verificationInfo)
 		if err != nil {
 			return nil, nil, sdkerrors.Wrap(err, "dispatch")
 		}
@@ -467,7 +554,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 
 		store.Set(types.GetContractLabelPrefix(label), contractAddress)
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, initMsg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, initMsg, verificationInfo)
 		if err != nil {
 			return nil, nil, sdkerrors.Wrap(err, "dispatch")
 		}
@@ -479,7 +566,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 }
 
 // Execute executes the contract instance
-func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
+func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte, handleType wasmTypes.HandleType) (*sdk.Result, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "execute")
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading Compute module: execute")
@@ -493,7 +580,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	// If no callback signature - we should send the actual msg sender sign bytes and signature
 	if callbackSig == nil {
-		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetSignerInfo(ctx, caller)
+		signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err = k.GetTxInfo(ctx, caller)
 		if err != nil {
 			return nil, err
 		}
@@ -520,9 +607,9 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 	}
 
-	// random := k.GetRandomSeed(ctx, ctx.BlockHeight())
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
-	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey /* random */)
+	env := types.NewEnv(ctx, caller, coins, contractAddress, contractKey, random)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -532,7 +619,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	gas := gasForContract(ctx)
-	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, wasmTypes.HandleTypeExecute)
+	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, verificationInfo, handleType)
 	consumeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -555,7 +642,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			return nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
 		}
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, verificationInfo, wasmTypes.CosmosMsgVersionV010)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, verificationInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "dispatch")
 		}
@@ -569,7 +656,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 		))
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, verificationInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(err, "dispatch")
 		}
@@ -623,7 +710,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 		sdk.NewCoins(),   /* empty because it's unused in queries */
 		contractAddress,
 		contractKey,
-		// []byte{0}, /* empty because it's unused in queries */
+		[]byte{0}, /* empty because it's unused in queries */
 	)
 	params.QueryDepth = queryDepth
 
@@ -686,18 +773,21 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 	return contractKey
 }
 
-// func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
-//	store := ctx.KVStore(k.storeKey)
-//
-//	random := store.Get(types.GetRandomKey(height))
-//
-//	return random
-// }
+func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
+	store := ctx.KVStore(k.storeKey)
 
-// func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
-//	store := ctx.KVStore(k.storeKey)
-//	store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
-// }
+	random := store.Get(types.GetRandomKey(height))
+
+	return random
+}
+
+func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
+	store := ctx.KVStore(k.storeKey)
+
+	ctx.Logger().Info(fmt.Sprintf("Setting random: %s", hex.EncodeToString(random)))
+
+	store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
+}
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {
 	store := ctx.KVStore(k.storeKey)
@@ -853,7 +943,6 @@ func (k *Keeper) handleContractResponse(
 	// sigInfo of the initial message that triggered the original contract call
 	// This is used mainly in replies in order to decrypt their data.
 	ogSigInfo wasmTypes.VerificationInfo,
-	ogCosmosMessageVersion wasmTypes.CosmosMsgVersion,
 ) ([]byte, error) {
 	events := types.ContractLogsToSdkEvents(logs, contractAddr)
 
@@ -870,7 +959,7 @@ func (k *Keeper) handleContractResponse(
 	}
 
 	responseHandler := NewContractResponseHandler(NewMessageDispatcher(k.messenger, k))
-	return responseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data, ogTx, ogSigInfo, ogCosmosMessageVersion)
+	return responseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data, ogTx, ogSigInfo)
 }
 
 func gasForContract(ctx sdk.Context) uint64 {
@@ -892,16 +981,22 @@ func consumeGas(ctx sdk.Context, gas uint64) {
 }
 
 // generates a contract address from codeID + instanceID
-func (k Keeper) generateContractAddress(ctx sdk.Context, codeID uint64) sdk.AccAddress {
+func (k Keeper) generateContractAddress(ctx sdk.Context, codeID uint64, creator sdk.AccAddress) sdk.AccAddress {
 	instanceID := k.autoIncrementID(ctx, types.KeyLastInstanceID)
-	return contractAddress(codeID, instanceID)
+	return contractAddress(codeID, instanceID, creator)
 }
 
-func contractAddress(codeID, instanceID uint64) sdk.AccAddress {
-	// NOTE: It is possible to get a duplicate address if either codeID or instanceID
-	// overflow 32 bits. This is highly improbable, but something that could be refactored.
-	contractID := codeID<<32 + instanceID
-	return addrFromUint64(contractID)
+func contractAddress(codeID, instanceID uint64, creator sdk.AccAddress) sdk.AccAddress {
+	contractId := codeID<<32 + instanceID
+	hashSourceBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(hashSourceBytes, contractId)
+
+	hashSourceBytes = append(hashSourceBytes, creator...)
+
+	sha := sha256.Sum256(hashSourceBytes)
+	hasherRIPEMD160 := ripemd160.New()
+	hasherRIPEMD160.Write(sha[:]) // does not error
+	return sdk.AccAddress(hasherRIPEMD160.Sum(nil))
 }
 
 func (k Keeper) GetNextCodeID(ctx sdk.Context) uint64 {
@@ -962,13 +1057,6 @@ func (k Keeper) importContract(ctx sdk.Context, contractAddr sdk.AccAddress, cus
 	return k.importContractState(ctx, contractAddr, state)
 }
 
-func addrFromUint64(id uint64) sdk.AccAddress {
-	addr := make([]byte, 20)
-	addr[0] = 'C'
-	binary.PutUvarint(addr[1:], id)
-	return sdk.AccAddress(crypto.AddressHash(addr))
-}
-
 // MultipliedGasMeter wraps the GasMeter from context and multiplies all reads by out defined multiplier
 type MultipiedGasMeter struct {
 	originalMeter sdk.GasMeter
@@ -987,7 +1075,7 @@ func gasMeter(ctx sdk.Context) MultipiedGasMeter {
 }
 
 type MsgDispatcher interface {
-	DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error)
+	DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
 }
 
 // ContractResponseHandler default implementation that first dispatches submessage then normal messages.
@@ -1002,9 +1090,9 @@ func NewContractResponseHandler(md MsgDispatcher) *ContractResponseHandler {
 }
 
 // Handle processes the data returned by a contract invocation.
-func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, messages []v1wasmTypes.SubMsg, origRspData []byte, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error) {
+func (h ContractResponseHandler) Handle(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, messages []v1wasmTypes.SubMsg, origRspData []byte, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
 	result := origRspData
-	switch rsp, err := h.md.DispatchSubmessages(ctx, contractAddr, ibcPort, messages, ogTx, ogSigInfo, ogCosmosMessageVersion); {
+	switch rsp, err := h.md.DispatchSubmessages(ctx, contractAddr, ibcPort, messages, ogTx, ogSigInfo); {
 	case err != nil:
 		return nil, sdkerrors.Wrap(err, "submessages")
 	case rsp != nil:
@@ -1026,9 +1114,9 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	store := ctx.KVStore(k.storeKey)
 	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 
-	// random := k.GetRandomSeed(ctx, ctx.BlockHeight())
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
-	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey /* random */)
+	env := types.NewEnv(ctx, contractAddress, sdk.Coins{}, contractAddress, contractKey, random)
 
 	// prepare querier
 	querier := QueryHandler{
@@ -1039,11 +1127,11 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 
 	// instantiate wasm contract
 	gas := gasForContract(ctx)
-	marshaledReply, error := json.Marshal(reply)
+	marshaledReply, err := json.Marshal(reply)
 	marshaledReply = append(ogTx[0:64], marshaledReply...)
 
-	if error != nil {
-		return nil, error
+	if err != nil {
+		return nil, err
 	}
 
 	response, gasUsed, execErr := k.wasmer.Execute(codeInfo.CodeHash, env, marshaledReply, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, ogSigInfo, wasmTypes.HandleTypeReply)
@@ -1064,7 +1152,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 			sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 		))
 
-		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, ogTx, ogSigInfo, wasmTypes.CosmosMsgVersionV1)
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, ogTx, ogSigInfo)
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrReplyFailed, err.Error())
 		}
@@ -1073,4 +1161,8 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1w
 	default:
 		return nil, sdkerrors.Wrap(types.ErrReplyFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
+}
+
+func (k Keeper) GetStoreKey() sdk.StoreKey {
+	return k.storeKey
 }

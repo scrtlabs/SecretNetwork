@@ -57,7 +57,7 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 }
 
 // ValidateGenesis performs genesis state validation for the compute module.
-func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, config client.TxEncodingConfig, message json.RawMessage) error {
+func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, _ client.TxEncodingConfig, message json.RawMessage) error {
 	var data GenesisState
 	err := marshaler.UnmarshalJSON(message, &data)
 	if err != nil {
@@ -118,12 +118,12 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 	// }
 }
 
-func (am AppModule) LegacyQuerierHandler(amino *codec.LegacyAmino) sdk.Querier {
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
 	return keeper.NewLegacyQuerier(am.keeper)
 }
 
 // RegisterInvariants registers the compute module invariants.
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // Route returns the message routing key for the compute module.
 func (am AppModule) Route() sdk.Route {
@@ -160,7 +160,7 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 		panic(err)
 	}
 
-	// There is a possiblity, specificly was found on upgrade block, when there are no pre-commits at all (beginBlock.Commit == nil)
+	// There is a possibility, specifically was found on upgrade block, when there are no pre-commits at all (beginBlock.Commit == nil)
 	// In this case Marshal will fail with a Seg Fault.
 	// The fix below it a temporary fix until we will investigate the issue in tendermint.
 	if beginBlock.Commit == nil {
@@ -170,27 +170,28 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 
 	commit, err := beginBlock.Commit.Marshal()
 	if err != nil {
+		ctx.Logger().Error("Failed to marshal commit")
 		panic(err)
 	}
 
 	data, err := beginBlock.Data.Marshal()
 	if err != nil {
+		ctx.Logger().Error("Failed to marshal data")
 		panic(err)
 	}
 
-	var encryptedRandom []byte
 	if beginBlock.Header.EncryptedRandom != nil {
-		encryptedRandom = beginBlock.Header.EncryptedRandom.Random
+		randomAndProof := append(beginBlock.Header.EncryptedRandom.Random, beginBlock.Header.EncryptedRandom.Proof...) //nolint:all
+		random, err := api.SubmitBlockSignatures(header, commit, data, randomAndProof)
+		if err != nil {
+			panic(err)
+		}
+
+		am.keeper.SetRandomSeed(ctx, random)
+
 	} else {
-		encryptedRandom = []byte{}
+		println("No random got from TM header")
 	}
-
-	_, err = api.SubmitBlockSignatures(header, commit, data, encryptedRandom)
-	if err != nil {
-		panic(err)
-	}
-
-	// am.keeper.SetRandomSeed(ctx, random)
 }
 
 // EndBlock returns the end blocker for the compute module. It returns no validator
@@ -204,24 +205,24 @@ func (AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.Validato
 // AppModuleSimulation functions
 
 // GenerateGenesisState creates a randomized GenState of the bank module.
-func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) { //nolint:all
 }
 
 // ProposalContents doesn't return any content functions for governance proposals.
-func (AppModule) ProposalContents(simState module.SimulationState) []simtypes.WeightedProposalContent {
+func (AppModule) ProposalContents(simState module.SimulationState) []simtypes.WeightedProposalContent { //nolint:all
 	return nil
 }
 
 // RandomizedParams creates randomized bank param changes for the simulator.
-func (AppModule) RandomizedParams(r *rand.Rand) []simtypes.ParamChange {
+func (AppModule) RandomizedParams(r *rand.Rand) []simtypes.ParamChange { //nolint:all
 	return nil
 }
 
 // RegisterStoreDecoder registers a decoder for supply module's types
-func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) { //nolint:all
 }
 
 // WeightedOperations returns the all the gov module operations with their respective weights.
-func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation { //nolint:all
 	return nil
 }

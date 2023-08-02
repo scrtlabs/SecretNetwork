@@ -323,7 +323,8 @@ fn read_db(
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
 
-    let (value, proof, mp_key) = unsafe {
+    #[allow(unused_variables)]
+    let (value, proof, mp_key): (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>) = unsafe {
         let status = ocalls::ocall_read_db(
             (&mut ocall_return) as *mut _,
             context.unsafe_clone(),
@@ -350,13 +351,20 @@ fn read_db(
         match ocall_return {
             OcallReturn::Success => {
                 let value_buffer = value_buffer.assume_init();
-                let proof_buffer = proof_buffer.assume_init();
-                let mp_key_buffer = mp_key_buffer.assume_init();
-                (
-                    ecalls::recover_buffer(value_buffer)?,
-                    ecalls::recover_buffer(proof_buffer)?,
-                    ecalls::recover_buffer(mp_key_buffer)?,
-                )
+
+                #[cfg(feature = "read-db-proofs")]
+                {
+                    let proof_buffer = proof_buffer.assume_init();
+                    let mp_key_buffer = mp_key_buffer.assume_init();
+                    (
+                        ecalls::recover_buffer(value_buffer)?,
+                        ecalls::recover_buffer(proof_buffer)?,
+                        ecalls::recover_buffer(mp_key_buffer)?,
+                    )
+                }
+
+                #[cfg(not(feature = "read-db-proofs"))]
+                (ecalls::recover_buffer(value_buffer)?, None, None)
             }
             OcallReturn::Failure => {
                 return Err(WasmEngineError::FailedOcall(vm_err));

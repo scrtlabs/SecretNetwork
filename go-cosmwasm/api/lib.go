@@ -56,10 +56,6 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 	defer freeAfterSend(encRandomSlice)
 	txsSlice := sendSlice(txs)
 	defer freeAfterSend(txsSlice)
-	// valSetSlice := sendSlice(valSet)
-	// defer freeAfterSend(apiKeySlice)
-	// nextValSetSlice := sendSlice(nextValSet)
-	// defer freeAfterSend(apiKeySlice)
 
 	res, err := C.submit_block_signatures(spidSlice, apiKeySlice, txsSlice, encRandomSlice /* valSetSlice, nextValSetSlice,*/, &errmsg)
 	if err != nil {
@@ -348,6 +344,17 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	certSlice := sendSlice(cert)
 	defer freeAfterSend(certSlice)
 	res, err := C.get_encrypted_seed(certSlice, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), nil
+}
+
+func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
+	errmsg := C.Buffer{}
+	pkSlice := sendSlice(pk)
+	defer freeAfterSend(pkSlice)
+	res, err := C.get_encrypted_genesis_seed(pkSlice, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
