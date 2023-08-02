@@ -17,6 +17,7 @@ use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use protobuf::Message;
 
+use crate::contract_operations::is_code_hash_allowed;
 use crate::input_validation::contract_address_validation::verify_contract_address;
 use crate::input_validation::msg_validation::verify_and_get_sdk_msg;
 use crate::input_validation::send_funds_validations::verify_sent_funds;
@@ -375,21 +376,23 @@ pub struct ReplyParams {
 
 /// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.
 pub fn validate_msg(
+    contract_address: &CanonicalAddr,
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
     data_for_validation: Option<Vec<u8>>,
     handle_type: Option<HandleType>,
 ) -> Result<ValidatedMessage, EnclaveError> {
     match handle_type {
-        None => validate_basic_msg(msg, contract_hash, data_for_validation),
+        None => validate_basic_msg(contract_address, msg, contract_hash, data_for_validation),
         Some(h) => match is_ibc_msg(h) {
-            false => validate_basic_msg(msg, contract_hash, data_for_validation),
-            true => validate_ibc_msg(msg, contract_hash, data_for_validation, h),
+            false => validate_basic_msg(contract_address, msg, contract_hash, data_for_validation),
+            true => validate_ibc_msg(contract_address, msg, contract_hash, data_for_validation, h),
         },
     }
 }
 
 pub fn validate_ibc_msg(
+    contract_address: &CanonicalAddr,
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
     data_for_validation: Option<Vec<u8>>,
@@ -408,6 +411,7 @@ pub fn validate_ibc_msg(
                 })?;
 
             let validated_msg = validate_basic_msg(
+                contract_address,
                 parsed_ibc_packet.packet.data.as_slice(),
                 contract_hash,
                 data_for_validation,
@@ -433,6 +437,7 @@ pub fn validate_ibc_msg(
 }
 
 pub fn validate_basic_msg(
+    contract_address: &CanonicalAddr,
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
     data_for_validation: Option<Vec<u8>>,
@@ -493,7 +498,14 @@ pub fn validate_basic_msg(
     })?;
 
     if decoded_hash != contract_hash {
-        warn!("Message contains mismatched contract hash");
+        warn!("Message contains mismatched contract hash, checking hardcoded contract hash...");
+        if is_code_hash_allowed(contract_address, &String::from_utf8_lossy(&decoded_hash)) {
+            warn!("Message contains mismatched contract hash, but it's allowed");
+        } else {
+            warn!("Message contains mismatched contract hash, and it's not allowed");
+            return Err(EnclaveError::ValidationFailure);
+        }
+
         return Err(EnclaveError::ValidationFailure);
     }
 

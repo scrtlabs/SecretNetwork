@@ -141,7 +141,13 @@ pub fn init(
     let ValidatedMessage {
         validated_msg,
         reply_params,
-    } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
+    } = validate_msg(
+        &canonical_contract_address,
+        &decrypted_msg,
+        &contract_hash,
+        None,
+        None,
+    )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in validate_msg: {:?}", duration);
 
@@ -246,6 +252,7 @@ fn to_canonical(contract_address: &BaseAddr) -> Result<CanonicalAddr, EnclaveErr
 }
 
 lazy_static::lazy_static! {
+    /// Current hardcoded contract admins
     static ref HARDCODED_CONTRACT_ADMINS: HashMap<&'static str, &'static str> = HashMap::from([
         (
             "secret1exampleContractAddress1",
@@ -256,8 +263,22 @@ lazy_static::lazy_static! {
             "secret1ExampleAdminAddress2",
         ),
     ]);
+
+    /// The entire history of contracts that were deployed before v1.10 and have been migrated using the hardcoded admin feature.
+    /// These contracts might have other contracts that call them with a wrong code_hash, because those other contracts have it stored from before the migration.
+    static ref ALLOWED_CONTRACT_CODE_HASH: HashMap<&'static str, &'static str> = HashMap::from([
+    (
+        "secret1exampleContractAddress1",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ),
+    (
+        "secret1exampleContractAddress2",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ),
+]);
 }
 
+/// Current hardcoded contract admins
 fn is_hardcoded_contract_admin(
     contract: &CanonicalAddr,
     admin: &CanonicalAddr,
@@ -288,6 +309,26 @@ fn is_hardcoded_contract_admin(
     let admin = admin.unwrap();
 
     HARDCODED_CONTRACT_ADMINS.get(contract.as_str()) == Some(&admin.as_str())
+}
+
+/// The entire history of contracts that were deployed before v1.10 and have been migrated using the hardcoded admin feature.
+/// These contracts might have other contracts that call them with a wrong code_hash, because those other contracts have it stored from before the migration.
+pub fn is_code_hash_allowed(contract_address: &CanonicalAddr, code_hash: &str) -> bool {
+    if admin_proof != [0; enclave_crypto::HASH_SIZE] {
+        return false;
+    }
+
+    let contract_address = HumanAddr::from_canonical(contract_address);
+    if contract_address.is_err() {
+        trace!(
+            "is_code_hash_allowed: failed to convert contract to human address: {:?}",
+            contract_address.err().unwrap()
+        );
+        return false;
+    }
+    let contract = contract_address.unwrap();
+
+    ALLOWED_CONTRACT_CODE_HASH.get(contract.as_str()) == Some(&code_hash)
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
@@ -381,7 +422,13 @@ pub fn migrate(
     let ValidatedMessage {
         validated_msg,
         reply_params,
-    } = validate_msg(&decrypted_msg, &contract_hash, None, None)?;
+    } = validate_msg(
+        &canonical_contract_address,
+        &decrypted_msg,
+        &contract_hash,
+        None,
+        None,
+    )?;
     // let duration = start.elapsed();
     // trace!("Time elapsed in validate_msg: {:?}", duration);
 
@@ -615,6 +662,7 @@ pub fn handle(
     let mut reply_params: Option<Vec<ReplyParams>> = None;
     if was_msg_encrypted {
         let x = validate_msg(
+            &canonical_contract_address,
             &decrypted_msg,
             &contract_hash,
             data_for_validation,
@@ -777,8 +825,13 @@ pub fn query(
     let secret_msg = SecretMessage::from_slice(msg)?;
     let decrypted_msg = secret_msg.decrypt()?;
 
-    let ValidatedMessage { validated_msg, .. } =
-        validate_msg(&decrypted_msg, &contract_hash, None, None)?;
+    let ValidatedMessage { validated_msg, .. } = validate_msg(
+        &canonical_contract_address,
+        &decrypted_msg,
+        &contract_hash,
+        None,
+        None,
+    )?;
 
     let og_contract_key = base_env.get_og_contract_key()?;
 
