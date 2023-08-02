@@ -56,6 +56,23 @@ macro_rules! debug_err {
     };
 }
 
+pub fn shuffle_cache(keys: &mut Vec<(Vec<u8>, Vec<u8>)>, random: Binary) {
+    let sha256 = &sha_256(random.as_slice())[..];
+    // SeedableRng is implemented for 4*32 bit seed
+    let seed: Vec<usize> = sha256
+        .chunks_exact(8)
+        .map(|chunk| {
+            usize::from_le_bytes([
+                chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+            ])
+        })
+        .collect();
+
+    let mut rng: StdRng = sgx_rand::SeedableRng::from_seed(seed.as_slice());
+
+    rng.shuffle(keys);
+}
+
 trait Wasm3ResultEx {
     fn allow_missing_import(self) -> Self;
 }
@@ -645,21 +662,7 @@ impl Engine {
             .collect();
 
         if let Some(random_unwraped) = random {
-            let sha256 = &sha_256(random_unwraped.as_slice())[..];
-            // SeedableRng is implemented for 4*32 bit seed
-            let seed: Vec<usize> = sha256
-                .chunks_exact(8)
-                .map(|chunk| {
-                    usize::from_le_bytes([
-                        chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6],
-                        chunk[7],
-                    ])
-                })
-                .collect();
-
-            let mut rng: StdRng = sgx_rand::SeedableRng::from_seed(seed.as_slice());
-
-            rng.shuffle(&mut keys);
+            shuffle_cache(&mut keys, random_unwraped);
         }
 
         write_multiple_keys(&self.context.context, keys).map_err(|err| {
@@ -1913,4 +1916,54 @@ fn host_check_gas_used(
     let gas_used = limit.saturating_sub(gas_remaining) / 1000;
 
     Ok(gas_used as i64)
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use super::shuffle_cache;
+    use crate::count_failures;
+    use crate::wasm3::Binary;
+
+    pub fn run_tests() {
+        println!();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            cache_shuffle_works();
+        });
+
+        // The test doesn't work for some reason
+        // #[cfg(feature = "SGX_MODE_HW")]
+        // count_failures!(failures, {
+        //     cert::tests::test_certificate_invalid_group_out_of_date();
+        // });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
+    }
+
+    fn cache_shuffle_works() {
+        let mut keys: Vec<(Vec<u8>, Vec<u8>)> = vec![];
+        for i in 0..30 {
+            keys.push((vec![i as u8], vec![i as u8]));
+        }
+
+        shuffle_cache(&mut keys, Binary::from(vec![1, 3, 3, 7].as_slice()));
+        // Same seed same results
+        let expected_results: Vec<u8> = vec![
+            24, 2, 23, 21, 26, 5, 10, 3, 19, 27, 16, 28, 9, 20, 0, 13, 6, 18, 25, 7, 15, 12, 8, 22,
+            1, 11, 14, 17, 29, 4,
+        ];
+        let mut sum: i16 = 0;
+
+        for i in 0..30 {
+            assert_eq!(expected_results[i], keys[i].0[0]);
+            sum += i as i16;
+            sum -= keys[i].0[0] as i16;
+        }
+
+        // Sum should be 0 as we increase and decrease it eventually by the same numbers
+        assert_eq!(sum, 0)
+    }
 }

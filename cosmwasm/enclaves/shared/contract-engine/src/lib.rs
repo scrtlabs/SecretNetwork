@@ -27,7 +27,7 @@ mod random;
 mod reply_message;
 pub(crate) mod types;
 #[cfg(feature = "wasm3")]
-mod wasm3;
+pub mod wasm3;
 
 pub use contract_operations::{handle, init, query};
 #[cfg(feature = "light-client-validation")]

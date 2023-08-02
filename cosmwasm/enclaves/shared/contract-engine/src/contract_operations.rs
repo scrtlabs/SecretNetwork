@@ -740,9 +740,6 @@ pub fn handle(
 
     let mut output = result?;
 
-    #[cfg(not(feature = "random"))]
-    let random: Option<Binary> = None;
-    #[cfg(feature = "random")]
     let random = versioned_env.get_random();
 
     // This gets refunded because it will get charged later by the sdk
