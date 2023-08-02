@@ -7,8 +7,8 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-base:20.04-2.17-6.24.2
-ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.17
+ARG SCRT_BASE_IMAGE_ENCLAVE=scrtlabs/sgx-rust:2004-1.1.6
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.20
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
@@ -83,6 +83,8 @@ WORKDIR tm-secret-enclave
 
 RUN git submodule init
 RUN git submodule update --remote
+
+RUN rustup component add rust-src
 
 RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U=${FEATURES_U} make build
 
@@ -164,7 +166,6 @@ RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu
     openssl \
     curl \
     wget \
-    libsnappy-dev \
     libgflags-dev \
     bash-completion
 
