@@ -148,13 +148,16 @@ fn validate_inputs(
     in_encrypted_random_len: u32,
     decrypted_random: &mut [u8; 32],
 ) -> Result<(), sgx_status_t> {
-    validate_input_length!(in_header_len, "header", MAX_VARIABLE_LENGTH);
-    validate_input_length!(in_commit_len, "commit", MAX_VARIABLE_LENGTH);
-    validate_input_length!(in_txs_len, "txs", MAX_BLOCK_DATA_LENGTH);
+    let failed_call = || Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
+
+    validate_input_length!(in_header_len, "header", MAX_VARIABLE_LENGTH, failed_call());
+    validate_input_length!(in_commit_len, "commit", MAX_VARIABLE_LENGTH, failed_call());
+    validate_input_length!(in_txs_len, "txs", MAX_BLOCK_DATA_LENGTH, failed_call());
     validate_input_length!(
         in_encrypted_random_len,
-        "encrypted random",
-        RANDOM_PROOF_LEN
+        "encrypted_random",
+        RANDOM_PROOF_LEN,
+        failed_call()
     );
 
     validate_const_ptr!(

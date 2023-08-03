@@ -12,7 +12,7 @@ use enclave_ffi_types::{
     QueryResult, RuntimeConfiguration, UpdateAdminResult,
 };
 
-use enclave_utils::{oom_handler, validate_const_ptr, validate_mut_ptr};
+use enclave_utils::{oom_handler, validate_const_ptr, validate_input_length, validate_mut_ptr};
 
 use crate::external::results::{
     result_handle_success_to_handleresult, result_init_success_to_initresult,
@@ -23,6 +23,13 @@ use crate::external::results::{
 lazy_static! {
     static ref ECALL_ALLOCATE_STACK: SgxMutex<Vec<EnclaveBuffer>> = SgxMutex::new(Vec::new());
 }
+
+const MAX_ENV_LENGTH: usize = 10_240; // 10 KiB
+const MAX_SIG_INFO_LENGTH: usize = 5_120_000; // 5 MiB, includes tx_bytes and sign_bytes
+const MAX_MSG_LENGTH: usize = 2_048_000; // 2 MiB
+const MAX_ADDRESS_LENGTH: usize = 65; // canonical can be 20 or 32 bytes, humanized can be 45 or 65
+const MAX_PROOF_LENGTH: usize = 32; // output of sha256
+const MAX_WASM_LENGHT: usize = 3_145_728; // 3 MiB, larger Wasm ATM is 1,990,361 bytes (1.6 MiB)
 
 /// # Safety
 /// Always use protection
@@ -157,6 +164,13 @@ pub unsafe extern "C" fn ecall_init(
     validate_const_ptr!(msg, msg_len as usize, failed_call());
     validate_const_ptr!(contract, contract_len as usize, failed_call());
     validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
+    // admin can be null (checked later), so admin_len is allowed to be 0
+
+    validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
+    validate_input_length!(msg_len, "msg", MAX_MSG_LENGTH, failed_call());
+    validate_input_length!(contract_len, "contract", MAX_WASM_LENGHT, failed_call());
+    validate_input_length!(sig_info_len, "sig_info", MAX_SIG_INFO_LENGTH, failed_call());
+    validate_input_length!(admin_len, "admin", MAX_ADDRESS_LENGTH, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
@@ -232,6 +246,11 @@ pub unsafe extern "C" fn ecall_handle(
     validate_const_ptr!(msg, msg_len as usize, failed_call());
     validate_const_ptr!(contract, contract_len as usize, failed_call());
     validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
+
+    validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
+    validate_input_length!(msg_len, "msg", MAX_MSG_LENGTH, failed_call());
+    validate_input_length!(contract_len, "contract", MAX_WASM_LENGHT, failed_call());
+    validate_input_length!(sig_info_len, "sig_info", MAX_SIG_INFO_LENGTH, failed_call());
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
@@ -329,6 +348,10 @@ unsafe fn ecall_query_impl(
     validate_const_ptr!(msg, msg_len as usize, failed_call());
     validate_const_ptr!(contract, contract_len as usize, failed_call());
 
+    validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
+    validate_input_length!(msg_len, "msg", MAX_MSG_LENGTH, failed_call());
+    validate_input_length!(contract_len, "contract", MAX_WASM_LENGHT, failed_call());
+
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
     let msg = std::slice::from_raw_parts(msg, msg_len);
@@ -397,12 +420,25 @@ pub unsafe extern "C" fn ecall_migrate(
 
     let failed_call = || result_migrate_success_to_result(Err(EnclaveError::FailedFunctionCall));
     validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
+
     validate_const_ptr!(env, env_len as usize, failed_call());
     validate_const_ptr!(msg, msg_len as usize, failed_call());
     validate_const_ptr!(contract, contract_len as usize, failed_call());
     validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
     validate_const_ptr!(admin, admin_len as usize, failed_call());
     validate_const_ptr!(admin_proof, admin_proof_len as usize, failed_call());
+
+    validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
+    validate_input_length!(msg_len, "msg", MAX_MSG_LENGTH, failed_call());
+    validate_input_length!(contract_len, "contract", MAX_WASM_LENGHT, failed_call());
+    validate_input_length!(sig_info_len, "sig_info", MAX_SIG_INFO_LENGTH, failed_call());
+    validate_input_length!(admin_len, "admin", MAX_ADDRESS_LENGTH, failed_call());
+    validate_input_length!(
+        admin_proof_len,
+        "admin_proof",
+        MAX_ENV_LENGTH,
+        failed_call()
+    );
 
     let contract = std::slice::from_raw_parts(contract, contract_len);
     let env = std::slice::from_raw_parts(env, env_len);
@@ -482,7 +518,22 @@ pub unsafe extern "C" fn ecall_update_admin(
         current_admin_proof_len as usize,
         failed_call()
     );
-    // validate_const_ptr!(new_admin, new_admin_len as usize, failed_call());
+    // new_admin can be null (checked later), so new_admin_len is allowed to be 0
+
+    validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
+    validate_input_length!(sig_info_len, "sig_info", MAX_SIG_INFO_LENGTH, failed_call());
+    validate_input_length!(
+        current_admin_len,
+        "current_admin",
+        MAX_ADDRESS_LENGTH,
+        failed_call()
+    );
+    validate_input_length!(
+        current_admin_proof_len,
+        "current_admin_proof",
+        MAX_PROOF_LENGTH,
+        failed_call()
+    );
 
     let env = std::slice::from_raw_parts(env, env_len);
     let sig_info = std::slice::from_raw_parts(sig_info, sig_info_len);
