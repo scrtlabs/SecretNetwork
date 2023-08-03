@@ -119,6 +119,19 @@ func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *compute.MsgExecuteContr
 	if err := execMsg.ValidateBasic(); err != nil {
 		return nil, fmt.Errorf(types.ErrBadExecutionMsg, err.Error())
 	}
+
+	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
+		// We are in the mempool, the light client isn't updated yet so the enclave will fail this call.
+		// We don't want to run the contract in this case,
+		// as it will fail and will not enter the block due to IBC mempool optimization.
+		// Return nil to indicate success and bypass this IBC mempool optimization:
+		// https://github.com/cosmos/ibc-go/blob/v4.3.1/modules/core/ante/ante.go#L55
+		ctx.GasMeter().ConsumeGas(300_000, "add gas to relayer simulation")
+		return &sdk.Result{
+			Data: []byte{0}, // not empty
+		}, nil
+	}
+
 	return h.ContractKeeper.Execute(
 		ctx,
 		execMsg.Contract,

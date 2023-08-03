@@ -1,6 +1,8 @@
 package types
 
 import (
+	"strings"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
@@ -106,4 +108,109 @@ func (msg MsgExecuteContract) GetSignBytes() []byte {
 
 func (msg MsgExecuteContract) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
+}
+
+func (msg MsgMigrateContract) Route() string {
+	return RouterKey
+}
+
+func (msg MsgMigrateContract) Type() string {
+	return "migrate"
+}
+
+func (msg MsgMigrateContract) ValidateBasic() error {
+	if msg.CodeID == 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return sdkerrors.Wrap(err, "sender")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
+		return sdkerrors.Wrap(err, "contract")
+	}
+
+	return nil
+}
+
+func (msg MsgMigrateContract) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgMigrateContract) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
+}
+
+// GetFunds returns tokens send to the contract
+func (msg MsgMigrateContract) GetFunds() sdk.Coins {
+	return sdk.NewCoins()
+}
+
+func (msg MsgUpdateAdmin) Route() string {
+	return RouterKey
+}
+
+func (msg MsgUpdateAdmin) Type() string {
+	return "update-contract-admin"
+}
+
+func (msg MsgUpdateAdmin) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return sdkerrors.Wrap(err, "sender")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
+		return sdkerrors.Wrap(err, "contract")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.NewAdmin); err != nil {
+		return sdkerrors.Wrap(err, "new admin")
+	}
+	if strings.EqualFold(msg.Sender, msg.NewAdmin) {
+		return sdkerrors.Wrap(ErrInvalidMsg, "new admin is the same as the old")
+	}
+	return nil
+}
+
+func (msg MsgUpdateAdmin) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgUpdateAdmin) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
+}
+
+func (msg MsgClearAdmin) Route() string {
+	return RouterKey
+}
+
+func (msg MsgClearAdmin) Type() string {
+	return "clear-contract-admin"
+}
+
+func (msg MsgClearAdmin) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return sdkerrors.Wrap(err, "sender")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
+		return sdkerrors.Wrap(err, "contract")
+	}
+	return nil
+}
+
+func (msg MsgClearAdmin) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgClearAdmin) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
 }

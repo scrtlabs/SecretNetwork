@@ -16,8 +16,8 @@ pub fn bench_read_storage_same_key(deps: DepsMut, keys: u64) -> StdResult<()> {
 
 /// call this test only after setting up the test with write storage, so the keys are populated
 pub fn bench_read_storage_different_key(deps: DepsMut, keys: u64) -> StdResult<()> {
-    for i in 0..keys {
-        deps.storage.get(&i.to_be_bytes()).unwrap();
+    for i in 1..keys {
+        deps.storage.get(&i.to_be_bytes());
     }
 
     Ok(())

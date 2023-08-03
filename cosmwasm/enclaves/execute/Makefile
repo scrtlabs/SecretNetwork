@@ -138,10 +138,10 @@ $(Enclave_EDL_Products): Enclave.edl
 	sgx_edger8r --trusted $^ --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir ./
 
 check:
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo check --features "$(FEATURES)" --target x86_64-unknown-linux-sgx
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo check --features "$(FEATURES),light-client-validation" --target x86_64-unknown-linux-sgx
 
 clippy:
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clippy --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -- -D warnings
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clippy --features "$(FEATURES),light-client-validation" --target x86_64-unknown-linux-sgx -- -D warnings
 
 clean:
 	rm -rf $(CUSTOM_LIBRARY_PATH) $(Enclave_EDL_Products) *.o *.so *.h

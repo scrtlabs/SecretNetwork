@@ -128,11 +128,7 @@ pub fn calc_encryption_key(nonce: &IoNonce, user_public_key: &Ed25519PublicKey) 
 
     let tx_encryption_ikm = enclave_io_key.current.diffie_hellman(user_public_key);
 
-    let tx_encryption_key = AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce);
-
-    trace!("rust tx_encryption_key {:?}", tx_encryption_key.get());
-
-    tx_encryption_key
+    AESKey::new_from_slice(&tx_encryption_ikm).derive_key_from_this(nonce)
 }
 
 fn encrypt_serializable<T>(
@@ -380,6 +376,20 @@ pub fn manipulate_callback_sig_for_plaintext(
                                     .collect::<Vec<cw_types_v010::types::Coin>>()[..],
                             ));
                         }
+                        cw_types_v1::results::WasmMsg::Migrate {
+                            callback_sig, msg, ..
+                        } => {
+                            *callback_sig = Some(create_callback_signature(
+                                contract_addr,
+                                &msg.as_slice().to_vec(),
+                                &[],
+                            ));
+                        }
+                        cw_types_v1::results::WasmMsg::ClearAdmin { callback_sig, .. }
+                        | cw_types_v1::results::WasmMsg::UpdateAdmin { callback_sig, .. } => {
+                            *callback_sig =
+                                Some(create_callback_signature(contract_addr, &vec![], &[]));
+                        }
                     }
                 }
             }
@@ -411,6 +421,20 @@ pub fn manipulate_callback_sig_for_plaintext(
                                     })
                                     .collect::<Vec<Coin>>()[..],
                             ));
+                        }
+                        cw_types_v1::results::WasmMsg::Migrate {
+                            callback_sig, msg, ..
+                        } => {
+                            *callback_sig = Some(create_callback_signature(
+                                contract_addr,
+                                &msg.as_slice().to_vec(),
+                                &[],
+                            ));
+                        }
+                        cw_types_v1::results::WasmMsg::ClearAdmin { callback_sig, .. }
+                        | cw_types_v1::results::WasmMsg::UpdateAdmin { callback_sig, .. } => {
+                            *callback_sig =
+                                Some(create_callback_signature(contract_addr, &vec![], &[]));
                         }
                     }
                 }
@@ -447,18 +471,18 @@ pub fn set_all_logs_to_plaintext(raw_output: &mut RawWasmOutput) {
 }
 
 fn deserialize_output(output: Vec<u8>) -> Result<RawWasmOutput, EnclaveError> {
-    info!(
+    trace!(
         "output as received from contract: {:?}",
         String::from_utf8_lossy(&output)
     );
 
     let output: RawWasmOutput = serde_json::from_slice(&output).map_err(|err| {
         warn!("got an error while trying to deserialize output bytes from json");
-        trace!("output: {:?} error: {:?}", output, err);
+        debug!("output: {:?} error: {:?}", output, err);
         EnclaveError::FailedToDeserialize
     })?;
 
-    info!("Output after deserialization: {:?}", output);
+    trace!("Output after deserialization: {:?}", output);
 
     Ok(output)
 }
@@ -486,9 +510,10 @@ fn encrypt_output(
     // Therefore if reply_recipient_contract_hash is "Some", we append it to any encrypted data besides submessages that are irrelevant for replies.
     // More info in: https://github.com/CosmWasm/cosmwasm/blob/v1.0.0/packages/std/src/results/submessages.rs#L192-L198
     let encryption_key = calc_encryption_key(&secret_msg.nonce, &secret_msg.user_public_key);
-    info!(
+    trace!(
         "message nonce and public key for encryption: {:?} {:?}",
-        secret_msg.nonce, secret_msg.user_public_key
+        secret_msg.nonce,
+        secret_msg.user_public_key
     );
 
     match &mut output {
@@ -607,7 +632,8 @@ fn encrypt_wasm_submsg<T: Clone + fmt::Debug + PartialEq>(
     if let cw_types_v1::results::CosmosMsg::Wasm(wasm_msg) = &mut sub_msg.msg {
         match wasm_msg {
             cw_types_v1::results::WasmMsg::Instantiate { msg, .. }
-            | cw_types_v1::results::WasmMsg::Execute { msg, .. } => {
+            | cw_types_v1::results::WasmMsg::Execute { msg, .. }
+            | cw_types_v1::results::WasmMsg::Migrate { msg, .. } => {
                 let mut msg_to_encrypt = SecretMessage {
                     msg: msg.as_slice().to_vec(),
                     nonce: secret_msg.nonce,
@@ -616,6 +642,8 @@ fn encrypt_wasm_submsg<T: Clone + fmt::Debug + PartialEq>(
                 msg_to_encrypt.encrypt_in_place()?;
                 *msg = Binary::from(msg_to_encrypt.to_vec().as_slice());
             }
+            cw_types_v1::results::WasmMsg::ClearAdmin { .. }
+            | cw_types_v1::results::WasmMsg::UpdateAdmin { .. } => {}
         }
     };
 
@@ -709,6 +737,19 @@ fn create_callback_sig_for_submsgs(
                             })
                             .collect::<Vec<Coin>>()[..],
                     ));
+                }
+                cw_types_v1::results::WasmMsg::Migrate {
+                    msg, callback_sig, ..
+                } => {
+                    *callback_sig = Some(create_callback_signature(
+                        contract_addr,
+                        &SecretMessage::from_slice(msg.as_slice())?.msg,
+                        &[],
+                    ));
+                }
+                cw_types_v1::results::WasmMsg::ClearAdmin { callback_sig, .. }
+                | cw_types_v1::results::WasmMsg::UpdateAdmin { callback_sig, .. } => {
+                    *callback_sig = Some(create_callback_signature(contract_addr, &vec![], &[]));
                 }
             }
         }
@@ -889,6 +930,38 @@ fn encrypt_v010_wasm_msg(
                 send,
             ));
         }
+        cw_types_v010::types::WasmMsg::Migrate {
+            msg,
+            callback_code_hash,
+            callback_sig,
+            ..
+        } => {
+            let mut hash_appended_msg = callback_code_hash.as_bytes().to_vec();
+            hash_appended_msg.extend_from_slice(msg.as_slice());
+
+            let mut msg_to_pass = SecretMessage::from_base64(
+                Binary(hash_appended_msg).to_base64(),
+                nonce,
+                user_public_key,
+            )?;
+
+            msg_to_pass.encrypt_in_place()?;
+            *msg = Binary::from(msg_to_pass.to_vec().as_slice());
+
+            *callback_sig = Some(create_callback_signature(
+                contract_addr,
+                &msg_to_pass.msg,
+                &[],
+            ));
+        }
+        cw_types_v010::types::WasmMsg::UpdateAdmin { callback_sig, .. }
+        | cw_types_v010::types::WasmMsg::ClearAdmin { callback_sig, .. } => {
+            *callback_sig = Some(create_callback_signature(
+                contract_addr,
+                &vec![], /* must be empty vec for callback_sig verification */
+                &[],
+            ));
+        }
     }
 
     Ok(())
@@ -904,7 +977,8 @@ fn attach_reply_headers_to_v1_wasm_msg(
 ) -> Result<(), EnclaveError> {
     match wasm_msg {
         cw_types_v1::results::WasmMsg::Execute { msg, code_hash, .. }
-        | cw_types_v1::results::WasmMsg::Instantiate { msg, code_hash, .. } => {
+        | cw_types_v1::results::WasmMsg::Instantiate { msg, code_hash, .. }
+        | cw_types_v1::results::WasmMsg::Migrate { msg, code_hash, .. } => {
             // On cosmwasm v1, submessages execute contracts whose results are sent back to the original caller by using "Reply".
             // Such submessages should be encrypted, but they weren't initially meant to be sent back to the enclave as an input of another contract.
             // To support "sending back" behavior, the enclave expects every encrypted input to be prepended by the recipient's contract hash.
@@ -932,17 +1006,19 @@ fn attach_reply_headers_to_v1_wasm_msg(
 
             *msg = Binary::from(hash_appended_msg.as_slice());
         }
+        cw_types_v1::results::WasmMsg::UpdateAdmin { .. }
+        | cw_types_v1::results::WasmMsg::ClearAdmin { .. } => {}
     }
 
     Ok(())
 }
 
 pub fn create_callback_signature(
-    _contract_addr: &CanonicalAddr,
-    msg_to_sign: &Vec<u8>,
-    funds_to_send: &[Coin],
+    _sender: &CanonicalAddr,
+    msg_to_pass: &Vec<u8>,
+    sent_funds: &[Coin],
 ) -> Vec<u8> {
-    // Hash(Enclave_secret | sender(current contract) | msg_to_pass | sent_funds)
+    // sha256(enclave_secret | msg_to_pass | sent_funds)
     let mut callback_sig_bytes = KEY_MANAGER
         .get_consensus_callback_secret()
         .unwrap()
@@ -950,9 +1026,8 @@ pub fn create_callback_signature(
         .get()
         .to_vec();
 
-    //callback_sig_bytes.extend(contract_addr.as_slice());
-    callback_sig_bytes.extend(msg_to_sign.as_slice());
-    callback_sig_bytes.extend(serde_json::to_vec(funds_to_send).unwrap());
+    callback_sig_bytes.extend(msg_to_pass.as_slice());
+    callback_sig_bytes.extend(serde_json::to_vec(sent_funds).unwrap());
 
     sha2::Sha256::digest(callback_sig_bytes.as_slice()).to_vec()
 }

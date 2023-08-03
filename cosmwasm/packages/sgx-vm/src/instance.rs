@@ -326,12 +326,54 @@ where
         Ok(function)
     }
 
-    pub fn call_init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<Vec<u8>> {
-        let result = self.inner.init(env, msg, sig_info)?;
+    pub fn call_migrate(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+        admin_proof: &[u8],
+    ) -> VmResult<Vec<u8>> {
+        let result = self.inner.migrate(env, msg, sig_info, admin, admin_proof)?;
         Ok(result.into_output())
     }
 
-    pub fn call_handle(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8], handle_type: u8) -> VmResult<Vec<u8>> {
+    pub fn call_update_admin(
+        &mut self,
+        env: &[u8],
+        sig_info: &[u8],
+        current_admin: &[u8],
+        current_admin_proof: &[u8],
+        new_admin: &[u8],
+    ) -> VmResult<Vec<u8>> {
+        let result = self.inner.update_admin(
+            env,
+            sig_info,
+            current_admin,
+            current_admin_proof,
+            new_admin,
+        )?;
+        Ok(result.into_output())
+    }
+
+    pub fn call_init(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+    ) -> VmResult<Vec<u8>> {
+        let result = self.inner.init(env, msg, sig_info, admin)?;
+        Ok(result.into_output())
+    }
+
+    pub fn call_handle(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        handle_type: u8,
+    ) -> VmResult<Vec<u8>> {
         let result = self.inner.handle(env, msg, sig_info, handle_type)?;
         Ok(result.into_output())
     }

@@ -15,6 +15,7 @@ secretcli*
 libenclave.a
 libEnclave_u.a
 librust_cosmwasm_enclave.signed.so
+tendermint_enclave.signed.so
 *.o
 /release
 SHA256SUMS*

@@ -291,16 +291,17 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	// create with no balance is also legal
-	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
+	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.NoError(t, err)
 	require.Equal(t, "secret1uhfqhj6cvt7983n6xdxkjhfvx9833qk5pmgfl4", contractAddr.String())
 
 	// gas can change +- 10% before we start failing, though maybe for consensus we should check a constant amount
 	gasAfter := ctx.GasMeter().GasConsumed()
 	require.Greater(t, gasAfter-gasBefore, types.InstanceCost)
-	require.Less(t, gasAfter-gasBefore, types.InstanceCost+8000)
+	require.Less(t, gasAfter-gasBefore, types.InstanceCost+10_000)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, contractAddr)
@@ -310,7 +311,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, info.Label, "demo contract 1")
 
 	// test that creating again with the same label will fail
-	_, _, err = keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
+	_, _, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.Error(t, err)
 }
 
@@ -356,7 +357,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			}
 
 			// when
-			_, _, addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
+			_, _, addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, nil, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
 			// then
 			if spec.expError {
 				require.Error(t, err)
@@ -408,8 +409,9 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
-	addr, _, err := keeper.Instantiate(ctx, nonExistingCodeID, creator /* , nil */, initMsgBz, "demo contract 2", nil, nil)
+	addr, _, err := keeper.Instantiate(ctx, nonExistingCodeID, creator, nil, initMsgBz, "demo contract 2", nil, nil)
 	require.True(t, types.ErrNotFound.Is(err), err)
 	require.Nil(t, addr)
 }
@@ -457,9 +459,9 @@ func TestExecute(t *testing.T) {
 
 	gasBefore := ctx.GasMeter().GasConsumed()
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, contractID, deposit)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, creatorPrivKey, initMsgBz, contractID, deposit)
 	// create with no balance is also legal
-	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", deposit, nil)
 
 	require.NoError(t, err)
 
@@ -582,7 +584,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: bob, Beneficiary: fred})
 			require.NoError(t, err)
 
-			_, _, contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
+			_, _, contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, nil, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
 			require.Empty(t, err)
 
 			wasmCalls := int64(-1)
@@ -639,6 +641,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	_, err = keeper.Execute(ctx, nonExistingAddress, creator, msgBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.True(t, types.ErrNotFound.Is(err), err)
@@ -673,7 +676,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, nil, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
 
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"panic":{}}`))
 	require.NoError(t, err)
@@ -693,6 +696,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	// let's make sure we get a reasonable error, no panic/crash
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, topUp, nil, wasmtypes.HandleTypeExecute)
@@ -757,8 +761,9 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
-	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, msgBz, "demo contract 5", deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, msgBz, "demo contract 5", deposit, nil)
 	require.NoError(t, err)
 
 	// make sure we set a limit before calling
@@ -802,6 +807,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	// this must fail
 	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil, nil, wasmtypes.HandleTypeExecute)
@@ -839,7 +845,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	}
 	initMsgBz, err := json.Marshal(initMsg)
 
-	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, nil, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002
@@ -874,6 +880,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	// updateLightClientHelper(t, ctx)
 
 	start := time.Now()
 

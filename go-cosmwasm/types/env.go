@@ -16,6 +16,12 @@ type Env struct {
 	Transaction *TransactionInfo `json:"transaction,omitempty"`
 }
 
+type ContractKey struct {
+	OgContractKey           []byte `protobuf:"bytes,1,opt,name=og_contract_key,json=ogContractKey,proto3" json:"og_contract_key,omitempty"`
+	CurrentContractKey      []byte `protobuf:"bytes,2,opt,name=current_contract_key,json=currentContractKey,proto3" json:"current_contract_key,omitempty"`
+	CurrentContractKeyProof []byte `protobuf:"bytes,3,opt,name=current_contract_key_proof,json=currentContractKeyProof,proto3" json:"current_contract_key_proof,omitempty"`
+}
+
 type TransactionInfo struct {
 	// Position of this transaction in the block.
 	// The first transaction has index 0
@@ -28,8 +34,6 @@ type TransactionInfo struct {
 type BaseEnv[T Env] struct {
 	First T
 }
-
-type ContractKey string
 
 type BlockInfo struct {
 	// block height this transaction is executed
