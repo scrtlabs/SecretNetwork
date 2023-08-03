@@ -1,4 +1,4 @@
-FROM ghcr.io/scrtlabs/sgx-rust:2004-1.1.6
+FROM ghcr.io/scrtlabs/release-base:20.04-2.20
 
 RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
     apt-get update && \

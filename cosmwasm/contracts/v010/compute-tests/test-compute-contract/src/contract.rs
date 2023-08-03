@@ -1705,6 +1705,8 @@ fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
     let null_ptr: *const CanonicalAddr = std::ptr::null();
     let null_canon_addr: &CanonicalAddr = unsafe { &*null_ptr };
 
+    use std::ptr;
+
     match &pass_type[..] {
         "read_db_key" => {
             unsafe { deps.storage.get(null_ptr_slice) };

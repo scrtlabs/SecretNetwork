@@ -1111,6 +1111,7 @@ func TestPassNullPointerToImports(t *testing.T) {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
+			println("Setting up contract: ", testContract.CosmWasmVersion, testContract.WasmFilePath)
 			_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests)
 			require.Empty(t, initErr)
 
