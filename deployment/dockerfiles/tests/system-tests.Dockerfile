@@ -1,7 +1,7 @@
 # This dockerfile contains tests that only test the compute module, using a single node. They do not execute tests
 # on multiple nodes, nor do they require a full network or interfaces with user libraries, network latency, etc.
 
-FROM ghcr.io/scrtlabs/compile-contracts:1.6.0
+FROM ghcr.io/scrtlabs/compile-contracts:1.10.0
 
 RUN mkdir -p /opt/secret/.sgx_secrets
 
