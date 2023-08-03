@@ -1,4 +1,4 @@
-FROM ghcr.io/scrtlabs/sgx-rust:2004-1.1.5
+FROM ghcr.io/scrtlabs/sgx-rust:2004-1.1.6
 
 ARG NODE_VERSION=16
 

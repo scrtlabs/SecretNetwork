@@ -13,6 +13,7 @@ use core::time;
 use mem::MaybeUninit;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::ptr::null;
 use std::{mem, thread};
 
 //// consts
@@ -1697,9 +1698,11 @@ fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
 ) -> HandleResponse {
     let null_ptr_slice: &[u8] = unsafe { MaybeUninit::zeroed().assume_init() };
 
+    use std::ptr;
+
     match &pass_type[..] {
         "read_db_key" => {
-            deps.storage.get(null_ptr_slice);
+            unsafe { deps.storage.get(null_ptr_slice) };
         }
         "write_db_key" => {
             deps.storage.set(null_ptr_slice, b"write value");
