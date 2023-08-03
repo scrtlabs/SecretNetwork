@@ -29,6 +29,10 @@ type TransactionInfo struct {
 	// Along with BlockInfo.Height, this allows you to get a unique
 	// transaction identifier for the chain for future queries
 	Index uint32 `json:"index"`
+	/// The hash of the current transaction bytes.
+	/// aka txhash or transaction_id
+	/// hash = sha256(tx_bytes)
+	Hash string `json:"txhash"`
 }
 
 type BaseEnv[T Env] struct {
