@@ -1,6 +1,8 @@
 package api
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store/cache"
@@ -8,9 +10,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	_ "crypto/sha1"
+	_ "encoding/base64"
 )
 
 type storeWithParent interface{ GetParent() sdk.KVStore }
+
+func hashkey(bv []byte) string {
+	hasher := sha1.New()
+	hasher.Write(bv)
+	sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+	return sha
+}
 
 func getInnerIavl(store sdk.KVStore, key []byte) (iavlStore *iavl.Store, fullKey []byte, err error) {
 	switch st := store.(type) {
@@ -33,6 +45,7 @@ func getInnerIavl(store sdk.KVStore, key []byte) (iavlStore *iavl.Store, fullKey
 }
 
 func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byte, proof []byte, fullKey []byte, err error) {
+	fmt.Println("getting key:", hashkey(key))
 	iavlStore, fullKey, err := getInnerIavl(store, key)
 	if err != nil {
 		return nil, nil, nil, err

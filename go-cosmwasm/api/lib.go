@@ -282,6 +282,17 @@ func Query(
 	counter := startContract()
 	defer endContract(counter)
 
+	// todo remove
+	key := make([]byte, 4)
+	iavlStore, _, _ := getInnerIavl(store, key)
+
+	var i int64 = 10
+	for ; i >= 0; i-- {
+		fmt.Println("get: getting existing versions:", i)
+		version_exists := iavlStore.VersionExists(i)
+		fmt.Println("version", i, "exists:", version_exists)
+	}
+
 	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)

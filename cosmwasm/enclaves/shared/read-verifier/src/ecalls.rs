@@ -71,18 +71,18 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
 
     // Encode all key-value pairs to bytes
     for root in store_roots.pairs {
-        debug!("TOMMM key: {:?}", String::from_utf8_lossy(&root.key));
-        debug!("TOMMM val: {:?}", root.value);
+        // debug!("TOMMM key: {:?}", String::from_utf8_lossy(&root.key));
+        // debug!("TOMMM val: {:?}", root.value);
         store_roots_bytes.push(pair_to_bytes(root));
     }
     let h = merkle::simple_hash_from_byte_vectors(store_roots_bytes);
 
     debug!("received app_hash: {:?}", h);
-    debug!("received compute_root: {:?}", compute_root_slice);
-    debug!(
-        "TOMMM hashed compute_root: {:?}",
-        sha::sha_256(compute_root_slice)
-    );
+    // debug!("received compute_root: {:?}", compute_root_slice);
+    // debug!(
+    //     "TOMMM hashed compute_root: {:?}",
+    //     sha::sha_256(compute_root_slice)
+    // );
 
     let mut rp = READ_PROOFER.lock().unwrap();
     rp.app_hash = h;
