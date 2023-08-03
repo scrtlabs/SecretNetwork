@@ -1,20 +1,24 @@
 use cw_types_v010::types::HumanAddr;
 use enclave_cosmos_types::types::{
-    CosmosSdkMsg, FungibleTokenPacketData, IbcHooksIncomingTransferMsg,
+    DirectSdkMsg, FungibleTokenPacketData, IbcHooksIncomingTransferMsg,
     IbcHooksOutgoingTransferMemo, Packet,
 };
 use log::*;
 
 /// Check that the contract listed in the cosmos sdk message matches the one in env
-pub fn verify_contract_address(msg: &CosmosSdkMsg, contract_address: &HumanAddr) -> bool {
+pub fn verify_contract_address(msg: &DirectSdkMsg, contract_address: &HumanAddr) -> bool {
     // Contract address is relevant only to execute, since during sending an instantiate message the contract address is not yet known
     match msg {
-        CosmosSdkMsg::MsgExecuteContract { contract, .. } => {
-            verify_msg_execute_contract_address(contract_address, contract)
+        DirectSdkMsg::MsgExecuteContract { contract, .. }
+        | DirectSdkMsg::MsgMigrateContract { contract, .. }
+        | DirectSdkMsg::MsgUpdateAdmin { contract, .. }
+        | DirectSdkMsg::MsgClearAdmin { contract, .. } => {
+            verify_msg_execute_or_migrate_contract_address(contract_address, contract)
         }
         // During sending an instantiate message the contract address is not yet known
-        CosmosSdkMsg::MsgInstantiateContract { .. } => true,
-        CosmosSdkMsg::MsgRecvPacket {
+        // so we cannot extract it from the message and compare it to the one in env
+        DirectSdkMsg::MsgInstantiateContract { .. } => true,
+        DirectSdkMsg::MsgRecvPacket {
             packet:
                 Packet {
                     destination_port,
@@ -23,28 +27,31 @@ pub fn verify_contract_address(msg: &CosmosSdkMsg, contract_address: &HumanAddr)
                 },
             ..
         } => verify_contract_address_msg_recv_packet(destination_port, data, contract_address),
-        CosmosSdkMsg::MsgAcknowledgement {
+        DirectSdkMsg::MsgAcknowledgement {
             packet: Packet {
                 source_port, data, ..
             },
             ..
         }
-        | CosmosSdkMsg::MsgTimeout {
+        | DirectSdkMsg::MsgTimeout {
             packet: Packet {
                 source_port, data, ..
             },
             ..
         } => verify_contract_address_msg_ack_or_timeout(source_port, data, contract_address),
-        CosmosSdkMsg::Other => false,
+        DirectSdkMsg::Other => false,
     }
 }
 
-fn verify_msg_execute_contract_address(contract_address: &HumanAddr, contract: &HumanAddr) -> bool {
-    info!("Verifying contract address..");
+fn verify_msg_execute_or_migrate_contract_address(
+    contract_address: &HumanAddr,
+    contract: &HumanAddr,
+) -> bool {
+    info!("verifying contract address...");
     let is_verified = contract_address == contract;
     if !is_verified {
         trace!(
-            "Contract address sent to enclave {:?} is not the same as the signed one {:?}",
+            "contract address sent to enclave {:?} is not the same as the signed one {:?}",
             contract_address,
             *contract
         );

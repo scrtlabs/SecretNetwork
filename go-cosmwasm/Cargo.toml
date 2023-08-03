@@ -31,17 +31,16 @@ backtraces = ["snafu/backtraces"]
 production = ["cosmwasm-sgx-vm/production"]
 # This flag enales storing contracts that require the debug-print function
 debug-print = ["cosmwasm-sgx-vm/debug-print"]
-# This feature compiles a query optimized node with a second enclave used exclusively for queries.
-# Putting this functionality in a separate enclave allows improving query performace without hard forks.
-query-node = ["cosmwasm-sgx-vm/query-node"]
-
 # features that do nothing here but are just here for compatability with enclave
 light-client-validation = []
+go-tests = []
 random = []
 verify-validator-whitelist = []
 
 [dependencies]
-cosmwasm-std = { package = "secret-cosmwasm-std", features = ["iterator"], version = "0.10.1"}
+cosmwasm-std = { package = "secret-cosmwasm-std", features = [
+    "iterator"
+], version = "0.10.1" }
 cosmwasm-sgx-vm = { path = "../cosmwasm/packages/sgx-vm", features = [
     "iterator"
 ] }
@@ -49,7 +48,9 @@ errno = "0.2"
 snafu = "0.6.3"
 serde_json = "1.0"
 ctor = "0.1.13"
-simple_logger = { version = "2.3.0", default-features = false, features = ["stderr"] }
+simple_logger = { version = "2.3.0", default-features = false, features = [
+    "stderr"
+] }
 log = "0.4.17"
 
 [dev-dependencies]

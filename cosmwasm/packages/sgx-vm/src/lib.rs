@@ -27,7 +27,9 @@ mod wasmi;
 mod random;
 
 pub use crate::cache::CosmCache;
-pub use crate::calls::{call_handle_raw, call_init_raw, call_query_raw};
+pub use crate::calls::{
+    call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, call_update_admin_raw,
+};
 pub use crate::checksum::Checksum;
 pub use crate::errors::{
     CommunicationError, CommunicationResult, RegionValidationError, RegionValidationResult,

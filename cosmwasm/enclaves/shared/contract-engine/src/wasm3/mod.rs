@@ -95,7 +95,7 @@ pub struct Context {
     gas_costs: WasmCosts,
     query_depth: u32,
     operation: ContractOperation,
-    contract_key: ContractKey,
+    og_contract_key: ContractKey,
     user_nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     kv_cache: KvCache,
@@ -214,7 +214,7 @@ impl Engine {
         gas_limit: u64,
         gas_costs: WasmCosts,
         contract_code: &ContractCode,
-        contract_key: ContractKey,
+        og_contract_key: ContractKey,
         operation: ContractOperation,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
@@ -230,7 +230,7 @@ impl Engine {
             gas_used_externally: 0,
             gas_costs,
             operation,
-            contract_key,
+            og_contract_key,
             user_nonce,
             user_public_key,
             kv_cache,
@@ -268,7 +268,7 @@ impl Engine {
             .to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in environment.new_runtime is: {:?}", duration);
-        debug!("initialized runtime");
+        trace!("initialized runtime");
 
         // let start = Instant::now();
         let module = self
@@ -280,31 +280,31 @@ impl Engine {
         // "Time elapsed in environment.parse_module is: {:?}",
         // duration
         // );
-        debug!("parsed module");
+        trace!("parsed module");
 
         // let start = Instant::now();
         let mut instance = runtime.load_module(module).to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in runtime.load_module is: {:?}", duration);
-        debug!("created instance");
+        trace!("created instance");
 
         // let start = Instant::now();
         gas::set_gas_limit(&instance, self.gas_limit)?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in set_gas_limit is: {:?}", duration);
-        debug!("set gas limit");
+        trace!("set gas limit");
 
         // let start = Instant::now();
         Self::link_host_functions(&mut instance).to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in link_host_functions is: {:?}", duration);
-        debug!("linked functions");
+        trace!("linked functions");
 
         // let start = Instant::now();
         let result = func(&mut instance, &mut self.context);
         // let duration = start.elapsed();
         // trace!("Instance: elapsed time for running func is: {:?}", duration);
-        debug!("function returned {:?}", result);
+        trace!("function returned {:?}", result);
 
         self.used_gas = self
             .gas_limit
@@ -375,6 +375,69 @@ impl Engine {
     #[allow(dead_code)]
     pub fn supported_features(&self) -> &Vec<ContractFeature> {
         &self.features
+    }
+
+    pub fn migrate(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+        let api_version = self.get_api_version();
+
+        self.with_instance(|instance, context| {
+            debug!("starting migrate, api version: {:?}", api_version);
+
+            let (env_bytes, _msg_info_bytes) = env.get_wasm_ptrs()?;
+
+            // let start = Instant::now();
+            let env_ptr = write_to_memory(instance, &env_bytes)?;
+            // let duration = start.elapsed();
+            // trace!(
+            //     "Time elapsed in env_bytes write_to_memory is: {:?}",
+            //     duration
+            // );
+
+            // let start = Instant::now();
+            let msg_ptr = write_to_memory(instance, &msg)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in msg write_to_memory is: {:?}", duration);
+
+            let result = match api_version {
+                CosmWasmApiVersion::V010 => {
+                    let (migrate, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("migrate")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    migrate.call_with_context(context, args)
+                }
+                CosmWasmApiVersion::V1 => {
+                    let (migrate, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("migrate")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    // let start = Instant::now();
+                    // let res =
+                    migrate.call_with_context(context, args)
+                    // let duration = start.elapsed();
+                    // trace!("Time elapsed in call_with_context is: {:?}", duration);
+                    // res
+                }
+                CosmWasmApiVersion::Invalid => {
+                    return Err(EnclaveError::InvalidWasm);
+                }
+            };
+            // let start = Instant::now();
+            let output_ptr = check_execution_result(instance, context, result)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in check_execution_result is: {:?}", duration);
+
+            // let start = Instant::now();
+            let output = read_from_memory(instance, output_ptr)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in read_from_memory is: {:?}", duration);
+
+            Ok(output)
+        })
     }
 
     pub fn init(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
@@ -451,13 +514,13 @@ impl Engine {
         let api_version = self.get_api_version();
 
         self.with_instance(|instance, context| {
-            debug!("starting handle");
+            trace!("starting handle");
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
             let msg_ptr = write_to_memory(instance, &msg)?;
-            debug!("handle written msg");
+            trace!("handle written msg");
             let env_ptr = write_to_memory(instance, &env_bytes)?;
-            debug!("handle written env");
+            trace!("handle written env");
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -496,13 +559,13 @@ impl Engine {
                 }
             };
 
-            debug!("found handle");
+            trace!("found handle");
 
             let output_ptr = check_execution_result(instance, context, result)?;
-            debug!("called handle");
+            trace!("called handle");
 
             let output = read_from_memory(instance, output_ptr)?;
-            debug!("extracted handle output: {:?}", output);
+            trace!("extracted handle output: {:?}", output);
 
             Ok(output)
         })
@@ -570,7 +633,7 @@ impl Engine {
                     &k,
                     &v,
                     &self.context.context,
-                    &self.context.contract_key,
+                    &self.context.og_contract_key,
                     &get_encryption_salt(self.context.timestamp),
                 )
                 .unwrap();
@@ -844,11 +907,12 @@ fn host_read_db(
     let (value, used_gas) = read_from_encrypted_state(
         &state_key_name,
         &context.context,
-        &context.contract_key,
+        &context.og_contract_key,
         match context.operation {
             ContractOperation::Init => true,
             ContractOperation::Handle => true,
             ContractOperation::Query => false,
+            ContractOperation::Migrate => true,
         },
         &mut context.kv_cache,
         &get_encryption_salt(context.timestamp),
@@ -892,7 +956,7 @@ fn host_remove_db(
     context.kv_cache.remove(&state_key_name);
 
     let used_gas =
-        remove_from_encrypted_state(&state_key_name, &context.context, &context.contract_key)?;
+        remove_from_encrypted_state(&state_key_name, &context.context, &context.og_contract_key)?;
     context.use_gas_externally(used_gas);
 
     Ok(())

@@ -2,18 +2,20 @@ use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use cw_types_v1::results::REPLY_ENCRYPTION_MAGIC_BYTES;
 use log::*;
 
-#[cfg(feature = "light-client-validation")]
 use cw_types_generic::BaseEnv;
 
 use cw_types_v010::types::{CanonicalAddr, Coin, HumanAddr};
 use enclave_cosmos_types::traits::CosmosAminoPubkey;
 use enclave_cosmos_types::types::{
-    ContractCode, CosmosPubKey, CosmosSdkMsg, HandleType, SigInfo, SignDoc, StdSignDoc,
+    ContractCode, CosmosPubKey, DirectSdkMsg, HandleType, SigInfo, SignDoc, StdSignDoc, TxBody,
+    VerifyParamsType,
 };
 use enclave_crypto::traits::VerifyingKey;
 use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
+use protobuf::Message;
 
+use crate::contract_operations::is_code_hash_allowed;
 use crate::input_validation::contract_address_validation::verify_contract_address;
 use crate::input_validation::msg_validation::verify_and_get_sdk_msg;
 use crate::input_validation::send_funds_validations::verify_sent_funds;
@@ -23,7 +25,7 @@ use crate::message::is_ibc_msg;
 use crate::types::SecretMessage;
 
 #[cfg(feature = "light-client-validation")]
-use block_verifier::VERIFIED_MESSAGES;
+use block_verifier::VERIFIED_BLOCK_MESSAGES;
 
 extern crate hex;
 
@@ -52,14 +54,29 @@ fn is_subslice(larger: &[u8], smaller: &[u8]) -> bool {
 
 #[cfg(feature = "light-client-validation")]
 pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
-    let verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
+    #[cfg(feature = "go-tests")]
+    {
+        // allow skipping light client validation in go-tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set to TRUE
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+
+        if is_skip_light_client_validation
+            .unwrap_or_default()
+            .to_uppercase()
+            == "TRUE"
+        {
+            return Ok(());
+        }
+    }
+
+    let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     if verified_msgs.height() != base_env.0.block.height {
         error!("wrong height for this block - 0xF6AC");
         return Err(EnclaveError::ValidationFailure);
     }
 
     if verified_msgs.time() != base_env.0.block.time as i128 {
-        error!("wrong height for this block - 0xF6AF");
+        error!("wrong time for this block - 0xF6AF");
         return Err(EnclaveError::ValidationFailure);
     }
 
@@ -67,8 +84,27 @@ pub fn verify_block_info(base_env: &BaseEnv) -> Result<(), EnclaveError> {
 }
 
 #[cfg(feature = "light-client-validation")]
-pub fn check_msg_matches_state(msg: &[u8]) -> bool {
-    let mut verified_msgs = VERIFIED_MESSAGES.lock().unwrap();
+/// WARNING: this function must be called at most once per message!
+/// Checks if there's a msg in the light client that's contained in tx_sign_bytes
+pub fn check_tx_in_current_block(tx_sign_bytes: &[u8]) -> bool {
+    #[cfg(feature = "go-tests")]
+    {
+        // allow skipping light client validation in go-tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set to TRUE
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+
+        if is_skip_light_client_validation
+            .unwrap_or_default()
+            .to_uppercase()
+            == "TRUE"
+        {
+            return true;
+        }
+    }
+
+    info!("Verifying message in signed block...");
+
+    let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     let remaining_msgs = verified_msgs.remaining();
 
     if remaining_msgs == 0 {
@@ -80,8 +116,10 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
     // all the messages available before we can determine that there has been a failure
     // this isn't an attack vector since this can happen anyway by manipulating the state between executions
     while verified_msgs.remaining() > 0 {
-        if let Some(expected_msg) = verified_msgs.get_next() {
-            if is_subslice(&expected_msg, msg) {
+        if let Some(verified_msg) = verified_msgs.get_next() {
+            trace!("input tx_sign_bytes: {:?}", hex::encode(&tx_sign_bytes));
+            trace!("light client msg: {:?}", hex::encode(&verified_msg));
+            if is_subslice(tx_sign_bytes, &verified_msg) {
                 return true;
             }
         }
@@ -89,18 +127,67 @@ pub fn check_msg_matches_state(msg: &[u8]) -> bool {
 
     error!("Failed to validate message, error 0x3255");
 
-    // if this message fails to verify we have to fail the rest of the TX, so we won't get any
-    // other messages
+    // if this message fails to verify we have to fail the rest of the block, so we won't get any other messages
     verified_msgs.clear();
 
     false
 }
 
+#[cfg(feature = "light-client-validation")]
+/// WARNING: this function must be called at most once per message!
+/// Checks if there's a msg in the light client that's containing cert
+pub fn check_cert_in_current_block(cert: &[u8]) -> bool {
+    #[cfg(feature = "go-tests")]
+    {
+        // allow skipping light client validation in go-tests
+        // if the env variable SKIP_LIGHT_CLIENT_VALIDATION is set to TRUE
+        let is_skip_light_client_validation = std::env::var("SKIP_LIGHT_CLIENT_VALIDATION");
+
+        if is_skip_light_client_validation
+            .unwrap_or_default()
+            .to_uppercase()
+            == "TRUE"
+        {
+            return true;
+        }
+    }
+
+    let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+    let remaining_msgs = verified_msgs.remaining();
+
+    if remaining_msgs == 0 {
+        error!("Failed to validate message, error 0x4555");
+        return false;
+    }
+
+    // Msgs might fail in the sdk before they reach the enclave. In this case we need to run through
+    // all the messages available before we can determine that there has been a failure
+    // this isn't an attack vector since this can happen anyway by manipulating the state between executions
+    while verified_msgs.remaining() > 0 {
+        if let Some(verified_msg) = verified_msgs.get_next() {
+            if is_subslice(&verified_msg, cert) {
+                return true;
+            }
+        }
+    }
+
+    error!("Failed to validate message, error 0x4255");
+
+    // if this message fails to verify we have to fail the rest of the block, so we won't get any other messages
+    verified_msgs.clear();
+
+    false
+}
+
+/// contract_key is a unique key for each contract
+/// it's used in state encryption to prevent the same
+/// encryption keys from being used for different contracts
 pub fn generate_contract_key(
     sender: &CanonicalAddr,
     block_height: &u64,
     contract_hash: &[u8; HASH_SIZE],
     contract_address: &CanonicalAddr,
+    og_contract_key: Option<&[u8; CONTRACT_KEY_LENGTH]>,
 ) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
     let consensus_state_ikm = KEY_MANAGER.get_consensus_state_ikm().unwrap();
 
@@ -114,11 +201,12 @@ pub fn generate_contract_key(
         // otherwise we'd have to migrate all the contract_keys every time we rotate the seed
         // which is doable but requires one more ecall & just unnecessary
         // actually using consensus_state_ikm might be entirely unnecessary here but it's too
-        // painful at this point to change the protocol to remove it
+        // painful at this point to change the validation protocol to remove it
         &consensus_state_ikm.genesis,
         &sender_id,
         contract_hash,
         &(contract_address.0).0,
+        og_contract_key,
     );
 
     contract_key[0..32].copy_from_slice(&sender_id);
@@ -140,19 +228,26 @@ pub fn generate_contract_id(
     sender_id: &[u8; HASH_SIZE],
     code_hash: &[u8; HASH_SIZE],
     contract_address: &[u8],
+    og_contract_key: Option<&[u8; CONTRACT_KEY_LENGTH]>,
 ) -> [u8; HASH_SIZE] {
     let authentication_key = consensus_state_ikm.derive_key_from_this(sender_id.as_ref());
 
     let mut input_data = sender_id.to_vec();
     input_data.extend_from_slice(code_hash);
     input_data.extend_from_slice(contract_address);
+
+    if let Some(og_contract_key) = og_contract_key {
+        input_data.extend_from_slice(og_contract_key);
+    }
+
     authentication_key.sign_sha_256(&input_data)
 }
 
-pub fn validate_contract_key(
+pub fn validate_current_contract_key(
     contract_key: &[u8; CONTRACT_KEY_LENGTH],
     contract_address: &CanonicalAddr,
     contract_code: &ContractCode,
+    og_contract_key: Option<&[u8; CONTRACT_KEY_LENGTH]>,
 ) -> Result<(), EnclaveError> {
     // parse contract key -> < signer_id || authentication_code >
     let mut signer_id: [u8; HASH_SIZE] = [0u8; HASH_SIZE];
@@ -177,15 +272,93 @@ pub fn validate_contract_key(
         &signer_id,
         &contract_code.hash(),
         contract_address.as_slice(),
+        og_contract_key,
     );
 
     if calculated_authentication_id == expected_authentication_id {
         trace!("Successfully authenticated the contract!");
         Ok(())
     } else {
-        warn!("got an error while trying to deserialize output bytes");
+        warn!("Failed to authenticated the contract");
         Err(EnclaveError::FailedContractAuthentication)
     }
+}
+
+/// validate_contract_key validates the contract key against the contract address and code hash. If the contract was previously migrated, it also validates the contract key proof against the original contract key.
+pub fn validate_contract_key(
+    base_env: &BaseEnv,
+    canonical_contract_address: &CanonicalAddr,
+    contract_code: &ContractCode,
+) -> Result<(), EnclaveError> {
+    let og_contract_key: [u8; CONTRACT_KEY_LENGTH] = base_env.get_og_contract_key()?;
+
+    if base_env.was_migrated() {
+        trace!("Contract was migrated, validating proof");
+
+        let current_contract_key: [u8; CONTRACT_KEY_LENGTH] =
+            base_env.get_current_contract_key()?;
+
+        validate_current_contract_key(
+            &current_contract_key,
+            canonical_contract_address,
+            contract_code,
+            Some(&og_contract_key),
+        )?;
+
+        let sent_contract_key_proof = base_env.get_current_contract_key_proof()?;
+
+        let contract_key_proof = generate_contract_key_proof(
+            &canonical_contract_address.0 .0,
+            &contract_code.hash(),
+            &og_contract_key,
+            &current_contract_key, // this is already validated
+        );
+
+        if sent_contract_key_proof != contract_key_proof {
+            error!("Failed to validate contract key proof for a migrated contract");
+            return Err(EnclaveError::ValidationFailure);
+        }
+
+        Ok(())
+    } else {
+        trace!("Contract still has original code, validating contract_key");
+
+        validate_current_contract_key(
+            &og_contract_key,
+            canonical_contract_address,
+            contract_code,
+            None,
+        )?;
+
+        Ok(())
+    }
+}
+
+pub fn generate_admin_proof(admin: &[u8], contract_key: &[u8]) -> [u8; enclave_crypto::HASH_SIZE] {
+    let mut data_to_sign = vec![];
+    data_to_sign.extend_from_slice(admin);
+    data_to_sign.extend_from_slice(contract_key);
+
+    let admin_proof_secret = KEY_MANAGER.get_admin_proof_secret().unwrap();
+
+    admin_proof_secret.sign_sha_256(data_to_sign.as_slice())
+}
+
+pub fn generate_contract_key_proof(
+    contract_address: &[u8],
+    code_hash: &[u8],
+    og_contract_key: &[u8],
+    new_contract_key: &[u8],
+) -> [u8; enclave_crypto::HASH_SIZE] {
+    let mut data_to_sign = vec![];
+    data_to_sign.extend_from_slice(contract_address);
+    data_to_sign.extend_from_slice(code_hash);
+    data_to_sign.extend_from_slice(og_contract_key);
+    data_to_sign.extend_from_slice(new_contract_key);
+
+    let contract_key_proof_secret = KEY_MANAGER.get_contract_key_proof_secret().unwrap();
+
+    contract_key_proof_secret.sign_sha_256(data_to_sign.as_slice())
 }
 
 pub struct ValidatedMessage {
@@ -201,21 +374,23 @@ pub struct ReplyParams {
 
 /// Validate that the message sent to the enclave (after decryption) was actually addressed to this contract.
 pub fn validate_msg(
+    contract_address: &CanonicalAddr,
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
     data_for_validation: Option<Vec<u8>>,
     handle_type: Option<HandleType>,
 ) -> Result<ValidatedMessage, EnclaveError> {
     match handle_type {
-        None => validate_basic_msg(msg, contract_hash, data_for_validation),
+        None => validate_basic_msg(contract_address, msg, contract_hash, data_for_validation),
         Some(h) => match is_ibc_msg(h) {
-            false => validate_basic_msg(msg, contract_hash, data_for_validation),
-            true => validate_ibc_msg(msg, contract_hash, data_for_validation, h),
+            false => validate_basic_msg(contract_address, msg, contract_hash, data_for_validation),
+            true => validate_ibc_msg(contract_address, msg, contract_hash, data_for_validation, h),
         },
     }
 }
 
 pub fn validate_ibc_msg(
+    contract_address: &CanonicalAddr,
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
     data_for_validation: Option<Vec<u8>>,
@@ -234,6 +409,7 @@ pub fn validate_ibc_msg(
                 })?;
 
             let validated_msg = validate_basic_msg(
+                contract_address,
                 parsed_ibc_packet.packet.data.as_slice(),
                 contract_hash,
                 data_for_validation,
@@ -259,6 +435,7 @@ pub fn validate_ibc_msg(
 }
 
 pub fn validate_basic_msg(
+    contract_address: &CanonicalAddr,
     msg: &[u8],
     contract_hash: &[u8; HASH_SIZE],
     data_for_validation: Option<Vec<u8>>,
@@ -319,7 +496,14 @@ pub fn validate_basic_msg(
     })?;
 
     if decoded_hash != contract_hash {
-        warn!("Message contains mismatched contract hash");
+        warn!("Message contains mismatched contract hash, checking hardcoded contract hash...");
+        if is_code_hash_allowed(contract_address, &String::from_utf8_lossy(&decoded_hash)) {
+            warn!("Message contains mismatched contract hash, but it's allowed");
+        } else {
+            warn!("Message contains mismatched contract hash, and it's not allowed");
+            return Err(EnclaveError::ValidationFailure);
+        }
+
         return Err(EnclaveError::ValidationFailure);
     }
 
@@ -362,25 +546,23 @@ pub fn verify_params(
     sent_funds: &[Coin],
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
-    msg: &SecretMessage,
-    #[cfg(feature = "light-client-validation")] og_msg: &[u8],
+    secret_msg: &SecretMessage,
     should_verify_sig_info: bool,
     should_verify_input: bool,
-    handle_type: HandleType,
+    verify_params_type: VerifyParamsType,
+    current_admin: Option<&CanonicalAddr>,
+    new_admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
     if should_verify_sig_info {
         debug!("Verifying message signatures for: {:?}", sig_info);
 
         if let Some(callback_sig) = &sig_info.callback_sig {
-            return verify_callback_sig(callback_sig.as_slice(), sender, msg, sent_funds);
+            // We return here if there's a callback signature.
+            // The sender is another contract in the same transaction, so there aren't any signed_bytes to verify or tx_bytes to check in the signed block.
+            return verify_callback_sig(callback_sig.as_slice(), sender, secret_msg, sent_funds);
         }
 
-        #[cfg(feature = "light-client-validation")]
-        if !check_msg_matches_state(og_msg) {
-            return Err(EnclaveError::ValidationFailure);
-        }
-
-        verify_signature(sig_info, sender, handle_type)?;
+        verify_signature(sig_info, sender)?;
     }
 
     if should_verify_input {
@@ -389,8 +571,10 @@ pub fn verify_params(
             sent_funds,
             sender,
             contract_address,
-            msg,
-            handle_type,
+            secret_msg,
+            verify_params_type,
+            current_admin,
+            new_admin,
         )?;
     }
 
@@ -399,12 +583,8 @@ pub fn verify_params(
     Ok(())
 }
 
-fn verify_signature(
-    sig_info: &SigInfo,
-    sender: &CanonicalAddr,
-    handle_type: HandleType,
-) -> Result<(), EnclaveError> {
-    let sender_public_key = get_signer(sig_info, sender, handle_type)?;
+fn verify_signature(sig_info: &SigInfo, sender: &CanonicalAddr) -> Result<(), EnclaveError> {
+    let sender_public_key = get_signer(sig_info, sender)?;
 
     sender_public_key
         .verify_bytes(
@@ -431,24 +611,32 @@ fn verify_signature(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn verify_input(
     sig_info: &SigInfo,
     sent_funds: &[Coin],
     sender: &CanonicalAddr,
     contract_address: &HumanAddr,
-    msg: &SecretMessage,
-    handle_type: HandleType,
+    secret_msg: &SecretMessage,
+    verify_params_types: VerifyParamsType,
+    current_admin: Option<&CanonicalAddr>,
+    new_admin: Option<&CanonicalAddr>,
 ) -> Result<(), EnclaveError> {
-    let messages = get_messages(sig_info, handle_type)?;
+    let sdk_messages = get_sdk_messages_from_sign_bytes(sig_info)?;
 
-    let is_verified = verify_message_params(
-        &messages,
+    verify_tx_bytes(sig_info, &sdk_messages)?;
+
+    let is_verified = verify_input_params(
+        sig_info,
+        &sdk_messages,
         sender,
         sent_funds,
         contract_address,
-        msg,
-        handle_type,
-    );
+        secret_msg,
+        verify_params_types,
+        current_admin,
+        new_admin,
+    )?;
 
     if !is_verified {
         warn!("Parameter verification failed");
@@ -458,15 +646,13 @@ fn verify_input(
     Ok(())
 }
 
-fn get_signer(
-    sign_info: &SigInfo,
-    sender: &CanonicalAddr,
-    handle_type: HandleType,
-) -> Result<CosmosPubKey, EnclaveError> {
+fn get_signer(sign_info: &SigInfo, sender: &CanonicalAddr) -> Result<CosmosPubKey, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
+    use protobuf::well_known_types::Any as AnyProto;
+
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
-            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), handle_type)?;
+            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
             trace!("sign doc: {:?}", sign_doc);
 
             // This verifies that signatures and sign bytes are self consistent
@@ -482,9 +668,6 @@ fn get_signer(
             Ok(sender_public_key.clone())
         }
         SIGN_MODE_LEGACY_AMINO_JSON => {
-            use protobuf::well_known_types::Any as AnyProto;
-            use protobuf::Message;
-
             let any_pub_key =
                 AnyProto::parse_from_bytes(&sign_info.public_key.0).map_err(|err| {
                     warn!("failed to parse public key as Any: {:?}", err);
@@ -498,9 +681,6 @@ fn get_signer(
             Ok(public_key)
         }
         SIGN_MODE_EIP_191 => {
-            use protobuf::well_known_types::Any as AnyProto;
-            use protobuf::Message;
-
             let any_pub_key =
                 AnyProto::parse_from_bytes(&sign_info.public_key.0).map_err(|err| {
                     warn!("failed to parse public key as Any: {:?}", err);
@@ -523,15 +703,16 @@ fn get_signer(
     }
 }
 
-fn get_messages(
+// extract sdk_messages from sign_bytes
+// sign_byte might be in Amino format
+fn get_sdk_messages_from_sign_bytes(
     sign_info: &SigInfo,
-    handle_type: HandleType,
-) -> Result<Vec<CosmosSdkMsg>, EnclaveError> {
+) -> Result<Vec<DirectSdkMsg>, EnclaveError> {
     use cosmos_proto::tx::signing::SignMode::*;
     match sign_info.sign_mode {
         SIGN_MODE_DIRECT => {
-            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice(), handle_type)?;
-            trace!("sign doc: {:?}", sign_doc);
+            let sign_doc = SignDoc::from_bytes(sign_info.sign_bytes.as_slice())?;
+            trace!("direct sign doc: {:?}", sign_doc);
 
             Ok(sign_doc.body.messages)
         }
@@ -541,10 +722,11 @@ fn get_messages(
                     warn!("failure to parse StdSignDoc: {:?}", err);
                     EnclaveError::FailedTxVerification
                 })?;
-            let messages: Result<Vec<CosmosSdkMsg>, _> = sign_doc
+            trace!("amino sign doc: {:?}", sign_doc);
+            let messages: Result<Vec<DirectSdkMsg>, _> = sign_doc
                 .msgs
                 .iter()
-                .map(|x| x.clone().into_cosmwasm_msg())
+                .map(|x| x.clone().into_direct_msg())
                 .collect();
             Ok(messages?)
         }
@@ -577,10 +759,13 @@ fn get_messages(
                 );
                 EnclaveError::FailedTxVerification
             })?;
-            let messages: Result<Vec<CosmosSdkMsg>, _> = sign_doc
+
+            trace!("eip191 sign doc: {:?}", sign_doc);
+
+            let messages: Result<Vec<DirectSdkMsg>, _> = sign_doc
                 .msgs
                 .iter()
-                .map(|x| x.clone().into_cosmwasm_msg())
+                .map(|x| x.clone().into_direct_msg())
                 .collect();
             Ok(messages?)
         }
@@ -594,16 +779,51 @@ fn get_messages(
     }
 }
 
+/// in order to use tx_bytes in the light client verification, we need to verify tx_bytes against sign_bytes which is verified against the sender's signature
+fn verify_tx_bytes(
+    sig_info: &SigInfo,
+    sdk_messages_from_sign_bytes: &Vec<DirectSdkMsg>,
+) -> Result<(), EnclaveError> {
+    trace!("Verifying tx_bytes against sign_bytes...");
+
+    let tx_raw_from_tx_bytes = cosmos_proto::tx::tx::TxRaw::parse_from_bytes(
+        sig_info.tx_bytes.as_slice(),
+    )
+    .map_err(|err| {
+        warn!("failed to parse TxRaw from tx_bytes: {:?}", err);
+        EnclaveError::FailedTxVerification
+    })?;
+
+    let sdk_messages_from_tx_bytes = TxBody::from_bytes(&tx_raw_from_tx_bytes.body_bytes)?.messages;
+
+    let is_verified = sdk_messages_from_sign_bytes == &sdk_messages_from_tx_bytes;
+
+    if is_verified {
+        Ok(())
+    } else {
+        trace!(
+            "sdk_messages_from_tx_bytes: {:?}",
+            sdk_messages_from_tx_bytes
+        );
+        trace!(
+            "sdk_messages_from_sign_bytes: {:?}",
+            sdk_messages_from_sign_bytes
+        );
+        trace!("failed to verify tx_bytes against sign_bytes");
+        Err(EnclaveError::FailedTxVerification)
+    }
+}
+
 /// Verify that the callback sig is appropriate.
 ///
 ///This is used when contracts send callbacks to each other.
 fn verify_callback_sig(
     callback_signature: &[u8],
     sender: &CanonicalAddr,
-    msg: &SecretMessage,
+    secret_msg: &SecretMessage,
     sent_funds: &[Coin],
 ) -> Result<(), EnclaveError> {
-    if verify_callback_sig_impl(callback_signature, sender, msg, sent_funds) {
+    if verify_callback_sig_impl(callback_signature, sender, secret_msg, sent_funds) {
         info!("Message verified! msg.sender is the calling contract");
         return Ok(());
     }
@@ -615,20 +835,20 @@ fn verify_callback_sig(
 fn verify_callback_sig_impl(
     callback_signature: &[u8],
     sender: &CanonicalAddr,
-    msg: &SecretMessage,
+    secret_msg: &SecretMessage,
     sent_funds: &[Coin],
 ) -> bool {
     if callback_signature.is_empty() {
         return false;
     }
 
-    let callback_sig = create_callback_signature(sender, &msg.msg, sent_funds);
+    let callback_sig = create_callback_signature(sender, &secret_msg.msg, sent_funds);
 
     if callback_signature != callback_sig {
         trace!(
             "Contract signature does not match with the one sent: {:?}. Expected message to be signed: {:?}",
             callback_signature,
-            String::from_utf8_lossy(msg.msg.as_slice())
+            String::from_utf8_lossy(secret_msg.msg.as_slice())
         );
 
         return false;
@@ -637,46 +857,66 @@ fn verify_callback_sig_impl(
     true
 }
 
-fn verify_message_params(
-    messages: &[CosmosSdkMsg],
+#[allow(clippy::too_many_arguments)]
+fn verify_input_params(
+    sig_info: &SigInfo,
+    sdk_messages: &[DirectSdkMsg],
     sender: &CanonicalAddr,
     sent_funds: &[Coin],
     contract_address: &HumanAddr,
-    sent_msg: &SecretMessage,
-    handle_type: HandleType,
-) -> bool {
+    sent_wasm_input: &SecretMessage,
+    verify_params_types: VerifyParamsType,
+    current_admin: Option<&CanonicalAddr>,
+    new_admin: Option<&CanonicalAddr>,
+) -> Result<bool, EnclaveError> {
     info!("Verifying sdk message against wasm input...");
     // If msg is not found (is None) then it means message verification failed,
     // since it didn't find a matching signed message
-    let msg = verify_and_get_sdk_msg(messages, sender, sent_msg, handle_type);
-    if msg.is_none() {
-        debug!("Message verification failed!");
-        trace!(
-            "Message sent to contract {:?} by {:?} does not match any signed messages {:?}",
-            sent_msg.to_vec(),
-            sender,
-            messages
-        );
-        return false;
+    let sdk_msg = verify_and_get_sdk_msg(
+        sdk_messages,
+        sender,
+        contract_address,
+        sent_wasm_input,
+        verify_params_types,
+        current_admin,
+        new_admin,
+    );
+
+    let sdk_msg = match sdk_msg {
+        Some(sdk_msg) => sdk_msg,
+        None => {
+            debug!("Message verification failed!");
+            trace!(
+                "Message sent to contract {:?} by {:?} does not match any signed messages {:?}",
+                sent_wasm_input.to_vec(),
+                sender,
+                sdk_messages
+            );
+            return Ok(false);
+        }
+    };
+
+    #[cfg(feature = "light-client-validation")]
+    if !check_tx_in_current_block(sig_info.tx_bytes.as_slice()) {
+        return Err(EnclaveError::ValidationFailure);
     }
-    let msg = msg.unwrap();
 
     info!("Verifying message sender...");
-    if let Some(value) = verify_sender(msg, sender) {
-        return value;
+    if let Some(value) = verify_sender(sdk_msg, sender) {
+        return Ok(value);
     }
 
     info!("Verifying contract address...");
-    if !verify_contract_address(msg, contract_address) {
+    if !verify_contract_address(sdk_msg, contract_address) {
         warn!("Contract address verification failed!");
-        return false;
+        return Ok(false);
     }
 
     info!("Verifying sent funds...");
-    if !verify_sent_funds(msg, sent_funds) {
+    if !verify_sent_funds(sdk_msg, sent_funds) {
         warn!("Funds verification failed!");
-        return false;
+        return Ok(false);
     }
 
-    true
+    Ok(true)
 }

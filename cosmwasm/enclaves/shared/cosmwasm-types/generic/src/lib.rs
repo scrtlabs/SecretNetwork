@@ -12,6 +12,7 @@ use cw_types_v1::types::{self as v1types, Addr};
 use enclave_ffi_types::EnclaveError;
 
 pub const CONTRACT_KEY_LENGTH: usize = 64;
+pub const CONTRACT_KEY_PROOF_LENGTH: usize = 32;
 
 /// CosmwasmApiVersion is used to decide how to handle contract inputs and outputs
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
@@ -39,29 +40,101 @@ pub type BaseCanoncalAddr = v010types::CanonicalAddr;
 pub struct BaseEnv(pub V010Env);
 
 impl BaseEnv {
-    pub fn get_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
-        let contract_key = if let Some(b64_key) = &self.0.contract_key {
-            base64::decode(b64_key).map_err(|err| {
-                warn!(
-                    "got an error while trying to decode contract key {:?}: {}",
-                    b64_key, err
-                );
-                EnclaveError::FailedContractAuthentication
-            })?
+    pub fn was_migrated(&self) -> bool {
+        if let Some(contract_key) = &self.0.contract_key {
+            contract_key.current_contract_key.is_some()
+                && contract_key.current_contract_key_proof.is_some()
+                && contract_key.og_contract_key.is_some() // this one might be unnecessary
         } else {
-            warn!("Contract execute with empty contract key");
-            return Err(EnclaveError::FailedContractAuthentication);
-        };
-
-        if contract_key.len() != CONTRACT_KEY_LENGTH {
-            warn!("Contract execute with empty contract key");
-            return Err(EnclaveError::FailedContractAuthentication);
+            false
         }
+    }
 
-        let mut key_as_bytes = [0u8; CONTRACT_KEY_LENGTH];
-        key_as_bytes.copy_from_slice(&contract_key);
+    pub fn get_og_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+        if let Some(contract_key) = &self.0.contract_key {
+            let og_contract_key = if let Some(og_contract_key) = &contract_key.og_contract_key {
+                &og_contract_key.0
+            } else {
+                warn!("Tried to get an empty og_contract_key");
+                return Err(EnclaveError::FailedContractAuthentication);
+            };
 
-        Ok(key_as_bytes)
+            if og_contract_key.len() != CONTRACT_KEY_LENGTH {
+                warn!("Tried to get an empty og_contract_key");
+                return Err(EnclaveError::FailedContractAuthentication);
+            }
+
+            let mut as_bytes: [u8; CONTRACT_KEY_LENGTH] = [0u8; CONTRACT_KEY_LENGTH];
+            as_bytes.copy_from_slice(og_contract_key);
+
+            Ok(as_bytes)
+        } else {
+            warn!("Tried to get og_contract_key from an empty contract_key");
+            Err(EnclaveError::FailedContractAuthentication)
+        }
+    }
+
+    pub fn get_current_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+        if let Some(contract_key) = &self.0.contract_key {
+            let current_contract_key =
+                if let Some(current_contract_key) = &contract_key.current_contract_key {
+                    &current_contract_key.0
+                } else {
+                    warn!("Tried to get an empty current_contract_key");
+                    return Err(EnclaveError::FailedContractAuthentication);
+                };
+
+            if current_contract_key.len() != CONTRACT_KEY_LENGTH {
+                warn!("Tried to get an empty current_contract_key");
+                return Err(EnclaveError::FailedContractAuthentication);
+            }
+
+            let mut as_bytes: [u8; CONTRACT_KEY_LENGTH] = [0u8; CONTRACT_KEY_LENGTH];
+            as_bytes.copy_from_slice(current_contract_key);
+
+            Ok(as_bytes)
+        } else {
+            warn!("Tried to get current_contract_key from an empty contract_key");
+            Err(EnclaveError::FailedContractAuthentication)
+        }
+    }
+
+    pub fn get_current_contract_key_proof(
+        &self,
+    ) -> Result<[u8; CONTRACT_KEY_PROOF_LENGTH], EnclaveError> {
+        if let Some(contract_key) = &self.0.contract_key {
+            let current_contract_key_proof = if let Some(current_contract_key_proof) =
+                &contract_key.current_contract_key_proof
+            {
+                &current_contract_key_proof.0
+            } else {
+                warn!("Tried to get an empty current_contract_key_proof");
+                return Err(EnclaveError::FailedContractAuthentication);
+            };
+
+            if current_contract_key_proof.len() != CONTRACT_KEY_PROOF_LENGTH {
+                warn!("Tried to get an empty current_contract_key_proof");
+                return Err(EnclaveError::FailedContractAuthentication);
+            }
+
+            let mut as_bytes: [u8; CONTRACT_KEY_PROOF_LENGTH] = [0u8; CONTRACT_KEY_PROOF_LENGTH];
+            as_bytes.copy_from_slice(current_contract_key_proof);
+
+            Ok(as_bytes)
+        } else {
+            warn!("Tried to get current_contract_key_proof from an empty contract_key");
+            Err(EnclaveError::FailedContractAuthentication)
+        }
+    }
+
+    /// get_latest_contract_key is used to get either current_contract_key or og_contract_key, in case there isn't a current_contract_key since the contract was never migrated.
+    /// This is used for seeding the random sent to the contract, and for verifying the admin when migrating and updating the admin.
+    pub fn get_latest_contract_key(&self) -> Result<[u8; CONTRACT_KEY_LENGTH], EnclaveError> {
+        if self.was_migrated() {
+            self.get_current_contract_key()
+        } else {
+            self.get_og_contract_key()
+        }
     }
 
     pub fn get_verification_params(&self) -> (&BaseAddr, &BaseAddr, u64, &Vec<BaseCoin>) {
@@ -109,7 +182,9 @@ impl BaseEnv {
                 contract: v010types::ContractInfo {
                     address: self.0.contract.address,
                 },
-                contract_key: self.0.contract_key,
+                // to maintain compatability with v010 we just return none here - no contract should care
+                // about this anyway
+                contract_key: None,
                 contract_code_hash: self.0.contract_code_hash,
                 transaction: None,
             },

@@ -61,7 +61,7 @@ jobs:
           ./scripts/install-wasm-tools.sh
       - name: Build Contracts
         run: |
-          make build-test-contract
+          make build-test-contracts
           cp x/compute/internal/keeper/testdata/erc20.wasm .
       - uses: actions/upload-artifact@v3
         with:
@@ -71,6 +71,10 @@ jobs:
         with:
           name: contract.wasm
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm
+      - uses: actions/upload-artifact@v3
+        with:
+          name: contract-v2.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract-v2/contract-v2.wasm
       - uses: actions/upload-artifact@v3
         with:
           name: v1-contract.wasm
@@ -123,10 +127,13 @@ jobs:
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librandom_api.so /opt/mount/librandom_api.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/tendermint_enclave.signed.so /opt/mount/tendermint_enclave.signed.so
-
       - uses: actions/download-artifact@v3
         with:
           name: contract.wasm
+          path: ./x/compute/internal/keeper/testdata/
+      - uses: actions/download-artifact@v3
+        with:
+          name: contract-v2.wasm
           path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
         with:
@@ -163,12 +170,13 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+          # cp tendermint_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ias_keys/develop
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
           LOG_LEVEL=ERROR go test -v -tags "test" ./x/compute/client/...
-          LOG_LEVEL=ERROR go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
+          LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-20.04
@@ -259,7 +267,7 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES=debug-print,random
+            FEATURES_U=debug-print,random,light-client-validation,go-tests
             SGX_MODE=SW
           target: build-localsecret
           cache-from: type=gha
@@ -324,7 +332,7 @@ jobs:
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
-          git clone --depth 1 --branch master https://github.com/scrtlabs/secret.js
+          git clone --depth 1 --branch contract-upgrade-v2 https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml

@@ -1510,20 +1510,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "secret-query-enclave"
-version = "1.4.0"
-dependencies = [
- "ctor",
- "enclave_contract_engine",
- "enclave_utils",
- "lazy_static",
- "log",
- "sgx_tstd",
- "sgx_types",
- "simple_logger",
-]
-
-[[package]]
 name = "semver"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"

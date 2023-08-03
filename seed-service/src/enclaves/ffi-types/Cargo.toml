@@ -1,7 +1,7 @@
 [package]
 name = "enclave-ffi-types"
 version = "0.1.0"
-authors = ["Reuven Podmazo <reuven@enigma.co>"]
+authors = ["Reuven Podmazo <reuven@scrtlabs.com>"]
 edition = "2021"
 
 [features]

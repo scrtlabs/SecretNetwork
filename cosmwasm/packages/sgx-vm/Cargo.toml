@@ -3,7 +3,7 @@ name = "cosmwasm-sgx-vm"
 version = "0.10.0"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
-    "Enigma Team <info@enigma.co>",
+    "SCRT Labs <info@scrtlabs.com>",
 ]
 edition = "2021"
 description = "VM bindings to run cosmwams contracts"
@@ -35,9 +35,6 @@ staking = ["cosmwasm-std/staking"]
 production = []
 # This flag enales storing contracts that require the debug-print function
 debug-print = []
-# This feature compiles a query optimized node with a second enclave used exclusively for queries.
-# Putting this functionality in a separate enclave allows improving query performace without hard forks.
-query-node = []
 
 [dependencies]
 # Uses the path when built locally; uses the given version from crates.io when published
@@ -56,7 +53,6 @@ sha2 = "0.10.7"
 hex = "0.4"
 memmap = "0.7"
 parity-wasm = "0.41"
-
 # requirements specific to Secret Network
 lazy_static = "1.4"
 enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [

@@ -1,7 +1,7 @@
 [package]
 name = "contract-v010"
 version = "0.0.1"
-authors = ["Enigma <info@enigma.co>"]
+authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "A test contract intended to use in integration tests for the Secret Netowrk"
 license = "MIT"

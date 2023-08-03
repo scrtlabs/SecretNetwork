@@ -27,7 +27,7 @@ impl Ed25519PrivateKey {
         self.key
     }
 
-    pub fn as_mut(&mut self) -> &mut [u8; SECRET_KEY_SIZE] {
+    pub fn get_mut(&mut self) -> &mut [u8; SECRET_KEY_SIZE] {
         &mut self.key.key.r as &mut [u8; SECRET_KEY_SIZE]
     }
 }
@@ -47,7 +47,7 @@ pub struct KeyPair {
 impl KeyPair {
     pub fn new() -> Result<Self, CryptoError> {
         let mut secret_key = Ed25519PrivateKey::default();
-        rand_slice(secret_key.as_mut())?;
+        rand_slice(secret_key.get_mut())?;
 
         let sk = x25519_dalek::StaticSecret::from(secret_key.to_owned().key.r as [u8; 32]);
         let pk = x25519_dalek::PublicKey::from(&sk);
@@ -83,7 +83,7 @@ impl AlignedMemory for Ed25519PrivateKey {}
 impl<T: AlignedMemory + ExportECKey> From<T> for KeyPair {
     fn from(value: T) -> Self {
         let mut secret_key = Ed25519PrivateKey::default();
-        secret_key.as_mut().copy_from_slice(value.key_ref());
+        secret_key.get_mut().copy_from_slice(value.key_ref());
 
         let my_secret = x25519_dalek::StaticSecret::from(secret_key.to_owned().key.r as [u8; 32]);
         let pk = x25519_dalek::PublicKey::from(&my_secret);

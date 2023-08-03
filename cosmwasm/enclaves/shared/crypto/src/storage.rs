@@ -57,7 +57,7 @@ fn open(filepath: &str) -> Result<Ed25519PrivateKey, EnclaveError> {
 
     let mut buf = Ed25519PrivateKey::default();
     let n = file
-        .read(buf.as_mut())
+        .read(buf.get_mut())
         .map_err(|_err| EnclaveError::FailedUnseal)?;
 
     if n < SECRET_KEY_SIZE {
