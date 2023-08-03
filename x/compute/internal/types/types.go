@@ -163,6 +163,7 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 			Hash:  txhash,
 		}
 	}
+
 	return env
 }
 

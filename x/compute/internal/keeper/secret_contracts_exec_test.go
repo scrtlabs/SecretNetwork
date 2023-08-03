@@ -171,7 +171,7 @@ func TestAddrValidateFunction(t *testing.T) {
 func TestRandomEnv(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[randomContract], sdk.NewCoins())
 
-	_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
+	_, ctx, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
 	require.Empty(t, initErr)
 	require.Len(t, initEvents, 1)
 
@@ -186,16 +186,16 @@ func TestRandomEnv(t *testing.T) {
 	require.Len(t, actualMessageInfo.Block.Random, 32)
 
 	expectedV1Env := fmt.Sprintf(
-		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":{"index":1,"hash":"%s"},"contract":{"address":"%s","code_hash":"%s"}}`,
 		ctx.BlockHeight(),
 		// env.block.time is nanoseconds since unix epoch
 		ctx.BlockTime().UnixNano(),
 		ctx.ChainID(),
 		base64.StdEncoding.EncodeToString(actualMessageInfo.Block.Random),
+		txhash(t, ctx),
 		contractAddress.String(),
 		calcCodeHash(TestContractPaths[randomContract]),
 	)
-	//
 	requireEventsInclude(t,
 		initEvents,
 		[]ContractEvent{
@@ -209,8 +209,7 @@ func TestRandomEnv(t *testing.T) {
 		},
 	)
 
-	//
-	_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, 1)
+	_, ctx, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, true, defaultGasForTests, 1)
 	require.Empty(t, execErr)
 
 	execEvent := execEvents[0]
@@ -221,12 +220,13 @@ func TestRandomEnv(t *testing.T) {
 	json.Unmarshal([]byte(envAttribute.Value), &actualExecEnv)
 
 	expectedV1EnvExec := fmt.Sprintf(
-		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+		`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":{"index":1,"hash":"%s"},"contract":{"address":"%s","code_hash":"%s"}}`,
 		ctx.BlockHeight(),
 		// env.block.time is nanoseconds since unix epoch
 		ctx.BlockTime().UnixNano(),
 		ctx.ChainID(),
 		base64.StdEncoding.EncodeToString(actualExecEnv.Block.Random),
+		txhash(t, ctx),
 		contractAddress.String(),
 		calcCodeHash(TestContractPaths[randomContract]),
 	)
@@ -256,18 +256,19 @@ func TestEnv(t *testing.T) {
 		t.Run(testContract.CosmWasmVersion, func(t *testing.T) {
 			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, testContract.WasmFilePath, sdk.NewCoins())
 
-			_, _, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
+			_, ctx, contractAddress, initEvents, initErr := initHelperImpl(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, -1, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
 			require.Empty(t, initErr)
 			require.Len(t, initEvents, 1)
 
 			// var firstRandom string
 
 			expectedV1Env := fmt.Sprintf(
-				`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+				`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":{"index":1,"hash":"%s"},"contract":{"address":"%s","code_hash":"%s"}}`,
 				ctx.BlockHeight(),
 				// env.block.time is nanoseconds since unix epoch
 				ctx.BlockTime().UnixNano(),
 				ctx.ChainID(),
+				txhash(t, ctx),
 				contractAddress.String(),
 				calcCodeHash(testContract.WasmFilePath),
 			)
@@ -322,8 +323,19 @@ func TestEnv(t *testing.T) {
 					initEvents,
 				)
 			}
-			_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 1)
+			_, ctx, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1, defaultGasForTests, 1)
 			require.Empty(t, execErr)
+
+			expectedV1Env = fmt.Sprintf(
+				`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":{"index":1,"hash":"%s"},"contract":{"address":"%s","code_hash":"%s"}}`,
+				ctx.BlockHeight(),
+				// env.block.time is nanoseconds since unix epoch
+				ctx.BlockTime().UnixNano(),
+				ctx.ChainID(),
+				txhash(t, ctx),
+				contractAddress.String(),
+				calcCodeHash(testContract.WasmFilePath),
+			)
 
 			if testContract.IsCosmWasmV1 {
 				requireEventsInclude(t,
@@ -380,6 +392,16 @@ func TestEnv(t *testing.T) {
 				// only env (no msg info) in v1 query
 				queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get_env":{}}`, true, false, math.MaxUint64)
 				require.Empty(t, qErr)
+
+				expectedV1Env := fmt.Sprintf(
+					`{"block":{"height":%d,"time":"%d","chain_id":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+					ctx.BlockHeight(),
+					// env.block.time is nanoseconds since unix epoch
+					ctx.BlockTime().UnixNano(),
+					ctx.ChainID(),
+					contractAddress.String(),
+					calcCodeHash(testContract.WasmFilePath),
+				)
 
 				require.Equal(t, expectedV1Env, queryRes)
 			} else {
@@ -2799,4 +2821,48 @@ func TestIBCHooksOutgoingTransferTimeout(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExecEnvTxHash(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+
+	_, ctx, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"tx_hash":{}}`, true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "txhash", Value: txhash(t, ctx)},
+			},
+		},
+		events,
+	)
+}
+
+func TestCallbackEnvTxHash(t *testing.T) {
+	ctx, keeper, codeID, codeHash, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+
+	_, ctx, _, events, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress, codeHash, `{\"tx_hash\":{}}`), true, true, math.MaxUint64, 0)
+
+	require.Empty(t, err)
+	require.Len(t, events, 2)
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "b", Value: "b"},
+			},
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "txhash", Value: txhash(t, ctx)},
+			},
+		},
+		events,
+	)
 }

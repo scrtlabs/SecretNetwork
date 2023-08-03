@@ -32,7 +32,7 @@ type TransactionInfo struct {
 	/// The hash of the current transaction bytes.
 	/// aka txhash or transaction_id
 	/// hash = sha256(tx_bytes)
-	Hash string `json:"txhash"`
+	Hash string `json:"hash"`
 }
 
 type BaseEnv[T Env] struct {

@@ -110,9 +110,10 @@ func multisigTxCreatorForExisting(
 	require.NoError(t, err)
 
 	tx := builder.(protoTxProvider)
-	txbytes, err := tx.GetProtoTx().Marshal()
+	txBytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
-	*ctx = ctx.WithTxBytes(txbytes)
+	*ctx = ctx.WithTxBytes(txBytes)
+	*ctx = types.WithTXCounter(*ctx, 1)
 	// updateLightClientHelper(t, *ctx)
 
 	return signmodeHandler
@@ -204,6 +205,7 @@ func prepareInitSignedTxMultipleMsgs(
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
@@ -624,6 +626,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	contractAddressA, _, err := keeper.Instantiate(
@@ -729,6 +732,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	contractAddressA, _, err := keeper.Instantiate(
@@ -877,6 +881,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	txBytes, err := tx.GetProtoTx().Marshal()
 	require.NoError(t, err)
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	_, _, err = keeper.Instantiate(

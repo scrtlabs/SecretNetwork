@@ -251,7 +251,7 @@ func TestEnvAfterMigrate(t *testing.T) {
 			_, migrateErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"nop":{}}`, true, testContract.IsCosmWasmV1After, math.MaxUint64)
 			require.Empty(t, migrateErr)
 
-			_, _, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1After, defaultGasForTests, 1)
+			_, ctx, _, execEvents, _, execErr := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"get_env":{}}`, true, testContract.IsCosmWasmV1After, defaultGasForTests, 1)
 			require.Empty(t, execErr)
 
 			execEvent := execEvents[0]
@@ -262,12 +262,13 @@ func TestEnvAfterMigrate(t *testing.T) {
 			json.Unmarshal([]byte(envAttribute.Value), &actualExecEnv)
 
 			expectedV1EnvExec := fmt.Sprintf(
-				`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+				`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":{"index":1,"hash":"%s"},"contract":{"address":"%s","code_hash":"%s"}}`,
 				ctx.BlockHeight(),
 				// env.block.time is nanoseconds since unix epoch
 				ctx.BlockTime().UnixNano(),
 				ctx.ChainID(),
 				base64.StdEncoding.EncodeToString(actualExecEnv.Block.Random),
+				txhash(t, ctx),
 				contractAddress.String(),
 				calcCodeHash(TestContractPaths[v1MigratedContract]),
 			)
@@ -2877,12 +2878,13 @@ func TestEnvDuringMigrate(t *testing.T) {
 			json.Unmarshal([]byte(envAttribute.Value), &actualMigrateEnv)
 
 			expectedV1EnvMigrate := fmt.Sprintf(
-				`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":null,"contract":{"address":"%s","code_hash":"%s"}}`,
+				`{"block":{"height":%d,"time":"%d","chain_id":"%s","random":"%s"},"transaction":{"index":1,"hash":"%s"},"contract":{"address":"%s","code_hash":"%s"}}`,
 				ctx.BlockHeight(),
 				// env.block.time is nanoseconds since unix epoch
 				ctx.BlockTime().UnixNano(),
 				ctx.ChainID(),
 				base64.StdEncoding.EncodeToString(actualMigrateEnv.Block.Random),
+				txhash(t, migrateResult.Ctx),
 				contractAddress.String(),
 				calcCodeHash(testContract.WasmFilePathAfter),
 			)
@@ -8208,4 +8210,25 @@ func TestContractNoLongerIbcEnabledAfterMigrate(t *testing.T) {
 
 	info = keeper.GetContractInfo(ctx, contractA)
 	require.Equal(t, info.IBCPortID, "wasm."+contractA.String())
+}
+
+func TestMigrateEnvTxHash(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, _, contractAddress, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	require.Empty(t, initErr)
+
+	newCodeId, _ := uploadCode(ctx, t, keeper, TestContractPaths[v1MigratedContract], walletA)
+	res, migErr := migrateHelper(t, keeper, ctx, newCodeId, contractAddress, walletA, privKeyA, `{"tx_hash":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, migErr)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "txhash", Value: txhash(t, res.Ctx)},
+			},
+		},
+		res.WasmEvents,
+	)
 }

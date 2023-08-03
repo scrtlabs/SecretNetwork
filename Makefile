@@ -460,6 +460,10 @@ build-test-contracts:
 	rm -f $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
 	cp $(TEST_CONTRACT_V1_PATH)/migration/contract-v2/migrate_contract_v2.wasm $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
 
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/random-test
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1_random_test.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/random-test/v1_random_test.wasm $(TEST_COMPUTE_MODULE_PATH)/v1_random_test.wasm
+
 
 prep-go-tests: build-test-contracts bin-data-sw
 	# empty BUILD_PROFILE means debug mode which compiles faster

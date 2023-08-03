@@ -932,7 +932,7 @@ fn extract_query_depth(env: &[u8]) -> Result<u32, EnclaveError> {
             EnclaveError::FailedToDeserialize
         })
         .map(|env| {
-            trace!("base env: {:?}", env);
+            trace!("env.query_depth: {:?}", env);
             env.query_depth
         })
 }

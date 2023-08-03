@@ -343,6 +343,9 @@ pub fn instantiate(
 
             Ok(Response::new())
         }
+        InstantiateMsg::TxHash {  } => Ok(Response::new().add_attributes(vec![
+            ("txhash", env.transaction.unwrap().hash),
+        ])),
     }
 }
 
@@ -1393,6 +1396,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             ),
         }
         ExecuteMsg::Echo { data } => Ok(Response::new().set_data(data)),
+        ExecuteMsg::TxHash {  } => Ok(Response::new().add_attributes(vec![
+            ("txhash", env.transaction.unwrap().hash),
+        ])),
     }
 }
 
@@ -3868,6 +3874,9 @@ pub fn migrate(deps: DepsMut, env: Env, msg: ExecuteMsg) -> StdResult<Response> 
             ),
         }
         ExecuteMsg::Echo { data } => Ok(Response::new().set_data(data)),
+        ExecuteMsg::TxHash {  } => Ok(Response::new().add_attributes(vec![
+            ("txhash", env.transaction.unwrap().hash),
+        ])),
     }
 }
 
