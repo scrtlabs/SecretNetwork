@@ -656,7 +656,7 @@ impl<'m> CWMemory<'m> {
         }
 
         let data_len = self.get_u32_at(region_ptr + (SIZE_OF_U32 as u32) * 2)? as usize;
-        let mut remaining_len = data_len as usize;
+        let mut remaining_len = data_len;
 
         let data = self.memory.as_slice().get(data_ptr..data_ptr + data_len);
         let data = data.ok_or(WasmEngineError::MemoryReadError)?;
@@ -1779,12 +1779,12 @@ fn host_ed25519_sign(
 fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     let mut encryption_salt: Vec<u8> = vec![];
 
-    encryption_salt.extend(&timestamp.to_be_bytes());
+    encryption_salt.extend(timestamp.to_be_bytes());
 
     let msg_counter = MSG_COUNTER.lock().unwrap();
 
-    encryption_salt.extend(&msg_counter.height.to_be_bytes());
-    encryption_salt.extend(&msg_counter.counter.to_be_bytes());
+    encryption_salt.extend(msg_counter.height.to_be_bytes());
+    encryption_salt.extend(msg_counter.counter.to_be_bytes());
 
     encryption_salt
 }

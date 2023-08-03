@@ -181,7 +181,6 @@ pub fn get_mr_enclave() -> [u8; 32] {
 
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
 #[cfg(feature = "SGX_MODE_HW")]
-#[allow(const_err)]
 pub fn create_attestation_report(
     pub_k: &[u8; 32],
     sign_type: sgx_quote_sign_type_t,

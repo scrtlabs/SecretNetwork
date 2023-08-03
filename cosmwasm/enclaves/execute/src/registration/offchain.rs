@@ -458,7 +458,7 @@ pub unsafe extern "C" fn ecall_key_gen(
 pub unsafe extern "C" fn ecall_get_genesis_seed(
     pk: *const u8,
     pk_len: u32,
-    seed: &mut [u8; SINGLE_ENCRYPTED_SEED_SIZE as usize],
+    seed: &mut [u8; SINGLE_ENCRYPTED_SEED_SIZE],
 ) -> sgx_types::sgx_status_t {
     validate_mut_ptr!(
         seed.as_mut_ptr(),
