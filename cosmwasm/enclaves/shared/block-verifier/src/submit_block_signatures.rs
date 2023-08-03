@@ -26,6 +26,7 @@ use crate::wasm_messages::VERIFIED_BLOCK_MESSAGES;
 use crate::verify::validator_set::get_validator_set_for_height;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
+const MAX_BLOCK_DATA_LENGTH: u32 = 22_020_096; // 21 MiB = max block size
 const RANDOM_PROOF_LEN: u32 = 80;
 
 #[no_mangle]
@@ -149,6 +150,7 @@ fn validate_inputs(
 ) -> Result<(), sgx_status_t> {
     validate_input_length!(in_header_len, "header", MAX_VARIABLE_LENGTH);
     validate_input_length!(in_commit_len, "commit", MAX_VARIABLE_LENGTH);
+    validate_input_length!(in_txs_len, "txs", MAX_BLOCK_DATA_LENGTH);
     validate_input_length!(
         in_encrypted_random_len,
         "encrypted random",
