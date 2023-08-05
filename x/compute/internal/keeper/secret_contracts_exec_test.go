@@ -2272,7 +2272,7 @@ func TestEvaporateGas(t *testing.T) {
 			msg:         `{"evaporate":{"amount": 1200}}`,
 			outOfGas:    false,
 			// 1200 - (base = 8) + 1 (see above) = 1193
-			gasExpected: 1192,
+			gasExpected: 1193,
 			gasForTest:  defaultGasForTests,
 		},
 		{
@@ -2360,7 +2360,7 @@ func TestConsumeExact(t *testing.T) {
 			// to be offset by 1 - do we really care?
 			msg:         `{"use_exact":{"amount": 399999}}`,
 			outOfGas:    false,
-			gasExpected: 400000,
+			gasExpected: 399999,
 			gasForTest:  defaultGasForTests,
 		},
 	} {

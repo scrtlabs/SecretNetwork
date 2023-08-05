@@ -242,6 +242,10 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/enclaves/test clean
 	$(MAKE) -C check-hw clean
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract clean
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2 clean
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract clean
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2 clean
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \

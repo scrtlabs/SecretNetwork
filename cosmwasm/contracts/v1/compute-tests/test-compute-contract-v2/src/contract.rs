@@ -1,11 +1,10 @@
 use core::time;
-use mem::MaybeUninit;
-use std::{mem, thread, vec};
+use std::{thread, vec};
 
 use cosmwasm_std::{
     attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Empty, Env,
     Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage,
-    SubMsg, SubMsgResult, WasmMsg, WasmQuery, from_binary, SubMsgResponse,
+    SubMsg, SubMsgResult, WasmMsg, WasmQuery, from_binary, SubMsgResponse, CanonicalAddr,
 };
 use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
@@ -2666,13 +2665,11 @@ fn exec_with_callback_contract_error(contract_addr: String, code_hash: String) -
 }
 
 fn allocate_on_heap(bytes: usize) -> Response {
-    let mut values: Vec<u8> = vec![0; bytes];
-    
-    for i in 0..bytes {
-        values[i] = (bytes / i) as u8;
-    }
+    let mut values: Box<Vec<u8>> = Box::new(vec![0; bytes]);
 
-    Response::new().set_data("😅".as_bytes().to_vec())
+    values[bytes - 1] = 1;
+
+    Response::new().set_data("😅".as_bytes().to_vec()).add_attribute("zero", format!("{}", values[bytes / 2]))
 }
 
 fn get_state(deps: DepsMut, key: String) -> Response {
@@ -2699,7 +2696,12 @@ fn remove_state(deps: DepsMut, key: String) -> Response {
 #[allow(invalid_value)]
 #[allow(unused_must_use)]
 fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -> Response {
-    let null_ptr_slice: &[u8] = unsafe { MaybeUninit::zeroed().assume_init() };
+    let null_ptr_slice: &[u8] = unsafe { std::slice::from_raw_parts(std::ptr::null(), 0) };
+
+    let null_human_addr: &str = unsafe{ std::str::from_utf8_unchecked(null_ptr_slice) };
+
+    let null_ptr: *const CanonicalAddr = std::ptr::null();
+    let null_canon_addr: &CanonicalAddr = unsafe { &*null_ptr };
 
     match &pass_type[..] {
         "read_db_key" => {
@@ -2716,17 +2718,17 @@ fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -
         }
         "canonicalize_address_input" => {
             deps.api
-                .addr_canonicalize(unsafe { MaybeUninit::zeroed().assume_init() });
+                .addr_canonicalize(null_human_addr);
         }
         "canonicalize_address_output" => { /* TODO */ }
         "humanize_address_input" => {
             deps.api
-                .addr_humanize(unsafe { MaybeUninit::zeroed().assume_init() });
+                .addr_humanize(null_canon_addr);
         }
         "humanize_address_output" => { /* TODO */ }
         "validate_address_input" => {
             deps.api
-                .addr_validate(unsafe { MaybeUninit::zeroed().assume_init() });
+                .addr_validate(null_human_addr);
         }
         "validate_address_output" => { /* TODO */ }
         _ => {}

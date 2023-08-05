@@ -27,7 +27,6 @@ overflow-checks = true
 
 [features]
 default = []
-backtraces = ["cosmwasm-std/backtraces"]
 with_floats = []
 
 [dependencies]

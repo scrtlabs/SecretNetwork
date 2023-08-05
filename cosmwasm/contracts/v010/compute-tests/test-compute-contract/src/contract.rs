@@ -1,19 +1,19 @@
 use cosmwasm_storage::{PrefixedStorage, ReadonlySingleton, Singleton};
 
 use cosmwasm_std::{
-    log, plaintext_log, to_binary, Api, BankMsg, Binary, Coin, CosmosMsg, Empty, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, Querier, QueryRequest,
-    QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
+    log, plaintext_log, to_binary, Api, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Empty,
+    Env, Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, Querier,
+    QueryRequest, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg,
+    WasmQuery,
 };
 use secp256k1::Secp256k1;
 
 /////////////////////////////// Messages ///////////////////////////////
 
 use core::time;
-use mem::MaybeUninit;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{mem, thread};
+use std::thread;
 
 //// consts
 
@@ -1644,15 +1644,13 @@ fn exec_with_callback_contract_error(
 }
 
 fn allocate_on_heap(bytes: usize) -> HandleResponse {
-    let mut values: Vec<u8> = vec![0; bytes];
+    let mut values: Box<Vec<u8>> = Box::new(vec![0; bytes]);
 
-    for i in 0..bytes {
-        values[i] = (bytes / i) as u8;
-    }
+    values[bytes - 1] = 1;
 
     HandleResponse {
         data: Some(Binary("😅".as_bytes().to_vec())),
-        log: vec![],
+        log: vec![log("zero", format!("{}", values[bytes / 2]))],
         messages: vec![],
     }
 }
@@ -1698,7 +1696,13 @@ fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     pass_type: String,
 ) -> HandleResponse {
-    let null_ptr_slice: &[u8] = unsafe { MaybeUninit::zeroed().assume_init() };
+    let null_ptr_slice: &[u8] = unsafe { std::slice::from_raw_parts(std::ptr::null(), 0) };
+
+    let null_ptr: *const HumanAddr = std::ptr::null();
+    let null_human_addr: &HumanAddr = unsafe { &*null_ptr };
+
+    let null_ptr: *const CanonicalAddr = std::ptr::null();
+    let null_canon_addr: &CanonicalAddr = unsafe { &*null_ptr };
 
     match &pass_type[..] {
         "read_db_key" => {
@@ -1714,13 +1718,11 @@ fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
             deps.storage.remove(null_ptr_slice);
         }
         "canonicalize_address_input" => {
-            deps.api
-                .canonical_address(unsafe { MaybeUninit::zeroed().assume_init() });
+            deps.api.canonical_address(null_human_addr);
         }
         "canonicalize_address_output" => { /* TODO */ }
         "humanize_address_input" => {
-            deps.api
-                .human_address(unsafe { MaybeUninit::zeroed().assume_init() });
+            deps.api.human_address(null_canon_addr);
         }
         "humanize_address_output" => { /* TODO */ }
         _ => {}
