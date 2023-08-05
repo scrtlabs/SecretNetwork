@@ -1648,7 +1648,10 @@ fn exec_with_callback_contract_error(
 
 fn allocate_on_heap(bytes: usize) -> HandleResponse {
     let mut values: Vec<u8> = vec![0; bytes];
-    values[bytes - 1] = 1;
+
+    for i in 0..bytes {
+        values[i] = (bytes / i) as u8;
+    }
 
     HandleResponse {
         data: Some(Binary("😅".as_bytes().to_vec())),

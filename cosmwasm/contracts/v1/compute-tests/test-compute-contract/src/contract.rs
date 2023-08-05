@@ -2660,7 +2660,10 @@ fn exec_with_callback_contract_error(contract_addr: String, code_hash: String) -
 
 fn allocate_on_heap(bytes: usize) -> Response {
     let mut values: Vec<u8> = vec![0; bytes];
-    values[bytes - 1] = 1;
+    
+    for i in 0..bytes {
+        values[i] = (bytes / i) as u8;
+    }
 
     Response::new().set_data("😅".as_bytes().to_vec())
 }
