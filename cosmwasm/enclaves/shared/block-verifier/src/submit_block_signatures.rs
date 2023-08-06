@@ -21,18 +21,18 @@ macro_rules! unwrap_or_return {
 }
 
 use crate::txs::tx_from_bytes;
-use crate::wasm_messages::VERIFIED_MESSAGES;
+use crate::wasm_messages::VERIFIED_BLOCK_MESSAGES;
 
 use crate::verify::validator_set::get_validator_set_for_height;
-use enclave_utils::validator_set::ValidatorSetForHeight;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
+const MAX_BLOCK_DATA_LENGTH: u32 = 22_020_096; // 21 MiB = max block size
 const RANDOM_PROOF_LEN: u32 = 80;
-const MAX_TXS_LENGTH: u32 = 10 * 1024 * 1024;
-const TX_THRESHOLD: usize = 100_000;
 
 #[no_mangle]
 #[allow(unused_variables)]
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe fn submit_block_signatures_impl(
     in_header: *const u8,
     in_header_len: u32,
@@ -89,31 +89,15 @@ pub unsafe fn submit_block_signatures_impl(
 
     let txs = unwrap_or_return!(crate::verify::txs::validate_txs(txs_slice, &header));
 
-    let mut message_verifier = VERIFIED_MESSAGES.lock().unwrap();
+    let mut message_verifier = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
     if message_verifier.remaining() != 0 {
-        // this will happen if a tx fails - the message queue doesn't get cleared.
-        // todo: add clearing of message queue if a tx fails?
-        debug!(
-                "Wasm verified out of sync?? Adding new messages but old one is not empty?? - remaining: {}",
-                message_verifier.remaining()
-            );
-
-        // new tx, so messages should always be empty
+        // new block, clear messages
         message_verifier.clear();
     }
 
     for tx in txs.tx.iter() {
         // doing this a different way makes the code unreadable or requires creating a copy of
-        // tx. Feel free to change this if someone finds a better way
-        log::trace!(
-            "Got tx: {}",
-            if tx.len() < TX_THRESHOLD {
-                format!("{:?}", hex::encode(tx))
-            } else {
-                String::new()
-            }
-        );
 
         let parsed_tx = unwrap_or_return!(tx_from_bytes(tx.as_slice()).map_err(|_| {
             error!("Unable to parse tx bytes from proto");
@@ -164,13 +148,16 @@ fn validate_inputs(
     in_encrypted_random_len: u32,
     decrypted_random: &mut [u8; 32],
 ) -> Result<(), sgx_status_t> {
-    validate_input_length!(in_header_len, "header", MAX_VARIABLE_LENGTH);
-    validate_input_length!(in_commit_len, "commit", MAX_VARIABLE_LENGTH);
-    validate_input_length!(in_txs_len, "txs", MAX_TXS_LENGTH);
+    let failed_call = || Err(sgx_status_t::SGX_ERROR_INVALID_PARAMETER);
+
+    validate_input_length!(in_header_len, "header", MAX_VARIABLE_LENGTH, failed_call());
+    validate_input_length!(in_commit_len, "commit", MAX_VARIABLE_LENGTH, failed_call());
+    validate_input_length!(in_txs_len, "txs", MAX_BLOCK_DATA_LENGTH, failed_call());
     validate_input_length!(
         in_encrypted_random_len,
-        "encrypted random",
-        RANDOM_PROOF_LEN
+        "encrypted_random",
+        RANDOM_PROOF_LEN,
+        failed_call()
     );
 
     validate_const_ptr!(

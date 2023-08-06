@@ -218,4 +218,7 @@ type StargateMsg struct {
 type WasmMsg struct {
 	Execute     *v010msgtypes.ExecuteMsg     `json:"execute,omitempty"`
 	Instantiate *v010msgtypes.InstantiateMsg `json:"instantiate,omitempty"`
+	Migrate     *v010msgtypes.MigrateMsg     `json:"migrate,omitempty"`
+	UpdateAdmin *v010msgtypes.UpdateAdminMsg `json:"update_admin,omitempty"`
+	ClearAdmin  *v010msgtypes.ClearAdminMsg  `json:"clear_admin,omitempty"`
 }

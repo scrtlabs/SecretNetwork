@@ -28,7 +28,7 @@ type Messenger interface {
 
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
-	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
+	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.SigInfo) ([]byte, error)
 	GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer
 }
 
@@ -160,6 +160,7 @@ func redactError(err error) (bool, error) {
 		e := strings.ReplaceAll(err.Error(), "encrypted: ", "")
 		e = strings.ReplaceAll(e, ": execute contract failed", "")
 		e = strings.ReplaceAll(e, ": instantiate contract failed", "")
+		e = strings.ReplaceAll(e, ": migrate contract failed", "")
 		return false, fmt.Errorf("%s", e)
 	}
 
@@ -186,7 +187,7 @@ func redactError(err error) (bool, error) {
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
 // that dispatched them, both on success as well as failure
-func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error) {
+func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.SigInfo) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
 
@@ -299,8 +300,9 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// In order to specify that the reply isn't signed by the enclave we use "SIGN_MODE_UNSPECIFIED"
 		// The SGX will notice that the value is SIGN_MODE_UNSPECIFIED and will treat the message as plaintext.
-		replySigInfo := wasmTypes.VerificationInfo{
-			Bytes:     []byte{},
+		replySigInfo := wasmTypes.SigInfo{
+			TxBytes:   []byte{},
+			SignBytes: []byte{},
 			ModeInfo:  []byte{},
 			PublicKey: []byte{},
 			Signature: []byte{},

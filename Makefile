@@ -32,7 +32,6 @@ TEST_COMPUTE_MODULE_PATH = ./x/compute/internal/keeper/testdata/
 
 ENCLAVE_PATH = cosmwasm/enclaves/
 EXECUTE_ENCLAVE_PATH = $(ENCLAVE_PATH)/execute/
-QUERY_ENCLAVE_PATH = $(ENCLAVE_PATH)/query/
 DOCKER_BUILD_ARGS ?=
 
 DOCKER_BUILDX_CHECK = $(@shell docker build --load test)
@@ -166,11 +165,13 @@ build-secret: build-linux
 
 build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES)" FEATURES_U="$(FEATURES_U) light-client-validation go-tests" $(MAKE) -C go-cosmwasm build-rust
 
-build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
-_build-linux-with-query:
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-node,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+build-tm-secret-enclave:
+	git clone https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
+	cd /tmp/tm-secret-enclave && git checkout v1.9.3 && git submodule init && git submodule update --remote
+	rustup component add rust-src
+	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
@@ -244,7 +245,7 @@ clean:
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
-			--build-arg FEATURES="${FEATURES},debug-print,random" \
+			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \
@@ -416,39 +417,70 @@ build-bench-contract:
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/bench-contract
 	cp $(TEST_CONTRACT_V1_PATH)/bench-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 
-build-test-contract:
+build-test-contracts:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update
 	# sudo apt install -y binaryen
 	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract
-	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/contract.wasm $(TEST_COMPUTE_MODULE_PATH)/contract.wasm
+
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract_with_floats.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/contract_with_floats.wasm $(TEST_COMPUTE_MODULE_PATH)/contract_with_floats.wasm
+
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/static-too-high-initial-memory.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/static-too-high-initial-memory.wasm $(TEST_COMPUTE_MODULE_PATH)/static-too-high-initial-memory.wasm
+
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/too-high-initial-memory.wasm $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2
+	
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract-v2.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2/contract-v2.wasm $(TEST_COMPUTE_MODULE_PATH)/contract-v2.wasm
+
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract
-	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1-contract.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/v1-contract.wasm $(TEST_COMPUTE_MODULE_PATH)/v1-contract.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1-contract-v2.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2/v1-contract-v2.wasm $(TEST_COMPUTE_MODULE_PATH)/v1-contract-v2.wasm
+
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/ibc-test-contract
-	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/ibc.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/ibc.wasm $(TEST_COMPUTE_MODULE_PATH)/ibc.wasm
 
-prep-go-tests: build-test-contract bin-data-sw
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v1
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v1.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/migration/contract-v1/migrate_contract_v1.wasm $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v1.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v2
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/migration/contract-v2/migrate_contract_v2.wasm $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
+
+
+prep-go-tests: build-test-contracts bin-data-sw
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 
-go-tests: build-test-contract bin-data-sw
+go-tests: build-test-contracts bin-data-sw
+	# SGX_MODE=SW $(MAKE) build-tm-secret-enclave
+	# cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
-	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
-	rm -rf ./x/compute/internal/keeper/.sgx_secrets
-	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
-go-tests-hw: build-test-contract bin-data
+go-tests-hw: build-test-contracts bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
+	# SGX_MODE=HW $(MAKE) build-tm-secret-enclave
+	# cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=HW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	rm -rf ./x/compute/internal/keeper/.sgx_secrets
-	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=HW go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=HW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 # When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
 # rule in the Makefile in `enclaves/execute`. This is to speed up the compilation time of tests and speed up the
@@ -457,7 +489,7 @@ go-tests-hw: build-test-contract bin-data
 enclave-tests:
 	$(MAKE) -C cosmwasm/enclaves/test run
 
-build-all-test-contracts: build-test-contract
+build-all-test-contracts: build-test-contracts
 	cd $(CW_CONTRACTS_V010_PATH)/gov && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os $(CW_CONTRACTS_V010_PATH)/gov/target/wasm32-unknown-unknown/release/gov.wasm -o $(TEST_CONTRACT_PATH)/gov.wasm
 
@@ -483,7 +515,7 @@ build-all-test-contracts: build-test-contract
 	wasm-opt -Os .$(CW_CONTRACTS_V010_PATH)/hackatom/target/wasm32-unknown-unknown/release/hackatom.wasm -o $(TEST_CONTRACT_PATH)/contract.wasm
 	cat $(TEST_CONTRACT_PATH)/contract.wasm | gzip > $(TEST_CONTRACT_PATH)/contract.wasm.gzip
 
-build-erc20-contract: build-test-contract
+build-erc20-contract: build-test-contracts
 	cd .$(CW_CONTRACTS_V010_PATH)/erc20 && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os .$(CW_CONTRACTS_V010_PATH)/erc20/target/wasm32-unknown-unknown/release/cw_erc20.wasm -o ./erc20.wasm
 

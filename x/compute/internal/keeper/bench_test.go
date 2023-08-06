@@ -163,7 +163,7 @@ func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAd
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, `{"init": {}}`, true, true, defaultGasForTests)
+	_, _, contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, nil, creatorPriv, `{"init": {}}`, true, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	return contractAddr, creator, creatorPriv, ctx, keeper

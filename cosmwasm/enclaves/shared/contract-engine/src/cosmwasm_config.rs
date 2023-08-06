@@ -15,6 +15,7 @@ pub enum ContractOperation {
     Init,
     Handle,
     Query,
+    Migrate,
 }
 
 #[allow(unused)]
@@ -29,6 +30,10 @@ impl ContractOperation {
 
     pub fn is_query(&self) -> bool {
         matches!(self, ContractOperation::Query)
+    }
+
+    pub fn is_migrate(&self) -> bool {
+        matches!(self, ContractOperation::Migrate)
     }
 }
 

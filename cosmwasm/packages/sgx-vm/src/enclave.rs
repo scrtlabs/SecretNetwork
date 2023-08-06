@@ -66,25 +66,13 @@ fn init_enclave(enclave_file: &str) -> SgxResult<SgxEnclave> {
 }
 
 static ENCLAVE_FILE: &str = "librust_cosmwasm_enclave.signed.so";
-// #[cfg(feature = "query-node")]
-// static QUERY_ENCLAVE_FILE: &str = "librust_cosmwasm_query_enclave.signed.so";
 /// This const determines how many seconds we wait when trying to get access to the enclave
 /// before giving up.
 const ENCLAVE_LOCK_TIMEOUT: u64 = 6 * 5;
-// #[cfg(feature = "query-node")]
 const TCS_NUM: u8 = 8;
-// #[cfg(not(feature = "query-node"))]
-// const TCS_NUM: u8 = 1;
 lazy_static! {
     pub static ref ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(ENCLAVE_FILE, TCS_NUM);
 }
-// #[cfg(feature = "query-node")]
-// lazy_static! {
-//     pub static ref QUERY_ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(
-//         QUERY_ENCLAVE_FILE,
-//         std::cmp::min(TCS_NUM, num_cpus::get() as u8)
-//     );
-// }
 
 /// This struct manages the access to the enclave.
 ///

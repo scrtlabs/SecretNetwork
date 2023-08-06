@@ -192,9 +192,24 @@ Buffer instantiate(cache_t *cache,
                    uint64_t gas_limit,
                    uint64_t *gas_used,
                    Buffer *err,
-                   Buffer sig_info);
+                   Buffer sig_info,
+                   Buffer admin);
 
 Buffer key_gen(Buffer *err);
+
+Buffer migrate(cache_t *cache,
+               Buffer contract_id,
+               Buffer params,
+               Buffer msg,
+               DB db,
+               GoApi api,
+               GoQuerier querier,
+               uint64_t gas_limit,
+               uint64_t *gas_used,
+               Buffer *err,
+               Buffer sig_info,
+               Buffer admin,
+               Buffer admin_proof);
 
 Buffer query(cache_t *cache,
              Buffer code_id,
@@ -222,3 +237,16 @@ Buffer submit_block_signatures(Buffer header,
                                Buffer txs,
                                Buffer random,
                                Buffer *err);
+
+Buffer update_admin(cache_t *cache,
+                    Buffer contract_id,
+                    Buffer params,
+                    DB db,
+                    GoApi api,
+                    GoQuerier querier,
+                    uint64_t gas_limit,
+                    Buffer *err,
+                    Buffer sig_info,
+                    Buffer current_admin,
+                    Buffer current_admin_proof,
+                    Buffer new_admin);

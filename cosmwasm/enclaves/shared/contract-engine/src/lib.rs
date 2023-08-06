@@ -29,6 +29,8 @@ pub(crate) mod types;
 mod wasm3;
 
 pub use contract_operations::{handle, init, query};
+#[cfg(feature = "light-client-validation")]
+pub use contract_validation::{check_cert_in_current_block, check_tx_in_current_block};
 
 #[cfg(feature = "test")]
 pub mod tests {
@@ -65,3 +67,6 @@ pub mod tests {
         }
     }
 }
+
+#[cfg(all(feature = "go-tests", feature = "production"))]
+compile_error!("Cannot use 'go-tests' & 'production' features together.");
