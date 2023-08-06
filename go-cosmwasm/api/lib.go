@@ -252,6 +252,7 @@ func Handle(
 	//runtime.LockOSThread()
 	//defer runtime.UnlockOSThread()
 
+	fmt.Println("handle go: passing db:", db)
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, u8(handleType))
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
@@ -283,12 +284,14 @@ func Query(
 	defer endContract(counter)
 
 	// todo remove
-	key := make([]byte, 4)
+	fmt.Println("query go: setting up db to pass to enclave")
+
+	key := make([]byte, 1)
 	iavlStore, _, _ := getInnerIavl(store, key)
 
 	var i int64 = 10
 	for ; i >= 0; i-- {
-		fmt.Println("get: getting existing versions:", i)
+		fmt.Println("query go: getting existing versions:", i)
 		version_exists := iavlStore.VersionExists(i)
 		fmt.Println("version", i, "exists:", version_exists)
 	}
@@ -305,6 +308,7 @@ func Query(
 	//runtime.LockOSThread()
 	//defer runtime.UnlockOSThread()
 
+	fmt.Println("query go: passing db:", db)
 	res, err := C.query(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.

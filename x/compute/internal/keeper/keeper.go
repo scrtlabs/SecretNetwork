@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/store/cache"
+	"github.com/cosmos/cosmos-sdk/store/iavl"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -478,6 +480,29 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator sdk.AccAddre
 	}
 }
 
+type storeWithParent interface{ GetParent() sdk.KVStore }
+
+// todo remove
+func getInnerIavl(store sdk.KVStore, key []byte) (iavlStore *iavl.Store, fullKey []byte, err error) {
+	switch st := store.(type) {
+	case prefix.Store: // Special case for a prefix store to get the prefixed key
+		fmt.Println("getting inner iavl from prefixed store")
+		return getInnerIavl(st.GetParent(), st.Key(key))
+	case storeWithParent:
+		fmt.Println("getting inner iavl from a child store")
+		return getInnerIavl(st.GetParent(), key)
+	case *cache.CommitKVStoreCache:
+		fmt.Println("getting inner iavl from a commit cache")
+		return getInnerIavl(st.CommitKVStore, key)
+	case *iavl.Store:
+		fmt.Println("getting final iavl")
+		return st, key, nil
+	default:
+		fmt.Println("error unwrapping iavl")
+		return nil, nil, fmt.Errorf("store type not supported: %+v", store)
+	}
+}
+
 // Execute executes the contract instance
 func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, callbackSig []byte) (*sdk.Result, error) {
 	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "execute")
@@ -502,6 +527,17 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	fmt.Println("handle-2 go: setting up db to pass to enclave")
+
+	key := make([]byte, 1)
+	iavlStore, _, _ := getInnerIavl(prefixStore, key)
+
+	var i int64 = 10
+	for ; i >= 0; i-- {
+		fmt.Println("query go: getting existing versions:", i)
+		version_exists := iavlStore.VersionExists(i)
+		fmt.Println("version", i, "exists:", version_exists)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -604,6 +640,18 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
+	}
+
+	fmt.Println("query-2 go: setting up db to pass to enclave")
+
+	key := make([]byte, 1)
+	iavlStore, _, _ := getInnerIavl(prefixStore, key)
+
+	var i int64 = 10
+	for ; i >= 0; i-- {
+		fmt.Println("query go: getting existing versions:", i)
+		version_exists := iavlStore.VersionExists(i)
+		fmt.Println("version", i, "exists:", version_exists)
 	}
 
 	// prepare querier

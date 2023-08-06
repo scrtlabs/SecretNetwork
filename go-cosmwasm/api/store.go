@@ -45,7 +45,8 @@ func getInnerIavl(store sdk.KVStore, key []byte) (iavlStore *iavl.Store, fullKey
 }
 
 func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byte, proof []byte, fullKey []byte, err error) {
-	fmt.Println("getting key:", hashkey(key))
+	fmt.Println("getting key: hash:", hashkey(key), "string:", string(key), "bytes:", key)
+	fmt.Println("Store given:", store)
 	iavlStore, fullKey, err := getInnerIavl(store, key)
 	if err != nil {
 		return nil, nil, nil, err
@@ -54,19 +55,15 @@ func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byt
 	// Query height is (current - 1) because we will probably not have a proof in
 	// the current height (assuming we're mid execution)
 
-	fmt.Println("get with proof: blockheight minus 1 is:", blockHeight-1)
-	for i := blockHeight - 1; i >= 0; i-- {
-		version_exists := iavlStore.VersionExists(i)
-		if !version_exists {
-			fmt.Println("get with proof: version", i, "exists:", version_exists)
-			break
-		}
-		if !version_exists || i == 0 || i == blockHeight-1 {
-			fmt.Println("get with proof: version", i, "exists:", version_exists)
-		}
-	}
+	fmt.Println("get with proof: version", blockHeight, "exists:", iavlStore.VersionExists(blockHeight))
+	fmt.Println("get with proof: version", blockHeight-1, "exists:", iavlStore.VersionExists(blockHeight-1))
+	fmt.Println("get with proof: version", 1, "exists:", iavlStore.VersionExists(1))
+	fmt.Println("get with proof: version", 0, "exists:", iavlStore.VersionExists(0))
 
-	result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight - 1})
+	// original:
+	// result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight - 1})
+	// current:
+	result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight})
 	fmt.Println("result returned from version:", result.Height)
 
 	// result.ProofOps.Ops should always contain only one proof
