@@ -10,7 +10,7 @@ RUN ./install-wasm-tools.sh
 
 RUN $HOME/.cargo/bin/rustup install 1.61
 RUN $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown
-
+ז
 ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin

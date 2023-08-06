@@ -26,6 +26,7 @@ fn main() {
         // Treat undefined as HW
         _ => {
             println!("cargo:rustc-link-lib=dylib=sgx_urts");
+            println!("cargo:rustc-link-lib=dylib=sgx_epid");
             println!("cargo:rustc-link-lib=dylib=sgx_uae_service");
         }
     }

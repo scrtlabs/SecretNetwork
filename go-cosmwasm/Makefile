@@ -25,7 +25,7 @@ else
 	endif
 endif
 
-SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
+SGX_SDK ?= /opt/sgxsdk
 
 ifeq ($(SGX_ARCH), x86)
 	SGX_COMMON_CFLAGS := -m32

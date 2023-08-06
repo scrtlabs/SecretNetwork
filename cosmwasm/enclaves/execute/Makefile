@@ -1,7 +1,7 @@
 ######## SGX SDK Settings ########
 
 FEATURES ?=
-SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
+SGX_SDK ?= /opt/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 BUILD_PROFILE ?= release
