@@ -534,7 +534,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	var i int64 = 10
 	for ; i >= 0; i-- {
-		fmt.Println("query go: getting existing versions:", i)
+		fmt.Println("handle-2 go: getting existing versions:", i)
 		version_exists := iavlStore.VersionExists(i)
 		fmt.Println("version", i, "exists:", version_exists)
 	}
