@@ -43,7 +43,22 @@ COPY deployment/ci/go-tests-bench.sh .
 RUN chmod +x go-tests.sh
 RUN chmod +x go-tests-bench.sh
 
-COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
-COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
+ARG PSW_VERSION=2.20.100.4-focal1
+
+RUN apt-get update && \
+    apt-get install -y gnupg2 apt-transport-https ca-certificates curl software-properties-common make g++ libcurl4 libssl1.1 && \
+    curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add - && \
+    add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
+    apt-get update && \
+    apt-get install -y \
+        libsgx-launch=$PSW_VERSION \
+        libsgx-epid=$PSW_VERSION \
+        libsgx-quote-ex=$PSW_VERSION \
+        libsgx-urts=$PSW_VERSION && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /var/cache/apt/archives/*
+
+#COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
+#COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
 
 ENTRYPOINT ["/bin/bash", "go-tests.sh"]
