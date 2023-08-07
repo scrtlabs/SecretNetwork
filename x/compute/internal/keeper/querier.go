@@ -76,6 +76,10 @@ func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecr
 	}
 
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	// does this fix the issue? no
+	ms := ctx.MultiStore()
+	msCache := ms.CacheMultiStore()
+	ctx = ctx.WithMultiStore(msCache)
 
 	response, err := q.keeper.QuerySmart(ctx, contractAddress, req.Query, false)
 	switch {

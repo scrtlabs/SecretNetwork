@@ -61,9 +61,9 @@ func getWithProof(store sdk.KVStore, key []byte, blockHeight int64) (value []byt
 	fmt.Println("get with proof: version", 0, "exists:", iavlStore.VersionExists(0))
 
 	// original:
-	// result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight - 1})
+	result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight - 1})
 	// current:
-	result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight})
+	//result := iavlStore.Query(abci.RequestQuery{Data: fullKey, Path: "/key", Prove: true, Height: blockHeight})
 	fmt.Println("result returned from version:", result.Height)
 
 	// result.ProofOps.Ops should always contain only one proof

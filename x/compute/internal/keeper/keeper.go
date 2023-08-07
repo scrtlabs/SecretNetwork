@@ -526,6 +526,7 @@ func (k Keeper) Execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	verificationInfo := types.NewVerificationInfo(signBytes, signMode, modeInfoBytes, pkBytes, signerSig, callbackSig)
 
+	fmt.Println("handle-2 context:", ctx)
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	fmt.Println("handle-2 go: setting up db to pass to enclave")
 
@@ -637,6 +638,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 
 	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: query")
 
+	fmt.Println("query-2 context:", ctx)
 	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
@@ -649,7 +651,7 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 
 	var i int64 = 10
 	for ; i >= 0; i-- {
-		fmt.Println("query go: getting existing versions:", i)
+		fmt.Println("query-2 go: getting existing versions:", i)
 		version_exists := iavlStore.VersionExists(i)
 		fmt.Println("version", i, "exists:", version_exists)
 	}
