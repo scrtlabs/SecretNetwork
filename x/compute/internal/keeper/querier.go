@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -77,6 +78,7 @@ func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecr
 
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 	// does this fix the issue? no
+	fmt.Println("DEBUGE: caching multistore")
 	ms := ctx.MultiStore()
 	msCache := ms.CacheMultiStore()
 	ctx = ctx.WithMultiStore(msCache)
