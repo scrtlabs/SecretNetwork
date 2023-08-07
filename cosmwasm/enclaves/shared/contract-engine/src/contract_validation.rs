@@ -117,7 +117,7 @@ pub fn check_tx_in_current_block(tx_sign_bytes: &[u8]) -> bool {
     // this isn't an attack vector since this can happen anyway by manipulating the state between executions
     while verified_msgs.remaining() > 0 {
         if let Some(verified_msg) = verified_msgs.get_next() {
-            trace!("input tx_sign_bytes: {:?}", hex::encode(&tx_sign_bytes));
+            trace!("input tx_sign_bytes: {:?}", hex::encode(tx_sign_bytes));
             trace!("light client msg: {:?}", hex::encode(&verified_msg));
             if is_subslice(tx_sign_bytes, &verified_msg) {
                 return true;
