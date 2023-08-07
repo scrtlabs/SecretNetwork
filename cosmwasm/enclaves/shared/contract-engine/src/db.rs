@@ -372,6 +372,7 @@ fn read_db(
     debug!("is feature of read-db-proofs enabled?");
     #[cfg(feature = "read-db-proofs")]
     if let (Some(proof), Some(mp_key)) = (proof, mp_key) {
+        debug!("yes it is!");
         debug!("verifying merkle proof inside enclave");
         let comm_proof =
             comm_proof_from_bytes(&proof).map_err(|_| WasmEngineError::HostMisbehavior)?;
@@ -382,6 +383,7 @@ fn read_db(
         }
         debug!("proof verified!");
     } else {
+        debug!("yes it is!");
         return Err(WasmEngineError::HostMisbehavior);
     }
 

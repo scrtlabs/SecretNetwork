@@ -170,7 +170,7 @@ _build-linux:
 
 .PHONY: run-dev
 run-dev: docs/tendermint_enclave.signed.so
-	SGX_MODE=SW $(MAKE) build-linux
+	FEATURES="read-db-proofs" SGX_MODE=SW $(MAKE) build-linux
 	cp go-cosmwasm/librust_cosmwasm_enclave.signed.so .
 	cp docs/tendermint_enclave.signed.so .
 	SGX_MODE=SW ./scripts/start-node.sh
