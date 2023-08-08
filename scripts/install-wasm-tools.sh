@@ -81,7 +81,16 @@ cargo install pwasm-utils-cli --bin wasm-prune --force
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	set -e
 
-	sudo apt-get install -y wabt
+	tmp=`mktemp -d`
+	pushd $tmp > /dev/null
+	
+	echo "Downloading wabt_1.0.33-1_amd64.deb";
+	wget 'https://launchpad.net/ubuntu/+archive/primary/+files/wabt_1.0.33-1_amd64.deb'
+
+	echo "Installing wasm2wat & wat2wasm into ~/.cargo/bin"
+	sudo dpkg -i wabt_1.0.33-1_amd64.deb
+
+	popd > /dev/null
 fi
 
 echo ""
