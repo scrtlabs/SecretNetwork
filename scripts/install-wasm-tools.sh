@@ -81,34 +81,24 @@ cargo install pwasm-utils-cli --bin wasm-prune --force
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	set -e
 
-	BUILD_NUM=`curl -s https://storage.googleapis.com/wasm-llvm/builds/linux/lkgr.json | jq -r '.build'`
-	if [ -z ${BUILD_NUM+x} ]; then
-		echo "Could not fetch the latest build number.";
-		exit 1;
-	fi
-
 	tmp=`mktemp -d`
 	pushd $tmp > /dev/null
-	echo "Downloading wasm-binaries.tbz2";
-	curl -L -o wasm-binaries.tbz2 https://storage.googleapis.com/wasm-llvm/builds/linux/$BUILD_NUM/wasm-binaries.tbz2
+	
+	echo "Downloading wabt-1.0.33-ubuntu.tar.gz";
+	wget https://github.com/WebAssembly/wabt/releases/download/1.0.33/wabt-1.0.33-ubuntu.tar.gz
 
-	declare -a binaries=("wasm2wat" "wat2wasm") # Default binaries
-	if [ "$#" -ne 0 ]; then
-		echo "Installing selected binaries.";
-		binaries=("$@");
-	else
-		echo "Installing default binaries.";
-	fi
+	tar --strip-components=2 -xf wabt-1.0.33-ubuntu.tar.gz wabt-1.0.33/bin/wasm2wat wabt-1.0.33/bin/wat2wasm
 
-	for bin in "${binaries[@]}"
-	do
-		echo "Installing $bin into ~/.cargo/bin"
-		tar -xvjf wasm-binaries.tbz2 wasm-install/bin/$bin > /dev/null
-		cp -f wasm-install/bin/$bin ~/.cargo/bin/
-	done
+	echo "Installing wasm2wat & wat2wasm into ~/.cargo/bin"
+	cp -f wasm2wat ~/.cargo/bin/
+	cp -f wat2wasm ~/.cargo/bin/
+
 	popd > /dev/null
 fi
 
 echo ""
 echo "Run source ~/.cargo/env now to update environment."
 echo ""
+
+source ~/.cargo/env
+wasm2wat --version
