@@ -2,6 +2,7 @@ mod enclave;
 mod enclave_api;
 mod types;
 
+use clap::App;
 use lazy_static::lazy_static;
 use sgx_types::sgx_status_t;
 
@@ -9,19 +10,30 @@ use crate::{enclave_api::ecall_check_patch_level, types::EnclaveDoorbell};
 
 use enclave_ffi_types::NodeAuthResult;
 
-#[cfg(not(feature = "production"))]
-static ENCLAVE_FILE: &str = "check_hw_testnet_enclave.so";
-
-#[cfg(feature = "production")]
-static ENCLAVE_FILE: &str = "check_hw_enclave.so";
-
+const ENCLAVE_FILE_TESTNET: &str = "check_hw_testnet_enclave.so";
+const ENCLAVE_FILE_MAINNET: &str = "check_hw_enclave.so";
 const TCS_NUM: u8 = 1;
 
 lazy_static! {
-    static ref ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(ENCLAVE_FILE, TCS_NUM);
+    static ref ENCLAVE_DOORBELL: EnclaveDoorbell = {
+        let is_testnet = std::env::args().any(|arg| arg == "--testnet");
+        let enclave_file = if is_testnet {
+            ENCLAVE_FILE_TESTNET
+        } else {
+            ENCLAVE_FILE_MAINNET
+        };
+        EnclaveDoorbell::new(enclave_file, TCS_NUM)
+    };
 }
 
 fn main() {
+    let matches = App::new("Check HW")
+        .version("1.0")
+        .arg("--testnet 'Run in testnet mode'")
+        .get_matches();
+
+    let is_testnet = matches.is_present("testnet");
+
     println!("Creating enclave instance..");
 
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -43,10 +55,11 @@ fn main() {
         return;
     }
 
-    #[cfg(feature = "production")]
-    let api_key_bytes = include_bytes!("../../ias_keys/production/api_key.txt");
-    #[cfg(not(feature = "production"))]
-    let api_key_bytes = include_bytes!("../../api_key.txt");
+    let api_key_bytes = if is_testnet {
+        include_bytes!("../../ias_keys/develop/api_key.txt")
+    } else {
+        include_bytes!("../../ias_keys/production/api_key.txt")
+    };
 
     let eid = enclave.unwrap().geteid();
     let mut retval = NodeAuthResult::Success;
@@ -61,8 +74,7 @@ fn main() {
 
     if status != sgx_status_t::SGX_SUCCESS {
         println!(
-            "Failed to run hardware verification test (is {:?} in the correct path?)",
-            ENCLAVE_FILE
+            "Failed to run hardware verification test (is the correct enclave in the correct path?)"
         );
         return;
     }

@@ -217,10 +217,54 @@ jobs:
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
           cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+
+          # 1. Untar the archive
+          tar -xzf check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+
+          # 2. Rename the files
+          mv check_hw check_hw_testnet
+          mv check_hw_enclave.so check_hw_testnet_enclave.so
+
+          # 3. Retar the renamed files
+          tar -czf check_hw_${{ steps.get_version.outputs.VERSION }}_testnet.tar.gz check_hw_testnet check_hw_testnet_enclave.so
+
       - uses: actions/upload-artifact@v3
         with:
-          name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-          path: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}_testnet.tar.gz
+          path: check_hw_${{ steps.get_version.outputs.VERSION }}_testnet.tar.gz
+
+#  check-hw-tool-mainnet:
+#    runs-on: ubuntu-20.04
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          submodules: recursive
+#      - name: Get the version
+#        id: get_version
+#        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+#      - name: Build check-hw-tool image
+#        uses: docker/build-push-action@v4
+#        with:
+#          file: deployment/dockerfiles/Dockerfile
+#          context: .
+#          load: true
+#          tags: check_hw_tool_build
+#          secrets: |
+#            API_KEY=${{ secrets.API_KEY_MAINNET }}
+#            SPID=${{ secrets.SPID_MAINNET }}
+#          build-args: |
+#            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+#            SGX_MODE=HW
+#            FEATURES=production
+#          target: compile-check-hw-tool
+#      - name: Run check-hw-tool image
+#        run: |
+#          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
+#          cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+#      - uses: actions/upload-artifact@v3
+#        with:
+#          name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
+#          path: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
 
   publish-localsecret:
     runs-on: ubuntu-20.04
@@ -282,7 +326,8 @@ jobs:
         build-deb-testnet,
         build-deb-mainnet,
         MacOS-ARM64-CLI,
-        check-hw-tool,
+        check-hw-tool
+        # check-hw-tool-mainnet
       ]
     runs-on: ubuntu-20.04
     steps:
@@ -317,6 +362,9 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+#      - uses: actions/download-artifact@v3
+#        with:
+#          name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
@@ -331,3 +379,4 @@ jobs:
             secretcli-Linux
             secretcli-MacOS-arm64
             check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+#            check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
