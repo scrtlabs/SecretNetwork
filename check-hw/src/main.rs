@@ -9,8 +9,13 @@ use crate::{enclave_api::ecall_check_patch_level, types::EnclaveDoorbell};
 
 use enclave_ffi_types::NodeAuthResult;
 
+#[cfg(not(feature = "production"))]
+static ENCLAVE_FILE: &str = "check_hw_testnet_enclave.so";
+
+#[cfg(feature = "production")]
 static ENCLAVE_FILE: &str = "check_hw_enclave.so";
-const TCS_NUM: u8 = 8;
+
+const TCS_NUM: u8 = 1;
 
 lazy_static! {
     static ref ENCLAVE_DOORBELL: EnclaveDoorbell = EnclaveDoorbell::new(ENCLAVE_FILE, TCS_NUM);
@@ -38,7 +43,10 @@ fn main() {
         return;
     }
 
+    #[cfg(feature = "production")]
     let api_key_bytes = include_bytes!("../../ias_keys/production/api_key.txt");
+    #[cfg(not(feature = "production"))]
+    let api_key_bytes = include_bytes!("../../api_key.txt");
 
     let eid = enclave.unwrap().geteid();
     let mut retval = NodeAuthResult::Success;

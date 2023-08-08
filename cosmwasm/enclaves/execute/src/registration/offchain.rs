@@ -357,7 +357,6 @@ pub unsafe extern "C" fn ecall_init_node(
 pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
-    dry_run: u8,
 ) -> sgx_status_t {
     // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
@@ -368,22 +367,8 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
-    let dry_run = dry_run != 0; // u8 => bool
 
-    let kp: KeyPair = if dry_run {
-        match KeyPair::new() {
-            Ok(new_kp) => new_kp,
-            Err(e) => {
-                error!(
-                    "Failed to generate temporary key for attestation: {}",
-                    e.to_string()
-                );
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        }
-    } else {
-        KEY_MANAGER.get_registration_key().unwrap()
-    };
+    let kp = KEY_MANAGER.get_registration_key().unwrap();
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
@@ -398,10 +383,8 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         };
 
     //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if !dry_run {
-        if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
-            return status;
-        }
+    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
+        return status;
     }
 
     #[cfg(feature = "SGX_MODE_HW")]

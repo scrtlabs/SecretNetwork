@@ -1,16 +1,15 @@
-use crate::registration::attestation::create_attestation_report;
-use crate::registration::cert::{
-    check_epid_gid_is_whitelisted, verify_quote_status, verify_ra_cert,
-};
-use crate::registration::create_attestation_certificate;
-use crate::registration::print_report::print_platform_info;
-use crate::registration::report::{AttestationReport, SgxQuoteStatus};
 use core::slice;
+
+use log::error;
+
 use enclave_crypto::consts::SIGNATURE_TYPE;
 use enclave_ffi_types::NodeAuthResult;
 use enclave_utils::validate_const_ptr;
-use log::{error, info};
-use sgx_types::SgxResult;
+
+use crate::registration::attestation::create_attestation_report;
+use crate::registration::cert::{check_epid_gid_is_whitelisted, verify_quote_status};
+use crate::registration::print_report::print_platform_info;
+use crate::registration::report::AttestationReport;
 
 #[no_mangle]
 pub unsafe extern "C" fn ecall_check_patch_level(
@@ -20,7 +19,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
     validate_const_ptr!(api_key, api_key_len as usize, NodeAuthResult::InvalidInput);
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
-    /// CREATE THE ATTESTATION REPORT
+    // CREATE THE ATTESTATION REPORT
     // generate temporary key for attestation
     let temp_key_result = enclave_crypto::KeyPair::new().unwrap();
 
@@ -31,7 +30,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
         None,
     ) {
         Ok(r) => r,
-        Err(e) => {
+        Err(_e) => {
             error!("Error creating attestation report");
             return NodeAuthResult::InvalidCert;
         }
@@ -51,7 +50,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
     let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
 
     let _result = ecc_handle.open();
-    let (key_der, cert) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle).unwrap();
+    let (_key_der, cert) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle).unwrap();
     let _result = ecc_handle.close();
 
     let report = AttestationReport::from_cert(&cert)
@@ -61,7 +60,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
         })
         .unwrap();
 
-    /// PERFORM EPID CHECK
+    // PERFORM EPID CHECK
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         error!(
             "Platform verification error: quote status {:?}",
@@ -74,7 +73,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
         return NodeAuthResult::BadQuoteStatus;
     }
 
-    /// PERFORM STATUS CHECKS
+    // PERFORM STATUS CHECKS
     let node_auth_result = NodeAuthResult::from(&report.sgx_quote_status);
     // print
     match verify_quote_status(&report, &report.advisory_ids) {
