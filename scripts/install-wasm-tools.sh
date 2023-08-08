@@ -81,7 +81,7 @@ cargo install pwasm-utils-cli --bin wasm-prune --force
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	set -e
 
-	apt-get install -y wabt
+	sudo apt-get install -y wabt
 fi
 
 echo ""
