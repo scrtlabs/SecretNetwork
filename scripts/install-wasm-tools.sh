@@ -81,19 +81,7 @@ cargo install pwasm-utils-cli --bin wasm-prune --force
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	set -e
 
-	tmp=`mktemp -d`
-	pushd $tmp > /dev/null
-	
-	echo "Downloading wabt-1.0.33-ubuntu.tar.gz";
-	wget https://github.com/WebAssembly/wabt/releases/download/1.0.33/wabt-1.0.33-ubuntu.tar.gz
-
-	tar --strip-components=2 -xf wabt-1.0.33-ubuntu.tar.gz wabt-1.0.33/bin/wasm2wat wabt-1.0.33/bin/wat2wasm
-
-	echo "Installing wasm2wat & wat2wasm into ~/.cargo/bin"
-	cp -f wasm2wat ~/.cargo/bin/
-	cp -f wat2wasm ~/.cargo/bin/
-
-	popd > /dev/null
+	apt-get install -y wabt
 fi
 
 echo ""
