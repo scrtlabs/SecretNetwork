@@ -42,6 +42,7 @@ verify-validator-whitelist = [
   "light-client-validation"
 ]
 go-tests = []
+check-hw = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.

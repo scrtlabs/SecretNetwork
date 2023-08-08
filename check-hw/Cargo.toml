@@ -9,6 +9,11 @@ edition = "2021"
 default = []
 production = []
 
+# Just here for compatability with enclave features
+verify-validator-whitelist = []
+light-client-validation = []
+random = []
+
 [dependencies]
 sgx_types = { path = "../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 sgx_urts = { path = "../third_party/incubator-teaclave-sgx-sdk/sgx_urts" }

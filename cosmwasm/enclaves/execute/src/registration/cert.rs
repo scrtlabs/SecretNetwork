@@ -421,16 +421,12 @@ pub fn verify_quote_status(
     }
 }
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
-const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
+pub const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
 
-#[cfg(all(
-    not(all(feature = "SGX_MODE_HW", feature = "production")),
-    feature = "test"
-))]
-const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
+#[cfg(not(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test"))))]
+pub const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
 
-#[cfg(any(all(feature = "SGX_MODE_HW", feature = "production"), feature = "test"))]
-fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
+pub fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
     #[cfg(feature = "epid_whitelist_disabled")]
     {
         return true;
