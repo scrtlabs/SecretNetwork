@@ -627,7 +627,6 @@ fn verify_input(
     verify_tx_bytes(sig_info, &sdk_messages)?;
 
     let is_verified = verify_input_params(
-        #[cfg(feature = "light-client-validation")]
         sig_info,
         &sdk_messages,
         sender,
@@ -860,7 +859,7 @@ fn verify_callback_sig_impl(
 
 #[allow(clippy::too_many_arguments)]
 fn verify_input_params(
-    #[cfg(feature = "light-client-validation")] sig_info: &SigInfo,
+    sig_info: &SigInfo,
     sdk_messages: &[DirectSdkMsg],
     sender: &CanonicalAddr,
     sent_funds: &[Coin],
