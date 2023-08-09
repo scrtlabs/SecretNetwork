@@ -242,6 +242,10 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/enclaves/test clean
 	$(MAKE) -C check-hw clean
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract clean
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2 clean
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract clean
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2 clean
 
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
@@ -459,6 +463,10 @@ build-test-contracts:
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v2
 	rm -f $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
 	cp $(TEST_CONTRACT_V1_PATH)/migration/contract-v2/migrate_contract_v2.wasm $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/random-test
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1_random_test.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/random-test/v1_random_test.wasm $(TEST_COMPUTE_MODULE_PATH)/v1_random_test.wasm
 
 
 prep-go-tests: build-test-contracts bin-data-sw
