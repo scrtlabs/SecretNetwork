@@ -1113,3 +1113,21 @@ func TestInputAdminMismatch(t *testing.T) {
 		}
 	}
 }
+
+func TestInitEnvTxHash(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1MigratedContract], sdk.NewCoins())
+
+	_, ctx, contractAddress, events, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"tx_hash":{}}`, true, true, defaultGasForTests)
+
+	require.Empty(t, err)
+
+	requireEvents(t,
+		[]ContractEvent{
+			{
+				{Key: "contract_address", Value: contractAddress.String()},
+				{Key: "txhash", Value: txhash(t, ctx)},
+			},
+		},
+		events,
+	)
+}
