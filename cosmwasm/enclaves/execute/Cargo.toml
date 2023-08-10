@@ -10,7 +10,7 @@ name = "secret_enclave"
 crate-type = ["staticlib"]
 
 [features]
-default = ["SGX_MODE_SW", "random"]
+default = ["SGX_MODE_SW", "random", "epid_whitelist_disabled"]
 SGX_MODE_SW = []
 SGX_MODE_HW = []
 production = [

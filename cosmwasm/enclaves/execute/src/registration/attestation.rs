@@ -35,7 +35,7 @@ use std::{
     sync::Arc,
 };
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+#[cfg(all(feature = "SGX_MODE_HW"))]
 use crate::registration::cert::verify_ra_cert;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -44,13 +44,14 @@ use enclave_crypto::consts::SIGNING_METHOD;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SigningMethod;
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+#[cfg(all(feature = "SGX_MODE_HW"))]
 use enclave_crypto::consts::{
     CURRENT_CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH,
     GENESIS_CONSENSUS_SEED_SEALING_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
     NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
 };
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+use enclave_ffi_types::NodeAuthResult;
+#[cfg(all(feature = "SGX_MODE_HW"))]
 use std::sgxfs::remove as SgxFsRemove;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -63,9 +64,14 @@ use super::{hex, report::EndorsedAttestationReport};
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
 #[cfg(feature = "production")]
-pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
+pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v5/sigrl/";
 #[cfg(feature = "production")]
-pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
+pub const REPORT_SUFFIX: &str = "/sgx/attestation/v5/report&update=early";
+
+#[cfg(feature = "production")]
+pub const LEGACY_REPORT_SUFFIX: &str = "/sgx/attestation/v5/report";
+#[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
+pub const LEGACY_REPORT_SUFFIX: &str = "/sgx/dev/attestation/v5/report";
 
 // #[cfg(feature = "SGX_MODE_HW")]
 // pub const SN_TSS_HOSTNAME: &str = "secretnetwork.trustedservices.scrtlabs.com";
@@ -75,9 +81,9 @@ pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
 // pub const SN_TSS_GID_LIST: &str = "/get-gids";
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
+pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v5/sigrl/";
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
+pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v5/report&update=early";
 
 /// extra_data size that will store the public key of the attesting node
 #[cfg(feature = "SGX_MODE_HW")]
@@ -94,6 +100,7 @@ pub fn create_attestation_certificate(
     _sign_type: sgx_quote_sign_type_t,
     _api_key: &[u8],
     _challenge: Option<&[u8]>,
+    _early: bool,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // init sgx ecc
     let ecc_handle = SgxEccHandle::new();
@@ -113,6 +120,106 @@ pub fn create_attestation_certificate(
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
+pub fn validate_enclave_version(
+    kp: &KeyPair,
+    sign_type: sgx_quote_sign_type_t,
+    api_key: &[u8],
+    challenge: Option<&[u8]>,
+) -> Result<(), sgx_status_t> {
+    // extract private key from KeyPair
+    let ecc_handle = SgxEccHandle::new();
+    let _result = ecc_handle.open();
+
+    // use ephemeral key
+    let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
+
+    // call create_report using the secp256k1 public key, and __not__ the P256 one
+    let signed_report =
+        match create_attestation_report(&kp.get_pubkey(), sign_type, api_key, challenge, true) {
+            Ok(r) => r,
+            Err(e) => {
+                error!("Error creating attestation report");
+                return Err(e);
+            }
+        };
+
+    let payload: String = serde_json::to_string(&signed_report).map_err(|_| {
+        error!("Error serializing report. May be malformed, or badly encoded");
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    })?;
+    let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
+    let _result = ecc_handle.close();
+
+    let timestamp = crate::registration::report::AttestationReport::from_cert(&cert_der)
+        .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?
+        .timestamp;
+
+    let result = verify_ra_cert(&cert_der, None, true).map_err(|e| {
+        remove_all_keys();
+    });
+
+    if result.is_err() && in_grace_period(timestamp) {
+        let ecc_handle = SgxEccHandle::new();
+        let _result = ecc_handle.open();
+
+        // use ephemeral key
+        let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
+
+        // call create_report using the secp256k1 public key, and __not__ the P256 one
+        let signed_report =
+            match create_attestation_report(&kp.get_pubkey(), sign_type, api_key, challenge, false)
+            {
+                Ok(r) => r,
+                Err(e) => {
+                    error!("Error creating attestation report");
+                    return Err(e);
+                }
+            };
+
+        let payload: String = serde_json::to_string(&signed_report).map_err(|_| {
+            error!("Error serializing report. May be malformed, or badly encoded");
+            sgx_status_t::SGX_ERROR_UNEXPECTED
+        })?;
+        let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
+        let _result = ecc_handle.close();
+
+        let verify_result = verify_ra_cert(&cert_der, None, false);
+        if verify_result.is_err() {
+            #[cfg(feature = "production")]
+            remove_all_keys();
+            info!("")
+        }
+    } else if result.is_err() {
+        #[cfg(feature = "production")]
+        remove_all_keys();
+    }
+
+    Ok(())
+}
+
+fn remove_all_keys() {
+    info!("Error validating created certificate");
+    let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
+    let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
+    let _ = SgxFsRemove(REGISTRATION_KEY_SEALING_PATH.as_str());
+    let _ = SgxFsRemove(
+        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
+            .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
+            .as_path(),
+    );
+    let _ = SgxFsRemove(
+        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
+            .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
+            .as_path(),
+    );
+    let _ = SgxFsRemove(
+        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
+            .join(NODE_EXCHANGE_KEY_FILE)
+            .as_path(),
+    );
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
 pub fn create_attestation_certificate(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
@@ -128,7 +235,7 @@ pub fn create_attestation_certificate(
 
     // call create_report using the secp256k1 public key, and __not__ the P256 one
     let signed_report =
-        match create_attestation_report(&kp.get_pubkey(), sign_type, api_key, challenge) {
+        match create_attestation_report(&kp.get_pubkey(), sign_type, api_key, challenge, true) {
             Ok(r) => r,
             Err(e) => {
                 error!("Error creating attestation report");
@@ -143,6 +250,8 @@ pub fn create_attestation_certificate(
     let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
+    let timestamp = 0;
+
     #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
     validate_report(&cert_der, None);
 
@@ -151,7 +260,7 @@ pub fn create_attestation_certificate(
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
-    let _ = verify_ra_cert(cert, None).map_err(|e| {
+    let _ = verify_ra_cert(cert, None, true).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);
         let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
         let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
@@ -174,6 +283,11 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
     });
 }
 
+pub fn in_grace_period(timestamp: u64) -> bool {
+    // Friday, August 18, 2023 3:48:16 PM UTC
+    timestamp < 1692373696 as u64
+}
+
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn get_mr_enclave() -> [u8; 32] {
     rsgx_self_report().body.mr_enclave.m
@@ -187,6 +301,7 @@ pub fn create_attestation_report(
     sign_type: sgx_quote_sign_type_t,
     api_key_file: &[u8],
     challenge: Option<&[u8]>,
+    early: bool,
 ) -> Result<EndorsedAttestationReport, sgx_status_t> {
     // Workflow:
     // (1) ocall to get the target_info structure (ti) and epid group id (eg)
@@ -399,7 +514,7 @@ pub fn create_attestation_report(
     }
 
     let (attn_report, signature, signing_cert) =
-        get_report_from_intel(ias_sock, quote_vec, api_key_file)?;
+        get_report_from_intel(ias_sock, quote_vec, api_key_file, early)?;
     Ok(EndorsedAttestationReport {
         report: attn_report.into_bytes(),
         signature,
@@ -645,6 +760,7 @@ pub fn get_report_from_intel(
     fd: c_int,
     quote: Vec<u8>,
     api_key_file: &[u8],
+    early: bool,
 ) -> SgxResult<(String, Vec<u8>, Vec<u8>)> {
     trace!("get_report_from_intel fd = {:?}", fd);
     let config = make_ias_client_config();
@@ -652,8 +768,14 @@ pub fn get_report_from_intel(
     let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
     let ias_key = String::from_utf8_lossy(api_key_file).trim_end().to_owned();
 
+    let endpoint = if early {
+        REPORT_SUFFIX
+    } else {
+        LEGACY_REPORT_SUFFIX
+    };
+
     let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-                      REPORT_SUFFIX,
+                      endpoint,
                       DEV_HOSTNAME,
                       ias_key,
                       encoded_json.len(),

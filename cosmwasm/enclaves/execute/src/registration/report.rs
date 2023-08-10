@@ -591,13 +591,14 @@ impl AdvisoryIDs {
 pub struct AttestationReport {
     /// The freshness of the report, i.e., elapsed time after acquiring the
     /// report in seconds.
-    // pub freshness: Duration,
+    pub timestamp: u64,
     /// Quote status
     pub sgx_quote_status: SgxQuoteStatus,
     /// Content of the quote
     pub sgx_quote_body: SgxQuote,
     pub platform_info_blob: Option<Vec<u8>>,
     pub advisory_ids: AdvisoryIDs,
+    pub tcb_eval_data_number: u16,
 }
 
 impl AttestationReport {
@@ -632,7 +633,7 @@ impl AttestationReport {
         let chain: Vec<&[u8]> = vec![&ias_cert];
 
         // set as 04.11.23(dd.mm.yy) - should be valid for the foreseeable future, and not rely on SystemTime
-        let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1_699_088_856);
+        let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1723218496);
 
         // note: there's no way to not validate the time, and we don't want to write this code
         // ourselves. We also can't just ignore the error message, since that means that the rest of
@@ -719,15 +720,31 @@ impl AttestationReport {
             vec![]
         };
 
+        let tcb_eval_data_number = attn_report["tcbEvaluationDataNumber"]
+            .as_u64()
+            .ok_or(Error::ReportParseError)? as u16;
+
+        let timestamp_str = attn_report["timestamp"]
+            .as_str()
+            .ok_or(Error::ReportParseError)?;
+
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
         // report_data field
 
+        let time = chrono::DateTime::parse_from_rfc3339(timestamp_str).map_err(|_| {
+            warn!("Failed to decode advisories");
+            Error::ReportParseError
+        })?;
+        let timestamp_since_epoch = time.timestamp();
+
         Ok(Self {
+            timestamp: timestamp_since_epoch as u64,
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,
             advisory_ids: AdvisoryIDs(advisories),
+            tcb_eval_data_number,
         })
     }
 }

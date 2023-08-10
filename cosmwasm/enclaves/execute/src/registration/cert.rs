@@ -275,6 +275,7 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
 pub fn verify_ra_cert(
     cert_der: &[u8],
     override_verify: Option<SigningMethod>,
+    _check_tcb_version: bool,
 ) -> Result<Vec<u8>, NodeAuthResult> {
     let payload = get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
@@ -296,6 +297,7 @@ pub fn verify_ra_cert(
 pub fn verify_ra_cert(
     cert_der: &[u8],
     override_verify_type: Option<SigningMethod>,
+    check_tcb_version: bool,
 ) -> Result<Vec<u8>, NodeAuthResult> {
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
 
@@ -323,6 +325,14 @@ pub fn verify_ra_cert(
                     report.sgx_quote_body.isv_enclave_report.mr_enclave, this_mr_enclave
                 );
                 return Err(NodeAuthResult::MrEnclaveMismatch);
+            }
+
+            if check_tcb_version {
+                // todo: change this to a parameters or const when we migrate the code to main
+                if report.tcb_eval_data_number < 16 {
+                    info!("Got an outdated certificate");
+                    return Err(NodeAuthResult::GroupOutOfDate);
+                }
             }
         }
         SigningMethod::MRSIGNER => {
