@@ -6,7 +6,7 @@ This is a signaling proposal by SCRT Labs to add hardcoded admins to a list of p
 
 If approved, the v1.10 upgrade, tentatively scheduled for the 12th of September, 2023, will include the proposed hardcoded admins in its code.
 
-Note: this proposal's text is also available on [GitHub](https://github.com/scrtlabs/SecretNetwork/blob/7d5bf4313/docs/proposals/hardcode-admins-on-v1.10.md) for better readability.
+Note: this proposal's text is also available on [GitHub](https://github.com/scrtlabs/SecretNetwork/blob/b9d2dc269/docs/proposals/hardcode-admins-on-v1.10.md) for better readability.
 
 ## Details
 
