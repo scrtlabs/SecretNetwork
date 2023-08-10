@@ -154,9 +154,7 @@ pub fn validate_enclave_version(
         .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?
         .timestamp;
 
-    let result = verify_ra_cert(&cert_der, None, true).map_err(|e| {
-        remove_all_keys();
-    });
+    let result = verify_ra_cert(&cert_der, None, true);
 
     if result.is_err() && in_grace_period(timestamp) {
         let ecc_handle = SgxEccHandle::new();
