@@ -91,7 +91,7 @@ pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
     let port = 443;
     let hostname = "api.trustedservices.intel.com";
     let addr = lookup_ipv4(hostname, port);
-    let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
+    let sock = TcpStream::connect(addr).expect("[-] Connect tls server failed!");
 
     unsafe {
         *ret_fd = sock.into_raw_fd();

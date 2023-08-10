@@ -63,9 +63,9 @@ use super::{hex, report::EndorsedAttestationReport};
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
 #[cfg(feature = "production")]
-pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
+pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v5/sigrl/";
 #[cfg(feature = "production")]
-pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
+pub const REPORT_SUFFIX: &str = "/sgx/attestation/v5/report?update=early";
 
 // #[cfg(feature = "SGX_MODE_HW")]
 // pub const SN_TSS_HOSTNAME: &str = "secretnetwork.trustedservices.scrtlabs.com";
@@ -75,9 +75,9 @@ pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
 // pub const SN_TSS_GID_LIST: &str = "/get-gids";
 
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
+pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v5/sigrl/";
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
+pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v5/report?update=early";
 
 /// extra_data size that will store the public key of the attesting node
 #[cfg(feature = "SGX_MODE_HW")]

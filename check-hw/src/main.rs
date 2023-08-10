@@ -16,20 +16,25 @@ const TCS_NUM: u8 = 1;
 
 lazy_static! {
     static ref ENCLAVE_DOORBELL: EnclaveDoorbell = {
-        let is_testnet = std::env::args().any(|arg| arg == "--testnet");
+        let is_testnet = std::env::args().any(|arg| arg == "--testnet" || arg == "-t");
         let enclave_file = if is_testnet {
             ENCLAVE_FILE_TESTNET
         } else {
             ENCLAVE_FILE_MAINNET
         };
-        EnclaveDoorbell::new(enclave_file, TCS_NUM)
+        EnclaveDoorbell::new(enclave_file, TCS_NUM, is_testnet as i32)
     };
 }
 
 fn main() {
     let matches = App::new("Check HW")
         .version("1.0")
-        .arg("--testnet 'Run in testnet mode'")
+        .arg(
+            clap::Arg::with_name("testnet")
+                .short("t")
+                .long("testnet")
+                .help("Run in testnet mode"),
+        )
         .get_matches();
 
     let is_testnet = matches.is_present("testnet");
@@ -84,7 +89,6 @@ fn main() {
         If you require assistance or more information, please contact us on Discord or Telegram. In addition, you may use the documentation available at \
         https://docs.scrt.network
         ");
-        return;
     } else {
         println!("Platform verification successful! You are able to run a mainnet Secret node")
     }

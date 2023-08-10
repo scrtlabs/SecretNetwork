@@ -359,7 +359,7 @@ pub fn verify_quote_status(
     //     "Got GID: {:?}",
     //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
     // );
-
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         error!(
             "Platform verification error: quote status {:?}",
@@ -420,29 +420,25 @@ pub fn verify_quote_status(
         }
     }
 }
+
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
+#[allow(dead_code)]
 pub const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
 
-#[cfg(not(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test"))))]
+#[cfg(not(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test"),)))]
+#[allow(dead_code)]
 pub const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
 
+#[cfg(not(feature = "epid_whitelist_disabled"))]
 pub fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
-    #[cfg(feature = "epid_whitelist_disabled")]
-    {
-        return true;
-    }
+    let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
 
-    #[cfg(not(feature = "epid_whitelist_disabled"))]
-    {
-        let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
-
-        decoded.as_chunks::<4>().0.iter().any(|&arr| {
-            if epid_gid == &u32::from_be_bytes(arr) {
-                return true;
-            }
-            false
-        })
-    }
+    decoded.as_chunks::<4>().0.iter().any(|&arr| {
+        if epid_gid == &u32::from_be_bytes(arr) {
+            return true;
+        }
+        false
+    })
 }
 
 #[cfg(feature = "SGX_MODE_HW")]

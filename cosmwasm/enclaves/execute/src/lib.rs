@@ -17,6 +17,7 @@ mod ecalls;
 pub mod registration;
 mod tests;
 
+#[allow(unused_imports)]
 use crate::registration::check_patch_level::ecall_check_patch_level;
 
 #[cfg(feature = "production")]

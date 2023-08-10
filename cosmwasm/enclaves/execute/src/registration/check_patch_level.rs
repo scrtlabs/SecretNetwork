@@ -7,16 +7,27 @@ use enclave_ffi_types::NodeAuthResult;
 use enclave_utils::validate_const_ptr;
 
 use crate::registration::attestation::create_attestation_report;
-use crate::registration::cert::{check_epid_gid_is_whitelisted, verify_quote_status};
+use crate::registration::cert::verify_quote_status;
+
+#[cfg(not(feature = "epid_whitelist_disabled"))]
+use crate::registration::cert::check_epid_gid_is_whitelisted;
+
 use crate::registration::print_report::print_platform_info;
 use crate::registration::report::AttestationReport;
 
+/// # Safety
+/// Don't forget to check the input length of api_key_len
 #[no_mangle]
 pub unsafe extern "C" fn ecall_check_patch_level(
     api_key: *const u8,
     api_key_len: u32,
 ) -> NodeAuthResult {
     validate_const_ptr!(api_key, api_key_len as usize, NodeAuthResult::InvalidInput);
+    if api_key_len > 100 {
+        error!("API key malformed");
+        return NodeAuthResult::InvalidInput;
+    }
+
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     // CREATE THE ATTESTATION REPORT
@@ -61,6 +72,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
         .unwrap();
 
     // PERFORM EPID CHECK
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         error!(
             "Platform verification error: quote status {:?}",
@@ -71,6 +83,17 @@ pub unsafe extern "C" fn ecall_check_patch_level(
                 for more information");
         error!("If you think this message appeared in error, please contact us on Telegram or Discord, and attach your quote status from the message above");
         return NodeAuthResult::BadQuoteStatus;
+    }
+
+    if report.tcb_eval_data_number < 16 {
+        error!("Your current platform is probably not up to date, and may require a BIOS or PSW update. \n \
+                Please see https://docs.scrt.network/secret-network-documentation/infrastructure/setting-up-a-node-validator/hardware-setup/patching-your-node \
+                for more information");
+        println!(
+            "Tried to attest using old data: {}",
+            report.tcb_eval_data_number
+        );
+        return NodeAuthResult::GroupOutOfDate;
     }
 
     // PERFORM STATUS CHECKS
@@ -92,11 +115,11 @@ pub unsafe extern "C" fn ecall_check_patch_level(
     }
 
     // print platform blob info
-    return match node_auth_result {
+    match node_auth_result {
         NodeAuthResult::GroupOutOfDate | NodeAuthResult::SwHardeningAndConfigurationNeeded => unsafe {
             print_platform_info(&report);
             node_auth_result
         },
         _ => NodeAuthResult::Success,
-    };
+    }
 }
