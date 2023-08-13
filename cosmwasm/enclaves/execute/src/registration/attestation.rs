@@ -102,7 +102,6 @@ pub fn create_attestation_certificate(
     _sign_type: sgx_quote_sign_type_t,
     _api_key: &[u8],
     _challenge: Option<&[u8]>,
-    _early: bool,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // init sgx ecc
     let ecc_handle = SgxEccHandle::new();
@@ -281,6 +280,7 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
     });
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 pub fn in_grace_period(timestamp: u64) -> bool {
     // Friday, August 21, 2023 2:00:00 PM UTC
     timestamp < 1692626400_u64
