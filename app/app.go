@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
 	"io"
 	"net/http"
 	"os"
@@ -100,6 +101,7 @@ var (
 		v1_7.Upgrade,
 		v1_8.Upgrade,
 		v1_9.Upgrade,
+		v1_10.Upgrade,
 	}
 )
 
