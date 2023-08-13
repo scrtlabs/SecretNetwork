@@ -280,6 +280,7 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
     });
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 pub fn in_grace_period(timestamp: u64) -> bool {
     // Friday, August 21, 2023 2:00:00 PM UTC
     timestamp < 1692626400_u64
