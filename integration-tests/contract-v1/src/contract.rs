@@ -1,12 +1,5 @@
 use crate::ibc::PACKET_LIFETIME;
-use cosmwasm_std::{
-    entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse,
-    AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse,
-    ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps,
-    DepsMut, DistributionMsg, Empty, Env, Event, GovMsg, IbcMsg, IbcQuery, IbcTimeout,
-    ListChannelsResponse, MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg,
-    StakingQuery, StdError, StdResult, ValidatorResponse, WasmMsg, WasmQuery,
-};
+use cosmwasm_std::{entry_point, to_binary, to_vec, AllBalanceResponse, AllDelegationsResponse, AllValidatorsResponse, BalanceResponse, BankMsg, BankQuery, Binary, BondedDenomResponse, ChannelResponse, ContractInfoResponse, ContractResult, CosmosMsg, DelegationResponse, Deps, DepsMut, DistributionMsg, Empty, Env, Event, GovMsg, IbcMsg, IbcQuery, IbcTimeout, ListChannelsResponse, MessageInfo, PortIdResponse, QueryRequest, Response, StakingMsg, StakingQuery, StdError, StdResult, ValidatorResponse, WasmMsg, WasmQuery, SubMsg};
 
 use crate::msg::{Msg, PacketMsg, QueryMsg};
 use crate::state::{
@@ -181,6 +174,20 @@ fn handle_msg(deps: DepsMut, env: Env, info: MessageInfo, msg: Msg) -> StdResult
                 ))
             }
         },
+        Msg::Forward { recipient_address, recipient_hash, msg } => {
+            deps.storage.set("forwarded".as_bytes(), "forwarded".as_bytes());
+            Ok(Response::new().add_submessage(SubMsg::new(
+                CosmosMsg::Wasm(
+                    WasmMsg::Execute {
+                        contract_addr: recipient_address.into_string(),
+                        code_hash: recipient_hash,
+                        msg: msg?,
+                        funds: vec![],
+                    },
+                )
+            )))
+        }
+        Msg::FailTx {} => Err (StdError::generic_err("this should always fail")),
         // Msg::GetRandom {} => {
         //     return Ok(
         //         Response::new()
