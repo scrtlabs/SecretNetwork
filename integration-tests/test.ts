@@ -134,7 +134,7 @@ beforeAll(async () => {
     };
   }
 
-  // Send 100k SCRT from account 0 to each of accounts 1-itrations
+  // Send 100k SCRT from account 0 to each of accounts 1-iterations
 
   const { secretjs } = accounts[0];
 
@@ -520,6 +520,83 @@ describe("CustomMsg", () => {
   });
 });
 
+describe.only("Rollback", () => {
+  test("v0.10", async () => {
+    const tx = await accounts[0].secretjs.tx.compute.executeContract(
+      {
+        sender: accounts[0].address,
+        contract_address: contracts["secretdev-1"].v010.address,
+        code_hash: contracts["secretdev-1"].v010.codeHash,
+        msg: {
+          forward: {
+            msg: toBase64(toUtf8(JSON.stringify({ fail_tx: {} }))),
+            recipient_address: contracts["secretdev-1"].v1.address,
+            recipient_hash: contracts["secretdev-1"].v1.codeHash,
+          }
+        },
+      },
+      { gasLimit: 250_000 }
+    );
+
+    if (tx.code !== 3) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(3 /* WASM ErrExecuteFailed */);
+    expect(tx.rawLog).toContain("execute contract failed");
+
+    console.log("querying v10 contract state");
+    // verify the value rolled back
+    const result: any = await readonly.query.compute.queryContract({
+      contract_address: contracts["secretdev-1"].v010.address,
+      code_hash: contracts["secretdev-1"].v010.codeHash,
+      query: {
+        forward: {},
+      }
+    });
+
+    let resultString = String.fromCharCode(...result)
+    console.log("got result:", resultString);
+
+    expect(resultString).toBe("no-fail");
+  });
+
+  test("v1", async () => {
+    const tx = await accounts[0].secretjs.tx.compute.executeContract(
+      {
+        sender: accounts[0].address,
+        contract_address: contracts["secretdev-1"].v1.address,
+        code_hash: contracts["secretdev-1"].v1.codeHash,
+        msg: {
+          forward: {
+            msg: toBase64(toUtf8(JSON.stringify({ fail_tx: {} }))),
+            recipient_address: contracts["secretdev-1"].v010.address,
+            recipient_hash: contracts["secretdev-1"].v010.codeHash,
+          }
+        },
+      },
+      { gasLimit: 250_000 }
+    );
+
+    if (tx.code !== 3) {
+      console.error(tx.rawLog);
+    }
+    expect(tx.code).toBe(3 /* WASM ErrExecuteFailed */);
+    expect(tx.rawLog).toContain("execute contract failed");
+
+    console.log("querying v1 contract state");
+    // verify the value rolled back
+    const result: any = await readonly.query.compute.queryContract({
+      contract_address: contracts["secretdev-1"].v1.address,
+      code_hash: contracts["secretdev-1"].v1.codeHash,
+      query: {
+        forward: {},
+      }
+    });
+
+    expect(result).toBe("no-fail");
+  });
+});
+
 describe("tx broadcast multi", () => {
   test("Send Multiple Messages Amino", async () => {
     const { validators } = await readonly.query.staking.validators({});
@@ -896,6 +973,7 @@ describe("Wasm", () => {
 
         expect(tx.rawLog).toContain("execute contract failed");
       });
+
     });
 
     describe("v0.10", () => {
@@ -958,56 +1036,6 @@ describe("Wasm", () => {
         expect(tx.rawLog).toContain("execute contract failed");
       });
 
-      test("error in submsg + rollback", async () => {
-        const tx = await accounts[0].secretjs.tx.compute.executeContract(
-          {
-            sender: accounts[0].address,
-            contract_address: contracts["secretdev-1"].v010.address,
-            code_hash: contracts["secretdev-1"].v010.codeHash,
-            msg: {
-              wasm_msg_execute: {
-                contract_addr: contracts["secretdev-1"].v010.address,
-                callback_code_hash: contracts["secretdev-1"].v010.codeHash,
-                msg: toBase64(toUtf8(JSON.stringify({ forward: {
-                  msg: toBase64(toUtf8(JSON.stringify({ fail_tx: {} }))),
-                  recipient_address: contracts["secretdev-1"].v1.address,
-                  recipient_hash: contracts["secretdev-1"].v1.codeHash,
-                } }))),
-                send: [],
-              },
-            },
-          },
-          { gasLimit: 250_000 }
-        );
-
-        if (tx.code !== 3) {
-          console.error(tx.rawLog);
-        }
-        expect(tx.code).toBe(3 /* WASM ErrExecuteFailed */);
-        expect(tx.rawLog).toContain("execute contract failed");
-
-        // verify the value rolled back
-        const b64encode = (str: string): string =>
-          Buffer.from(str, "binary").toString("base64");
-        const result: any = await readonly.query.compute.queryContract({
-          contract_address: contracts["secretdev-1"].v1.address,
-          code_hash: contracts["secretdev-1"].v1.codeHash,
-          query: {
-            wasm_smart: {
-              contract_addr: contracts["secretdev-1"].v010.address,
-              code_hash: contracts["secretdev-1"].v010.codeHash,
-              msg: b64encode(
-                JSON.stringify({
-                  value_on_fail: {},
-                })
-              ),
-            },
-          },
-        });
-
-        // todo expect correctly
-        expect(result?.value).toBe("no-fail");
-      });
     });
   });
 });

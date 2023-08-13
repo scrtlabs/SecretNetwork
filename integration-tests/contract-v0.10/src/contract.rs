@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Api, BalanceResponse, BankMsg, BankQuery, Binary, Coin, CosmosMsg, Empty, Env, Extern, GovMsg, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, LogAttribute, Querier, QueryRequest, QueryResult, StakingMsg, Storage, VoteOption, WasmMsg, Uint128, StdError};
+use cosmwasm_std::{to_binary, Api, BalanceResponse, BankMsg, BankQuery, Binary, Coin, CosmosMsg, Empty, Env, Extern, GovMsg, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, LogAttribute, Querier, QueryRequest, QueryResult, StakingMsg, Storage, VoteOption, WasmMsg, StdError};
 
 /////////////////////////////// Messages ///////////////////////////////
 
@@ -64,12 +64,13 @@ pub enum Msg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     BankBalance { address: HumanAddr, denom: String },
+    Forward {},
 }
 
 /////////////////////////////// Init ///////////////////////////////
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    deps: &mut Extern<S, A, Q>,
     _env: Env,
     _msg: Msg,
 ) -> InitResult {
@@ -227,5 +228,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
                     }))?;
             return Ok(to_binary(&res)?);
         }
+        QueryMsg::Forward { } => Ok(to_binary(&deps.storage.get("forwarded".as_bytes()))?),
     }
+
 }

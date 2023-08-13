@@ -168,6 +168,13 @@ build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
 
+.PHONY: run-dev
+run-dev: docs/tendermint_enclave.signed.so
+	FEATURES="read-db-proofs" SGX_MODE=SW $(MAKE) build-linux
+	cp go-cosmwasm/librust_cosmwasm_enclave.signed.so .
+	cp docs/tendermint_enclave.signed.so .
+	SGX_MODE=SW ./scripts/start-node.sh
+
 build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
 _build-linux-with-query:
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-node,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
