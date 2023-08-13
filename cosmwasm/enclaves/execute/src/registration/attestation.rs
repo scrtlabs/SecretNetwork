@@ -44,14 +44,16 @@ use enclave_crypto::consts::SIGNING_METHOD;
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SigningMethod;
 
-#[cfg(all(feature = "SGX_MODE_HW"))]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use enclave_crypto::consts::{
     CURRENT_CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH,
     GENESIS_CONSENSUS_SEED_SEALING_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
     NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
 };
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use enclave_ffi_types::NodeAuthResult;
-#[cfg(all(feature = "SGX_MODE_HW"))]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use std::sgxfs::remove as SgxFsRemove;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -147,7 +149,7 @@ pub fn validate_enclave_version(
         error!("Error serializing report. May be malformed, or badly encoded");
         sgx_status_t::SGX_ERROR_UNEXPECTED
     })?;
-    let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
+    let (_key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
     let timestamp = crate::registration::report::AttestationReport::from_cert(&cert_der)
@@ -178,23 +180,23 @@ pub fn validate_enclave_version(
             error!("Error serializing report. May be malformed, or badly encoded");
             sgx_status_t::SGX_ERROR_UNEXPECTED
         })?;
-        let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
+        let (_key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
         let _result = ecc_handle.close();
 
         let verify_result = verify_ra_cert(&cert_der, None, false);
         if verify_result.is_err() {
-            #[cfg(feature = "production")]
+            #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
             remove_all_keys();
-            info!("")
         }
     } else if result.is_err() {
-        #[cfg(feature = "production")]
+        #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
         remove_all_keys();
     }
 
     Ok(())
 }
 
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 fn remove_all_keys() {
     info!("Error validating created certificate");
     let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
@@ -248,8 +250,6 @@ pub fn create_attestation_certificate(
     let (key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
 
-    let timestamp = 0;
-
     #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
     validate_report(&cert_der, None);
 
@@ -283,7 +283,7 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
 
 pub fn in_grace_period(timestamp: u64) -> bool {
     // Friday, August 21, 2023 2:00:00 PM UTC
-    timestamp < 1692626400 as u64
+    timestamp < 1692626400_u64
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
