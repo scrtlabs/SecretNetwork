@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Coin, IbcTimeout, VoteOption};
+use cosmwasm_std::{Addr, Binary, Coin, IbcTimeout, VoteOption};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -72,6 +72,12 @@ pub enum Msg {
         funds: Vec<Coin>,
     },
     GetTxId {},
+    Forward {
+        recipient_address: Addr,
+        recipient_hash: String,
+        msg: Binary,
+    },
+    FailTx {}
     //GetRandom {},
 }
 
@@ -121,6 +127,7 @@ pub enum QueryMsg {
     LastIbcReceive {},
     LastIbcAck {},
     LastIbcTimeout {},
+    Forward {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

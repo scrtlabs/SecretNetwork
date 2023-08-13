@@ -9,7 +9,7 @@ CHAINID=${3:-secretdev-1}
 rm -rf $SECRETD_HOME
 
 # Build genesis file incl account for passed address
-coins="10000000000uscrt,100000000000stake"
+coins="1000000000000000000uscrt,100000000000stake"
 $SECRETD init --chain-id $CHAINID $CHAINID --home $SECRETD_HOME
 $SECRETD keys add validator --keyring-backend="test" --home $SECRETD_HOME
 $SECRETD add-genesis-account $($SECRETD keys show validator -a --keyring-backend="test" --home $SECRETD_HOME) $coins --home $SECRETD_HOME

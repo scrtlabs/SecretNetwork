@@ -1,8 +1,4 @@
-use cosmwasm_std::{
-    to_binary, Api, BalanceResponse, BankMsg, BankQuery, Binary, Coin, CosmosMsg, Empty, Env,
-    Extern, GovMsg, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult,
-    LogAttribute, Querier, QueryRequest, QueryResult, StakingMsg, Storage, VoteOption, WasmMsg,
-};
+use cosmwasm_std::{to_binary, Api, BalanceResponse, BankMsg, BankQuery, Binary, Coin, CosmosMsg, Empty, Env, Extern, GovMsg, HandleResponse, HandleResult, HumanAddr, InitResponse, InitResult, LogAttribute, Querier, QueryRequest, QueryResult, StakingMsg, Storage, VoteOption, WasmMsg, StdError};
 
 /////////////////////////////// Messages ///////////////////////////////
 
@@ -56,21 +52,29 @@ pub enum Msg {
         send: Vec<Coin>,
     },
     CustomMsg {},
+    Forward {
+        recipient_address: HumanAddr,
+        recipient_hash: String,
+        msg: Binary,
+    },
+    FailTx {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     BankBalance { address: HumanAddr, denom: String },
+    Forward {},
 }
 
 /////////////////////////////// Init ///////////////////////////////
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    deps: &mut Extern<S, A, Q>,
     _env: Env,
     _msg: Msg,
 ) -> InitResult {
+    deps.storage.set("forwarded".as_bytes(), "no-fail".as_bytes());
     return Ok(InitResponse {
         messages: vec![],
         log: vec![],
@@ -80,7 +84,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 /////////////////////////////// Handle ///////////////////////////////
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: Msg,
 ) -> HandleResult {
@@ -192,6 +196,22 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             log: vec![],
             data: None,
         }),
+        Msg::Forward { recipient_address, recipient_hash, msg } => {
+            deps.storage.set("forwarded".as_bytes(), "forwarded".as_bytes());
+            Ok(HandleResponse {
+                messages: vec![CosmosMsg::Wasm(
+                    WasmMsg::Execute {
+                        contract_addr: recipient_address,
+                        callback_code_hash: recipient_hash,
+                        msg,
+                        send: vec![]
+                    },
+                )],
+                log: vec![],
+                data: None,
+            })
+        }
+        Msg::FailTx {} => Err (StdError::generic_err("this should always fail")),
     }
 }
 
@@ -208,5 +228,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
                     }))?;
             return Ok(to_binary(&res)?);
         }
+        QueryMsg::Forward { } => Ok(to_binary(&deps.storage.get("forwarded".as_bytes()))?),
     }
+
 }
