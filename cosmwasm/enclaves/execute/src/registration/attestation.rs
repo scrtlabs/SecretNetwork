@@ -102,7 +102,6 @@ pub fn create_attestation_certificate(
     _sign_type: sgx_quote_sign_type_t,
     _api_key: &[u8],
     _challenge: Option<&[u8]>,
-    _early: bool,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     // init sgx ecc
     let ecc_handle = SgxEccHandle::new();
