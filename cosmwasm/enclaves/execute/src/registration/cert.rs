@@ -317,12 +317,25 @@ pub fn verify_ra_cert(
     match signing_method {
         SigningMethod::MRENCLAVE => {
             let this_mr_enclave = get_mr_enclave();
+            let this_mr_signer = MRSIGNER;
 
-            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
-                error!("Got a different mr_enclave than expected. Invalid certificate");
+            let crate::registration::report::SgxEnclaveReport {
+                mr_enclave: report_mr_enclave,
+                mr_signer: report_mr_signer,
+                ..
+            } = report.sgx_quote_body.isv_enclave_report;
+
+            if report_mr_enclave != this_mr_enclave || report_mr_signer != this_mr_signer {
+                error!(
+                    "Got a different mr_enclave or mr_signer than expected. Invalid certificate"
+                );
                 warn!(
-                    "received: {:?} \n expected: {:?}",
-                    report.sgx_quote_body.isv_enclave_report.mr_enclave, this_mr_enclave
+                    "mr_enclave: received: {:?} \n expected: {:?}",
+                    report_mr_enclave, this_mr_enclave
+                );
+                warn!(
+                    "mr_signer: received: {:?} \n expected: {:?}",
+                    report_mr_signer, this_mr_signer
                 );
                 return Err(NodeAuthResult::MrEnclaveMismatch);
             }
