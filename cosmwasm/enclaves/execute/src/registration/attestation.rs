@@ -282,8 +282,8 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
 }
 
 pub fn in_grace_period(timestamp: u64) -> bool {
-    // Friday, August 18, 2023 3:48:16 PM UTC
-    timestamp < 1692373696 as u64
+    // Friday, August 21, 2023 2:00:00 PM UTC
+    timestamp < 1692626400 as u64
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
