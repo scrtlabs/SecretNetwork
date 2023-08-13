@@ -667,13 +667,12 @@ impl AttestationReport {
         // Verify and extract information from attestation report
         let attn_report: Value = serde_json::from_slice(&report.report)?;
         trace!("attn_report: {}", attn_report);
-
         // Verify API version is supported
         let version = attn_report["version"]
             .as_u64()
             .ok_or(Error::ReportParseError)?;
 
-        if version != 4 {
+        if version != 5 {
             warn!("API version incompatible");
             return Err(Error::ReportParseError);
         };
@@ -712,8 +711,8 @@ impl AttestationReport {
         };
 
         let advisories: Vec<String> = if let Some(raw) = attn_report.get("advisoryIDs") {
-            serde_json::from_value(raw.clone()).map_err(|_| {
-                warn!("Failed to decode advisories");
+            serde_json::from_value(raw.clone()).map_err(|e| {
+                warn!("Failed to decode advisories: {}", e);
                 Error::ReportParseError
             })?
         } else {
@@ -731,9 +730,9 @@ impl AttestationReport {
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
         // report_data field
-
-        let time = chrono::DateTime::parse_from_rfc3339(timestamp_str).map_err(|_| {
-            warn!("Failed to decode advisories");
+        let timestamp_rfc = format!("{}Z", timestamp_str);
+        let time = chrono::DateTime::parse_from_rfc3339(&timestamp_rfc).map_err(|e| {
+            warn!("Failed to decode timestamp: {}", e);
             Error::ReportParseError
         })?;
         let timestamp_since_epoch = time.timestamp();
