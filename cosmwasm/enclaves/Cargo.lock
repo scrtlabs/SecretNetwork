@@ -640,7 +640,7 @@ dependencies = [
  "lazy_static",
  "log",
  "lru",
- "parity-wasm",
+ "parity-wasm 0.45.0",
  "protobuf",
  "pwasm-utils",
  "rand_chacha",
@@ -1156,6 +1156,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc878dac00da22f8f61e7af3157988424567ab01d9920b962ef7dcbd7cd865"
 
 [[package]]
+name = "parity-wasm"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1ad0aff30c1da14b1254fcb2af73e1fa9a28670e584a626f53a369d0e157304"
+
+[[package]]
 name = "paste"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1293,7 +1299,7 @@ checksum = "4f7a12f176deee919f4ba55326ee17491c8b707d0987aed822682c821b660192"
 dependencies = [
  "byteorder",
  "log",
- "parity-wasm",
+ "parity-wasm 0.41.0",
 ]
 
 [[package]]
@@ -1492,7 +1498,7 @@ dependencies = [
  "lazy_static",
  "log",
  "num-bigint",
- "parity-wasm",
+ "parity-wasm 0.45.0",
  "pwasm-utils",
  "rustls",
  "serde 1.0.118",
@@ -2092,7 +2098,7 @@ dependencies = [
  "memory_units",
  "num-rational",
  "num-traits 0.2.15",
- "parity-wasm",
+ "parity-wasm 0.41.0",
  "wasmi-validation",
 ]
 
@@ -2101,7 +2107,7 @@ name = "wasmi-validation"
 version = "0.3.0"
 source = "git+https://github.com/paritytech/wasmi?rev=84d2764594d80425373bf4949a58fa3df3d624c3#84d2764594d80425373bf4949a58fa3df3d624c3"
 dependencies = [
- "parity-wasm",
+ "parity-wasm 0.41.0",
 ]
 
 [[package]]

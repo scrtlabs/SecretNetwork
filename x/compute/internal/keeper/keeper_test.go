@@ -291,6 +291,7 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	// create with no balance is also legal
@@ -409,6 +410,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	addr, _, err := keeper.Instantiate(ctx, nonExistingCodeID, creator, nil, initMsgBz, "demo contract 2", nil, nil)
@@ -641,6 +643,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	_, err = keeper.Execute(ctx, nonExistingAddress, creator, msgBz, nil, nil, wasmtypes.HandleTypeExecute)
@@ -696,6 +699,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	// let's make sure we get a reasonable error, no panic/crash
@@ -761,6 +765,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, msgBz, "demo contract 5", deposit, nil)
@@ -807,6 +812,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	// this must fail
@@ -880,6 +886,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 
 	start := time.Now()

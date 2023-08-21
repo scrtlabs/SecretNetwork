@@ -27,14 +27,13 @@ overflow-checks = true
 
 [features]
 default = []
-backtraces = ["cosmwasm-std/backtraces"]
 with_floats = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "c6c5ee77", package = "secret-cosmwasm-std", features = [
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "b46529a2", package = "secret-cosmwasm-std", features = [
   "random"
 ] }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "c6c5ee77", package = "secret-cosmwasm-storage" }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "b46529a2", package = "secret-cosmwasm-storage" }
 schemars = "0.8.1"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",

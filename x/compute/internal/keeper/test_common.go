@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -681,6 +682,7 @@ func PrepareExecSignedTxWithMultipleMsgs(
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
@@ -701,6 +703,7 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
@@ -723,6 +726,7 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, 
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
@@ -742,6 +746,7 @@ func prepareMigrateSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contra
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
@@ -760,6 +765,7 @@ func prepareUpdateAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, co
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
@@ -777,6 +783,7 @@ func prepareClearAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, con
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
@@ -797,6 +804,7 @@ func PrepareSignedTx(t *testing.T,
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
@@ -827,6 +835,7 @@ func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKe
 //	txBytes, err := tx.Marshal()
 //	require.NoError(t, err)
 //
+//  ctx = wasmtypes.WithTXCounter(ctx, 1)
 //	return ctx.WithTxBytes(txBytes)
 //}
 
@@ -1038,4 +1047,11 @@ func makeBlockIDRandom() tmtypes.BlockID {
 			Hash:  partSetHash,
 		},
 	}
+}
+
+func txhash(t *testing.T, ctx sdk.Context) string {
+	require.NotEmpty(t, ctx.TxBytes())
+	txhashBz := sha256.Sum256(ctx.TxBytes())
+	txhash := hex.EncodeToString(txhashBz[:])
+	return txhash
 }

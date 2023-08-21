@@ -69,7 +69,9 @@ serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 ctor = "0.1.13"
 derive_more = "0.99"
 pwasm-utils = { version = "0.12.0", default-features = false }
-parity-wasm = { version = "0.41.0", default-features = false }
+parity-wasm = { version = "0.45.0", default-features = false, features = [
+  "sign_ext"
+] }
 base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
 # for attestation
 chrono = { git = "https://github.com/mesalock-linux/chrono-sgx" }
