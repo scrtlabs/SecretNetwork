@@ -35,7 +35,7 @@ use std::{
     sync::Arc,
 };
 
-#[cfg(all(feature = "SGX_MODE_HW"))]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::cert::verify_ra_cert;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -51,8 +51,6 @@ use enclave_crypto::consts::{
     NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
 };
 
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-use enclave_ffi_types::NodeAuthResult;
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use std::sgxfs::remove as SgxFsRemove;
 
@@ -120,7 +118,7 @@ pub fn create_attestation_certificate(
     Ok((key_der, cert_der))
 }
 
-#[cfg(feature = "SGX_MODE_HW")]
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 pub fn validate_enclave_version(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
@@ -148,12 +146,10 @@ pub fn validate_enclave_version(
         error!("Error serializing report. May be malformed, or badly encoded");
         sgx_status_t::SGX_ERROR_UNEXPECTED
     })?;
-    let (_key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
-    let _result = ecc_handle.close();
 
-    let timestamp = crate::registration::report::AttestationReport::from_cert(&cert_der)
-        .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?
-        .timestamp;
+    // let timestamp = crate::registration::report::AttestationReport::from_cert(&cert_der)
+    //     .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?
+    //     .timestamp;
 
     // if result.is_err() && in_grace_period(timestamp) {
     //     let ecc_handle = SgxEccHandle::new();
@@ -186,11 +182,12 @@ pub fn validate_enclave_version(
     //         remove_all_keys();
     //     }
     // } else
-    #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+
+    let (_key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
+    let _result = ecc_handle.close();
     if verify_ra_cert(&cert_der, None, true).is_err() {
         remove_all_keys();
     }
-
 
     Ok(())
 }
@@ -281,6 +278,7 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
+#[allow(dead_code)]
 pub fn in_grace_period(timestamp: u64) -> bool {
     // Friday, August 21, 2023 2:00:00 PM UTC
     timestamp < 1692626400_u64

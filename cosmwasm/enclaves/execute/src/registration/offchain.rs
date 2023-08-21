@@ -215,7 +215,7 @@ pub unsafe extern "C" fn ecall_init_node(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    #[cfg(feature = "SGX_MODE_HW")]
+    #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
     {
         // this validates the cert and handles the "what if it fails" inside as well
         let res = crate::registration::attestation::validate_enclave_version(
