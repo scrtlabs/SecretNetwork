@@ -673,7 +673,7 @@ impl AttestationReport {
             .as_u64()
             .ok_or(Error::ReportParseError)?;
 
-        if version != 4 {
+        if version != 5 {
             warn!("API version incompatible");
             return Err(Error::ReportParseError);
         };
