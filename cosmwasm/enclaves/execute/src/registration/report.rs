@@ -728,16 +728,17 @@ impl AttestationReport {
             .as_str()
             .ok_or(Error::ReportParseError)?;
 
-        // We don't actually validate the public key, since we use ephemeral certificates,
-        // and all we really care about that the report is valid and the key that is saved in the
-        // report_data field
-
-        let time = chrono::DateTime::parse_from_rfc3339(timestamp_str).map_err(|_| {
-            warn!("Failed to decode advisories");
+        let timestamp_rfc = format!("{}Z", timestamp_str);
+        let time = chrono::DateTime::parse_from_rfc3339(&timestamp_rfc).map_err(|e| {
+            warn!("Failed to decode timestamp: {}", e);
             Error::ReportParseError
         })?;
         let timestamp_since_epoch = time.timestamp();
 
+        // We don't actually validate the public key, since we use ephemeral certificates,
+        // and all we really care about that the report is valid and the key that is saved in the
+        // report_data field
+        
         Ok(Self {
             timestamp: timestamp_since_epoch as u64,
             sgx_quote_status,
