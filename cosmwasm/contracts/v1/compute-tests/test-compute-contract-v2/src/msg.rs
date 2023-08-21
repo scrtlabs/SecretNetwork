@@ -110,6 +110,7 @@ pub enum InstantiateMsg {
     },
     GetEnv {},
     TestRemoveDb {},
+    TxHash {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -446,6 +447,7 @@ pub enum ExecuteMsg {
     Echo {
         data: Binary,
     },
+    TxHash {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
