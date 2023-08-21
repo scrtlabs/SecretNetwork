@@ -601,6 +601,6 @@ pub mod tests {
 
     pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();
-        let _ = verify_ra_cert(&tls_ra_cert, None).unwrap();
+        let _ = verify_ra_cert(&tls_ra_cert, None, false).unwrap();
     }
 }

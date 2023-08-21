@@ -36,6 +36,14 @@ pub mod tests {
             report::tests::test_attestation_report_test();
             cert::tests::test_certificate_valid();
             cert::tests::test_certificate_invalid_configuration_needed();
+        });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
+
+        #[cfg(not(feature = "epid_whitelist_disabled"))]
+        count_failures!(failures, {
             cert::tests::test_epid_whitelist();
         });
 
