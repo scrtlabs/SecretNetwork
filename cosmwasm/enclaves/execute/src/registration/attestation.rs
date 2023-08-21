@@ -179,6 +179,7 @@ pub fn get_mr_enclave() -> [u8; 32] {
     rsgx_self_report().body.mr_enclave.m
 }
 
+
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn create_attestation_report(

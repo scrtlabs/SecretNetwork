@@ -60,6 +60,7 @@ fn main() {
         return;
     }
 
+    #[allow(clippy::if_same_then_else)]
     let api_key_bytes = if is_testnet {
         include_bytes!("../../ias_keys/develop/api_key.txt")
     } else {

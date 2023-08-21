@@ -18,6 +18,7 @@ pub mod registration;
 mod tests;
 
 #[allow(unused_imports)]
+#[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::check_patch_level::ecall_check_patch_level;
 
 #[cfg(feature = "production")]

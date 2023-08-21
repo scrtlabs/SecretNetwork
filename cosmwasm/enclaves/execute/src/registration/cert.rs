@@ -543,6 +543,7 @@ pub mod tests {
     //     assert_eq!(result, NodeAuthResult::GroupOutOfDate)
     // }
 
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
     pub fn test_epid_whitelist() {
         // check that we parse this correctly
         let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
