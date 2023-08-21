@@ -52,7 +52,7 @@ unsafe fn ecall_allocate_impl(buffer: *const u8, length: usize) -> EnclaveBuffer
         return EnclaveBuffer::default();
     }
 
-    validate_const_ptr!(buffer, length as usize, EnclaveBuffer::default());
+    validate_const_ptr!(buffer, length, EnclaveBuffer::default());
 
     let slice = std::slice::from_raw_parts(buffer, length);
     let result = panic::catch_unwind(|| {
@@ -160,10 +160,10 @@ pub unsafe extern "C" fn ecall_init(
 
     let failed_call = || result_init_success_to_initresult(Err(EnclaveError::FailedFunctionCall));
     validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
-    validate_const_ptr!(env, env_len as usize, failed_call());
-    validate_const_ptr!(msg, msg_len as usize, failed_call());
-    validate_const_ptr!(contract, contract_len as usize, failed_call());
-    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
+    validate_const_ptr!(env, env_len, failed_call());
+    validate_const_ptr!(msg, msg_len, failed_call());
+    validate_const_ptr!(contract, contract_len, failed_call());
+    validate_const_ptr!(sig_info, sig_info_len, failed_call());
     // admin can be null (checked later), so admin_len is allowed to be 0
 
     validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
@@ -242,10 +242,10 @@ pub unsafe extern "C" fn ecall_handle(
     let failed_call =
         || result_handle_success_to_handleresult(Err(EnclaveError::FailedFunctionCall));
     validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
-    validate_const_ptr!(env, env_len as usize, failed_call());
-    validate_const_ptr!(msg, msg_len as usize, failed_call());
-    validate_const_ptr!(contract, contract_len as usize, failed_call());
-    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
+    validate_const_ptr!(env, env_len, failed_call());
+    validate_const_ptr!(msg, msg_len, failed_call());
+    validate_const_ptr!(contract, contract_len, failed_call());
+    validate_const_ptr!(sig_info, sig_info_len, failed_call());
 
     validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
     validate_input_length!(msg_len, "msg", MAX_MSG_LENGTH, failed_call());
@@ -344,9 +344,9 @@ unsafe fn ecall_query_impl(
 
     let failed_call = || result_query_success_to_queryresult(Err(EnclaveError::FailedFunctionCall));
     validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
-    validate_const_ptr!(env, env_len as usize, failed_call());
-    validate_const_ptr!(msg, msg_len as usize, failed_call());
-    validate_const_ptr!(contract, contract_len as usize, failed_call());
+    validate_const_ptr!(env, env_len, failed_call());
+    validate_const_ptr!(msg, msg_len, failed_call());
+    validate_const_ptr!(contract, contract_len, failed_call());
 
     validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
     validate_input_length!(msg_len, "msg", MAX_MSG_LENGTH, failed_call());
@@ -421,12 +421,12 @@ pub unsafe extern "C" fn ecall_migrate(
     let failed_call = || result_migrate_success_to_result(Err(EnclaveError::FailedFunctionCall));
     validate_mut_ptr!(used_gas as _, std::mem::size_of::<u64>(), failed_call());
 
-    validate_const_ptr!(env, env_len as usize, failed_call());
-    validate_const_ptr!(msg, msg_len as usize, failed_call());
-    validate_const_ptr!(contract, contract_len as usize, failed_call());
-    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
-    validate_const_ptr!(admin, admin_len as usize, failed_call());
-    validate_const_ptr!(admin_proof, admin_proof_len as usize, failed_call());
+    validate_const_ptr!(env, env_len, failed_call());
+    validate_const_ptr!(msg, msg_len, failed_call());
+    validate_const_ptr!(contract, contract_len, failed_call());
+    validate_const_ptr!(sig_info, sig_info_len, failed_call());
+    validate_const_ptr!(admin, admin_len, failed_call());
+    validate_const_ptr!(admin_proof, admin_proof_len, failed_call());
 
     validate_input_length!(env_len, "env", MAX_ENV_LENGTH, failed_call());
     validate_input_length!(msg_len, "msg", MAX_MSG_LENGTH, failed_call());
@@ -510,12 +510,12 @@ pub unsafe extern "C" fn ecall_update_admin(
 
     let failed_call =
         || result_update_admin_success_to_result(Err(EnclaveError::FailedFunctionCall));
-    validate_const_ptr!(env, env_len as usize, failed_call());
-    validate_const_ptr!(sig_info, sig_info_len as usize, failed_call());
-    validate_const_ptr!(current_admin, current_admin_len as usize, failed_call());
+    validate_const_ptr!(env, env_len, failed_call());
+    validate_const_ptr!(sig_info, sig_info_len, failed_call());
+    validate_const_ptr!(current_admin, current_admin_len, failed_call());
     validate_const_ptr!(
         current_admin_proof,
-        current_admin_proof_len as usize,
+        current_admin_proof_len,
         failed_call()
     );
     // new_admin can be null (checked later), so new_admin_len is allowed to be 0

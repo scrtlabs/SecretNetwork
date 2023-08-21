@@ -13,7 +13,8 @@ use secp256k1::Secp256k1;
 use core::time;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::thread;
+use std::ptr::null;
+use std::{mem, thread};
 
 //// consts
 
@@ -1704,9 +1705,11 @@ fn pass_null_pointer_to_imports_should_throw<S: Storage, A: Api, Q: Querier>(
     let null_ptr: *const CanonicalAddr = std::ptr::null();
     let null_canon_addr: &CanonicalAddr = unsafe { &*null_ptr };
 
+    use std::ptr;
+
     match &pass_type[..] {
         "read_db_key" => {
-            deps.storage.get(null_ptr_slice);
+            unsafe { deps.storage.get(null_ptr_slice) };
         }
         "write_db_key" => {
             deps.storage.set(null_ptr_slice, b"write value");

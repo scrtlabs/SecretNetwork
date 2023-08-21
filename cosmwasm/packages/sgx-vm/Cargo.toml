@@ -5,7 +5,7 @@ authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
     "SCRT Labs <info@scrtlabs.com>",
 ]
-edition = "2018"
+edition = "2021"
 description = "VM bindings to run cosmwams contracts"
 repository = "https://github.com/CosmWasm/cosmwasm/tree/master/packages/sgx-vm"
 license = "Apache-2.0"
@@ -32,7 +32,6 @@ backtraces = ["snafu/backtraces"]
 # we keep this optional, to allow possible future integration (or different Cosmos Backends)
 iterator = ["cosmwasm-std/iterator"]
 staking = ["cosmwasm-std/staking"]
-enclave-tests = []
 production = []
 # This flag enales storing contracts that require the debug-print function
 debug-print = []

@@ -44,7 +44,7 @@ pub fn encrypt_seed(
         .encrypt_siv(seed_to_share.as_slice(), Some(&authenticated_data))
     {
         Ok(r) => {
-            if r.len() != SINGLE_ENCRYPTED_SEED_SIZE as usize {
+            if r.len() != SINGLE_ENCRYPTED_SEED_SIZE {
                 error!(
                     "Seed encryption failed. Got seed of unexpected length: {:?}",
                     r.len()
