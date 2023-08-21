@@ -591,7 +591,7 @@ impl AdvisoryIDs {
 pub struct AttestationReport {
     /// The freshness of the report, i.e., elapsed time after acquiring the
     /// report in seconds.
-    // pub freshness: Duration,
+    pub timestamp: u64,
     /// Quote status
     pub sgx_quote_status: SgxQuoteStatus,
     /// Content of the quote
@@ -632,7 +632,7 @@ impl AttestationReport {
 
         let chain: Vec<&[u8]> = vec![&ias_cert];
 
-        // set as 04.11.24(dd.mm.yy) - should be valid for the foreseeable future, and not rely on SystemTime
+        // set as 04.11.23(dd.mm.yy) - should be valid for the foreseeable future, and not rely on SystemTime
         let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1723218496);
 
         // note: there's no way to not validate the time, and we don't want to write this code
@@ -724,11 +724,23 @@ impl AttestationReport {
             .as_u64()
             .ok_or(Error::ReportParseError)? as u16;
 
+        let timestamp_str = attn_report["timestamp"]
+            .as_str()
+            .ok_or(Error::ReportParseError)?;
+
+        let timestamp_rfc = format!("{}Z", timestamp_str);
+        let time = chrono::DateTime::parse_from_rfc3339(&timestamp_rfc).map_err(|e| {
+            warn!("Failed to decode timestamp: {}", e);
+            Error::ReportParseError
+        })?;
+        let timestamp_since_epoch = time.timestamp();
+
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
         // report_data field
 
         Ok(Self {
+            timestamp: timestamp_since_epoch as u64,
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,

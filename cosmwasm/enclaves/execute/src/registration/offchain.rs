@@ -215,16 +215,19 @@ pub unsafe extern "C" fn ecall_init_node(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    // this validates the cert and handles the "what if it fails" inside as well
-    let res = create_attestation_certificate(
-        temp_key_result.as_ref().unwrap(),
-        SIGNATURE_TYPE,
-        api_key_slice,
-        None,
-    );
-    if res.is_err() {
-        error!("Error starting node, might not be updated",);
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+    {
+        // this validates the cert and handles the "what if it fails" inside as well
+        let res = crate::registration::attestation::validate_enclave_version(
+            temp_key_result.as_ref().unwrap(),
+            SIGNATURE_TYPE,
+            api_key_slice,
+            None,
+        );
+        if res.is_err() {
+            error!("Error starting node, might not be updated",);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     }
 
     // public keys in certificates don't have 0x04, so we'll copy it here
