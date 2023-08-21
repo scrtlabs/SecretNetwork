@@ -66,7 +66,7 @@ pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 #[cfg(feature = "production")]
 pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v5/sigrl/";
 #[cfg(feature = "production")]
-pub const REPORT_SUFFIX: &str = "/sgx/attestation/v5/report&update=early";
+pub const REPORT_SUFFIX: &str = "/sgx/attestation/v5/report?update=early";
 
 #[cfg(feature = "production")]
 pub const LEGACY_REPORT_SUFFIX: &str = "/sgx/attestation/v5/report";
@@ -83,7 +83,7 @@ pub const LEGACY_REPORT_SUFFIX: &str = "/sgx/dev/attestation/v5/report";
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
 pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v5/sigrl/";
 #[cfg(all(feature = "SGX_MODE_HW", not(feature = "production")))]
-pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v5/report&update=early";
+pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v5/report?update=early";
 
 /// extra_data size that will store the public key of the attesting node
 #[cfg(feature = "SGX_MODE_HW")]
