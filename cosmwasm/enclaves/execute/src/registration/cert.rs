@@ -554,7 +554,7 @@ pub mod tests {
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
 
-        let res = verify_ra_cert(&tls_ra_cert, None);
+        let res = verify_ra_cert(&tls_ra_cert, None, false);
 
         assert!(res.is_ok());
 
