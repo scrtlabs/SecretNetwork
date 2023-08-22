@@ -57,6 +57,7 @@ pub unsafe extern "C" fn ecall_check_patch_level(
         SIGNATURE_TYPE,
         api_key_slice,
         None,
+        true,
     ) {
         Ok(r) => r,
         Err(_e) => {
