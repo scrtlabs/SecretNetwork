@@ -192,6 +192,7 @@ jobs:
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
+      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -209,6 +210,7 @@ jobs:
           secrets: |
             API_KEY=${{ secrets.API_KEY_TESTNET }}
             SPID=${{ secrets.SPID_TESTNET }}
+            API_KEY_MAINNET=${{ secrets.API_KEY_MAINNET }}
           build-args: |
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW

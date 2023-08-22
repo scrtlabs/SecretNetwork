@@ -314,18 +314,13 @@ ENV VERSION=${BUILD_VERSION}
 ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
-
-# Ignore $FEATURES because it should never be `production`
-RUN . /opt/sgxsdk/environment && env \
-    && VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=HW make build-rust
-
-# Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
-# Add source files
-COPY check-hw check-hw/
-RUN cp go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave.so
+COPY check-hw check-hw
+
+RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+    && wget -O check-hw/check_hw_enclave.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
+COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave_testnet.so
 
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
@@ -333,14 +328,14 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production
 
 RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
 RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
+RUN --mount=type=secret,id=API_KEY_MAINNET,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/check-hw
 
-COPY ./deployment/docker/builder/create_check_hw_tar.sh .
+RUN . /opt/sgxsdk/environment && env \
+    && VERSION=${VERSION} SGX_MODE=HW make check-hw
 
-RUN . /opt/sgxsdk/environment && env && make
-RUN cp ../go-cosmwasm/librust_cosmwasm_enclave.signed.so ./check_hw_enclave.so
+COPY ./deployment/docker/builder/create_check_hw_tar.sh .
 
 ENTRYPOINT ["/bin/bash", "create_check_hw_tar.sh"]
 
