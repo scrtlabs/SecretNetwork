@@ -304,7 +304,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 
 # ***************** COMPILE CHECK-HW TOOL ************** #
 
-FROM prepare-compile-enclave as compile-check-hw-tool
+FROM compile-enclave as compile-check-hw-tool
 
 ARG BUILD_VERSION="v0.0.0"
 ARG FEATURES
@@ -330,14 +330,18 @@ RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets
 RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
 RUN --mount=type=secret,id=API_KEY_MAINNET,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
 
+
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/check-hw
 
-RUN . /opt/sgxsdk/environment && env \
-    && VERSION=${VERSION} SGX_MODE=HW make check-hw
+RUN make
+
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
 COPY ./deployment/docker/builder/create_check_hw_tar.sh .
+RUN chmod +x create_check_hw_tar.sh
 
-ENTRYPOINT ["/bin/bash", "create_check_hw_tar.sh"]
+
+ENTRYPOINT ["/bin/bash", "./create_check_hw_tar.sh"]
 
 # ***************** LOCALSECRET ************** #
 FROM release-image as build-localsecret
