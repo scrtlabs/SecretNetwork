@@ -264,13 +264,17 @@ impl CwEnv {
         }
     }
 
-    #[cfg(feature = "random")]
     pub fn get_random(&self) -> Option<Binary> {
-        match self {
+        #[cfg(feature = "random")]
+        return match self {
             CwEnv::V010Env { .. } => None,
             CwEnv::V1Env { env, .. } => env.block.random.clone(),
-        }
+        };
+
+        #[cfg(not(feature = "random"))]
+        None
     }
+
     pub fn get_wasm_ptrs(&self) -> Result<(Vec<u8>, Vec<u8>), EnclaveError> {
         match self {
             CwEnv::V010Env { env } => {
