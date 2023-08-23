@@ -233,6 +233,8 @@ github.com/cosmos/gorocksdb v1.2.0 h1:d0l3jJG8M4hBouIZq0mDUHZ+zjOx044J3nGRskwTb4
 github.com/cosmos/gorocksdb v1.2.0/go.mod h1:aaKvKItm514hKfNJpUJXnnOWeBnk2GL4+Qw9NHizILw=
 github.com/cosmos/iavl v0.19.6 h1:XY78yEeNPrEYyNCKlqr9chrwoeSDJ0bV2VjocTk//OU=
 github.com/cosmos/iavl v0.19.6/go.mod h1:X9PKD3J0iFxdmgNLa7b2LYWdsGd90ToV5cAONApkEPw=
+github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4 v4.1.0 h1:96fDMIUSlSQ6dBcwhdYwTT+uTwFP+EWbSyLORcKSJZ8=
+github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4 v4.1.0/go.mod h1:Mn/jr9pIYr1ofFuptLEi9N6MjcshTT0cpoOY4ln1DeA=
 github.com/cosmos/ibc-go/v4 v4.4.2 h1:PG4Yy0/bw6Hvmha3RZbc53KYzaCwuB07Ot4GLyzcBvo=
 github.com/cosmos/ibc-go/v4 v4.4.2/go.mod h1:j/kD2JCIaV5ozvJvaEkWhLxM2zva7/KTM++EtKFYcB8=
 github.com/cpuguy83/go-md2man v1.0.10/go.mod h1:SmD6nW6nTyfqj6ABTjUi3V3JVMnlJmwcJI5acqYI6dE=
@@ -940,8 +942,6 @@ github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DM
 github.com/spf13/viper v1.14.0 h1:Rg7d3Lo706X9tHsJMUjdiwMpHB7W8WnSVOssIY+JElU=
 github.com/spf13/viper v1.14.0/go.mod h1:WT//axPky3FdvXHzGw33dNdXXXfFQqmEalje+egj8As=
 github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4/go.mod h1:RZLeN1LMWmRsyYjvAu+I6Dm9QmlDaIIt+Y+4Kd7Tp+Q=
-github.com/strangelove-ventures/packet-forward-middleware/v4 v4.0.6 h1:aY64yjKZyDyzlIbDOkGBPvVpR0ArzIjunpCRKqoIm7o=
-github.com/strangelove-ventures/packet-forward-middleware/v4 v4.0.6/go.mod h1:4zAtg449/JISRmf+sbmqolqSLP+QJBh+EtWkWtt/AKE=
 github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
 github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
 github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a/go.mod h1:qNTQ5P5JnDBl6z3cMAg/SywNDC5ABu5ApDIw6lUbRmI=
