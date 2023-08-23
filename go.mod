@@ -10,6 +10,8 @@ replace (
 	// last-marker-in-baseapp branch
 	//github.com/cosmos/cosmos-sdk => /mnt/c/Users/Bob/GolandProjects/cosmos-sdk
 	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.13-0.20230802150248-ea64f27dc58d
+
+	github.com/cosmos/iavl => github.com/cosmos/iavl v0.19.6
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
@@ -21,7 +23,7 @@ replace (
 )
 
 require (
-	github.com/cosmos/cosmos-sdk v0.45.15
+	github.com/cosmos/cosmos-sdk v0.45.16
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4 v4.1.0
 	github.com/cosmos/ibc-go/v4 v4.4.2
