@@ -56,7 +56,7 @@ macro_rules! debug_err {
     };
 }
 
-pub fn shuffle_cache(keys: &mut Vec<(Vec<u8>, Vec<u8>)>, random: Binary) {
+pub fn shuffle_cache(keys: &mut [(Vec<u8>, Vec<u8>)], random: Binary) {
     let sha256 = &sha_256(random.as_slice())[..];
     // SeedableRng is implemented for 4*32 bit seed
     let seed: Vec<usize> = sha256

@@ -477,8 +477,10 @@ pub fn migrate(
 
     let output = result?;
 
+    let random = versioned_env.get_random();
+
     engine
-        .flush_cache()
+        .flush_cache(random)
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
     let output = post_process_output(
