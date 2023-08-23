@@ -192,8 +192,13 @@ pub fn init(
 
     let output = result?;
 
+    #[cfg(not(feature = "random"))]
+    let random: Option<Binary> = None;
+    #[cfg(feature = "random")]
+    let random = versioned_env.get_random();
+
     engine
-        .flush_cache()
+        .flush_cache(random)
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
     // TODO: copy cosmwasm's structures to enclave
@@ -472,8 +477,10 @@ pub fn migrate(
 
     let output = result?;
 
+    let random = versioned_env.get_random();
+
     engine
-        .flush_cache()
+        .flush_cache(random)
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
 
     let output = post_process_output(
@@ -735,9 +742,11 @@ pub fn handle(
 
     let mut output = result?;
 
+    let random = versioned_env.get_random();
+
     // This gets refunded because it will get charged later by the sdk
     let refund_cache_gas = engine
-        .flush_cache()
+        .flush_cache(random)
         .map_err(|_| EnclaveError::FailedFunctionCall)?;
     *used_gas = used_gas.saturating_sub(refund_cache_gas);
 
