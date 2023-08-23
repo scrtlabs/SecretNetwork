@@ -14,8 +14,8 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.20.100.4.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -43,27 +43,17 @@ jobs:
           rustc --version  
           cargo +stable install xargo --version 0.3.25
           xargo --version
-      - name: Download sccache
-        run: |
-          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
-          tar xf ./sccache-*.tar.gz
-          mv ./sccache*/sccache "$HOME/sccache"
       - name: Test enclave
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
-          RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
+          make enclave-tests
           make clean-enclave
 
   Build-Contracts:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-      - name: Download sccache
-        run: |
-          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
-          tar xf ./sccache-*.tar.gz
-          mv ./sccache*/sccache "$HOME/sccache"
       - name: Install Requirements
         run: |
           rustup target add wasm32-unknown-unknown
@@ -120,8 +110,8 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.20.100.4.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Download LocalSecret
@@ -140,9 +130,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: contract.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
         with:
           name: contract-v2.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
         with:
           name: v1-contract.wasm
@@ -154,24 +146,20 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: contract_with_floats.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
         with:
           name: too-high-initial-memory.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
         with:
           name: static-too-high-initial-memory.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - name: Setup Files
         run: |
           find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-          # cp /opt/mount/librandom_api.so /usr/lib/librandom_api.so
-          # cp /opt/mount/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
-          cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
-          cp contract-v2.wasm ./x/compute/internal/keeper/testdata/contract-v2.wasm
-          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
-          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
-          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
           find "$(pwd)" -name \*.wasm
       - name: Test x/registration
         run: |
@@ -232,11 +220,6 @@ jobs:
           rustc --version  
           cargo +stable install xargo --version 0.3.25
           xargo --version
-      - name: Download sccache
-        run: |
-          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
-          tar xf ./sccache-*.tar.gz
-          mv ./sccache*/sccache "$HOME/sccache"
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"

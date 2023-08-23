@@ -2,7 +2,7 @@ version: '3'
 
 services:
   aesm:
-    image: fortanix/aesmd:2.17.100.3
+    image: fortanix/aesmd:2.18.101.1
     devices:
       - /dev/sgx/enclave
       - /dev/sgx/provision

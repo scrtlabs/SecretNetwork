@@ -25,7 +25,7 @@ pub fn parse_message(
             trace!(
                 "parsing {} msg (Should always be plaintext): {:?}",
                 HandleType::get_export_name(handle_type),
-                base64::encode(&message)
+                base64::encode(message)
             );
 
             parse_plaintext_ibc_protocol_message(message)

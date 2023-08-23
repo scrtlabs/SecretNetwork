@@ -1,4 +1,4 @@
-FROM baiduxlab/sgx-rust:2004-1.1.5
+FROM scrtlabs/sgx-rust:2004-1.1.6
 
 ### Install rocksdb
 

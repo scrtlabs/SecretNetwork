@@ -172,7 +172,7 @@ pub fn verify_ibc_wasm_hooks_incoming_transfer(sent_msg: &SecretMessage, packet:
         fungible_token_packet_data
             .memo
             .clone()
-            .unwrap_or_else(|| "".to_string())
+            .unwrap_or_default()
             .as_bytes(),
     );
     if ibc_hooks_incoming_transfer_msg.is_err() {

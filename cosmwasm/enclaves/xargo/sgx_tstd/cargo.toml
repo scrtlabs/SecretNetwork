@@ -21,14 +21,24 @@ untrusted_fs = []
 untrusted_time = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_types = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
-sgx_libc = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
-sgx_trts = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
-sgx_alloc = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
-sgx_tprotected_fs = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
-sgx_backtrace_sys = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
-sgx_demangle = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
-sgx_unwind = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+#sgx_types = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+#sgx_libc = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+#sgx_trts = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+#sgx_alloc = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+#sgx_tprotected_fs = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+#sgx_backtrace_sys = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+#sgx_demangle = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+#sgx_unwind = { git = "https://github.com/scrtlabs/incubator-teaclave-sgx-sdk.git", branch = "secret" }
+sgx_alloc = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_alloc" }
+sgx_backtrace_sys = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace_sys" }
+sgx_build_helper = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_build_helper" }
+sgx_demangle = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_demangle" }
+sgx_libc = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_libc" }
+sgx_tprotected_fs = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tprotected_fs" }
+sgx_trts = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_trts" }
+sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_unwind = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_unwind" }
+
 
 [dependencies.hashbrown]
 package = "hashbrown_tstd"

@@ -25,12 +25,15 @@ else
 	endif
 endif
 
-SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
+SGX_SDK ?= /opt/sgxsdk
 
 ifeq ($(SGX_ARCH), x86)
 	SGX_COMMON_CFLAGS := -m32
+	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
+
 else
 	SGX_COMMON_CFLAGS := -m64
+	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 endif
 
 ifeq ($(SGX_DEBUG), 1)
@@ -91,7 +94,7 @@ lib/libQueryEnclave_u.a: $(Query_Enclave_EDL_Products)
 # because the EDL depends on a header file that is generated in that process.
 $(Enclave_EDL_Products): $(Enclave_Path)/Enclave.edl enclave-ffi-types.h
 	mkdir -p "lib/enclave"
-	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./lib/enclave
+	$(SGX_EDGER8R) --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./lib/enclave
 
 # This file gets generated whenever we build this crate, because enclave-ffi-types is our dependency
 # but when running the build for the first time, there's an interdependency between the .edl which requires this
