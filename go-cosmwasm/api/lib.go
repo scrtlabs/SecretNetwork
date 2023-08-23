@@ -423,12 +423,12 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(apiKey []byte, dryRun bool) (bool, error) {
+func CreateAttestationReport(apiKey []byte) (bool, error) {
 	errmsg := C.Buffer{}
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.create_attestation_report(apiKeySlice, &errmsg, cbool(dryRun))
+	_, err := C.create_attestation_report(apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

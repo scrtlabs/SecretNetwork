@@ -382,7 +382,7 @@ pub fn verify_quote_status(
     //     "Got GID: {:?}",
     //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
     // );
-
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         error!(
             "Platform verification error: quote status {:?}",
@@ -443,6 +443,7 @@ pub fn verify_quote_status(
         }
     }
 }
+
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
 #[allow(dead_code)]
 const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
@@ -453,25 +454,15 @@ const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
 ))]
 const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
 
-#[cfg(any(all(feature = "SGX_MODE_HW", feature = "production"), feature = "test"))]
-#[allow(unused_variables)]
-fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
-    #[cfg(feature = "epid_whitelist_disabled")]
-    {
-        true
-    }
-
-    #[cfg(not(feature = "epid_whitelist_disabled"))]
-    {
-        let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
-
-        decoded.as_chunks::<4>().0.iter().any(|&arr| {
-            if epid_gid == &u32::from_be_bytes(arr) {
-                return true;
-            }
-            false
-        })
-    }
+#[cfg(not(feature = "epid_whitelist_disabled"))]
+pub fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
+    let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
+    decoded.as_chunks::<4>().0.iter().any(|&arr| {
+        if epid_gid == &u32::from_be_bytes(arr) {
+            return true;
+        }
+        false
+    })
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -576,6 +567,7 @@ pub mod tests {
     //     assert_eq!(result, NodeAuthResult::GroupOutOfDate)
     // }
 
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
     pub fn test_epid_whitelist() {
         // check that we parse this correctly
         let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
