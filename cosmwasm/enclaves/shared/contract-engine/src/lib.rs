@@ -24,6 +24,7 @@ mod message_utils;
 mod query_chain;
 mod random;
 mod reply_message;
+mod hardcoded_admins;
 pub(crate) mod types;
 #[cfg(feature = "wasm3")]
 mod wasm3;
