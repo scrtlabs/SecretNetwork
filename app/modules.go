@@ -24,6 +24,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
+	packetforward "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4/router"
 	ica "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts"
 	icatypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/types"
 	ibcfee "github.com/cosmos/ibc-go/v4/modules/apps/29-fee"
@@ -35,7 +36,6 @@ import (
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
-	packetforward "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 )
 
 var ModuleAccountPermissions = map[string][]string{
