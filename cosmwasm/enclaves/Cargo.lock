@@ -705,6 +705,7 @@ name = "enclave_utils"
 version = "1.6.0"
 dependencies = [
  "enclave-ffi-types",
+ "enclave_crypto",
  "lazy_static",
  "log",
  "serde 1.0.118",

@@ -17,3 +17,6 @@ mod results;
 pub mod storage;
 pub mod tx_bytes;
 pub mod validator_set;
+
+#[cfg(feature = "random")]
+pub mod random;
