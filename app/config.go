@@ -33,10 +33,10 @@ import (
 	ibcclient "github.com/cosmos/ibc-go/v4/modules/core/02-client/client"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 
+	packetforwardrouter "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4/router"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
-	packetforwardrouter "github.com/strangelove-ventures/packet-forward-middleware/v4/router"
 )
 
 var mbasics = module.NewBasicManager(

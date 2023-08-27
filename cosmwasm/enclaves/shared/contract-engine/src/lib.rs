@@ -5,6 +5,7 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate sgx_rand;
 extern crate sgx_types;
 
 mod contract_operations;
@@ -27,7 +28,7 @@ mod reply_message;
 mod hardcoded_admins;
 pub(crate) mod types;
 #[cfg(feature = "wasm3")]
-mod wasm3;
+pub mod wasm3;
 
 pub use contract_operations::{handle, init, query};
 #[cfg(feature = "light-client-validation")]
