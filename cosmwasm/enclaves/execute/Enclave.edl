@@ -34,14 +34,18 @@ enclave {
 
         public sgx_status_t ecall_get_attestation_report(
             [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len,
-            uint8_t dry_run
+            uint32_t api_key_len
         );
 
         public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
             uintptr_t cert_len,
             [out, count=96] uint8_t* seed
+        );
+
+        public NodeAuthResult ecall_check_patch_level(
+            [in, count=api_key_len] const uint8_t* api_key,
+            uint32_t api_key_len
         );
 
         public sgx_status_t ecall_get_genesis_seed(

@@ -151,7 +151,7 @@ void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
-bool create_attestation_report(Buffer api_key, Buffer *err, bool dry_run);
+bool create_attestation_report(Buffer api_key, Buffer *err);
 
 void free_rust(Buffer buf);
 

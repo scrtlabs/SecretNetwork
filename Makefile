@@ -372,7 +372,8 @@ build-check-hw-tool:
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
-                 --secret id=API_KEY,src=api_key.txt \
+                 --secret id=API_KEY,src=ias_keys/develop/api_key.txt \
+				 --secret id=API_KEY_MAINNET,src=ias_keys/production/api_key.txt \
                  --secret id=SPID,src=spid.txt \
                  --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg BUILD_VERSION=${VERSION} \

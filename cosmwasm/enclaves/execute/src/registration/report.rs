@@ -738,7 +738,7 @@ impl AttestationReport {
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
         // report_data field
-        
+
         Ok(Self {
             timestamp: timestamp_since_epoch as u64,
             sgx_quote_status,

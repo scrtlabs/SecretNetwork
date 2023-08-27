@@ -224,7 +224,7 @@ jobs:
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           mkdir -p ias_keys/production
-          echo "not_a_key" > ias_keys/production/api_key.txt
+          cp ias_keys/develop/api_key.txt ias_keys/production/api_key.txt
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 

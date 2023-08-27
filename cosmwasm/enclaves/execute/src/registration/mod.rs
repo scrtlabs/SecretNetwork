@@ -17,6 +17,7 @@ mod ocalls;
 #[cfg(feature = "SGX_MODE_HW")]
 pub mod print_report;
 
+pub mod check_patch_level;
 pub mod seed_service;
 
 #[cfg(feature = "test")]
@@ -46,6 +47,8 @@ pub mod tests {
         count_failures!(failures, {
             cert::tests::test_epid_whitelist();
         });
+
+
 
         // The test doesn't work for some reason
         // #[cfg(feature = "SGX_MODE_HW")]
