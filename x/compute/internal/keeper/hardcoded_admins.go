@@ -201,5 +201,5 @@ var hardcodedContractAdmins = map[string]string{
 	"secret16h5sqd79x43wutne8ge3pdz3e3lngw62vy5lmr": "secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf",
 	"secret1f6kw62rzgn3fwc0jfp7nxjks0l45jv3r6tpc0x": "secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf",
 	"secret15a09wzvz3wlem2cfuwnphh46te2pnmk6263c6g": "secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf",
-	"secret1mr0eu9smlq4ac97rhr3np0nl8yq7k6n9gjm9t2": "secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf"
+	"secret1mr0eu9smlq4ac97rhr3np0nl8yq7k6n9gjm9t2": "secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf",
 }
