@@ -37,7 +37,7 @@ COPY cosmwasm cosmwasm/
 
 # ***************** COMPILE ENCLAVE ************** #
 
-FROM prepare-compile-enclave AS compile-enclave
+FROM prepare-compile-enclave AS compile-enclave-builder
 
 ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
@@ -62,6 +62,8 @@ COPY third_party third_party
 COPY go-cosmwasm go-cosmwasm/
 COPY cosmwasm cosmwasm/
 
+FROM compile-enclave-builder AS compile-enclave
+
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
 RUN . /opt/sgxsdk/environment && env \
@@ -69,24 +71,12 @@ RUN . /opt/sgxsdk/environment && env \
 
 ENTRYPOINT ["/bin/bash"]
 
-FROM prepare-compile-enclave AS compile-tendermint-enclave
+FROM compile-enclave-builder AS compile-tendermint-enclave
 
-ARG SGX_MODE=SW
-ARG FEATURES_U
+COPY Makefile Makefile
+COPY tm-secret-enclave tm-secret-enclave
 
-ARG SGX_MODE=${SGX_MODE}
-ENV FEATURES_U=${FEATURES_U}
-
-RUN git clone --branch v1.9.3 --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
-
-WORKDIR tm-secret-enclave
-
-RUN git submodule init
-RUN git submodule update --remote
-
-RUN rustup component add rust-src
-
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
+RUN . /opt/sgxsdk/environment && env && FEATURES=$(FEATURES) MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build-tm-secret-enclave
 
 # ***************** COMPILE SECRETD ************** #
 FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-secretd
@@ -95,7 +85,7 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
-ADD https://go.dev/dl/go1.19.linux-amd64.tar.gz go.linux-amd64.tar.gz
+ADD https://go.dev/dl/go1.20.linux-amd64.tar.gz go.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go.linux-amd64.tar.gz
 RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 

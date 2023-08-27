@@ -2,3 +2,7 @@
 	path = third_party/incubator-teaclave-sgx-sdk
 	url = https://github.com/scrtlabs/incubator-teaclave-sgx-sdk
 	branch = secret-1.x
+[submodule "tm-secret-enclave"]
+	path = tm-secret-enclave
+	url = https://github.com/scrtlabs/tm-secret-enclave
+	branch = main

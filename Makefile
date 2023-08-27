@@ -167,11 +167,16 @@ build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES)" FEATURES_U="$(FEATURES_U) light-client-validation go-tests" $(MAKE) -C go-cosmwasm build-rust
 
+
+.PHONY: checkout-tm-enclave
+checkout-tm-enclave:
+	cd tm-secret-enclave && git submodule init && git submodule update --remote
+
+.PHONY: build-tm-secret-enclave
 build-tm-secret-enclave:
-	git clone https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
-	cd /tmp/tm-secret-enclave && git checkout v1.9.3 && git submodule init && git submodule update --remote
-	rustup component add rust-src
-	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
+	FEATURE=$(FEATURES) SGX_MODE=$(SGX_MODE) $(MAKE) -C tm-secret-enclave build
+	cp tm-secret-enclave/tendermint_enclave.signed.so .
+	cp tm-secret-enclave/api/librandom_api.so .
 
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
