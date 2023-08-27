@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "random")]
@@ -8,7 +6,7 @@ use cw_types_generic::{ContractFeature, CwEnv};
 use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
-use cw_types_v010::types::{CanonicalAddr, HumanAddr};
+use cw_types_v010::types::CanonicalAddr;
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo, VerifyParamsType};
 use enclave_crypto::Ed25519PublicKey;
@@ -36,7 +34,7 @@ use crate::random::derive_random;
 #[cfg(feature = "random")]
 use crate::wasm3::Engine;
 
-use crate::hardcoded_admins::{is_code_hash_allowed, is_hardcoded_contract_admin};
+use crate::hardcoded_admins::is_hardcoded_contract_admin;
 
 use super::contract_validation::{
     generate_contract_key, validate_contract_key, validate_msg, verify_params, ContractKey,

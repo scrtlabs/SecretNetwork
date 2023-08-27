@@ -1,4 +1,5 @@
 use log::trace;
+use std::collections::HashMap;
 use cw_types_v010::types::{CanonicalAddr, HumanAddr};
 
 lazy_static::lazy_static! {
