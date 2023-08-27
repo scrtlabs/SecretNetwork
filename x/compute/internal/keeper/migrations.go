@@ -24,12 +24,6 @@ func v1GetContractKey(ctx sdk.Context, k Keeper, contractAddress sdk.AccAddress)
 	return contractKey
 }
 
-// TODO fill this after the governance vote
-var hardcodedContractAdmins = map[string]string{
-	"secret1exampleContractAddress1": "secret1ExampleAdminAddress1",
-	"secret1exampleContractAddress2": "secret1ExampleAdminAddress2",
-}
-
 // Migrate1to2 migrates from version 1 to 2. The migration includes converting contractKey from []byte to:
 //
 //	type ContractKey struct {

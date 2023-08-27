@@ -15,7 +15,7 @@ use enclave_crypto::{sha_256, AESKey, Hmac, Kdf, HASH_SIZE, KEY_MANAGER};
 use enclave_ffi_types::EnclaveError;
 use protobuf::Message;
 
-use crate::contract_operations::is_code_hash_allowed;
+use crate::hardcoded_admins::is_code_hash_allowed;
 use crate::input_validation::contract_address_validation::verify_contract_address;
 use crate::input_validation::msg_validation::verify_and_get_sdk_msg;
 use crate::input_validation::send_funds_validations::verify_sent_funds;

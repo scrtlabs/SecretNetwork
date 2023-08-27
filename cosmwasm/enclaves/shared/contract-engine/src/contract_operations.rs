@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "random")]
@@ -8,7 +6,7 @@ use cw_types_generic::{ContractFeature, CwEnv};
 use cw_types_generic::{BaseAddr, BaseEnv};
 
 use cw_types_v010::encoding::Binary;
-use cw_types_v010::types::{CanonicalAddr, HumanAddr};
+use cw_types_v010::types::CanonicalAddr;
 
 use enclave_cosmos_types::types::{ContractCode, HandleType, SigInfo, VerifyParamsType};
 use enclave_crypto::Ed25519PublicKey;
@@ -35,6 +33,8 @@ use crate::random::update_msg_counter;
 use crate::random::derive_random;
 #[cfg(feature = "random")]
 use crate::wasm3::Engine;
+
+use crate::hardcoded_admins::is_hardcoded_contract_admin;
 
 use super::contract_validation::{
     generate_contract_key, validate_contract_key, validate_msg, verify_params, ContractKey,
@@ -256,82 +256,6 @@ fn to_canonical(contract_address: &BaseAddr) -> Result<CanonicalAddr, EnclaveErr
         );
         EnclaveError::FailedToDeserialize
     })
-}
-
-lazy_static::lazy_static! {
-    /// Current hardcoded contract admins
-    static ref HARDCODED_CONTRACT_ADMINS: HashMap<&'static str, &'static str> = HashMap::from([
-        (
-            "secret1exampleContractAddress1",
-            "secret1ExampleAdminAddress1",
-        ),
-        (
-            "secret1exampleContractAddress2",
-            "secret1ExampleAdminAddress2",
-        ),
-    ]);
-
-    /// The entire history of contracts that were deployed before v1.10 and have been migrated using the hardcoded admin feature.
-    /// These contracts might have other contracts that call them with a wrong code_hash, because those other contracts have it stored from before the migration.
-    static ref ALLOWED_CONTRACT_CODE_HASH: HashMap<&'static str, &'static str> = HashMap::from([
-    (
-        "secret1exampleContractAddress1",
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    ),
-    (
-        "secret1exampleContractAddress2",
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    ),
-]);
-}
-
-/// Current hardcoded contract admins
-fn is_hardcoded_contract_admin(
-    contract: &CanonicalAddr,
-    admin: &CanonicalAddr,
-    admin_proof: &[u8],
-) -> bool {
-    if admin_proof != [0; enclave_crypto::HASH_SIZE] {
-        return false;
-    }
-
-    let contract = HumanAddr::from_canonical(contract);
-    if contract.is_err() {
-        trace!(
-            "is_hardcoded_contract_admin: failed to convert contract to human address: {:?}",
-            contract.err().unwrap()
-        );
-        return false;
-    }
-    let contract = contract.unwrap();
-
-    let admin = HumanAddr::from_canonical(admin);
-    if admin.is_err() {
-        trace!(
-            "is_hardcoded_contract_admin: failed to convert admin to human address: {:?}",
-            admin.err().unwrap()
-        );
-        return false;
-    }
-    let admin = admin.unwrap();
-
-    HARDCODED_CONTRACT_ADMINS.get(contract.as_str()) == Some(&admin.as_str())
-}
-
-/// The entire history of contracts that were deployed before v1.10 and have been migrated using the hardcoded admin feature.
-/// These contracts might have other contracts that call them with a wrong code_hash, because those other contracts have it stored from before the migration.
-pub fn is_code_hash_allowed(contract_address: &CanonicalAddr, code_hash: &str) -> bool {
-    let contract_address = HumanAddr::from_canonical(contract_address);
-    if contract_address.is_err() {
-        trace!(
-            "is_code_hash_allowed: failed to convert contract to human address: {:?}",
-            contract_address.err().unwrap()
-        );
-        return false;
-    }
-    let contract = contract_address.unwrap();
-
-    ALLOWED_CONTRACT_CODE_HASH.get(contract.as_str()) == Some(&code_hash)
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
