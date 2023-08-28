@@ -80,7 +80,7 @@ RUN git submodule update --remote
 RUN rustup component add rust-src
 RUN cargo install xargo --version 0.3.25
 
-RUN . /opt/sgxsdk/environment && env && LD_LIBRARY_PATH=/opt/sgxsdk/lib64 FEATURES=${FEATURES} MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
+RUN . /opt/sgxsdk/environment && env && LD_LIBRARY_PATH=/opt/sgxsdk/lib64 FEATURES="$(echo \"${FEATURES}\" | perl -pe 's/go-tests|debug-print//g')" MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
 
 # ***************** COMPILE SECRETD ************** #
 FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-secretd

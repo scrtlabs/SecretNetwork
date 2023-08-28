@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [goleveldb, rocksdb]
+        db_backend: [goleveldb]
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_MAINNET }}
       API_KEY: ${{ secrets.API_KEY_MAINNET }}
