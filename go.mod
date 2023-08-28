@@ -1,10 +1,9 @@
 module github.com/scrtlabs/SecretNetwork
 
-go 1.19
+go 1.20
 
 replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
-
 	// dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
 	// last-marker-in-baseapp branch
@@ -15,7 +14,8 @@ replace (
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/scrtlabs/tm-secret-enclave => github.com/scrtlabs/tm-secret-enclave v1.9.6
+
+	github.com/scrtlabs/tm-secret-enclave => github.com/scrtlabs/tm-secret-enclave v1.11.1-0.20230828132205-561238bf33c0
 	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
 
 	// enforce grpc version
@@ -37,7 +37,7 @@ require (
 	github.com/rakyll/statik v0.1.7
 	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/rs/zerolog v1.30.0
-	github.com/scrtlabs/tm-secret-enclave v1.7.2-0.20230314102956-8a5bb4f4529d
+	github.com/scrtlabs/tm-secret-enclave v1.11.1-0.20230828132205-561238bf33c0
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5

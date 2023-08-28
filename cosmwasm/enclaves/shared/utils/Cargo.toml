@@ -30,4 +30,4 @@ serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 
-enclave_crypto = {path = "../crypto"}
+enclave_crypto = { path = "../crypto" }
