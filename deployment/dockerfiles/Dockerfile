@@ -56,8 +56,6 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 RUN . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
 
-ENTRYPOINT ["/bin/bash"]
-
 FROM prepare-compile-enclave AS compile-tendermint-enclave
 
 ARG BUILD_VERSION="v0.0.0"
@@ -205,34 +203,33 @@ RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
 
-ENTRYPOINT ["/bin/bash"]
 
-#RUN LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/ secretd completion > /root/secretd_completion
-#
-## RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
-#RUN echo 'source /root/secretd_completion' >> ~/.bashrc
-#
-#RUN mkdir -p /root/.secretd/.compute/
-#RUN mkdir -p /opt/secret/.sgx_secrets/
-#RUN mkdir -p /root/.secretd/.node/
-#RUN mkdir -p /root/config/
-#
-#
-######## Node parameters
-#ARG MONIKER=default
-#ARG CHAINID=secretdev-1
-#ARG GENESISPATH=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-testnet-genesis.json
-#ARG PERSISTENT_PEERS=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.southuk.azure.com:26656
-#
-#ENV GENESISPATH="${GENESISPATH}"
-#ENV CHAINID="${CHAINID}"
-#ENV MONIKER="${MONIKER}"
-#ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
-#
-##ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
-#
-## Run secretd by default, omit entrypoint to ease using container with secretcli
-#ENTRYPOINT ["/bin/bash", "startup.sh"]
+RUN secretd completion > /root/secretd_completion
+
+# RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
+RUN echo 'source /root/secretd_completion' >> ~/.bashrc
+
+RUN mkdir -p /root/.secretd/.compute/
+RUN mkdir -p /opt/secret/.sgx_secrets/
+RUN mkdir -p /root/.secretd/.node/
+RUN mkdir -p /root/config/
+
+
+####### Node parameters
+ARG MONIKER=default
+ARG CHAINID=secretdev-1
+ARG GENESISPATH=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-testnet-genesis.json
+ARG PERSISTENT_PEERS=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.southuk.azure.com:26656
+
+ENV GENESISPATH="${GENESISPATH}"
+ENV CHAINID="${CHAINID}"
+ENV MONIKER="${MONIKER}"
+ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
+
+#ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
+
+# Run secretd by default, omit entrypoint to ease using container with secretcli
+ENTRYPOINT ["/bin/bash", "startup.sh"]
 
 # ***************** MAINNET UPGRADE ************** #
 
