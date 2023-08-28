@@ -6,7 +6,7 @@ edition = "2018"
 [features]
 default = ["random"]
 test = ["base64"]
-random = []
+random = ["enclave_utils/random"]
 production = []
 verify-validator-whitelist = []
 

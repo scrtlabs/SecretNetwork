@@ -367,7 +367,7 @@ checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "cosmos_proto"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "dirs",
  "protobuf",
@@ -450,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_generic"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.1",
  "cw_types_v010",
@@ -464,7 +464,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_v010"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_v1"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -620,7 +620,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_contract_engine"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -659,7 +659,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_cosmos_types"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "cosmos_proto",
  "cw_types_v010",
@@ -678,7 +678,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_crypto"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "aes-siv",
  "cosmos_proto",
@@ -703,9 +703,10 @@ dependencies = [
 
 [[package]]
 name = "enclave_utils"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "enclave-ffi-types",
+ "enclave_crypto",
  "lazy_static",
  "log",
  "serde 1.0.118",
@@ -1479,7 +1480,7 @@ dependencies = [
 
 [[package]]
 name = "secret-enclave"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bit-vec",

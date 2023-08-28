@@ -899,8 +899,8 @@ github.com/scrtlabs/cosmos-sdk v0.45.13-0.20230802150248-ea64f27dc58d h1:J52TETA
 github.com/scrtlabs/cosmos-sdk v0.45.13-0.20230802150248-ea64f27dc58d/go.mod h1:kOvNW8eRcR6zcO9yEfDa+iexTXdb+/QxHL1OqSEqfAo=
 github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52 h1:25rvoh2dQgzOOGPj/t1tPKApeeRrcUZtQXZ6wu6mE54=
 github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52/go.mod h1:H9SALxhCLtq/RwZLDUo/A7q7ri4GSDeZzJDx/mqA23E=
-github.com/scrtlabs/tm-secret-enclave v1.9.6 h1:pTQpq1jEU/6m+jThuxl8RFggsG83qLPG/1R8TEI62AE=
-github.com/scrtlabs/tm-secret-enclave v1.9.6/go.mod h1:qdFKkARpxJArJ6QiJiJFDu2LWl88hcSPuz6oOgq+cKQ=
+github.com/scrtlabs/tm-secret-enclave v1.11.1 h1:UFPMS8XGrgx0SVTcHF0JmM/7nw17sQRMJ3PCg6rlGQA=
+github.com/scrtlabs/tm-secret-enclave v1.11.1/go.mod h1:nxZQtzzAqBNBLOEXSv4cKlUnVA4vRmHOn6ujr3kxVME=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/segmentio/kafka-go v0.1.0/go.mod h1:X6itGqS9L4jDletMsxZ7Dz+JFWxM6JHfPOCvTvk+EJo=
