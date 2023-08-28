@@ -24,19 +24,7 @@ ENV PATH="/root/.cargo/bin:$PATH"
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
-COPY rust-toolchain rust-toolchain
-RUN rustup component add rust-src
-RUN cargo install xargo --version 0.3.25
-
-# Add submodules
-COPY third_party third_party
-
-# Add source files
-COPY go-cosmwasm go-cosmwasm/
-COPY cosmwasm cosmwasm/
-
 # ***************** COMPILE ENCLAVE ************** #
-
 FROM prepare-compile-enclave AS compile-enclave
 
 ARG BUILD_VERSION="v0.0.0"
@@ -51,16 +39,17 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
-COPY rust-toolchain rust-toolchain
-RUN rustup component add rust-src
-RUN cargo install xargo --version 0.3.25
-
 # Add submodules
 COPY third_party third_party
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm/
 COPY cosmwasm cosmwasm/
+
+COPY rust-toolchain rust-toolchain
+RUN rustup component add rust-src
+RUN cargo install xargo --version 0.3.25
+
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
@@ -71,11 +60,17 @@ ENTRYPOINT ["/bin/bash"]
 
 FROM prepare-compile-enclave AS compile-tendermint-enclave
 
+ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
+ARG FEATURES
 ARG FEATURES_U
+ARG MITIGATION_CVE_2020_0551=LOAD
 
-ARG SGX_MODE=${SGX_MODE}
+ENV VERSION=${BUILD_VERSION}
+ENV SGX_MODE=${SGX_MODE}
+ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
+ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
 RUN git clone --branch main --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
 
@@ -85,8 +80,9 @@ RUN git submodule init
 RUN git submodule update --remote
 
 RUN rustup component add rust-src
+RUN cargo install xargo --version 0.3.25
 
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
+RUN . /opt/sgxsdk/environment && env && LD_LIBRARY_PATH=/opt/sgxsdk/lib64 FEATURES=${FEATURES} MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
 
 # ***************** COMPILE SECRETD ************** #
 FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-secretd
@@ -137,7 +133,6 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/relea
 
 COPY --from=compile-enclave /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so
 COPY --from=compile-enclave /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so
-# COPY --from=compile-enclave /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so
 
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
@@ -188,7 +183,6 @@ ENV SCRT_ENCLAVE_DIR=/usr/lib/
 # workaround because paths seem kind of messed up
 RUN ln -s /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/x86_64-linux-gnu/libsgx_urts_sim.so
 RUN ln -s /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/x86_64-linux-gnu/libsgx_uae_service_sim.so
-
 # Install ca-certificates
 WORKDIR /root
 
@@ -211,32 +205,34 @@ RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
 
-RUN secretd completion > /root/secretd_completion
+ENTRYPOINT ["/bin/bash"]
 
-# RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
-RUN echo 'source /root/secretd_completion' >> ~/.bashrc
-
-RUN mkdir -p /root/.secretd/.compute/
-RUN mkdir -p /opt/secret/.sgx_secrets/
-RUN mkdir -p /root/.secretd/.node/
-RUN mkdir -p /root/config/
-
-
-####### Node parameters
-ARG MONIKER=default
-ARG CHAINID=secretdev-1
-ARG GENESISPATH=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-testnet-genesis.json
-ARG PERSISTENT_PEERS=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.southuk.azure.com:26656
-
-ENV GENESISPATH="${GENESISPATH}"
-ENV CHAINID="${CHAINID}"
-ENV MONIKER="${MONIKER}"
-ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
-
-#ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
-
-# Run secretd by default, omit entrypoint to ease using container with secretcli
-ENTRYPOINT ["/bin/bash", "startup.sh"]
+#RUN LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/ secretd completion > /root/secretd_completion
+#
+## RUN echo "SECRET_NODE_TYPE=${SECRET_NODE_TYPE}" >> ~/.bashrc
+#RUN echo 'source /root/secretd_completion' >> ~/.bashrc
+#
+#RUN mkdir -p /root/.secretd/.compute/
+#RUN mkdir -p /opt/secret/.sgx_secrets/
+#RUN mkdir -p /root/.secretd/.node/
+#RUN mkdir -p /root/config/
+#
+#
+######## Node parameters
+#ARG MONIKER=default
+#ARG CHAINID=secretdev-1
+#ARG GENESISPATH=https://raw.githubusercontent.com/enigmampc/SecretNetwork/master/secret-testnet-genesis.json
+#ARG PERSISTENT_PEERS=201cff36d13c6352acfc4a373b60e83211cd3102@bootstrap.southuk.azure.com:26656
+#
+#ENV GENESISPATH="${GENESISPATH}"
+#ENV CHAINID="${CHAINID}"
+#ENV MONIKER="${MONIKER}"
+#ENV PERSISTENT_PEERS="${PERSISTENT_PEERS}"
+#
+##ENV LD_LIBRARY_PATH=/opt/sgxsdk/libsgx-enclave-common/:/opt/sgxsdk/lib64/
+#
+## Run secretd by default, omit entrypoint to ease using container with secretcli
+#ENTRYPOINT ["/bin/bash", "startup.sh"]
 
 # ***************** MAINNET UPGRADE ************** #
 
