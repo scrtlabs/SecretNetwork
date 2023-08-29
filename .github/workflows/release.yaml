@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [rocksdb, goleveldb]
+        db_backend: [goleveldb]
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
@@ -38,10 +38,6 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - name: Sets env vars for rocksdb
-        if: ${{ matrix.db_backend == 'rocksdb' }}
-        run: |
-          echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
       - name: Build .deb Package Image
         uses: docker/build-push-action@v4
         with:
@@ -74,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [goleveldb, rocksdb]
+        db_backend: [goleveldb]
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_MAINNET }}
       API_KEY: ${{ secrets.API_KEY_MAINNET }}
@@ -220,53 +216,10 @@ jobs:
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
           cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
 
-          # 1. Untar the archive
-          tar -xzf check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-
-          # 2. Rename the files
-          mv check_hw check_hw_testnet
-          mv check_hw_enclave.so check_hw_testnet_enclave.so
-
-          # 3. Retar the renamed files
-          tar -czf check_hw_${{ steps.get_version.outputs.VERSION }}_testnet.tar.gz check_hw_testnet check_hw_testnet_enclave.so
-
       - uses: actions/upload-artifact@v3
         with:
-          name: check_hw_${{ steps.get_version.outputs.VERSION }}_testnet.tar.gz
-          path: check_hw_${{ steps.get_version.outputs.VERSION }}_testnet.tar.gz
-
-#  check-hw-tool-mainnet:
-#    runs-on: ubuntu-20.04
-#    steps:
-#      - uses: actions/checkout@v3
-#        with:
-#          submodules: recursive
-#      - name: Get the version
-#        id: get_version
-#        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-#      - name: Build check-hw-tool image
-#        uses: docker/build-push-action@v4
-#        with:
-#          file: deployment/dockerfiles/Dockerfile
-#          context: .
-#          load: true
-#          tags: check_hw_tool_build
-#          secrets: |
-#            API_KEY=${{ secrets.API_KEY_MAINNET }}
-#            SPID=${{ secrets.SPID_MAINNET }}
-#          build-args: |
-#            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
-#            SGX_MODE=HW
-#            FEATURES=production
-#          target: compile-check-hw-tool
-#      - name: Run check-hw-tool image
-#        run: |
-#          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
-#          cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-#      - uses: actions/upload-artifact@v3
-#        with:
-#          name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
-#          path: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+          path: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
 
   publish-localsecret:
     runs-on: ubuntu-20.04
@@ -354,13 +307,7 @@ jobs:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
       - uses: actions/download-artifact@v3
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
-      - uses: actions/download-artifact@v3
-        with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
-      - uses: actions/download-artifact@v3
-        with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
       - uses: actions/download-artifact@v3
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
@@ -373,9 +320,7 @@ jobs:
           prerelease: true
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
