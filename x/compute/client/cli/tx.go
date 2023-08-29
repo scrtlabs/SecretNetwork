@@ -32,6 +32,7 @@ const (
 	flagProposalType           = "type"
 	flagIoMasterKey            = "enclave-key"
 	flagCodeHash               = "code-hash"
+	flagAdmin                  = "admin"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -127,7 +128,7 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.
 func InstantiateContractCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --amount [coins,optional]",
+		Use:     "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --amount [coins,optional] --admin [admin_addr_bech32,optional]",
 		Short:   "Instantiate a wasm contract",
 		Aliases: []string{"init"},
 		Args:    cobra.ExactArgs(2),
@@ -153,6 +154,7 @@ func InstantiateContractCmd() *cobra.Command {
 		"io-master-key.txt file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	cmd.Flags().String(flagAdmin, "", "Optional: Bech32 address of the admin of the contract")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -234,6 +236,11 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		return types.MsgInstantiateContract{}, err
 	}
 
+	admin, err := initFlags.GetString(flagAdmin)
+	if err != nil {
+		return types.MsgInstantiateContract{}, fmt.Errorf("Admin: %s", err)
+	}
+
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
 		Sender:           cliCtx.GetFromAddress(),
@@ -243,6 +250,11 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		InitFunds:        amount,
 		InitMsg:          encryptedMsg,
 	}
+
+	if admin != "" {
+		msg.Admin = admin
+	}
+
 	return msg, nil
 }
 
