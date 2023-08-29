@@ -74,6 +74,8 @@ RUN git clone --branch main --depth 1 https://github.com/scrtlabs/tm-secret-encl
 
 WORKDIR tm-secret-enclave
 
+RUN git checkout v1.11.1
+
 RUN git submodule init
 RUN git submodule update --remote
 
