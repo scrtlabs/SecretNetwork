@@ -252,6 +252,11 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 	}
 
 	if admin != "" {
+		_, err = sdk.AccAddressFromBech32(admin)
+		if err != nil {
+			return types.MsgInstantiateContract{}, fmt.Errorf("Admint address is not in bech32 format: %s", err)
+		}
+
 		msg.Admin = admin
 	}
 
