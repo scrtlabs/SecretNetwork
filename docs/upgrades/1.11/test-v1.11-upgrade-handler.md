@@ -49,10 +49,11 @@ sleep 5
 INIT='{"counter":{"counter":10, "expires":100000}}'
 secretd tx compute instantiate 1 "$INIT" --from a --label "c" -y
 sleep 5
+ADDR=`secretd q compute list-contract-by-code 1 | jq -r '.[0].contract_address'`
 
-secretd tx compute execute secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"increment":{"addition": 13}}' --from a -y
+secretd tx compute execute $ADDR '{"increment":{"addition": 13}}' --from a -y
 sleep 5
-secretd query compute query secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"get": {}}'
+secretd query compute query $ADDR '{"get": {}}'
 ```
 
 Expected result should be:
@@ -181,7 +182,7 @@ You should see `INF applying upgrade "v1.11" at height` in the logs, following b
 ### Query the value of the counter
 
 ```bash
-secretd query compute query secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"get": {}}'
+secretd query compute query $ADDR '{"get": {}}'
 ```
 
 Expected result should be:
