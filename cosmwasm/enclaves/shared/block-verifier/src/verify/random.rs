@@ -1,10 +1,10 @@
 #![cfg(feature = "random")]
 
 use enclave_crypto::{SIVEncryptable, KEY_MANAGER};
+use enclave_utils::random::{create_legacy_proof, create_random_proof};
 use log::{debug, error};
 use sgx_types::sgx_status_t;
 use tendermint::Hash;
-use enclave_utils::random::create_random_proof;
 
 pub fn validate_encrypted_random(
     random_and_proof: &[u8],
@@ -19,16 +19,19 @@ pub fn validate_encrypted_random(
         .get(48..)
         .ok_or(sgx_status_t::SGX_ERROR_INVALID_PARAMETER)?;
 
-
     let irs = KEY_MANAGER.initial_randomness_seed.unwrap();
     let calculated_proof = create_random_proof(&irs, height, encrypted_random_slice, app_hash);
 
     if calculated_proof != rand_proof {
-        error!(
-            "Error validating random: {:?} != {:?}",
-            calculated_proof, rand_proof
-        );
-        return Err(sgx_status_t::SGX_ERROR_INVALID_SIGNATURE);
+        let legacy_proof = create_legacy_proof(&irs, height, encrypted_random_slice, app_hash);
+
+        if legacy_proof != calculated_proof {
+            error!(
+                "Error validating random: {:?} != {:?}",
+                calculated_proof, rand_proof
+            );
+            return Err(sgx_status_t::SGX_ERROR_INVALID_SIGNATURE);
+        }
     }
 
     debug!(

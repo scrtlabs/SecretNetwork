@@ -53,7 +53,10 @@ fn seal(data: &[u8; 32], filepath: &str) -> Result<(), EnclaveError> {
 }
 
 fn open(filepath: &str) -> Result<Ed25519PrivateKey, EnclaveError> {
-    let mut file = SgxFile::open(filepath).map_err(|_err| EnclaveError::FailedUnseal)?;
+    let mut file = SgxFile::open(filepath).map_err(|err| {
+        error!("failed to unseal file! {:?}", err);
+        EnclaveError::FailedUnseal
+    })?;
 
     let mut buf = Ed25519PrivateKey::default();
     let n = file

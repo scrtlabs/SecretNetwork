@@ -7,8 +7,8 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2004-1.1.6
-ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.20
+ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2004-1.1.5
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.17
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
@@ -70,7 +70,7 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
-RUN git clone --branch v1.11.3 --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
+RUN git clone --branch v1.11.4 --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
 
 WORKDIR tm-secret-enclave
 
@@ -164,10 +164,10 @@ RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu
 
 RUN echo "source /etc/profile.d/bash_completion.sh" >> ~/.bashrc
 
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
-    apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/* && \
-    npm i -g local-cors-proxy
+#RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
+#    apt-get install -y nodejs && \
+#    rm -rf /var/lib/apt/lists/* && \
+#    npm i -g local-cors-proxy
 
 ARG SGX_MODE=SW
 ENV SGX_MODE=${SGX_MODE}
