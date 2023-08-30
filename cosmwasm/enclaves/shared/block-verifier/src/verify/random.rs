@@ -25,10 +25,10 @@ pub fn validate_encrypted_random(
     if calculated_proof != rand_proof {
         let legacy_proof = create_legacy_proof(&irs, height, encrypted_random_slice, app_hash);
 
-        if legacy_proof != calculated_proof {
+        if legacy_proof != rand_proof {
             error!(
-                "Error validating random: {:?} != {:?}",
-                calculated_proof, rand_proof
+                "Error validating random: {:?} != {:?} != {:?}",
+                calculated_proof, rand_proof, legacy_proof
             );
             return Err(sgx_status_t::SGX_ERROR_INVALID_SIGNATURE);
         }
