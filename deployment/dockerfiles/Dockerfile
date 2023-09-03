@@ -74,8 +74,6 @@ RUN git clone --branch v1.11.5 --depth 1 https://github.com/scrtlabs/tm-secret-e
 
 WORKDIR tm-secret-enclave
 
-COPY cosmwasm/enclaves/execute/sgx_sk.pem packages/enclave/Enclave_private.pem
-
 RUN git submodule init
 RUN git submodule update --remote
 
