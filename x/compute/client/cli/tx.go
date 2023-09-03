@@ -462,14 +462,24 @@ func parseMigrateContractArgs(args []string, cliCtx client.Context) (types.MsgMi
 	if err != nil {
 		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code id")
 	}
+	migrateMsg := types.SecretMsg{}
 
-	migrateMsg := args[2]
+	migrateMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[1])
+	if err != nil {
+		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code hash")
+	}
 
+	migrateMsg.Msg = []byte(args[2])
+	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+	encryptedMsg, err := wasmCtx.Encrypt(migrateMsg.Serialize())
+	if err != nil {
+		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "encrypt")
+	}
 	msg := types.MsgMigrateContract{
 		Sender:   cliCtx.GetFromAddress().String(),
 		Contract: args[0],
 		CodeID:   codeID,
-		Msg:      []byte(migrateMsg),
+		Msg:      encryptedMsg,
 	}
 	return msg, nil
 }

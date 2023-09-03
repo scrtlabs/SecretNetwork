@@ -70,7 +70,7 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
-RUN git clone --branch v1.11.3 --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
+RUN git clone --branch v1.11.5 --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
 
 WORKDIR tm-secret-enclave
 

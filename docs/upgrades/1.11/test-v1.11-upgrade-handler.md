@@ -59,59 +59,6 @@ secretd query compute query $ADDR '{"get": {}}'
 Expected result should be:
 {"get":{"count":23}}
 
-## Step 3
-
-Run the secret.js tests from the `master` branch on the `secret.js` repo.  
-This will create state on the chain before the upgrade.
-
-First delete `globalSetup` & `globalTeardown` (because we already launched the chain manually):
-
-```bash
-echo 'import { SecretNetworkClient } from "../src";
-import { sleep } from "./utils";
-
-require("ts-node").register({ transpileOnly: true });
-
-module.exports = async () => {
-  await waitForBlocks();
-  console.log(`LocalSecret is running`);
-};
-
-async function waitForBlocks() {
-  while (true) {
-    const secretjs = new SecretNetworkClient({
-      url: "http://localhost:1317",
-      chainId: "secretdev-1",
-    });
-
-    try {
-      const { block } = await secretjs.query.tendermint.getLatestBlock({});
-
-      if (Number(block?.header?.height) >= 1) {
-        break;
-      }
-    } catch (e) {
-      // console.eerror(e);
-    }
-    await sleep(250);
-  }
-}
-' > test/globalSetup.ts
-```
-
-```bash
-echo '//@ts-ignore
-require("ts-node").register({ transpileOnly: true });
-
-module.exports = async () => {};' > test/globalTeardown.js
-```
-
-Then run the tests:
-
-```bash
-yarn test
-```
-
 ## Step 4
 
 Propose a software upgrade on the v1.10 chain.
@@ -145,15 +92,15 @@ FEATURES="light-client-validation,random" SGX_MODE=SW make build-linux
 docker exec bootstrap bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 docker exec node bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 
-docker cp secretd                                                  bootstrap:/tmp/upgrade-bin
-docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           bootstrap:/tmp/upgrade-bin
-docker cp go-cosmwasm/api/libgo_cosmwasm.so                        bootstrap:/tmp/upgrade-bin
-docker cp secretd                                                  node:/tmp/upgrade-bin
-docker cp go-cosmwasm/librust_cosmwasm_enclave.signed.so           node:/tmp/upgrade-bin
-docker cp go-cosmwasm/api/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
+docker cp usr/local/bin/secretd                                    bootstrap:/tmp/upgrade-bin
+docker cp usr/lib/librust_cosmwasm_enclave.signed.so           bootstrap:/tmp/upgrade-bin
+docker cp usr/lib/libgo_cosmwasm.so                        bootstrap:/tmp/upgrade-bin
+docker cp usr/local/bin/secretd                                    node:/tmp/upgrade-bin
+docker cp usr/lib/librust_cosmwasm_enclave.signed.so           node:/tmp/upgrade-bin
+docker cp usr/lib/libgo_cosmwasm.so                        node:/tmp/upgrade-bin
 # These two should be brought from the external repo or from a previous localsecret
-docker cp docs/librandom_api.so                                    node:/usr/lib
-docker cp docs/tendermint_enclave.signed.so                        node:/usr/lib
+docker cp usr/lib/librandom_api.so                                    node:/usr/lib
+docker cp usr/lib/tendermint_enclave.signed.so                        node:/usr/lib
 
 docker exec node bash -c 'pkill -9 secretd'
 
