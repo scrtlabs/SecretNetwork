@@ -1,6 +1,6 @@
 # CHANGELOG
 
-# 1.10.0 (Unreleased - WIP)
+# 1.11.0
 
 - Added ibc-hooks middleware by Osmosis.
   - WASM hooks: allows ICS-20 token transfers to initiate contract calls, serving various use cases.
@@ -15,6 +15,7 @@
   - The admin can update or clear the admin address.
   - The admins of contracts that were instantiated before v1.10 are hardcoded according to [proposal TODO](https://www.mintscan.io/secret/proposals/TODO).
   - Hardcoded admins can only be updated/cleared with a future gov proposal.
+  - Set Hardcoded admins acording to [proposal 262](./docs/proposals/hardcode-admins-on-v1.10.md)
   - When the new MsgMigrateContract is invoked, the `migrate()` function is being called on the new contract code, where the new contract can optionally perform state migrations. See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/139a0eb18/cosmwasm/contracts/v1/compute-tests/migration/contract-v2/src/contract.rs#L37-L43).
 - Set hardcoded admins according to [proposal TODO](https://www.mintscan.io/secret/proposals/TODO).
 - Fixed a scenario where the enclave's light client might fail a valid node registration transaction.
@@ -23,10 +24,16 @@
 - Update Tendermint to CometBFT v0.34.29
 - Update IBC to v4.4.2
 - Update IAVL to v0.19.6
-- Update Packet Forward Middleware to v4.0.5
+- Update Packet Forward Middleware to v4.1.0
+- Fix initialization of x/vesting module
 - Add `env.transaction.hash` to support SNIP-52
   - SNIP-52: https://github.com/SolarRepublic/SNIPs/blob/feat/snip-52/SNIP-52.md#notification-data-algorithms
   - See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/4f21d5794/cosmwasm/contracts/v1/compute-tests/test-compute-contract-v2/src/contract.rs#L1398-L1400).
+- Flush the enclave's cache in a random order
+
+# 1.10.0
+
+Patch against SGX Downfall vulnerability. See [v1.10 proposal](./docs/proposals/v1.10.md) for more info.
 
 # 1.9.3
 
