@@ -13,11 +13,9 @@
   - On init, the creator can specify an admin address.
   - The admin can migrate the contract to a new code ID.
   - The admin can update or clear the admin address.
-  - The admins of contracts that were instantiated before v1.10 are hardcoded according to [proposal TODO](https://www.mintscan.io/secret/proposals/TODO).
+  - The admins of contracts that were instantiated before v1.10 are hardcoded according to [proposal 262](./docs/proposals/hardcode-admins-on-v1.10.md).
   - Hardcoded admins can only be updated/cleared with a future gov proposal.
-  - Set Hardcoded admins acording to [proposal 262](./docs/proposals/hardcode-admins-on-v1.10.md)
-  - When the new MsgMigrateContract is invoked, the `migrate()` function is being called on the new contract code, where the new contract can optionally perform state migrations. See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/139a0eb18/cosmwasm/contracts/v1/compute-tests/migration/contract-v2/src/contract.rs#L37-L43).
-- Set hardcoded admins according to [proposal TODO](https://www.mintscan.io/secret/proposals/TODO).
+  - When the new `MsgMigrateContract` is invoked, the `migrate()` function is being called on the new contract code, where the new contract can optionally perform state migrations. See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/139a0eb18/cosmwasm/contracts/v1/compute-tests/migration/contract-v2/src/contract.rs#L37-L43).
 - Fixed a scenario where the enclave's light client might fail a valid node registration transaction.
 - Add support for uploading contracts that were compiled with Rust v1.70+.
 - Update Cosmos SDK to v0.45.16
@@ -27,7 +25,7 @@
 - Update Packet Forward Middleware to v4.1.0
 - Fix initialization of x/vesting module
 - Add `env.transaction.hash` to support SNIP-52
-  - SNIP-52: https://github.com/SolarRepublic/SNIPs/blob/feat/snip-52/SNIP-52.md#notification-data-algorithms
+  - SNIP-52: https://github.com/SolarRepublic/SNIPs/blob/3cc16b7/SNIP-52.md#notification-data-algorithms
   - See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/4f21d5794/cosmwasm/contracts/v1/compute-tests/test-compute-contract-v2/src/contract.rs#L1398-L1400).
 - Flush the enclave's cache in a random order
 
