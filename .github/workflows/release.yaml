@@ -21,7 +21,7 @@ jobs:
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Declare Commit Variables
@@ -77,7 +77,7 @@ jobs:
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Get the version
@@ -148,7 +148,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
@@ -165,7 +165,7 @@ jobs:
   MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: 1.19 # The Go version to download (if necessary) and use.
@@ -190,7 +190,7 @@ jobs:
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
       API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Get the version
@@ -230,7 +230,7 @@ jobs:
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Get the version
@@ -262,7 +262,7 @@ jobs:
   Lib-Checks:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/check-objdump
         name: Check Mitigation flags in Cosmwasm Enclave
         with:
@@ -286,7 +286,7 @@ jobs:
       ]
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
