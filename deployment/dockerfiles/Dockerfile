@@ -80,7 +80,8 @@ RUN git submodule update --remote
 RUN rustup component add rust-src
 RUN cargo install xargo --version 0.3.25
 
-RUN . /opt/sgxsdk/environment && env && LD_LIBRARY_PATH=/opt/sgxsdk/lib64 FEATURES="$(echo \"${FEATURES}\" | perl -pe 's/go-tests|debug-print//g')" MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
+RUN . /opt/sgxsdk/environment && env && LD_LIBRARY_PATH=/opt/sgxsdk/lib64 FEATURES="$(echo ${FEATURES} | perl -pe 's/go-tests|debug-print//g')" MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
+
 
 # ***************** COMPILE SECRETD ************** #
 FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-secretd
@@ -238,13 +239,13 @@ FROM release-image as mainnet-release
 ARG BUILD_VERSION="v0.0.0"
 ENV VERSION=${BUILD_VERSION}
 
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/libgo_cosmwasm.so
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/librandom_api.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librandom_api.so
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/tendermint_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/tendermint_enclave.signed.so
 
 COPY deployment/docker/mainnet/mainnet_node.sh .
