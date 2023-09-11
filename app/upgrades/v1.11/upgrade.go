@@ -12,7 +12,7 @@ import (
 	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 )
 
-const upgradeName = "v1.11"
+const upgradeName = "v1.11-testnet-shade-hardcoded-admins"
 
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
