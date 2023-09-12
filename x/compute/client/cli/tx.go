@@ -238,7 +238,7 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 
 	admin, err := initFlags.GetString(flagAdmin)
 	if err != nil {
-		return types.MsgInstantiateContract{}, fmt.Errorf("Admin: %s", err)
+		return types.MsgInstantiateContract{}, fmt.Errorf("admin: %s", err)
 	}
 
 	// build and sign the transaction, then broadcast to Tendermint
@@ -254,7 +254,7 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 	if admin != "" {
 		_, err = sdk.AccAddressFromBech32(admin)
 		if err != nil {
-			return types.MsgInstantiateContract{}, fmt.Errorf("Admint address is not in bech32 format: %s", err)
+			return types.MsgInstantiateContract{}, fmt.Errorf("admin address is not in bech32 format: %s", err)
 		}
 
 		msg.Admin = admin
