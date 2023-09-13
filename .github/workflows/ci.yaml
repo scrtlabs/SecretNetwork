@@ -248,7 +248,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
         with:
           driver-opts: network=host
       - uses: actions/checkout@v4
@@ -283,7 +283,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - uses: actions/checkout@v4
       - name: Build Hermes Image
         uses: docker/build-push-action@v4
