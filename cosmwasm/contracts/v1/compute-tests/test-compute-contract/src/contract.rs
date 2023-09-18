@@ -646,6 +646,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::MultipleSubMessagesWithReplyWithPanic {} => {
             send_multiple_sub_messages_with_reply_with_panic(env, deps)
         }
+        ExecuteMsg::IncrementAndSendFailingSubmessage { reply_on } => {
+            increment(env.clone(), deps, 1)?;
+            send_failing_submsg(env, reply_on)
+        },
         ExecuteMsg::InitV10 {
             counter,
             code_id,
@@ -1367,7 +1371,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             contract_addr,
             new_admin,
             reply,
-        } => 
+        } =>
         match reply {
             true => Ok(Response::new().add_submessage(SubMsg::reply_on_success(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.into_string(),
@@ -1739,6 +1743,27 @@ pub fn send_multiple_sub_messages_with_reply_with_error(
             .to_be_bytes()
             .into(),
     );
+    Ok(resp)
+}
+
+pub fn send_failing_submsg(
+    env: Env,
+    reply_on: ReplyOn,
+) -> StdResult<Response> {
+    let mut resp = Response::default();
+
+    resp.messages.push(SubMsg {
+        id: 9200,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: Binary::from(r#"{"quick_error":{}}"#.as_bytes().to_vec()),
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on,
+    });
+
     Ok(resp)
 }
 
@@ -2254,6 +2279,8 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (8451, SubMsgResult::Ok(_)) => Ok(Response::new()
             .add_attribute_plaintext("attr_reply", "🦄")
             .set_data(to_binary("reply")?)),
+        //(9000, SubMsgResult::Err(_)) => Err(StdError::generic_err("err")),
+        (9200, SubMsgResult::Err(_)) => Ok(Response::default().set_data("err".as_bytes())),
         (11337, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
 
 
@@ -2274,13 +2301,13 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
                 Ok(_) => return Err(StdError::generic_err("cannot parse into SendMsgMigrateContract")),
                 Err(err) => {
                 return Err(StdError::generic_err(format!("cannot parse into SendMsgMigrateContract: {:?}",err)));
-                    
+
                 },
             };
-            
-            
-            
-         
+
+
+
+
 
             Ok(
                 Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
@@ -2297,10 +2324,10 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
                 contract_addr,
                 ..
             }) => contract_addr,
-                
+
                 Ok(_) => {
                 return Err(StdError::generic_err("cannot parse into SendMsgClearAdmin"));
-                    
+
                 }
             Err(err) => {
                 return Err(StdError::generic_err(format!("cannot parse into SendMsgClearAdmin: {:?}",err)));
@@ -2322,16 +2349,16 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
                 new_admin),
                 Ok(_) => {
                 return Err(StdError::generic_err("cannot parse into SendMsgUpdateAdmin"));
-                    
+
                 }
             Err(err) => {
                 return Err(StdError::generic_err(format!("cannot parse into SendMsgUpdateAdmin: {:?}",err)));
 
             },
         };
-        
-        
-      
+
+
+
 
             Ok(Response::new().add_message(
             CosmosMsg::Wasm(WasmMsg::UpdateAdmin {

@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"math"
 	"testing"
 
@@ -40,6 +41,31 @@ func TestV1MultipleSubmessagesNoReply(t *testing.T) {
 	e := json.Unmarshal([]byte(queryRes), &resp)
 	require.NoError(t, e)
 	require.Equal(t, uint32(16), resp.Get.Count)
+}
+
+func TestV1StatePersistsAfterSubmessageFails(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	fmt.Println("ESHELDEBUG: before init") // todo remove
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+	fmt.Println("ESHELDEBUG: after init") // todo remove
+	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment_and_send_failing_submessage":{"reply_on":"always"}}`, true, true, math.MaxUint64, 0)
+	fmt.Println("ESHELDEBUG: after exec") // todo remove
+
+	require.Empty(t, err)
+	fmt.Println("ESHELDEBUG: after empty") // todo remove
+	require.Equal(t, uint32(10), binary.BigEndian.Uint32(data))
+	fmt.Println("ESHELDEBUG: after require") // todo remove
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	fmt.Println("ESHELDEBUG: after query") // todo remove
+	require.Empty(t, qErr)
+
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	fmt.Println("ESHELDEBUG: after unmarshal") // todo remove
+	require.NoError(t, e)
+	require.Equal(t, uint32(11), resp.Get.Count)
 }
 
 func TestSendEncryptedAttributesFromInitWithoutSubmessageWithoutReply(t *testing.T) {
