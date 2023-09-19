@@ -632,7 +632,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::MultipleSubMessagesNoReply {} => send_multiple_sub_messages_no_reply(env, deps),
         ExecuteMsg::QuickError {} => {
             count(deps.storage).save(&123456)?;
-            Err(StdError::generic_err("error in execute"))
+            Err(StdError::generic_err("quick error in execute"))
         }
         ExecuteMsg::MultipleSubMessagesNoReplyWithError {} => {
             send_multiple_sub_messages_no_reply_with_error(env, deps)
