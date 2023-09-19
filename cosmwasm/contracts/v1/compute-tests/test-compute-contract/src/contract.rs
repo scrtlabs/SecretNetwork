@@ -647,8 +647,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             send_multiple_sub_messages_with_reply_with_panic(env, deps)
         }
         ExecuteMsg::IncrementAndSendFailingSubmessage { reply_on } => {
-            increment(env.clone(), deps, 1)?;
-            send_failing_submsg(env, reply_on)
+            increment_simple(deps)?;
+            let mut response = send_failing_submsg(env, reply_on)?;
+            response.data = Some((count as u32).to_be_bytes().into());
+
+            Ok(response)
         },
         ExecuteMsg::InitV10 {
             counter,
@@ -1439,6 +1442,13 @@ pub fn increment(env: Env, deps: DepsMut, c: u64) -> StdResult<Response> {
     resp.data = Some((new_count as u32).to_be_bytes().into());
 
     Ok(resp)
+}
+
+pub fn increment_simple(deps: DepsMut) -> StdResult<u64> {
+    let new_count = count_read(deps.storage).load()? + 1;
+    count(deps.storage).save(&new_count)?;
+
+    Ok(new_count)
 }
 
 pub fn transfer_money(_deps: DepsMut, amount: u64) -> StdResult<Response> {
@@ -2280,7 +2290,9 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             .add_attribute_plaintext("attr_reply", "🦄")
             .set_data(to_binary("reply")?)),
         //(9000, SubMsgResult::Err(_)) => Err(StdError::generic_err("err")),
-        (9200, SubMsgResult::Err(_)) => Ok(Response::default().set_data("err".as_bytes())),
+        (9200, SubMsgResult::Err(_)) => Ok(Response::default().set_data(
+            (count_read(deps.storage).load()? as u32).to_be_bytes()
+        )),
         (11337, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
 
 
