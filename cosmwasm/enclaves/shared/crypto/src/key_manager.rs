@@ -55,6 +55,18 @@ lazy_static! {
 #[allow(clippy::new_without_default)]
 impl Keychain {
     pub fn new() -> Self {
+        for path in [
+            GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str(),
+            CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str(),
+        ] {
+            println!("REUVEN");
+            println!("exporting auto key for {:?}", path);
+            let ak = std::sgxfs::export_auto_key(path).map(|k| Vec::from(k.as_ref()));
+            println!("auto key for {:?} is {:?}", path, ak);
+            let ak = std::sgxfs::export_align_auto_key(path).map(|k| Vec::from(k.key.as_ref()));
+            println!("aligned auto key for {:?} is {:?}", path, ak);
+        }
+
         let consensus_seed: Option<SeedsHolder<Seed>> = match (
             Seed::unseal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()),
             Seed::unseal(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()),
