@@ -1,13 +1,10 @@
 use core::time;
 use std::{thread, vec};
 
-use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Empty, Env,
-    Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage,
-    SubMsg, SubMsgResponse, SubMsgResult, WasmMsg, WasmQuery, from_binary, CanonicalAddr,
-};
+use cosmwasm_std::{attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, WasmMsg, WasmQuery, from_binary, CanonicalAddr, Coin, Uint128};
 use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
+use serde::Serialize;
 
 use crate::msg::{
     ExecuteMsg, ExternalMessages, IBCLifecycleComplete, InstantiateMsg, QueryMsg, QueryRes, SudoMsg,
@@ -653,6 +650,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
             Ok(response)
         },
+        ExecuteMsg::IncrementAndSendSubmessageWithBankFail { reply_on } => {
+            increment_simple(deps)?;
+            let mut response = send_failing_submsg_with_bank_fail(env, reply_on)?;
+            response.data = Some((count as u32).to_be_bytes().into());
+
+            Ok(response)
+        },
         ExecuteMsg::InitV10 {
             counter,
             code_id,
@@ -1241,6 +1245,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
             return res;
         }
+        ExecuteMsg::IncrementAndBankMsgSend { to, amount } => {
+            increment_simple(deps)?;
+            Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
+                to_address: to,
+                amount,
+            })))
+        }
         ExecuteMsg::BankMsgSend { to, amount } => {
             Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
                 to_address: to,
@@ -1753,6 +1764,38 @@ pub fn send_multiple_sub_messages_with_reply_with_error(
             .to_be_bytes()
             .into(),
     );
+    Ok(resp)
+}
+
+pub fn send_failing_submsg_with_bank_fail(
+    env: Env,
+    reply_on: ReplyOn,
+) -> StdResult<Response> {
+    let failing_bank_msg = ExecuteMsg::IncrementAndBankMsgSend {
+        amount: vec![ Coin::new(100, "non-existent")],
+        to: "non-existent".to_string()
+    };
+
+    let bank_binary_msg = Binary::from(
+        serde_json_wasm::to_string(&failing_bank_msg)
+            .unwrap()
+            .as_bytes()
+            .to_vec()
+    );
+
+    let mut resp = Response::default();
+    resp.messages.push(SubMsg {
+        id: 9200,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: bank_binary_msg,
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on,
+    });
+
     Ok(resp)
 }
 

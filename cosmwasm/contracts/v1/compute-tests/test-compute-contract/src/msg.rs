@@ -178,6 +178,9 @@ pub enum ExecuteMsg {
     IncrementAndSendFailingSubmessage {
         reply_on: ReplyOn,
     },
+    IncrementAndSendSubmessageWithBankFail {
+        reply_on: ReplyOn,
+    },
     InitV10 {
         code_id: u64,
         code_hash: String,
@@ -412,6 +415,10 @@ pub enum ExecuteMsg {
         msg: Binary,
         privkey: Binary,
         iterations: u32,
+    },
+    IncrementAndBankMsgSend {
+        amount: Vec<Coin>,
+        to: String,
     },
     BankMsgSend {
         amount: Vec<Coin>,

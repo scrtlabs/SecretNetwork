@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"math"
 	"testing"
 
@@ -69,6 +70,28 @@ func TestV1StatePersistsAfterSubmessageFailsNoReply(t *testing.T) {
 	require.NotEmpty(t, err)
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	require.Empty(t, qErr)
+
+	var resp v1QueryResponse
+	e := json.Unmarshal([]byte(queryRes), &resp)
+	require.NoError(t, e)
+	require.Equal(t, uint32(11), resp.Get.Count)
+}
+
+func TestV1StatePersistsAfterSubmessageThatGeneratesBankMsgFails(t *testing.T) {
+	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+	fmt.Println("ESHELDEBUG before init") //todo remove
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+	fmt.Println("ESHELDEBUG before exec") //todo remove
+	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"increment_and_send_submessage_with_bank_fail":{"reply_on":"never"}}`, false, true, math.MaxUint64, 0)
+
+	fmt.Println("ESHELDEBUG before error check") //todo remove
+	require.NotEmpty(t, err)
+	fmt.Println("ESHELDEBUG after error check") //todo remove
+
+	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
+	fmt.Println("ESHELDEBUG after query") //todo remove
 	require.Empty(t, qErr)
 
 	var resp v1QueryResponse
