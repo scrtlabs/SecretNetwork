@@ -110,7 +110,12 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
 
 	m := keeper.NewMigrator(am.keeper)
-	err := configurator.RegisterMigration(types.ModuleName, 2, m.Migrate2to3)
+	err := configurator.RegisterMigration(types.ModuleName, 1, m.Migrate1to2)
+	if err != nil {
+		panic(err)
+	}
+
+	err = configurator.RegisterMigration(types.ModuleName, 2, m.Migrate2to3)
 	if err != nil {
 		panic(err)
 	}
