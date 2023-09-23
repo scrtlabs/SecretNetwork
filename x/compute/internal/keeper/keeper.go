@@ -178,6 +178,14 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, nil
 }
 
+func (k Keeper) GetStoreKey() sdk.StoreKey {
+	return k.storeKey
+}
+
+func (k Keeper) GetCdc() codec.BinaryCodec {
+	return k.cdc
+}
+
 func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
 	wasmCode, err := uncompress(wasmCode)
 	if err != nil {
