@@ -63,3 +63,8 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 
 	return nil
 }
+
+func (m Migrator) Migrate2to3(ctx sdk.Context) error {
+	// Keep it empty it is only here because we had a bug in testnet
+	return nil
+}
