@@ -31,7 +31,7 @@ func v1GetContractKey(ctx sdk.Context, k Keeper, contractAddress sdk.AccAddress)
 //		CurrentContractKey      []byte
 //		CurrentContractKeyProof []byte
 //	}
-func (m Migrator) Migrate1to2(ctx sdk.Context) error {
+func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	iter := prefix.NewStore(ctx.KVStore(m.keeper.storeKey), types.ContractKeyPrefix).Iterator(nil, nil)
 	for ; iter.Valid(); iter.Next() {
 		var contractAddress sdk.AccAddress = iter.Key()
