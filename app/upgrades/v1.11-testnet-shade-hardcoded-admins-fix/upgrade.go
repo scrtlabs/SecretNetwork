@@ -1,4 +1,4 @@
-package v1_11_testnet_shade_hardcoded_admins
+package v1_11_testnet_shade_hardcoded_admins_fix
 
 import (
 	"fmt"
