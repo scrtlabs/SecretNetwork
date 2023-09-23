@@ -178,10 +178,6 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, nil
 }
 
-func (k Keeper) GetStoreKey() sdk.StoreKey {
-	return k.storeKey
-}
-
 func (k Keeper) GetCdc() codec.BinaryCodec {
 	return k.cdc
 }
