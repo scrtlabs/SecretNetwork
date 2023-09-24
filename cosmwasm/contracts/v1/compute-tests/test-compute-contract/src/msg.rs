@@ -181,6 +181,8 @@ pub enum ExecuteMsg {
     IncrementAndSendSubmessageWithBankFail {
         reply_on: ReplyOn,
     },
+    SendSucceedingSubmessageThenFailingMessageOnReply {},
+    SendSucceedingSubmessageAndFailingMessage {},
     InitV10 {
         code_id: u64,
         code_hash: String,

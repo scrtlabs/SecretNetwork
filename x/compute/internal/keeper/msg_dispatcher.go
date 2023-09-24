@@ -312,7 +312,7 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		// In a case when the reply is encrypted but the sdk failed (Most likely, funds issue)
 		// we return a error
 		if isReplyEncrypted(msg) && isSdkError {
-			return nil, fmt.Errorf("an sdk error occoured while sending a sub-message: %s", redactedErr.Error())
+			return nil, fmt.Errorf("an sdk error occurred while sending a sub-message: %s", redactedErr.Error())
 		}
 
 		if isReplyEncrypted(msg) {
