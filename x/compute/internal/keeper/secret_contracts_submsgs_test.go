@@ -109,13 +109,13 @@ Test case:
     Note: If the reply was called, it would have incremented the counter again (to 12)
 
 Observed Outcome:
+
   - Contract does not handle reply, even though it is reply_on=always, because sdk messages revert the whole tx.
     This is because regular messages are not postponed until all Submsgs are processed. Instead, they are processed
     in the same ordering as SubMsgs. This differs from cosmwasm's documentation at https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#order-and-rollback
-    The difference in outcomes is small when sdk message fails, because either way, the whole tx is reverted, but may
-	be present in cases of contract-queries-to-chain if the sdk message succeeds.
 
   - Counter is still on 11. SubMsg changes reverted, reply not reached. (first increment remains as it is reverted in sdk)
+
   - Error is not empty, whole tx will revert because of sdk message failing.
 */
 func TestV1StateRevertsAfterSubmessageThatGeneratesBankMsgFails(t *testing.T) {
@@ -143,20 +143,21 @@ Test case:
  0. Initial counter stored in state: 10
  1. Contract increments 1 (=11)
  2. Contract sends:
-    2a. Submessage to itself:
+    2a. Submessage to itself (reply=always):
     2a-1. Submessage execution increments counter by 3 (=14)
     2a-2. Submessage succeeds
+    2a-3. Contract handles reply, increments counter by 1 (=15)
     2b. Failing Bank message.
 
 Expected Result:
   - Error is not empty - will revert all changes
-  - Counter is on 11 (main message revert happens in sdk, not reflected here)
+  - Counter is on 15 (main message revert happens in sdk, not reflected here)
 */
 func TestV1SubmessageStateRevertsIfCallerFails(t *testing.T) {
 	ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
 
 	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
-	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"send_succeeding_submessage_and_failing_message":{}}`, true, true, math.MaxUint64, 0)
+	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"send_succeeding_submessage_and_failing_message":{}}`, false, true, math.MaxUint64, 0)
 
 	require.NotEmpty(t, err)
 
@@ -169,7 +170,7 @@ func TestV1SubmessageStateRevertsIfCallerFails(t *testing.T) {
 
 	// The state here should have been reverted by the APP but in go-tests we create our own keeper so it is not reverted
 	// in this case. Only the submessage changes revert, since we manage them in a sub-context in our keeper.
-	require.Equal(t, uint32(11), resp.Get.Count)
+	require.Equal(t, uint32(15), resp.Get.Count)
 }
 
 /*

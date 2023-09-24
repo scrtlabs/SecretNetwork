@@ -669,23 +669,17 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
             let mut response = Response::default();
 
-            // add_succeeding_submsg(env, &mut response, ReplyOn::Always, 9201);
-
-            // response = response.add_message(
-            //     CosmosMsg::Bank(BankMsg::Send {
-            //         to_address: "non-existent".to_string(),
-            //         amount: vec![Coin::new(100, "non-existent")],
-            //     })
-            // );
+            add_succeeding_submsg(env, &mut response, ReplyOn::Always, 9201);
 
             response = response.add_message(
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: env.contract.address.clone().into_string(),
-                    code_hash: env.contract.code_hash.clone(),
-                    msg: Binary::from(r#"{"quick_error":{}}"#.as_bytes().to_vec()),
-                    funds: vec![],
+                CosmosMsg::Bank(BankMsg::Send {
+                    to_address: "non-existent".to_string(),
+                    amount: vec![Coin::new(100, "non-existent")],
                 })
             );
+
+            // NOTE that if the submsg is added after the message, then it is processed in THAT order,
+            // which is different from what is stated in cosmwasm's docs here: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#order-and-rollback
 
             Ok(response)
         }
