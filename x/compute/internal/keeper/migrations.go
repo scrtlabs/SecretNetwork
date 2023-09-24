@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"encoding/json"
-
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
@@ -100,12 +98,6 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	return nil
 }
 
-type BrokenContractKey struct {
-	OgContractKey           types.ContractKey
-	CurrentContractKey      types.ContractKey
-	CurrentContractKeyProof []byte
-}
-
 func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 	iter := prefix.NewStore(ctx.KVStore(m.keeper.storeKey), types.ContractKeyPrefix).Iterator(nil, nil)
 	for ; iter.Valid(); iter.Next() {
@@ -116,21 +108,17 @@ func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 
 		// get broken contract key
 		brokenContractKeyBz := v1GetContractKey(ctx, m.keeper, contractAddress)
-		var brokenContractKey BrokenContractKey
-		err := json.Unmarshal(brokenContractKeyBz, &brokenContractKey)
-		if err != nil {
-			return err
-		}
+		var brokenContractKey types.BrokenContractKey
+		err := m.keeper.cdc.Unmarshal(brokenContractKeyBz, &brokenContractKey)
+		if err == nil {
+			fixedContractKey := types.ContractKey{
+				OgContractKey:           brokenContractKey.OgContractKey.OgContractKey,
+				CurrentContractKey:      brokenContractKey.CurrentContractKey.CurrentContractKey,
+				CurrentContractKeyProof: brokenContractKey.CurrentContractKeyProof,
+			}
 
-		// convert v1 contract key to v2 contract key
-		fixedContractKey := types.ContractKey{
-			OgContractKey:           brokenContractKey.OgContractKey.OgContractKey,
-			CurrentContractKey:      brokenContractKey.CurrentContractKey.CurrentContractKey,
-			CurrentContractKeyProof: brokenContractKey.CurrentContractKeyProof,
+			m.keeper.SetContractKey(ctx, contractAddress, &fixedContractKey)
 		}
-
-		// overide v1 contract key with v2 contract key in the store
-		m.keeper.SetContractKey(ctx, contractAddress, &fixedContractKey)
 	}
 
 	return nil
