@@ -804,9 +804,19 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 		return types.ContractKey{}, sdkerrors.Wrap(types.ErrNotFound, "contract key")
 	}
 
-	err := k.cdc.Unmarshal(contractKeyBz, &contractKey)
-	if err != nil {
-		return contractKey, err
+	var brokenContractKey types.BrokenContractKey
+	err := k.cdc.Unmarshal(contractKeyBz, &brokenContractKey)
+	if err == nil {
+		contractKey = types.ContractKey{
+			OgContractKey:           brokenContractKey.OgContractKey.OgContractKey,
+			CurrentContractKey:      brokenContractKey.CurrentContractKey.CurrentContractKey,
+			CurrentContractKeyProof: brokenContractKey.CurrentContractKeyProof,
+		}
+	} else {
+		err := k.cdc.Unmarshal(contractKeyBz, &contractKey)
+		if err != nil {
+			return contractKey, err
+		}
 	}
 
 	return contractKey, nil
