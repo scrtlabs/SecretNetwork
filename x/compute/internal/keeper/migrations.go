@@ -68,3 +68,8 @@ func (m Migrator) Migrate2to3(_ sdk.Context) error {
 	// Keep it empty it is only here because we had a bug in testnet
 	return nil
 }
+
+func (m Migrator) Migrate3to4(_ sdk.Context) error {
+	// Keep it empty it is only here because we had a bug in testnet
+	return nil
+}

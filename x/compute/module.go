@@ -103,7 +103,7 @@ func NewAppModule(keeper Keeper) AppModule {
 }
 
 // ConsensusVersion implements AppModule/ConsensusVersion.
-func (AppModule) ConsensusVersion() uint64 { return 3 }
+func (AppModule) ConsensusVersion() uint64 { return 4 }
 
 func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterMsgServer(configurator.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
@@ -115,6 +115,11 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 		panic(err)
 	}
 	err = configurator.RegisterMigration(types.ModuleName, 2, m.Migrate2to3)
+	if err != nil {
+		panic(err)
+	}
+
+	err = configurator.RegisterMigration(types.ModuleName, 3, m.Migrate3to4)
 	if err != nil {
 		panic(err)
 	}
