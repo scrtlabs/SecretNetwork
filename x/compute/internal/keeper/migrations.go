@@ -111,10 +111,13 @@ func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 		var brokenContractKey types.BrokenContractKey
 		err := m.keeper.cdc.Unmarshal(brokenContractKeyBz, &brokenContractKey)
 		if err == nil {
-			fixedContractKey := types.ContractKey{
-				OgContractKey:           brokenContractKey.OgContractKey.OgContractKey,
-				CurrentContractKey:      brokenContractKey.CurrentContractKey.CurrentContractKey,
-				CurrentContractKeyProof: brokenContractKey.CurrentContractKeyProof,
+			var fixedContractKey types.ContractKey
+			if brokenContractKey.OgContractKey != nil && brokenContractKey.CurrentContractKey != nil {
+				fixedContractKey = types.ContractKey{
+					OgContractKey:           brokenContractKey.OgContractKey.OgContractKey,
+					CurrentContractKey:      brokenContractKey.CurrentContractKey.CurrentContractKey,
+					CurrentContractKeyProof: brokenContractKey.CurrentContractKeyProof,
+				}
 			}
 
 			m.keeper.SetContractKey(ctx, contractAddress, &fixedContractKey)
