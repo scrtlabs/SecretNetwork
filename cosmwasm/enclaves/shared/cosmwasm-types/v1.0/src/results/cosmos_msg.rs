@@ -162,6 +162,7 @@ pub enum WasmMsg {
     /// This is translated to a [MsgInstantiateContract](https://github.com/CosmWasm/wasmd/blob/v0.16.0-alpha1/x/wasm/internal/types/tx.proto#L47-L61).
     /// `sender` is automatically filled with the current contract's address.
     Instantiate {
+        admin: Option<String>,
         code_id: u64,
         /// code_hash is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract
         /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
