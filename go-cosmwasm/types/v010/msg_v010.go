@@ -145,6 +145,8 @@ type ExecuteMsg struct {
 }
 
 type InstantiateMsg struct {
+	// Optional admin address to be set
+	Admin string `json:"admin,omitempty"`
 	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
 	CodeID uint64 `json:"code_id"`
 	// Custom addition to support binding a message to specific code to harden against offline & replay attacks
