@@ -87,7 +87,7 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 
 		// Pre v1.11 contracts don't have a history, so we'll add an initial history entry for them.
 		// This is required for the hardcode admin feature to work.
-		// This will also prevent an inconstant state between pre v1.11 and post v1.11 contracts.
+		// This will also prevent an inconsistent state between pre v1.11 and post v1.11 contracts.
 		contractHistory := m.keeper.GetContractHistory(ctx, contractAddress)
 		if len(contractHistory) == 0 {
 			historyEntry := contractInfo.InitialHistory(nil)
