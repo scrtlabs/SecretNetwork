@@ -327,12 +327,13 @@ jobs:
         run: |
           cd integration-tests
           yarn
+          perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ../deployment/dockerfiles/ibc/docker-compose.yml
           docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d > docker-compose.log 2>&1
           yarn test || { cat docker-compose.log; exit 1; }
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
-          git clone --depth 1 --branch contract-upgrade-v2 https://github.com/scrtlabs/secret.js
+          git clone --depth 1 --branch master https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
