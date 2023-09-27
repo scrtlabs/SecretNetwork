@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
@@ -79,6 +81,9 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 	iter := store.Iterator(nil, nil)
 	defer iter.Close()
 
+	migrated := 0
+	ctx.Logger().Info(fmt.Sprintf("Migrated contracts: %d\n", migrated))
+
 	for ; iter.Valid(); iter.Next() {
 		var contractAddress sdk.AccAddress = iter.Key()
 
@@ -109,6 +114,11 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 			// Persist the contractInfo changes.
 			newContractInfoBz := m.keeper.cdc.MustMarshal(&contractInfo)
 			store.Set(iter.Key(), newContractInfoBz)
+		}
+
+		migrated++
+		if migrated%50 == 0 {
+			ctx.Logger().Info(fmt.Sprintf("Migrated contracts: %d\n", migrated))
 		}
 	}
 	return nil
