@@ -283,7 +283,6 @@ pub enum WasmMsg {
     },
     /// this instantiates a new contracts from previously uploaded wasm code
     Instantiate {
-        admin: Option<String>,
         code_id: u64,
         /// callback_code_hash is the hex encoded hash of the code. This is used by Secret Network to harden against replaying the contract
         /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
