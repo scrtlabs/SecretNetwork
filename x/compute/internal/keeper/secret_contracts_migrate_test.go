@@ -8244,7 +8244,6 @@ func TestContractInitsContractWithAdmin(t *testing.T) {
 			newCodeId, codeHash := uploadCode(ctx, t, keeper, testContract.WasmFilePath, walletA)
 
 			initMsg := fmt.Sprintf(`{"call_to_init":{"admin": "%s", "code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, addr.String(), newCodeId, codeHash, `{\"nop\":{}}`)
-			fmt.Println("ESHELDEBUG: initMsg:", initMsg)
 			_, ctx, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, initMsg, false, true, math.MaxUint64, 0)
 			require.Empty(t, err)
 
