@@ -357,6 +357,7 @@ pub enum ExecuteMsg {
         code_hash: String,
         label: String,
         msg: String,
+        admin: Option<String>,
     },
     CallToExec {
         addr: String,

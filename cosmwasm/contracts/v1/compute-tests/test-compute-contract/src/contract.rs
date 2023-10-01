@@ -1010,6 +1010,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             code_hash,
             label,
             msg,
+            admin,
         } => Ok(Response::new()
             .add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
@@ -1017,7 +1018,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
                 label,
-                admin: None,
+                admin,
             }))
             .add_attribute("a", "a")),
         ExecuteMsg::CallToExec {

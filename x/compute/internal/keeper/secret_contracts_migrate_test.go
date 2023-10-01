@@ -8232,3 +8232,35 @@ func TestMigrateEnvTxHash(t *testing.T) {
 		res.WasmEvents,
 	)
 }
+
+func TestContractInitsContractWithAdmin(t *testing.T) {
+	for _, testContract := range testContracts {
+		t.Run("v1 inits "+testContract.CosmWasmVersion, func(t *testing.T) {
+			ctx, keeper, codeID, _, walletA, privKeyA, _, _ := setupTest(t, TestContractPaths[v1Contract], sdk.NewCoins())
+
+			_, _, addr, _, initErr := initHelper(t, keeper, ctx, codeID, walletA, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+			require.Empty(t, initErr)
+
+			newCodeId, codeHash := uploadCode(ctx, t, keeper, testContract.WasmFilePath, walletA)
+
+			initMsg := fmt.Sprintf(`{"call_to_init":{"admin": "%s", "code_id":%d,"code_hash":"%s","msg":"%s","label":"1"}}`, addr.String(), newCodeId, codeHash, `{\"nop\":{}}`)
+			_, ctx, _, events, _, err := execHelper(t, keeper, ctx, addr, walletA, privKeyA, initMsg, false, true, math.MaxUint64, 0)
+			require.Empty(t, err)
+
+			var newContractBech32 string
+			for _, v := range events[1] {
+				if v.Key == "contract_address" {
+					newContractBech32 = v.Value
+					break
+				}
+			}
+			require.NotEmpty(t, newContractBech32)
+
+			address, error2 := sdk.AccAddressFromBech32(newContractBech32)
+			require.NoError(t, error2)
+			info := keeper.GetContractInfo(ctx, address)
+
+			require.Equal(t, addr.String(), info.Admin)
+		})
+	}
+}
