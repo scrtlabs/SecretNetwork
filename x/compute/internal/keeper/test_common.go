@@ -625,7 +625,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateC
 	if msg.Admin != "" {
 		admin, err = sdk.AccAddressFromBech32(msg.Admin)
 		if err != nil {
-			return nil, err
+			return nil, sdkerrors.Wrap(err, "admin")
 		}
 	}
 
