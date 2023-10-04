@@ -67,12 +67,18 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 }
 
 func (m Migrator) Migrate2to3(_ sdk.Context) error {
-	// Keep it empty it is only here because we had a bug in testnet
+	// Empty migration.
+	// Because of a testnet bug, we had to do a bunch of migrations in the testnet
+	// which let the ConsensusVersion there to be 4.
+	// This migration is here to match the ConsensusVersion on mainnet to that of the testnet.
 	return nil
 }
 
 func (m Migrator) Migrate3to4(_ sdk.Context) error {
-	// Keep it empty it is only here because we had a bug in testnet
+	// Empty migration.
+	// Because of a testnet bug, we had to do a bunch of migrations in the testnet
+	// which let the ConsensusVersion there to be 4.
+	// This migration is here to match the ConsensusVersion on mainnet to that of the testnet.
 	return nil
 }
 
@@ -91,7 +97,7 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 		m.keeper.cdc.MustUnmarshal(iter.Value(), &contractInfo)
 
 		// Pre v1.11 contracts don't have a history, so we'll add an initial history entry for them.
-		// This is required for the hardcode admin feature to work.
+		// This is required for the hardcoded admins feature to work.
 		// This will also prevent an inconsistent state between pre v1.11 and post v1.11 contracts.
 		contractHistory := m.keeper.GetContractHistory(ctx, contractAddress)
 		if len(contractHistory) == 0 {
