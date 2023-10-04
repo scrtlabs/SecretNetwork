@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   localsecret-1:
-    image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
+    image: "ghcr.io/scrtlabs/localsecret:latest"
     # ports are only here in case interaction
     # between localhost and container is desired
     ports:
@@ -14,14 +14,14 @@ services:
       - "5000:5000"
     environment:
       LOG_LEVEL: "TRACE"
-    #      SLEEP: "true"
+#      SLEEP: "true"
     healthcheck:
       test: ["CMD-SHELL", "secretd status"]
       interval: 10s
       timeout: 5s
       retries: 5
   localsecret-2:
-    image: "ghcr.io/scrtlabs/localsecret:v0.0.0"
+    image: "ghcr.io/scrtlabs/localsecret:latest"
     # ports are only here in case interaction
     # between localhost and container is desired
     ports:
