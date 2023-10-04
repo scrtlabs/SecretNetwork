@@ -30,8 +30,8 @@ default = []
 with_floats = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "b46529a2", package = "secret-cosmwasm-std" }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "b46529a2", package = "secret-cosmwasm-storage" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "ed247c8", package = "secret-cosmwasm-std" }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "ed247c8", package = "secret-cosmwasm-storage" }
 schemars = "0.8.1"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",
