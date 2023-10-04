@@ -298,7 +298,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	// Then we'll pass Fee as an ics4wrapper to everything else.
 	//
 	// Compute send: Switch -> Fee -> Packet Forward -> WASM Hooks
-	// Compute receive: Switch -> Fee -> WASM Hooks
+	// Compute receive: Switch -> Fee -> Packet Forward -> WASM Hooks
 	//
 	// Transfer send: Switch -> Fee -> Packet Forward -> WASM Hooks (WASM Hooks isn't necessary here, but we'll add it for consistency)
 	// Transfer receive: Switch -> Fee -> Packet Forward -> WASM Hooks
@@ -455,10 +455,17 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	ak.ComputeKeeper = &computeKeeper
 	wasmHooks.ContractKeeper = ak.ComputeKeeper
 
-	// Compute receive: Switch -> Fee -> WASM Hooks
+	// Compute receive: Switch -> Fee -> Packet Forward -> WASM Hooks
 	var computeStack porttypes.IBCModule
 	computeStack = compute.NewIBCHandler(ak.ComputeKeeper, ak.IbcKeeper.ChannelKeeper, ak.IbcFeeKeeper)
 	computeStack = ibchooks.NewIBCMiddleware(computeStack, &ibcHooksICS4Wrapper)
+	computeStack = ibcpacketforward.NewIBCMiddleware(
+		computeStack,
+		ak.PacketForwardKeeper,
+		0,
+		ibcpacketforwardkeeper.DefaultForwardTransferPacketTimeoutTimestamp, // 10 minutes
+		ibcpacketforwardkeeper.DefaultRefundTransferPacketTimeoutTimestamp,  // 28 days
+	)
 	computeStack = ibcfee.NewIBCMiddleware(computeStack, ak.IbcFeeKeeper)
 	computeStack = ibcswitch.NewIBCMiddleware(computeStack, ak.IbcSwitchKeeper)
 
