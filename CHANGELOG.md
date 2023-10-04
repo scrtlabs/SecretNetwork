@@ -4,11 +4,12 @@
 
 - Fix the hardcoded admins feature
 - Add hardcoded admins according to proposals [269](https://dev.mintscan.io/secret/proposals/269) (Shillables) & [270](https://dev.mintscan.io/secret/proposals/270) (Sienna).
-- Fix PFM drops packets of IBC contracts
+- Update PFM to stop dropping packets of IBC contracts
   - This bug was introduced in v1.9 and was missed because of a bug in our CI system
   - For more info see https://github.com/cosmos/ibc-apps/pull/105
 - Add `admin` to `WasmMsg::Instantiate` in cosmwasm-std (Thanks [@luca992](https://github.com/luca992)!)
   - This allows contracts to specify an admin address when instantiating other contracts
+- Update IBC to v4.5.0
 
 # 1.11.0
 
