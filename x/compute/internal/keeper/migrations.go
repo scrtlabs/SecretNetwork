@@ -2,10 +2,13 @@ package keeper
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 // Migrator is a struct for handling in-place store migrations.
@@ -87,8 +90,10 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 	iter := store.Iterator(nil, nil)
 	defer iter.Close()
 
-	migrated := 0
-	ctx.Logger().Info(fmt.Sprintf("Migrated contracts: %d\n", migrated))
+	formatter := message.NewPrinter(language.English)
+	migratedContracts := uint64(0)
+	totalContracts := m.keeper.peekAutoIncrementID(ctx, types.KeyLastCodeID)
+	previousTime := time.Now().UnixNano()
 
 	for ; iter.Valid(); iter.Next() {
 		var contractAddress sdk.AccAddress = iter.Key()
@@ -122,10 +127,39 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 			store.Set(iter.Key(), newContractInfoBz)
 		}
 
-		migrated++
-		if migrated%50 == 0 {
-			ctx.Logger().Info(fmt.Sprintf("Migrated contracts: %d\n", migrated))
-		}
+		migratedContracts++
+		logMigrationProgress(ctx, formatter, migratedContracts, totalContracts, previousTime)
+		previousTime = time.Now().UnixNano()
 	}
 	return nil
+}
+
+const progressPartSize = 1000
+
+func logMigrationProgress(ctx sdk.Context, formatter *message.Printer, migratedContracts uint64, totalContracts uint64, previousTime int64) {
+	if migratedContracts%progressPartSize == 0 || migratedContracts == totalContracts {
+		if totalContracts > 0 {
+			timePerPartNs := time.Now().UnixNano() - previousTime
+			partsLeft := float64(totalContracts-migratedContracts) / float64(progressPartSize)
+			timeLeftNs := uint64(partsLeft * float64(timePerPartNs))
+			timeLeftSec := timeLeftNs / 1e9
+			etaMinutes := uint(timeLeftSec / 60)
+			etaSeconds := uint(timeLeftSec % 60)
+
+			ctx.Logger().Info(
+				formatter.Sprintf("Migrated contracts: %d/%d (%f%%), ETA: %s\n",
+					migratedContracts,
+					totalContracts,
+					(float64(migratedContracts)/float64(totalContracts))*100,
+					fmt.Sprintf(
+						"%02dm:%02ds",
+						etaMinutes,
+						etaSeconds,
+					),
+				),
+			)
+		}
+	} else {
+		ctx.Logger().Info(fmt.Sprintf("Migrated contracts: %d\n", migratedContracts))
+	}
 }
