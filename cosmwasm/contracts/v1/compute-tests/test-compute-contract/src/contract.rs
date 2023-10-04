@@ -2,9 +2,9 @@ use core::time;
 use std::{thread, vec};
 
 use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Empty, Env,
-    Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage,
-    SubMsg, SubMsgResponse, SubMsgResult, WasmMsg, WasmQuery, from_binary, CanonicalAddr,
+    attr, coins, entry_point, from_binary, to_binary, BankMsg, Binary, CanonicalAddr, CosmosMsg,
+    Deps, DepsMut, Empty, Env, Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response,
+    StdError, StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
@@ -208,6 +208,7 @@ pub fn instantiate(
                 code_hash,
                 funds: vec![],
                 label: String::from("fi"),
+                admin: None,
             }))
             .add_attribute("instantiating a new contract from init!", "🐙")),
         InstantiateMsg::CallbackBadParams {
@@ -246,6 +247,7 @@ pub fn instantiate(
             code_hash,
             label,
             msg,
+            admin,
         } => Ok(Response::new()
             .add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
@@ -253,6 +255,7 @@ pub fn instantiate(
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
                 label,
+                admin,
             }))
             .add_attribute("a", "a")),
         InstantiateMsg::CallToExec {
@@ -308,6 +311,7 @@ pub fn instantiate(
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 funds: coins,
                 label: "init test".to_string(),
+                admin: None,
             })),
         ),
         InstantiateMsg::SendMultipleFundsToExecCallback {
@@ -663,6 +667,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     funds: vec![],
                     label: "new2231231".to_string(),
                     code_id,
+                    admin: None,
                 }),
                 gas_limit: Some(10000000_u64),
                 reply_on: ReplyOn::Always,
@@ -739,6 +744,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     funds: vec![],
                     label: "new2231231".to_string(),
                     code_id,
+                    admin: None,
                 }),
                 gas_limit: Some(10000000_u64),
                 reply_on: ReplyOn::Never,
@@ -791,6 +797,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     funds: vec![],
                     label: "new2231231".to_string(),
                     code_id,
+                    admin: None,
                 }),
                 gas_limit: Some(10000000_u64),
                 reply_on: ReplyOn::Always,
@@ -827,6 +834,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     funds: vec![],
                     label: "new2231231".to_string(),
                     code_id,
+                    admin: None,
                 }),
                 gas_limit: Some(10000000_u64),
                 reply_on: ReplyOn::Never,
@@ -975,6 +983,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 code_hash,
                 label: String::from("yo"),
                 funds: coins(amount.into(), denom),
+                admin: None,
             })),
         ),
         ExecuteMsg::SendFundsToExecCallback {
@@ -1001,6 +1010,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             code_hash,
             label,
             msg,
+            admin,
         } => Ok(Response::new()
             .add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
@@ -1008,6 +1018,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
                 label,
+                admin,
             }))
             .add_attribute("a", "a")),
         ExecuteMsg::CallToExec {
@@ -1257,6 +1268,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 funds: coins,
                 label: "test".to_string(),
+                admin: None,
             })),
         ),
         ExecuteMsg::SendMultipleFundsToExecCallback {
@@ -1367,8 +1379,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             contract_addr,
             new_admin,
             reply,
-        } => 
-        match reply {
+        } => match reply {
             true => Ok(Response::new().add_submessage(SubMsg::reply_on_success(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.into_string(),
                 code_hash: env.contract.code_hash,
@@ -1530,6 +1541,7 @@ pub fn send_multiple_sub_messages(env: Env, _deps: DepsMut) -> StdResult<Respons
             funds: vec![],
             label: "new202213".to_string(),
             code_id: 1,
+            admin: None,
         }),
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Always,
@@ -1599,6 +1611,7 @@ pub fn send_multiple_sub_messages_no_reply(env: Env, deps: DepsMut) -> StdResult
             funds: vec![],
             label: "new202213".to_string(),
             code_id: 1,
+            admin: None,
         }),
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Never,
@@ -1878,6 +1891,7 @@ pub fn init_new_contract(env: Env, _deps: DepsMut) -> StdResult<Response> {
             funds: vec![],
             label: "new202213".to_string(),
             code_id: 1,
+            admin: None,
         }),
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Always,
@@ -1900,6 +1914,7 @@ pub fn init_new_contract_with_error(env: Env, _deps: DepsMut) -> StdResult<Respo
             funds: vec![],
             label: "new2022133".to_string(),
             code_id: 1,
+            admin: None,
         }),
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Always,
@@ -2255,32 +2270,27 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             .add_attribute_plaintext("attr_reply", "🦄")
             .set_data(to_binary("reply")?)),
         (11337, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
-
-
-          let ( contract_addr,
-            new_code_id,
-            callback_code_hash,
-            msg) = match from_binary(&data.unwrap()) {
-                Ok(ExecuteMsg::SendMsgMigrateContract {
-                    contract_addr,
-                    new_code_id,
-                    callback_code_hash,
-                    msg,
-                    ..
-                }) => ( contract_addr,
-                    new_code_id,
-                    callback_code_hash,
-                    msg),
-                Ok(_) => return Err(StdError::generic_err("cannot parse into SendMsgMigrateContract")),
-                Err(err) => {
-                return Err(StdError::generic_err(format!("cannot parse into SendMsgMigrateContract: {:?}",err)));
-                    
-                },
-            };
-            
-            
-            
-         
+            let (contract_addr, new_code_id, callback_code_hash, msg) =
+                match from_binary(&data.unwrap()) {
+                    Ok(ExecuteMsg::SendMsgMigrateContract {
+                        contract_addr,
+                        new_code_id,
+                        callback_code_hash,
+                        msg,
+                        ..
+                    }) => (contract_addr, new_code_id, callback_code_hash, msg),
+                    Ok(_) => {
+                        return Err(StdError::generic_err(
+                            "cannot parse into SendMsgMigrateContract",
+                        ))
+                    }
+                    Err(err) => {
+                        return Err(StdError::generic_err(format!(
+                            "cannot parse into SendMsgMigrateContract: {:?}",
+                            err
+                        )));
+                    }
+                };
 
             Ok(
                 Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
@@ -2292,53 +2302,49 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
             )
         }
         (11338, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
-            let   contract_addr=  match from_binary(&data.unwrap()) {
-            Ok(ExecuteMsg::SendMsgClearAdmin {
-                contract_addr,
-                ..
-            }) => contract_addr,
-                
+            let contract_addr = match from_binary(&data.unwrap()) {
+                Ok(ExecuteMsg::SendMsgClearAdmin { contract_addr, .. }) => contract_addr,
+
                 Ok(_) => {
-                return Err(StdError::generic_err("cannot parse into SendMsgClearAdmin"));
-                    
+                    return Err(StdError::generic_err("cannot parse into SendMsgClearAdmin"));
                 }
-            Err(err) => {
-                return Err(StdError::generic_err(format!("cannot parse into SendMsgClearAdmin: {:?}",err)));
-
-            },
-        };
-
+                Err(err) => {
+                    return Err(StdError::generic_err(format!(
+                        "cannot parse into SendMsgClearAdmin: {:?}",
+                        err
+                    )));
+                }
+            };
 
             Ok(Response::new().add_message(CosmosMsg::Wasm(WasmMsg::ClearAdmin { contract_addr })))
         }
         (11339, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
-            let   ( contract_addr,
-                new_admin)=  match from_binary(&data.unwrap()) {
-            Ok(ExecuteMsg::SendMsgUpdateAdmin {
-                contract_addr,
-                new_admin,
-                ..
-            }) => ( contract_addr,
-                new_admin),
+            let (contract_addr, new_admin) = match from_binary(&data.unwrap()) {
+                Ok(ExecuteMsg::SendMsgUpdateAdmin {
+                    contract_addr,
+                    new_admin,
+                    ..
+                }) => (contract_addr, new_admin),
                 Ok(_) => {
-                return Err(StdError::generic_err("cannot parse into SendMsgUpdateAdmin"));
-                    
+                    return Err(StdError::generic_err(
+                        "cannot parse into SendMsgUpdateAdmin",
+                    ));
                 }
-            Err(err) => {
-                return Err(StdError::generic_err(format!("cannot parse into SendMsgUpdateAdmin: {:?}",err)));
+                Err(err) => {
+                    return Err(StdError::generic_err(format!(
+                        "cannot parse into SendMsgUpdateAdmin: {:?}",
+                        err
+                    )));
+                }
+            };
 
-            },
-        };
-        
-        
-      
-
-            Ok(Response::new().add_message(
-            CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
-                contract_addr,
-                admin: new_admin,
-            }),
-        ))},
+            Ok(
+                Response::new().add_message(CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
+                    contract_addr,
+                    admin: new_admin,
+                })),
+            )
+        }
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
 }
@@ -2638,6 +2644,7 @@ pub fn exec_callback_to_init(
             code_hash,
             funds: vec![],
             label: String::from("hi"),
+            admin: None,
         }))
         .add_attribute("instantiating a new contract", "🪂")
 }
@@ -2662,7 +2669,9 @@ fn allocate_on_heap(bytes: usize) -> Response {
 
     values[bytes - 1] = 1;
 
-    Response::new().set_data("😅".as_bytes().to_vec()).add_attribute("zero", format!("{}", values[bytes / 2]))
+    Response::new()
+        .set_data("😅".as_bytes().to_vec())
+        .add_attribute("zero", format!("{}", values[bytes / 2]))
 }
 
 fn get_state(deps: DepsMut, key: String) -> Response {
@@ -2691,7 +2700,7 @@ fn remove_state(deps: DepsMut, key: String) -> Response {
 fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -> Response {
     let null_ptr_slice: &[u8] = unsafe { std::slice::from_raw_parts(std::ptr::null(), 0) };
 
-    let null_human_addr: &str = unsafe{ std::str::from_utf8_unchecked(null_ptr_slice) };
+    let null_human_addr: &str = unsafe { std::str::from_utf8_unchecked(null_ptr_slice) };
 
     let null_ptr: *const CanonicalAddr = std::ptr::null();
     let null_canon_addr: &CanonicalAddr = unsafe { &*null_ptr };
@@ -2710,18 +2719,15 @@ fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -
             deps.storage.remove(null_ptr_slice);
         }
         "canonicalize_address_input" => {
-            deps.api
-                .addr_canonicalize(null_human_addr);
+            deps.api.addr_canonicalize(null_human_addr);
         }
         "canonicalize_address_output" => { /* TODO */ }
         "humanize_address_input" => {
-            deps.api
-                .addr_humanize(null_canon_addr);
+            deps.api.addr_humanize(null_canon_addr);
         }
         "humanize_address_output" => { /* TODO */ }
         "validate_address_input" => {
-            deps.api
-                .addr_validate(null_human_addr);
+            deps.api.addr_validate(null_human_addr);
         }
         "validate_address_output" => { /* TODO */ }
         _ => {}
@@ -2861,15 +2867,14 @@ pub fn sudo(_deps: DepsMut, _env: Env, msg: SudoMsg) -> StdResult<Response> {
                 success.to_string(),
             ),
         ])),
-        SudoMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout {
-            channel,
-            sequence,
-        }) => Ok(Response::default().add_attributes(vec![
-            ("ibc_lifecycle_complete.ibc_timeout.channel", channel),
-            (
-                "ibc_lifecycle_complete.ibc_timeout.sequence",
-                sequence.to_string(),
-            ),
-        ])),
+        SudoMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout { channel, sequence }) => {
+            Ok(Response::default().add_attributes(vec![
+                ("ibc_lifecycle_complete.ibc_timeout.channel", channel),
+                (
+                    "ibc_lifecycle_complete.ibc_timeout.sequence",
+                    sequence.to_string(),
+                ),
+            ]))
+        }
     }
 }

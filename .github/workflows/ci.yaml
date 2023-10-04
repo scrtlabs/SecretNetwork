@@ -270,8 +270,8 @@ jobs:
             FEATURES_U=debug-print,random,light-client-validation,go-tests
             SGX_MODE=SW
           target: build-localsecret
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localsecret.tar
       - name: Upload Image
         uses: actions/upload-artifact@v3
