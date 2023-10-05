@@ -22,7 +22,7 @@ jobs:
           - build: macOS
             os: macOS-latest
           - build: Windows
-            os: windows-latest
+            os: windows-2022
     defaults:
       run:
         shell: bash
