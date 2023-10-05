@@ -1,6 +1,6 @@
 module github.com/scrtlabs/SecretNetwork
 
-go 1.20
+go 1.21
 
 replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
