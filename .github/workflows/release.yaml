@@ -275,13 +275,12 @@ jobs:
           version: "v1.9.0"
 
   Release:
-    needs:
-      [
+    needs: [
         native-build-cli,
         build-deb-testnet,
         build-deb-mainnet,
         MacOS-ARM64-CLI,
-        check-hw-tool
+        check-hw-tool,
         # check-hw-tool-mainnet
       ]
     runs-on: ubuntu-20.04
@@ -311,9 +310,9 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-#      - uses: actions/download-artifact@v3
-#        with:
-#          name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
+      #      - uses: actions/download-artifact@v3
+      #        with:
+      #          name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
@@ -326,4 +325,5 @@ jobs:
             secretcli-Linux
             secretcli-MacOS-arm64
             check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+
 #            check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
