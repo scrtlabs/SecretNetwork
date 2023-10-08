@@ -314,7 +314,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          body: ⚠️ TESTNET ⚠️
+          body: "# ⚠️ TESTNET ⚠️"
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
