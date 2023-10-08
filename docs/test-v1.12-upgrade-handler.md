@@ -1,14 +1,14 @@
-# How to test the v1.6 upgrade with LocalSecret
+# How to test the v1.12 upgrade with LocalSecret
 
 ## Step 1
 
-Start a v1.5 chain.
+Start a v1.11 chain.
 
 - Port 9091 open for secret.js tests
-- Port 26657 open for cw20-ics20 tests
+- Port 26657 open for manual tests
 
 ```bash
-docker run -it -p 9091:9091 -p 26657:26657 -p 1317:1317 --name localsecret ghcr.io/scrtlabs/localsecret:v1.5.1-patch.3
+docker run -it -p 9091:9091 -p 26657:26657 -p 1317:1317 --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0
 ```
 
 ## Step 2
@@ -34,9 +34,9 @@ INIT='{"counter":{"counter":10, "expires":100000}}'
 secretd tx compute instantiate 1 "$INIT" --from a --label "c" -y
 sleep 5
 
-secretd tx compute execute secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"increment":{"addition": 13}}' --from a -y
+secretd tx compute execute secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q '{"increment":{"addition": 13}}' --from a -y
 sleep 5
-secretd query compute query secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"get": {}}'
+secretd query compute query secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q '{"get": {}}'
 ```
 
 Expected result should be:

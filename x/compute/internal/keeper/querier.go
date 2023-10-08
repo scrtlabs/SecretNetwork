@@ -201,6 +201,11 @@ func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper K
 		return nil, nil
 	}
 
+	if info.Admin == "" {
+		// remove meaningless admin proof when no admin is defined
+		info.AdminProof = nil
+	}
+
 	return &types.ContractInfoWithAddress{
 		ContractAddress: contractAddress.String(),
 		ContractInfo:    info,
