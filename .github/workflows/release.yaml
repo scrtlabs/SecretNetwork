@@ -146,7 +146,7 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-latest]
+        os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
@@ -297,6 +297,9 @@ jobs:
           name: secretcli-macOS
       - uses: actions/download-artifact@v3
         with:
+          name: secretcli-Windows
+      - uses: actions/download-artifact@v3
+        with:
           name: secretcli-MacOS-arm64
       - uses: actions/download-artifact@v3
         with:
@@ -318,6 +321,7 @@ jobs:
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
             secretcli-macOS
+            secretcli-Windows
             secretcli-Linux
             secretcli-MacOS-arm64
             check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
