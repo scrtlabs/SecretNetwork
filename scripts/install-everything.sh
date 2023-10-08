@@ -20,7 +20,7 @@ rustup component add rust-src
 rustup target add wasm32-unknown-unknown
 
 # Install Go
-GO_VERSION=1.20.2
+GO_VERSION=1.21.1
 wget -q https://golang.org/dl/go$GO_VERSION.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go$GO_VERSION.linux-amd64.tar.gz
 export PATH=$PATH:/usr/local/go/bin

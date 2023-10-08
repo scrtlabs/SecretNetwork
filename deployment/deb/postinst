@@ -32,6 +32,7 @@ EOF
 systemctl daemon-reload
 
 mkdir -p "/opt/secret/.sgx_secrets"
-chown -R "$SUDO_USER":"$SUDO_USER" "/opt/secret/.sgx_secrets"
 mkdir -p "/opt/secret/.secretd/.node"
 mkdir -p "$(eval echo ~"$SUDO_USER")/.sgx_secrets"
+chown -R "$SUDO_USER":"$SUDO_USER" "/opt/secret/"
+chmod -R 666 "/opt/secret/"
