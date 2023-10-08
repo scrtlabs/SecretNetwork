@@ -37,6 +37,7 @@ import (
 	v1_11_testnet_broken_state "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11-testnet-broken-state"
 	v1_11_testnet_shade_hardcoded_admins "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11-testnet-shade-hardcoded-admins"
 	v1_11_testnet_shade_hardcoded_admins_fix "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11-testnet-shade-hardcoded-admins-fix"
+	v1_12 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.12"
 	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
@@ -111,6 +112,7 @@ var (
 		v1_11_testnet_shade_hardcoded_admins.Upgrade,
 		v1_11_testnet_shade_hardcoded_admins_fix.Upgrade,
 		v1_11_testnet_broken_state.Upgrade,
+		v1_12.Upgrade,
 	}
 )
 
