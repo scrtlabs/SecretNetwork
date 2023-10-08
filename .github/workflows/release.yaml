@@ -66,6 +66,7 @@ jobs:
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
 
   build-deb-mainnet:
+    if: false
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
