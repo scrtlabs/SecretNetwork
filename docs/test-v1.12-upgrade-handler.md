@@ -5,7 +5,7 @@
 ### Start a v1.11 chain
 
 ```bash
-docker run -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0-beta.19
+docker run -p 1316:1317 -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0-beta.19
 ```
 
 ## Step 2
@@ -33,6 +33,53 @@ docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lz
 ```
 
 Expected result should be: `null`
+
+### OPTIONAL: Init a bunch of contracts to test the progress prints in the upgrade handler
+
+```ts
+import { MsgInstantiateContract, SecretNetworkClient, Wallet } from "secretjs";
+
+async function main() {
+  const wallet = new Wallet(
+    "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
+  );
+  const secretjs = new SecretNetworkClient({
+    chainId: "secretdev-1",
+    url: "http://localhost:1317",
+    wallet,
+    walletAddress: wallet.address,
+  });
+
+  const { code_hash } = await secretjs.query.compute.codeHashByCodeId({
+    code_id: "1",
+  });
+
+  let count = 0;
+  while (count < 7000) {
+    console.log(new Date().toISOString(), count);
+    const msgs: MsgInstantiateContract[] = [];
+    for (let i = 0; i < 500; i++) {
+      msgs.push(
+        new MsgInstantiateContract({
+          code_id: 1,
+          code_hash,
+          init_msg: { nop: {} },
+          label: String(Math.random()),
+          sender: wallet.address,
+        })
+      );
+    }
+    const tx = await secretjs.tx.broadcast(msgs, { gasLimit: 100_000_000 });
+
+    if (tx.code === 0) {
+      count += 500;
+    } else {
+      console.log(tx.rawLog);
+    }
+  }
+}
+main();
+```
 
 ## Step 3
 
@@ -134,14 +181,6 @@ docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lz
 ```
 
 Expected result should be: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
-
-### Check that the admin_proof is an array of 32 zeros
-
-```bash
-docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q | jq -r .admin_proof'
-```
-
-Expected result should be: `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`
 
 ### Upgrade the contract
 
