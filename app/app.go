@@ -433,9 +433,9 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 		return
 	}
 
-	for _, upgradeDetails := range Upgrades {
-		if upgradeInfo.Name == upgradeDetails.UpgradeName {
-			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
+	for i := range Upgrades {
+		if upgradeInfo.Name == Upgrades[i].UpgradeName {
+			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &Upgrades[i].StoreUpgrades))
 		}
 	}
 }
