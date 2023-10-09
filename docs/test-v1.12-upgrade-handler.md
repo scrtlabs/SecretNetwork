@@ -81,40 +81,48 @@ async function main() {
 main();
 ```
 
-## Step 3
+## Step 4
+### Test Hardcoded admins: Prepare a binary where you're a hardcoded admin of a deployed contract
+Add yourself as a hardcoded admin of the just-deployed contract
+Add the following line to the list in the file `hardcoded_admins.go`:
+```go
+	"secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q": "secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03",
+```
+
+Add the following line to the list in the file `hardcoded_admins.rs`:
+```rust
+        ("secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q", "secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03"),
+```
+
+Add the following line to the `ALLOWED_CONTRACT_CODE_HASH` map in the file `hardcoded_admins.rs`:
+```rust
+        ("secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q", "d45dc9b951ed5e9416bd52ccf28a629a52af0470a1a129afee7e53924416f555"),
+```
 
 Compile a v1.12 LocalSecret with the hardcoded admin.
+```bash
+DOCKER_TAG=v1.12 make localsecret
+```
 
-Edit `x/compute/internal/keeper/hardcoded_admins.go` and `cosmwasm/enclaves/shared/contract-engine/src/hardcoded_admins.rs` and add:
-
-- Contract: `secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q`
-- Admin: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
-- Code hash: `d45dc9b951ed5e9416bd52ccf28a629a52af0470a1a129afee7e53924416f555`
-
-Then run `DOCKER_TAG=v0.0.0 make localsecret`.
-
-## Step 4
-
+## Step 5
 Copy binaries from the v1.12 LocalSecret to the running v1.11 LocalSecret.
 
 ```bash
 # Start a v1.12 chain and wait a bit for it to setup
-docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v0.0.0
+docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v1.12
 sleep 5
 
 # Copy binaries from v1.12 chain to host (a limitation of `docker cp`)
-
 rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin
-docker cp localsecret-1.12:/usr/bin/secretcli                                /tmp/upgrade-bin
-docker cp localsecret-1.12:/usr/bin/secretd                                  /tmp/upgrade-bin
-docker cp localsecret-1.12:/usr/lib/librust_cosmwasm_enclave.signed.so       /tmp/upgrade-bin
-docker cp localsecret-1.12:/usr/lib/libgo_cosmwasm.so                        /tmp/upgrade-bin
+docker cp localsecret-1.12:/usr/bin/secretcli                              /tmp/upgrade-bin
+docker cp localsecret-1.12:/usr/bin/secretd                                /tmp/upgrade-bin
+docker cp localsecret-1.12:/usr/lib/librust_cosmwasm_enclave.signed.so     /tmp/upgrade-bin
+docker cp localsecret-1.12:/usr/lib/libgo_cosmwasm.so                      /tmp/upgrade-bin
 
 # Can kill localsecret-1.12 at this point
 docker rm -f localsecret-1.12
 
 # Copy binaries from host to current v1.11 chain
-
 docker exec localsecret bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 
 docker cp /tmp/upgrade-bin/secretcli                                localsecret:/tmp/upgrade-bin
@@ -122,14 +130,14 @@ docker cp /tmp/upgrade-bin/secretd                                  localsecret:
 docker cp /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       localsecret:/tmp/upgrade-bin
 docker cp /tmp/upgrade-bin/libgo_cosmwasm.so                        localsecret:/tmp/upgrade-bin
 
-# Overwrite v1.4 binaries with v1.11 binaries without affecting file permissions
+# Overwrite v1.11 binaries with v1.12 binaries without affecting file permissions
 # v1.11 chain is still running at this point
 # we assume v1.11 binaries are loaded to RAM
-# so overwriting them with v1.12 binraies won't take effect until a process restart
+# so overwriting them with v1.12 binaries won't take effect until a process restart
 
-docker exec localsecret bash -c 'cat /tmp/upgrade-bin/secretcli                                > /usr/bin/secretcli'
-docker exec localsecret bash -c 'cat /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so       > /usr/lib/librust_cosmwasm_enclave.signed.so'
-docker exec localsecret bash -c 'cat /tmp/upgrade-bin/libgo_cosmwasm.so                        > /usr/lib/libgo_cosmwasm.so'
+docker exec localsecret bash -c 'cat /tmp/upgrade-bin/secretcli                             > /usr/bin/secretcli'
+docker exec localsecret bash -c 'cat /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so    > /usr/lib/librust_cosmwasm_enclave.signed.so'
+docker exec localsecret bash -c 'cat /tmp/upgrade-bin/libgo_cosmwasm.so                     > /usr/lib/libgo_cosmwasm.so'
 
 # We cannot overwrite secretd because it's being used ("Text file busy")
 # so instead we're going to point the init script to the new binary
@@ -170,7 +178,7 @@ docker stop localsecret
 docker start localsecret -a
 ```
 
-You should see `INF applying upgrade "v1.12" at height` in the logs, following by blocks continute to stream.
+You should see `INF applying upgrade "v1.12" at height` in the logs, followed by blocks continuing to stream.
 
 ## Step 7
 
