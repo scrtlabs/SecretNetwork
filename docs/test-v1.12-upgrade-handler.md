@@ -88,13 +88,17 @@ yarn test
 
 ## Step 4
 
-Compile a v1.12 LocalSecret with the hardcoded admin:
+Compile a v1.12 LocalSecret with the hardcoded admin.
 
-TODO
+Edit `x/compute/internal/keeper/hardcoded_admins.go` and `cosmwasm/enclaves/shared/contract-engine/src/hardcoded_admins.rs` and add:
+
+- Contract: `secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q`
+- Admin: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
+- Code hash: `d45dc9b951ed5e9416bd52ccf28a629a52af0470a1a129afee7e53924416f555`
 
 ## Step 5
 
-Copy binaries from v1.12 chain to v1.11 chain.
+Copy binaries from the v1.12 LocalSecret to the running v1.11 LocalSecret.
 
 ```bash
 # Start a v1.12 chain and wait a bit for it to setup
@@ -187,7 +191,7 @@ Expected result should be: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
 docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q | jq -r .admin_proof'
 ```
 
-Expected result should be: `TODO`
+Expected result should be: `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`
 
 ### Upgrade the contract
 
@@ -198,3 +202,36 @@ docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lz
 ```
 
 Expected result should be: `0`
+
+### Check out the contract history
+
+```bash
+docker exec localsecret bash -c 'secretcli q wasm contract-history secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q' | jq
+```
+
+Expected result should look like this:
+
+```json
+{
+  "entries": [
+    {
+      "operation": "CONTRACT_CODE_HISTORY_OPERATION_TYPE_INIT",
+      "code_id": "1",
+      "updated": {
+        "block_height": "6",
+        "tx_index": "0"
+      },
+      "msg": "/307FYU9h9g96KS4Mz9jEarU+2a71zcm3WMgx+0Gmm6gCbZNrWqp6+IIdiaiZzzhNkC9C7jFAMewHrtCcYfCY5XlqRJku7TPYYlr5K2rHctP7QLXMk1VMeh5zXR9S2rrX5DJxIb1uTElFHhqBnfPQl004eHxmvFblWmtGJVIpoRzjqU7yokrCYEJK6d1i876QHhilFRPAIW/3A=="
+    },
+    {
+      "operation": "CONTRACT_CODE_HISTORY_OPERATION_TYPE_MIGRATE",
+      "code_id": "2",
+      "updated": {
+        "block_height": "243",
+        "tx_index": "0"
+      },
+      "msg": "0eoOpwuUcXE6u05CVy7o5CPln5L/c/uyh1qEOKkYyoigCbZNrWqp6+IIdiaiZzzhNkC9C7jFAMewHrtCcYfCY+PsNVSw+7DTG9zXdU2ZINEW+EN4IjDXPqnZF5shanRnFJ6oRLt7K6Jel8nB36/fyAdkZfeQK+6PT6eOT40Gp6HRYi7jh85Yh0CJVUL2kO6fVBP1dpg6QAJAtw=="
+    }
+  ]
+}
+```
