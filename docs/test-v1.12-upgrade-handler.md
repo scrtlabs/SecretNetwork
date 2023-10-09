@@ -2,10 +2,10 @@
 
 ## Step 1
 
-Start a v1.11 chain.
+### Start a v1.11 chain
 
 ```bash
-docker run -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0
+docker run -p 1316:1317 -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0-beta.19
 ```
 
 ## Step 2
@@ -34,56 +34,51 @@ docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lz
 
 Expected result should be: `null`
 
-## Step 3
+### OPTIONAL: Init a bunch of contracts to test the progress prints in the upgrade handler
 
-Run the secret.js tests from the `master` branch on the `secret.js` repo.  
-This will create state on the chain before the upgrade.
+```ts
+import { MsgInstantiateContract, SecretNetworkClient, Wallet } from "secretjs";
 
-First delete `globalSetup` & `globalTeardown` (because we already launched the chain manually):
+async function main() {
+  const wallet = new Wallet(
+    "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
+  );
+  const secretjs = new SecretNetworkClient({
+    chainId: "secretdev-1",
+    url: "http://localhost:1317",
+    wallet,
+    walletAddress: wallet.address,
+  });
 
-```bash
-echo 'import { SecretNetworkClient } from "../src";
-import { sleep } from "./utils";
+  const { code_hash } = await secretjs.query.compute.codeHashByCodeId({
+    code_id: "1",
+  });
 
-require("ts-node").register({ transpileOnly: true });
-
-module.exports = async () => {
-  await waitForBlocks();
-  console.log(`LocalSecret is running`);
-};
-
-async function waitForBlocks() {
-  while (true) {
-    const secretjs = await SecretNetworkClient.create({
-      grpcWebUrl: "http://localhost:9091",
-      chainId: "secretdev-1",
-    });
-
-    try {
-      const { block } = await secretjs.query.tendermint.getLatestBlock({});
-
-      if (Number(block?.header?.height) >= 1) {
-        break;
-      }
-    } catch (e) {
-      // console.error(e);
+  let count = 0;
+  while (count < 7000) {
+    console.log(new Date().toISOString(), count);
+    const msgs: MsgInstantiateContract[] = [];
+    for (let i = 0; i < 500; i++) {
+      msgs.push(
+        new MsgInstantiateContract({
+          code_id: 1,
+          code_hash,
+          init_msg: { nop: {} },
+          label: String(Math.random()),
+          sender: wallet.address,
+        })
+      );
     }
-    await sleep(250);
+    const tx = await secretjs.tx.broadcast(msgs, { gasLimit: 100_000_000 });
+
+    if (tx.code === 0) {
+      count += 500;
+    } else {
+      console.log(tx.rawLog);
+    }
   }
-}' > test/globalSetup.ts
-```
-
-```bash
-echo '//@ts-ignore
-require("ts-node").register({ transpileOnly: true });
-
-module.exports = async () => {};' > test/globalTeardown.js
-```
-
-Then run the tests:
-
-```bash
-yarn test
+}
+main();
 ```
 
 ## Step 4
@@ -154,7 +149,7 @@ docker exec localsecret bash -c $'perl -i -pe \'s/^.*?secretcli.*$//\' bootstrap
 docker exec localsecret bash -c $'perl -i -pe \'s;secretd start;/tmp/upgrade-bin/secretd start;\' bootstrap_init.sh'
 ```
 
-## Step 6
+## Step 5
 
 Propose a software upgrade on the v1.11 chain.
 
@@ -172,7 +167,7 @@ echo "PROPOSAL_ID   = ${PROPOSAL_ID}"
 echo "UPGRADE_BLOCK = ${UPGRADE_BLOCK}"
 ```
 
-## Step 7
+## Step 6
 
 Apply the upgrade.
 
@@ -185,7 +180,7 @@ docker start localsecret -a
 
 You should see `INF applying upgrade "v1.12" at height` in the logs, followed by blocks continuing to stream.
 
-## Step 8
+## Step 7
 
 ### Check that the admin is now set to the hardcoded value
 
@@ -195,26 +190,17 @@ docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lz
 
 Expected result should be: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
 
-### Check that the admin_proof is an array of 32 zeros
-
-```bash
-docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q | jq -r .admin_proof'
-```
-
-Expected result should be: `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`
-
 ### Upgrade the contract
 
 ```bash
 docker cp ./contract-with-migrate.wasm.gz localsecret:/root/
 docker exec localsecret bash -c 'secretcli tx wasm store contract-with-migrate.wasm.gz --from a --gas 5000000 -y -b block'
-sleep 5
-docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"nop\":{}}" --from a -y -b block' | jq -r . code
+docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"nop\":{}}" --from a -y -b block' | jq -r .code
 ```
 
 Expected result should be: `0`
 
-### Check out the contract history
+### Check the contract history
 
 ```bash
 docker exec localsecret bash -c 'secretcli q wasm contract-history secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q' | jq
