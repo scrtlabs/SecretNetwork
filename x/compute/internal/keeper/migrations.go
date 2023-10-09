@@ -139,7 +139,7 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 
 	formatter := message.NewPrinter(language.English)
 	migratedContracts := uint64(0)
-	totalContracts := m.keeper.peekAutoIncrementID(ctx, types.KeyLastCodeID)
+	totalContracts := m.keeper.peekAutoIncrementID(ctx, types.KeyLastCodeID) - 1
 	previousTime := time.Now().UnixNano()
 
 	for ; iter.Valid(); iter.Next() {
@@ -206,7 +206,5 @@ func logMigrationProgress(ctx sdk.Context, formatter *message.Printer, migratedC
 				),
 			)
 		}
-	} else {
-		ctx.Logger().Info(fmt.Sprintf("Migrated contracts: %d\n", migratedContracts))
 	}
 }
