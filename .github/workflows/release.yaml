@@ -255,7 +255,7 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES=debug-print
+            FEATURES=debug-print,random,light-client-validation
             SGX_MODE=SW
           target: build-localsecret
 
