@@ -114,7 +114,7 @@ Copy binaries from the v1.12 LocalSecret to the running v1.11 LocalSecret.
 
 ```bash
 # Start a v1.12 chain and wait a bit for it to setup
-docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v0.0.0
+docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v1.12
 sleep 5
 
 # Copy binaries from v1.12 chain to host (a limitation of `docker cp`)
@@ -208,6 +208,7 @@ Expected result should be: `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`
 ```bash
 docker cp ./contract-with-migrate.wasm.gz localsecret:/root/
 docker exec localsecret bash -c 'secretcli tx wasm store contract-with-migrate.wasm.gz --from a --gas 5000000 -y -b block'
+sleep 5
 docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"nop\":{}}" --from a -y -b block' | jq -r . code
 ```
 
