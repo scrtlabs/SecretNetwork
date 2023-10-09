@@ -2,10 +2,10 @@
 
 ## Step 1
 
-Start a v1.11 chain.
+### Start a v1.11 chain
 
 ```bash
-docker run -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0
+docker run -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0-beta.19
 ```
 
 ## Step 2
@@ -36,58 +36,6 @@ Expected result should be: `null`
 
 ## Step 3
 
-Run the secret.js tests from the `master` branch on the `secret.js` repo.  
-This will create state on the chain before the upgrade.
-
-First delete `globalSetup` & `globalTeardown` (because we already launched the chain manually):
-
-```bash
-echo 'import { SecretNetworkClient } from "../src";
-import { sleep } from "./utils";
-
-require("ts-node").register({ transpileOnly: true });
-
-module.exports = async () => {
-  await waitForBlocks();
-  console.log(`LocalSecret is running`);
-};
-
-async function waitForBlocks() {
-  while (true) {
-    const secretjs = await SecretNetworkClient.create({
-      grpcWebUrl: "http://localhost:9091",
-      chainId: "secretdev-1",
-    });
-
-    try {
-      const { block } = await secretjs.query.tendermint.getLatestBlock({});
-
-      if (Number(block?.header?.height) >= 1) {
-        break;
-      }
-    } catch (e) {
-      // console.error(e);
-    }
-    await sleep(250);
-  }
-}' > test/globalSetup.ts
-```
-
-```bash
-echo '//@ts-ignore
-require("ts-node").register({ transpileOnly: true });
-
-module.exports = async () => {};' > test/globalTeardown.js
-```
-
-Then run the tests:
-
-```bash
-yarn test
-```
-
-## Step 4
-
 Compile a v1.12 LocalSecret with the hardcoded admin.
 
 Edit `x/compute/internal/keeper/hardcoded_admins.go` and `cosmwasm/enclaves/shared/contract-engine/src/hardcoded_admins.rs` and add:
@@ -96,7 +44,9 @@ Edit `x/compute/internal/keeper/hardcoded_admins.go` and `cosmwasm/enclaves/shar
 - Admin: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
 - Code hash: `d45dc9b951ed5e9416bd52ccf28a629a52af0470a1a129afee7e53924416f555`
 
-## Step 5
+Then run `DOCKER_TAG=v0.0.0 make localsecret`.
+
+## Step 4
 
 Copy binaries from the v1.12 LocalSecret to the running v1.11 LocalSecret.
 
@@ -144,7 +94,7 @@ docker exec localsecret bash -c $'perl -i -pe \'s/^.*?secretcli.*$//\' bootstrap
 docker exec localsecret bash -c $'perl -i -pe \'s;secretd start;/tmp/upgrade-bin/secretd start;\' bootstrap_init.sh'
 ```
 
-## Step 6
+## Step 5
 
 Propose a software upgrade on the v1.11 chain.
 
@@ -162,7 +112,7 @@ echo "PROPOSAL_ID   = ${PROPOSAL_ID}"
 echo "UPGRADE_BLOCK = ${UPGRADE_BLOCK}"
 ```
 
-## Step 7
+## Step 6
 
 Apply the upgrade.
 
@@ -175,7 +125,7 @@ docker start localsecret -a
 
 You should see `INF applying upgrade "v1.12" at height` in the logs, following by blocks continute to stream.
 
-## Step 8
+## Step 7
 
 ### Check that the admin is now set to the hardcoded value
 
@@ -198,12 +148,12 @@ Expected result should be: `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`
 ```bash
 docker cp ./contract-with-migrate.wasm.gz localsecret:/root/
 docker exec localsecret bash -c 'secretcli tx wasm store contract-with-migrate.wasm.gz --from a --gas 5000000 -y -b block'
-docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"nop\":{}}" --from a -y -b block' | jq -r . code
+docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"nop\":{}}" --from a -y -b block' | jq -r .code
 ```
 
 Expected result should be: `0`
 
-### Check out the contract history
+### Check the contract history
 
 ```bash
 docker exec localsecret bash -c 'secretcli q wasm contract-history secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q' | jq
