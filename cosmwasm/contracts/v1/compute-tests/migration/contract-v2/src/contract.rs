@@ -58,8 +58,15 @@ pub fn write_to_storage(deps: DepsMut, value: u64) -> StdResult<()> {
     Ok(())
 }
 
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCounter {} => to_binary(&read_storage(&deps)?),
+        QueryMsg::Simple {} => to_binary(&42),
+        QueryMsg::GetEnv {} => Ok(Binary::from(
+            serde_json_wasm::to_string(&env)
+                .unwrap()
+                .as_bytes()
+                .to_vec(),
+        )),
     }
 }

@@ -26,10 +26,6 @@ pub enum MigrateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetCounter {},
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum QueryRes {
-    GetCounter { count: u64 },
+    Simple {},
+    GetEnv {},
 }
