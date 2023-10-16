@@ -201,10 +201,7 @@ func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper K
 		return nil, nil
 	}
 
-	if info.Admin == "" {
-		// remove meaningless admin proof when no admin is defined
-		info.AdminProof = nil
-	}
+	info.AdminProof = nil // for internal usage only
 
 	return &types.ContractInfoWithAddress{
 		ContractAddress: contractAddress.String(),
@@ -216,6 +213,8 @@ func queryContractListByCode(ctx sdk.Context, codeID uint64, keeper Keeper) ([]t
 	var contracts []types.ContractInfoWithAddress
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo, _ types.ContractCustomInfo) bool {
 		if info.CodeID == codeID {
+			info.AdminProof = nil // for internal usage only
+
 			// and add the address
 			infoWithAddress := types.ContractInfoWithAddress{
 				ContractAddress: addr.String(),

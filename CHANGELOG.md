@@ -1,6 +1,6 @@
 # CHANGELOG
 
-# 1.12.0 (WIP)
+# 1.12.0
 
 - Fix the hardcoded admins feature
 - Add hardcoded admins according to proposals [269](https://dev.mintscan.io/secret/proposals/269) (Shillables) & [270](https://dev.mintscan.io/secret/proposals/270) (Sienna).
