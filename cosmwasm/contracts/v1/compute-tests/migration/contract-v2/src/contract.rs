@@ -1,5 +1,5 @@
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Deps, Binary, to_binary};
 
 #[entry_point]
 pub fn instantiate(
@@ -21,8 +21,9 @@ pub fn execute(
     match msg {
         ExecuteMsg::NewFunction {} => Ok(Response::default()),
 
+        ExecuteMsg::Increment {} |
         ExecuteMsg::NewFunctionWithStorage {} => {
-            let mut x = read_storage(&deps)?;
+            let mut x = read_storage(&deps.as_ref())?;
 
             // let mut resp = Response::new();
             //
@@ -42,7 +43,7 @@ pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response
     }
 }
 
-pub fn read_storage(deps: &DepsMut) -> StdResult<u64> {
+pub fn read_storage(deps: &Deps) -> StdResult<u64> {
     let x = deps.storage.get(b"test.key").unwrap_or(vec![]);
 
     let mut y = [0u8; 8];
@@ -55,4 +56,10 @@ pub fn write_to_storage(deps: DepsMut, value: u64) -> StdResult<()> {
     deps.storage.set(b"test.key", &value.to_be_bytes());
 
     Ok(())
+}
+
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetCounter {} => to_binary(&read_storage(&deps)?),
+    }
 }
