@@ -5,7 +5,7 @@
 ### Start a v1.11 chain
 
 ```bash
-docker run -p 1316:1317 -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0-beta.19
+docker run -p 1316:1317 -p 26657 -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0-beta.19
 ```
 
 ## Step 2
@@ -16,100 +16,84 @@ docker run -p 1316:1317 -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.1
 docker cp ./contract.wasm localsecret:/root/
 ```
 
-### Instantiate a contract and get its address
+### Instantiate a contract with admin and get its address
 
 ```bash
 docker exec localsecret bash -c 'secretcli tx wasm store contract.wasm --from a --gas 5000000 -y -b block'
-docker exec localsecret bash -c 'secretcli tx wasm init 1 "{\"nop\":{}}" --from a --label "xyz" -y -b block'
+docker exec localsecret bash -c 'secretcli tx wasm init 1 "{\"nop\":{}}" --from a --label "xyz" -y -b block --admin secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03'
 docker exec localsecret bash -c 'secretcli q wasm list-contract-by-code 1 | jq -r ".[0].contract_address"'
 ```
-
 Expected result should be: `secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q`
 
-### Check that there's no admin
+### Instantiate a second contract and get its address
 
+```bash
+docker exec localsecret bash -c 'secretcli tx wasm init 1 "{\"nop\":{}}" --from a --label "premigrated" -y -b block --admin secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03'
+docker exec localsecret bash -c 'secretcli q wasm list-contract-by-code 1 | jq -r ".[1].contract_address"'
+```
+Expected result should be: `secret18wy2w4rzg9xxsm2ru8jq8tdq053h39epxvd4rl`
+
+
+### Check that you're the admin
+
+On the first contract:
 ```bash
 docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q | jq -r .admin'
 ```
+Expected result should be: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
 
-Expected result should be: `null`
+On the second contract:
+```bash
+docker exec localsecret bash -c 'secretcli q wasm contract secret18wy2w4rzg9xxsm2ru8jq8tdq053h39epxvd4rl | jq -r .admin'
+```
+Expected result should be: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
 
-### OPTIONAL: Init a bunch of contracts to test the progress prints in the upgrade handler
+## Step 3
+### Migrate the first contract on the v11 chain
+```bash
+docker cp ./migrate_contract_v2.wasm localsecret:/root/
+docker exec localsecret bash -c 'secretcli tx wasm store migrate_contract_v2.wasm --from a --gas 5000000 -y -b block'
+docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"migrate\":{}}" --from a -y -b block' | jq -r .code
+```
 
-```ts
-import { MsgInstantiateContract, SecretNetworkClient, Wallet } from "secretjs";
+Expected result should be: `0`
 
-async function main() {
-  const wallet = new Wallet(
-    "grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
-  );
-  const secretjs = new SecretNetworkClient({
-    chainId: "secretdev-1",
-    url: "http://localhost:1317",
-    wallet,
-    walletAddress: wallet.address,
-  });
+### Check that you CAN'T query and execute the contract
+Query:
+```bash
+docker exec localsecret bash -c 'secretcli q wasm query secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q "{\"get_counter\":{}}"'
+```
 
-  const { code_hash } = await secretjs.query.compute.codeHashByCodeId({
-    code_id: "1",
-  });
+You should see an error:
+```
+Error: got an error finding base64 of the error: regexMatch '[]' should have a length of 2. error: rpc error: code = Unauthenticated desc = Execution error: Enclave: calling a function in the contract failed for an unexpected reason: query contract failed
+```
 
-  let count = 0;
-  while (count < 7000) {
-    console.log(new Date().toISOString(), count);
-    const msgs: MsgInstantiateContract[] = [];
-    for (let i = 0; i < 500; i++) {
-      msgs.push(
-        new MsgInstantiateContract({
-          code_id: 1,
-          code_hash,
-          init_msg: { nop: {} },
-          label: String(Math.random()),
-          sender: wallet.address,
-        })
-      );
-    }
-    const tx = await secretjs.tx.broadcast(msgs, { gasLimit: 100_000_000 });
+Execute:
+```bash
+docker exec localsecret bash -c 'secretcli tx wasm execute secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q {\"increment\":{}} --from a -y -b block'
+```
 
-    if (tx.code === 0) {
-      count += 500;
-    } else {
-      console.log(tx.rawLog);
-    }
-  }
-}
-main();
+You should see an error:
+```
+... "raw_log": "failed to execute message; message index: 0: Execution error: Enclave: the contract panicked: execute contract failed" ...
 ```
 
 ## Step 4
-### Test Hardcoded admins: Prepare a binary where you're a hardcoded admin of a deployed contract
-Add yourself as a hardcoded admin of the just-deployed contract
-Add the following line to the list in the file `hardcoded_admins.go`:
-```go
-	"secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q": "secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03",
-```
-
-Add the following line to the list in the file `hardcoded_admins.rs`:
-```rust
-        ("secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q", "secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03"),
-```
-
-Add the following line to the `ALLOWED_CONTRACT_CODE_HASH` map in the file `hardcoded_admins.rs`:
-```rust
-        ("secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q", "d45dc9b951ed5e9416bd52ccf28a629a52af0470a1a129afee7e53924416f555"),
-```
-
-Compile a v1.12 LocalSecret with the hardcoded admin.
+### Compile a docker with version 12 of the network
+Compile a v1.12 LocalSecret 
 ```bash
-DOCKER_TAG=v1.12 make localsecret
+DOCKER_TAG=v1.12-local make localsecret
 ```
+Alternatively, to save compilation, you can use this one: `http://ghcr.io/scrtlabs/localsecret:v1.12.0-eshel.1`
 
 ## Step 5
 Copy binaries from the v1.12 LocalSecret to the running v1.11 LocalSecret.
 
 ```bash
 # Start a v1.12 chain and wait a bit for it to setup
-docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v1.12
+docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v1.12.0-eshel.1 
+# or: docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v1.12.0-eshel.1 
 sleep 5
 
 # Copy binaries from v1.12 chain to host (a limitation of `docker cp`)
@@ -149,7 +133,7 @@ docker exec localsecret bash -c $'perl -i -pe \'s/^.*?secretcli.*$//\' bootstrap
 docker exec localsecret bash -c $'perl -i -pe \'s;secretd start;/tmp/upgrade-bin/secretd start;\' bootstrap_init.sh'
 ```
 
-## Step 5
+## Step 6
 
 Propose a software upgrade on the v1.11 chain.
 
@@ -167,7 +151,7 @@ echo "PROPOSAL_ID   = ${PROPOSAL_ID}"
 echo "UPGRADE_BLOCK = ${UPGRADE_BLOCK}"
 ```
 
-## Step 6
+## Step 7
 
 Apply the upgrade.
 
@@ -180,7 +164,7 @@ docker start localsecret -a
 
 You should see `INF applying upgrade "v1.12" at height` in the logs, followed by blocks continuing to stream.
 
-## Step 7
+## Step 8
 
 ### Check that the admin is now set to the hardcoded value
 
@@ -195,7 +179,7 @@ Expected result should be: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
 ```bash
 docker cp ./contract-with-migrate.wasm.gz localsecret:/root/
 docker exec localsecret bash -c 'secretcli tx wasm store contract-with-migrate.wasm.gz --from a --gas 5000000 -y -b block'
-docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"nop\":{}}" --from a -y -b block' | jq -r .code
+docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"migrate\":{}}" --from a -y -b block' | jq -r .code
 ```
 
 Expected result should be: `0`
