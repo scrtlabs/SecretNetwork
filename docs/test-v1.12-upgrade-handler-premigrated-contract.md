@@ -5,7 +5,7 @@
 ### Start a v1.11 chain
 
 ```bash
-docker run -p 1316:1317 -p 26657 -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0-beta.19
+docker run -p 1316:1317 -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.11.0-beta.19
 ```
 
 ## Step 2
@@ -58,26 +58,23 @@ docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lz
 
 Expected result should be: `0`
 
-### Check that you CAN'T query and execute the contract
+### Check that you can query and execute the contract
 Query:
 ```bash
-docker exec localsecret bash -c 'secretcli q wasm query secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q "{\"get_counter\":{}}"'
+docker exec localsecret bash -c 'secretcli q wasm query secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q "{\"get_env\":{}}"'
 ```
 
-You should see an error:
+You should see something like this:
 ```
-Error: got an error finding base64 of the error: regexMatch '[]' should have a length of 2. error: rpc error: code = Unauthenticated desc = Execution error: Enclave: calling a function in the contract failed for an unexpected reason: query contract failed
+{"block":{"height":104,"time":"1697457031504624271","chain_id":"secretdev-1"},"transaction":null,"contract":{"address":"secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q","code_hash":"03974c32f672da9b34a9698b3f3e1e21366dac1bc611ba743ee72c9d16b6d1a8"}}
 ```
 
 Execute:
 ```bash
-docker exec localsecret bash -c 'secretcli tx wasm execute secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q {\"increment\":{}} --from a -y -b block'
+docker exec localsecret bash -c 'secretcli tx wasm execute secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q {\"new_function\":{}} --from a -y -b block'
 ```
 
-You should see an error:
-```
-... "raw_log": "failed to execute message; message index: 0: Execution error: Enclave: the contract panicked: execute contract failed" ...
-```
+The transaction should succeed (code 0)
 
 ## Step 4
 ### Compile a docker with version 12 of the network
@@ -92,7 +89,7 @@ Copy binaries from the v1.12 LocalSecret to the running v1.11 LocalSecret.
 
 ```bash
 # Start a v1.12 chain and wait a bit for it to setup
-docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v1.12.0-eshel.1 
+docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v1.12
 # or: docker run -it -d --name localsecret-1.12 ghcr.io/scrtlabs/localsecret:v1.12.0-eshel.1 
 sleep 5
 
@@ -166,28 +163,57 @@ You should see `INF applying upgrade "v1.12" at height` in the logs, followed by
 
 ## Step 8
 
-### Check that the admin is now set to the hardcoded value
+### Check that you can still query/execute the migrated contract
 
+Query:
 ```bash
-docker exec localsecret bash -c 'secretcli q wasm contract secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q | jq -r .admin'
+docker exec localsecret bash -c 'secretcli q wasm query secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q "{\"get_env\":{}}"'
 ```
 
-Expected result should be: `secret1ap26qrlp8mcq2pg6r47w43l0y8zkqm8a450s03`
+You should see something like this:
+```
+{"block":{"height":104,"time":"1697457031504624271","chain_id":"secretdev-1"},"transaction":null,"contract":{"address":"secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q","code_hash":"03974c32f672da9b34a9698b3f3e1e21366dac1bc611ba743ee72c9d16b6d1a8"}}
+```
 
-### Upgrade the contract
+Execute:
+```bash
+docker exec localsecret bash -c 'secretcli tx wasm execute secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q {\"new_function\":{}} --from a -y -b block'
+```
+
+The transaction should succeed (code 0)
+
+### Upgrade the second contract
 
 ```bash
-docker cp ./contract-with-migrate.wasm.gz localsecret:/root/
-docker exec localsecret bash -c 'secretcli tx wasm store contract-with-migrate.wasm.gz --from a --gas 5000000 -y -b block'
-docker exec localsecret bash -c 'secretcli tx wasm migrate secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q 2 "{\"migrate\":{}}" --from a -y -b block' | jq -r .code
+docker exec localsecret bash -c 'secretcli tx wasm migrate secret18wy2w4rzg9xxsm2ru8jq8tdq053h39epxvd4rl 2 "{\"migrate\":{}}" --from a -y -b block' | jq -r .code
 ```
 
 Expected result should be: `0`
+
+### Check that you can query/execute the contract which was migrated on v1.12
+
+Query:
+```bash
+docker exec localsecret bash -c 'secretcli q wasm query secret18wy2w4rzg9xxsm2ru8jq8tdq053h39epxvd4rl "{\"get_env\":{}}"'
+```
+
+You should see something like this:
+```
+{"block":{"height":104,"time":"1697457031504624271","chain_id":"secretdev-1"},"transaction":null,"contract":{"address":"secret18wy2w4rzg9xxsm2ru8jq8tdq053h39epxvd4rl","code_hash":"03974c32f672da9b34a9698b3f3e1e21366dac1bc611ba743ee72c9d16b6d1a8"}}
+```
+
+Execute:
+```bash
+docker exec localsecret bash -c 'secretcli tx wasm execute secret18wy2w4rzg9xxsm2ru8jq8tdq053h39epxvd4rl {\"new_function\":{}} --from a -y -b block'
+```
+
+The transaction should succeed (code 0)
 
 ### Check the contract history
 
 ```bash
 docker exec localsecret bash -c 'secretcli q wasm contract-history secret1mfk7n6mc2cg6lznujmeckdh4x0a5ezf6hx6y8q' | jq
+docker exec localsecret bash -c 'secretcli q wasm contract-history secret18wy2w4rzg9xxsm2ru8jq8tdq053h39epxvd4rl' | jq
 ```
 
 Expected result should look like this:

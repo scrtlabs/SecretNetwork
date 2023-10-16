@@ -58,6 +58,7 @@ pub fn write_to_storage(deps: DepsMut, value: u64) -> StdResult<()> {
     Ok(())
 }
 
+#[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCounter {} => to_binary(&read_storage(&deps)?),
