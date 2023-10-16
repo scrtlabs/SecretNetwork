@@ -10,7 +10,7 @@ docker run -p 1316:1317 -it --name localsecret ghcr.io/scrtlabs/localsecret:v1.1
 
 ## Step 2
 
-### Copy the suplied contract to the docker
+### Copy the supplied contract to the docker
 
 ```bash
 docker cp ./contract.wasm localsecret:/root/
