@@ -42,6 +42,8 @@ cosmwasm-storage = { version = "1.0.0" }
 # Used only for schema generation
 cosmwasm-schema = { version = "1.1.0", optional = true }
 
+serde-json-wasm = "0.2.1"
+
 # Uncomment these for some common extra tools
 # secret-toolkit = "0.7.0"
 # cw-storage-plus = { version = "0.14.0", default-features = false }
@@ -52,4 +54,3 @@ cosmwasm-schema = { version = "1.1.0", optional = true }
 
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "97122ddc6e1b2a57e2b966f6b0663df95ed5d82b" }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "97122ddc6e1b2a57e2b966f6b0663df95ed5d82b" }
-
