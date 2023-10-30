@@ -215,8 +215,8 @@ dependencies = [
 name = "block-verifier"
 version = "0.1.0"
 dependencies = [
- "cosmos-sdk-proto",
  "base64 0.21.1",
+ "cosmos-sdk-proto",
  "cosmos_proto",
  "enclave_crypto",
  "enclave_utils",
@@ -1440,15 +1440,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "436b050e76ed2903236f032a59761c1eb99e1b0aead2c257922771dab1fc8c78"
 
 [[package]]
-name = "remove_dir_all"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3acd125665422973a33ac9d3dd2df85edad0f4ae9b00dafb1a05e43a9f5ef8e7"
-dependencies = [
- "winapi",
-]
-
-[[package]]
 name = "ring"
 version = "0.16.19"
 source = "git+https://github.com/mesalock-linux/ring-sgx?tag=v0.16.5#844efe271ed78a399d803b2579f5f2424d543c9f"
@@ -1571,6 +1562,7 @@ dependencies = [
  "bit-vec",
  "block-verifier",
  "chrono",
+ "cosmos-sdk-proto",
  "ctor",
  "derive_more",
  "enclave-ffi-types",
@@ -1580,6 +1572,7 @@ dependencies = [
  "enclave_utils",
  "hex",
  "httparse",
+ "integer-encoding",
  "itertools 0.8.2",
  "lazy_static",
  "log",
@@ -1595,6 +1588,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "simple_logger",
+ "tendermint",
  "time",
  "uuid",
  "webpki",
