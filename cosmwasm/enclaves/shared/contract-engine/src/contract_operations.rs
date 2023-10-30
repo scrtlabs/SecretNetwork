@@ -370,6 +370,7 @@ pub fn migrate(
         query_depth,
         secret_msg.nonce,
         secret_msg.user_public_key,
+        block_height,
         base_env.0.block.time,
     )?;
     // let duration = start.elapsed();

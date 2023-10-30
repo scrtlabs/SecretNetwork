@@ -1,8 +1,14 @@
 use cosmos_sdk_proto::cosmos::base::kv::v1beta1::{Pair, Pairs};
 use cosmos_sdk_proto::traits::Message;
+use enclave_utils::{validate_const_ptr, validate_input_length};
 use integer_encoding::VarInt;
+use log::{debug, error};
 use sgx_types::sgx_status_t;
+use std::slice;
 use tendermint::merkle;
+
+const MAX_MERKLE_ROOT_LENGTH: u32 = 32;
+const MAX_ROOTS_LENGTH: u32 = 20 * MAX_MERKLE_ROOT_LENGTH;
 
 /// # Safety
 ///  This function reads buffers which must be correctly initialized by the caller,
@@ -58,13 +64,20 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
     in_compute_root: *const u8,
     in_compute_root_len: u32,
 ) -> sgx_status_t {
-    validate_input_length!(in_roots_len, "roots", MAX_VARIABLE_LENGTH);
+    let failed_call = || sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+
+    validate_input_length!(in_roots_len, "roots", MAX_ROOTS_LENGTH, failed_call());
     validate_const_ptr!(
         in_roots,
         in_roots_len as usize,
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     );
-    validate_input_length!(in_compute_root_len, "roots", MAX_VARIABLE_LENGTH);
+    validate_input_length!(
+        in_compute_root_len,
+        "compute_root",
+        MAX_MERKLE_ROOT_LENGTH,
+        failed_call()
+    );
     validate_const_ptr!(
         in_compute_root,
         in_compute_root_len as usize,
@@ -86,7 +99,7 @@ pub unsafe extern "C" fn ecall_submit_store_roots(
     debug!("received app_hash: {:?}", h);
     debug!("received compute_root: {:?}", compute_root_slice);
 
-    return sgx_status_t::SGX_SUCCESS;
+    sgx_status_t::SGX_SUCCESS
 }
 
 // This is a copy of a cosmos-sdk function: https://github.com/scrtlabs/cosmos-sdk/blob/1b9278476b3ac897d8ebb90241008476850bf212/store/internal/maps/maps.go#LL152C1-L152C1
@@ -108,5 +121,5 @@ fn pair_to_bytes(kv: Pair) -> Vec<u8> {
     buf.extend_from_slice(&(kv.value.len()).encode_var_vec());
     buf.extend_from_slice(&kv.value);
 
-    return buf;
+    buf
 }
