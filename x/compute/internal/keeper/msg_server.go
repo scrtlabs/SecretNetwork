@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
@@ -49,7 +51,15 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInstantiateContract) (*types.MsgInstantiateContractResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	var adminAddr sdk.AccAddress
+	var err error
+	if msg.Admin != "" {
+		if adminAddr, err = sdk.AccAddressFromBech32(msg.Admin); err != nil {
+			return nil, sdkerrors.Wrap(err, "admin")
+		}
+	}
+
+	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, msg.Sender, adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +89,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.Contract.String()),
 	))
 
-	data, err := m.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig)
+	data, err := m.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
 	if err != nil {
 		return nil, err
 	}
@@ -87,4 +97,95 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	return &types.MsgExecuteContractResponse{
 		Data: data.Data,
 	}, nil
+}
+
+func (m msgServer) MigrateContract(goCtx context.Context, msg *types.MsgMigrateContract) (*types.MsgMigrateContractResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "sender")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "contract")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	data, err := m.keeper.Migrate(ctx, contractAddr, senderAddr, msg.CodeID, msg.Msg, msg.CallbackSig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgMigrateContractResponse{
+		Data: data,
+	}, nil
+}
+
+func (m msgServer) UpdateAdmin(goCtx context.Context, msg *types.MsgUpdateAdmin) (*types.MsgUpdateAdminResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "sender")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "contract")
+	}
+	newAdminAddr, err := sdk.AccAddressFromBech32(msg.NewAdmin)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "new admin")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	if err := m.keeper.UpdateContractAdmin(ctx, contractAddr, senderAddr, newAdminAddr, msg.CallbackSig); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgUpdateAdminResponse{}, nil
+}
+
+func (m msgServer) ClearAdmin(goCtx context.Context, msg *types.MsgClearAdmin) (*types.MsgClearAdminResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "sender")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "contract")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	if err := m.keeper.UpdateContractAdmin(ctx, contractAddr, senderAddr, nil, msg.CallbackSig); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgClearAdminResponse{}, nil
 }

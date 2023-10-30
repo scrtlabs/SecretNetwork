@@ -18,10 +18,10 @@ pub struct EnclaveDoorbell {
 }
 
 impl EnclaveDoorbell {
-    pub fn new(enclave_file: &str, count: u8) -> Self {
+    pub fn new(enclave_file: &str, count: u8, debug: i32) -> Self {
         // info!("Setting up enclave doorbell for up to {} threads", count);
         Self {
-            enclave: init_enclave(enclave_file),
+            enclave: init_enclave(enclave_file, debug),
             condvar: Condvar::new(),
             count: Mutex::new(count),
         }

@@ -10,10 +10,10 @@ fn path_from_env(file_name: &str) -> String {
     path::Path::new(
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string()),
     )
-        .join(file_name)
-        .to_str()
-        .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-        .to_string()
+    .join(file_name)
+    .to_str()
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
+    .to_string()
 }
 
 lazy_static::lazy_static! {
@@ -30,15 +30,13 @@ pub struct TxBytesForHeight {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
-    pub  tx: Vec<u8>
+    pub tx: Vec<u8>,
 }
 
 impl TxBytesForHeight {
     pub fn unseal() -> SgxResult<Self> {
-        let val_set_from_storage: Self = serde_json::from_slice(
-            unseal(&TX_BYTES_SEALING_PATH)?.as_slice(),
-        )
-            .map_err(|e| {
+        let val_set_from_storage: Self =
+            serde_json::from_slice(unseal(&TX_BYTES_SEALING_PATH)?.as_slice()).map_err(|e| {
                 error!("Error decoding tx bytes from json {:?}", e);
                 sgx_status_t::SGX_ERROR_UNEXPECTED
             })?;

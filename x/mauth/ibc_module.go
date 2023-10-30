@@ -2,13 +2,14 @@ package mauth
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
 
-	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
-	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
+	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
+	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 )
 
 var _ porttypes.IBCModule = IBCModule{}
@@ -28,65 +29,70 @@ func NewIBCModule(k keeper.Keeper) IBCModule {
 // OnChanOpenInit implements the IBCModule interface
 func (im IBCModule) OnChanOpenInit(
 	ctx sdk.Context,
-	order channeltypes.Order,
-	connectionHops []string,
+	_ channeltypes.Order,
+	_ []string,
 	portID string,
 	channelID string,
 	chanCap *capabilitytypes.Capability,
-	counterparty channeltypes.Counterparty,
+	_ channeltypes.Counterparty,
 	version string,
-) error {
-	return im.keeper.ClaimCapability(ctx, chanCap, host.ChannelCapabilityPath(portID, channelID))
+) (string, error) {
+	err := im.keeper.ClaimCapability(ctx, chanCap, host.ChannelCapabilityPath(portID, channelID))
+	if err != nil {
+		return "", err
+	}
+
+	return version, nil
 }
 
 // OnChanOpenTry implements the IBCModule interface
 func (im IBCModule) OnChanOpenTry(
-	ctx sdk.Context,
-	order channeltypes.Order,
-	connectionHops []string,
-	portID,
-	channelID string,
-	chanCap *capabilitytypes.Capability,
-	counterparty channeltypes.Counterparty,
-	counterpartyVersion string,
+	_ sdk.Context,
+	_ channeltypes.Order,
+	_ []string,
+	_,
+	_ string,
+	_ *capabilitytypes.Capability,
+	_ channeltypes.Counterparty,
+	_ string,
 ) (version string, err error) {
 	return "", nil
 }
 
 // OnChanOpenAck implements the IBCModule interface
 func (im IBCModule) OnChanOpenAck(
-	ctx sdk.Context,
-	portID,
-	channelID string,
-	counterpartychannelID string,
-	counterpartyVersion string,
+	_ sdk.Context,
+	_,
+	_ string,
+	_ string,
+	_ string,
 ) error {
 	return nil
 }
 
 // OnChanOpenConfirm implements the IBCModule interface
 func (im IBCModule) OnChanOpenConfirm(
-	ctx sdk.Context,
-	portID,
-	channelID string,
+	_ sdk.Context,
+	_,
+	_ string,
 ) error {
 	return nil
 }
 
 // OnChanCloseInit implements the IBCModule interface
 func (im IBCModule) OnChanCloseInit(
-	ctx sdk.Context,
-	portID,
-	channelID string,
+	_ sdk.Context,
+	_,
+	_ string,
 ) error {
 	return nil
 }
 
 // OnChanCloseConfirm implements the IBCModule interface
 func (im IBCModule) OnChanCloseConfirm(
-	ctx sdk.Context,
-	portID,
-	channelID string,
+	_ sdk.Context,
+	_,
+	_ string,
 ) error {
 	return nil
 }
@@ -95,40 +101,40 @@ func (im IBCModule) OnChanCloseConfirm(
 // is returned if the packet data is successfully decoded and the receive application
 // logic returns without error.
 func (im IBCModule) OnRecvPacket(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	relayer sdk.AccAddress,
+	_ sdk.Context,
+	_ channeltypes.Packet,
+	_ sdk.AccAddress,
 ) ibcexported.Acknowledgement {
-	return channeltypes.NewErrorAcknowledgement("cannot receive packet via interchain accounts authentication module")
+	return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "cannot receive packet via interchain accounts authentication module"))
 }
 
 // OnAcknowledgementPacket implements the IBCModule interface
 func (im IBCModule) OnAcknowledgementPacket(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	acknowledgement []byte,
-	relayer sdk.AccAddress,
+	_ sdk.Context,
+	_ channeltypes.Packet,
+	_ []byte,
+	_ sdk.AccAddress,
 ) error {
 	return nil
 }
 
 // OnTimeoutPacket implements the IBCModule interface.
 func (im IBCModule) OnTimeoutPacket(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	relayer sdk.AccAddress,
+	_ sdk.Context,
+	_ channeltypes.Packet,
+	_ sdk.AccAddress,
 ) error {
 	return nil
 }
 
 // NegotiateAppVersion implements the IBCModule interface
 func (im IBCModule) NegotiateAppVersion(
-	ctx sdk.Context,
-	order channeltypes.Order,
-	connectionID string,
-	portID string,
-	counterparty channeltypes.Counterparty,
-	proposedVersion string,
+	_ sdk.Context,
+	_ channeltypes.Order,
+	_ string,
+	_ string,
+	_ channeltypes.Counterparty,
+	_ string,
 ) (string, error) {
 	return "", nil
 }

@@ -41,9 +41,9 @@ dependencies = [
 
 [[package]]
 name = "aho-corasick"
-version = "0.7.19"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4f55bd91a0978cbfd91c457a164bab8b4001c833b7f323132c0a4e1922dd44e"
+checksum = "67fc08ce920c31afb70f013dcce1bfc3a3195de6a228474e45e1f145b36f8d04"
 dependencies = [
  "memchr",
 ]
@@ -115,6 +115,12 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
+
+[[package]]
+name = "base64"
+version = "0.21.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f1e31e207a6b8fb791a38ea3105e6cb541f55e4d029902d3039a4ad07cc4105"
 
 [[package]]
 name = "bech32"
@@ -209,6 +215,7 @@ dependencies = [
 name = "block-verifier"
 version = "0.1.0"
 dependencies = [
+ "base64 0.21.1",
  "cosmos_proto",
  "enclave_crypto",
  "enclave_utils",
@@ -360,7 +367,7 @@ checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "cosmos_proto"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "dirs",
  "protobuf",
@@ -443,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_generic"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.1",
  "cw_types_v010",
@@ -457,7 +464,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_v010"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -471,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "cw_types_v1"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -613,7 +620,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_contract_engine"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bech32",
@@ -633,7 +640,7 @@ dependencies = [
  "lazy_static",
  "log",
  "lru",
- "parity-wasm",
+ "parity-wasm 0.45.0",
  "protobuf",
  "pwasm-utils",
  "rand_chacha",
@@ -641,6 +648,7 @@ dependencies = [
  "secp256k1 0.24.2",
  "serde 1.0.118",
  "serde_json 1.0.60",
+ "sgx_rand",
  "sgx_tstd",
  "sgx_types",
  "sha2 0.8.2",
@@ -651,7 +659,7 @@ dependencies = [
 
 [[package]]
 name = "enclave_cosmos_types"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "cosmos_proto",
  "cw_types_v010",
@@ -663,13 +671,14 @@ dependencies = [
  "prost 0.6.1",
  "protobuf",
  "serde 1.0.118",
+ "serde_json 1.0.60",
  "sgx_tstd",
  "sha2 0.8.2",
 ]
 
 [[package]]
 name = "enclave_crypto"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "aes-siv",
  "cosmos_proto",
@@ -694,9 +703,10 @@ dependencies = [
 
 [[package]]
 name = "enclave_utils"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "enclave-ffi-types",
+ "enclave_crypto",
  "lazy_static",
  "log",
  "serde 1.0.118",
@@ -1147,6 +1157,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc878dac00da22f8f61e7af3157988424567ab01d9920b962ef7dcbd7cd865"
 
 [[package]]
+name = "parity-wasm"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1ad0aff30c1da14b1254fcb2af73e1fa9a28670e584a626f53a369d0e157304"
+
+[[package]]
 name = "paste"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1284,7 +1300,7 @@ checksum = "4f7a12f176deee919f4ba55326ee17491c8b707d0987aed822682c821b660192"
 dependencies = [
  "byteorder",
  "log",
- "parity-wasm",
+ "parity-wasm 0.41.0",
 ]
 
 [[package]]
@@ -1337,9 +1353,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.7.0"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e076559ef8e241f2ae3479e36f97bd5741c0330689e217ad51ce2c76808b868a"
+checksum = "af83e617f331cc6ae2da5443c602dfa5af81e517212d9d611a5b3ba1777b5370"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1348,9 +1364,9 @@ dependencies = [
 
 [[package]]
 name = "regex-syntax"
-version = "0.6.28"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
+checksum = "a5996294f19bd3aae0453a862ad728f60e6600695733dd5df01da90c54363a3c"
 
 [[package]]
 name = "remove_dir_all"
@@ -1464,7 +1480,7 @@ dependencies = [
 
 [[package]]
 name = "secret-enclave"
-version = "1.6.0"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bit-vec",
@@ -1483,7 +1499,7 @@ dependencies = [
  "lazy_static",
  "log",
  "num-bigint",
- "parity-wasm",
+ "parity-wasm 0.45.0",
  "pwasm-utils",
  "rustls",
  "serde 1.0.118",
@@ -1499,20 +1515,6 @@ dependencies = [
  "webpki",
  "webpki-roots",
  "yasna",
-]
-
-[[package]]
-name = "secret-query-enclave"
-version = "1.4.0"
-dependencies = [
- "ctor",
- "enclave_contract_engine",
- "enclave_utils",
- "lazy_static",
- "log",
- "sgx_tstd",
- "sgx_types",
- "simple_logger",
 ]
 
 [[package]]
@@ -1604,11 +1606,11 @@ dependencies = [
 
 [[package]]
 name = "sgx_alloc"
-version = "1.1.5"
+version = "1.1.6"
 
 [[package]]
 name = "sgx_backtrace_sys"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "cc",
  "sgx_build_helper",
@@ -1617,22 +1619,22 @@ dependencies = [
 
 [[package]]
 name = "sgx_build_helper"
-version = "1.1.5"
+version = "1.1.6"
 
 [[package]]
 name = "sgx_demangle"
-version = "1.1.5"
+version = "1.1.6"
 
 [[package]]
 name = "sgx_libc"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_rand"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "sgx_trts",
  "sgx_tstd",
@@ -1641,14 +1643,14 @@ dependencies = [
 
 [[package]]
 name = "sgx_tcrypto"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tprotected_fs"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "sgx_trts",
  "sgx_types",
@@ -1656,7 +1658,7 @@ dependencies = [
 
 [[package]]
 name = "sgx_trts"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "sgx_libc",
  "sgx_types",
@@ -1664,14 +1666,14 @@ dependencies = [
 
 [[package]]
 name = "sgx_tse"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tstd"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "hashbrown_tstd",
  "sgx_alloc",
@@ -1686,11 +1688,11 @@ dependencies = [
 
 [[package]]
 name = "sgx_types"
-version = "1.1.5"
+version = "1.1.6"
 
 [[package]]
 name = "sgx_unwind"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "sgx_build_helper",
 ]
@@ -2097,7 +2099,7 @@ dependencies = [
  "memory_units",
  "num-rational",
  "num-traits 0.2.15",
- "parity-wasm",
+ "parity-wasm 0.41.0",
  "wasmi-validation",
 ]
 
@@ -2106,7 +2108,7 @@ name = "wasmi-validation"
 version = "0.3.0"
 source = "git+https://github.com/paritytech/wasmi?rev=84d2764594d80425373bf4949a58fa3df3d624c3#84d2764594d80425373bf4949a58fa3df3d624c3"
 dependencies = [
- "parity-wasm",
+ "parity-wasm 0.41.0",
 ]
 
 [[package]]

@@ -17,6 +17,9 @@ use enclave_utils::{
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
 
+#[cfg(feature = "light-client-validation")]
+use enclave_contract_engine::check_cert_in_current_block;
+
 ///
 /// `ecall_authenticate_new_node`
 ///
@@ -45,11 +48,17 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     validate_mut_ptr!(seed.as_mut_ptr(), seed.len(), NodeAuthResult::InvalidInput);
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
+
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
+
+    #[cfg(feature = "light-client-validation")]
+    if !check_cert_in_current_block(cert_slice) {
+        return NodeAuthResult::SignatureInvalid;
+    }
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         // verify certificate, and return the public key in the extra data of the report
-        let pk = verify_ra_cert(cert_slice, None)?;
+        let pk = verify_ra_cert(cert_slice, None, true)?;
 
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
         if pk.len() != PUBLIC_KEY_SIZE {
@@ -67,10 +76,10 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             &target_public_key.to_vec()
         );
 
-        let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis)
+        let mut res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis, false)
             .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
-        let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current)
+        let res_current: Vec<u8> = encrypt_seed(target_public_key, SeedType::Current, false)
             .map_err(|_| NodeAuthResult::SeedEncryptionFailed)?;
 
         res.extend(&res_current);

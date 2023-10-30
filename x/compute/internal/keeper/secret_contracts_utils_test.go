@@ -7,8 +7,13 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/cosmos/cosmos-sdk/telemetry"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	stypes "github.com/cosmos/cosmos-sdk/store/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -22,15 +27,16 @@ import (
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
-
-type ContractEvent []v010cosmwasm.LogAttribute
 
 type TestContract struct {
 	CosmWasmVersion string
 	IsCosmWasmV1    bool
 	WasmFilePath    string
+	WasmFilePathV2  string
 }
 
 var testContracts = []TestContract{
@@ -38,10 +44,12 @@ var testContracts = []TestContract{
 		CosmWasmVersion: "v0.10",
 		IsCosmWasmV1:    false,
 		WasmFilePath:    TestContractPaths[v010Contract],
+		WasmFilePathV2:  TestContractPaths[v010MigratedContract],
 	}, {
 		CosmWasmVersion: "v1",
 		IsCosmWasmV1:    true,
 		WasmFilePath:    TestContractPaths[v1Contract],
+		WasmFilePathV2:  TestContractPaths[v1MigratedContract],
 	},
 }
 
@@ -277,7 +285,7 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 	return dataPlaintext
 }
 
-var contractErrorRegex = regexp.MustCompile(`.*encrypted: (.+): (?:instantiate|execute|query|reply to) contract failed`)
+var contractErrorRegex = regexp.MustCompile(`.*encrypted: (.+): (?:instantiate|execute|migrate|query|reply to) contract failed`)
 
 func extractInnerError(t *testing.T, err error, nonce []byte, isEncrypted bool, isV1Contract bool) cosmwasm.StdError {
 	match := contractErrorRegex.FindAllStringSubmatch(err.Error(), -1)
@@ -317,7 +325,7 @@ type WasmCounterGasMeter struct {
 	gasMeter    sdk.GasMeter
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) RefundGas(amount stypes.Gas, descriptor string) {}
+func (wasmGasMeter *WasmCounterGasMeter) RefundGas(_ stypes.Gas, _ string) {}
 
 func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() sdk.Gas {
 	return wasmGasMeter.gasMeter.GasConsumed()
@@ -357,17 +365,28 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
 func queryHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, input string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	input string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
 ) (string, cosmwasm.StdError) {
 	return queryHelperImpl(t, keeper, ctx, contractAddr, input, isErrorEncrypted, isV1Contract, gas, -1)
 }
 
 func queryHelperImpl(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddr sdk.AccAddress, input string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	input string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	wasmCallCount int64,
 ) (string, cosmwasm.StdError) {
 	hash, err := keeper.GetContractHash(ctx, contractAddr)
 	require.NoError(t, err)
@@ -398,9 +417,9 @@ func queryHelperImpl(
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happened
-		require.NotZero(t, gasMeter.GetWasmCounter(), err)
+		require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), "%+v", err)
 	}
 
 	if err != nil {
@@ -416,48 +435,150 @@ func queryHelperImpl(
 	return string(resultBz), cosmwasm.StdError{}
 }
 
-func execHelperMultipleCoins(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, shouldSkipAttributes ...bool,
+//func execHelperImpl(
+//	t *testing.T, keeper Keeper, ctx sdk.Context,
+//	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
+//	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
+//) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+//	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), wasmCallCount, shouldSkipAttributes...)
+//}
+
+func execHelperCustomWasmCount(
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coin int64,
+	wasmCallCount int64,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coins, -1, shouldSkipAttributes...)
+	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewCoin("denom", sdk.NewInt(coin))), wasmCallCount, shouldSkipAttributes...)
+
+	if len(results) != 1 {
+		panic("Single msg test somehow returned multiple results")
+	}
+
+	if err != nil {
+		return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, *err.CosmWasm
+	}
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, cosmwasm.StdError{}
+	// todo: lol refactor tests to use the struct
+}
+
+func execHelperMultipleCoins(
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coins sdk.Coins,
+	wasmCount int64,
+	shouldSkipAttributes ...bool,
+) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, coins, wasmCount, shouldSkipAttributes...)
+
+	if len(results) != 1 {
+		panic("Single msg test somehow returned multiple results")
+	}
+
+	// todo: lol refactor tests to use the struct
+	if err != nil {
+		return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, *err.CosmWasm
+	}
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, cosmwasm.StdError{}
 }
 
 func execHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coin int64,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, coin, -1, shouldSkipAttributes...)
+	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
+
+	if len(results) != 1 {
+		panic(fmt.Sprintf("Single msg test somehow returned multiple results: %d", len(results)))
+	}
+
+	if err != nil {
+		return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, *err.CosmWasm
+	}
+	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, cosmwasm.StdError{}
 }
 
-func execHelperImpl(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coin int64, wasmCallCount int64, shouldSkipAttributes ...bool,
-) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	return execHelperMultipleCoinsImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), wasmCallCount, shouldSkipAttributes...)
+func execHelperMultipleMsgs(
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsg []string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coin int64,
+	shouldSkipAttributes ...bool,
+) ([]ExecResult, *ErrorResult) {
+	return execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
 }
 
-func execHelperMultipleCoinsImpl(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	contractAddress sdk.AccAddress, txSender sdk.AccAddress, senderPrivKey crypto.PrivKey, execMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, coins sdk.Coins, wasmCallCount int64, shouldSkipAttributes ...bool,
-) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
+func execTxBuilderImpl(
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	execMsgs []string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	coins sdk.Coins,
+	wasmCallCount int64,
+	shouldSkipAttributes ...bool,
+) ([]ExecResult, *ErrorResult) {
 	hash, err := keeper.GetContractHash(ctx, contractAddress)
 	require.NoError(t, err)
 
 	hashStr := hex.EncodeToString(hash)
 
-	msg := types.SecretMsg{
-		CodeHash: []byte(hashStr),
-		Msg:      []byte(execMsg),
+	var secretMsgs []types.SecretMsg
+	for _, execMsg := range execMsgs {
+		secretMsg := types.SecretMsg{
+			CodeHash: []byte(hashStr),
+			Msg:      []byte(execMsg),
+		}
+		secretMsgs = append(secretMsgs, secretMsg)
 	}
 
-	execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
-	require.NoError(t, err)
-	nonce := execMsgBz[0:32]
+	var secretMsgsBz [][]byte
+	for _, msg := range secretMsgs {
+		execMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
+		require.NoError(t, err)
+
+		secretMsgsBz = append(secretMsgsBz, execMsgBz)
+		// nonce := execMsgBz[0:32]
+	}
 
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
@@ -470,47 +591,104 @@ func execHelperMultipleCoinsImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareExecSignedTx(t, keeper, ctx, txSender, senderPrivKey, execMsgBz, contractAddress, coins)
+	ctx = PrepareExecSignedTxWithMultipleMsgs(t, keeper, ctx, txSender, senderPrivKey, secretMsgsBz, contractAddress, coins)
 
-	gasBefore := ctx.GasMeter().GasConsumed()
-	execResult, err := keeper.Execute(ctx, contractAddress, txSender, execMsgBz, coins, nil)
-	gasAfter := ctx.GasMeter().GasConsumed()
-	gasUsed := gasAfter - gasBefore
+	// reset value before test
+	keeper.LastMsgManager.SetMarker(false)
 
-	if wasmCallCount < 0 {
-		// default, just check that at least 1 call happened
-		require.NotZero(t, gasMeter.GetWasmCounter(), err)
-	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
+	var results []ExecResult
+	for _, msg := range secretMsgsBz {
+
+		// simulate the check in baseapp
+		if keeper.LastMsgManager.GetMarker() {
+			errResult := ErrorResult{
+				Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
+			}
+			return results, &errResult
+		}
+
+		nonce := msg[0:32]
+
+		gasBefore := ctx.GasMeter().GasConsumed()
+		execResult, err := keeper.Execute(ctx, contractAddress, txSender, msg, coins, nil, cosmwasm.HandleTypeExecute)
+		gasAfter := ctx.GasMeter().GasConsumed()
+		gasUsed := gasAfter - gasBefore
+
+		if wasmCallCount < 0 {
+			// default, just check that at least 1 call happened
+			require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
+		} else {
+			require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), "%+v", err)
+		}
+
+		if err != nil {
+			results = append(results, ExecResult{
+				Nonce:      nil,
+				Ctx:        ctx,
+				Data:       nil,
+				WasmEvents: nil,
+				GasUsed:    gasUsed,
+			})
+
+			errResult := ErrorResult{
+				Generic: err,
+			}
+			cwErr := extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
+			errResult.CosmWasm = &cwErr
+
+			return results, &errResult
+		}
+
+		// wasmEvents come from all the callbacks as well
+		wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
+
+		// Data is the output of only the first call
+		data := getDecryptedData(t, execResult.Data, nonce)
+
+		results = append(results, ExecResult{
+			Nonce:      nonce,
+			Ctx:        ctx,
+			Data:       data,
+			WasmEvents: wasmEvents,
+			GasUsed:    gasUsed,
+		})
 	}
 
-	if err != nil {
-		return nil, ctx, nil, nil, 0, extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
-	}
-
-	// wasmEvents comes from all the callbacks as well
-	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
-
-	// TODO check if we can extract the messages from ctx
-
-	// Data is the output of only the first call
-	data := getDecryptedData(t, execResult.Data, nonce)
-
-	return nonce, ctx, data, wasmEvents, gasUsed, cosmwasm.StdError{}
+	return results, nil
 }
 
 func initHelper(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	codeID uint64,
+	creator,
+	admin sdk.AccAddress,
+	creatorPrivKey crypto.PrivKey,
+	initMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
-	return initHelperImpl(t, keeper, ctx, codeID, creator, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, sdk.NewCoins(), shouldSkipAttributes...)
+	return initHelperImpl(t, keeper, ctx, codeID, creator, admin, creatorPrivKey, initMsg, isErrorEncrypted, isV1Contract, gas, -1, sdk.NewCoins(), shouldSkipAttributes...)
 }
 
 func initHelperImpl(
-	t *testing.T, keeper Keeper, ctx sdk.Context,
-	codeID uint64, creator sdk.AccAddress, creatorPrivKey crypto.PrivKey, initMsg string,
-	isErrorEncrypted bool, isV1Contract bool, gas uint64, wasmCallCount int64, sentFunds sdk.Coins, shouldSkipAttributes ...bool,
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	codeID uint64,
+	creator,
+	admin sdk.AccAddress,
+	creatorPrivKey crypto.PrivKey,
+	initMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	wasmCallCount int64,
+	sentFunds sdk.Coins,
+	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, sdk.AccAddress, []ContractEvent, cosmwasm.StdError) {
 	codeInfo, err := keeper.GetCodeInfo(ctx, codeID)
 	require.NoError(t, err)
@@ -537,22 +715,22 @@ func initHelperImpl(
 		log.NewNopLogger(),
 	).WithGasMeter(gasMeter)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, codeID, sentFunds)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, admin, creatorPrivKey, initMsgBz, codeID, sentFunds)
 	// make the label a random base64 string, because why not?
-	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sentFunds, nil)
+	contractAddress, _, err := keeper.Instantiate(ctx, codeID, creator, admin, initMsgBz, base64.RawURLEncoding.EncodeToString(nonce), sentFunds, nil)
 
 	if wasmCallCount < 0 {
 		// default, just check that at least 1 call happened
-		require.NotZero(t, gasMeter.GetWasmCounter(), err)
+		require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
 	} else {
-		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), err)
+		require.Equal(t, uint64(wasmCallCount), gasMeter.GetWasmCounter(), "%+v", err)
 	}
 
 	if err != nil {
 		return nil, ctx, nil, nil, extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
 	}
 
-	// wasmEvents comes from all the callbacks as well
+	// wasmEvents come from all the callbacks as well
 	wasmEvents := tryDecryptWasmEvents(ctx, nonce, shouldSkipAttributes...)
 
 	// TODO check if we can extract the messages from ctx
@@ -604,4 +782,473 @@ type GetResponse struct {
 }
 type v1QueryResponse struct {
 	Get GetResponse `json:"get"`
+}
+
+func migrateHelper(
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	newCodeId uint64,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	migrateMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	wasmCallCount ...int64,
+) (MigrateResult, *ErrorResult) {
+	codeInfo, err := keeper.GetCodeInfo(ctx, newCodeId)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(codeInfo.CodeHash)
+
+	secretMsg := types.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      []byte(migrateMsg),
+	}
+
+	migrateMsgBz, err := wasmCtx.Encrypt(secretMsg.Serialize())
+	require.NoError(t, err)
+
+	// create new ctx with the same storage and a gas limit
+	// this is to reset the event manager, so we won't get
+	// events from past calls
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	ctx = sdk.NewContext(
+		ctx.MultiStore(),
+		ctx.BlockHeader(),
+		ctx.IsCheckTx(),
+		log.NewNopLogger(),
+	).WithGasMeter(gasMeter)
+
+	ctx = prepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
+
+	// reset value before test
+	keeper.LastMsgManager.SetMarker(false)
+
+	// simulate the check in baseapp
+	if keeper.LastMsgManager.GetMarker() {
+		errResult := ErrorResult{
+			Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
+		}
+		return MigrateResult{}, &errResult
+	}
+
+	nonce := migrateMsgBz[0:32]
+
+	gasBefore := ctx.GasMeter().GasConsumed()
+	execResult, err := keeper.Migrate(ctx, contractAddress, txSender, newCodeId, migrateMsgBz, nil)
+	gasAfter := ctx.GasMeter().GasConsumed()
+	gasUsed := gasAfter - gasBefore
+
+	if len(wasmCallCount) == 0 {
+		// default, just check that at least 1 call happened
+		require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
+	} else {
+		require.Equal(t, uint64(wasmCallCount[0]), gasMeter.GetWasmCounter(), "%+v", err)
+	}
+
+	if err != nil {
+		result := MigrateResult{
+			Nonce:      nil,
+			Ctx:        ctx,
+			Data:       nil,
+			WasmEvents: nil,
+			GasUsed:    gasUsed,
+		}
+
+		errResult := ErrorResult{
+			Generic: err,
+		}
+		cwErr := extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
+		errResult.CosmWasm = &cwErr
+
+		return result, &errResult
+	}
+
+	// wasmEvents come from all the callbacks as well
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce)
+
+	// Data is the output of only the first call
+	data := getDecryptedData(t, execResult, nonce)
+
+	result := MigrateResult{
+		Nonce:      nonce,
+		Ctx:        ctx,
+		Data:       data,
+		WasmEvents: wasmEvents,
+		GasUsed:    gasUsed,
+	}
+
+	return result, nil
+}
+
+func updateAdminHelper(
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	sender sdk.AccAddress,
+	senderPrivkey crypto.PrivKey,
+	newAdmin sdk.AccAddress,
+	gas uint64,
+) (UpdateAdminResult, error) {
+	// create new ctx with the same storage and a gas limit
+	// this is to reset the event manager, so we won't get
+	// events from past calls
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	ctx = sdk.NewContext(
+		ctx.MultiStore(),
+		ctx.BlockHeader(),
+		ctx.IsCheckTx(),
+		log.NewNopLogger(),
+	).WithGasMeter(gasMeter)
+
+	if newAdmin.Empty() {
+		ctx = prepareClearAdminSignedTx(t, keeper, ctx, contractAddress.String(), sender, senderPrivkey)
+	} else {
+		ctx = prepareUpdateAdminSignedTx(t, keeper, ctx, contractAddress.String(), sender, senderPrivkey, newAdmin)
+	}
+
+	gasBefore := ctx.GasMeter().GasConsumed()
+	err := keeper.UpdateContractAdmin(ctx, contractAddress, sender, newAdmin, nil)
+	gasAfter := ctx.GasMeter().GasConsumed()
+	gasUsed := gasAfter - gasBefore
+
+	return UpdateAdminResult{
+		Ctx:     ctx,
+		GasUsed: gasUsed,
+	}, err
+}
+
+func fakeUpdateContractAdmin(ctx sdk.Context,
+	k Keeper,
+	contractAddress,
+	caller,
+	newAdmin sdk.AccAddress,
+	currentAdminToSend sdk.AccAddress,
+	currentAdminProof []byte,
+) error {
+	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "update-contract-admin")
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: update-contract-admin")
+
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+
+	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, caller)
+	if err != nil {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	}
+
+	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+
+	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey, nil)
+
+	// prepare querier
+	// TODO: this is unnecessary, get rid of this
+	querier := QueryHandler{
+		Ctx:     ctx,
+		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
+	}
+
+	// instantiate wasm contract
+	gas := gasForContract(ctx)
+
+	newAdminProof, updateAdminErr := k.wasmer.UpdateAdmin(codeInfo.CodeHash, env, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, sigInfo, currentAdminToSend, currentAdminProof, newAdmin)
+
+	if updateAdminErr != nil {
+		return updateAdminErr
+	}
+
+	contractInfo.Admin = newAdmin.String()
+	contractInfo.AdminProof = newAdminProof
+	k.setContractInfo(ctx, contractAddress, &contractInfo)
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeUpdateContractAdmin,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyNewAdmin, newAdmin.String()),
+	))
+
+	return nil
+}
+
+func fakeUpdateAdminHelper(
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	sender sdk.AccAddress,
+	senderPrivkey crypto.PrivKey,
+	newAdmin sdk.AccAddress,
+	gas uint64,
+	currentAdminToSend sdk.AccAddress,
+	currentAdminProof []byte,
+) (UpdateAdminResult, error) {
+	// create new ctx with the same storage and a gas limit
+	// this is to reset the event manager, so we won't get
+	// events from past calls
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	ctx = sdk.NewContext(
+		ctx.MultiStore(),
+		ctx.BlockHeader(),
+		ctx.IsCheckTx(),
+		log.NewNopLogger(),
+	).WithGasMeter(gasMeter)
+
+	if newAdmin.Empty() {
+		ctx = prepareClearAdminSignedTx(t, keeper, ctx, contractAddress.String(), sender, senderPrivkey)
+	} else {
+		ctx = prepareUpdateAdminSignedTx(t, keeper, ctx, contractAddress.String(), sender, senderPrivkey, newAdmin)
+	}
+
+	gasBefore := ctx.GasMeter().GasConsumed()
+	err := fakeUpdateContractAdmin(ctx, keeper, contractAddress, sender, newAdmin, currentAdminToSend, currentAdminProof)
+	gasAfter := ctx.GasMeter().GasConsumed()
+	gasUsed := gasAfter - gasBefore
+
+	return UpdateAdminResult{
+		Ctx:     ctx,
+		GasUsed: gasUsed,
+	}, err
+}
+
+func fakeMigrate(ctx sdk.Context,
+	k Keeper,
+	contractAddress sdk.AccAddress,
+	caller sdk.AccAddress,
+	newCodeID uint64,
+	msg []byte,
+	adminToSend sdk.AccAddress,
+	adminProof []byte,
+) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "compute", "keeper", "migrate")
+	ctx.GasMeter().ConsumeGas(types.InstanceCost, "Loading CosmWasm module: migrate")
+
+	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, caller)
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	}
+
+	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
+
+	contractInfo, _, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, sdkerrors.Wrap(err, "unknown contract").Error())
+	}
+
+	newCodeInfo, err := k.GetCodeInfo(ctx, newCodeID)
+	if err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, sdkerrors.Wrap(err, "unknown code").Error())
+	}
+
+	// check for IBC flag
+	switch report, err := k.wasmer.AnalyzeCode(newCodeInfo.CodeHash); {
+	case err != nil:
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
+	case !report.HasIBCEntryPoints && contractInfo.IBCPortID != "":
+		// prevent update of ibc contract to non ibc contract
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, "requires ibc callbacks")
+	case report.HasIBCEntryPoints && contractInfo.IBCPortID == "":
+		// add ibc port
+		ibcPort, err := k.ensureIbcPort(ctx, contractAddress)
+		if err != nil {
+			return nil, err
+		}
+		contractInfo.IBCPortID = ibcPort
+	}
+
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
+
+	env := types.NewEnv(ctx, caller, sdk.Coins{}, contractAddress, contractKey, random)
+
+	// prepare querier
+	querier := QueryHandler{
+		Ctx:     ctx,
+		Plugins: k.queryPlugins,
+		Caller:  contractAddress,
+	}
+
+	// instantiate wasm contract
+	gas := gasForContract(ctx)
+
+	response, newContractKey, newContractKeyProof, gasUsed, migrateErr := k.wasmer.Migrate(newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, gasMeter(ctx), gas, sigInfo, adminToSend, adminProof)
+	consumeGas(ctx, gasUsed)
+
+	if migrateErr != nil {
+		var result []byte
+		var jsonError error
+		switch res := response.(type) { //nolint:gocritic
+		case v1wasmTypes.DataWithInternalReplyInfo:
+			result, jsonError = json.Marshal(res)
+			if jsonError != nil {
+				return nil, sdkerrors.Wrap(jsonError, "couldn't marshal internal reply info")
+			}
+		}
+
+		return result, sdkerrors.Wrap(types.ErrMigrationFailed, migrateErr.Error())
+	}
+
+	// update contract key with new one
+	k.SetContractKey(ctx, contractAddress, &types.ContractKey{
+		OgContractKey:           contractKey.OgContractKey,
+		CurrentContractKey:      newContractKey,
+		CurrentContractKeyProof: newContractKeyProof,
+	})
+
+	// delete old secondary index entry
+	k.removeFromContractCodeSecondaryIndex(ctx, contractAddress, k.getLastContractHistoryEntry(ctx, contractAddress))
+	// persist migration updates
+	historyEntry := contractInfo.AddMigration(ctx, newCodeID, msg)
+	k.appendToContractHistory(ctx, contractAddress, historyEntry)
+	k.addToContractCodeSecondaryIndex(ctx, contractAddress, historyEntry)
+
+	contractInfo.CodeID = newCodeID
+	k.setContractInfo(ctx, contractAddress, &contractInfo)
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeMigrate,
+		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(newCodeID, 10)),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	))
+
+	switch res := response.(type) {
+	case *v010wasmTypes.HandleResponse:
+		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
+		}
+
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, sigInfo)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "dispatch")
+		}
+
+		return data, nil
+	case *v1wasmTypes.Response:
+		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, sigInfo)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "dispatch")
+		}
+
+		return data, nil
+	default:
+		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, fmt.Sprintf("cannot detect response type: %+v", res))
+	}
+}
+
+func fakeMigrateHelper(
+	t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	newCodeId uint64,
+	contractAddress sdk.AccAddress,
+	txSender sdk.AccAddress,
+	senderPrivKey crypto.PrivKey,
+	migrateMsg string,
+	isErrorEncrypted bool,
+	isV1Contract bool,
+	gas uint64,
+	adminToSend sdk.AccAddress,
+	adminProof []byte,
+	wasmCallCount ...int64,
+) (MigrateResult, *ErrorResult) {
+	codeInfo, err := keeper.GetCodeInfo(ctx, newCodeId)
+	require.NoError(t, err)
+
+	hashStr := hex.EncodeToString(codeInfo.CodeHash)
+
+	secretMsg := types.SecretMsg{
+		CodeHash: []byte(hashStr),
+		Msg:      []byte(migrateMsg),
+	}
+
+	migrateMsgBz, err := wasmCtx.Encrypt(secretMsg.Serialize())
+	require.NoError(t, err)
+
+	// create new ctx with the same storage and a gas limit
+	// this is to reset the event manager, so we won't get
+	// events from past calls
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	ctx = sdk.NewContext(
+		ctx.MultiStore(),
+		ctx.BlockHeader(),
+		ctx.IsCheckTx(),
+		log.NewNopLogger(),
+	).WithGasMeter(gasMeter)
+
+	ctx = prepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
+
+	// reset value before test
+	keeper.LastMsgManager.SetMarker(false)
+
+	// simulate the check in baseapp
+	if keeper.LastMsgManager.GetMarker() {
+		errResult := ErrorResult{
+			Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
+		}
+		return MigrateResult{}, &errResult
+	}
+
+	nonce := migrateMsgBz[0:32]
+
+	gasBefore := ctx.GasMeter().GasConsumed()
+	execResult, err := fakeMigrate(ctx, keeper, contractAddress, txSender, newCodeId, migrateMsgBz, adminToSend, adminProof)
+	gasAfter := ctx.GasMeter().GasConsumed()
+	gasUsed := gasAfter - gasBefore
+
+	if len(wasmCallCount) == 0 {
+		// default, just check that at least 1 call happened
+		require.NotZero(t, gasMeter.GetWasmCounter(), "%+v", err)
+	} else {
+		require.Equal(t, uint64(wasmCallCount[0]), gasMeter.GetWasmCounter(), "%+v", err)
+	}
+
+	if err != nil {
+		result := MigrateResult{
+			Nonce:      nil,
+			Ctx:        ctx,
+			Data:       nil,
+			WasmEvents: nil,
+			GasUsed:    gasUsed,
+		}
+
+		errResult := ErrorResult{
+			Generic: err,
+		}
+		cwErr := extractInnerError(t, err, nonce, isErrorEncrypted, isV1Contract)
+		errResult.CosmWasm = &cwErr
+
+		return result, &errResult
+	}
+
+	// wasmEvents come from all the callbacks as well
+	wasmEvents := tryDecryptWasmEvents(ctx, nonce)
+
+	// Data is the output of only the first call
+	data := getDecryptedData(t, execResult, nonce)
+
+	result := MigrateResult{
+		Nonce:      nonce,
+		Ctx:        ctx,
+		Data:       data,
+		WasmEvents: wasmEvents,
+		GasUsed:    gasUsed,
+	}
+
+	return result, nil
 }

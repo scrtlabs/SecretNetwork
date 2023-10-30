@@ -5,15 +5,18 @@ use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
 use crate::enclave::ENCLAVE_DOORBELL;
-// #[cfg(feature = "query-node")]
-// use crate::enclave::QUERY_ENCLAVE_DOORBELL;
 use crate::errors::{EnclaveError, VmResult};
 use crate::{Querier, Storage, VmError};
 
-use enclave_ffi_types::{Ctx, HandleResult, InitResult, QueryResult};
+use enclave_ffi_types::{
+    Ctx, HandleResult, InitResult, MigrateResult, QueryResult, UpdateAdminResult,
+};
 
 use sgx_types::sgx_status_t;
 
+use crate::wasmi::results::{
+    migrate_result_to_vm_result, update_admin_result_to_vm_result, MigrateSuccess,
+};
 use log::*;
 use serde::Deserialize;
 
@@ -21,7 +24,7 @@ use super::exports::FullContext;
 use super::imports;
 use super::results::{
     handle_result_to_vm_result, init_result_to_vm_result, query_result_to_vm_result, HandleSuccess,
-    InitSuccess, QuerySuccess,
+    InitSuccess, QuerySuccess, UpdateAdminSuccess,
 };
 
 pub struct Module<S, Q>
@@ -92,7 +95,126 @@ where
         VmError::generic_err("The enclave is too busy and can not respond to this query")
     }
 
-    pub fn init(&mut self, env: &[u8], msg: &[u8], sig_info: &[u8]) -> VmResult<InitSuccess> {
+    pub fn migrate(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+        admin_proof: &[u8],
+    ) -> VmResult<MigrateSuccess> {
+        trace!(
+            "migrate() called with env: {:?} msg: {:?} gas_left: {}",
+            String::from_utf8_lossy(env),
+            String::from_utf8_lossy(msg),
+            self.gas_left()
+        );
+
+        let mut migrate_result = MaybeUninit::<MigrateResult>::uninit();
+        let mut used_gas = 0_u64;
+
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = ENCLAVE_DOORBELL
+            .get_access(1) // This can never be recursive
+            .ok_or_else(Self::busy_enclave_err)?;
+        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+
+        let status = unsafe {
+            imports::ecall_migrate(
+                enclave.geteid(),
+                migrate_result.as_mut_ptr(),
+                self.ctx.unsafe_clone(),
+                self.gas_left(),
+                &mut used_gas,
+                self.bytecode.as_ptr(),
+                self.bytecode.len(),
+                env.as_ptr(),
+                env.len(),
+                msg.as_ptr(),
+                msg.len(),
+                sig_info.as_ptr(),
+                sig_info.len(),
+                admin.as_ptr(),
+                admin.len(),
+                admin_proof.as_ptr(),
+                admin_proof.len(),
+            )
+        };
+
+        trace!(
+            "migrate() returned with gas_used: {} (gas_limit: {})",
+            used_gas,
+            self.gas_limit
+        );
+        self.consume_gas(used_gas);
+
+        match status {
+            sgx_status_t::SGX_SUCCESS => {
+                let migrate_result = unsafe { migrate_result.assume_init() };
+                migrate_result_to_vm_result(migrate_result)
+            }
+            failure_status => Err(EnclaveError::sdk_err(failure_status).into()),
+        }
+    }
+
+    pub fn update_admin(
+        &mut self,
+        env: &[u8],
+        sig_info: &[u8],
+        current_admin: &[u8],
+        current_admin_proof: &[u8],
+        new_admin: &[u8],
+    ) -> VmResult<UpdateAdminSuccess> {
+        trace!(
+            "update_admin() called with env: {:?}",
+            String::from_utf8_lossy(env),
+        );
+
+        let mut update_admin_result = MaybeUninit::<UpdateAdminResult>::uninit();
+
+        // Bind the token to a local variable to ensure its
+        // destructor runs in the end of the function
+        let enclave_access_token = ENCLAVE_DOORBELL
+            .get_access(1) // This can never be recursive
+            .ok_or_else(Self::busy_enclave_err)?;
+        let enclave = enclave_access_token.map_err(EnclaveError::sdk_err)?;
+
+        let status = unsafe {
+            imports::ecall_update_admin(
+                enclave.geteid(),
+                update_admin_result.as_mut_ptr(),
+                env.as_ptr(),
+                env.len(),
+                sig_info.as_ptr(),
+                sig_info.len(),
+                current_admin.as_ptr(),
+                current_admin.len(),
+                current_admin_proof.as_ptr(),
+                current_admin_proof.len(),
+                new_admin.as_ptr(),
+                new_admin.len(),
+            )
+        };
+
+        trace!("update_admin() returned");
+
+        match status {
+            sgx_status_t::SGX_SUCCESS => {
+                let update_admin_result = unsafe { update_admin_result.assume_init() };
+                update_admin_result_to_vm_result(update_admin_result)
+            }
+            failure_status => Err(EnclaveError::sdk_err(failure_status).into()),
+        }
+    }
+
+    pub fn init(
+        &mut self,
+        env: &[u8],
+        msg: &[u8],
+        sig_info: &[u8],
+        admin: &[u8],
+    ) -> VmResult<InitSuccess> {
         trace!(
             "init() called with env: {:?} msg: {:?} gas_left: {}",
             String::from_utf8_lossy(env),
@@ -125,6 +247,8 @@ where
                 msg.len(),
                 sig_info.as_ptr(),
                 sig_info.len(),
+                admin.as_ptr(),
+                admin.len(),
             )
         };
 
@@ -213,10 +337,7 @@ where
         let mut query_result = MaybeUninit::<QueryResult>::uninit();
         let mut used_gas = 0_u64;
 
-        // #[cfg(not(feature = "query-node"))]
         let doorbell = &ENCLAVE_DOORBELL;
-        // #[cfg(feature = "query-node")]
-        // let doorbell = &QUERY_ENCLAVE_DOORBELL;
 
         // Bind the token to a local variable to ensure its
         // destructor runs in the end of the function

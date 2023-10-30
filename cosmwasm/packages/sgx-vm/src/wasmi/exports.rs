@@ -14,12 +14,6 @@ pub extern "C" fn ocall_allocate(buffer: *const u8, length: usize) -> UserSpaceB
     ocall_allocate_impl(buffer, length)
 }
 
-// #[cfg(feature = "query-node")]
-// #[no_mangle]
-// pub extern "C" fn ocall_allocate_qe(buffer: *const u8, length: usize) -> UserSpaceBuffer {
-//     ocall_allocate_impl(buffer, length)
-// }
-
 /// Copy a buffer from the enclave memory space, and return an opaque pointer to it.
 fn ocall_allocate_impl(buffer: *const u8, length: usize) -> UserSpaceBuffer {
     let slice = unsafe { std::slice::from_raw_parts(buffer, length) };
@@ -65,27 +59,6 @@ pub extern "C" fn ocall_read_db(
         key_len,
     )
 }
-
-// #[cfg(feature = "query-node")]
-// #[no_mangle]
-// pub extern "C" fn ocall_read_db_qe(
-//     context: Ctx,
-//     vm_error: *mut UntrustedVmError,
-//     gas_used: *mut u64,
-//     value: *mut EnclaveBuffer,
-//     key: *const u8,
-//     key_len: usize,
-// ) -> OcallReturn {
-//     ocall_read_db_concrete(
-//         super::allocate_enclave_buffer_qe,
-//         context,
-//         vm_error,
-//         gas_used,
-//         value,
-//         key,
-//         key_len,
-//     )
-// }
 
 /// Read a key from the contracts key-value store.
 fn ocall_read_db_concrete(
@@ -176,29 +149,6 @@ pub extern "C" fn ocall_query_chain(
         query_depth,
     )
 }
-
-// #[cfg(feature = "query-node")]
-// #[no_mangle]
-// pub extern "C" fn ocall_query_chain_qe(
-//     context: Ctx,
-//     vm_error: *mut UntrustedVmError,
-//     gas_used: *mut u64,
-//     gas_limit: u64,
-//     value: *mut EnclaveBuffer,
-//     query: *const u8,
-//     query_len: usize,
-// ) -> OcallReturn {
-//     ocall_query_chain_concrete(
-//         super::allocate_enclave_buffer_qe,
-//         context,
-//         vm_error,
-//         gas_used,
-//         gas_limit,
-//         value,
-//         query,
-//         query_len,
-//     )
-// }
 
 /// Read a key from the contracts key-value store.
 #[allow(clippy::too_many_arguments)]

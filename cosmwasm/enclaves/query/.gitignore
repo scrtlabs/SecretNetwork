@@ -1,7 +1,0 @@
-*.so
-*.o
-*.h
-*.c
-lib/
-
-!Cargo.lock

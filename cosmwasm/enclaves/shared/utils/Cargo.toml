@@ -1,11 +1,12 @@
 [package]
 name = "enclave_utils"
-version = "1.6.0"
+version = "1.11.0"
 authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 
 [features]
 production = []
+random = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
@@ -28,3 +29,5 @@ serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+
+enclave_crypto = { path = "../crypto" }
