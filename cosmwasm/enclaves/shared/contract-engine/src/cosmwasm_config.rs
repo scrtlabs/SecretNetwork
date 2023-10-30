@@ -5,12 +5,17 @@ pub mod api_marker {
     pub const V1: &str = "interface_version_8";
 }
 
+pub mod features {
+    pub const RANDOM: &str = "requires_random";
+}
+
 /// Right now ContractOperation is used to detect queris and prevent state changes
 #[derive(Clone, Copy, Debug)]
 pub enum ContractOperation {
     Init,
     Handle,
     Query,
+    Migrate,
 }
 
 #[allow(unused)]
@@ -25,6 +30,10 @@ impl ContractOperation {
 
     pub fn is_query(&self) -> bool {
         matches!(self, ContractOperation::Query)
+    }
+
+    pub fn is_migrate(&self) -> bool {
+        matches!(self, ContractOperation::Migrate)
     }
 }
 

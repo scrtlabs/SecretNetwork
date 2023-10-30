@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Coin};
+use cosmwasm_std::{Binary, Coin, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -79,6 +79,7 @@ pub enum InstantiateMsg {
         code_hash: String,
         label: String,
         msg: String,
+        admin: Option<String>,
     },
     CallToExec {
         addr: String,
@@ -109,11 +110,17 @@ pub enum InstantiateMsg {
         code_hash: String,
     },
     GetEnv {},
+    TestRemoveDb {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    IncrementTimes {
+        times: u64,
+    },
+    LastMsgMarkerNop {},
+    LastMsgMarker {},
     WasmMsg {
         ty: String,
     },
@@ -350,6 +357,7 @@ pub enum ExecuteMsg {
         code_hash: String,
         label: String,
         msg: String,
+        admin: Option<String>,
     },
     CallToExec {
         addr: String,
@@ -416,6 +424,57 @@ pub enum ExecuteMsg {
     ExecuteMultipleContracts {
         details: Vec<ExecuteDetails>,
     },
+    SendMsgMigrateContract {
+        contract_addr: String,
+        new_code_id: Uint64,
+        callback_code_hash: String,
+        msg: Binary,
+        #[serde(default)]
+        reply: bool,
+    },
+    SendMsgClearAdmin {
+        contract_addr: String,
+        #[serde(default)]
+        reply: bool,
+    },
+    SendMsgUpdateAdmin {
+        contract_addr: String,
+        new_admin: String,
+        #[serde(default)]
+        reply: bool,
+    },
+    Echo {
+        data: Binary,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum IBCLifecycleComplete {
+    #[serde(rename = "ibc_ack")]
+    IBCAck {
+        /// The source channel (secret side) of the IBC packet
+        channel: String,
+        /// The sequence number that the packet was sent with
+        sequence: u64,
+        /// String encoded version of the ack as seen by OnAcknowledgementPacket(..)
+        ack: String,
+        /// Weather an ack is a success of failure according to the transfer spec
+        success: bool,
+    },
+    #[serde(rename = "ibc_timeout")]
+    IBCTimeout {
+        /// The source channel (secret side) of the IBC packet
+        channel: String,
+        /// The sequence number that the packet was sent with
+        sequence: u64,
+    },
+}
+
+/// Message type for `sudo` entry_point
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum SudoMsg {
+    #[serde(rename = "ibc_lifecycle_complete")]
+    IBCLifecycleComplete(IBCLifecycleComplete),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

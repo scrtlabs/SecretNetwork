@@ -1,7 +1,7 @@
 # This dockerfile contains tests that only test the compute module, using a single node. They do not execute tests
 # on multiple nodes, nor do they require a full network or interfaces with user libraries, network latency, etc.
 
-FROM ghcr.io/scrtlabs/compile-contracts:1.5.0
+FROM ghcr.io/scrtlabs/compile-contracts:1.10.0
 
 RUN mkdir -p /opt/secret/.sgx_secrets
 
@@ -11,7 +11,7 @@ COPY cosmwasm cosmwasm
 COPY Makefile .
 COPY x x
 
-RUN . /root/.cargo/env && make build-test-contract
+RUN . /root/.cargo/env && make build-test-contracts
 
 # Add source files
 COPY go-cosmwasm go-cosmwasm
@@ -43,7 +43,7 @@ COPY deployment/ci/go-tests-bench.sh .
 RUN chmod +x go-tests.sh
 RUN chmod +x go-tests-bench.sh
 
-COPY --from=azcr.io/enigmampc/ci-base-image:latest /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
-COPY --from=azcr.io/enigmampc/ci-base-image:latest /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
+COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
+COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
 
 ENTRYPOINT ["/bin/bash", "go-tests.sh"]

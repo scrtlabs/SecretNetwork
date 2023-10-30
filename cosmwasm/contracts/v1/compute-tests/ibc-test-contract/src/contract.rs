@@ -1,11 +1,11 @@
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{count, count_read};
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Event, Ibc3ChannelOpenResponse,
-    IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
-    IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
-    IbcReceiveResponse, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
-    SubMsgResult, WasmMsg,
+    entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, Event,
+    Ibc3ChannelOpenResponse, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg,
+    IbcChannelOpenMsg, IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg,
+    IbcPacketTimeoutMsg, IbcReceiveResponse, MessageInfo, Reply, ReplyOn, Response, StdError,
+    StdResult, SubMsg, SubMsgResult, WasmMsg,
 };
 use serde::{Deserialize, Serialize};
 use serde_json_wasm as serde_json;
@@ -311,4 +311,10 @@ pub fn ibc_packet_timeout(
 ) -> StdResult<IbcBasicResponse> {
     count(deps.storage).save(&(msg.packet.sequence + 9))?;
     get_resp_based_on_num(env, msg.packet.sequence)
+}
+
+/// this is a no-op just to test how this integrates with wasmd
+#[entry_point]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: Empty) -> StdResult<Response> {
+    Ok(Response::default())
 }

@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use log::*;
 use lru::LruCache;
 
-use cw_types_generic::CosmWasmApiVersion;
+use cw_types_generic::{ContractFeature, CosmWasmApiVersion};
 
 use enclave_ffi_types::EnclaveError;
 
@@ -12,18 +12,23 @@ use enclave_cosmos_types::types::ContractCode;
 use enclave_crypto::HASH_SIZE;
 
 use super::{gas, validation};
-use crate::gas::WasmCosts;
-use crate::cosmwasm_config::api_marker;
 use crate::cosmwasm_config::ContractOperation;
+use crate::cosmwasm_config::{api_marker, features};
+use crate::gas::WasmCosts;
 
 pub struct VersionedCode {
     pub code: Vec<u8>,
     pub version: CosmWasmApiVersion,
+    pub features: Vec<ContractFeature>,
 }
 
 impl VersionedCode {
-    pub fn new(code: Vec<u8>, version: CosmWasmApiVersion) -> Self {
-        Self { code, version }
+    pub fn new(code: Vec<u8>, version: CosmWasmApiVersion, features: Vec<ContractFeature>) -> Self {
+        Self {
+            code,
+            version,
+            features,
+        }
     }
 }
 
@@ -42,57 +47,64 @@ pub fn create_module_instance(
     gas_costs: &WasmCosts,
     operation: ContractOperation,
 ) -> Result<VersionedCode, EnclaveError> {
-    debug!("fetching module from cache");
+    trace!("fetching module from cache");
     let cache = MODULE_CACHE.read().unwrap();
 
     // If the cache is disabled, don't try to use it and just compile the module.
     if cache.cap() == 0 {
-        debug!("cache is disabled, building module");
+        trace!("cache is disabled, building module");
         return analyze_module(contract_code, gas_costs, operation);
     }
-    debug!("cache is enabled");
+    trace!("cache is enabled");
 
     // Try to fetch a cached instance
     let mut code = None;
     let mut api_version = CosmWasmApiVersion::Invalid;
-    debug!("peeking in cache");
+    let mut features = vec![];
+    trace!("peeking in cache");
     let peek_result = cache.peek(&contract_code.hash());
     if let Some(VersionedCode {
         code: cached_code,
         version: cached_ver,
+        features: cached_features,
     }) = peek_result
     {
-        debug!("found instance in cache!");
+        trace!("found instance in cache!");
         code = Some(cached_code.clone());
         api_version = *cached_ver;
+        features = cached_features.clone();
     }
 
     drop(cache); // Release read lock
 
     // if we couldn't find the code in the cache, analyze it now
     if code.is_none() {
-        debug!("code not found in cache! analyzing now");
+        trace!("code not found in cache! analyzing now");
         let versioned_code = analyze_module(contract_code, gas_costs, operation)?;
         code = Some(versioned_code.code);
         api_version = versioned_code.version;
+        features = versioned_code.features;
     }
 
     // If we analyzed the code in the previous step, insert it to the LRU cache
-    debug!("updating cache");
+    trace!("updating cache");
     let mut cache = MODULE_CACHE.write().unwrap();
     if let Some(code) = code.clone() {
-        debug!("storing code in cache");
-        cache.put(contract_code.hash(), VersionedCode::new(code, api_version));
+        trace!("storing code in cache");
+        cache.put(
+            contract_code.hash(),
+            VersionedCode::new(code, api_version, features.clone()),
+        );
     } else {
         // Touch the cache to update the LRU value
-        debug!("updating LRU without storing anything");
+        trace!("updating LRU without storing anything");
         cache.get(&contract_code.hash());
     }
 
     let code = code.unwrap();
 
-    debug!("returning built instance");
-    Ok(VersionedCode::new(code, api_version))
+    trace!("returning built instance");
+    Ok(VersionedCode::new(code, api_version, features))
 }
 
 pub fn analyze_module(
@@ -124,6 +136,19 @@ pub fn analyze_module(
             return Err(EnclaveError::InvalidWasm);
         }
     };
+
+    // features
+    let random_enabled = module
+        .exports
+        .iter()
+        .any(|exp| exp.name == features::RANDOM);
+
+    let features = if random_enabled {
+        debug!("Found supported features: random");
+        vec![ContractFeature::Random]
+    } else {
+        vec![]
+    };
     drop(exports);
 
     validation::validate_memory(&mut module)?;
@@ -139,5 +164,5 @@ pub fn analyze_module(
 
     let code = module.emit_wasm();
 
-    Ok(VersionedCode::new(code, cosmwasm_api_version))
+    Ok(VersionedCode::new(code, cosmwasm_api_version, features))
 }

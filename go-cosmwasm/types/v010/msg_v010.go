@@ -117,6 +117,9 @@ type WithdrawMsg struct {
 type WasmMsg struct {
 	Execute     *ExecuteMsg     `json:"execute,omitempty"`
 	Instantiate *InstantiateMsg `json:"instantiate,omitempty"`
+	Migrate     *MigrateMsg     `json:"migrate,omitempty"`
+	UpdateAdmin *UpdateAdminMsg `json:"update_admin,omitempty"`
+	ClearAdmin  *ClearAdminMsg  `json:"clear_admin,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
@@ -142,6 +145,8 @@ type ExecuteMsg struct {
 }
 
 type InstantiateMsg struct {
+	// Optional admin address to be set
+	Admin string `json:"admin,omitempty"`
 	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
 	CodeID uint64 `json:"code_id"`
 	// Custom addition to support binding a message to specific code to harden against offline & replay attacks
@@ -155,4 +160,40 @@ type InstantiateMsg struct {
 	// Send is an optional amount of coins this contract sends to the called contract
 	Send              types.Coins `json:"send"`
 	CallbackSignature []byte      `json:"callback_sig"` // Optional
+}
+
+type MigrateMsg struct {
+	// Sender is the that actor that signed the messages
+	Sender string `json:"sender"`
+	// Contract is the address of the smart contract
+	Contract string `json:"contract_addr"`
+	// CodeID references the new WASM code
+	CodeID uint64 `json:"code_id"`
+	// msg is an encrypted input to pass to the contract on migration
+	Msg []byte `json:"msg"`
+	// used internally for encryption, should always be empty in a signed transaction
+	CallbackSignature []byte `json:"callback_sig"`
+	// Custom addition to support binding a message to specific code to harden against offline & replay attacks
+	// This is only needed when creating a callback message
+	CallbackCodeHash string `json:"callback_code_hash"`
+}
+
+type UpdateAdminMsg struct {
+	// Sender is the that actor that signed the messages
+	Sender string `json:"sender,omitempty"`
+	// NewAdmin address to be set
+	NewAdmin string `json:"admin,omitempty"`
+	// Contract is the address of the smart contract
+	Contract string `json:"contract_addr,omitempty"`
+	// used internally for encryption, should always be empty in a signed transaction
+	CallbackSignature []byte `json:"callback_sig"`
+}
+
+type ClearAdminMsg struct {
+	// Sender is the that actor that signed the messages
+	Sender string `json:"sender,omitempty"`
+	// Contract is the address of the smart contract
+	Contract string `json:"contract_addr,omitempty"`
+	// used internally for encryption, should always be empty in a signed transaction
+	CallbackSignature []byte `json:"callback_sig"`
 }

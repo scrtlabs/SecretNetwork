@@ -15,5 +15,8 @@ pub mod pointers;
 pub mod recursion_depth;
 mod results;
 pub mod storage;
-pub mod validator_set;
 pub mod tx_bytes;
+pub mod validator_set;
+
+#[cfg(feature = "random")]
+pub mod random;

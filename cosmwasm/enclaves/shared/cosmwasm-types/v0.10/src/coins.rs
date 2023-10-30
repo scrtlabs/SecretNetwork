@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::math::Uint128;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
 pub struct Coin {
     pub denom: String,
     pub amount: Uint128,

@@ -7,9 +7,8 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG TEST=enigmampc/rocksdb:v6.24.2
-ARG SCRT_BASE_IMAGE_ENCLAVE=enigmampc/rocksdb:v6.24.2-1.1.5
-ARG SCRT_RELEASE_BASE_IMAGE=enigmampc/enigma-sgx-base:2004-1.1.5
+ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2004-1.1.5
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.17
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
@@ -25,19 +24,7 @@ ENV PATH="/root/.cargo/bin:$PATH"
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
-COPY rust-toolchain rust-toolchain
-RUN rustup component add rust-src
-RUN --mount=type=cache,target=/root/.cargo/registry cargo install xargo --version 0.3.25
-
-# Add submodules
-COPY third_party third_party
-
-# Add source files
-COPY go-cosmwasm go-cosmwasm/
-COPY cosmwasm cosmwasm/
-
 # ***************** COMPILE ENCLAVE ************** #
-
 FROM prepare-compile-enclave AS compile-enclave
 
 ARG BUILD_VERSION="v0.0.0"
@@ -52,10 +39,6 @@ ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
-COPY rust-toolchain rust-toolchain
-RUN rustup component add rust-src
-RUN --mount=type=cache,target=/root/.cargo/registry cargo install xargo --version 0.3.25
-
 # Add submodules
 COPY third_party third_party
 
@@ -63,38 +46,51 @@ COPY third_party third_party
 COPY go-cosmwasm go-cosmwasm/
 COPY cosmwasm cosmwasm/
 
+COPY rust-toolchain rust-toolchain
+RUN rustup component add rust-src
+RUN cargo install xargo --version 0.3.25
+
+
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
 
-RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
+RUN . /opt/sgxsdk/environment && env \
     && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} VERSION=${VERSION} FEATURES=${FEATURES} FEATURES_U=${FEATURES_U} SGX_MODE=${SGX_MODE} make build-rust
-
-ENTRYPOINT ["/bin/bash"]
 
 FROM prepare-compile-enclave AS compile-tendermint-enclave
 
+ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
+ARG FEATURES
 ARG FEATURES_U
+ARG MITIGATION_CVE_2020_0551=LOAD
 
-ARG SGX_MODE=${SGX_MODE}
+ENV VERSION=${BUILD_VERSION}
+ENV SGX_MODE=${SGX_MODE}
+ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
+ENV MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551}
 
-RUN git clone --branch main https://github.com/scrtlabs/tm-secret-enclave.git
+RUN git clone --branch v1.11.5 --depth 1 https://github.com/scrtlabs/tm-secret-enclave.git
 
 WORKDIR tm-secret-enclave
 
 RUN git submodule init
 RUN git submodule update --remote
 
-RUN . /opt/sgxsdk/environment && env && MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U=${FEATURES_U} make build
+RUN rustup component add rust-src
+RUN cargo install xargo --version 0.3.25
+
+RUN . /opt/sgxsdk/environment && env && LD_LIBRARY_PATH=/opt/sgxsdk/lib64 FEATURES="$(echo ${FEATURES} | perl -pe 's/go-tests|debug-print//g')" MITIGATION_CVE_2020_0551=${MITIGATION_CVE_2020_0551} SGX_MODE=${SGX_MODE} FEATURES_U="$(echo \"${FEATURES_U}\" | perl -pe 's/go-tests|debug-print//g')" make build
+
 
 # ***************** COMPILE SECRETD ************** #
-FROM $TEST AS compile-secretd
+FROM $SCRT_BASE_IMAGE_ENCLAVE AS compile-secretd
 
 ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
-ADD https://go.dev/dl/go1.19.linux-amd64.tar.gz go.linux-amd64.tar.gz
+ADD https://go.dev/dl/go1.21.1.linux-amd64.tar.gz go.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go.linux-amd64.tar.gz
 RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 
@@ -136,7 +132,6 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/relea
 
 COPY --from=compile-enclave /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so
 COPY --from=compile-enclave /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so
-# COPY --from=compile-enclave /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_query_enclave.signed.so
 
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
@@ -157,14 +152,14 @@ RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} 
 FROM $SCRT_RELEASE_BASE_IMAGE as release-image
 
 # wasmi-sgx-test script requirements
-RUN apt-get update && \
+RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
     jq \
     openssl \
     curl \
     wget \
-    libsnappy-dev \
     libgflags-dev \
     bash-completion
 
@@ -187,7 +182,6 @@ ENV SCRT_ENCLAVE_DIR=/usr/lib/
 # workaround because paths seem kind of messed up
 RUN ln -s /opt/sgxsdk/lib64/libsgx_urts_sim.so /usr/lib/x86_64-linux-gnu/libsgx_urts_sim.so
 RUN ln -s /opt/sgxsdk/lib64/libsgx_uae_service_sim.so /usr/lib/x86_64-linux-gnu/libsgx_uae_service_sim.so
-
 # Install ca-certificates
 WORKDIR /root
 
@@ -209,6 +203,7 @@ RUN chmod +x /usr/bin/secretd
 RUN chmod +x bootstrap_init.sh
 RUN chmod +x startup.sh
 RUN chmod +x node_init.sh
+
 
 RUN secretd completion > /root/secretd_completion
 
@@ -244,13 +239,13 @@ FROM release-image as mainnet-release
 ARG BUILD_VERSION="v0.0.0"
 ENV VERSION=${BUILD_VERSION}
 
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/librust_cosmwasm_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/libgo_cosmwasm.so
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/librandom_api.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librandom_api.so
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/tendermint_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/tendermint_enclave.signed.so
 
 COPY deployment/docker/mainnet/mainnet_node.sh .
@@ -303,7 +298,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 
 # ***************** COMPILE CHECK-HW TOOL ************** #
 
-FROM prepare-compile-enclave as compile-check-hw-tool
+FROM compile-enclave as compile-check-hw-tool
 
 ARG BUILD_VERSION="v0.0.0"
 ARG FEATURES
@@ -313,18 +308,13 @@ ENV VERSION=${BUILD_VERSION}
 ENV FEATURES=${FEATURES}
 ENV FEATURES_U=${FEATURES_U}
 
-WORKDIR /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm
-
-# Ignore $FEATURES because it should never be `production`
-RUN --mount=type=cache,target=/root/.cargo/registry  . /opt/sgxsdk/environment && env \
-    && VERSION=${VERSION} FEATURES="" FEATURES_U=${FEATURES_U} SGX_MODE=HW make build-rust
-
-# Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 
-# Add source files
-COPY check-hw check-hw/
-RUN cp go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave.so
+COPY check-hw check-hw
+
+RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+    && wget -O check-hw/check_hw_enclave.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
+COPY --from=compile-secretd /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave_testnet.so
 
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop
 RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy
@@ -332,16 +322,20 @@ RUN mkdir -p /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production
 
 RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/develop/api_key.txt
 RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt > /go/src/github.com/enigmampc/SecretNetwork/ias_keys/sw_dummy/api_key.txt
-RUN --mount=type=secret,id=API_KEY,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
+RUN --mount=type=secret,id=API_KEY_MAINNET,dst=/run/secrets/api_key.txt cat /run/secrets/api_key.txt >  /go/src/github.com/enigmampc/SecretNetwork/ias_keys/production/api_key.txt
+
 
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork/check-hw
 
+RUN make
+
+WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
+
 COPY ./deployment/docker/builder/create_check_hw_tar.sh .
+RUN chmod +x create_check_hw_tar.sh
 
-RUN --mount=type=cache,target=/root/.cargo/registry . /opt/sgxsdk/environment && env && make
-RUN cp ../go-cosmwasm/librust_cosmwasm_enclave.signed.so ./check_hw_enclave.so
 
-ENTRYPOINT ["/bin/bash", "create_check_hw_tar.sh"]
+ENTRYPOINT ["/bin/bash", "./create_check_hw_tar.sh"]
 
 # ***************** LOCALSECRET ************** #
 FROM release-image as build-localsecret

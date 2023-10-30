@@ -1,0 +1,44 @@
+[package]
+name = "v1-sanity-contract-v2"
+version = "0.0.1"
+authors = ["SCRT Labs <info@scrtlabs.com>"]
+edition = "2018"
+description = "A Test contract intended to use in system tests for the Secret Netowrk"
+license = "MIT"
+exclude = [
+  # Those files are cosmwasm-opt artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "v1-sanity-contract.wasm",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[features]
+default = []
+with_floats = []
+
+[dependencies]
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "b46529a2", package = "secret-cosmwasm-std", features = [
+  "random"
+] }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "b46529a2", package = "secret-cosmwasm-storage" }
+schemars = "0.8.1"
+serde = { version = "1.0.114", default-features = false, features = [
+  "derive",
+  "alloc"
+] }
+serde-json-wasm = "0.2.1"
+secp256k1 = "0.22.2"
+bincode2 = "2.0.1"

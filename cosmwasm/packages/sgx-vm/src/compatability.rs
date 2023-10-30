@@ -50,6 +50,8 @@ const SUPPORTED_IMPORTS_V1: &[&str] = &[
     "env.db_scan",
     #[cfg(feature = "iterator")]
     "env.db_next",
+    "env.gas_evaporate",
+    "env.check_gas"
 ];
 
 /// Lists all entry points we expect to be present when calling a v0.10 contract.

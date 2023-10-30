@@ -122,7 +122,7 @@ func NewLegacyQuerier(keeper Keeper) sdk.Querier {
 	}
 }
 
-func queryContractState(ctx sdk.Context, bech, queryMethod string, data []byte, keeper Keeper) (json.RawMessage, error) {
+func queryContractState(ctx sdk.Context, bech, queryMethod string, data []byte, keeper Keeper) (json.RawMessage, error) { //nolint:all
 	contractAddr, err := sdk.AccAddressFromBech32(bech)
 	if err != nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, bech)
@@ -135,10 +135,10 @@ func queryContractState(ctx sdk.Context, bech, queryMethod string, data []byte, 
 }
 
 func queryContractKey(ctx sdk.Context, address sdk.AccAddress, keeper Keeper) ([]byte, error) {
-	res := keeper.GetContractKey(ctx, address)
-	if res == nil {
+	res, err := keeper.GetContractKey(ctx, address)
+	if err != nil {
 		return nil, nil
 	}
 
-	return res, nil
+	return res.CurrentContractKey, nil
 }

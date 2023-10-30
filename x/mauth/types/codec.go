@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 )
 
-func RegisterCodec(cdc *codec.LegacyAmino) {
+func RegisterCodec(_ *codec.LegacyAmino) {
 	//	cdc.RegisterConcrete(MsgRegister{}, "intertx/MsgRegister", nil)
 	//	cdc.RegisterConcrete(MsgSend{}, "intertx/MsgSend", nil)
 }

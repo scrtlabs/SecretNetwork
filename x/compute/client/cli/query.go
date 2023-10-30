@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -50,6 +51,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdCodeHashByContractAddress(),
 		GetCmdCodeHashByCodeID(),
 		CmdDecryptText(),
+		GetCmdGetContractHistory(),
 	)
 	return queryCmd
 }
@@ -141,7 +143,7 @@ func GetCmdCodeHashByContractAddress() *cobra.Command {
 			}
 
 			addr := hex.EncodeToString(res)
-			fmt.Printf("0x%s", addr)
+			fmt.Printf("0x%s\n", addr)
 			return nil
 		},
 	}
@@ -332,7 +334,7 @@ func CmdDecryptText() *cobra.Command {
 				return fmt.Errorf("error while trying to decrypt the output data: %w", err)
 			}
 
-			fmt.Printf("Decrypted data: %s", dataPlaintextB64Bz)
+			fmt.Printf("Decrypted data: %s\n", dataPlaintextB64Bz)
 			return nil
 		},
 	}
@@ -553,10 +555,11 @@ func GetCmdQuery() *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 
 	cmd := &cobra.Command{
-		Use:   "query [bech32_address_or_label] [query]", // TODO add --from wallet
-		Short: "Calls contract with given address with query data and prints the returned result",
-		Long:  "Calls contract with given address with query data and prints the returned result",
-		Args:  cobra.ExactArgs(2),
+		Use:     "query [bech32_address_or_label] [query]",
+		Short:   "Run a query on a contract",
+		Long:    "Calls contract with given address with query data and prints the returned result",
+		Aliases: []string{"smart"},
+		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
@@ -710,4 +713,61 @@ func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
 
 func asciiDecodeString(s string) ([]byte, error) {
 	return []byte(s), nil
+}
+
+// GetCmdGetContractHistory prints the code history for a given contract
+func GetCmdGetContractHistory() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "contract-history [bech32_address]",
+		Short:   "Prints out the code history for a contract given its address",
+		Long:    "Prints out the code history for a contract given its address",
+		Aliases: []string{"history", "hist", "ch"},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			_, err = sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(clientCtx)
+			res, err := queryClient.ContractHistory(
+				context.Background(),
+				&types.QueryContractHistoryRequest{
+					ContractAddress: args[0],
+				},
+			)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(res)
+		},
+		SilenceUsage: true,
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "contract history")
+	return cmd
+}
+
+// sdk ReadPageRequest expects binary but we encoded to base64 in our marshaller
+func withPageKeyDecoded(flagSet *flag.FlagSet) *flag.FlagSet {
+	encoded, err := flagSet.GetString(flags.FlagPageKey)
+	if err != nil {
+		panic(err.Error())
+	}
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		panic(err.Error())
+	}
+	err = flagSet.Set(flags.FlagPageKey, string(raw))
+	if err != nil {
+		panic(err.Error())
+	}
+	return flagSet
 }

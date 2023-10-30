@@ -4,10 +4,9 @@ version = "0.1.0"
 edition = "2018"
 
 [features]
-default = []
-test = []
-random = []
-light-client-validation = []
+default = ["random"]
+test = ["base64"]
+random = ["enclave_utils/random"]
 production = []
 verify-validator-whitelist = []
 
@@ -31,3 +30,6 @@ protobuf = { version = "2.25.2" }
 hex = { version = "0.4.3" }
 cosmos-sdk-proto = { version = "0.16.0", default-features = false }
 integer-encoding = "3.0.4"
+base64 = { version = "0.21.0", optional = true }
+
+# cosmrs = { version = "0.11.0", default-features = false }

@@ -2,7 +2,13 @@
 name = "enclave-test"
 version = "0.1.0"
 authors = ["SCRT Labs <info@scrtlabs.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-cosmwasm-sgx-vm = { path = "../../packages/sgx-vm", features = ["iterator", "enclave-tests"] }
+sgx_types = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_urts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_urts" }
+lazy_static = "1.4.0"
+log = "0.4.17"
+parking_lot = "0.12.1"
+
+enclave-ffi-types = {path = "../ffi-types"}

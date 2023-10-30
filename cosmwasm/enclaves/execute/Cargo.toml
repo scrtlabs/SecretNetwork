@@ -1,6 +1,6 @@
 [package]
 name = "secret-enclave"
-version = "1.6.0"
+version = "1.11.0"
 authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "An enclave running wasmi, to be used by cosmwasm-sgx-vm"
@@ -10,7 +10,7 @@ name = "secret_enclave"
 crate-type = ["staticlib"]
 
 [features]
-default = ["SGX_MODE_SW"]
+default = ["SGX_MODE_SW", "random", "epid_whitelist_disabled"]
 SGX_MODE_SW = []
 SGX_MODE_HW = []
 production = [
@@ -24,20 +24,33 @@ production = [
   "block-verifier/verify-validator-whitelist"
 ]
 debug-print = ["enclave_contract_engine/debug-print"]
-test = ["enclave_contract_engine/test", "enclave_crypto/test", "enclave_cosmos_types/test", "block-verifier/test"]
+test = [
+  "enclave_contract_engine/test",
+  "enclave_crypto/test",
+  "enclave_cosmos_types/test",
+  "block-verifier/test"
+]
 use_seed_service_on_bootstrap = []
 epid_whitelist_disabled = []
-light-client-validation = ["enclave_contract_engine/light-client-validation", "block-verifier/light-client-validation"]
-random = ["enclave_contract_engine/random"]
-verify-validator-whitelist = ["block-verifier/verify-validator-whitelist"]
+light-client-validation = [
+  "enclave_contract_engine/light-client-validation",
+  "block-verifier"
+]
+random = ["enclave_contract_engine/random", "enclave_crypto/random"]
+verify-validator-whitelist = [
+  "block-verifier/verify-validator-whitelist",
+  "light-client-validation"
+]
+go-tests = []
+check-hw = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = [
-    "backtrace",
-    "untrusted_time"
+  "backtrace",
+  "untrusted_time"
 ] }
 sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
@@ -45,26 +58,22 @@ sgx_types = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://g
 sgx_tse = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_rand = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tcrypto = { rev = "d2d339cbb005f676bb700059bd51dc689c025f6b", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-
 enclave-ffi-types = { path = "../ffi-types" }
-
 enclave_contract_engine = { path = "../shared/contract-engine" }
 enclave_crypto = { path = "../shared/crypto" }
 enclave_utils = { path = "../shared/utils" }
 enclave_cosmos_types = { path = "../shared/cosmos-types", optional = true }
-
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 ctor = "0.1.13"
 derive_more = "0.99"
-
 pwasm-utils = { version = "0.12.0", default-features = false }
-parity-wasm = { version = "0.41.0", default-features = false }
-
+parity-wasm = { version = "0.45.0", default-features = false, features = [
+  "sign_ext"
+] }
 base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
-
 # for attestation
 chrono = { git = "https://github.com/mesalock-linux/chrono-sgx" }
 num-bigint = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }
@@ -75,10 +84,10 @@ bit-vec = { version = "0.6", default-features = false }
 lazy_static = "1.4"
 hex = "0.4.2"
 log = "0.4.17"
-simple_logger = { version = "2.3.0", default-features = false, features = ["stderr"] }
-
-block-verifier = { path = "../shared/block-verifier", default-features = false }
-
+simple_logger = { version = "2.3.0", default-features = false, features = [
+  "stderr"
+] }
+block-verifier = { path = "../shared/block-verifier", optional = true }
 time = "=0.3.17"
 
 [dependencies.webpki]
@@ -100,7 +109,6 @@ git = "https://github.com/mesalock-linux/rustls"
 rev = "95b5e79dc24b02f3ce424437eb9698509d0baf58"
 default-features = false
 features = ["dangerous_configuration", "mesalock_sgx"]
-
 #[patch.'https://github.com/apache/teaclave-sgx-sdk.git']
 #sgx_align_struct_attribute = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_align_struct_attribute" }
 #sgx_alloc = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_alloc" }

@@ -151,11 +151,13 @@ void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
-bool create_attestation_report(Buffer api_key, Buffer *err, bool dry_run);
+bool create_attestation_report(Buffer api_key, Buffer *err);
 
 void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
+
+Buffer get_encrypted_genesis_seed(Buffer pk, Buffer *err);
 
 Buffer get_encrypted_seed(Buffer cert, Buffer *err);
 
@@ -190,9 +192,24 @@ Buffer instantiate(cache_t *cache,
                    uint64_t gas_limit,
                    uint64_t *gas_used,
                    Buffer *err,
-                   Buffer sig_info);
+                   Buffer sig_info,
+                   Buffer admin);
 
 Buffer key_gen(Buffer *err);
+
+Buffer migrate(cache_t *cache,
+               Buffer contract_id,
+               Buffer params,
+               Buffer msg,
+               DB db,
+               GoApi api,
+               GoQuerier querier,
+               uint64_t gas_limit,
+               uint64_t *gas_used,
+               Buffer *err,
+               Buffer sig_info,
+               Buffer admin,
+               Buffer admin_proof);
 
 Buffer query(cache_t *cache,
              Buffer code_id,
@@ -222,3 +239,16 @@ Buffer submit_block_signatures(Buffer header,
                                Buffer *err);
 
 bool submit_store_roots(Buffer roots, Buffer compute_root, Buffer *err);
+
+Buffer update_admin(cache_t *cache,
+                    Buffer contract_id,
+                    Buffer params,
+                    DB db,
+                    GoApi api,
+                    GoQuerier querier,
+                    uint64_t gas_limit,
+                    Buffer *err,
+                    Buffer sig_info,
+                    Buffer current_admin,
+                    Buffer current_admin_proof,
+                    Buffer new_admin);

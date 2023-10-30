@@ -275,6 +275,7 @@ pub fn get_ias_auth_config() -> (Vec<u8>, rustls::RootCertStore) {
 pub fn verify_ra_cert(
     cert_der: &[u8],
     override_verify: Option<SigningMethod>,
+    _check_tcb_version: bool,
 ) -> Result<Vec<u8>, NodeAuthResult> {
     let payload = get_netscape_comment(cert_der).map_err(|_err| NodeAuthResult::InvalidCert)?;
 
@@ -296,6 +297,7 @@ pub fn verify_ra_cert(
 pub fn verify_ra_cert(
     cert_der: &[u8],
     override_verify_type: Option<SigningMethod>,
+    check_tcb_version: bool,
 ) -> Result<Vec<u8>, NodeAuthResult> {
     let report = AttestationReport::from_cert(cert_der).map_err(|_| NodeAuthResult::InvalidCert)?;
 
@@ -315,14 +317,35 @@ pub fn verify_ra_cert(
     match signing_method {
         SigningMethod::MRENCLAVE => {
             let this_mr_enclave = get_mr_enclave();
+            let this_mr_signer = MRSIGNER;
 
-            if report.sgx_quote_body.isv_enclave_report.mr_enclave != this_mr_enclave {
-                error!("Got a different mr_enclave than expected. Invalid certificate");
+            let crate::registration::report::SgxEnclaveReport {
+                mr_enclave: report_mr_enclave,
+                mr_signer: report_mr_signer,
+                ..
+            } = report.sgx_quote_body.isv_enclave_report;
+
+            if report_mr_enclave != this_mr_enclave || report_mr_signer != this_mr_signer {
+                error!(
+                    "Got a different mr_enclave or mr_signer than expected. Invalid certificate"
+                );
                 warn!(
-                    "received: {:?} \n expected: {:?}",
-                    report.sgx_quote_body.isv_enclave_report.mr_enclave, this_mr_enclave
+                    "mr_enclave: received: {:?} \n expected: {:?}",
+                    report_mr_enclave, this_mr_enclave
+                );
+                warn!(
+                    "mr_signer: received: {:?} \n expected: {:?}",
+                    report_mr_signer, this_mr_signer
                 );
                 return Err(NodeAuthResult::MrEnclaveMismatch);
+            }
+
+            if check_tcb_version {
+                // todo: change this to a parameters or const when we migrate the code to main
+                if report.tcb_eval_data_number < 16 {
+                    info!("Got an outdated certificate");
+                    return Err(NodeAuthResult::GroupOutOfDate);
+                }
             }
         }
         SigningMethod::MRSIGNER => {
@@ -359,7 +382,7 @@ pub fn verify_quote_status(
     //     "Got GID: {:?}",
     //     transform_u32_to_array_of_u8(report.sgx_quote_body.gid)
     // );
-
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
     if !check_epid_gid_is_whitelisted(&report.sgx_quote_body.gid) {
         error!(
             "Platform verification error: quote status {:?}",
@@ -420,7 +443,9 @@ pub fn verify_quote_status(
         }
     }
 }
+
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production", not(feature = "test")))]
+#[allow(dead_code)]
 const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
 
 #[cfg(all(
@@ -429,24 +454,15 @@ const WHITELIST_FROM_FILE: &str = include_str!("../../whitelist.txt");
 ))]
 const WHITELIST_FROM_FILE: &str = include_str!("fixtures/test_whitelist.txt");
 
-#[cfg(any(all(feature = "SGX_MODE_HW", feature = "production"), feature = "test"))]
-fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
-    #[cfg(feature = "epid_whitelist_disabled")]
-    {
-        return true;
-    }
-
-    #[cfg(not(feature = "epid_whitelist_disabled"))]
-    {
-        let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
-
-        decoded.as_chunks::<4>().0.iter().any(|&arr| {
-            if epid_gid == &u32::from_be_bytes(arr) {
-                return true;
-            }
-            false
-        })
-    }
+#[cfg(not(feature = "epid_whitelist_disabled"))]
+pub fn check_epid_gid_is_whitelisted(epid_gid: &u32) -> bool {
+    let decoded = base64::decode(WHITELIST_FROM_FILE.trim()).unwrap(); //will never fail since data is constant
+    decoded.as_chunks::<4>().0.iter().any(|&arr| {
+        if epid_gid == &u32::from_be_bytes(arr) {
+            return true;
+        }
+        false
+    })
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -529,7 +545,7 @@ pub mod tests {
         let report = AttestationReport::from_cert(&tls_ra_cert);
         assert!(report.is_ok());
 
-        let res = verify_ra_cert(&tls_ra_cert, None);
+        let res = verify_ra_cert(&tls_ra_cert, None, false);
 
         assert!(res.is_ok());
 
@@ -551,6 +567,7 @@ pub mod tests {
     //     assert_eq!(result, NodeAuthResult::GroupOutOfDate)
     // }
 
+    #[cfg(not(feature = "epid_whitelist_disabled"))]
     pub fn test_epid_whitelist() {
         // check that we parse this correctly
         let res = crate::registration::cert::check_epid_gid_is_whitelisted(&(0xc12 as u32));
@@ -576,6 +593,6 @@ pub mod tests {
 
     pub fn test_certificate_valid() {
         let tls_ra_cert = tls_ra_cert_der_valid();
-        let _ = verify_ra_cert(&tls_ra_cert, None).unwrap();
+        let _ = verify_ra_cert(&tls_ra_cert, None, false).unwrap();
     }
 }

@@ -18,13 +18,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	eng "github.com/scrtlabs/SecretNetwork/types"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
-const SupportedFeatures = "staking,stargate,ibc3"
+const SupportedFeatures = "staking,stargate,ibc3,random"
 
 var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath: "/tmp/id_tx_io.json",
@@ -290,16 +291,18 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
 
 	// create with no balance is also legal
-	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
+	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.NoError(t, err)
-	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", contractAddr.String())
+	require.Equal(t, "secret1uhfqhj6cvt7983n6xdxkjhfvx9833qk5pmgfl4", contractAddr.String())
 
 	// gas can change +- 10% before we start failing, though maybe for consensus we should check a constant amount
 	gasAfter := ctx.GasMeter().GasConsumed()
 	require.Greater(t, gasAfter-gasBefore, types.InstanceCost)
-	require.Less(t, gasAfter-gasBefore, types.InstanceCost+8000)
+	require.Less(t, gasAfter-gasBefore, types.InstanceCost+10_000)
 
 	// ensure it is stored properly
 	info := keeper.GetContractInfo(ctx, contractAddr)
@@ -309,7 +312,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, info.Label, "demo contract 1")
 
 	// test that creating again with the same label will fail
-	_, _, err = keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", nil, nil)
+	_, _, err = keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.Error(t, err)
 }
 
@@ -355,7 +358,7 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			}
 
 			// when
-			_, _, addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
+			_, _, addr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, nil, bobPriv, string(initMsgBz), false, false, defaultGasForTests, wasmCalls, sdk.NewCoins(sdk.NewInt64Coin("denom", int64(deposit))))
 			// then
 			if spec.expError {
 				require.Error(t, err)
@@ -407,8 +410,10 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
 
-	addr, _, err := keeper.Instantiate(ctx, nonExistingCodeID, creator /* , nil */, initMsgBz, "demo contract 2", nil, nil)
+	addr, _, err := keeper.Instantiate(ctx, nonExistingCodeID, creator, nil, initMsgBz, "demo contract 2", nil, nil)
 	require.True(t, types.ErrNotFound.Is(err), err)
 	require.Nil(t, addr)
 }
@@ -456,13 +461,13 @@ func TestExecute(t *testing.T) {
 
 	gasBefore := ctx.GasMeter().GasConsumed()
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initMsgBz, contractID, deposit)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, creatorPrivKey, initMsgBz, contractID, deposit)
 	// create with no balance is also legal
-	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, initMsgBz, "demo contract 1", deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", deposit, nil)
 
 	require.NoError(t, err)
 
-	require.Equal(t, "secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg", addr.String())
+	require.Equal(t, "secret12exhpaft5rv3t8lcw9nykudxaddq2nmtv4r3tl", addr.String())
 
 	// ensure bob doesn't exist
 	bobAcct := accKeeper.GetAccount(ctx, bob)
@@ -511,7 +516,7 @@ func TestExecute(t *testing.T) {
 
 	ctx = PrepareExecSignedTx(t, keeper, ctx, fred, privFred, msgBz, addr, topUp)
 
-	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp, nil)
+	res, err := keeper.Execute(ctx, addr, fred, msgBz, topUp, nil, wasmtypes.HandleTypeExecute)
 	diff := time.Since(start)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -581,7 +586,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: bob, Beneficiary: fred})
 			require.NoError(t, err)
 
-			_, _, contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
+			_, _, contractAddr, _, err := initHelperImpl(t, keeper, ctx, codeID, bob, nil, bobPriv, string(initMsgBz), true, false, defaultGasForTests, -1, sdk.NewCoins())
 			require.Empty(t, err)
 
 			wasmCalls := int64(-1)
@@ -590,7 +595,7 @@ func TestExecuteWithDeposit(t *testing.T) {
 			}
 
 			// when
-			_, _, _, _, _, err = execHelperImpl(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, false, defaultGasForTests, deposit, wasmCalls)
+			_, _, _, _, _, err = execHelperCustomWasmCount(t, keeper, ctx, contractAddr, bob, bobPriv, `{"release":{}}`, false, false, defaultGasForTests, deposit, wasmCalls)
 
 			// then
 			if spec.expError {
@@ -619,7 +624,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// unauthorized - trialCtx so we don't change state
-	nonExistingAddress := addrFromUint64(9999)
+	nonExistingAddress := sdk.AccAddress([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	msgBz, err := wasmCtx.Encrypt([]byte(`{}`))
 	require.NoError(t, err)
 
@@ -638,8 +643,10 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
 
-	_, err = keeper.Execute(ctx, nonExistingAddress, creator, msgBz, nil, nil)
+	_, err = keeper.Execute(ctx, nonExistingAddress, creator, msgBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.True(t, types.ErrNotFound.Is(err), err)
 }
 
@@ -672,7 +679,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	initMsgBz, err := json.Marshal(initMsg)
 	require.NoError(t, err)
 
-	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, nil, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
 
 	execMsgBz, err := wasmCtx.Encrypt([]byte(`{"panic":{}}`))
 	require.NoError(t, err)
@@ -692,9 +699,11 @@ func TestExecuteWithPanic(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
 
 	// let's make sure we get a reasonable error, no panic/crash
-	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, topUp, nil)
+	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, topUp, nil, wasmtypes.HandleTypeExecute)
 	require.Error(t, err)
 }
 
@@ -756,8 +765,10 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
 
-	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* , nil */, msgBz, "demo contract 5", deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, msgBz, "demo contract 5", deposit, nil)
 	require.NoError(t, err)
 
 	// make sure we set a limit before calling
@@ -801,9 +812,11 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
 
 	// this must fail
-	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil, nil)
+	_, err = keeper.Execute(ctx, addr, fred, execMsgBz, nil, nil, wasmtypes.HandleTypeExecute)
 	assert.True(t, false)
 	// make sure gas ran out
 	// TODO: wasmer doesn't return gas used on error. we should consume it (for error on metering failure)
@@ -838,7 +851,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	}
 	initMsgBz, err := json.Marshal(initMsg)
 
-	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
+	_, _, addr, _, err := initHelper(t, keeper, ctx, contractID, creator, nil, creatorPrivKey, string(initMsgBz), false, false, defaultGasForTests)
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002
@@ -873,6 +886,8 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx = ctx.WithTxBytes(txBytes)
+	ctx = types.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
 
 	start := time.Now()
 
@@ -888,7 +903,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	}()
 
 	// this should throw out of gas exception (panic)
-	_, err = keeper.Execute(ctx, addr, fred, msgBz, nil, nil)
+	_, err = keeper.Execute(ctx, addr, fred, msgBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.True(t, false, "We must panic before this line")
 }
 

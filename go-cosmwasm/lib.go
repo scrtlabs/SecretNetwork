@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -139,33 +138,35 @@ func (w *Wasmer) Instantiate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	sigInfo types.VerificationInfo,
-	contractAddress sdk.AccAddress,
-) (interface{}, []byte, uint64, error) {
+	sigInfo types.SigInfo,
+	admin []byte,
+	// data, contractKey, adminProof, gasUsed, error
+) (interface{}, []byte, []byte, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, nil, 0, err
 	}
 
 	sigInfoBin, err := json.Marshal(sigInfo)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, nil, 0, err
 	}
 
-	data, gasUsed, err := api.Instantiate(w.cache, codeId, paramBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin)
+	data, gasUsed, err := api.Instantiate(w.cache, codeId, paramBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, admin)
 	if err != nil {
-		return nil, nil, gasUsed, err
+		return nil, nil, nil, gasUsed, err
 	}
 
 	key := data[0:64]
-	data = data[64:]
+	adminProof := data[64:96]
+	data = data[96:]
 
 	var respV010orV1 V010orV1ContractInitResponse
 	err = json.Unmarshal(data, &respV010orV1)
 
 	if err != nil {
 		// unidentified response 🤷
-		return nil, nil, gasUsed, fmt.Errorf("instantiate: cannot parse response from json: %w", err)
+		return nil, nil, nil, gasUsed, fmt.Errorf("instantiate: cannot parse response from json: %w", err)
 	}
 
 	isOutputAddressedToReply := len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0
@@ -177,18 +178,18 @@ func (w *Wasmer) Instantiate(
 				InternalMsgId:          respV010orV1.InternalMsgId,
 				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
 				Data:                   []byte(respV010orV1.V010.Err.GenericErr.Msg),
-			}, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010.Err)
+			}, nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010.Err)
 		}
 
 		if respV010orV1.V010.Ok != nil {
 			if isOutputAddressedToReply {
 				respV010orV1.V010.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 				if err != nil {
-					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
+					return nil, nil, nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
 				}
 			}
 
-			return respV010orV1.V010.Ok, key, gasUsed, nil
+			return respV010orV1.V010.Ok, key, adminProof, gasUsed, nil
 		}
 	}
 
@@ -199,22 +200,22 @@ func (w *Wasmer) Instantiate(
 				InternalMsgId:          respV010orV1.InternalMsgId,
 				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
 				Data:                   []byte(respV010orV1.V1.Err.GenericErr.Msg),
-			}, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V1.Err)
+			}, nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V1.Err)
 		}
 
 		if respV010orV1.V1.Ok != nil {
 			if isOutputAddressedToReply {
 				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
 				if err != nil {
-					return nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
+					return nil, nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
 				}
 			}
 
-			return respV010orV1.V1.Ok, key, gasUsed, nil
+			return respV010orV1.V1.Ok, key, adminProof, gasUsed, nil
 		}
 	}
 
-	return nil, nil, gasUsed, fmt.Errorf("instantiate: cannot detect response type (v0.10 or v1)")
+	return nil, nil, nil, gasUsed, fmt.Errorf("instantiate: cannot detect response type (v0.10 or v1)")
 }
 
 func AppendReplyInternalDataToData(data []byte, internaReplyEnclaveSig []byte, internalMsgId []byte) ([]byte, error) {
@@ -242,7 +243,7 @@ func (w *Wasmer) Execute(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	sigInfo types.VerificationInfo,
+	sigInfo types.SigInfo,
 	handleType types.HandleType,
 ) (interface{}, uint64, error) {
 	paramBin, err := json.Marshal(env)
@@ -395,4 +396,132 @@ func (w *Wasmer) AnalyzeCode(
 	codeHash []byte,
 ) (*v1types.AnalysisReport, error) {
 	return api.AnalyzeCode(w.cache, codeHash)
+}
+
+// Migrate will migrate an existing contract to a new code binary.
+// This takes storage of the data from the original contract and the CodeID of the new contract that should
+// replace it. This allows it to run a migration step if needed, or return an error if unable to migrate
+// the given data.
+//
+// MigrateMsg has some data on how to perform the migration.
+func (w *Wasmer) Migrate(
+	newCodeId CodeHash,
+	env types.Env,
+	migrateMsg []byte,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	sigInfo types.SigInfo,
+	admin []byte,
+	adminProof []byte,
+	// data, contractKey, adminProof, gasUsed, error
+) (interface{}, []byte, []byte, uint64, error) {
+	paramBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, nil, nil, 0, err
+	}
+
+	sigInfoBin, err := json.Marshal(sigInfo)
+	if err != nil {
+		return nil, nil, nil, 0, err
+	}
+
+	data, gasUsed, err := api.Migrate(w.cache, newCodeId, paramBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, admin, adminProof)
+	if err != nil {
+		return nil, nil, nil, gasUsed, err
+	}
+
+	newContractKey := data[0:64]
+	proof := data[64:96]
+	data = data[96:]
+
+	var respV010orV1 ContractExecResponse
+	err = json.Unmarshal(data, &respV010orV1)
+
+	if err != nil {
+		// unidentified response 🤷
+		return nil, nil, nil, gasUsed, fmt.Errorf("migrate: cannot parse response from json: %w", err)
+	}
+
+	isOutputAddressedToReply := len(respV010orV1.InternaReplyEnclaveSig) > 0 && len(respV010orV1.InternalMsgId) > 0
+
+	// init v0.10 response
+	if respV010orV1.V010 != nil {
+		if respV010orV1.V010.Err != nil {
+			return v1types.DataWithInternalReplyInfo{
+				InternalMsgId:          respV010orV1.InternalMsgId,
+				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+				Data:                   []byte(respV010orV1.V010.Err.GenericErr.Msg),
+			}, nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V010.Err)
+		}
+
+		if respV010orV1.V010.Ok != nil {
+			if isOutputAddressedToReply {
+				respV010orV1.V010.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V010.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+				if err != nil {
+					return nil, nil, nil, gasUsed, fmt.Errorf("cannot serialize v0.10 DataWithInternalReplyInfo into binary : %w", err)
+				}
+			}
+
+			return respV010orV1.V010.Ok, newContractKey, proof, gasUsed, nil
+		}
+	}
+
+	// init v1 response
+	if respV010orV1.V1 != nil {
+		if respV010orV1.V1.Err != nil {
+			return v1types.DataWithInternalReplyInfo{
+				InternalMsgId:          respV010orV1.InternalMsgId,
+				InternaReplyEnclaveSig: respV010orV1.InternaReplyEnclaveSig,
+				Data:                   []byte(respV010orV1.V1.Err.GenericErr.Msg),
+			}, nil, nil, gasUsed, fmt.Errorf("%+v", respV010orV1.V1.Err)
+		}
+
+		if respV010orV1.V1.Ok != nil {
+			if isOutputAddressedToReply {
+				respV010orV1.V1.Ok.Data, err = AppendReplyInternalDataToData(respV010orV1.V1.Ok.Data, respV010orV1.InternaReplyEnclaveSig, respV010orV1.InternalMsgId)
+				if err != nil {
+					return nil, nil, nil, gasUsed, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into binary: %w", err)
+				}
+			}
+
+			return respV010orV1.V1.Ok, newContractKey, proof, gasUsed, nil
+		}
+	}
+
+	return nil, nil, nil, gasUsed, fmt.Errorf("migrate: cannot detect response type (v0.10 or v1)")
+}
+
+// UpdateAdmin will update or clear a contract admin.
+func (w *Wasmer) UpdateAdmin(
+	newCodeId CodeHash,
+	env types.Env,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	sigInfo types.SigInfo,
+	currentAdmin []byte,
+	currentAdminProof []byte,
+	newAdmin []byte,
+) ([]byte, error) {
+	paramBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, err
+	}
+
+	sigInfoBin, err := json.Marshal(sigInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	newAdminProof, err := api.UpdateAdmin(w.cache, newCodeId, paramBin, &gasMeter, store, &goapi, &querier, gasLimit, sigInfoBin, currentAdmin, currentAdminProof, newAdmin)
+	if err != nil {
+		return nil, err
+	}
+
+	return newAdminProof, nil
 }

@@ -286,7 +286,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 
 	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
 
-	// fmt.Printf("bootstrap: %s", cast.ToString(bootstrap))
+	// fmt.Printf("bootstrap: %s\n", cast.ToString(bootstrap))
 
 	return app.NewSecretNetworkApp(logger, db, traceStore, true, skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
@@ -348,11 +348,8 @@ func updateTmParamsAndInit(mbm module.BasicManager, defaultNodeHome string) *cob
 
 		serverconfig.WriteConfigFile(appConfigFilePath, appConf)
 
-		if err := originalFunc(cmd, args); err != nil {
-			return err
-		}
-
-		return nil
+		err := originalFunc(cmd, args)
+		return err
 	}
 
 	cmd.RunE = wrappedFunc

@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/spf13/cobra"
@@ -31,6 +32,7 @@ const (
 	flagProposalType           = "type"
 	flagIoMasterKey            = "enclave-key"
 	flagCodeHash               = "code-hash"
+	flagAdmin                  = "admin"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -47,6 +49,9 @@ func GetTxCmd() *cobra.Command {
 		StoreCodeCmd(),
 		InstantiateContractCmd(),
 		ExecuteContractCmd(),
+		MigrateContractCmd(),
+		UpdateContractAdminCmd(),
+		ClearContractAdminCmd(),
 	)
 	return txCmd
 }
@@ -123,7 +128,7 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.
 func InstantiateContractCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --amount [coins,optional]",
+		Use:     "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --amount [coins,optional] --admin [admin_addr_bech32,optional]",
 		Short:   "Instantiate a wasm contract",
 		Aliases: []string{"init"},
 		Args:    cobra.ExactArgs(2),
@@ -149,6 +154,7 @@ func InstantiateContractCmd() *cobra.Command {
 		"io-master-key.txt file, which you can get using the command `secretcli q register secret-network-params` ")
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	cmd.Flags().String(flagAdmin, "", "Optional: Bech32 address of the admin of the contract")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -230,6 +236,11 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		return types.MsgInstantiateContract{}, err
 	}
 
+	admin, err := initFlags.GetString(flagAdmin)
+	if err != nil {
+		return types.MsgInstantiateContract{}, fmt.Errorf("admin: %s", err)
+	}
+
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
 		Sender:           cliCtx.GetFromAddress(),
@@ -239,6 +250,16 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		InitFunds:        amount,
 		InitMsg:          encryptedMsg,
 	}
+
+	if admin != "" {
+		_, err = sdk.AccAddressFromBech32(admin)
+		if err != nil {
+			return types.MsgInstantiateContract{}, fmt.Errorf("admin address is not in bech32 format: %s", err)
+		}
+
+		msg.Admin = admin
+	}
+
 	return msg, nil
 }
 
@@ -405,4 +426,125 @@ func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddres
 	}
 
 	return []byte(hex.EncodeToString(res)), nil
+}
+
+// MigrateContractCmd will migrate a contract to a new code version
+func MigrateContractCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "migrate [contract_addr_bech32] [new_code_id_int64] [json_encoded_migration_args]",
+		Short:   "Migrate a wasm contract to a new code version",
+		Aliases: []string{"update", "mig", "m"},
+		Args:    cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			msg, err := parseMigrateContractArgs(args, clientCtx)
+			if err != nil {
+				return err
+			}
+			if err := msg.ValidateBasic(); err != nil {
+				return nil
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
+		},
+		SilenceUsage: true,
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+func parseMigrateContractArgs(args []string, cliCtx client.Context) (types.MsgMigrateContract, error) {
+	// get the id of the code to instantiate
+	codeID, err := strconv.ParseUint(args[1], 10, 64)
+	if err != nil {
+		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code id")
+	}
+	migrateMsg := types.SecretMsg{}
+
+	migrateMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[1])
+	if err != nil {
+		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code hash")
+	}
+
+	migrateMsg.Msg = []byte(args[2])
+	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
+	encryptedMsg, err := wasmCtx.Encrypt(migrateMsg.Serialize())
+	if err != nil {
+		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "encrypt")
+	}
+	msg := types.MsgMigrateContract{
+		Sender:   cliCtx.GetFromAddress().String(),
+		Contract: args[0],
+		CodeID:   codeID,
+		Msg:      encryptedMsg,
+	}
+	return msg, nil
+}
+
+// UpdateContractAdminCmd sets an new admin for a contract
+func UpdateContractAdminCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "set-contract-admin [contract_addr_bech32] [new_admin_addr_bech32]",
+		Short:   "Set new admin for a contract",
+		Aliases: []string{"new-admin", "admin", "set-adm", "sa"},
+		Args:    cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			msg, err := parseUpdateContractAdminArgs(args, clientCtx)
+			if err != nil {
+				return err
+			}
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
+		},
+		SilenceUsage: true,
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+func parseUpdateContractAdminArgs(args []string, cliCtx client.Context) (types.MsgUpdateAdmin, error) {
+	msg := types.MsgUpdateAdmin{
+		Sender:   cliCtx.GetFromAddress().String(),
+		Contract: args[0],
+		NewAdmin: args[1],
+	}
+	return msg, nil
+}
+
+// ClearContractAdminCmd clears an admin for a contract
+func ClearContractAdminCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "clear-contract-admin [contract_addr_bech32]",
+		Short:   "Clears admin for a contract to prevent further migrations",
+		Aliases: []string{"clear-admin", "clr-adm"},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			msg := types.MsgClearAdmin{
+				Sender:   clientCtx.GetFromAddress().String(),
+				Contract: args[0],
+			}
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
+		},
+		SilenceUsage: true,
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
 }

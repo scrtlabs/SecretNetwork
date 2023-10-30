@@ -5,6 +5,7 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate sgx_rand;
 extern crate sgx_types;
 
 mod contract_operations;
@@ -12,19 +13,26 @@ mod contract_validation;
 mod cosmwasm_config;
 mod db;
 mod errors;
+mod execute_message;
 pub mod external;
 mod gas;
+mod ibc_denom_utils;
+mod ibc_message;
+mod input_validation;
 mod io;
 mod message;
+mod message_utils;
 mod query_chain;
 mod random;
+mod reply_message;
+mod hardcoded_admins;
 pub(crate) mod types;
-#[cfg(feature = "wasmi-engine")]
-mod wasm;
 #[cfg(feature = "wasm3")]
-mod wasm3;
+pub mod wasm3;
 
 pub use contract_operations::{handle, init, query};
+#[cfg(feature = "light-client-validation")]
+pub use contract_validation::{check_cert_in_current_block, check_tx_in_current_block};
 
 #[cfg(feature = "test")]
 pub mod tests {
@@ -61,3 +69,6 @@ pub mod tests {
         }
     }
 }
+
+#[cfg(all(feature = "go-tests", feature = "production"))]
+compile_error!("Cannot use 'go-tests' & 'production' features together.");

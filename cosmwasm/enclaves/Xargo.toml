@@ -15,7 +15,7 @@ panic_unwind = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_panic_
 sgx_tdh = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tdh", stage = 4 }
 sgx_tseal = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tseal", stage = 4 }
 sgx_tprotected_fs = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tprotected_fs", stage = 4 }
-std = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "c70a82f708fd20e9fd0377990dde097d14024f7a", stage = 5, features = [
+std = { path = "../../third_party/incubator-teaclave-sgx-sdk/xargo/sgx_tstd", stage = 5, features = [
     "net",
     "backtrace",
     "untrusted_fs",

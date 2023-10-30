@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/scrtlabs/SecretNetwork/app/keepers"
+	packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4/router/types"
+	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 	gocosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
-	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -28,65 +29,53 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/kv"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
-	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
-	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
-	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
-	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibc "github.com/cosmos/ibc-go/v3/modules/core"
-	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
+	icatypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
+	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
+	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
+	v1_11 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11"
+	v1_12 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.12"
 	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
+	v1_9 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.9"
+
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
-	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/cosmos/cosmos-sdk/x/capability"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
-	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/cosmos/cosmos-sdk/x/gov"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/cosmos/cosmos-sdk/x/mint"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	"github.com/cosmos/cosmos-sdk/x/params"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	"github.com/gorilla/mux"
+	"github.com/rakyll/statik/fs"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	"github.com/spf13/cast"
-
-	"github.com/gorilla/mux"
-	"github.com/rakyll/statik/fs"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	tmjson "github.com/tendermint/tendermint/libs/json"
@@ -108,24 +97,23 @@ var (
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
 	DefaultNodeHome = filepath.Join(homeDir, ".secretd")
 
-	// module account permissions
-	maccPerms = map[string][]string{
-		authtypes.FeeCollectorName:     nil,
-		distrtypes.ModuleName:          nil,
-		minttypes.ModuleName:           {authtypes.Minter},
-		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
-		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
-		govtypes.ModuleName:            {authtypes.Burner},
-		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
-		icatypes.ModuleName:            nil,
-	}
-
 	// Module accounts that are allowed to receive tokens
 	allowedReceivingModAcc = map[string]bool{
 		distrtypes.ModuleName: true,
 	}
 
-	Upgrades = []upgrades.Upgrade{v1_3.Upgrade, v1_4.Upgrade, v1_5.Upgrade, v1_6.Upgrade, v1_7.Upgrade, v1_8.Upgrade}
+	Upgrades = []upgrades.Upgrade{
+		v1_3.Upgrade,
+		v1_4.Upgrade,
+		v1_5.Upgrade,
+		v1_6.Upgrade,
+		v1_7.Upgrade,
+		v1_8.Upgrade,
+		v1_9.Upgrade,
+		v1_10.Upgrade,
+		v1_11.Upgrade,
+		v1_12.Upgrade,
+	}
 )
 
 // Verify app interface at compile time
@@ -155,6 +143,14 @@ type SecretNetworkApp struct {
 	sm *module.SimulationManager
 
 	configurator module.Configurator
+}
+
+func (app *SecretNetworkApp) GetInterfaceRegistry() types.InterfaceRegistry {
+	return app.interfaceRegistry
+}
+
+func (app *SecretNetworkApp) GetCodec() codec.Codec {
+	return app.appCodec
 }
 
 func (app *SecretNetworkApp) GetBaseApp() *baseapp.BaseApp {
@@ -222,7 +218,6 @@ func NewSecretNetworkApp(
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
-	// bApp.GRPCQueryRouter().RegisterSimulateService(bApp.Simulate, interfaceRegistry)
 
 	// Initialize our application with the store keys it requires
 	app := &SecretNetworkApp{
@@ -236,7 +231,7 @@ func NewSecretNetworkApp(
 
 	app.AppKeepers.InitKeys()
 
-	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, maccPerms, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath)
+	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath)
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
 	app.setupUpgradeStoreLoaders()
 
@@ -244,119 +239,25 @@ func NewSecretNetworkApp(
 	// we prefer to be more strict in what arguments the modules expect.
 	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
 
-	icaModule := ica.NewAppModule(app.AppKeepers.ICAControllerKeeper, app.AppKeepers.ICAHostKeeper)
-	icaAuthModule := icaauth.NewAppModule(appCodec, *app.AppKeepers.ICAAuthKeeper)
-
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
-	app.mm = module.NewManager(
-		genutil.NewAppModule(app.AppKeepers.AccountKeeper, app.AppKeepers.StakingKeeper, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
-		auth.NewAppModule(appCodec, *app.AppKeepers.AccountKeeper, authsims.RandomGenesisAccounts),
-		bank.NewAppModule(appCodec, *app.AppKeepers.BankKeeper, app.AppKeepers.AccountKeeper),
-		capability.NewAppModule(appCodec, *app.AppKeepers.CapabilityKeeper),
-		crisis.NewAppModule(app.AppKeepers.CrisisKeeper, skipGenesisInvariants),
-		feegrantmodule.NewAppModule(appCodec, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, *app.AppKeepers.FeegrantKeeper, app.interfaceRegistry),
-		gov.NewAppModule(app.appCodec, *app.AppKeepers.GovKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper),
-		mint.NewAppModule(appCodec, *app.AppKeepers.MintKeeper, app.AppKeepers.AccountKeeper),
-		slashing.NewAppModule(appCodec, *app.AppKeepers.SlashingKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, *app.AppKeepers.StakingKeeper),
-		distr.NewAppModule(appCodec, *app.AppKeepers.DistrKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, *app.AppKeepers.StakingKeeper),
-		staking.NewAppModule(appCodec, *app.AppKeepers.StakingKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper),
-		upgrade.NewAppModule(*app.AppKeepers.UpgradeKeeper),
-		evidence.NewAppModule(*app.AppKeepers.EvidenceKeeper),
-		compute.NewAppModule(*app.AppKeepers.ComputeKeeper),
-		params.NewAppModule(*app.AppKeepers.ParamsKeeper),
-		authzmodule.NewAppModule(appCodec, *app.AppKeepers.AuthzKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, app.interfaceRegistry),
-		reg.NewAppModule(*app.AppKeepers.RegKeeper),
-		ibc.NewAppModule(app.AppKeepers.IbcKeeper),
-		transfer.NewAppModule(*app.AppKeepers.TransferKeeper),
-		icaModule,
-		icaAuthModule,
-	)
+	app.mm = module.NewManager(Modules(app, encodingConfig, skipGenesisInvariants)...)
+
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
 	// CanWithdrawInvariant invariant.
 
-	app.mm.SetOrderBeginBlockers(
-		upgradetypes.ModuleName,
-		capabilitytypes.ModuleName,
-		minttypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		evidencetypes.ModuleName,
-		stakingtypes.ModuleName,
-		ibchost.ModuleName,
-		ibctransfertypes.ModuleName,
-		feegrant.ModuleName,
-		authtypes.ModuleName,
-		banktypes.ModuleName,
-		govtypes.ModuleName,
-		crisistypes.ModuleName,
-		genutiltypes.ModuleName,
-		authz.ModuleName,
-		paramstypes.ModuleName,
-		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
-		// custom modules
-		compute.ModuleName,
-		reg.ModuleName,
-	)
+	SetOrderBeginBlockers(app)
 
 	// NOTE: Capability module must occur first so that it can initialize any capabilities
 	// so that other modules that want to create or claim capabilities afterwards in InitChain
 	// can do so safely.
-	app.mm.SetOrderEndBlockers(
-		crisistypes.ModuleName,
-		govtypes.ModuleName,
-		authz.ModuleName,
-		feegrant.ModuleName,
-		stakingtypes.ModuleName,
-		capabilitytypes.ModuleName,
-		authtypes.ModuleName,
-		banktypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		minttypes.ModuleName,
-		genutiltypes.ModuleName,
-		evidencetypes.ModuleName,
-		paramstypes.ModuleName,
-		upgradetypes.ModuleName,
-		ibchost.ModuleName,
-		ibctransfertypes.ModuleName,
-		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
-		compute.ModuleName,
-		reg.ModuleName,
-	)
+	SetOrderEndBlockers(app)
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
 	// Sets the order of Genesis - Order matters, genutil is to always come last
-	app.mm.SetOrderInitGenesis(
-		capabilitytypes.ModuleName,
-		authtypes.ModuleName,
-		banktypes.ModuleName,
-		distrtypes.ModuleName,
-		stakingtypes.ModuleName,
-		slashingtypes.ModuleName,
-		govtypes.ModuleName,
-		paramstypes.ModuleName,
-		upgradetypes.ModuleName,
-		// custom modules
-		compute.ModuleName,
-		reg.ModuleName,
-
-		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
-
-		authz.ModuleName,
-		minttypes.ModuleName,
-		crisistypes.ModuleName,
-		ibchost.ModuleName,
-		genutiltypes.ModuleName,
-		evidencetypes.ModuleName,
-		ibctransfertypes.ModuleName,
-		feegrant.ModuleName,
-	)
+	SetOrderInitGenesis(app)
 
 	// register all module routes and module queriers
 	app.mm.RegisterInvariants(app.AppKeepers.CrisisKeeper)
@@ -511,7 +412,7 @@ func (app *SecretNetworkApp) LoadHeight(height int64) error {
 // ModuleAccountAddrs returns all the app's module account addresses.
 func (app *SecretNetworkApp) ModuleAccountAddrs() map[string]bool {
 	modAccAddrs := make(map[string]bool)
-	for acc := range maccPerms {
+	for acc := range ModuleAccountPermissions {
 		modAccAddrs[authtypes.NewModuleAddress(acc).String()] = true
 	}
 
@@ -564,7 +465,7 @@ func RegisterSwaggerAPI(_ client.Context, rtr *mux.Router) {
 // allowed to receive external tokens.
 func (app *SecretNetworkApp) BlockedAddrs() map[string]bool {
 	blockedAddrs := make(map[string]bool)
-	for acc := range maccPerms {
+	for acc := range ModuleAccountPermissions {
 		blockedAddrs[authtypes.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
 	}
 
@@ -594,9 +495,9 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 		return
 	}
 
-	for _, upgradeDetails := range Upgrades {
-		if upgradeInfo.Name == upgradeDetails.UpgradeName {
-			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
+	for i := range Upgrades {
+		if upgradeInfo.Name == Upgrades[i].UpgradeName {
+			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &Upgrades[i].StoreUpgrades))
 		}
 	}
 }
@@ -604,4 +505,99 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 // LegacyAmino returns the application's sealed codec.
 func (app *SecretNetworkApp) LegacyAmino() *codec.LegacyAmino {
 	return app.legacyAmino
+}
+
+func SetOrderBeginBlockers(app *SecretNetworkApp) {
+	app.mm.SetOrderBeginBlockers(
+		upgradetypes.ModuleName,
+		capabilitytypes.ModuleName,
+		minttypes.ModuleName,
+		distrtypes.ModuleName,
+		slashingtypes.ModuleName,
+		evidencetypes.ModuleName,
+		stakingtypes.ModuleName,
+		ibchost.ModuleName,
+		ibctransfertypes.ModuleName,
+		feegrant.ModuleName,
+		authtypes.ModuleName,
+		vestingtypes.ModuleName,
+		banktypes.ModuleName,
+		govtypes.ModuleName,
+		crisistypes.ModuleName,
+		genutiltypes.ModuleName,
+		authz.ModuleName,
+		paramstypes.ModuleName,
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
+		packetforwardtypes.ModuleName,
+		ibcfeetypes.ModuleName,
+		// custom modules
+		compute.ModuleName,
+		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
+	)
+}
+
+func SetOrderInitGenesis(app *SecretNetworkApp) {
+	app.mm.SetOrderInitGenesis(
+		capabilitytypes.ModuleName,
+		authtypes.ModuleName,
+		vestingtypes.ModuleName,
+		banktypes.ModuleName,
+		distrtypes.ModuleName,
+		stakingtypes.ModuleName,
+		slashingtypes.ModuleName,
+		govtypes.ModuleName,
+		paramstypes.ModuleName,
+		upgradetypes.ModuleName,
+		// custom modules
+		compute.ModuleName,
+		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
+
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
+
+		authz.ModuleName,
+		minttypes.ModuleName,
+		crisistypes.ModuleName,
+		ibchost.ModuleName,
+		genutiltypes.ModuleName,
+		evidencetypes.ModuleName,
+		ibctransfertypes.ModuleName,
+		packetforwardtypes.ModuleName,
+
+		ibcfeetypes.ModuleName,
+		feegrant.ModuleName,
+	)
+}
+
+func SetOrderEndBlockers(app *SecretNetworkApp) {
+	app.mm.SetOrderEndBlockers(
+		crisistypes.ModuleName,
+		govtypes.ModuleName,
+		authz.ModuleName,
+		feegrant.ModuleName,
+		stakingtypes.ModuleName,
+		capabilitytypes.ModuleName,
+		authtypes.ModuleName,
+		vestingtypes.ModuleName,
+		banktypes.ModuleName,
+		distrtypes.ModuleName,
+		slashingtypes.ModuleName,
+		minttypes.ModuleName,
+		genutiltypes.ModuleName,
+		evidencetypes.ModuleName,
+		paramstypes.ModuleName,
+		upgradetypes.ModuleName,
+		ibchost.ModuleName,
+		ibctransfertypes.ModuleName,
+		icatypes.ModuleName,
+		icaauthtypes.ModuleName,
+		ibcfeetypes.ModuleName,
+		packetforwardtypes.ModuleName,
+		compute.ModuleName,
+		reg.ModuleName,
+		ibcswitchtypes.ModuleName,
+	)
 }

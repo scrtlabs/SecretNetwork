@@ -3,9 +3,9 @@ name = "cosmwasm-sgx-vm"
 version = "0.10.0"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
-    "Enigma Team <info@enigma.co>",
+    "SCRT Labs <info@scrtlabs.com>",
 ]
-edition = "2018"
+edition = "2021"
 description = "VM bindings to run cosmwams contracts"
 repository = "https://github.com/CosmWasm/cosmwasm/tree/master/packages/sgx-vm"
 license = "Apache-2.0"
@@ -32,13 +32,9 @@ backtraces = ["snafu/backtraces"]
 # we keep this optional, to allow possible future integration (or different Cosmos Backends)
 iterator = ["cosmwasm-std/iterator"]
 staking = ["cosmwasm-std/staking"]
-enclave-tests = []
 production = []
 # This flag enales storing contracts that require the debug-print function
 debug-print = []
-# This feature compiles a query optimized node with a second enclave used exclusively for queries.
-# Putting this functionality in a separate enclave allows improving query performace without hard forks.
-query-node = []
 
 [dependencies]
 # Uses the path when built locally; uses the given version from crates.io when published
@@ -48,16 +44,15 @@ serde_json = "1.0"
 # wasmer-middleware-common = "=0.17.0"
 # wasmer-clif-backend = { version = "=0.17.0", optional = true }
 # wasmer-singlepass-backend = { version = "=0.17.0", optional = true }
-serde = { version = "1.0.103", default-features = false, features = [
+serde = { version = "1.0.188", default-features = false, features = [
     "derive",
     "alloc"
 ] }
 snafu = { version = "0.6.3" }
-sha2 = "0.9.1"
+sha2 = "0.10.8"
 hex = "0.4"
 memmap = "0.7"
-parity-wasm = "0.41"
-
+parity-wasm = { version = "0.45", features = ["sign_ext"] }
 # requirements specific to Secret Network
 lazy_static = "1.4"
 enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
@@ -65,11 +60,11 @@ enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
 ] }
 sgx_types = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 sgx_urts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_urts" }
-log = "0.4.8"
-base64 = "0.12.0"
+log = "0.4.20"
+base64 = "0.21.3"
 parking_lot = "0.11"
-num_cpus = "1.14.0"
+num_cpus = "1.16.0"
 
 [dev-dependencies]
-tempfile = "3.1.0"
+tempfile = "3.8.0"
 wabt = "0.9.1"

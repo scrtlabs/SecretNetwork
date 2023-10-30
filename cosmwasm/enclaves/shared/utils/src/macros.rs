@@ -71,3 +71,16 @@ macro_rules! validate_mut_ptr {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! validate_input_length {
+    ($input:expr, $var_name:expr, $constant:expr, $ret_val:expr $(,)?) => {
+        if $input > $constant {
+            error!(
+                "Error: {} ({}) is larger than the constant value ({})",
+                $var_name, $input, $constant
+            );
+            return $ret_val;
+        }
+    };
+}

@@ -3,7 +3,7 @@
   "info": {
     "title": "Secret Network",
     "description": "A REST interface for queries and transactions",
-    "version": "v1.8"
+    "version": "v1.12"
   },
   "apis": [
     {
@@ -172,6 +172,17 @@
       }
     },
     {
+      "url": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonUpgradedConsensusState"
+        }
+      }
+    },
+    {
       "url": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.json",
       "operationIds": {
         "rename": {
@@ -190,6 +201,17 @@
           "Pool": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonUpgradedConsensusState"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.jsonUpgradedConsensusState"
         }
       }
     },
@@ -245,6 +267,17 @@
           "Pool": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonDelegatorValidators",
           "UpgradedConsensusState": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonUpgradedConsensusState"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonUpgradedConsensusState"
         }
       }
     },
