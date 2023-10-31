@@ -171,7 +171,7 @@ func cGetNoProof(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffe
 }
 
 //export cGet
-func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, key C.Buffer, val *C.Buffer, merkle_p *C.Buffer, mp_key *C.Buffer, _ *C.Buffer) (ret C.GoResult) {
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, key C.Buffer, val *C.Buffer, merkle_p *C.Buffer, mp_key *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer

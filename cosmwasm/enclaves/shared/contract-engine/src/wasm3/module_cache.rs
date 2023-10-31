@@ -47,21 +47,21 @@ pub fn create_module_instance(
     gas_costs: &WasmCosts,
     operation: ContractOperation,
 ) -> Result<VersionedCode, EnclaveError> {
-    debug!("fetching module from cache");
+    trace!("fetching module from cache");
     let cache = MODULE_CACHE.read().unwrap();
 
     // If the cache is disabled, don't try to use it and just compile the module.
     if cache.cap() == 0 {
-        debug!("cache is disabled, building module");
+        trace!("cache is disabled, building module");
         return analyze_module(contract_code, gas_costs, operation);
     }
-    debug!("cache is enabled");
+    trace!("cache is enabled");
 
     // Try to fetch a cached instance
     let mut code = None;
     let mut api_version = CosmWasmApiVersion::Invalid;
     let mut features = vec![];
-    debug!("peeking in cache");
+    trace!("peeking in cache");
     let peek_result = cache.peek(&contract_code.hash());
     if let Some(VersionedCode {
         code: cached_code,
@@ -69,7 +69,7 @@ pub fn create_module_instance(
         features: cached_features,
     }) = peek_result
     {
-        debug!("found instance in cache!");
+        trace!("found instance in cache!");
         code = Some(cached_code.clone());
         api_version = *cached_ver;
         features = cached_features.clone();
@@ -79,7 +79,7 @@ pub fn create_module_instance(
 
     // if we couldn't find the code in the cache, analyze it now
     if code.is_none() {
-        debug!("code not found in cache! analyzing now");
+        trace!("code not found in cache! analyzing now");
         let versioned_code = analyze_module(contract_code, gas_costs, operation)?;
         code = Some(versioned_code.code);
         api_version = versioned_code.version;
@@ -87,23 +87,23 @@ pub fn create_module_instance(
     }
 
     // If we analyzed the code in the previous step, insert it to the LRU cache
-    debug!("updating cache");
+    trace!("updating cache");
     let mut cache = MODULE_CACHE.write().unwrap();
     if let Some(code) = code.clone() {
-        debug!("storing code in cache");
+        trace!("storing code in cache");
         cache.put(
             contract_code.hash(),
             VersionedCode::new(code, api_version, features.clone()),
         );
     } else {
         // Touch the cache to update the LRU value
-        debug!("updating LRU without storing anything");
+        trace!("updating LRU without storing anything");
         cache.get(&contract_code.hash());
     }
 
     let code = code.unwrap();
 
-    debug!("returning built instance");
+    trace!("returning built instance");
     Ok(VersionedCode::new(code, api_version, features))
 }
 

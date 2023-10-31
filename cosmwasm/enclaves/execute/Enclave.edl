@@ -34,14 +34,18 @@ enclave {
 
         public sgx_status_t ecall_get_attestation_report(
             [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len,
-            uint8_t dry_run
+            uint32_t api_key_len
         );
 
         public NodeAuthResult ecall_authenticate_new_node(
             [in, count=cert_len] const uint8_t* cert,
             uintptr_t cert_len,
             [out, count=96] uint8_t* seed
+        );
+
+        public NodeAuthResult ecall_check_patch_level(
+            [in, count=api_key_len] const uint8_t* api_key,
+            uint32_t api_key_len
         );
 
         public sgx_status_t ecall_get_genesis_seed(
@@ -74,7 +78,9 @@ enclave {
             [in, count=msg_len] const uint8_t* msg,
             uintptr_t msg_len,
             [in, count=sig_info_len] const uint8_t* sig_info,
-            uintptr_t sig_info_len
+            uintptr_t sig_info_len,
+            [in, count=admin_len] const uint8_t* admin,
+            uintptr_t admin_len
         );
 
         public HandleResult ecall_handle(
@@ -104,6 +110,37 @@ enclave {
             uintptr_t msg_len
         );
 
+        public MigrateResult ecall_migrate(
+            Ctx context,
+            uint64_t gas_limit,
+            [out] uint64_t* used_gas,
+            [in, count=contract_len] const uint8_t* contract,
+            uintptr_t contract_len,
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
+            [in, count=msg_len] const uint8_t* msg,
+            uintptr_t msg_len,
+            [in, count=sig_info_len] const uint8_t* sig_info,
+            uintptr_t sig_info_len,
+            [in, count=admin_len] const uint8_t* admin,
+            uintptr_t admin_len,
+            [in, count=admin_proof_len] const uint8_t* admin_proof,
+            uintptr_t admin_proof_len
+        );
+
+        public UpdateAdminResult ecall_update_admin(
+            [in, count=env_len] const uint8_t* env,
+            uintptr_t env_len,
+            [in, count=sig_info_len] const uint8_t* sig_info,
+            uintptr_t sig_info_len,
+            [in, count=current_admin_len] const uint8_t* current_admin,
+            uintptr_t current_admin_len,
+            [in, count=current_admin_proof_len] const uint8_t* current_admin_proof,
+            uintptr_t current_admin_proof_len,
+            [in, count=new_admin_len] const uint8_t* new_admin,
+            uintptr_t new_admin_len
+        );
+
         public HealthCheckResult ecall_health_check();
 
         public uint32_t ecall_run_tests();
@@ -125,6 +162,14 @@ enclave {
         );
 
         public SdkBeginBlockerResult ecall_app_begin_blocker(
+            [in, count=in_roots_len] const uint8_t* in_roots,
+            uintptr_t in_roots_len,
+            [in, count=in_compute_root_len] const uint8_t* in_compute_root,
+            uintptr_t in_compute_root_len
+        );
+
+
+        public sgx_status_t ecall_submit_store_roots(
             [in, count=in_roots_len] const uint8_t* in_roots,
             uintptr_t in_roots_len,
             [in, count=in_compute_root_len] const uint8_t* in_compute_root,

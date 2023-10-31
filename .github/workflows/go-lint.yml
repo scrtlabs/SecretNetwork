@@ -5,7 +5,6 @@ on:
       - "*"
     branches:
       - "*"
-  pull_request:
 permissions:
   contents: read
   # Optional: allow read access to pull request. Use with `only-new-issues` option.
@@ -17,8 +16,8 @@ jobs:
     steps:
       - uses: actions/setup-go@v4
         with:
-          go-version: 1.19
-      - uses: actions/checkout@v3
+          go-version: 1.21
+      - uses: actions/checkout@v4
       - name: make bin-data-sw
         run: |
           go install github.com/jteeuwen/go-bindata/go-bindata@latest
@@ -26,5 +25,5 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: v1.53.2
+          version: v1.54.2
+          skip-cache: true

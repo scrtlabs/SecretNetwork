@@ -42,7 +42,9 @@ pub fn print_local_report_info(cert: &[u8]) {
     }
 }
 
-unsafe fn print_platform_info(report: &AttestationReport) {
+/// # Safety
+/// Placeholder
+pub unsafe fn print_platform_info(report: &AttestationReport) {
     if let Some(platform_info) = &report.platform_info_blob {
         let mut update_info = sgx_update_info_bit_t::default();
         let mut rt = sgx_status_t::default();

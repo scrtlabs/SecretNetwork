@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Coin};
+use cosmwasm_std::{Binary, Coin, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -79,6 +79,7 @@ pub enum InstantiateMsg {
         code_hash: String,
         label: String,
         msg: String,
+        admin: Option<String>,
     },
     CallToExec {
         addr: String,
@@ -356,6 +357,7 @@ pub enum ExecuteMsg {
         code_hash: String,
         label: String,
         msg: String,
+        admin: Option<String>,
     },
     CallToExec {
         addr: String,
@@ -422,8 +424,28 @@ pub enum ExecuteMsg {
     ExecuteMultipleContracts {
         details: Vec<ExecuteDetails>,
     },
-    #[serde(rename = "ibc_lifecycle_complete")]
-    IBCLifecycleComplete(IBCLifecycleComplete),
+    SendMsgMigrateContract {
+        contract_addr: String,
+        new_code_id: Uint64,
+        callback_code_hash: String,
+        msg: Binary,
+        #[serde(default)]
+        reply: bool,
+    },
+    SendMsgClearAdmin {
+        contract_addr: String,
+        #[serde(default)]
+        reply: bool,
+    },
+    SendMsgUpdateAdmin {
+        contract_addr: String,
+        new_admin: String,
+        #[serde(default)]
+        reply: bool,
+    },
+    Echo {
+        data: Binary,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -446,6 +468,13 @@ pub enum IBCLifecycleComplete {
         /// The sequence number that the packet was sent with
         sequence: u64,
     },
+}
+
+/// Message type for `sudo` entry_point
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum SudoMsg {
+    #[serde(rename = "ibc_lifecycle_complete")]
+    IBCLifecycleComplete(IBCLifecycleComplete),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

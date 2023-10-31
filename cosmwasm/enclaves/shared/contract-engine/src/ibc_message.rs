@@ -41,7 +41,7 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
 
                 trace!(
                     "ibc_packet_receive data before decryption: {:?}",
-                    base64::encode(&message)
+                    base64::encode(message)
                 );
 
                 parsed_encrypted_ibc_packet.packet.data =
@@ -53,7 +53,7 @@ pub fn parse_ibc_receive_message(message: &[u8]) -> Result<ParsedMessage, Enclav
 
                 trace!(
                     "ibc_packet_receive data was plaintext: {:?}",
-                    base64::encode(&message)
+                    base64::encode(message)
                 );
 
                 (

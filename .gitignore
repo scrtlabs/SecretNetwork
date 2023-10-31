@@ -15,6 +15,7 @@ secretcli*
 libenclave.a
 libEnclave_u.a
 librust_cosmwasm_enclave.signed.so
+tendermint_enclave.signed.so
 *.o
 /release
 SHA256SUMS*
@@ -38,12 +39,6 @@ node_modules
 /secretjs
 /secret.js
 tmp-swagger-gen
-x/compute/internal/keeper/testdata/contract_with_floats.wasm
-x/compute/internal/keeper/testdata/contract.wasm
-x/compute/internal/keeper/testdata/ibc.wasm
-x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
-x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
-x/compute/internal/keeper/testdata/v1-contract.wasm
 /github.com
 third_party/build
 x/compute/internal/keeper/testdata/test-contract/target

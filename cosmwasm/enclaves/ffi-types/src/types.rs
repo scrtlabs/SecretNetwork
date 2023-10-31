@@ -312,6 +312,7 @@ pub enum InitResult {
         output: UserSpaceBuffer,
         /// The contract_key for this contract.
         contract_key: [u8; 64],
+        admin_proof: [u8; 32],
     },
     Failure {
         /// The error that happened in the enclave
@@ -328,6 +329,31 @@ pub enum HandleResult {
         output: UserSpaceBuffer,
     },
     Failure {
+        /// The error that happened in the enclave
+        err: EnclaveError,
+    },
+}
+
+#[repr(C)]
+pub enum MigrateResult {
+    Success {
+        /// A pointer to the output of the calculation
+        output: UserSpaceBuffer,
+        new_contract_key: [u8; 64],
+        new_contract_key_proof: [u8; 32],
+    },
+    Failure {
+        /// The error that happened in the enclave
+        err: EnclaveError,
+    },
+}
+
+#[repr(C)]
+pub enum UpdateAdminResult {
+    UpdateAdminSuccess {
+        new_admin_proof: [u8; 32],
+    },
+    UpdateAdminFailure {
         /// The error that happened in the enclave
         err: EnclaveError,
     },

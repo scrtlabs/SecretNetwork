@@ -1,17 +1,16 @@
 use core::time;
-use mem::MaybeUninit;
-use std::{mem, thread, vec};
+use std::{thread, vec};
 
 use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Empty, Env,
-    Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response, StdError, StdResult, Storage,
-    SubMsg, SubMsgResult, WasmMsg, WasmQuery,
+    attr, coins, entry_point, from_binary, to_binary, BankMsg, Binary, CanonicalAddr, CosmosMsg,
+    Deps, DepsMut, Empty, Env, Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response,
+    StdError, StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_storage::PrefixedStorage;
 use secp256k1::Secp256k1;
 
 use crate::msg::{
-    ExecuteMsg, ExternalMessages, IBCLifecycleComplete, InstantiateMsg, QueryMsg, QueryRes,
+    ExecuteMsg, ExternalMessages, IBCLifecycleComplete, InstantiateMsg, QueryMsg, QueryRes, SudoMsg,
 };
 use crate::state::{count, count_read, expiration, expiration_read, PREFIX_TEST, TEST_KEY};
 
@@ -209,6 +208,7 @@ pub fn instantiate(
                 code_hash,
                 funds: vec![],
                 label: String::from("fi"),
+                admin: None,
             }))
             .add_attribute("instantiating a new contract from init!", "🐙")),
         InstantiateMsg::CallbackBadParams {
@@ -247,6 +247,7 @@ pub fn instantiate(
             code_hash,
             label,
             msg,
+            admin,
         } => Ok(Response::new()
             .add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
@@ -254,6 +255,7 @@ pub fn instantiate(
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
                 label,
+                admin,
             }))
             .add_attribute("a", "a")),
         InstantiateMsg::CallToExec {
@@ -309,6 +311,7 @@ pub fn instantiate(
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 funds: coins,
                 label: "init test".to_string(),
+                admin: None,
             })),
         ),
         InstantiateMsg::SendMultipleFundsToExecCallback {
@@ -664,6 +667,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     funds: vec![],
                     label: "new2231231".to_string(),
                     code_id,
+                    admin: None,
                 }),
                 gas_limit: Some(10000000_u64),
                 reply_on: ReplyOn::Always,
@@ -740,6 +744,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     funds: vec![],
                     label: "new2231231".to_string(),
                     code_id,
+                    admin: None,
                 }),
                 gas_limit: Some(10000000_u64),
                 reply_on: ReplyOn::Never,
@@ -792,6 +797,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     funds: vec![],
                     label: "new2231231".to_string(),
                     code_id,
+                    admin: None,
                 }),
                 gas_limit: Some(10000000_u64),
                 reply_on: ReplyOn::Always,
@@ -828,6 +834,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     funds: vec![],
                     label: "new2231231".to_string(),
                     code_id,
+                    admin: None,
                 }),
                 gas_limit: Some(10000000_u64),
                 reply_on: ReplyOn::Never,
@@ -976,6 +983,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 code_hash,
                 label: String::from("yo"),
                 funds: coins(amount.into(), denom),
+                admin: None,
             })),
         ),
         ExecuteMsg::SendFundsToExecCallback {
@@ -1002,6 +1010,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             code_hash,
             label,
             msg,
+            admin,
         } => Ok(Response::new()
             .add_message(CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id,
@@ -1009,6 +1018,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 msg: Binary(msg.as_bytes().into()),
                 funds: vec![],
                 label,
+                admin,
             }))
             .add_attribute("a", "a")),
         ExecuteMsg::CallToExec {
@@ -1258,6 +1268,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 msg: Binary("{\"nop\":{}}".as_bytes().to_vec()),
                 funds: coins,
                 label: "test".to_string(),
+                admin: None,
             })),
         ),
         ExecuteMsg::SendMultipleFundsToExecCallback {
@@ -1312,33 +1323,85 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 })
                 .set_data(details[0].data.as_bytes()))
         }
-        ExecuteMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCAck {
-            channel,
-            sequence,
-            ack,
-            success,
-        }) => Ok(Response::default().add_attributes(vec![
-            ("ibc_lifecycle_complete.ibc_ack.channel", channel),
-            (
-                "ibc_lifecycle_complete.ibc_ack.sequence",
-                sequence.to_string(),
+        ExecuteMsg::SendMsgMigrateContract {
+            contract_addr,
+            new_code_id,
+            callback_code_hash,
+            msg,
+            reply,
+        } => match reply {
+            true => Ok(
+                Response::new().add_submessage(SubMsg::reply_on_success(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: env.contract.address.into_string(),
+                    code_hash: env.contract.code_hash,
+                    msg: Binary(
+                        format!(
+                            r#"{{"echo":{{"data":"{}"}}}}"#,
+                            Binary(format!(r#"{{"send_msg_migrate_contract":{{"contract_addr":"{}","new_code_id":"{}","callback_code_hash":"{}","msg":"{}"}}}}"#, contract_addr, new_code_id, callback_code_hash, msg.to_base64()).as_bytes().to_vec()).to_base64()
+                        )
+                        .as_bytes()
+                        .to_vec(),
+                    ),
+                    funds: vec![],
+                }),11337)),
             ),
-            ("ibc_lifecycle_complete.ibc_ack.ack", ack),
-            (
-                "ibc_lifecycle_complete.ibc_ack.success",
-                success.to_string(),
+            false => Ok(
+                Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+                    contract_addr,
+                    code_hash: callback_code_hash,
+                    code_id: new_code_id.u64(),
+                    msg,
+                })),
             ),
-        ])),
-        ExecuteMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout {
-            channel,
-            sequence,
-        }) => Ok(Response::default().add_attributes(vec![
-            ("ibc_lifecycle_complete.ibc_timeout.channel", channel),
-            (
-                "ibc_lifecycle_complete.ibc_timeout.sequence",
-                sequence.to_string(),
+        },
+        ExecuteMsg::SendMsgClearAdmin {
+            contract_addr,
+            reply,
+        } => {
+            match reply {
+                true => Ok(Response::new().add_submessage(SubMsg::reply_on_success(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: env.contract.address.into_string(),
+                    code_hash: env.contract.code_hash,
+                    msg: Binary(
+                        format!(
+                            r#"{{"echo":{{"data":"{}"}}}}"#,
+                            Binary(format!(r#"{{"send_msg_clear_admin":{{"contract_addr":"{}"}}}}"#, contract_addr).as_bytes().to_vec()).to_base64()
+                        )
+                        .as_bytes()
+                        .to_vec(),
+                    ),
+                    funds: vec![],
+                }),11338)),),
+                false => Ok(Response::new().add_message(CosmosMsg::Wasm(WasmMsg::ClearAdmin { contract_addr }))),
+            }
+        }
+        ExecuteMsg::SendMsgUpdateAdmin {
+            contract_addr,
+            new_admin,
+            reply,
+        } => match reply {
+            true => Ok(Response::new().add_submessage(SubMsg::reply_on_success(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address.into_string(),
+                code_hash: env.contract.code_hash,
+                msg: Binary(
+                    format!(
+                        r#"{{"echo":{{"data":"{}"}}}}"#,
+                        Binary(format!(r#"{{"send_msg_update_admin":{{"contract_addr":"{}","new_admin":"{}"}}}}"#, contract_addr, new_admin).as_bytes().to_vec()).to_base64()
+                    )
+                    .as_bytes()
+                    .to_vec(),
+                ),
+                funds: vec![],
+            }),11339)),),
+            false =>  Ok(
+                Response::new().add_message(CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
+                    contract_addr,
+                    admin: new_admin,
+                })),
             ),
-        ])),
+        }
+        ExecuteMsg::Echo { data }   => {
+            Ok(Response::new().set_data(data))}
     }
 }
 
@@ -1478,6 +1541,7 @@ pub fn send_multiple_sub_messages(env: Env, _deps: DepsMut) -> StdResult<Respons
             funds: vec![],
             label: "new202213".to_string(),
             code_id: 1,
+            admin: None,
         }),
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Always,
@@ -1547,6 +1611,7 @@ pub fn send_multiple_sub_messages_no_reply(env: Env, deps: DepsMut) -> StdResult
             funds: vec![],
             label: "new202213".to_string(),
             code_id: 1,
+            admin: None,
         }),
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Never,
@@ -1826,6 +1891,7 @@ pub fn init_new_contract(env: Env, _deps: DepsMut) -> StdResult<Response> {
             funds: vec![],
             label: "new202213".to_string(),
             code_id: 1,
+            admin: None,
         }),
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Always,
@@ -1848,6 +1914,7 @@ pub fn init_new_contract_with_error(env: Env, _deps: DepsMut) -> StdResult<Respo
             funds: vec![],
             label: "new2022133".to_string(),
             code_id: 1,
+            admin: None,
         }),
         gas_limit: Some(10000000_u64),
         reply_on: ReplyOn::Always,
@@ -2202,7 +2269,82 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (8451, SubMsgResult::Ok(_)) => Ok(Response::new()
             .add_attribute_plaintext("attr_reply", "🦄")
             .set_data(to_binary("reply")?)),
-        //(9000, SubMsgResult::Err(_)) => Err(StdError::generic_err("err")),
+        (11337, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
+            let (contract_addr, new_code_id, callback_code_hash, msg) =
+                match from_binary(&data.unwrap()) {
+                    Ok(ExecuteMsg::SendMsgMigrateContract {
+                        contract_addr,
+                        new_code_id,
+                        callback_code_hash,
+                        msg,
+                        ..
+                    }) => (contract_addr, new_code_id, callback_code_hash, msg),
+                    Ok(_) => {
+                        return Err(StdError::generic_err(
+                            "cannot parse into SendMsgMigrateContract",
+                        ))
+                    }
+                    Err(err) => {
+                        return Err(StdError::generic_err(format!(
+                            "cannot parse into SendMsgMigrateContract: {:?}",
+                            err
+                        )));
+                    }
+                };
+
+            Ok(
+                Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+                    contract_addr,
+                    code_hash: callback_code_hash,
+                    code_id: new_code_id.u64(),
+                    msg,
+                })),
+            )
+        }
+        (11338, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
+            let contract_addr = match from_binary(&data.unwrap()) {
+                Ok(ExecuteMsg::SendMsgClearAdmin { contract_addr, .. }) => contract_addr,
+
+                Ok(_) => {
+                    return Err(StdError::generic_err("cannot parse into SendMsgClearAdmin"));
+                }
+                Err(err) => {
+                    return Err(StdError::generic_err(format!(
+                        "cannot parse into SendMsgClearAdmin: {:?}",
+                        err
+                    )));
+                }
+            };
+
+            Ok(Response::new().add_message(CosmosMsg::Wasm(WasmMsg::ClearAdmin { contract_addr })))
+        }
+        (11339, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
+            let (contract_addr, new_admin) = match from_binary(&data.unwrap()) {
+                Ok(ExecuteMsg::SendMsgUpdateAdmin {
+                    contract_addr,
+                    new_admin,
+                    ..
+                }) => (contract_addr, new_admin),
+                Ok(_) => {
+                    return Err(StdError::generic_err(
+                        "cannot parse into SendMsgUpdateAdmin",
+                    ));
+                }
+                Err(err) => {
+                    return Err(StdError::generic_err(format!(
+                        "cannot parse into SendMsgUpdateAdmin: {:?}",
+                        err
+                    )));
+                }
+            };
+
+            Ok(
+                Response::new().add_message(CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
+                    contract_addr,
+                    admin: new_admin,
+                })),
+            )
+        }
         _ => Err(StdError::generic_err("invalid reply id or result")),
     }
 }
@@ -2502,6 +2644,7 @@ pub fn exec_callback_to_init(
             code_hash,
             funds: vec![],
             label: String::from("hi"),
+            admin: None,
         }))
         .add_attribute("instantiating a new contract", "🪂")
 }
@@ -2522,10 +2665,13 @@ fn exec_with_callback_contract_error(contract_addr: String, code_hash: String) -
 }
 
 fn allocate_on_heap(bytes: usize) -> Response {
-    let mut values: Vec<u8> = vec![0; bytes];
+    let mut values: Box<Vec<u8>> = Box::new(vec![0; bytes]);
+
     values[bytes - 1] = 1;
 
-    Response::new().set_data("😅".as_bytes().to_vec())
+    Response::new()
+        .set_data("😅".as_bytes().to_vec())
+        .add_attribute("zero", format!("{}", values[bytes / 2]))
 }
 
 fn get_state(deps: DepsMut, key: String) -> Response {
@@ -2552,7 +2698,12 @@ fn remove_state(deps: DepsMut, key: String) -> Response {
 #[allow(invalid_value)]
 #[allow(unused_must_use)]
 fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -> Response {
-    let null_ptr_slice: &[u8] = unsafe { MaybeUninit::zeroed().assume_init() };
+    let null_ptr_slice: &[u8] = unsafe { std::slice::from_raw_parts(std::ptr::null(), 0) };
+
+    let null_human_addr: &str = unsafe { std::str::from_utf8_unchecked(null_ptr_slice) };
+
+    let null_ptr: *const CanonicalAddr = std::ptr::null();
+    let null_canon_addr: &CanonicalAddr = unsafe { &*null_ptr };
 
     match &pass_type[..] {
         "read_db_key" => {
@@ -2568,18 +2719,15 @@ fn pass_null_pointer_to_imports_should_throw(deps: DepsMut, pass_type: String) -
             deps.storage.remove(null_ptr_slice);
         }
         "canonicalize_address_input" => {
-            deps.api
-                .addr_canonicalize(unsafe { MaybeUninit::zeroed().assume_init() });
+            deps.api.addr_canonicalize(null_human_addr);
         }
         "canonicalize_address_output" => { /* TODO */ }
         "humanize_address_input" => {
-            deps.api
-                .addr_humanize(unsafe { MaybeUninit::zeroed().assume_init() });
+            deps.api.addr_humanize(null_canon_addr);
         }
         "humanize_address_output" => { /* TODO */ }
         "validate_address_input" => {
-            deps.api
-                .addr_validate(unsafe { MaybeUninit::zeroed().assume_init() });
+            deps.api.addr_validate(null_human_addr);
         }
         "validate_address_output" => { /* TODO */ }
         _ => {}
@@ -2698,3 +2846,35 @@ fn remove_from_storage_in_query(storage: &dyn Storage) -> StdResult<Binary> {
 //// consts
 
 const REALLY_LONG: &[u8] = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+#[entry_point]
+pub fn sudo(_deps: DepsMut, _env: Env, msg: SudoMsg) -> StdResult<Response> {
+    match msg {
+        SudoMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCAck {
+            channel,
+            sequence,
+            ack,
+            success,
+        }) => Ok(Response::default().add_attributes(vec![
+            ("ibc_lifecycle_complete.ibc_ack.channel", channel),
+            (
+                "ibc_lifecycle_complete.ibc_ack.sequence",
+                sequence.to_string(),
+            ),
+            ("ibc_lifecycle_complete.ibc_ack.ack", ack),
+            (
+                "ibc_lifecycle_complete.ibc_ack.success",
+                success.to_string(),
+            ),
+        ])),
+        SudoMsg::IBCLifecycleComplete(IBCLifecycleComplete::IBCTimeout { channel, sequence }) => {
+            Ok(Response::default().add_attributes(vec![
+                ("ibc_lifecycle_complete.ibc_timeout.channel", channel),
+                (
+                    "ibc_lifecycle_complete.ibc_timeout.sequence",
+                    sequence.to_string(),
+                ),
+            ]))
+        }
+    }
+}

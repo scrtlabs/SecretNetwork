@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,10 +9,10 @@ import (
 	"path/filepath"
 	"sort"
 
+	packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4/router/types"
 	ibcfeetypes "github.com/cosmos/ibc-go/v4/modules/apps/29-fee/types"
 	gocosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
-	packetforwardtypes "github.com/strangelove-ventures/packet-forward-middleware/v4/router/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -37,6 +38,8 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
+	v1_11 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11"
+	v1_12 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.12"
 	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
@@ -108,6 +111,8 @@ var (
 		v1_8.Upgrade,
 		v1_9.Upgrade,
 		v1_10.Upgrade,
+		v1_11.Upgrade,
+		v1_12.Upgrade,
 	}
 )
 
@@ -340,7 +345,7 @@ func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context, req abci.RequestBegin
 	return app.mm.BeginBlock(ctx, req)
 }
 
-func storesRootsFromMultiStore(rootMulti *rootmulti.Store) kv.Pairs {
+func storesRootsFromMultiStore(rootMulti *rootmulti.Store) kv.Pairs { //[][]byte {
 	stores := rootMulti.GetStores()
 	kvs := kv.Pairs{}
 
@@ -357,6 +362,29 @@ func storesRootsFromMultiStore(rootMulti *rootmulti.Store) kv.Pairs {
 	sort.Sort(kvs)
 
 	return kvs
+}
+
+// This is a copy of an internal cosmos-sdk function: https://github.com/scrtlabs/cosmos-sdk/blob/1b9278476b3ac897d8ebb90241008476850bf212/store/internal/maps/maps.go#LL152C1-L152C1
+// pairBytes returns key || value, with both the
+// key and value length prefixed.
+func pairBytes(kv kv.Pair) []byte {
+	// In the worst case:
+	// * 8 bytes to Uvarint encode the length of the key
+	// * 8 bytes to Uvarint encode the length of the value
+	// So preallocate for the worst case, which will in total
+	// be a maximum of 14 bytes wasted, if len(key)=1, len(value)=1,
+	// but that's going to rare.
+	buf := make([]byte, 8+len(kv.Key)+8+len(kv.Value))
+
+	// Encode the key, prefixed with its length.
+	nlk := binary.PutUvarint(buf, uint64(len(kv.Key)))
+	nk := copy(buf[nlk:], kv.Key)
+
+	// Encode the value, prefixing with its length.
+	nlv := binary.PutUvarint(buf[nlk+nk:], uint64(len(kv.Value)))
+	nv := copy(buf[nlk+nk+nlv:], kv.Value)
+
+	return buf[:nlk+nk+nlv+nv]
 }
 
 // EndBlocker application updates every end block
@@ -467,9 +495,9 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 		return
 	}
 
-	for _, upgradeDetails := range Upgrades {
-		if upgradeInfo.Name == upgradeDetails.UpgradeName {
-			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
+	for i := range Upgrades {
+		if upgradeInfo.Name == Upgrades[i].UpgradeName {
+			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &Upgrades[i].StoreUpgrades))
 		}
 	}
 }

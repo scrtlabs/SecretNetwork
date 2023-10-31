@@ -1,34 +1,11 @@
 #![cfg(feature = "random")]
 
-use enclave_crypto::{sha_256, SIVEncryptable, KEY_MANAGER};
-use log::{debug, error, trace};
+use enclave_crypto::{SIVEncryptable, KEY_MANAGER};
+use enclave_utils::random::{create_legacy_proof, create_random_proof};
+use log::{debug, error};
 use sgx_types::sgx_status_t;
 use tendermint::Hash;
 
-pub fn create_proof(height: u64, random: &[u8], block_hash: &[u8]) -> [u8; 32] {
-    trace!(
-        "Height: {:?}\nRandom: {:?}\nApphash: {:?}",
-        height,
-        random,
-        block_hash
-    );
-    let irs = KEY_MANAGER.initial_randomness_seed.unwrap();
-
-    let height_bytes = height.to_be_bytes();
-    let irs_bytes = irs.get();
-
-    let data_len = height_bytes.len() + random.len() + block_hash.len() + irs_bytes.len();
-    let mut data = Vec::with_capacity(data_len);
-
-    data.extend_from_slice(&height_bytes);
-    data.extend_from_slice(random);
-    data.extend_from_slice(block_hash);
-    data.extend_from_slice(irs_bytes);
-
-    sha_256(data.as_slice())
-}
-
-#[cfg(feature = "random")]
 pub fn validate_encrypted_random(
     random_and_proof: &[u8],
     validator_set_hash: Hash,
@@ -42,14 +19,19 @@ pub fn validate_encrypted_random(
         .get(48..)
         .ok_or(sgx_status_t::SGX_ERROR_INVALID_PARAMETER)?;
 
-    let calculated_proof = create_proof(height, encrypted_random_slice, app_hash);
+    let irs = KEY_MANAGER.initial_randomness_seed.unwrap();
+    let calculated_proof = create_random_proof(&irs, height, encrypted_random_slice, app_hash);
 
     if calculated_proof != rand_proof {
-        error!(
-            "Error validating random: {:?} != {:?}",
-            calculated_proof, rand_proof
-        );
-        return Err(sgx_status_t::SGX_ERROR_INVALID_SIGNATURE);
+        let legacy_proof = create_legacy_proof(&irs, height, encrypted_random_slice, app_hash);
+
+        if legacy_proof != rand_proof {
+            error!(
+                "Error validating random: {:?} != {:?} != {:?}",
+                calculated_proof, rand_proof, legacy_proof
+            );
+            return Err(sgx_status_t::SGX_ERROR_INVALID_SIGNATURE);
+        }
     }
 
     debug!(

@@ -25,12 +25,15 @@ else
 	endif
 endif
 
-SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
+SGX_SDK ?= /opt/sgxsdk
 
 ifeq ($(SGX_ARCH), x86)
 	SGX_COMMON_CFLAGS := -m32
+	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
+
 else
 	SGX_COMMON_CFLAGS := -m64
+	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 endif
 
 ifeq ($(SGX_DEBUG), 1)
@@ -51,9 +54,6 @@ App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
 
 Enclave_Path := ../cosmwasm/enclaves/execute
 Enclave_EDL_Products := lib/enclave/Enclave_u.c lib/enclave/Enclave_u.h
-
-Query_Enclave_Path := ../cosmwasm/enclaves/query
-Query_Enclave_EDL_Products := lib/query-enclave/Enclave_u.c lib/query-enclave/Enclave_u.h
 
 .PHONY: all
 all: build test
@@ -76,16 +76,9 @@ build-query-enclave: librust_cosmwasm_query_enclave.signed.so lib/libQueryEnclav
 librust_cosmwasm_enclave.signed.so: inner-build-enclave
 	cp $(Enclave_Path)/$@ ./
 
-librust_cosmwasm_query_enclave.signed.so: inner-build-query-enclave
-	cp $(Query_Enclave_Path)/$@ ./
-
 .PHONY: inner-build-enclave
 inner-build-enclave:
 	FEATURES="$(FEATURES)" $(MAKE) -C $(Enclave_Path) enclave
-
-.PHONY: inner-build-query-enclave
-inner-build-query-enclave:
-	FEATURES="$(FEATURES)" $(MAKE) -C $(Query_Enclave_Path) enclave
 
 # This file will be picked up by the crate's build script and linked into the library.
 lib/libEnclave_u.a: $(Enclave_EDL_Products)
@@ -101,13 +94,7 @@ lib/libQueryEnclave_u.a: $(Query_Enclave_EDL_Products)
 # because the EDL depends on a header file that is generated in that process.
 $(Enclave_EDL_Products): $(Enclave_Path)/Enclave.edl enclave-ffi-types.h
 	mkdir -p "lib/enclave"
-	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./lib/enclave
-
-# We make sure that the enclave is built before we compile the edl,
-# because the EDL depends on a header file that is generated in that process.
-$(Query_Enclave_EDL_Products): $(Query_Enclave_Path)/Enclave.edl enclave-ffi-types.h
-	mkdir -p "lib/query-enclave"
-	sgx_edger8r --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./lib/query-enclave
+	$(SGX_EDGER8R) --untrusted $< --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir ./lib/enclave
 
 # This file gets generated whenever we build this crate, because enclave-ffi-types is our dependency
 # but when running the build for the first time, there's an interdependency between the .edl which requires this
@@ -189,4 +176,3 @@ clean:
 .PHONY: clean-all
 clean-all: clean
 	$(MAKE) -C $(Enclave_Path) clean
-	$(MAKE) -C $(Query_Enclave_Path) clean

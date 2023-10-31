@@ -310,7 +310,7 @@ pub fn parse_reply_message(encrypted_message: &[u8]) -> Result<ParsedMessage, En
     if !parsed_reply.is_encrypted {
         trace!(
             "reply input is not encrypted: {:?}",
-            base64::encode(&encrypted_message)
+            base64::encode(encrypted_message)
         );
 
         return parse_plaintext_reply_message(&orig_secret_msg, &mut parsed_reply);
@@ -318,7 +318,7 @@ pub fn parse_reply_message(encrypted_message: &[u8]) -> Result<ParsedMessage, En
 
     trace!(
         "reply input before decryption: {:?}",
-        base64::encode(&encrypted_message)
+        base64::encode(encrypted_message)
     );
 
     parse_encrypted_reply_message(&orig_secret_msg, &mut parsed_reply)

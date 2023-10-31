@@ -57,7 +57,7 @@ impl DenomTrace {
 
     // GetPrefix returns the receiving denomination prefix composed by the trace info and a separator.
     pub fn get_prefix(&self) -> String {
-        return format!("{}/", self.path);
+        format!("{}/", self.path)
     }
 }
 

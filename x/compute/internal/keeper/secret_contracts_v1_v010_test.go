@@ -28,7 +28,7 @@ func TestV1InitV010ContractWithReply(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10":{"counter":80, "code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
 
 	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, true, true, math.MaxUint64, 0)
@@ -59,9 +59,9 @@ func TestV1ExecuteV010ContractWithReply(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
 
 	msg := fmt.Sprintf(`{"exec_v10":{"address":"%s", "code_hash":"%s"}}`, v010ContractAddress, v010CodeHash)
@@ -85,7 +85,7 @@ func TestV1InitV010ContractNoReply(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_no_reply":{"counter":180, "code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
 
 	_, _, _, ev, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, true, true, math.MaxUint64, 0)
@@ -126,9 +126,9 @@ func TestV1ExecuteV010ContractNoReply(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
 
 	msg := fmt.Sprintf(`{"exec_v10_no_reply":{"address":"%s", "code_hash":"%s"}}`, v010ContractAddress, v010CodeHash)
@@ -157,7 +157,7 @@ func TestV1InitV010ContractWithReplyWithError(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_with_error":{"code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
 
 	_, _, _, _, _, err = execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, true, true, math.MaxUint64, 0)
@@ -178,9 +178,9 @@ func TestV1ExecuteV010ContractWithReplyWithError(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
 
 	msg := fmt.Sprintf(`{"exec_v10_with_error":{"address":"%s", "code_hash":"%s"}}`, v010ContractAddress, v010CodeHash)
@@ -203,7 +203,7 @@ func TestV1InitV010ContractNoReplyWithError(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, _ := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":10, "expires":100}}`, true, true, defaultGasForTests)
 	msg := fmt.Sprintf(`{"init_v10_no_reply_with_error":{"code_id":%d, "code_hash":"%s"}}`, v010CodeID, v010CodeHash)
 
 	_, _, data, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, msg, true, true, math.MaxUint64, 0)
@@ -225,9 +225,9 @@ func TestV1ExecuteV010ContractNoReplyWithError(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
 
 	msg := fmt.Sprintf(`{"exec_v10_no_reply_with_error":{"address":"%s", "code_hash":"%s"}}`, v010ContractAddress, v010CodeHash)
@@ -251,9 +251,9 @@ func TestV1QueryV010ContractWithError(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
 
 	msg := fmt.Sprintf(`{"query_v10_with_error":{"address":"%s", "code_hash":"%s"}}`, v010ContractAddress, v010CodeHash)
@@ -273,7 +273,7 @@ func TestV010InitV1ContractFromInitWithOkResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, initEvents, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, codeHash), true, true, defaultGasForTests)
+	_, _, contractAddress, initEvents, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, fmt.Sprintf(`{"callback_to_init":{"code_id":%d, "code_hash":"%s"}}`, codeID, codeHash), true, true, defaultGasForTests)
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get_contract_version":{}}`, true, false, math.MaxUint64)
 	require.Empty(t, qErr)
 
@@ -306,7 +306,7 @@ func TestV010InitV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get_contract_version":{}}`, true, false, math.MaxUint64)
@@ -344,9 +344,9 @@ func TestV010ExecuteV1ContractFromInitWithOkResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":199, "expires":100}}`, true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":199, "expires":100}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, _, _, err = initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"increment\":{\"addition\": 1}}`), true, true, defaultGasForTests)
+	_, _, _, _, err = initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"increment\":{\"addition\": 1}}`), true, true, defaultGasForTests)
 	require.Empty(t, err)
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get":{}}`, true, true, math.MaxUint64)
@@ -368,8 +368,8 @@ func TestV010ExecuteV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":299, "expires":100}}`, true, true, defaultGasForTests)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":299, "expires":100}}`, true, true, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 
 	_, _, _, _, _, err = execHelper(t, keeper, ctx, v010ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"increment\":{\"addition\": 1}}`), true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
@@ -393,8 +393,8 @@ func TestV010QueryV1ContractFromInitWithOkResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-	_, _, v010ContractAddress, events, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"receive_external_query_v1\":{\"num\":1}}`), true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, v010ContractAddress, events, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"receive_external_query_v1\":{\"num\":1}}`), true, true, defaultGasForTests)
 	require.Empty(t, err)
 	requireEvents(t,
 		[]ContractEvent{
@@ -416,8 +416,8 @@ func TestV010QueryV1ContractFromExecuteWithOkResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 
 	_, _, _, events, _, err := execHelper(t, keeper, ctx, v010ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"receive_external_query_v1\":{\"num\":1}}`), true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
@@ -441,7 +441,7 @@ func TestV010InitV1ContractFromInitWithErrResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, _, _, err = initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d, "code_hash":"%s","label":"blabla", "msg":"%s"}}`, codeID, codeHash, `{\"counter\":{\"counter\":0, \"expires\":100}}`), true, true, defaultGasForTests)
+	_, _, _, _, err = initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, fmt.Sprintf(`{"call_to_init":{"code_id":%d, "code_hash":"%s","label":"blabla", "msg":"%s"}}`, codeID, codeHash, `{\"counter\":{\"counter\":0, \"expires\":100}}`), true, true, defaultGasForTests)
 	require.Contains(t, fmt.Sprintf("%+v", err), "got wrong counter on init")
 }
 
@@ -454,7 +454,7 @@ func TestV010InitV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 
 	queryRes, qErr := queryHelper(t, keeper, ctx, contractAddress, `{"get_contract_version":{}}`, true, false, math.MaxUint64)
 	require.Empty(t, qErr)
@@ -474,8 +474,8 @@ func TestV010ExecuteV1ContractFromInitWithErrResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":199, "expires":100}}`, true, true, defaultGasForTests)
-	_, _, _, _, err = initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"increment\":{\"addition\": 0}}`), true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":199, "expires":100}}`, true, true, defaultGasForTests)
+	_, _, _, _, err = initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"increment\":{\"addition\": 0}}`), true, true, defaultGasForTests)
 
 	require.Contains(t, fmt.Sprintf("%+v", err), "got wrong counter on increment")
 }
@@ -489,8 +489,8 @@ func TestV010ExecuteV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"counter":{"counter":299, "expires":100}}`, true, true, defaultGasForTests)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"counter":{"counter":299, "expires":100}}`, true, true, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 
 	_, _, _, _, _, err = execHelper(t, keeper, ctx, v010ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_exec":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"increment\":{\"addition\": 0}}`), true, true, defaultGasForTests, 0)
 	require.Contains(t, fmt.Sprintf("%+v", err), "got wrong counter on increment")
@@ -505,8 +505,8 @@ func TestV010QueryV1ContractFromInitWithErrResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-	_, _, _, _, err = initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"contract_error\":{\"error_type\":\"generic_err\"}}`), true, true, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, _, _, err = initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"contract_error\":{\"error_type\":\"generic_err\"}}`), true, true, defaultGasForTests)
 	require.Contains(t, fmt.Sprintf("%+v", err), "la la 🤯")
 }
 
@@ -519,8 +519,8 @@ func TestV010QueryV1ContractFromExecuteWithErrResponse(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, contractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 
 	_, _, _, _, _, err = execHelper(t, keeper, ctx, v010ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"call_to_query":{"addr":"%s","code_hash":"%s","msg":"%s"}}`, contractAddress.String(), codeHash, `{\"contract_error\":{\"error_type\":\"generic_err\"}}`), true, true, defaultGasForTests, 0)
 	require.Contains(t, fmt.Sprintf("%+v", err), "la la 🤯")
@@ -539,9 +539,9 @@ func TestV1SendsLogsMixedWithV010WithoutReply(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 	nonce, ctx, _, logs, _, err := execHelper(t, keeper, ctx, v1ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"add_attributes_from_v010":{"addr":"%s","code_hash":"%s", "id":0}}`, v010ContractAddress, v010CodeHash), true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
@@ -601,9 +601,9 @@ func TestV1SendsLogsMixedWithV010WithReply(t *testing.T) {
 	require.NoError(t, err)
 	v010CodeHash := hex.EncodeToString(codeInfo.CodeHash)
 
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 	nonce, ctx, _, logs, _, err := execHelper(t, keeper, ctx, v1ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"add_attributes_from_v010":{"addr":"%s","code_hash":"%s", "id":2500}}`, v010ContractAddress, v010CodeHash), true, true, defaultGasForTests, 0)
 	require.Empty(t, err)
@@ -683,9 +683,9 @@ func TestV010SendsLogsMixedWithV1(t *testing.T) {
 	v010CodeID, err := keeper.Create(ctx, walletA, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
+	_, _, v010ContractAddress, _, err := initHelper(t, keeper, ctx, v010CodeID, walletA, nil, privKeyA, `{"nop":{}}`, true, false, defaultGasForTests)
 	require.Empty(t, err)
-	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
+	_, _, v1ContractAddress, _, err := initHelper(t, keeper, ctx, codeID, walletA, nil, privKeyA, `{"nop":{}}`, true, true, defaultGasForTests)
 	require.Empty(t, err)
 	nonce, ctx, _, logs, _, err := execHelper(t, keeper, ctx, v010ContractAddress, walletA, privKeyA, fmt.Sprintf(`{"add_mixed_events_and_attributes_from_v1":{"addr":"%s","code_hash":"%s"}}`, v1ContractAddress, v1CodeHash), true, true, defaultGasForTests, 0)
 	require.Empty(t, err)

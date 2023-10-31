@@ -7,15 +7,17 @@ use bech32::{FromBase32, ToBase32};
 use cw_types_generic::{ContractFeature, CosmWasmApiVersion, CwEnv};
 use rand_chacha::ChaChaRng;
 use rand_core::SeedableRng;
+use sgx_rand::Rng;
+use sgx_rand::StdRng;
 use wasm3::{Instance, Memory, Trap};
 
 use cw_types_v010::consts::BECH32_PREFIX_ACC_ADDR;
+use cw_types_v010::encoding::Binary;
 use enclave_cosmos_types::types::{ContractCode, HandleType};
 use enclave_crypto::{sha_256, Ed25519PublicKey, WasmApiCryptoError};
 use enclave_ffi_types::{Ctx, EnclaveError};
 
 use crate::contract_validation::ContractKey;
-
 use crate::cosmwasm_config::ContractOperation;
 use crate::db::read_from_encrypted_state;
 use crate::db::{remove_from_encrypted_state, write_multiple_keys};
@@ -52,6 +54,23 @@ macro_rules! debug_err {
     ($err: ident => $message: literal, $($args: tt)*) => {
         |$err| { debug!($message, $($args)*, $err = $err); $err }
     };
+}
+
+pub fn shuffle_cache(keys: &mut [(Vec<u8>, Vec<u8>)], random: Binary) {
+    let sha256 = &sha_256(random.as_slice())[..];
+    // SeedableRng is implemented for 4*32 bit seed
+    let seed: Vec<usize> = sha256
+        .chunks_exact(8)
+        .map(|chunk| {
+            usize::from_le_bytes([
+                chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+            ])
+        })
+        .collect();
+
+    let mut rng: StdRng = sgx_rand::SeedableRng::from_seed(seed.as_slice());
+
+    rng.shuffle(keys);
 }
 
 trait Wasm3ResultEx {
@@ -95,7 +114,7 @@ pub struct Context {
     gas_costs: WasmCosts,
     query_depth: u32,
     operation: ContractOperation,
-    contract_key: ContractKey,
+    og_contract_key: ContractKey,
     user_nonce: IoNonce,
     user_public_key: Ed25519PublicKey,
     kv_cache: KvCache,
@@ -215,7 +234,7 @@ impl Engine {
         gas_limit: u64,
         gas_costs: WasmCosts,
         contract_code: &ContractCode,
-        contract_key: ContractKey,
+        og_contract_key: ContractKey,
         operation: ContractOperation,
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
@@ -232,7 +251,7 @@ impl Engine {
             gas_used_externally: 0,
             gas_costs,
             operation,
-            contract_key,
+            og_contract_key,
             user_nonce,
             user_public_key,
             kv_cache,
@@ -271,7 +290,7 @@ impl Engine {
             .to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in environment.new_runtime is: {:?}", duration);
-        debug!("initialized runtime");
+        trace!("initialized runtime");
 
         // let start = Instant::now();
         let module = self
@@ -283,31 +302,31 @@ impl Engine {
         // "Time elapsed in environment.parse_module is: {:?}",
         // duration
         // );
-        debug!("parsed module");
+        trace!("parsed module");
 
         // let start = Instant::now();
         let mut instance = runtime.load_module(module).to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in runtime.load_module is: {:?}", duration);
-        debug!("created instance");
+        trace!("created instance");
 
         // let start = Instant::now();
         gas::set_gas_limit(&instance, self.gas_limit)?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in set_gas_limit is: {:?}", duration);
-        debug!("set gas limit");
+        trace!("set gas limit");
 
         // let start = Instant::now();
         Self::link_host_functions(&mut instance).to_enclave_result()?;
         // let duration = start.elapsed();
         // trace!("Time elapsed in link_host_functions is: {:?}", duration);
-        debug!("linked functions");
+        trace!("linked functions");
 
         // let start = Instant::now();
         let result = func(&mut instance, &mut self.context);
         // let duration = start.elapsed();
         // trace!("Instance: elapsed time for running func is: {:?}", duration);
-        debug!("function returned {:?}", result);
+        trace!("function returned {:?}", result);
 
         self.used_gas = self
             .gas_limit
@@ -378,6 +397,69 @@ impl Engine {
     #[allow(dead_code)]
     pub fn supported_features(&self) -> &Vec<ContractFeature> {
         &self.features
+    }
+
+    pub fn migrate(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
+        let api_version = self.get_api_version();
+
+        self.with_instance(|instance, context| {
+            debug!("starting migrate, api version: {:?}", api_version);
+
+            let (env_bytes, _msg_info_bytes) = env.get_wasm_ptrs()?;
+
+            // let start = Instant::now();
+            let env_ptr = write_to_memory(instance, &env_bytes)?;
+            // let duration = start.elapsed();
+            // trace!(
+            //     "Time elapsed in env_bytes write_to_memory is: {:?}",
+            //     duration
+            // );
+
+            // let start = Instant::now();
+            let msg_ptr = write_to_memory(instance, &msg)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in msg write_to_memory is: {:?}", duration);
+
+            let result = match api_version {
+                CosmWasmApiVersion::V010 => {
+                    let (migrate, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("migrate")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    migrate.call_with_context(context, args)
+                }
+                CosmWasmApiVersion::V1 => {
+                    let (migrate, args) = (
+                        instance
+                            .find_function::<(u32, u32), u32>("migrate")
+                            .to_enclave_result()?,
+                        (env_ptr, msg_ptr),
+                    );
+                    // let start = Instant::now();
+                    // let res =
+                    migrate.call_with_context(context, args)
+                    // let duration = start.elapsed();
+                    // trace!("Time elapsed in call_with_context is: {:?}", duration);
+                    // res
+                }
+                CosmWasmApiVersion::Invalid => {
+                    return Err(EnclaveError::InvalidWasm);
+                }
+            };
+            // let start = Instant::now();
+            let output_ptr = check_execution_result(instance, context, result)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in check_execution_result is: {:?}", duration);
+
+            // let start = Instant::now();
+            let output = read_from_memory(instance, output_ptr)?;
+            // let duration = start.elapsed();
+            // trace!("Time elapsed in read_from_memory is: {:?}", duration);
+
+            Ok(output)
+        })
     }
 
     pub fn init(&mut self, env: &CwEnv, msg: Vec<u8>) -> Result<Vec<u8>, EnclaveError> {
@@ -454,13 +536,13 @@ impl Engine {
         let api_version = self.get_api_version();
 
         self.with_instance(|instance, context| {
-            debug!("starting handle");
+            trace!("starting handle");
             let (env_bytes, msg_info_bytes) = env.get_wasm_ptrs()?;
 
             let msg_ptr = write_to_memory(instance, &msg)?;
-            debug!("handle written msg");
+            trace!("handle written msg");
             let env_ptr = write_to_memory(instance, &env_bytes)?;
-            debug!("handle written env");
+            trace!("handle written env");
 
             let result = match api_version {
                 CosmWasmApiVersion::V010 => {
@@ -499,13 +581,13 @@ impl Engine {
                 }
             };
 
-            debug!("found handle");
+            trace!("found handle");
 
             let output_ptr = check_execution_result(instance, context, result)?;
-            debug!("called handle");
+            trace!("called handle");
 
             let output = read_from_memory(instance, output_ptr)?;
-            debug!("extracted handle output: {:?}", output);
+            trace!("extracted handle output: {:?}", output);
 
             Ok(output)
         })
@@ -556,7 +638,7 @@ impl Engine {
         })
     }
 
-    pub fn flush_cache(&mut self) -> Result<u64, EnclaveError> {
+    pub fn flush_cache(&mut self, random: Option<Binary>) -> Result<u64, EnclaveError> {
         use crate::db::create_encrypted_key_value;
 
         // here we refund all the pseudo gas charged for writes to cache
@@ -580,7 +662,7 @@ impl Engine {
                     &k,
                     &v,
                     &self.context.context,
-                    &self.context.contract_key,
+                    &self.context.og_contract_key,
                     &get_encryption_salt(self.context.timestamp),
                 )
                 .unwrap();
@@ -588,6 +670,10 @@ impl Engine {
                 (enc_key.to_vec(), enc_v)
             })
             .collect();
+
+        if let Some(random_unwraped) = random {
+            shuffle_cache(&mut keys, random_unwraped);
+        }
 
         write_multiple_keys(&self.context.context, keys).map_err(|err| {
             debug!(
@@ -666,7 +752,7 @@ impl<'m> CWMemory<'m> {
         }
 
         let data_len = self.get_u32_at(region_ptr + (SIZE_OF_U32 as u32) * 2)? as usize;
-        let mut remaining_len = data_len as usize;
+        let mut remaining_len = data_len;
 
         let data = self.memory.as_slice().get(data_ptr..data_ptr + data_len);
         let data = data.ok_or(WasmEngineError::MemoryReadError)?;
@@ -870,11 +956,12 @@ fn host_read_db(
     let (value, used_gas) = read_from_encrypted_state(
         &state_key_name,
         &context.context,
-        &context.contract_key,
+        &context.og_contract_key,
         match context.operation {
             ContractOperation::Init => true,
             ContractOperation::Handle => true,
             ContractOperation::Query => false,
+            ContractOperation::Migrate => true,
         },
         &mut context.kv_cache,
         &get_encryption_salt(context.timestamp),
@@ -922,7 +1009,7 @@ fn host_remove_db(
     block_cache.remove_from_kv_cache(&context.contract_key, &state_key_name);
 
     let used_gas =
-        remove_from_encrypted_state(&state_key_name, &context.context, &context.contract_key)?;
+        remove_from_encrypted_state(&state_key_name, &context.context, &context.og_contract_key)?;
     context.use_gas_externally(used_gas);
 
     Ok(())
@@ -1809,12 +1896,12 @@ fn host_ed25519_sign(
 fn get_encryption_salt(timestamp: u64) -> Vec<u8> {
     let mut encryption_salt: Vec<u8> = vec![];
 
-    encryption_salt.extend(&timestamp.to_be_bytes());
+    encryption_salt.extend(timestamp.to_be_bytes());
 
     let msg_counter = MSG_COUNTER.lock().unwrap();
 
-    encryption_salt.extend(&msg_counter.height.to_be_bytes());
-    encryption_salt.extend(&msg_counter.counter.to_be_bytes());
+    encryption_salt.extend(msg_counter.height.to_be_bytes());
+    encryption_salt.extend(msg_counter.counter.to_be_bytes());
 
     encryption_salt
 }
@@ -1859,4 +1946,54 @@ fn host_check_gas_used(
     let gas_used = limit.saturating_sub(gas_remaining) / 1000;
 
     Ok(gas_used as i64)
+}
+
+#[cfg(feature = "test")]
+pub mod tests {
+    use super::shuffle_cache;
+    use crate::count_failures;
+    use crate::wasm3::Binary;
+
+    pub fn run_tests() {
+        println!();
+        let mut failures = 0;
+
+        count_failures!(failures, {
+            cache_shuffle_works();
+        });
+
+        // The test doesn't work for some reason
+        // #[cfg(feature = "SGX_MODE_HW")]
+        // count_failures!(failures, {
+        //     cert::tests::test_certificate_invalid_group_out_of_date();
+        // });
+
+        if failures != 0 {
+            panic!("{}: {} tests failed", file!(), failures);
+        }
+    }
+
+    fn cache_shuffle_works() {
+        let mut keys: Vec<(Vec<u8>, Vec<u8>)> = vec![];
+        for i in 0..30 {
+            keys.push((vec![i as u8], vec![i as u8]));
+        }
+
+        shuffle_cache(&mut keys, Binary::from(vec![1, 3, 3, 7].as_slice()));
+        // Same seed same results
+        let expected_results: Vec<u8> = vec![
+            24, 2, 23, 21, 26, 5, 10, 3, 19, 27, 16, 28, 9, 20, 0, 13, 6, 18, 25, 7, 15, 12, 8, 22,
+            1, 11, 14, 17, 29, 4,
+        ];
+        let mut sum: i16 = 0;
+
+        for i in 0..30 {
+            assert_eq!(expected_results[i], keys[i].0[0]);
+            sum += i as i16;
+            sum -= keys[i].0[0] as i16;
+        }
+
+        // Sum should be 0 as we increase and decrease it eventually by the same numbers
+        assert_eq!(sum, 0)
+    }
 }

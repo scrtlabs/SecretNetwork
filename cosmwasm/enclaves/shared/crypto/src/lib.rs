@@ -19,7 +19,7 @@ pub mod traits;
 
 // mod aes_gcm;
 mod aes_siv;
-mod ed25519;
+pub mod ed25519;
 mod hmac;
 pub mod secp256k1;
 
@@ -60,7 +60,7 @@ pub mod tests {
     }
 
     pub fn run_tests() {
-        let mut failures = 0;
+        let failures = 0;
 
         count_failures!(failures, {
             // todo: add encryption and other tests here

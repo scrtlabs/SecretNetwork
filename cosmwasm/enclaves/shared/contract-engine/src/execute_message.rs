@@ -7,7 +7,7 @@ pub fn parse_execute_message(message: &[u8]) -> Result<ParsedMessage, EnclaveErr
     if let Some(decrypted_secret_msg) = try_get_decrypted_secret_msg(message) {
         trace!(
             "execute input before decryption: {:?}",
-            base64::encode(&message)
+            base64::encode(message)
         );
 
         return Ok(ParsedMessage {
@@ -21,10 +21,7 @@ pub fn parse_execute_message(message: &[u8]) -> Result<ParsedMessage, EnclaveErr
         });
     }
 
-    trace!(
-        "execute input was plaintext: {:?}",
-        base64::encode(&message)
-    );
+    trace!("execute input was plaintext: {:?}", base64::encode(message));
 
     let secret_msg = SecretMessage {
         nonce: [0; 32],

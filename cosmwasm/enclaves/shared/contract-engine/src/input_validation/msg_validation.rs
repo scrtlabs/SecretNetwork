@@ -1,9 +1,12 @@
-use cw_types_v010::{encoding::Binary, types::CanonicalAddr};
+use cw_types_v010::{
+    encoding::Binary,
+    types::{CanonicalAddr, HumanAddr},
+};
 use cw_types_v1::ibc::IbcPacketReceiveMsg;
 use enclave_cosmos_types::types::{
-    is_transfer_ack_error, CosmosSdkMsg, FungibleTokenPacketData, HandleType, IBCLifecycleComplete,
+    is_transfer_ack_error, DirectSdkMsg, FungibleTokenPacketData, HandleType, IBCLifecycleComplete,
     IBCLifecycleCompleteOptions, IBCPacketAckMsg, IBCPacketTimeoutMsg, IbcHooksIncomingTransferMsg,
-    IncentivizedAcknowledgement, Packet,
+    IncentivizedAcknowledgement, Packet, VerifyParamsType,
 };
 
 use log::*;
@@ -12,49 +15,117 @@ use crate::types::SecretMessage;
 
 /// Get the cosmwasm message that contains the encrypted message
 pub fn verify_and_get_sdk_msg<'sd>(
-    messages: &'sd [CosmosSdkMsg],
-    msg_sender: &CanonicalAddr,
-    sent_msg: &SecretMessage,
-    handle_type: HandleType,
-) -> Option<&'sd CosmosSdkMsg> {
-    trace!("get_verified_msg: {:?}", messages);
+    sdk_messages: &'sd [DirectSdkMsg],
+    sent_sender: &CanonicalAddr,
+    sent_contract_address: &HumanAddr,
+    sent_wasm_input: &SecretMessage,
+    verify_params_types: VerifyParamsType,
+    sent_current_admin: Option<&CanonicalAddr>,
+    sent_new_admin: Option<&CanonicalAddr>,
+) -> Option<&'sd DirectSdkMsg> {
+    trace!("verify_and_get_sdk_msg: {:?}", sdk_messages);
 
-    messages.iter().find(|&m| match m {
-        CosmosSdkMsg::Other => false,
-        CosmosSdkMsg::MsgExecuteContract { msg, sender, .. }
-        | CosmosSdkMsg::MsgInstantiateContract {
+    sdk_messages.iter().find(|&m| match m {
+        DirectSdkMsg::Other => false,
+        DirectSdkMsg::MsgInstantiateContract {
             init_msg: msg,
             sender,
+            admin,
             ..
-        } => msg_sender == sender && &sent_msg.to_vec() == msg,
-        CosmosSdkMsg::MsgRecvPacket { packet, .. } => match handle_type {
-            HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE => verify_ibc_packet_recv(sent_msg, packet),
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER => {
-                verify_ibc_wasm_hooks_incoming_transfer(sent_msg, packet)
+        } => {
+            let empty_canon = &CanonicalAddr(Binary(vec![]));
+            let empty_human = HumanAddr("".to_string());
+
+            let sent_current_admin = sent_current_admin.unwrap_or(empty_canon);
+            let sent_current_admin =
+                &HumanAddr::from_canonical(sent_current_admin).unwrap_or(empty_human);
+
+            sent_current_admin == admin && sent_sender == sender && &sent_wasm_input.to_vec() == msg
+        }
+        DirectSdkMsg::MsgExecuteContract {
+            msg,
+            sender,
+            contract,
+            ..
+        } => {
+            sent_sender == sender
+                && sent_contract_address == contract
+                && &sent_wasm_input.to_vec() == msg
+        }
+        DirectSdkMsg::MsgMigrateContract {
+            msg,
+            sender,
+            contract,
+            ..
+        } => {
+            sent_sender == sender
+                && sent_current_admin.is_some()
+                && sent_current_admin.unwrap() == sender
+                && sent_contract_address == contract
+                && &sent_wasm_input.to_vec() == msg
+        }
+        DirectSdkMsg::MsgUpdateAdmin {
+            sender,
+            contract,
+            new_admin,
+        } => {
+            let empty_canon = &CanonicalAddr(Binary(vec![]));
+            let empty_human = HumanAddr("".to_string());
+
+            let sent_new_admin = sent_new_admin.unwrap_or(empty_canon);
+            let sent_new_admin = &HumanAddr::from_canonical(sent_new_admin).unwrap_or(empty_human);
+
+            sent_sender == sender
+                && sent_current_admin.is_some()
+                && sent_current_admin.unwrap() == sender
+                && sent_contract_address == contract
+                && sent_new_admin == new_admin
+        }
+        DirectSdkMsg::MsgClearAdmin {
+            sender, contract, ..
+        } => {
+            let empty_canon = &CanonicalAddr(Binary(vec![]));
+
+            sent_sender == sender
+                && sent_current_admin.is_some()
+                && sent_current_admin.unwrap() == sender
+                && sent_contract_address == contract
+                && sent_new_admin == Some(empty_canon)
+        }
+        DirectSdkMsg::MsgRecvPacket { packet, .. } => match verify_params_types {
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_RECEIVE) => {
+                verify_ibc_packet_recv(sent_wasm_input, packet)
             }
+            VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_INCOMING_TRANSFER,
+            ) => verify_ibc_wasm_hooks_incoming_transfer(sent_wasm_input, packet),
             _ => false,
         },
-        CosmosSdkMsg::MsgAcknowledgement {
+        DirectSdkMsg::MsgAcknowledgement {
             packet,
             acknowledgement,
             signer,
             ..
-        } => match handle_type {
-            HandleType::HANDLE_TYPE_IBC_PACKET_ACK => {
-                verify_ibc_packet_ack(sent_msg, packet, acknowledgement, signer)
+        } => match verify_params_types {
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_ACK) => {
+                verify_ibc_packet_ack(sent_wasm_input, packet, acknowledgement, signer)
             }
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK => {
-                verify_ibc_wasm_hooks_outgoing_transfer_ack(sent_msg, packet, acknowledgement)
-            }
+            VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_ACK,
+            ) => verify_ibc_wasm_hooks_outgoing_transfer_ack(
+                sent_wasm_input,
+                packet,
+                acknowledgement,
+            ),
             _ => false,
         },
-        CosmosSdkMsg::MsgTimeout { packet, signer, .. } => match handle_type {
-            HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT => {
-                verify_ibc_packet_timeout(sent_msg, packet, signer)
+        DirectSdkMsg::MsgTimeout { packet, signer, .. } => match verify_params_types {
+            VerifyParamsType::HandleType(HandleType::HANDLE_TYPE_IBC_PACKET_TIMEOUT) => {
+                verify_ibc_packet_timeout(sent_wasm_input, packet, signer)
             }
-            HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT => {
-                verify_ibc_wasm_hooks_outgoing_transfer_timeout(sent_msg, packet)
-            }
+            VerifyParamsType::HandleType(
+                HandleType::HANDLE_TYPE_IBC_WASM_HOOKS_OUTGOING_TRANSFER_TIMEOUT,
+            ) => verify_ibc_wasm_hooks_outgoing_transfer_timeout(sent_wasm_input, packet),
             _ => false,
         },
     })
@@ -101,7 +172,7 @@ pub fn verify_ibc_wasm_hooks_incoming_transfer(sent_msg: &SecretMessage, packet:
         fungible_token_packet_data
             .memo
             .clone()
-            .unwrap_or_else(|| "".to_string())
+            .unwrap_or_default()
             .as_bytes(),
     );
     if ibc_hooks_incoming_transfer_msg.is_err() {

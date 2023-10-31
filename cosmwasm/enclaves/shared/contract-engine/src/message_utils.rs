@@ -7,7 +7,7 @@ pub fn get_secret_msg(message: &[u8]) -> SecretMessage {
         Err(_) => {
             trace!(
                 "Message is not SecretMessage (probably plaintext): {:?}",
-                base64::encode(&message)
+                base64::encode(message)
             );
 
             SecretMessage {

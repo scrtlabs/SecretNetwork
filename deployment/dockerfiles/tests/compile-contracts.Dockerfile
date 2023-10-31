@@ -1,4 +1,4 @@
-FROM ghcr.io/scrtlabs/sgx-rust:2004-1.1.5
+FROM ghcr.io/scrtlabs/release-base:20.04-2.20
 
 ARG NODE_VERSION=16
 
@@ -15,7 +15,7 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go/
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
-ADD https://go.dev/dl/go1.19.linux-amd64.tar.gz go.linux-amd64.tar.gz
+ADD https://go.dev/dl/go1.21.1.linux-amd64.tar.gz go.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go.linux-amd64.tar.gz
 
 RUN apt-get update -y && \
