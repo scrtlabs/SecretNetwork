@@ -648,11 +648,11 @@ impl Engine {
         debug!("Before saving to cache");
         // store kv cache into the block cache - if we access this key later in the block we will want to
         let mut block_cache = BLOCK_CACHE.lock().unwrap();
-        block_cache.insert(self.context.contract_key, self.context.kv_cache.clone());
+        block_cache.insert(self.context.og_contract_key, self.context.kv_cache.clone());
 
         debug!("After saving to cache");
 
-        let keys: Vec<(Vec<u8>, Vec<u8>)> = self
+        let mut keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .context
             .kv_cache
             .flush()
@@ -936,7 +936,7 @@ fn host_read_db(
 
     let block_cache = BLOCK_CACHE.lock().unwrap();
 
-    if let Some(kv_cache) = block_cache.get(&context.contract_key) {
+    if let Some(kv_cache) = block_cache.get(&context.og_contract_key) {
         if let Some(unwrapped) = kv_cache.read(&state_key_name) {
             debug!("Got value from cache");
             let ptr_to_region_in_wasm_vm =
@@ -1006,7 +1006,7 @@ fn host_remove_db(
     context.kv_cache.remove(&state_key_name);
 
     let mut block_cache = BLOCK_CACHE.lock().unwrap();
-    block_cache.remove_from_kv_cache(&context.contract_key, &state_key_name);
+    block_cache.remove_from_kv_cache(&context.og_contract_key, &state_key_name);
 
     let used_gas =
         remove_from_encrypted_state(&state_key_name, &context.context, &context.og_contract_key)?;

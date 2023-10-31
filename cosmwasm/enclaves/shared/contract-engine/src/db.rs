@@ -172,13 +172,7 @@ pub fn read_from_encrypted_state(
         &encrypted_key_bytes,
         block_height,
     ) {
-        Ok((maybe_encrypted_value_bytes, maybe_proof, maybe_mp_key, gas_used)) => {
-            debug!("merkle proof returned from read_db(): {:?}", maybe_proof);
-            debug!("full key returned from read_db(): {:?}", maybe_mp_key);
-            debug!(
-                "enc value returned from read_db(): {:?}",
-                maybe_encrypted_value_bytes
-            );
+        Ok((maybe_encrypted_value_bytes, gas_used)) => {
             match maybe_encrypted_value_bytes {
                 Some(encrypted_value_bytes) => {
                     let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
