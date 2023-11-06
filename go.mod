@@ -32,7 +32,7 @@ require (
 	github.com/rs/zerolog v1.30.0
 	github.com/scrtlabs/tm-secret-enclave v1.11.1-0.20230828132205-561238bf33c0
 	github.com/spf13/cast v1.5.1
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
