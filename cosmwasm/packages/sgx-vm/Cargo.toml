@@ -44,7 +44,7 @@ serde_json = "1.0"
 # wasmer-middleware-common = "=0.17.0"
 # wasmer-clif-backend = { version = "=0.17.0", optional = true }
 # wasmer-singlepass-backend = { version = "=0.17.0", optional = true }
-serde = { version = "1.0.188", default-features = false, features = [
+serde = { version = "1.0.191", default-features = false, features = [
     "derive",
     "alloc"
 ] }
