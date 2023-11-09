@@ -61,7 +61,7 @@ enclave-ffi-types = { path = "../../enclaves/ffi-types", features = [
 sgx_types = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 sgx_urts = { path = "../../../third_party/incubator-teaclave-sgx-sdk/sgx_urts" }
 log = "0.4.20"
-base64 = "0.21.3"
+base64 = "0.21.5"
 parking_lot = "0.11"
 num_cpus = "1.16.0"
 
