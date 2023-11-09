@@ -24,7 +24,8 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) error 
 	}
 
 	var maxContractID int
-	for i, contract := range data.Contracts {
+	for i := range data.Contracts {
+		contract := data.Contracts[i] // This is to prevent golint from complaining about referencing a for variable address
 		err := keeper.importContract(ctx, contract.ContractAddress, contract.ContractCustomInfo, &contract.ContractInfo, contract.ContractState)
 		if err != nil {
 			return sdkerrors.Wrapf(err, "contract number %d", i)

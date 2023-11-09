@@ -334,6 +334,13 @@ var ZeroSender = sdk.AccAddress{
 }
 
 func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
+	if c.Created == nil {
+		c.Created = &AbsoluteTxPosition{
+			BlockHeight: 0,
+			TxIndex:     0,
+		}
+	}
+
 	return ContractCodeHistoryEntry{
 		Operation: ContractCodeHistoryOperationTypeInit,
 		CodeID:    c.CodeID,

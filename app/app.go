@@ -34,6 +34,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
 	v1_11 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11"
+	v1_12 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.12"
 	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
@@ -105,6 +106,7 @@ var (
 		v1_9.Upgrade,
 		v1_10.Upgrade,
 		v1_11.Upgrade,
+		v1_12.Upgrade,
 	}
 )
 
@@ -425,9 +427,9 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 		return
 	}
 
-	for _, upgradeDetails := range Upgrades {
-		if upgradeInfo.Name == upgradeDetails.UpgradeName {
-			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &upgradeDetails.StoreUpgrades))
+	for i := range Upgrades {
+		if upgradeInfo.Name == Upgrades[i].UpgradeName {
+			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &Upgrades[i].StoreUpgrades))
 		}
 	}
 }

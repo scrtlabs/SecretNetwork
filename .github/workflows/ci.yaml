@@ -105,7 +105,7 @@ jobs:
           submodules: recursive
       - uses: actions/setup-go@v4
         with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
+          go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
@@ -236,7 +236,7 @@ jobs:
           submodules: recursive
       - uses: actions/setup-go@v4
         with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
+          go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@v0.17.0
@@ -270,8 +270,8 @@ jobs:
             FEATURES_U=debug-print,random,light-client-validation,go-tests
             SGX_MODE=SW
           target: build-localsecret
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localsecret.tar
       - name: Upload Image
         uses: actions/upload-artifact@v3
@@ -327,12 +327,13 @@ jobs:
         run: |
           cd integration-tests
           yarn
+          perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ../deployment/dockerfiles/ibc/docker-compose.yml
           docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d > docker-compose.log 2>&1
           yarn test || { cat docker-compose.log; exit 1; }
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
-          git clone --depth 1 --branch contract-upgrade-v2 https://github.com/scrtlabs/secret.js
+          git clone --depth 1 --branch master https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml

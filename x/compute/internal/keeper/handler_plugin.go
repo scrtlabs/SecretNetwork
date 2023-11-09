@@ -524,6 +524,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, 
 			InitMsg:          msg.Instantiate.Msg,
 			InitFunds:        coins,
 			CallbackSig:      msg.Instantiate.CallbackSignature,
+			Admin:            msg.Instantiate.Admin,
 		}
 		return []sdk.Msg{&sdkMsg}, nil
 	case msg.Migrate != nil:
