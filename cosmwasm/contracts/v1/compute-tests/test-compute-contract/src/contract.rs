@@ -3,7 +3,7 @@ use std::{thread, vec};
 
 use cosmwasm_std::{
     attr, coins, entry_point, from_binary, to_binary, BankMsg, Binary, CanonicalAddr, CosmosMsg,
-    Deps, DepsMut, Empty, Env, Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response,
+    Coin, Deps, DepsMut, Empty, Env, Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response,
     StdError, StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_storage::PrefixedStorage;
