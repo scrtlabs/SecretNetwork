@@ -3,7 +3,7 @@ use std::{thread, vec};
 
 use cosmwasm_std::{
     attr, coins, entry_point, from_binary, to_binary, BankMsg, Binary, CanonicalAddr, CosmosMsg,
-    Deps, DepsMut, Empty, Env, Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response,
+    Coin, Deps, DepsMut, Empty, Env, Event, MessageInfo, QueryRequest, Reply, ReplyOn, Response,
     StdError, StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, WasmMsg, WasmQuery,
 };
 use cosmwasm_storage::PrefixedStorage;
@@ -652,11 +652,44 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::IncrementAndSendFailingSubmessage { reply_on } => {
             increment_simple(deps)?;
-            let mut response = send_failing_submsg(env, reply_on)?;
-            response.data = Some((count as u32).to_be_bytes().into());
+            let response = send_failing_submsg(env, reply_on)?;
 
             Ok(response)
         },
+        ExecuteMsg::IncrementAndSendSubmessageWithBankFail { reply_on } => {
+            increment_simple(deps)?;
+            let response = send_failing_submsg_with_bank_fail(env, reply_on)?;
+
+            Ok(response)
+        },
+        ExecuteMsg::SendSucceedingSubmessageThenFailingMessageOnReply {} => {
+            increment_simple(deps)?;
+
+            let mut response = Response::default();
+            add_succeeding_submsg(env, &mut response, ReplyOn::Always, 9201);
+
+            // failing message is created on reply
+            Ok(response)
+        },
+        ExecuteMsg::SendSucceedingSubmessageAndFailingMessage {} => {
+            increment_simple(deps)?;
+
+            let mut response = Response::default();
+
+            add_succeeding_submsg(env, &mut response, ReplyOn::Always, 9201);
+
+            response = response.add_message(
+                CosmosMsg::Bank(BankMsg::Send {
+                    to_address: "non-existent".to_string(),
+                    amount: vec![Coin::new(100, "non-existent")],
+                })
+            );
+
+            // NOTE that if the submsg is added after the message, then it is processed in THAT order,
+            // which is different from what is stated in cosmwasm's docs here: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#order-and-rollback
+
+            Ok(response)
+        }
         ExecuteMsg::InitV10 {
             counter,
             code_id,
@@ -1252,6 +1285,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
             return res;
         }
+        ExecuteMsg::IncrementAndBankMsgSend { to, amount } => {
+            increment_simple(deps)?;
+            Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
+                to_address: to,
+                amount,
+            })))
+        }
         ExecuteMsg::BankMsgSend { to, amount } => {
             Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
                 to_address: to,
@@ -1766,6 +1806,66 @@ pub fn send_multiple_sub_messages_with_reply_with_error(
             .to_be_bytes()
             .into(),
     );
+    Ok(resp)
+}
+
+pub fn add_succeeding_submsg(
+    env: Env,
+    resp: &mut Response,
+    reply_on: ReplyOn,
+    id: u64,
+) {
+    let message = ExecuteMsg::Increment { addition: 3 };
+
+    let message = Binary::from(
+        serde_json_wasm::to_string(&message)
+            .unwrap()
+            .as_bytes()
+            .to_vec()
+    );
+
+    resp.messages.push(SubMsg {
+        id: id,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: message,
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on,
+    });
+}
+
+pub fn send_failing_submsg_with_bank_fail(
+    env: Env,
+    reply_on: ReplyOn,
+) -> StdResult<Response> {
+    let failing_bank_msg = ExecuteMsg::IncrementAndBankMsgSend {
+        amount: vec![ Coin::new(100, "non-existent")],
+        to: "non-existent".to_string()
+    };
+
+    let bank_binary_msg = Binary::from(
+        serde_json_wasm::to_string(&failing_bank_msg)
+            .unwrap()
+            .as_bytes()
+            .to_vec()
+    );
+
+    let mut resp = Response::default();
+    resp.messages.push(SubMsg {
+        id: 9202,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.clone().into_string(),
+            code_hash: env.contract.code_hash.clone(),
+            msg: bank_binary_msg,
+            funds: vec![],
+        }),
+        gas_limit: Some(10000000_u64),
+        reply_on,
+    });
+
     Ok(resp)
 }
 
@@ -2308,6 +2408,27 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> StdResult<Response> {
         (9200, SubMsgResult::Err(_)) => Ok(Response::default().set_data(
             (count_read(deps.storage).load()? as u32).to_be_bytes()
         )),
+        (9201, _) => {
+            // check that the submessage worked
+            if count_read(deps.storage).load()? != 14 {
+                return Ok(Response::default()); // test expects error, so this will fail the test
+            }
+
+            increment_simple(deps)?;
+
+            let response = Response::default().add_message(
+                CosmosMsg::Bank(BankMsg::Send {
+                    to_address: "non-existent".to_string(),
+                    amount: vec![Coin::new(100, "non-existent")],
+                })
+            );
+
+            Ok(response)
+        },
+        (9202, _) => {
+            increment_simple(deps)?;
+            Ok(Response::default())
+        },
         (11337, SubMsgResult::Ok(SubMsgResponse { data, .. })) => {
             let (contract_addr, new_code_id, callback_code_hash, msg) =
                 match from_binary(&data.unwrap()) {

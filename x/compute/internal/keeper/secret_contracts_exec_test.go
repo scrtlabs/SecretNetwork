@@ -1594,7 +1594,7 @@ func TestV1SendsFundsWithErrorWithReply(t *testing.T) {
 	_, _, _, _, _, err := execHelper(t, keeper, ctx, contractAddress, walletA, privKeyA, `{"send_funds_with_error_with_reply":{}}`, false, true, math.MaxUint64, 0)
 
 	require.NotEmpty(t, err)
-	require.Contains(t, fmt.Sprintf("%+v", err), "an sdk error occoured while sending a sub-message")
+	require.Contains(t, fmt.Sprintf("%+v", err), "an sdk error occurred while sending a sub-message")
 }
 
 func TestCallbackSanity(t *testing.T) {
