@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Coin, Uint64};
+use cosmwasm_std::{Binary, Coin, Uint64, ReplyOn};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -176,6 +176,14 @@ pub enum ExecuteMsg {
     MultipleSubMessagesNoReplyWithPanic {},
     MultipleSubMessagesWithReplyWithError {},
     MultipleSubMessagesWithReplyWithPanic {},
+    IncrementAndSendFailingSubmessage {
+        reply_on: ReplyOn,
+    },
+    IncrementAndSendSubmessageWithBankFail {
+        reply_on: ReplyOn,
+    },
+    SendSucceedingSubmessageThenFailingMessageOnReply {},
+    SendSucceedingSubmessageAndFailingMessage {},
     InitV10 {
         code_id: u64,
         code_hash: String,
@@ -411,6 +419,10 @@ pub enum ExecuteMsg {
         msg: Binary,
         privkey: Binary,
         iterations: u32,
+    },
+    IncrementAndBankMsgSend {
+        amount: Vec<Coin>,
+        to: String,
     },
     BankMsgSend {
         amount: Vec<Coin>,
