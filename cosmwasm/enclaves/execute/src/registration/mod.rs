@@ -1,21 +1,21 @@
 pub use attestation::create_attestation_certificate;
 pub use offchain::{ecall_get_attestation_report, ecall_init_bootstrap, ecall_init_node};
-pub use onchain::ecall_authenticate_new_node;
+// pub use onchain::ecall_authenticate_new_node;
 
 mod attestation;
 mod cert;
-mod hex;
+// mod hex;
 mod offchain;
-mod onchain;
+// mod onchain;
 mod persistency;
 mod report;
 mod seed_exchange;
 
-#[cfg(feature = "SGX_MODE_HW")]
-mod ocalls;
+// #[cfg(feature = "SGX_MODE_HW")]
+// mod ocalls;
 
-#[cfg(feature = "SGX_MODE_HW")]
-pub mod print_report;
+// #[cfg(feature = "SGX_MODE_HW")]
+// pub mod print_report;
 
 pub mod check_patch_level;
 pub mod seed_service;
@@ -47,8 +47,6 @@ pub mod tests {
         count_failures!(failures, {
             cert::tests::test_epid_whitelist();
         });
-
-
 
         // The test doesn't work for some reason
         // #[cfg(feature = "SGX_MODE_HW")]

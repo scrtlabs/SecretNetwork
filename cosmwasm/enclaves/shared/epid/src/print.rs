@@ -1,14 +1,23 @@
-use crate::registration::{
-    cert::{ocall_get_update_info, verify_quote_status},
-    report::AttestationReport,
-};
+// use crate::registration::{
+//     cert::{ocall_get_update_info, verify_quote_status},
+//     report::AttestationReport,
+// };
+use crate::types::{verify_quote_status, EndorsedEpidAttestationReport, ValidatedEpidAttestation};
 
 use enclave_ffi_types::NodeAuthResult;
 use log::{error, warn};
 use sgx_types::{sgx_platform_info_t, sgx_status_t, sgx_update_info_bit_t};
 
-pub fn print_local_report_info(cert: &[u8]) {
-    let report = match AttestationReport::from_cert(cert) {
+#[cfg(not(feature = "SGX_MODE_HW"))]
+#[allow(dead_code)]
+fn print_local_report_info(_cert: &[u8]) {
+    println!("Enclave running in sgx software emulation mode");
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+#[allow(dead_code)]
+pub fn print_local_report_info(endorsed_report: &EndorsedEpidAttestationReport) {
+    let report = match ValidatedEpidAttestation::from_endorsed_report(endorsed_report) {
         Ok(r) => r,
         Err(_) => {
             error!("Error parsing report");
@@ -18,7 +27,7 @@ pub fn print_local_report_info(cert: &[u8]) {
 
     let node_auth_result = NodeAuthResult::from(&report.sgx_quote_status);
     // print
-    match verify_quote_status(&report, &report.advisory_ids) {
+    match verify_quote_status(&report, Some(&report.advisory_ids)) {
         Err(status) => match status {
             NodeAuthResult::SwHardeningAndConfigurationNeeded => {
                 println!("Platform status is SW_HARDENING_AND_CONFIGURATION_NEEDED. This means is updated but requires further BIOS configuration");
@@ -44,7 +53,7 @@ pub fn print_local_report_info(cert: &[u8]) {
 
 /// # Safety
 /// Placeholder
-pub unsafe fn print_platform_info(report: &AttestationReport) {
+pub unsafe fn print_platform_info(report: &ValidatedEpidAttestation) {
     if let Some(platform_info) = &report.platform_info_blob {
         let mut update_info = sgx_update_info_bit_t::default();
         let mut rt = sgx_status_t::default();

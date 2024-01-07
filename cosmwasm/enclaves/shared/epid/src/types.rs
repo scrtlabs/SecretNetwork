@@ -3,11 +3,10 @@ use attestation::sgx_report::AdvisoryIDs;
 use log::{debug, error, info, trace, warn};
 use secret_attestation_token::{
     AsAttestationToken, AttestationType, AuthenticationMaterialVerify, Error, FromAttestationToken,
-    SecretAttestationToken, VerificationError,
+    NodeAuthPublicKey, SecretAttestationToken, VerificationError,
 };
 // use ciborium::value::Value;
 use crate::epid_quote::EpidSgxQuote;
-
 use enclave_ffi_types::NodeAuthResult;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -151,7 +150,7 @@ impl FromAttestationToken<Self> for EndorsedEpidAttestationReport {
 }
 
 impl AuthenticationMaterialVerify for EndorsedEpidAttestationReport {
-    fn verify(&self) -> Result<enclave_crypto::NodeAuthPublicKey, VerificationError> {
+    fn verify(&self) -> Result<NodeAuthPublicKey, VerificationError> {
         let validated = self
             .validate_report()
             .map_err(|_| VerificationError::ErrorGeneric)?;

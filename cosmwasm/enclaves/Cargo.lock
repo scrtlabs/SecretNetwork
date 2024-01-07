@@ -69,6 +69,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 
 [[package]]
+name = "attestation"
+version = "1.7.0"
+dependencies = [
+ "base64 0.13.1",
+ "enclave-ffi-types",
+ "enclave_crypto",
+ "hex",
+ "lazy_static",
+ "log",
+ "secret-attestation-token",
+ "serde 1.0.118",
+ "serde_json 1.0.60",
+ "sgx_tse",
+ "sgx_types",
+ "uuid 1.6.1",
+ "webpki",
+ "webpki-roots",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -115,6 +135,12 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
+
+[[package]]
+name = "base64"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
 
 [[package]]
 name = "base64"
@@ -503,6 +529,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dcap"
+version = "0.1.0"
+dependencies = [
+ "attestation",
+ "enclave_crypto",
+ "enclave_utils",
+ "log",
+ "secret-attestation-token",
+ "sgx_tcrypto",
+ "sgx_tse",
+ "sgx_types",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -619,6 +659,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "enclave-networking"
+version = "0.1.0"
+dependencies = [
+ "base64 0.13.1",
+ "httparse",
+ "log",
+ "rustls",
+ "sgx_tstd",
+ "sgx_types",
+ "webpki",
+ "webpki-roots",
+ "yasna",
+]
+
+[[package]]
 name = "enclave_contract_engine"
 version = "1.11.0"
 dependencies = [
@@ -727,6 +782,34 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
+]
+
+[[package]]
+name = "epid"
+version = "0.1.0"
+dependencies = [
+ "attestation",
+ "base64 0.13.1",
+ "enclave-ffi-types",
+ "enclave-networking",
+ "enclave_crypto",
+ "enclave_utils",
+ "hex",
+ "httparse",
+ "log",
+ "rustls",
+ "secret-attestation-token",
+ "serde 1.0.118",
+ "serde_json 1.0.60",
+ "sgx_rand",
+ "sgx_tcrypto",
+ "sgx_tse",
+ "sgx_tstd",
+ "sgx_types",
+ "uuid 1.6.1",
+ "webpki",
+ "webpki-roots",
+ "yasna",
 ]
 
 [[package]]
@@ -1479,20 +1562,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "secret-attestation-token"
+version = "0.1.0"
+dependencies = [
+ "base64 0.20.0",
+ "hex",
+ "serde 1.0.118",
+ "serde_json 1.0.60",
+]
+
+[[package]]
 name = "secret-enclave"
 version = "1.11.0"
 dependencies = [
+ "attestation",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=dc7389e10817b078f289386b3b6a852ab6c4c021)",
  "bit-vec",
  "block-verifier",
  "chrono",
  "ctor",
+ "dcap",
  "derive_more",
  "enclave-ffi-types",
  "enclave_contract_engine",
  "enclave_cosmos_types",
  "enclave_crypto",
  "enclave_utils",
+ "epid",
  "hex",
  "httparse",
  "itertools 0.8.2",
@@ -1502,6 +1598,7 @@ dependencies = [
  "parity-wasm 0.45.0",
  "pwasm-utils",
  "rustls",
+ "secret-attestation-token",
  "serde 1.0.118",
  "serde_json 1.0.60",
  "sgx_rand",
@@ -1511,7 +1608,7 @@ dependencies = [
  "sgx_types",
  "simple_logger",
  "time",
- "uuid",
+ "uuid 0.8.2",
  "webpki",
  "webpki-roots",
  "yasna",
@@ -2024,6 +2121,12 @@ name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+
+[[package]]
+name = "uuid"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e395fcf16a7a3d8127ec99782007af141946b4795001f876d54fb0d55978560"
 
 [[package]]
 name = "vec_map"
