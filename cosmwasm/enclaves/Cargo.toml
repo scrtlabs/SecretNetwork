@@ -9,8 +9,12 @@ members = [
   "shared/utils",
   "shared/cosmwasm-types/v1.0",
   "shared/cosmwasm-types/v0.10",
+  "shared/block-verifier",
   "shared/cosmwasm-types/generic",
-  "shared/block-verifier"
+  "shared/attestation",
+  "shared/epid",
+  "shared/dcap",
+  "shared/net"
 ]
 exclude = ["test"]
 

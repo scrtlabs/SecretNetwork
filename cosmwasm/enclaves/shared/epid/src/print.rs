@@ -48,7 +48,7 @@ pub unsafe fn print_platform_info(report: &AttestationReport) {
     if let Some(platform_info) = &report.platform_info_blob {
         let mut update_info = sgx_update_info_bit_t::default();
         let mut rt = sgx_status_t::default();
-        let res = ocall_get_update_info(
+        let res = crate::ocalls::ocall_get_update_info(
             &mut rt as *mut sgx_status_t,
             platform_info[4..].as_ptr() as *const sgx_platform_info_t,
             1,

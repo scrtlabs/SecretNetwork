@@ -1,0 +1,33 @@
+[package]
+name = "enclave-networking"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
+  "net"
+] }
+sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+
+[dependencies]
+webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
+webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", rev = "6ff3be547ac13ccd46ae55605ad6506ce30688ef" }
+log = "0.4.17"
+httparse = "1.8.0"
+base64 = "0.13.1"
+
+[dependencies.yasna]
+git = "https://github.com/mesalock-linux/yasna.rs-sgx"
+rev = "a1f50714cd3eb29608ecf7888cacedc173edfdb2"
+default-features = false
+features = ["bit-vec", "num-bigint", "chrono", "mesalock_sgx"]
+
+[dependencies.rustls]
+git = "https://github.com/mesalock-linux/rustls"
+rev = "95b5e79dc24b02f3ce424437eb9698509d0baf58"
+default-features = false
+features = ["dangerous_configuration", "mesalock_sgx"]

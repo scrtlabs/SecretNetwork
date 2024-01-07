@@ -1,10 +1,11 @@
 use log::*;
+use secret_attestation_token::AttestationType;
 
 use enclave_crypto::{consts::SIGNATURE_TYPE, CryptoError, KeyPair, Keychain, Seed};
 
 use sgx_types::c_int;
 
-use crate::registration::create_attestation_certificate;
+use epid::generate_authentication_material;
 use std::{
     io::{BufReader, ErrorKind, Read, Write},
     net::{SocketAddr, TcpStream},
@@ -135,7 +136,13 @@ fn get_challenge_from_service(
     kp: KeyPair,
 ) -> Result<Vec<u8>, CryptoError> {
     pub const CHALLENGE_ENDPOINT: &str = "/authenticate";
-    let (_, cert) = match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key, None) {
+    let cert = match generate_authentication_material(
+        &kp.get_pubkey(),
+        SIGNATURE_TYPE,
+        api_key,
+        AttestationType::SgxEpid,
+        None,
+    ) {
         Err(_) => {
             trace!("Failed to get certificate from intel for seed service");
             return Err(CryptoError::IntelCommunicationError);
@@ -143,7 +150,7 @@ fn get_challenge_from_service(
         Ok(res) => res,
     };
 
-    let serialized_cert = base64::encode(cert);
+    let serialized_cert = base64::encode(serde_json::to_string(&cert).unwrap());
 
     let req = format!("GET {} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
                       CHALLENGE_ENDPOINT,
@@ -195,11 +202,12 @@ fn get_seed_from_service(
     challenge: Vec<u8>,
 ) -> Result<Vec<u8>, CryptoError> {
     pub const SEED_ENDPOINT: &str = "/seed/";
-    let (_, cert) = match create_attestation_certificate(
-        &kp,
+    let cert = match generate_authentication_material(
+        &kp.get_pubkey(),
         SIGNATURE_TYPE,
         api_key,
-        Some(challenge.as_slice()),
+        AttestationType::SgxEpid,
+        None,
     ) {
         Err(_) => {
             trace!("Failed to get certificate from intel for seed service");
@@ -208,7 +216,7 @@ fn get_seed_from_service(
         Ok(res) => res,
     };
 
-    let serialized_cert = base64::encode(cert);
+    let serialized_cert = base64::encode(serde_json::to_string(&cert).unwrap());
 
     let req = format!("GET {}{} HTTP/1.1\r\nHOST: {}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
                       SEED_ENDPOINT, id,

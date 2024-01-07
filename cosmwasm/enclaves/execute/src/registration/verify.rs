@@ -2,6 +2,7 @@
 /// These functions run on-chain and must be deterministic across all nodes
 ///
 use log::*;
+use secret_attestation_token::{AttestationType, SecretAttestationToken, VerificationError};
 use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
@@ -14,14 +15,14 @@ use enclave_utils::{
     validate_const_ptr, validate_mut_ptr,
 };
 
-use super::cert::verify_ra_cert;
+// use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
 
 #[cfg(feature = "light-client-validation")]
 use enclave_contract_engine::check_cert_in_current_block;
 
 ///
-/// `ecall_authenticate_new_node`
+/// `ecall_legacy_verify_node_on_chain`
 ///
 /// This call is used to help new nodes register in the network. The function will authenticate the
 /// new node, based on a received certificate. If the node is authenticated successfully, the seed
@@ -35,10 +36,9 @@ use enclave_contract_engine::check_cert_in_current_block;
 /// # Safety
 /// Safety first
 #[no_mangle]
-pub unsafe extern "C" fn ecall_authenticate_new_node(
-    cert: *const u8,
-    cert_len: u32,
-    // seed structure 1 byte - length (96 or 48) | genesis seed bytes | current seed bytes (optional)
+pub unsafe extern "C" fn ecall_legacy_verify_node_on_chain(
+    auth_material: *const u8,
+    auth_material_len: u32,
     seed: &mut [u8; OUTPUT_ENCRYPTED_SEED_SIZE as usize],
 ) -> NodeAuthResult {
     if let Err(_err) = oom_handler::register_oom_handler() {
@@ -50,6 +50,16 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
 
     let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
+    validate_const_ptr!(
+        auth_material,
+        auth_material_len as usize,
+        NodeAuthResult::InvalidInput
+    );
+    let material: SecretAttestationToken = serde_json::from_slice(std::slice::from_raw_parts(
+        auth_material,
+        auth_material_len as usize,
+    ))
+        .unwrap();
 
     #[cfg(feature = "light-client-validation")]
     if !check_cert_in_current_block(cert_slice) {
@@ -58,7 +68,23 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         // verify certificate, and return the public key in the extra data of the report
-        let pk = verify_ra_cert(cert_slice, None, true)?;
+
+        let pk = match material.attestation_type {
+            #[cfg(feature = "SGX_MODE_HW")]
+            AttestationType::SgxEpid => epid::verify_authentication_material(&material),
+            #[cfg(feature = "dcap")]
+            AttestationType::SgxDcap => dcap::verify_authentication_material(&material),
+            #[cfg(not(feature = "SGX_MODE_HW"))]
+            AttestationType::SgxSw => epid::verify_authentication_material(&material),
+            _ => {
+                error!("Unsupported authentication type");
+                Err(VerificationError::ErrorGeneric)
+            }
+        }
+            .map_err(|_e| {
+                error!("Error verifying tx"); //todo: add more verifying error types and print
+                NodeAuthResult::InvalidInput
+            })?;
 
         // just make sure the length isn't wrong for some reason (certificate may be malformed)
         if pk.len() != PUBLIC_KEY_SIZE {

@@ -442,7 +442,7 @@ build-test-contracts:
 	# sudo apt update
 	# sudo apt install -y binaryen
 	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract
-	
+
 	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract.wasm
 	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/contract.wasm $(TEST_COMPUTE_MODULE_PATH)/contract.wasm
 
@@ -456,7 +456,7 @@ build-test-contracts:
 	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/too-high-initial-memory.wasm $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
 
 	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2
-	
+
 	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract-v2.wasm
 	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2/contract-v2.wasm $(TEST_COMPUTE_MODULE_PATH)/contract-v2.wasm
 

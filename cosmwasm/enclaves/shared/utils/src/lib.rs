@@ -20,3 +20,4 @@ pub mod validator_set;
 
 #[cfg(feature = "random")]
 pub mod random;
+pub mod sgx_errors;

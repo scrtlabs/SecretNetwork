@@ -36,6 +36,7 @@ light-client-validation = []
 go-tests = []
 random = []
 verify-validator-whitelist = []
+epid = ["cosmwasm-sgx-vm/epid"]
 
 [dependencies]
 cosmwasm-std = { package = "secret-cosmwasm-std", features = [

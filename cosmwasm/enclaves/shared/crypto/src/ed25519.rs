@@ -1,20 +1,21 @@
-use super::keys::DhKey;
-
-use super::traits::{AlignedMemory, ExportECKey, EC_256_PRIVATE_KEY_SIZE};
 use sgx_types::sgx_align_ec256_private_t;
-
-// use x25519_dalek;
 
 use crate::CryptoError;
 
+use super::keys::DhKey;
 use super::rng::rand_slice;
+use super::traits::{AlignedMemory, EC_256_PRIVATE_KEY_SIZE, ExportECKey};
 
 pub const SECRET_KEY_SIZE: usize = 32;
 pub const PUBLIC_KEY_SIZE: usize = 32;
 
+pub const ED25519_PUBLIC_KEY_SIZE: usize = 32;
+// pub const NODE_AUTH_PUBLIC_KEY_SIZE: usize = 32;
+
 type AlignedEc256PrivateKey = sgx_align_ec256_private_t;
 
-pub type Ed25519PublicKey = [u8; 32];
+pub type Ed25519PublicKey = [u8; ED25519_PUBLIC_KEY_SIZE];
+pub type NodeAuthPublicKey = Ed25519PublicKey;
 
 #[repr(C, align(64))]
 #[derive(Clone, Copy, Default)]

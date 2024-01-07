@@ -1,0 +1,34 @@
+[package]
+name = "attestation"
+version = "1.7.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["verify", "sgx"]
+verify = ["sgx"]
+sgx = ["sgx_tse", "sgx_types", "secret-attestation-token/sgx"]
+
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types", optional = true }
+sgx_tse = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tse", optional = true }
+
+[dependencies]
+
+secret-attestation-token = { path = "../../../packages/secret-attestation-token" }
+
+uuid = "1.2.2"
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+  "derive"
+] }
+serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+hex = "0.4.3"
+
+enclave-ffi-types = { path = "../../ffi-types" }
+enclave_crypto = { path = "../crypto" }
+log = "0.4.17"
+lazy_static = "1.4.0"
+base64 = "0.13.1"
+
+webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
+webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", rev = "6ff3be547ac13ccd46ae55605ad6506ce30688ef" }

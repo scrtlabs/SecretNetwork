@@ -25,7 +25,7 @@ use cosmwasm_sgx_vm::{
     features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_genesis_seed,
+    create_attestation_token, create_attestation_report_u, untrusted_get_encrypted_genesis_seed,
     untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
 };
 
@@ -204,7 +204,7 @@ pub extern "C" fn create_attestation_report(api_key: Buffer, err: Option<&mut Bu
         Some(r) => r,
     };
 
-    if let Err(status) = create_attestation_report_u(api_key_slice) {
+    if let Err(status) = create_attestation_token(api_key_slice) {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }

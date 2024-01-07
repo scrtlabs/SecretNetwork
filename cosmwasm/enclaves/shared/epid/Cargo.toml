@@ -1,0 +1,55 @@
+[package]
+name = "epid"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["SGX_MODE_HW"]
+SGX_MODE_HW = []
+SGX_MODE_SW = []
+
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
+  "backtrace",
+  "untrusted_time"
+] }
+sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
+sgx_tse = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tse" }
+sgx_tcrypto = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto" }
+sgx_rand = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand" }
+
+[dependencies]
+secret-attestation-token = { path = "../../../packages/secret-attestation-token", features = ["sgx"] }
+enclave_crypto = { path = "../crypto" }
+attestation = { path = "../attestation" }
+enclave-ffi-types = { path = "../../ffi-types" }
+enclave_utils = { path = "../utils" }
+enclave-networking = { path = "../net" }
+base64 = "0.13.1"
+hex = "0.4.3"
+log = "0.4.17"
+uuid = "1.2.2"
+httparse = { version = "1.8.0", default-features = false }
+
+serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
+  "derive"
+] }
+serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
+# ciborium = "0.2.0"
+
+webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
+webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", rev = "6ff3be547ac13ccd46ae55605ad6506ce30688ef" }
+
+
+[dependencies.yasna]
+git = "https://github.com/mesalock-linux/yasna.rs-sgx"
+rev = "a1f50714cd3eb29608ecf7888cacedc173edfdb2"
+default-features = false
+features = ["bit-vec", "num-bigint", "chrono", "mesalock_sgx"]
+
+[dependencies.rustls]
+git = "https://github.com/mesalock-linux/rustls"
+rev = "95b5e79dc24b02f3ce424437eb9698509d0baf58"
+default-features = false
+features = ["dangerous_configuration", "mesalock_sgx"]

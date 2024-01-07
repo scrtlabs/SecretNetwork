@@ -28,18 +28,19 @@ enclave {
             uint32_t api_key_len
         );
 
-        public sgx_status_t ecall_key_gen(
+        public sgx_status_t ecall_generate_registration_key(
             [out, count=32] uint8_t* public_key
         );
 
-        public sgx_status_t ecall_get_attestation_report(
+        public sgx_status_t ecall_generate_authentication_material(
             [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len
+            uint32_t api_key_len,
+            uint8_t auth_type
         );
 
-        public NodeAuthResult ecall_authenticate_new_node(
-            [in, count=cert_len] const uint8_t* cert,
-            uintptr_t cert_len,
+        public NodeAuthResult ecall_legacy_verify_node_on_chain(
+            [in, count=auth_material_len] const uint8_t* auth_material,
+            uintptr_t auth_material_len,
             [out, count=96] uint8_t* seed
         );
 
@@ -155,10 +156,10 @@ enclave {
             [in, count=in_encrypted_random_len] const uint8_t* in_encrypted_random,
             uintptr_t in_encrypted_random_len,
             [out, count=32] uint8_t* decrypted
-      //      [in, count=in_validator_set_len] const uint8_t* in_validator_set,
-    //        uintptr_t in_validator_set_len,
-  //          [in, count=in_next_validator_set_len] const uint8_t* in_next_validator_set,
-//            uintptr_t in_next_validator_set_len
+//          [in, count=in_validator_set_len] const uint8_t* in_validator_set,
+//          uintptr_t in_validator_set_len,
+//          [in, count=in_next_validator_set_len] const uint8_t* in_next_validator_set,
+//          uintptr_t in_next_validator_set_len
         );
     };
 
@@ -219,10 +220,10 @@ enclave {
             [out] sgx_epid_group_id_t *ret_gid
         );
 
-        sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
-        sgx_status_t ocall_get_sn_tss_socket([out] int *ret_fd);
+        // sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
+        // sgx_status_t ocall_get_sn_tss_socket([out] int *ret_fd);
 
-        sgx_status_t ocall_get_quote(
+        sgx_status_t ocall_get_quote_epid(
             [in, size=sigrl_len] uint8_t * p_sigrl,
             uint32_t sigrl_len,
             [in] sgx_report_t *report,

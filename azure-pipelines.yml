@@ -13,7 +13,7 @@ jobs:
 - job: RunTests
   displayName: Run Hardware Tests
   timeoutInMinutes: 120
-  pool: 
+  pool:
     name: "sgx scale set new"
   workspace:
     clean: all # what to clean up before the job runs
@@ -45,7 +45,7 @@ jobs:
           $(tag)
           latest
         buildContext: .
-        arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES=$(FEATURES) --target compile-secretd
+        arguments: --secret id=API_KEY,src=api_key.txt --secret id=SPID,src=spid.txt --cache-from $(baseImageRepository) --build-arg SGX_MODE=$(SGX_MODE) --build-arg FEATURES_U=epid --build-arg FEATURES=$(FEATURES) --target compile-secretd
         dockerfile: '$(dockerfilePath)'
 
     - task: Docker@2
