@@ -422,12 +422,13 @@ pub unsafe extern "C" fn ecall_init_node(
 // ///
 // /// This function happens off-chain
 // ///
-// #[no_mangle]
-// pub unsafe extern "C" fn ecall_get_genesis_seed(
-//     pk: *const u8,
-//     pk_len: u32,
-//     seed: &mut [u8; SINGLE_ENCRYPTED_SEED_SIZE],
-// ) -> sgx_types::sgx_status_t {
+#[no_mangle]
+pub unsafe extern "C" fn ecall_get_genesis_seed(
+    pk: *const u8,
+    pk_len: u32,
+    seed: &mut [u8; SINGLE_ENCRYPTED_SEED_SIZE],
+) -> sgx_types::sgx_status_t {
+    panic!("not implemented yet");
 //     validate_mut_ptr!(
 //         seed.as_mut_ptr(),
 //         seed.len(),
@@ -477,4 +478,4 @@ pub unsafe extern "C" fn ecall_init_node(
 //         warn!("Enclave call ecall_get_genesis_seed panic!");
 //         sgx_status_t::SGX_ERROR_UNEXPECTED
 //     }
-// }
+}

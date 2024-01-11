@@ -190,40 +190,40 @@ pub unsafe extern "C" fn ecall_generate_authentication_material(
     sgx_status_t::SGX_SUCCESS
 }
 
-//
-// ///
-// /// This function generates the registration_key, which is used in the attestation and registration
-// /// process
-// ///
-// #[no_mangle]
-// pub unsafe extern "C" fn ecall_generate_registration_key(
-//     public_key: &mut [u8; PUBLIC_KEY_SIZE],
-// ) -> sgx_types::sgx_status_t {
-//     if let Err(_e) = validate_mut_slice(public_key) {
-//         return sgx_status_t::SGX_ERROR_UNEXPECTED;
-//     }
-//
-//     let mut key_manager = Keychain::new();
-//     if let Err(_e) = key_manager.create_registration_key() {
-//         error!("Failed to create registration key");
-//         return sgx_status_t::SGX_ERROR_UNEXPECTED;
-//     };
-//
-//     let reg_key = key_manager.get_registration_key();
-//
-//     if reg_key.is_err() {
-//         error!("Failed to unlock node key. Please make sure the file is accessible or reinitialize the node");
-//         return sgx_status_t::SGX_ERROR_UNEXPECTED;
-//     }
-//
-//     let pubkey = reg_key.unwrap().get_pubkey();
-//     public_key.clone_from_slice(&pubkey);
-//     trace!(
-//         "ecall_generate_registration_key key pk: {:?}",
-//         public_key.to_vec()
-//     );
-//     sgx_status_t::SGX_SUCCESS
-// }
+
+///
+/// This function generates the registration_key, which is used in the attestation and registration
+/// process
+///
+#[no_mangle]
+pub unsafe extern "C" fn ecall_generate_registration_key(
+    public_key: &mut [u8; PUBLIC_KEY_SIZE],
+) -> sgx_types::sgx_status_t {
+    if let Err(_e) = validate_mut_slice(public_key) {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    let mut key_manager = Keychain::new();
+    if let Err(_e) = key_manager.create_registration_key() {
+        error!("Failed to create registration key");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
+
+    let reg_key = key_manager.get_registration_key();
+
+    if reg_key.is_err() {
+        error!("Failed to unlock node key. Please make sure the file is accessible or reinitialize the node");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    let pubkey = reg_key.unwrap().get_pubkey();
+    public_key.clone_from_slice(&pubkey);
+    trace!(
+        "ecall_generate_registration_key key pk: {:?}",
+        public_key.to_vec()
+    );
+    sgx_status_t::SGX_SUCCESS
+}
 
 // #[cfg(not(feature = "SGX_MODE_HW"))]
 // pub fn create_attestation_certificate(

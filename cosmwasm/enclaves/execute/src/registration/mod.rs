@@ -1,5 +1,7 @@
-pub use attestation::create_attestation_certificate;
-pub use offchain::{ecall_get_attestation_report, ecall_init_bootstrap, ecall_init_node};
+// pub use attestation::create_attestation_certificate;
+pub use offchain::{ecall_init_bootstrap, ecall_init_node};
+pub use verify::ecall_legacy_verify_node_on_chain;
+
 // pub use onchain::ecall_authenticate_new_node;
 
 mod attestation;
@@ -19,6 +21,7 @@ mod seed_exchange;
 
 pub mod check_patch_level;
 pub mod seed_service;
+mod verify;
 
 #[cfg(feature = "test")]
 pub mod tests {

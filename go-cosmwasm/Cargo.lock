@@ -59,9 +59,15 @@ checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
 name = "base64"
-version = "0.21.3"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "414dcefbc63d77c526a76b3afcf6fbb9b5e2791c19c3aa2297733208750c6e53"
+checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
+
+[[package]]
+name = "base64"
+version = "0.21.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c79fed4cdb43e993fcdadc7e58a09fd0e3e649c4436fa11da71c9f1f3ee7feb9"
 
 [[package]]
 name = "bitflags"
@@ -88,7 +94,7 @@ dependencies = [
  "log",
  "proc-macro2",
  "quote",
- "serde",
+ "serde 1.0.188",
  "serde_json",
  "syn 1.0.107",
  "tempfile",
@@ -106,7 +112,7 @@ dependencies = [
  "log",
  "proc-macro2",
  "quote",
- "serde",
+ "serde 1.0.188",
  "serde_json",
  "syn 1.0.107",
  "tempfile",
@@ -144,7 +150,7 @@ dependencies = [
 name = "cosmwasm-sgx-vm"
 version = "0.10.0"
 dependencies = [
- "base64 0.21.3",
+ "base64 0.21.6",
  "enclave-ffi-types",
  "hex",
  "lazy_static",
@@ -153,8 +159,9 @@ dependencies = [
  "num_cpus",
  "parity-wasm",
  "parking_lot",
+ "secret-attestation-token",
  "secret-cosmwasm-std",
- "serde",
+ "serde 1.0.188",
  "serde_json",
  "sgx_types",
  "sgx_urts",
@@ -291,7 +298,7 @@ dependencies = [
  "errno",
  "log",
  "secret-cosmwasm-std",
- "serde",
+ "serde 1.0.188",
  "serde_json",
  "sgx_edl",
  "simple_logger",
@@ -545,7 +552,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be77ed66abed6954aabf6a3e31a84706bedbf93750d267e92ef4a6d90bbd6a61"
 dependencies = [
  "schemars_derive",
- "serde",
+ "serde 1.0.188",
  "serde_json",
 ]
 
@@ -568,6 +575,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
+name = "secret-attestation-token"
+version = "0.1.0"
+dependencies = [
+ "base64 0.20.0",
+ "hex",
+ "serde 1.0.118",
+]
+
+[[package]]
 name = "secret-cosmwasm-std"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -575,9 +591,17 @@ checksum = "f5d4b8fed972d924458d9c3c0e6c9fbf6c4c5e30655571e3d2b78be056d316e9"
 dependencies = [
  "base64 0.11.0",
  "schemars",
- "serde",
+ "serde 1.0.188",
  "serde-json-wasm",
  "snafu",
+]
+
+[[package]]
+name = "serde"
+version = "1.0.118"
+source = "git+https://github.com/mesalock-linux/serde-sgx#db0226f1d5d70fca6b96af2c285851502204e21c"
+dependencies = [
+ "serde_derive 1.0.118",
 ]
 
 [[package]]
@@ -586,7 +610,7 @@ version = "1.0.188"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf9e0fcba69a370eed61bcf2b728575f726b50b55cba78064753d708ddc7549e"
 dependencies = [
- "serde_derive",
+ "serde_derive 1.0.188",
 ]
 
 [[package]]
@@ -595,7 +619,17 @@ version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "120bad73306616e91acd7ceed522ba96032a51cffeef3cc813de7f367df71e37"
 dependencies = [
- "serde",
+ "serde 1.0.188",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.118"
+source = "git+https://github.com/mesalock-linux/serde-sgx#db0226f1d5d70fca6b96af2c285851502204e21c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.107",
 ]
 
 [[package]]
@@ -628,7 +662,7 @@ checksum = "164eacbdb13512ec2745fb09d51fd5b22b0d65ed294a1dcf7285a360c80a675c"
 dependencies = [
  "itoa",
  "ryu",
- "serde",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -774,7 +808,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
 dependencies = [
- "serde",
+ "serde 1.0.188",
 ]
 
 [[package]]

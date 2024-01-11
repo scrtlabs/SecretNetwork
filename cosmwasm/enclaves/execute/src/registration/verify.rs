@@ -47,9 +47,7 @@ pub unsafe extern "C" fn ecall_legacy_verify_node_on_chain(
     }
 
     validate_mut_ptr!(seed.as_mut_ptr(), seed.len(), NodeAuthResult::InvalidInput);
-    validate_const_ptr!(cert, cert_len as usize, NodeAuthResult::InvalidInput);
 
-    let cert_slice = std::slice::from_raw_parts(cert, cert_len as usize);
     validate_const_ptr!(
         auth_material,
         auth_material_len as usize,

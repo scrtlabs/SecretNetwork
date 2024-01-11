@@ -1,7 +1,6 @@
-use enclave_ffi_types::{HealthCheckResult, INPUT_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE, NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE};
+use enclave_ffi_types::{HealthCheckResult, INPUT_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_DOUBLE_ENCRYPTED_SEED_SIZE, NEWLY_FORMED_SINGLE_ENCRYPTED_SEED_SIZE, SINGLE_ENCRYPTED_SEED_SIZE, NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE};
 use sgx_types::*;
-
-use log::{error, info};
+use log::{error, info, debug};
 
 use crate::enclave::ENCLAVE_DOORBELL;
 
@@ -37,6 +36,13 @@ extern "C" {
     pub fn ecall_health_check(
         eid: sgx_enclave_id_t,
         retval: *mut HealthCheckResult,
+    ) -> sgx_status_t;
+    pub fn ecall_get_genesis_seed(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        pk: *const u8,
+        pk_len: u32,
+        seed: &mut [u8; SINGLE_ENCRYPTED_SEED_SIZE as usize],
     ) -> sgx_status_t;
 }
 
@@ -231,4 +237,41 @@ pub fn untrusted_get_encrypted_seed(
     }
 
     Ok(Ok(seed))
+}
+
+pub fn untrusted_get_encrypted_genesis_seed(
+    pk: &[u8],
+) -> SgxResult<[u8; SINGLE_ENCRYPTED_SEED_SIZE as usize]> {
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+    let eid = enclave.geteid();
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+
+    let mut seed = [0u8; SINGLE_ENCRYPTED_SEED_SIZE as usize];
+    let status = unsafe {
+        ecall_get_genesis_seed(eid, &mut retval, pk.as_ptr(), pk.len() as u32, &mut seed)
+    };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        debug!("Error from get genesis seed");
+        return Err(status);
+    }
+
+    if retval != sgx_status_t::SGX_SUCCESS {
+        debug!("Error from get genesis seed, bad NodeAuthResult");
+        return Err(retval);
+    }
+
+    debug!("Done getting genesis seed, got seed: {:?}", seed);
+
+    if seed.is_empty() {
+        error!("Got empty seed from encryption");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
+
+    Ok(seed)
 }
