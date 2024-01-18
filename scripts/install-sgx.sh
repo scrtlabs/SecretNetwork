@@ -52,7 +52,7 @@ install_sdk(){
 
     wget -O sgx_linux_x64_sdk_2.17.101.1.bin "https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/sgx_linux_x64_sdk_2.17.101.1.bin"
     chmod +x ./sgx_linux_x64_sdk_*.bin
-    (echo no; echo /opt/intel/) | ./sgx_linux_x64_sdk_2.13.100.4.bin
+    (echo no; echo /opt/intel/) | ./sgx_linux_x64_sdk_2.17.101.1.bin
     echo "source '/opt/intel/sgxsdk/environment'" | tee -a "$HOME/.bashrc" "$HOME/.zshrc" > /dev/null
 }
 
