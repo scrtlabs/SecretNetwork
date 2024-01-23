@@ -31,7 +31,7 @@ jobs:
           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - name: Cache build artifacts
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -149,7 +149,7 @@ jobs:
         os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Build CLI
@@ -166,7 +166,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Install xgo

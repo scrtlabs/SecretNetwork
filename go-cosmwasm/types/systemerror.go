@@ -90,8 +90,8 @@ func (e ExceededRecursionLimit) Error() string {
 	return "unknown system error"
 }
 
-// ToSystemError will try to convert the given error to an SystemError.
-// This is important to returning any Go error back to Rust.
+// ToSystemError will try to convert the given error to a SystemError.
+// This is important for returning any Go error back to Rust.
 //
 // If it is already StdError, return self.
 // If it is an error, which could be a sub-field of StdError, embed it.
