@@ -4,7 +4,7 @@ go 1.21
 
 replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.13-0.20230802150248-ea64f27dc58d
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.13-0.20240123105116-fa873fadfa55
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
