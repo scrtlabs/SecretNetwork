@@ -1,12 +1,13 @@
-PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
+# SPID and API_KEY are used for Intel SGX attestation
 SPID ?= 00000000000000000000000000000000
 API_KEY ?= FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
+# Environment variables and build tags setup
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -22,24 +23,23 @@ DOCKER_TAG ?= latest
 
 TM_SGX ?= true
 
+# Paths for contracts and modules
 CW_CONTRACTS_V010_PATH = ./cosmwasm/contracts/v010/
 CW_CONTRACTS_V1_PATH = ./cosmwasm/contracts/v1/
-
 TEST_CONTRACT_V010_PATH = ./cosmwasm/contracts/v010/compute-tests
 TEST_CONTRACT_V1_PATH = ./cosmwasm/contracts/v1/compute-tests
-
 TEST_COMPUTE_MODULE_PATH = ./x/compute/internal/keeper/testdata/
-
 ENCLAVE_PATH = cosmwasm/enclaves/
 EXECUTE_ENCLAVE_PATH = $(ENCLAVE_PATH)/execute/
+
+# Determine if Docker Buildx is available for multi-platform builds
 DOCKER_BUILD_ARGS ?=
-
 DOCKER_BUILDX_CHECK = $(@shell docker build --load test)
-
 ifeq (Building,$(findstring Building,$(DOCKER_BUILDX_CHECK)))
 	DOCKER_BUILD_ARGS += "--load"
 endif
 
+# Check and set the SGX_MODE to either HW or SW, error if not set
 ifeq ($(SGX_MODE), HW)
 	ext := hw
 else ifeq ($(SGX_MODE), SW)
@@ -48,6 +48,7 @@ else
 $(error SGX_MODE must be either HW or SW)
 endif
 
+# Set CGO flags based on the selected database backend (unused - currently only cleveldb is supported)
 ifeq ($(DB_BACKEND), rocksdb)
 	DB_BACKEND = rocksdb
 	DOCKER_CGO_LDFLAGS = "-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy"
@@ -63,6 +64,7 @@ endif
 
 CUR_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+# Build tags setup for various configurations like ledger, database, etc.
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
   ifeq ($(OS),Windows_NT)
@@ -120,6 +122,7 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
+# Linker flags to embed version information and other metadata into the binaries
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
 	-X github.com/scrtlabs/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
@@ -151,6 +154,7 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
+# Build the CLI tool
 build_cli:
 	go build -o secretcli -mod=readonly -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
@@ -173,6 +177,7 @@ build-tm-secret-enclave:
 	rustup component add rust-src
 	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
 
+# Targets for building the cli on various platforms like Windows, macOS, Linux
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
 	sudo mv github.com/scrtlabs/SecretNetwork-windows-* secretcli-windows-amd64.exe
@@ -195,6 +200,7 @@ build_linux_arm64_cli:
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
+# Build Debian package
 deb: build-linux deb-no-compile
 
 deb-no-compile:
@@ -226,6 +232,7 @@ deb-no-compile:
 	dpkg-deb --build /tmp/SecretNetwork/deb/ .
 	-rm -rf /tmp/SecretNetwork
 
+# Clean up generated files and reset the environment
 clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
@@ -247,6 +254,11 @@ clean:
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract clean
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2 clean
 
+###############################################################################
+###                         Dockerized Build Targets                        ###
+###############################################################################
+
+# Build localsecret - dockerized local chain for development and testing. In this version SGX is ran in software/simulation mode
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
 			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation" \
@@ -309,6 +321,7 @@ build-testnet:
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
+# special targets for building a deb package that compiles a new secretd but takes the enclaves from the latest package - used for upgrades when we don't want to replace the enclave
 build-mainnet-upgrade:
 	@mkdir build 2>&3 || true
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
@@ -336,6 +349,8 @@ build-mainnet-upgrade:
 				 -t deb_build \
 				 --target build-deb-mainnet .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
+
+# full mainnet build - will end up with a .deb package in the ./build folder
 build-mainnet:
 	@mkdir build 2>&3 || true
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production,random, ${FEATURES}" \
@@ -367,6 +382,7 @@ build-mainnet:
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
+# Build the hardware compatability checker - this is a binary that just runs attestation and provides details on the result
 build-check-hw-tool:
 	@mkdir build 2>&3 || true
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="${FEATURES}" \
@@ -383,23 +399,22 @@ build-check-hw-tool:
                  -t compile-check-hw-tool \
                  --target compile-check-hw-tool .
 
-# while developing:
+###############################################################################
+###                         Local Build Targets                             ###
+###############################################################################
+
 build-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) enclave
 
-# while developing:
 check-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) check
 
-# while developing:
 clippy-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) clippy
 
-# while developing:
 clean-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) clean
 
-# while developing:
 clippy: clippy-enclave
 	$(MAKE) -C check-hw clippy
 
