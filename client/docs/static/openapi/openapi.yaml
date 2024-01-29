@@ -38971,7 +38971,7 @@ paths:
                         type: string
                         example: "26354"
                       tags:
-                        tyDeprecated: array
+                        type: array
                         items:
                           type: object
                           properties:
@@ -39122,7 +39122,7 @@ paths:
                               type: string
                               example: "26354"
                             tags:
-                              tyDeprecated: array
+                              type: array
                               items:
                                 type: object
                                 properties:
@@ -39232,7 +39232,7 @@ paths:
                       log:
                         type: string
                       tags:
-                        tyDeprecated: array
+                        type: array
                         items:
                           type: object
                           properties:
@@ -39266,7 +39266,7 @@ paths:
                       log:
                         type: string
                       tags:
-                        tyDeprecated: array
+                        type: array
                         items:
                           type: object
                           properties:
@@ -43277,15 +43277,13 @@ paths:
               schema:
                 type: object
                 properties:
-                  type: object
-                  properties:
-                    height:
-                      type: string
-                    result:
-                      type: object
-                      properties:
-                        ioExchPubkey:
-                          type: string
+                  height:
+                    type: string
+                  result:
+                    type: object
+                    properties:
+                      ioExchPubkey:
+                        type: string
         "404":
           description: Not Found
 components:
@@ -69089,7 +69087,7 @@ components:
         log:
           type: string
         tags:
-          tyDeprecated: array
+          type: array
           items:
             type: object
             properties:
@@ -69123,7 +69121,7 @@ components:
         log:
           type: string
         tags:
-          tyDeprecated: array
+          type: array
           items:
             type: object
             properties:
@@ -69160,7 +69158,7 @@ components:
             log:
               type: string
             tags:
-              tyDeprecated: array
+              type: array
               items:
                 type: object
                 properties:
@@ -69194,7 +69192,7 @@ components:
             log:
               type: string
             tags:
-              tyDeprecated: array
+              type: array
               items:
                 type: object
                 properties:
@@ -69313,7 +69311,7 @@ components:
               type: string
               example: "26354"
             tags:
-              tyDeprecated: array
+              type: array
               items:
                 type: object
                 properties:
@@ -69408,7 +69406,7 @@ components:
                     type: string
                     example: "26354"
                   tags:
-                    tyDeprecated: array
+                    type: array
                     items:
                       type: object
                       properties:
