@@ -160,6 +160,22 @@ enclave {
   //          [in, count=in_next_validator_set_len] const uint8_t* in_next_validator_set,
 //            uintptr_t in_next_validator_set_len
         );
+
+        public SdkBeginBlockerResult ecall_app_begin_blocker(
+            [in, count=in_roots_len] const uint8_t* in_roots,
+            uintptr_t in_roots_len,
+            [in, count=in_compute_root_len] const uint8_t* in_compute_root,
+            uintptr_t in_compute_root_len
+        );
+
+
+        //public sgx_status_t ecall_submit_store_roots(
+        //    [in, count=in_roots_len] const uint8_t* in_roots,
+        //    uintptr_t in_roots_len,
+        //    [in, count=in_compute_root_len] const uint8_t* in_compute_root,
+        //    uintptr_t in_compute_root_len
+        //);
+
     };
 
     untrusted {
@@ -172,7 +188,10 @@ enclave {
             Ctx context,
             [out] UntrustedVmError* vm_error,
             [out] uint64_t* gas_used,
+            uint64_t block_height,
             [out] EnclaveBuffer* value,
+            [out] EnclaveBuffer* proof,
+            [out] EnclaveBuffer* mp_key,
             [in, count=key_len] const uint8_t* key,
             uintptr_t key_len
         ) allow (ecall_allocate);

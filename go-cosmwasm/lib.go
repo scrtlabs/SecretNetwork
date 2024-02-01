@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -17,7 +18,7 @@ type CodeHash []byte
 type WasmCode []byte
 
 // KVStore is a reference to some sub-kvstore that is valid for one instance of a code
-type KVStore = api.KVStore
+type KVStore = sdk.KVStore
 
 // GoAPI is a reference to some "precompiles", go callbacks
 type GoAPI = api.GoAPI

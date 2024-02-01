@@ -42,6 +42,7 @@ include = [
     "OcallReturn",
     "HealthCheckResult",
     "RuntimeConfiguration",
+    "SdkBeginBlockerResult"
 ]
 exclude = []
 prefix = ""
@@ -75,7 +76,7 @@ derive_gte = false
 rename_variants = "None"
 # must_use = "MUST_USE_ENUM"
 add_sentinel = false
-prefix_with_name = false
+prefix_with_name = true
 derive_helper_methods = false
 derive_const_casts = false
 derive_mut_casts = false

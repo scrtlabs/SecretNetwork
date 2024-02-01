@@ -6,8 +6,10 @@
 extern crate sgx_tstd as std;
 
 extern crate sgx_rand;
+extern crate alloc;
 extern crate sgx_types;
 
+mod block_cache;
 mod contract_operations;
 mod contract_validation;
 mod cosmwasm_config;
@@ -30,12 +32,14 @@ pub(crate) mod types;
 #[cfg(feature = "wasm3")]
 pub mod wasm3;
 
+pub use block_cache::clear_block_cache;
 pub use contract_operations::{handle, init, query};
 #[cfg(feature = "light-client-validation")]
 pub use contract_validation::{check_cert_in_current_block, check_tx_in_current_block};
 
 #[cfg(feature = "test")]
 pub mod tests {
+    use crate::block_cache;
     use crate::types;
 
     /// Catch failures like the standard test runner, and print similar information per test.
@@ -62,6 +66,9 @@ pub mod tests {
 
         count_failures!(failures, {
             types::tests::test_new_from_slice();
+            block_cache::tests::test_insert_into_cachemap();
+            block_cache::tests::test_merge_into_cachemap();
+            block_cache::tests::test_clear_cachemap();
         });
 
         if failures != 0 {

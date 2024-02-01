@@ -2,21 +2,19 @@ use enclave_crypto::consts::{
     CONSENSUS_SEED_VERSION, ENCRYPTED_KEY_MAGIC_BYTES, STATE_ENCRYPTION_VERSION,
 };
 use enclave_crypto::key_manager::SeedsHolder;
-use log::*;
-
-use sgx_types::sgx_status_t;
-
-use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
-
 use enclave_crypto::{sha_256, AESKey, Kdf, SIVEncryptable, KEY_MANAGER};
+use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError};
+use enclave_utils::kv_cache::KvCache;
+use log::*;
+#[cfg(feature = "read-verifier")]
+use read_verifier::read_proofs::{comm_proof_from_bytes, verify_read};
+use serde::{Deserialize, Serialize};
+use sgx_types::sgx_status_t;
 
 use crate::external::{ecalls, ocalls};
 
-use enclave_utils::kv_cache::KvCache;
-
 use super::contract_validation::ContractKey;
 use super::errors::WasmEngineError;
-use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct EncryptedKey {
@@ -156,6 +154,7 @@ pub fn read_from_encrypted_state(
     has_write_permissions: bool,
     kv_cache: &mut KvCache,
     encryption_salt: &[u8],
+    block_height: u64,
 ) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     // Try reading with the new encryption format
     let encrypted_key = EncryptedKey {
@@ -168,33 +167,39 @@ pub fn read_from_encrypted_state(
 
     let mut maybe_plaintext_value: Option<Vec<u8>>;
     let gas_used_first_read: u64;
-    (maybe_plaintext_value, gas_used_first_read) = match read_db(context, &encrypted_key_bytes) {
-        Ok((maybe_encrypted_value_bytes, gas_used)) => match maybe_encrypted_value_bytes {
-            Some(encrypted_value_bytes) => {
-                let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
-                    warn!(
-                        "read_db() got an error while trying to read_from_encrypted_state the value {:?} for key {:?}, stopping wasm: {:?}",
-                        encrypted_value_bytes,
-                        encrypted_key_bytes,
-                        err.to_string()
-                    );
-                    WasmEngineError::DecryptionError
-                })?;
+    (maybe_plaintext_value, gas_used_first_read) = match read_db(
+        context,
+        &encrypted_key_bytes,
+        block_height,
+    ) {
+        Ok((maybe_encrypted_value_bytes, gas_used)) => {
+            match maybe_encrypted_value_bytes {
+                Some(encrypted_value_bytes) => {
+                    let encrypted_value: EncryptedValue = bincode2::deserialize(&encrypted_value_bytes).map_err(|err| {
+                        warn!(
+                            "read_db() got an error while trying to read_from_encrypted_state the value {:?} for key {:?}, stopping wasm: {:?}",
+                            encrypted_value_bytes,
+                            encrypted_key_bytes,
+                            err.to_string()
+                        );
+                        WasmEngineError::DecryptionError
+                    })?;
 
-                match decrypt_value_new(
-                    &encrypted_key.data,
-                    &encrypted_value.data,
-                    contract_key,
-                    &encrypted_value.salt,
-                ) {
-                    Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
-                    // This error case is why we have all the matches here.
-                    // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
-                    Err(err) => Err(err),
+                    match decrypt_value_new(
+                        &encrypted_key.data,
+                        &encrypted_value.data,
+                        contract_key,
+                        &encrypted_value.salt,
+                    ) {
+                        Ok(plaintext_value) => Ok((Some(plaintext_value), gas_used)),
+                        // This error case is why we have all the matches here.
+                        // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
+                        Err(err) => Err(err),
+                    }
                 }
+                None => Ok((None, gas_used)),
             }
-            None => Ok((None, gas_used)),
-        },
+        }
         Err(err) => Err(err),
     }?;
 
@@ -211,23 +216,30 @@ pub fn read_from_encrypted_state(
     );
 
     let gas_used_second_read: u64;
-    (maybe_plaintext_value, gas_used_second_read) = match read_db(context, &scrambled_field_name) {
-        Ok((encrypted_value, gas_used)) => match encrypted_value {
-            Some(plaintext_value) => {
-                match decrypt_value_old(&scrambled_field_name, &plaintext_value, contract_key) {
-                    Ok(plaintext_value) => {
-                        let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
-                        Ok((Some(plaintext_value), gas_used))
+    (maybe_plaintext_value, gas_used_second_read) =
+        match read_db(context, &scrambled_field_name, block_height) {
+            Ok((encrypted_value, gas_used)) => {
+                match encrypted_value {
+                    Some(plaintext_value) => {
+                        match decrypt_value_old(
+                            &scrambled_field_name,
+                            &plaintext_value,
+                            contract_key,
+                        ) {
+                            Ok(plaintext_value) => {
+                                let _ = kv_cache.store_in_ro_cache(plaintext_key, &plaintext_value);
+                                Ok((Some(plaintext_value), gas_used))
+                            }
+                            // This error case is why we have all the matches here.
+                            // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
+                            Err(err) => Err(err),
+                        }
                     }
-                    // This error case is why we have all the matches here.
-                    // If we successfully collected a value, but failed to decrypt it, then we propagate that error.
-                    Err(err) => Err(err),
+                    None => Ok((None, gas_used)),
                 }
             }
-            None => Ok((None, gas_used)),
-        },
-        Err(err) => Err(err),
-    }?;
+            Err(err) => Err(err),
+        }?;
 
     let mut gas_used_write: u64 = 0;
     if has_write_permissions {
@@ -298,19 +310,30 @@ fn field_name_digest(field_name: &[u8], contract_key: &ContractKey) -> [u8; 32] 
 }
 
 /// Safe wrapper around reads from the contract storage
-fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
+#[allow(clippy::type_complexity)]
+fn read_db(
+    context: &Ctx,
+    key: &[u8],
+    block_height: u64,
+) -> Result<(Option<Vec<u8>>, u64), WasmEngineError> {
     let mut ocall_return = OcallReturn::Success;
-    let mut enclave_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
+    let mut value_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
+    let mut proof_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
+    let mut mp_key_buffer = std::mem::MaybeUninit::<EnclaveBuffer>::uninit();
     let mut vm_err = UntrustedVmError::default();
     let mut gas_used = 0_u64;
 
-    let value = unsafe {
+    #[allow(unused_variables)]
+    let (value, proof, mp_key): (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>) = unsafe {
         let status = ocalls::ocall_read_db(
             (&mut ocall_return) as *mut _,
             context.unsafe_clone(),
             (&mut vm_err) as *mut _,
             (&mut gas_used) as *mut _,
-            enclave_buffer.as_mut_ptr(),
+            block_height,
+            value_buffer.as_mut_ptr(),
+            proof_buffer.as_mut_ptr(),
+            mp_key_buffer.as_mut_ptr(),
             key.as_ptr(),
             key.len(),
         );
@@ -327,8 +350,21 @@ fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngi
 
         match ocall_return {
             OcallReturn::Success => {
-                let enclave_buffer = enclave_buffer.assume_init();
-                ecalls::recover_buffer(enclave_buffer)?
+                let value_buffer = value_buffer.assume_init();
+
+                #[cfg(feature = "read-db-proofs")]
+                {
+                    let proof_buffer = proof_buffer.assume_init();
+                    let mp_key_buffer = mp_key_buffer.assume_init();
+                    (
+                        ecalls::recover_buffer(value_buffer)?,
+                        ecalls::recover_buffer(proof_buffer)?,
+                        ecalls::recover_buffer(mp_key_buffer)?,
+                    )
+                }
+
+                #[cfg(not(feature = "read-db-proofs"))]
+                (ecalls::recover_buffer(value_buffer)?, None, None)
             }
             OcallReturn::Failure => {
                 return Err(WasmEngineError::FailedOcall(vm_err));
@@ -336,6 +372,19 @@ fn read_db(context: &Ctx, key: &[u8]) -> Result<(Option<Vec<u8>>, u64), WasmEngi
             OcallReturn::Panic => return Err(WasmEngineError::Panic),
         }
     };
+
+    #[cfg(feature = "read-db-proofs")]
+    if let (Some(proof), Some(mp_key)) = (proof, mp_key) {
+        let comm_proof =
+            comm_proof_from_bytes(&proof).map_err(|_| WasmEngineError::HostMisbehavior)?;
+        if !verify_read(&mp_key, value.clone(), &comm_proof) {
+            error!("could not verify merkle proof");
+            return Err(WasmEngineError::HostMisbehavior);
+        }
+        debug!("proof verified!");
+    } else {
+        return Err(WasmEngineError::HostMisbehavior);
+    }
 
     Ok((value, gas_used))
 }

@@ -104,7 +104,8 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DB_vtable {
-  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*, Buffer*);
+  int32_t (*read_db_no_proof)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*, Buffer*);
+  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, uint64_t, Buffer, Buffer*, Buffer*, Buffer*, Buffer*);
   int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, Buffer*);
   int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
   int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, int32_t, GoIter*, Buffer*);
@@ -237,6 +238,8 @@ Buffer submit_block_signatures(Buffer header,
                                Buffer txs,
                                Buffer random,
                                Buffer *err);
+
+bool submit_store_roots(Buffer roots, Buffer compute_root, Buffer *err);
 
 Buffer update_admin(cache_t *cache,
                     Buffer contract_id,

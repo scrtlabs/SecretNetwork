@@ -18,10 +18,14 @@
     "integration-tests/contract-v0.10/Cargo.toml",
     "cosmwasm/contracts/v1/compute-tests/random-test/Cargo.toml",
     "go-cosmwasm/Cargo.toml",
+    "integration-tests/contract-v0.10/Cargo.toml",
+    "check-hw/Cargo.toml",
+    "./cosmwasm/enclaves/shared/block-verifier/Cargo.toml",
     "cosmwasm/enclaves/shared/cosmos-proto/Cargo.toml",
     "cosmwasm/enclaves/shared/contract-engine/Cargo.toml",
     "cosmwasm/enclaves/shared/utils/Cargo.toml",
-    "cosmwasm/enclaves/shared/block-verifier/Cargo.toml"
+    "check-hw/Cargo.toml",
+    "./cosmwasm/enclaves/shared/block-verifier/Cargo.toml"
   ],
   "rust-analyzer.diagnostics.experimental.enable": true,
   "rust-analyzer.rustfmt.rangeFormatting.enable": true,

@@ -134,6 +134,8 @@ pub enum EnclaveError {
     FailedUnseal,
     #[display(fmt = "failed to authenticate secret contract")]
     FailedContractAuthentication,
+    #[display(fmt = "failed to save to cache")]
+    FailedSaveToCache,
     #[display(fmt = "failed to deserialize data")]
     FailedToDeserialize,
     #[display(fmt = "failed to serialize data")]
@@ -173,6 +175,14 @@ pub enum EnclaveError {
     Unknown,
 }
 
+#[repr(C)]
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum SdkBeginBlockerResult {
+    Success,
+    Failure,
+    BadVariableLength,
+    BadVariable,
+}
 /// This type represents the possible error conditions that can be encountered in the
 /// enclave while authenticating a new node in the network.
 /// cbindgen:prefix-with-name

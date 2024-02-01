@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"syscall"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -61,6 +62,20 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), nil
+}
+
+func SubmitModulesStoreRoots(roots []byte, computeRoot []byte) error {
+	errmsg := C.Buffer{}
+	rootsSlice := sendSlice(roots)
+	defer freeAfterSend(rootsSlice)
+	computeRootSlice := sendSlice(computeRoot)
+	defer freeAfterSend(computeRootSlice)
+
+	_, err := C.submit_store_roots(rootsSlice, computeRootSlice, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
 }
 
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
@@ -155,7 +170,7 @@ func Migrate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store sdk.KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -208,7 +223,7 @@ func UpdateAdmin(
 	code_id []byte,
 	params []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store sdk.KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -262,7 +277,7 @@ func Instantiate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store sdk.KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -312,7 +327,7 @@ func Handle(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store sdk.KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -358,7 +373,7 @@ func Query(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store sdk.KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,

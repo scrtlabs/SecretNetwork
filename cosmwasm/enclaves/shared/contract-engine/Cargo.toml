@@ -13,10 +13,11 @@ production = []
 wasm3 = []
 wasmi-engine = ["wasmi", "parity-wasm", "pwasm-utils"]
 light-client-validation = ["block-verifier"]
+read-db-proofs = ["read-verifier"]
 random = [
   "cw_types_generic/random",
   "cw_types_v1/random",
-  "cw_types_v010/random"
+  "cw_types_v010/random",
 ]
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
@@ -24,7 +25,7 @@ random = [
 # when compiling to the "sgx" target, we pull this from the target root with an "extern crate" directive
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_tstd = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd", features = [
-  "backtrace"
+  "backtrace",
 ] }
 sgx_types = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 sgx_rand = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_rand" }
@@ -39,7 +40,7 @@ cw_types_v1 = { path = "../cosmwasm-types/v1.0" }
 cw_types_generic = { path = "../cosmwasm-types/generic" }
 enclave_utils = { path = "../utils" }
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
-  "derive"
+  "derive",
 ] }
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx" }
 base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
@@ -62,7 +63,9 @@ ed25519-zebra = { version = "=2.2.0", default-features = false }
 rand_core = "0.5.0"
 rand_chacha = { version = "0.2.1", default-features = false }
 bincode2 = { git = "https://github.com/scrtlabs/bincode2-sgx", rev = "bdf9f458eaf41778d64cb812ed8fcad64ffd72a9" }
+
 block-verifier = { path = "../block-verifier", optional = true }
+read-verifier = { path = "../read-verifier", optional = true }
 
 [dependencies.wasmi]
 git = "https://github.com/paritytech/wasmi"

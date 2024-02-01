@@ -243,6 +243,39 @@ pub extern "C" fn init_cache(
 }
 
 #[no_mangle]
+pub extern "C" fn submit_store_roots(
+    roots: Buffer,
+    compute_root: Buffer,
+    err: Option<&mut Buffer>,
+) -> bool {
+    let roots_slice = match unsafe { roots.read() } {
+        None => {
+            set_error(Error::empty_arg("roots"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
+    let compute_root_slice = match unsafe { compute_root.read() } {
+        None => {
+            set_error(Error::empty_arg("compute_root"), err);
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    match cosmwasm_sgx_vm::untrusted_submit_store_roots(roots_slice, compute_root_slice) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), err);
+            false
+        }
+        Ok(()) => {
+            clear_error();
+            true
+        }
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn submit_block_signatures(
     header: Buffer,
     commit: Buffer,

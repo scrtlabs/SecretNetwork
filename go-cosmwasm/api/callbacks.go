@@ -7,7 +7,8 @@ package api
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
+typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, uint64_t block_height, Buffer key, Buffer *val, Buffer *merkle_p, Buffer *errOut);
+typedef GoResult (*read_db_no_proof_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
 typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
 typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
 typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
@@ -19,7 +20,8 @@ typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *ca
 typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, uint32_t query_depth, Buffer *result, Buffer *errOut);
 
 // forward declarations (db)
-GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
+GoResult cGetNoProof_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
+GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, uint64_t block_height, Buffer key, Buffer *val, Buffer *merkle_p, Buffer *mp_key, Buffer *errOut);
 GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
 GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
 GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
@@ -44,6 +46,7 @@ import (
 
 	dbm "github.com/tendermint/tm-db"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 )
 
@@ -88,35 +91,16 @@ type GasMeter interface {
 
 /****** DB ********/
 
-// KVStore copies a subset of types from cosmos-sdk
-// We may wish to make this more generic sometime in the future, but not now
-// https://github.com/cosmos/cosmos-sdk/blob/bef3689245bab591d7d169abd6bea52db97a70c7/store/types/store.go#L170
-type KVStore interface {
-	Get(key []byte) []byte
-	Set(key, value []byte)
-	Delete(key []byte)
-
-	// Iterator over a domain of keys in ascending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
-	// Iterator must be closed by caller.
-	// To iterate over entire domain, use store.Iterator(nil, nil)
-	Iterator(start, end []byte) dbm.Iterator
-
-	// Iterator over a domain of keys in descending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
-	// Iterator must be closed by caller.
-	ReverseIterator(start, end []byte) dbm.Iterator
-}
-
 var db_vtable = C.DB_vtable{
-	read_db:   (C.read_db_fn)(C.cGet_cgo),
-	write_db:  (C.write_db_fn)(C.cSet_cgo),
-	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
-	scan_db:   (C.scan_db_fn)(C.cScan_cgo),
+	read_db:          (C.read_db_fn)(C.cGet_cgo),
+	read_db_no_proof: (C.read_db_no_proof_fn)(C.cGetNoProof_cgo),
+	write_db:         (C.write_db_fn)(C.cSet_cgo),
+	remove_db:        (C.remove_db_fn)(C.cDelete_cgo),
+	scan_db:          (C.scan_db_fn)(C.cScan_cgo),
 }
 
 type DBState struct {
-	Store KVStore
+	Store sdk.KVStore
 	// IteratorStackID is used to lookup the proper stack frame for iterators associated with this DB (iterator.go)
 	IteratorStackID uint64
 }
@@ -126,7 +110,7 @@ type DBState struct {
 //	state := buildDBState(kv, counter)
 //	db := buildDB(&state, &gasMeter)
 //	// then pass db into some FFI function
-func buildDBState(kv KVStore, counter uint64) DBState {
+func buildDBState(kv sdk.KVStore, counter uint64) DBState {
 	return DBState{
 		Store:           kv,
 		IteratorStackID: counter,
@@ -157,8 +141,8 @@ func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 	}
 }
 
-//export cGet
-func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val *C.Buffer, _ *C.Buffer) (ret C.GoResult) {
+//export cGetNoProof
+func cGetNoProof(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val *C.Buffer, _ *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
@@ -166,7 +150,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val 
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 
 	gasBefore := gm.GasConsumed()
@@ -186,6 +170,47 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val 
 	return C.GoResult_Ok
 }
 
+//export cGet
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, block_height u64, key C.Buffer, val *C.Buffer, merkle_p *C.Buffer, mp_key *C.Buffer, _ *C.Buffer) (ret C.GoResult) {
+	defer recoverPanic(&ret)
+	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
+		// we received an invalid pointer
+		return C.GoResult_BadArgument
+	}
+
+	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
+	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
+	k := receiveSlice(key)
+
+	gasBefore := gm.GasConsumed()
+
+	v, proof, mpKey, err := getWithProof(kv, k, int64(block_height))
+	if err != nil {
+		panic(fmt.Sprintf("error getting merkle proof: %s", err.Error()))
+	}
+
+	gasAfter := gm.GasConsumed()
+	*usedGas = (u64)(gasAfter - gasBefore)
+
+	// v will equal nil when the key is missing
+	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
+	if v != nil {
+		*val = allocateRust(v)
+	}
+	// else: the Buffer on the rust side is initialised as a "null" buffer,
+	// so if we don't write a non-null address to it, it will understand that
+	// the key it requested does not exist in the kv store
+
+	if proof != nil {
+		*merkle_p = allocateRust(proof)
+	}
+	if mpKey != nil {
+		*mp_key = allocateRust(mpKey)
+	}
+
+	return C.GoResult_Ok
+}
+
 //export cSet
 func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer, val C.Buffer, _ *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
@@ -195,7 +220,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 	v := receiveSlice(val)
 
@@ -216,7 +241,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	kv := *(*sdk.KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 
 	gasBefore := gm.GasConsumed()

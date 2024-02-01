@@ -39,7 +39,10 @@ pub extern "C" fn ocall_read_db(
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
+    block_height: u64,
     value: *mut EnclaveBuffer,
+    proof: *mut EnclaveBuffer,
+    mp_key: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,
 ) -> OcallReturn {
@@ -48,7 +51,10 @@ pub extern "C" fn ocall_read_db(
         context,
         vm_error,
         gas_used,
+        block_height,
         value,
+        proof,
+        mp_key,
         key,
         key_len,
     )
@@ -60,7 +66,10 @@ fn ocall_read_db_concrete(
     context: Ctx,
     vm_error: *mut UntrustedVmError,
     gas_used: *mut u64,
+    height: u64,
     value: *mut EnclaveBuffer,
+    proof: *mut EnclaveBuffer,
+    mp_key: *mut EnclaveBuffer,
     key: *const u8,
     key_len: usize,
 ) -> OcallReturn {
@@ -68,27 +77,47 @@ fn ocall_read_db_concrete(
 
     let implementation = unsafe { get_implementations_from_context(&context).read_db };
 
-    std::panic::catch_unwind(|| implementation(context, key))
+    std::panic::catch_unwind(|| implementation(context, height, key))
         // Get either an error(`OcallReturn`), or a response(`EnclaveBuffer`)
         // which will be converted to a success status.
-        .map(|result| -> Result<EnclaveBuffer, OcallReturn> {
-            match result {
-                Ok((value, gas_cost)) => {
-                    unsafe { *gas_used = gas_cost };
-                    value
-                        .map(|val| alloc_impl(&val).map_err(|_| OcallReturn::Failure))
-                        .unwrap_or_else(|| Ok(EnclaveBuffer::default()))
+        .map(
+            |result| -> Result<(EnclaveBuffer, EnclaveBuffer, EnclaveBuffer), OcallReturn> {
+                match result {
+                    Ok(((value, proof, mp_key), gas_cost)) => {
+                        unsafe { *gas_used = gas_cost };
+
+                        let value_buf = if let Some(value) = value {
+                            alloc_impl(&value).map_err(|_| OcallReturn::Failure)?
+                        } else {
+                            EnclaveBuffer::default()
+                        };
+                        let proof_buf = if let Some(proof) = proof {
+                            alloc_impl(&proof).map_err(|_| OcallReturn::Failure)?
+                        } else {
+                            EnclaveBuffer::default()
+                        };
+                        let mp_key_buf = if let Some(mp_key) = mp_key {
+                            alloc_impl(&mp_key).map_err(|_| OcallReturn::Failure)?
+                        } else {
+                            EnclaveBuffer::default()
+                        };
+                        Ok((value_buf, proof_buf, mp_key_buf))
+                    }
+                    Err(err) => {
+                        unsafe { store_vm_error(err, vm_error) };
+                        Err(OcallReturn::Failure)
+                    }
                 }
-                Err(err) => {
-                    unsafe { store_vm_error(err, vm_error) };
-                    Err(OcallReturn::Failure)
-                }
-            }
-        })
+            },
+        )
         // Return the result or report the error
         .map(|result| match result {
-            Ok(enclave_buffer) => {
-                unsafe { *value = enclave_buffer };
+            Ok((value_buffer, proof_buffer, mp_key_buffer)) => {
+                unsafe {
+                    *value = value_buffer;
+                    *proof = proof_buffer;
+                    *mp_key = mp_key_buffer
+                };
                 OcallReturn::Success
             }
             Err(err) => err,
@@ -318,7 +347,11 @@ unsafe fn store_vm_error(vm_err: VmError, location: *mut UntrustedVmError) {
 /// appropriate for it.
 #[allow(clippy::type_complexity)]
 struct ExportImplementations {
-    read_db: fn(context: Ctx, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>,
+    read_db: fn(
+        context: Ctx,
+        height: u64,
+        key: &[u8],
+    ) -> VmResult<((Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>), u64)>,
     query_chain: fn(
         context: Ctx,
         query: &[u8],
@@ -374,13 +407,17 @@ unsafe fn get_implementations_from_context(context: &Ctx) -> &ExportImplementati
     &(*(context.data as *mut FullContext)).implementation
 }
 
-fn ocall_read_db_impl<S, Q>(mut context: Ctx, key: &[u8]) -> VmResult<(Option<Vec<u8>>, u64)>
+fn ocall_read_db_impl<S, Q>(
+    mut context: Ctx,
+    height: u64,
+    key: &[u8],
+) -> VmResult<((Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>), u64)>
 where
     S: Storage,
     Q: Querier,
 {
     with_storage_from_context::<S, Q, _, _>(&mut context, |storage: &mut S| {
-        let (ffi_result, gas_info) = storage.get(key);
+        let (ffi_result, gas_info) = storage.get(height, key);
         ffi_result
             .map(|value| (value, gas_info.externally_used))
             .map_err(Into::into)

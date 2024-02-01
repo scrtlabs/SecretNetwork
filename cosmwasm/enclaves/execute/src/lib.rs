@@ -15,7 +15,10 @@ use enclave_utils::logger::get_log_level;
 pub use enclave_contract_engine;
 mod ecalls;
 pub mod registration;
+mod sdk_entrypoints;
 mod tests;
+
+pub use sdk_entrypoints::ecall_app_begin_blocker;
 
 #[allow(unused_imports)]
 #[cfg(feature = "SGX_MODE_HW")]

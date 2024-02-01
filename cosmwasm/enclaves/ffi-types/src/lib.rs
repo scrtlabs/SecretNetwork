@@ -6,7 +6,7 @@ mod types;
 pub use types::{
     Ctx, EnclaveBuffer, EnclaveError, HandleResult, HealthCheckResult, InitResult, MigrateResult,
     NodeAuthResult, OcallReturn, QueryResult, RuntimeConfiguration, UntrustedVmError,
-    UpdateAdminResult, UserSpaceBuffer,
+    UpdateAdminResult, UserSpaceBuffer, SdkBeginBlockerResult
 };
 
 // On input, the encrypted seed is expected to contain 3 values:

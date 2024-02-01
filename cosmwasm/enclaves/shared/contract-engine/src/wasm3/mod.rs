@@ -27,9 +27,9 @@ use crate::query_chain::encrypt_and_query_chain;
 use crate::random::MSG_COUNTER;
 use crate::types::IoNonce;
 
+use crate::block_cache::BLOCK_CACHE;
 use gas::{get_exhausted_amount, get_remaining_gas, use_gas};
 use module_cache::create_module_instance;
-
 mod gas;
 pub mod module_cache;
 mod validation;
@@ -119,6 +119,7 @@ pub struct Context {
     user_public_key: Ed25519PublicKey,
     kv_cache: KvCache,
     last_error: Option<WasmEngineError>,
+    block_height: u64,
     timestamp: u64,
 }
 
@@ -238,6 +239,7 @@ impl Engine {
         user_nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
         query_depth: u32,
+        block_height: u64,
         timestamp: u64,
     ) -> Result<Engine, EnclaveError> {
         let versioned_code = create_module_instance(contract_code, &gas_costs, operation)?;
@@ -254,6 +256,7 @@ impl Engine {
             user_public_key,
             kv_cache,
             last_error: None,
+            block_height,
             timestamp,
         };
 
@@ -642,6 +645,13 @@ impl Engine {
         // todo: optimize to only charge for writes that change chain state
         let total_gas_to_refund = self.context.kv_cache.drain_gas_tracker();
 
+        debug!("Before saving to cache");
+        // store kv cache into the block cache - if we access this key later in the block we will want to
+        let mut block_cache = BLOCK_CACHE.lock().unwrap();
+        block_cache.insert(self.context.og_contract_key, self.context.kv_cache.clone());
+
+        debug!("After saving to cache");
+
         let mut keys: Vec<(Vec<u8>, Vec<u8>)> = self
             .context
             .kv_cache
@@ -911,9 +921,7 @@ fn host_read_db(
 
     debug!("db_read reading key {}", show_bytes(&state_key_name));
 
-    let value = context.kv_cache.read(&state_key_name);
-
-    if let Some(unwrapped) = value {
+    if let Some(unwrapped) = context.kv_cache.read(&state_key_name) {
         debug!("Got value from cache");
         let ptr_to_region_in_wasm_vm = write_to_memory(instance, &unwrapped).map_err(|err| {
             debug!(
@@ -924,6 +932,24 @@ fn host_read_db(
         })?;
 
         return Ok(ptr_to_region_in_wasm_vm as i32);
+    }
+
+    let block_cache = BLOCK_CACHE.lock().unwrap();
+
+    if let Some(kv_cache) = block_cache.get(&context.og_contract_key) {
+        if let Some(unwrapped) = kv_cache.read(&state_key_name) {
+            debug!("Got value from cache");
+            let ptr_to_region_in_wasm_vm =
+                write_to_memory(instance, &unwrapped).map_err(|err| {
+                    debug!(
+                        "read_db() error while trying to allocate {} bytes for the value",
+                        unwrapped.len(),
+                    );
+                    err
+                })?;
+
+            return Ok(ptr_to_region_in_wasm_vm as i32);
+        }
     }
 
     debug!("Missed value in cache");
@@ -939,6 +965,7 @@ fn host_read_db(
         },
         &mut context.kv_cache,
         &get_encryption_salt(context.timestamp),
+        context.block_height,
     )
     .map_err(debug_err!("db_read failed to read key from storage"))?;
     context.use_gas_externally(used_gas);
@@ -977,6 +1004,9 @@ fn host_remove_db(
 
     // Also remove the key from the cache to avoid rewriting it
     context.kv_cache.remove(&state_key_name);
+
+    let mut block_cache = BLOCK_CACHE.lock().unwrap();
+    block_cache.remove_from_kv_cache(&context.og_contract_key, &state_key_name);
 
     let used_gas =
         remove_from_encrypted_state(&state_key_name, &context.context, &context.og_contract_key)?;
