@@ -9,7 +9,7 @@ else
 fi
 
 # Clone Repo
-git clone https://github.com/scrtlabs/SecretNetwork.git
+git clone --branch alexh/test-cometbft-0.38.2 https://github.com/scrtlabs/SecretNetwork.git
 cd SecretNetwork
 
 # Install Rust

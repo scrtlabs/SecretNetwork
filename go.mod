@@ -3,13 +3,12 @@ module github.com/scrtlabs/SecretNetwork
 go 1.21
 
 replace (
-	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
 	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.13-0.20230802150248-ea64f27dc58d
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/scrtlabs/tm-secret-enclave => github.com/scrtlabs/tm-secret-enclave v1.11.1
-	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
+	// github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
 	// enforce grpc version
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
@@ -164,3 +163,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.6 // indirect
 )
+
+replace github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.2-scrt
+
+replace github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.38.2-scrt
