@@ -164,6 +164,6 @@ require (
 	nhooyr.io/websocket v1.8.6 // indirect
 )
 
-replace github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.2-scrt
+replace github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.2
 
-replace github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.38.2-scrt
+replace github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v0.38.2
