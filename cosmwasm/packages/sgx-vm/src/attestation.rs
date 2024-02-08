@@ -2,6 +2,8 @@ use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::IntoRawFd;
 
 use std::{self};
+use std::ptr::null;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use log::*;
 use sgx_types::*;
@@ -135,6 +137,113 @@ pub extern "C" fn ocall_get_quote(
     trace!("sgx_calc_quote_size returned {}", ret);
     ret
 }
+
+#[no_mangle]
+pub extern "C" fn ocall_get_quote_ecdsa_params(
+    pQeInfo: *mut sgx_target_info_t,
+    pQuoteSize: *mut u32
+) -> sgx_status_t
+{
+    let mut ret = unsafe { sgx_qe_get_target_info(pQeInfo) };
+    if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+        trace!("sgx_qe_get_target_info returned {}", ret);
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    ret = unsafe { sgx_qe_get_quote_size(pQuoteSize) };
+    if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+        trace!("sgx_qe_get_quote_size returned {}", ret);
+        return sgx_status_t::SGX_ERROR_BUSY;
+    }
+
+    unsafe {
+        trace!("*pQuoteSize = {}", *pQuoteSize);
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub extern "C" fn ocall_get_quote_ecdsa(
+    pReport: *const sgx_report_t,
+    pQuote: *mut u8,
+    nQuote: u32,
+) -> sgx_status_t
+{
+    trace!("Entering ocall_get_quote_ecdsa");
+
+    //let mut qe_target_info: sgx_target_info_t;
+    //sgx_qe_get_target_info(&qe_target_info);
+
+    let mut nQuoteAct: u32 = 0;
+    let mut ret = unsafe { sgx_qe_get_quote_size(&mut nQuoteAct) };
+    if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+        trace!("sgx_qe_get_quote_size returned {}", ret);
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    if nQuoteAct > nQuote {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    ret = unsafe { sgx_qe_get_quote(pReport, nQuote, pQuote) };
+    if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+        trace!("sgx_qe_get_quote returned {}", ret);
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub extern "C" fn ocall_verify_quote_ecdsa(
+    pQuote: *const u8,
+    nQuote:u32,
+    pTargetInfo: *const sgx_target_info_t,
+    p_qve_report_info: *mut sgx_ql_qe_report_info_t,
+    pSuppData: *mut u8,
+    nSuppData:u32,
+    pSuppDataActual: *mut u32,
+    pExpiration_check_date: *mut i64,
+    pCollateral_expiration_status: *mut u32,
+    pQve_isvsvn_threshold: *mut sgx_isv_svn_t,
+    pQvResult: *mut sgx_ql_qv_result_t,
+) -> sgx_status_t
+{
+    let current_time :time_t  = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as time_t;
+
+    unsafe {
+        sgx_qv_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_PERSISTENT);
+        sgx_qv_get_quote_supplemental_data_size(pSuppDataActual);
+
+        if *pSuppDataActual > nSuppData {
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+
+        (*p_qve_report_info).app_enclave_target_info = *pTargetInfo;
+
+        sgx_qv_verify_quote(
+            pQuote, nQuote,
+            null(),
+            current_time,
+            pCollateral_expiration_status,
+            pQvResult,
+            p_qve_report_info,
+            *pSuppDataActual,
+            pSuppData);
+
+        *pExpiration_check_date = current_time;
+        *pQve_isvsvn_threshold = 3;
+    };
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+
+
+
+
+
 
 #[no_mangle]
 pub extern "C" fn ocall_get_update_info(

@@ -5,6 +5,8 @@ enclave {
     from "sgx_net.edl" import *;
     from "sgx_time.edl" import *;
     include "sgx_quote.h"
+    include "sgx_ql_quote.h"
+    include "sgx_qve_header.h"
     from "sgx_backtrace.edl" import *;
     from "sgx_tstdc.edl" import *;
     from "sgx_tprotected_fs.edl" import *;
@@ -233,6 +235,31 @@ enclave {
             [out, size=maxlen] sgx_quote_t *p_quote,
             uint32_t maxlen,
             [out] uint32_t* p_quote_len
+        );
+
+        sgx_status_t ocall_get_quote_ecdsa_params(
+            [out] sgx_target_info_t* pQeInfo,
+            [out] uint32_t* pQuoteSize
+        );
+
+        sgx_status_t ocall_get_quote_ecdsa(
+            [in] const sgx_report_t* pReport,
+            [out, size=nQuote] uint8_t* pQuote,
+            uint32_t nQuote
+        );
+
+        sgx_status_t ocall_verify_quote_ecdsa(
+            [in, size=nQuote] const uint8_t* pQuote,
+            uint32_t nQuote,
+            [in] const sgx_target_info_t* pTargetInfo,
+            [out] sgx_ql_qe_report_info_t* p_qve_report_info,
+            [out, size=nSuppData] uint8_t* pSuppData,
+            uint32_t nSuppData,
+            [out] uint32_t* pSuppDataActual,
+            [out] int64_t* pExpiration_check_date,
+            [out] uint32_t* pCollateral_expiration_status,
+            [out] sgx_isv_svn_t* pQve_isvsvn_threshold,
+            [out] sgx_ql_qv_result_t* pQvResult
         );
 
         sgx_status_t ocall_get_update_info(

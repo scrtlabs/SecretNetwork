@@ -18,7 +18,8 @@ use sgx_tcrypto::rsgx_sha256_slice;
 
 use sgx_tcrypto::SgxEccHandle;
 
-use sgx_types::{sgx_quote_sign_type_t, sgx_status_t};
+use sgx_types::{sgx_create_report, sgx_quote_sign_type_t, sgx_status_t, sgx_self_target,
+                sgx_ql_qe_report_info_t, sgx_isv_svn_t, sgx_ql_qv_result_t, sgx_quote3_error_t, sgx_tvl_verify_qve_report_and_identity, sgx_quote_t};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
@@ -55,7 +56,7 @@ use enclave_crypto::consts::{
 use std::sgxfs::remove as SgxFsRemove;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote};
+use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote, ocall_get_quote_ecdsa_params, ocall_get_quote_ecdsa, ocall_verify_quote_ecdsa};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
@@ -287,6 +288,136 @@ pub fn in_grace_period(timestamp: u64) -> bool {
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn get_mr_enclave() -> [u8; 32] {
     rsgx_self_report().body.mr_enclave.m
+}
+
+
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn get_quote_ecdsa(
+    pub_k: &[u8; 32],
+) -> Result<Vec<u8>, sgx_status_t>
+{
+
+    let mut qe_target_info = sgx_target_info_t::default();
+    let mut quote_size: u32 = 0;
+    let mut rt: sgx_status_t = sgx_status_t::default();
+
+    let mut res = unsafe {
+        ocall_get_quote_ecdsa_params(
+            &mut rt as *mut sgx_status_t,
+            &mut qe_target_info,
+            &mut quote_size)
+    };
+
+    if res != sgx_status_t::SGX_SUCCESS
+    {
+        trace!("res = {}", res);
+    }
+
+    if rt != sgx_status_t::SGX_SUCCESS
+    {
+        trace!("rt = {}", rt);
+    }
+
+    trace!("ECDSA quote size = {}", quote_size);
+
+    let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
+    let mut my_report: sgx_report_t = sgx_report_t::default();
+
+    report_data.d[0] = 11;
+    report_data.d[1] = 22;
+
+    res = unsafe {
+        sgx_create_report(
+            &qe_target_info as *const sgx_target_info_t,
+            &report_data as *const sgx_report_data_t,
+            &mut my_report
+        )
+    };
+
+
+    let mut vQuote : Vec<u8> = Vec::new();
+    vQuote.resize(quote_size as usize, 0);
+
+
+    res = unsafe {
+
+        ocall_get_quote_ecdsa(
+            &mut rt as *mut sgx_status_t,
+            &my_report,
+            vQuote.as_mut_ptr(),
+            quote_size)
+    };
+
+    trace!("ocall_get_quote_ecdsa res = {}", res);
+
+    if res == sgx_status_t::SGX_SUCCESS
+    {
+        let mut ti: sgx_target_info_t = sgx_target_info_t::default();
+        unsafe {
+            sgx_self_target(&mut ti)
+        };
+
+        let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();
+        let mut pSupp: [u8; 5000] = [0; 5000];
+        let mut nSupp: u32 = 0;
+        let mut nExpTime: i64 = 0;
+        let mut nExpStatus: u32 = 0;
+        let mut qve_isvsvn_threshold: sgx_isv_svn_t = sgx_isv_svn_t::default();
+        let mut qvResult: sgx_ql_qv_result_t = sgx_ql_qv_result_t::default();
+
+        res = unsafe {
+            ocall_verify_quote_ecdsa(
+                &mut rt as *mut sgx_status_t,
+                vQuote.as_ptr(),
+                quote_size,
+                &ti,
+                &mut qe_report,
+                pSupp.as_mut_ptr(),
+                pSupp.len() as u32,
+                &mut nSupp,
+                &mut nExpTime,
+                &mut nExpStatus,
+                &mut qve_isvsvn_threshold,
+                &mut qvResult)
+        };
+
+        trace!("ocall_verify_quote_ecdsa res = {}", res);
+        trace!("rt = {}", rt);
+        trace!("nSupp = {}", nSupp);
+        trace!("nExpTime = {}", nExpTime);
+        trace!("nExpStatus = {}", nExpStatus);
+        trace!("qve_isvsvn_threshold = {}", qve_isvsvn_threshold);
+        trace!("qvResult = {}", qvResult);
+
+        // verify the qve report
+        let dcap_ret : sgx_quote3_error_t  = unsafe { sgx_tvl_verify_qve_report_and_identity(
+            vQuote.as_ptr(),
+            quote_size,
+            &qe_report,
+            nExpTime,
+            nExpStatus,
+            qvResult,
+            pSupp.as_ptr(),
+            nSupp,
+            qve_isvsvn_threshold) };
+
+        trace!("dcap_ret = {}", dcap_ret);
+
+        trace!("qe_report.qe_report.body.mr_signer = {:?}", qe_report.qe_report.body.mr_signer.m);
+        trace!("qe_report.qe_report.body.mr_enclave = {:?}", qe_report.qe_report.body.mr_enclave.m);
+        trace!("qe_report.qe_report.body.report_data = {:?}", qe_report.qe_report.body.report_data.d);
+
+        let my_pQuote = vQuote.as_ptr() as *const sgx_quote_t;
+        let myQuote : sgx_quote_t = unsafe { *my_pQuote };
+
+        trace!("myQuote.body.mr_signer = {:?}",  myQuote.report_body.mr_signer.m);
+        trace!("myQuote.body.mr_enclave = {:?}", myQuote.report_body.mr_enclave.m);
+        trace!("myQuote.body.report_data = {:?}", myQuote.report_body.report_data.d);
+    };
+
+
+    Ok(vQuote)
+
 }
 
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
