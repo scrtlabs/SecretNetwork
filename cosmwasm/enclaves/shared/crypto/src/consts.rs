@@ -16,6 +16,7 @@ pub enum SigningMethod {
 }
 
 pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
+pub const ATTESTATION_DCAP_SAVE_PATH: &str = "attestation_dcap.quote";
 
 pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
 pub const IO_KEY_SAVE_PATH: &str = "io-master-key.txt";
@@ -83,6 +84,13 @@ lazy_static! {
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(ATTESTATION_CERTIFICATE_SAVE_PATH)
+    .to_str()
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
+    .to_string();
+    pub static ref ATTESTATION_DCAP_PATH: String = path::Path::new(
+        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
+    )
+    .join(ATTESTATION_DCAP_SAVE_PATH)
     .to_str()
     .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();

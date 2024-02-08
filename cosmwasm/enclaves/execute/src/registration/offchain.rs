@@ -8,7 +8,7 @@ use std::panic;
 use std::slice;
 
 use enclave_crypto::consts::{
-    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
+    ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
     SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
@@ -19,7 +19,7 @@ use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
-use super::attestation::create_attestation_certificate;
+use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
 
 use super::seed_service::get_next_consensus_seed_from_service;
 
@@ -342,6 +342,66 @@ pub unsafe extern "C" fn ecall_init_node(
     sgx_status_t::SGX_SUCCESS
 }
 
+
+unsafe fn ecall_get_attestation_report_epid(
+    api_key: *const u8,
+    api_key_len: u32,
+    kp: &KeyPair,
+) -> sgx_status_t {
+    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
+    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
+
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        sgx_status_t::SGX_ERROR_UNEXPECTED,
+    );
+    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
+    let (_private_key_der, cert) =
+        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice, None) {
+            Err(e) => {
+                warn!("Error in create_attestation_certificate: {:?}", e);
+                return e;
+            }
+            Ok(res) => res,
+        };
+
+    //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
+    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
+        return status;
+    }
+
+    #[cfg(feature = "SGX_MODE_HW")]
+    {
+        crate::registration::print_report::print_local_report_info(cert.as_slice());
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+
+unsafe fn ecall_get_attestation_report_dcap(
+    kp: &KeyPair,
+) -> sgx_status_t
+{
+    let quote = match get_quote_ecdsa(&kp.get_pubkey()) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Error creating attestation report");
+            return e;
+        }
+    };
+    if let Err(status) = write_to_untrusted(&quote, ATTESTATION_DCAP_PATH.as_str()) {
+        return status;
+    }
+
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+
+
 #[no_mangle]
 /**
  * `ecall_get_attestation_report`
@@ -361,38 +421,19 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
 ) -> sgx_status_t {
-    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
-
-    validate_const_ptr!(
-        api_key,
-        api_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let kp = KEY_MANAGER.get_registration_key().unwrap();
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
     );
-    let (_private_key_der, cert) =
-        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice, None) {
-            Err(e) => {
-                warn!("Error in create_attestation_certificate: {:?}", e);
-                return e;
-            }
-            Ok(res) => res,
-        };
 
-    //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
-        return status;
-    }
+    let res = ecall_get_attestation_report_epid(api_key, api_key_len, &kp);
 
-    #[cfg(feature = "SGX_MODE_HW")]
-    {
-        crate::registration::print_report::print_local_report_info(cert.as_slice());
+    let res2 = ecall_get_attestation_report_dcap(&kp);
+
+    if (res != sgx_status_t::SGX_SUCCESS) && (res2 != sgx_status_t::SGX_SUCCESS) {
+        return res;
     }
 
     sgx_status_t::SGX_SUCCESS
