@@ -39,5 +39,5 @@ serde = { version = "1.0.114", default-features = false, features = [
   "derive",
   "alloc"
 ] }
-serde-json-wasm = "0.2.1"
+serde-json-wasm = "0.5.2"
 secp256k1 = "0.22.2"
