@@ -1,13 +1,14 @@
 use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::IntoRawFd;
+use core::mem;
 
-use std::{self};
-use std::ptr::null;
+use std::{self, ptr};
+use std::ptr::{null, null_mut};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use log::*;
 use sgx_types::*;
-use sgx_types::{sgx_status_t, SgxResult};
+use sgx_types::{sgx_status_t, SgxResult, sgx_ql_qve_collateral_t};
 
 use enclave_ffi_types::{NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE, SINGLE_ENCRYPTED_SEED_SIZE};
 
@@ -195,10 +196,209 @@ pub extern "C" fn ocall_get_quote_ecdsa(
     sgx_status_t::SGX_SUCCESS
 }
 
+pub struct QlQveCollateral {
+    pub tee_type: u32, // 0x00000000: SGX or 0x00000081: TDX
+    pub pck_crl_issuer_chain_size: u32,
+    pub root_ca_crl_size: u32,
+    pub pck_crl_size: u32,
+    pub tcb_info_issuer_chain_size: u32,
+    pub tcb_info_size: u32,
+    pub qe_identity_issuer_chain_size: u32,
+    pub qe_identity_size: u32
+}
+
+fn sgx_ql_qve_collateral_Serialize(
+    pCol: *const u8,
+    nCol: u32,
+    pRes: *mut u8,
+    nRes: u32,
+) -> u32
+{
+    if nCol < mem::size_of::<sgx_ql_qve_collateral_t>() as u32 {
+        return 0;
+    }
+
+    unsafe {
+        let pQlCol = pCol as *const sgx_ql_qve_collateral_t;
+
+        let size_extra =
+            (*pQlCol).pck_crl_issuer_chain_size +
+            (*pQlCol).root_ca_crl_size +
+            (*pQlCol).pck_crl_size +
+            (*pQlCol).tcb_info_issuer_chain_size +
+            (*pQlCol).tcb_info_size +
+            (*pQlCol).qe_identity_issuer_chain_size +
+            (*pQlCol).qe_identity_size
+            ;
+
+        if nCol < mem::size_of::<sgx_ql_qve_collateral_t>() as u32 + size_extra {
+            return 0;
+        }
+
+        let outSize: u32 = mem::size_of::<QlQveCollateral>() as u32 + size_extra;
+
+        if nRes >= outSize {
+
+            let x = QlQveCollateral {
+                tee_type : (*pQlCol).tee_type,
+                pck_crl_issuer_chain_size : (*pQlCol).pck_crl_issuer_chain_size,
+                root_ca_crl_size : (*pQlCol).root_ca_crl_size,
+                pck_crl_size : (*pQlCol).pck_crl_size,
+                tcb_info_issuer_chain_size : (*pQlCol).tcb_info_issuer_chain_size,
+                tcb_info_size : (*pQlCol).tcb_info_size,
+                qe_identity_issuer_chain_size : (*pQlCol).qe_identity_issuer_chain_size,
+                qe_identity_size : (*pQlCol).qe_identity_size
+            };
+
+            ptr::copy_nonoverlapping(&x as *const QlQveCollateral as *const u8, pRes, mem::size_of::<QlQveCollateral>());
+            let mut offs = mem::size_of::<QlQveCollateral>();
+
+            ptr::copy_nonoverlapping((*pQlCol).pck_crl_issuer_chain as *const u8, pRes.add(offs), x.pck_crl_issuer_chain_size as usize);
+            offs += x.pck_crl_issuer_chain_size as usize;
+
+            ptr::copy_nonoverlapping((*pQlCol).root_ca_crl as *const u8, pRes.add(offs), x.root_ca_crl_size as usize);
+            offs += x.root_ca_crl_size as usize;
+
+            ptr::copy_nonoverlapping((*pQlCol).pck_crl as *const u8, pRes.add(offs), x.pck_crl_size as usize);
+            offs += x.pck_crl_size as usize;
+
+            ptr::copy_nonoverlapping((*pQlCol).tcb_info_issuer_chain as *const u8, pRes.add(offs), x.tcb_info_issuer_chain_size as usize);
+            offs += x.tcb_info_issuer_chain_size as usize;
+
+            ptr::copy_nonoverlapping((*pQlCol).tcb_info as *const u8, pRes.add(offs), x.tcb_info_size as usize);
+            offs += x.tcb_info_size as usize;
+
+            ptr::copy_nonoverlapping((*pQlCol).qe_identity_issuer_chain as *const u8, pRes.add(offs), x.qe_identity_issuer_chain_size as usize);
+            offs += x.qe_identity_issuer_chain_size as usize;
+
+            ptr::copy_nonoverlapping((*pQlCol).qe_identity as *const u8, pRes.add(offs), x.qe_identity_size as usize);
+            offs += x.qe_identity_size as usize;
+        }
+
+        return outSize;
+    };
+
+    0; // unreachable
+}
+
+
+fn sgx_ql_qve_collateral_Deserialize(
+    pSer: *const u8,
+    nSer: u32,
+) -> sgx_ql_qve_collateral_t
+{
+    let mut res = sgx_ql_qve_collateral_t {
+        version: 0,
+        tee_type: 0,
+        pck_crl_issuer_chain: null_mut(),
+        pck_crl_issuer_chain_size: 0,
+        root_ca_crl: null_mut(),
+        root_ca_crl_size: 0,
+        pck_crl: null_mut(),
+        pck_crl_size: 0,
+        tcb_info_issuer_chain: null_mut(),
+        tcb_info_issuer_chain_size: 0,
+        tcb_info: null_mut(),
+        tcb_info_size: 0,
+        qe_identity_issuer_chain: null_mut(),
+        qe_identity_issuer_chain_size: 0,
+        qe_identity: null_mut(),
+        qe_identity_size: 0
+    };
+
+    if nSer >= mem::size_of::<QlQveCollateral>() as u32 {
+
+        unsafe {
+            let pQlCol = pSer as *const QlQveCollateral;
+            let size_extra =
+                (*pQlCol).pck_crl_issuer_chain_size +
+                (*pQlCol).root_ca_crl_size +
+                (*pQlCol).pck_crl_size +
+                (*pQlCol).tcb_info_issuer_chain_size +
+                (*pQlCol).tcb_info_size +
+                (*pQlCol).qe_identity_issuer_chain_size +
+                (*pQlCol).qe_identity_size
+                ;
+
+            if nSer >= mem::size_of::<QlQveCollateral>() as u32 + size_extra {
+
+                res.version = 1; // PCK Cert chain is in the Quote.
+                res.tee_type = (*pQlCol).tee_type;
+                res.pck_crl_issuer_chain_size = (*pQlCol).pck_crl_issuer_chain_size;
+                res.root_ca_crl_size = (*pQlCol).root_ca_crl_size;
+                res.pck_crl_size = (*pQlCol).pck_crl_size;
+                res.tcb_info_issuer_chain_size = (*pQlCol).tcb_info_issuer_chain_size;
+                res.tcb_info_size = (*pQlCol).tcb_info_size;
+                res.qe_identity_issuer_chain_size = (*pQlCol).qe_identity_issuer_chain_size;
+                res.qe_identity_size = (*pQlCol).qe_identity_size;
+
+                let mut offs = mem::size_of::<QlQveCollateral>();
+
+                res.pck_crl_issuer_chain = pSer.add(offs) as *mut i8;
+                offs += res.pck_crl_issuer_chain_size as usize;
+
+                res.root_ca_crl = pSer.add(offs) as *mut i8;
+                offs += res.root_ca_crl_size as usize;
+
+                res.pck_crl = pSer.add(offs) as *mut i8;
+                offs += res.pck_crl_size as usize;
+
+                res.tcb_info_issuer_chain = pSer.add(offs) as *mut i8;
+                offs += res.tcb_info_issuer_chain_size as usize;
+
+                res.tcb_info = pSer.add(offs) as *mut i8;
+                offs += res.tcb_info_size as usize;
+
+                res.qe_identity_issuer_chain = pSer.add(offs) as *mut i8;
+                offs += res.qe_identity_issuer_chain_size as usize;
+
+                res.qe_identity = pSer.add(offs) as *mut i8;
+                offs += res.qe_identity_size as usize;
+            }
+        }
+
+    };
+
+
+
+    return res; // unreachable
+}
+
+#[no_mangle]
+pub extern "C" fn ocall_get_quote_ecdsa_collateral(
+    pQuote: *const u8,
+    nQuote: u32,
+    pCol: *mut u8,
+    nCol: u32,
+    pColOut: *mut u32
+) -> sgx_status_t
+{
+    let mut pColMy : *mut u8 = 0 as *mut u8;
+    let mut nColMy : u32 = 0;
+
+    let ret = unsafe { tee_qv_get_collateral(pQuote, nQuote, &mut pColMy, &mut nColMy) };
+
+    if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+        trace!("tee_qv_get_collateral returned {}", ret);
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    unsafe {
+
+        *pColOut = sgx_ql_qve_collateral_Serialize(pColMy, nColMy, pCol, nCol);
+
+        tee_qv_free_collateral(pColMy);
+    };
+
+    sgx_status_t::SGX_SUCCESS
+}
+
 #[no_mangle]
 pub extern "C" fn ocall_verify_quote_ecdsa(
     pQuote: *const u8,
     nQuote:u32,
+    pCol: *const u8,
+    nCol:u32,
     pTargetInfo: *const sgx_target_info_t,
     p_qve_report_info: *mut sgx_ql_qe_report_info_t,
     pSuppData: *mut u8,
@@ -222,9 +422,11 @@ pub extern "C" fn ocall_verify_quote_ecdsa(
 
         (*p_qve_report_info).app_enclave_target_info = *pTargetInfo;
 
+        let myCol = sgx_ql_qve_collateral_Deserialize(pCol, nCol);
+
         sgx_qv_verify_quote(
             pQuote, nQuote,
-            null(),
+            &myCol,
             current_time,
             pCollateral_expiration_status,
             pQvResult,

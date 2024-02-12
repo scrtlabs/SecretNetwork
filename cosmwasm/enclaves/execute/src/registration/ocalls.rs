@@ -36,10 +36,20 @@ extern "C" {
         pQuote: *mut u8,
         nQuote: u32,
     ) -> sgx_status_t;
+    pub fn ocall_get_quote_ecdsa_collateral(
+        ret_val: *mut sgx_status_t,
+        pQuote: *const u8,
+        nQuote: u32,
+        pCol: *mut u8,
+        nCol: u32,
+        pColOut: *mut u32
+    ) -> sgx_status_t;
     pub fn ocall_verify_quote_ecdsa(
         ret_val: *mut sgx_status_t,
         pQuote: *const u8,
         nQuote:u32,
+        pCol: *const u8,
+        nCol:u32,
         pTargetInfo: *const sgx_target_info_t,
         p_qve_report_info: *mut sgx_ql_qe_report_info_t,
         pSuppData: *mut u8,

@@ -56,7 +56,8 @@ use enclave_crypto::consts::{
 use std::sgxfs::remove as SgxFsRemove;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote, ocall_get_quote_ecdsa_params, ocall_get_quote_ecdsa, ocall_verify_quote_ecdsa};
+use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote,
+    ocall_get_quote_ecdsa_params, ocall_get_quote_ecdsa, ocall_get_quote_ecdsa_collateral, ocall_verify_quote_ecdsa};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
@@ -293,7 +294,8 @@ pub fn get_mr_enclave() -> [u8; 32] {
 
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_quote_ecdsa(
-    vQuote : &Vec<u8>
+    vQuote : &Vec<u8>,
+    vCol : &Vec<u8>,
 ) -> Result<(sgx_report_body_t), sgx_status_t>
 {
     let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();
@@ -316,6 +318,8 @@ pub fn verify_quote_ecdsa(
             &mut rt as *mut sgx_status_t,
             vQuote.as_ptr(),
             vQuote.len() as u32,
+            vCol.as_ptr(),
+            vCol.len() as u32,
             &ti,
             &mut qe_report,
             pSupp.as_mut_ptr(),
@@ -421,10 +425,53 @@ pub fn get_quote_ecdsa(
 
     trace!("ocall_get_quote_ecdsa res = {}", res);
 
+
+    let mut vCol : Vec<u8> = Vec::new();
+    vCol.resize(0x4000, 0);
+    let mut nCol : u32 = 0;
+
+    let mut res = unsafe {
+        ocall_get_quote_ecdsa_collateral(
+            &mut rt as *mut sgx_status_t,
+            vQuote.as_ptr(),
+            vQuote.len() as u32,
+            vCol.as_mut_ptr(),
+            vCol.len() as u32,
+            &mut nCol)
+    };
+
+    if res != sgx_status_t::SGX_SUCCESS
+    {
+        trace!("res = {}", res);
+    }
+
+    if rt != sgx_status_t::SGX_SUCCESS
+    {
+        trace!("rt = {}", rt);
+    }
+
+    trace!("Collateral size = {}", nCol);
+
+    let bAgain = nCol > vCol.len() as u32;
+    vCol.resize(nCol as usize, 0);
+
+    //if bAgain
+    {
+        unsafe {
+            ocall_get_quote_ecdsa_collateral(
+                &mut rt as *mut sgx_status_t,
+                vQuote.as_ptr(),
+                vQuote.len() as u32,
+                vCol.as_mut_ptr(),
+                vCol.len() as u32,
+                &mut nCol)
+        };
+    }
+
     if res == sgx_status_t::SGX_SUCCESS
     {
         // test self
-        let res = match verify_quote_ecdsa(&vQuote) {
+        let res = match verify_quote_ecdsa(&vQuote, &vCol) {
             Ok(r) => {
                 r
             }

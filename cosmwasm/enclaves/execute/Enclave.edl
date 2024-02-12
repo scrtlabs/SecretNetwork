@@ -248,9 +248,19 @@ enclave {
             uint32_t nQuote
         );
 
+        sgx_status_t ocall_get_quote_ecdsa_collateral(
+            [in, size=nQuote] const uint8_t* pQuote,
+            uint32_t nQuote,
+            [out, size=nCol] uint8_t* pCol,
+            uint32_t nCol,
+            [out] uint32_t* pColOut
+        );
+
         sgx_status_t ocall_verify_quote_ecdsa(
             [in, size=nQuote] const uint8_t* pQuote,
             uint32_t nQuote,
+            [in, size=nCol] const uint8_t* pCol,
+            uint32_t nCol,
             [in] const sgx_target_info_t* pTargetInfo,
             [out] sgx_ql_qe_report_info_t* p_qve_report_info,
             [out, size=nSuppData] uint8_t* pSuppData,
