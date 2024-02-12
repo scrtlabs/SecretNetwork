@@ -262,13 +262,13 @@ enclave {
             [in, size=nCol] const uint8_t* pCol,
             uint32_t nCol,
             [in] const sgx_target_info_t* pTargetInfo,
+            int64_t nTime,
             [out] sgx_ql_qe_report_info_t* p_qve_report_info,
             [out, size=nSuppData] uint8_t* pSuppData,
             uint32_t nSuppData,
             [out] uint32_t* pSuppDataActual,
-            [out] int64_t* pExpiration_check_date,
+            [out] int64_t* pTime,
             [out] uint32_t* pCollateral_expiration_status,
-            [out] sgx_isv_svn_t* pQve_isvsvn_threshold,
             [out] sgx_ql_qv_result_t* pQvResult
         );
 

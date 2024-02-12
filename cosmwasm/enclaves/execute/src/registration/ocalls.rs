@@ -51,13 +51,13 @@ extern "C" {
         pCol: *const u8,
         nCol:u32,
         pTargetInfo: *const sgx_target_info_t,
+        nTime : i64,
         p_qve_report_info: *mut sgx_ql_qe_report_info_t,
         pSuppData: *mut u8,
         nSuppData:u32,
         pSuppDataActual: *mut u32,
-        pExpiration_check_date: *mut i64,
+        pTime: *mut i64,
         pCollateral_expiration_status: *mut u32,
-        pQve_isvsvn_threshold: *mut sgx_isv_svn_t,
         pQvResult: *mut sgx_ql_qv_result_t,
     ) -> sgx_status_t;
 }

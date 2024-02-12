@@ -1,3 +1,4 @@
+use core::mem;
 use enclave_crypto::KeyPair;
 use std::vec::Vec;
 
@@ -296,14 +297,14 @@ pub fn get_mr_enclave() -> [u8; 32] {
 pub fn verify_quote_ecdsa(
     vQuote : &Vec<u8>,
     vCol : &Vec<u8>,
-) -> Result<(sgx_report_body_t), sgx_status_t>
+    nTime: i64,
+) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t>
 {
     let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();
     let mut pSupp: [u8; 5000] = [0; 5000];
     let mut nSupp: u32 = 0;
     let mut nExpTime: i64 = 0;
     let mut nExpStatus: u32 = 0;
-    let mut qve_isvsvn_threshold: sgx_isv_svn_t = sgx_isv_svn_t::default();
     let mut qvResult: sgx_ql_qv_result_t = sgx_ql_qv_result_t::default();
     let mut rt: sgx_status_t = sgx_status_t::default();
     let mut ti: sgx_target_info_t = sgx_target_info_t::default();
@@ -321,25 +322,38 @@ pub fn verify_quote_ecdsa(
             vCol.as_ptr(),
             vCol.len() as u32,
             &ti,
+            nTime,
             &mut qe_report,
             pSupp.as_mut_ptr(),
             pSupp.len() as u32,
             &mut nSupp,
             &mut nExpTime,
             &mut nExpStatus,
-            &mut qve_isvsvn_threshold,
             &mut qvResult)
     };
 
-    trace!("ocall_verify_quote_ecdsa res = {}", res);
-    trace!("rt = {}", rt);
-    trace!("nSupp = {}", nSupp);
-    trace!("nExpTime = {}", nExpTime);
-    trace!("nExpStatus = {}", nExpStatus);
-    trace!("qve_isvsvn_threshold = {}", qve_isvsvn_threshold);
-    trace!("qvResult = {}", qvResult);
+    if res != sgx_status_t::SGX_SUCCESS {
+        return Err(res);
+    }
+    if rt != sgx_status_t::SGX_SUCCESS {
+        return Err(rt);
+    }
+
+    match qvResult {
+        sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK => {},
+        sgx_ql_qv_result_t::SGX_QL_QV_RESULT_SW_HARDENING_NEEDED => {},
+        _ => {
+            trace!("Quote verification result: {}", qvResult);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    };
 
     // verify the qve report
+    if nTime != 0 {
+        nExpTime = nTime; // insist on our time, if supplied
+    }
+
+    let qve_isvsvn_threshold: sgx_isv_svn_t = 3;
     let dcap_ret : sgx_quote3_error_t  = unsafe { sgx_tvl_verify_qve_report_and_identity(
         vQuote.as_ptr(),
         vQuote.len() as u32,
@@ -351,20 +365,29 @@ pub fn verify_quote_ecdsa(
         nSupp,
         qve_isvsvn_threshold) };
 
-    trace!("dcap_ret = {}", dcap_ret);
+    if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+        trace!("QVE report verification result: {}", dcap_ret);
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+    }
 
-    //trace!("qe_report.qe_report.body.mr_signer = {:?}", qe_report.qe_report.body.mr_signer.m);
-    //trace!("qe_report.qe_report.body.mr_enclave = {:?}", qe_report.qe_report.body.mr_enclave.m);
-    //trace!("qe_report.qe_report.body.report_data = {:?}", qe_report.qe_report.body.report_data.d);
+    trace!("nSupp = {}", nSupp);
+    trace!("nExpTime = {}", nExpTime);
+    trace!("nExpStatus = {}", nExpStatus);
+    trace!("qvResult = {}", qvResult);
+
+    if vQuote.len() < mem::size_of::<sgx_quote_t>() {
+        trace!("Quote too small");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
 
     let my_pQuote = vQuote.as_ptr() as *const sgx_quote_t;
-    let myQuote : sgx_quote_t = unsafe { *my_pQuote };
+    let report_body = unsafe { (*my_pQuote).report_body };
 
-    trace!("body.mr_signer = {:?}",  myQuote.report_body.mr_signer.m);
-    trace!("body.mr_enclave = {:?}", myQuote.report_body.mr_enclave.m);
-    trace!("body.report_data = {:?}", myQuote.report_body.report_data.d);
+    trace!("body.mr_signer = {:?}",  report_body.mr_signer.m);
+    trace!("body.mr_enclave = {:?}", report_body.mr_enclave.m);
+    trace!("body.report_data = {:?}", report_body.report_data.d);
 
-    Ok(myQuote.report_body)
+    Ok((report_body, qvResult))
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -384,13 +407,11 @@ pub fn get_quote_ecdsa(
             &mut quote_size)
     };
 
-    if res != sgx_status_t::SGX_SUCCESS
-    {
+    if res != sgx_status_t::SGX_SUCCESS {
         trace!("res = {}", res);
     }
 
-    if rt != sgx_status_t::SGX_SUCCESS
-    {
+    if rt != sgx_status_t::SGX_SUCCESS {
         trace!("rt = {}", rt);
     }
 
@@ -409,10 +430,12 @@ pub fn get_quote_ecdsa(
         )
     };
 
+    if rt != sgx_status_t::SGX_SUCCESS {
+        trace!("sgx_create_report = {}", rt);
+    }
 
     let mut vQuote : Vec<u8> = Vec::new();
     vQuote.resize(quote_size as usize, 0);
-
 
     res = unsafe {
 
@@ -423,8 +446,13 @@ pub fn get_quote_ecdsa(
             vQuote.len() as u32)
     };
 
-    trace!("ocall_get_quote_ecdsa res = {}", res);
+    if res != sgx_status_t::SGX_SUCCESS {
+        trace!("res = {}", res);
+    }
 
+    if rt != sgx_status_t::SGX_SUCCESS {
+        trace!("rt = {}", rt);
+    }
 
     let mut vCol : Vec<u8> = Vec::new();
     vCol.resize(0x4000, 0);
@@ -440,13 +468,11 @@ pub fn get_quote_ecdsa(
             &mut nCol)
     };
 
-    if res != sgx_status_t::SGX_SUCCESS
-    {
+    if res != sgx_status_t::SGX_SUCCESS {
         trace!("res = {}", res);
     }
 
-    if rt != sgx_status_t::SGX_SUCCESS
-    {
+    if rt != sgx_status_t::SGX_SUCCESS {
         trace!("rt = {}", rt);
     }
 
@@ -471,27 +497,20 @@ pub fn get_quote_ecdsa(
     if res == sgx_status_t::SGX_SUCCESS
     {
         // test self
-        let res = match verify_quote_ecdsa(&vQuote, &vCol) {
+        let report_body = match verify_quote_ecdsa(&vQuote, &vCol, 0) {
             Ok(r) => {
-                r
+                trace!("Self quote verified ok");
+                if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+                    // TODO: strict policy wrt own quote verification
+                    trace!("WARNING: {}", r.1);
+                }
+                r.0
             }
             Err(e) => {
                 trace!("Self quote verification failed: {}", e);
                 return Err(e);
             }
         };
-
-
-        trace!("qe_report.qe_report.body.mr_signer = {:?}", res.mr_signer.m);
-        trace!("qe_report.qe_report.body.mr_enclave = {:?}", res.mr_enclave.m);
-        trace!("qe_report.qe_report.body.report_data = {:?}", res.report_data.d);
-
-        let my_pQuote = vQuote.as_ptr() as *const sgx_quote_t;
-        let myQuote : sgx_quote_t = unsafe { *my_pQuote };
-
-        trace!("myQuote.body.mr_signer = {:?}",  myQuote.report_body.mr_signer.m);
-        trace!("myQuote.body.mr_enclave = {:?}", myQuote.report_body.mr_enclave.m);
-        trace!("myQuote.body.report_data = {:?}", myQuote.report_body.report_data.d);
     };
 
 

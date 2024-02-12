@@ -400,17 +400,20 @@ pub extern "C" fn ocall_verify_quote_ecdsa(
     pCol: *const u8,
     nCol:u32,
     pTargetInfo: *const sgx_target_info_t,
+    nTime: i64,
     p_qve_report_info: *mut sgx_ql_qe_report_info_t,
     pSuppData: *mut u8,
     nSuppData:u32,
     pSuppDataActual: *mut u32,
-    pExpiration_check_date: *mut i64,
+    pTime: *mut i64,
     pCollateral_expiration_status: *mut u32,
-    pQve_isvsvn_threshold: *mut sgx_isv_svn_t,
     pQvResult: *mut sgx_ql_qv_result_t,
 ) -> sgx_status_t
 {
-    let current_time :time_t  = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as time_t;
+    let mut nTimeUse :time_t = nTime;
+    if nTime == 0 {
+        nTimeUse = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as time_t;
+    }
 
     unsafe {
         sgx_qv_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_PERSISTENT);
@@ -427,15 +430,14 @@ pub extern "C" fn ocall_verify_quote_ecdsa(
         sgx_qv_verify_quote(
             pQuote, nQuote,
             &myCol,
-            current_time,
+            nTimeUse,
             pCollateral_expiration_status,
             pQvResult,
             p_qve_report_info,
             *pSuppDataActual,
             pSuppData);
 
-        *pExpiration_check_date = current_time;
-        *pQve_isvsvn_threshold = 3;
+        *pTime = nTimeUse;
     };
 
     sgx_status_t::SGX_SUCCESS
