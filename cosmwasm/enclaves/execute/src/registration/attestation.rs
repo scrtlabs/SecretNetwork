@@ -370,7 +370,7 @@ pub fn verify_quote_ecdsa(
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn get_quote_ecdsa(
     pub_k: &[u8; 32],
-) -> Result<Vec<u8>, sgx_status_t>
+) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t>
 {
 
     let mut qe_target_info = sgx_target_info_t::default();
@@ -495,7 +495,7 @@ pub fn get_quote_ecdsa(
     };
 
 
-    Ok(vQuote)
+    Ok((vQuote, vCol))
 
 }
 

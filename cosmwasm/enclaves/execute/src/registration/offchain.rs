@@ -8,7 +8,7 @@ use std::panic;
 use std::slice;
 
 use enclave_crypto::consts::{
-    ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
+    ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
     SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
@@ -385,17 +385,21 @@ unsafe fn ecall_get_attestation_report_dcap(
     kp: &KeyPair,
 ) -> sgx_status_t
 {
-    let quote = match get_quote_ecdsa(&kp.get_pubkey()) {
+    let (vQuote, vColl) = match get_quote_ecdsa(&kp.get_pubkey()) {
         Ok(r) => r,
         Err(e) => {
             warn!("Error creating attestation report");
             return e;
         }
     };
-    if let Err(status) = write_to_untrusted(&quote, ATTESTATION_DCAP_PATH.as_str()) {
+
+    if let Err(status) = write_to_untrusted(&vQuote, ATTESTATION_DCAP_PATH.as_str()) {
         return status;
     }
 
+    if let Err(status) = write_to_untrusted(&vColl, COLLATERAL_DCAP_PATH.as_str()) {
+        return status;
+    }
 
     sgx_status_t::SGX_SUCCESS
 }
