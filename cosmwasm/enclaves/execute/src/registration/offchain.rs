@@ -7,9 +7,12 @@ use sgx_types::sgx_status_t;
 use std::panic;
 use std::slice;
 
+use std::fs::File;
+use std::io::prelude::*;
+
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
-    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE, CERT_COMBINED_PATH,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -347,14 +350,14 @@ unsafe fn ecall_get_attestation_report_epid(
     api_key: *const u8,
     api_key_len: u32,
     kp: &KeyPair,
-) -> sgx_status_t {
+) -> Result<Vec<u8>, sgx_status_t> {
     // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
 
     validate_const_ptr!(
         api_key,
         api_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
+        Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     );
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
@@ -362,14 +365,13 @@ unsafe fn ecall_get_attestation_report_epid(
         match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice, None) {
             Err(e) => {
                 warn!("Error in create_attestation_certificate: {:?}", e);
-                return e;
+                return Err(e);
             }
             Ok(res) => res,
         };
 
-    //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
     if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
-        return status;
+        return Err(status);
     }
 
     #[cfg(feature = "SGX_MODE_HW")]
@@ -377,31 +379,31 @@ unsafe fn ecall_get_attestation_report_epid(
         crate::registration::print_report::print_local_report_info(cert.as_slice());
     }
 
-    sgx_status_t::SGX_SUCCESS
+    return Ok(cert)
 }
 
 
 unsafe fn ecall_get_attestation_report_dcap(
     kp: &KeyPair,
-) -> sgx_status_t
+) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t>
 {
     let (vQuote, vColl) = match get_quote_ecdsa(&kp.get_pubkey()) {
         Ok(r) => r,
         Err(e) => {
             warn!("Error creating attestation report");
-            return e;
+            return Err(e);
         }
     };
 
     if let Err(status) = write_to_untrusted(&vQuote, ATTESTATION_DCAP_PATH.as_str()) {
-        return status;
+        return Err(status);
     }
 
     if let Err(status) = write_to_untrusted(&vColl, COLLATERAL_DCAP_PATH.as_str()) {
-        return status;
+        return Err(status);
     }
 
-    sgx_status_t::SGX_SUCCESS
+    return Ok((vQuote, vColl));
 }
 
 
@@ -432,12 +434,47 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         &kp.get_pubkey().to_vec()
     );
 
-    let res = ecall_get_attestation_report_epid(api_key, api_key_len, &kp);
+    let mut size_epid : u32 = 0;
+    let mut size_dcap_q : u32 = 0;
+    let mut size_dcap_c : u32 = 0;
 
-    let res2 = ecall_get_attestation_report_dcap(&kp);
+    let res_epid = ecall_get_attestation_report_epid(api_key, api_key_len, &kp);
+    if let Ok(ref vCert) = res_epid {
+        size_epid = vCert.len() as u32;
+    }
 
-    if (res != sgx_status_t::SGX_SUCCESS) && (res2 != sgx_status_t::SGX_SUCCESS) {
-        return res;
+    let res_dcap = ecall_get_attestation_report_dcap(&kp);
+    if let Ok((ref vQuote, ref vColl)) = res_dcap {
+        size_dcap_q = vQuote.len() as u32;
+        size_dcap_c = vColl.len() as u32;
+    }
+
+    let mut fOut = match File::create(CERT_COMBINED_PATH.as_str()) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("failed to create file {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    fOut.write(&(size_epid as u32).to_le_bytes());
+    fOut.write(&(size_dcap_q as u32).to_le_bytes());
+    fOut.write(&(size_dcap_c as u32).to_le_bytes());
+
+    if let Ok(ref vCert) = res_epid {
+        fOut.write_all(vCert.as_slice());
+    }
+
+    if let Ok((vQuote, vColl)) = res_dcap {
+        fOut.write_all(vQuote.as_slice());
+        fOut.write_all(vColl.as_slice());
+    }
+
+    if (size_epid == 0) && (size_dcap_q == 0) {
+        if let Err(status) = res_epid {
+            return status;
+        }
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     sgx_status_t::SGX_SUCCESS
