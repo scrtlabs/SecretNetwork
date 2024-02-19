@@ -7,12 +7,23 @@ use std::panic;
 use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::seed_exchange::SeedType;
+use crate::registration::attestation::verify_quote_ecdsa;
+use crate::registration::cert::verify_ra_report;
+
 use enclave_crypto::consts::OUTPUT_ENCRYPTED_SEED_SIZE;
 use enclave_crypto::PUBLIC_KEY_SIZE;
 use enclave_utils::{
     oom_handler::{self, get_then_clear_oom_happened},
     validate_const_ptr, validate_mut_ptr,
 };
+
+use sgx_types::{sgx_report_body_t, sgx_ql_qv_result_t};
+
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_crypto::consts::SIGNING_METHOD;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_crypto::consts::SigningMethod;
 
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
@@ -94,6 +105,87 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     if !check_cert_in_current_block(cert_slice) {
         return NodeAuthResult::SignatureInvalid;
     }
+
+    let mut target_public_key: [u8; 32] = [0u8; 32];
+
+    let (vCert, vQ, vC) = SplitCombinedCert(cert, cert_len);
+
+    if vQ.is_empty() || vC.is_empty() {
+
+        if vCert.is_empty() {
+            warn!("No valid attestation method provided");
+            return NodeAuthResult::InvalidCert;
+        }
+
+        trace!("EPID attestation");
+
+        //let result = panic::catch_unwind(|| {
+            // verify certificate, and return the public key in the extra data of the report
+            let pk = match verify_ra_cert(cert_slice, None, true) {
+                Ok(retval) => {
+                    retval
+                }
+                Err(e) => {
+                    return e;
+                }
+            };
+
+            // just make sure the length isn't wrong for some reason (certificate may be malformed)
+            if pk.len() != PUBLIC_KEY_SIZE {
+                warn!(
+                    "Got public key from certificate with the wrong size: {:?}",
+                    pk.len()
+                );
+                return NodeAuthResult::MalformedPublicKey;
+            }
+
+            target_public_key.copy_from_slice(&pk);
+        //    NodeAuthResult::Success // not yet actually
+        //});
+
+        //if result.is_err() {
+        //    // There's no real need here to test if oom happened
+        //    get_then_clear_oom_happened();
+        //    warn!("Enclave call ecall_authenticate_new_node panic!");
+        //    return NodeAuthResult::Panic;
+        //}
+
+    } else {
+
+        // DCAP
+        trace!("DCAP attestation");
+
+        // TODO - current block timestamp is needed
+        //let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+        //let tm = verified_msgs.time();
+        let tm : i64 = 0;
+
+
+        // test self
+        let report_body = match verify_quote_ecdsa(&vQ, &vC, tm) {
+            Ok(r) => {
+                trace!("Remote quote verified ok");
+                if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+                    trace!("WARNING: {}", r.1);
+                }
+                r.0
+            }
+            Err(e) => {
+                trace!("Remote quote verification failed: {}", e);
+                return NodeAuthResult::InvalidCert;
+            }
+        };
+
+        let res2 = verify_ra_report(report_body.mr_signer.m, report_body.mr_enclave.m, Some(SigningMethod::MRSIGNER));
+        if NodeAuthResult::Success != res2 {
+            return res2;
+        }
+
+        target_public_key.copy_from_slice(&report_body.report_data.d[..32]);
+    }
+
+
+
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
         // verify certificate, and return the public key in the extra data of the report
