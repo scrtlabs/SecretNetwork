@@ -18,6 +18,7 @@ use enclave_utils::{
 };
 
 use sgx_types::{sgx_report_body_t, sgx_ql_qv_result_t};
+use block_verifier::VERIFIED_BLOCK_MESSAGES;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SIGNING_METHOD;
@@ -155,14 +156,15 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         // DCAP
         trace!("DCAP attestation");
 
-        // TODO - current block timestamp is needed
-        //let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
-        //let tm = verified_msgs.time();
-        let tm : i64 = 0;
+        let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+        let tm_ns = verified_msgs.time();
+        let tm_s = (tm_ns / 1000000000) as i64;
+        //let tm : i64 = 0;
 
+        trace!("Current block time: {}", tm_s);
 
         // test self
-        let report_body = match verify_quote_ecdsa(&vQ, &vC, tm) {
+        let report_body = match verify_quote_ecdsa(&vQ, &vC, tm_s) {
             Ok(r) => {
                 trace!("Remote quote verified ok");
                 if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
@@ -184,24 +186,8 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         target_public_key.copy_from_slice(&report_body.report_data.d[..32]);
     }
 
-
-
-
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
-        // verify certificate, and return the public key in the extra data of the report
-        let pk = verify_ra_cert(cert_slice, None, true)?;
 
-        // just make sure the length isn't wrong for some reason (certificate may be malformed)
-        if pk.len() != PUBLIC_KEY_SIZE {
-            warn!(
-                "Got public key from certificate with the wrong size: {:?}",
-                pk.len()
-            );
-            return Err(NodeAuthResult::MalformedPublicKey);
-        }
-
-        let mut target_public_key: [u8; 32] = [0u8; 32];
-        target_public_key.copy_from_slice(&pk);
         trace!(
             "ecall_get_encrypted_seed target_public_key key pk: {:?}",
             &target_public_key.to_vec()
