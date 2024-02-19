@@ -16,9 +16,48 @@ use enclave_utils::{
 
 use super::cert::verify_ra_cert;
 use super::seed_exchange::encrypt_seed;
+use core::mem;
+use std::slice;
 
 #[cfg(feature = "light-client-validation")]
 use enclave_contract_engine::check_cert_in_current_block;
+
+
+pub fn SplitCombinedCert(
+    cert: *const u8,
+    cert_len: u32,
+) -> (Vec<u8>, Vec<u8>, Vec<u8>)
+{
+    let mut vCert : Vec<u8> = Vec::new();
+    let mut vQ : Vec<u8> = Vec::new();
+    let mut vC : Vec<u8> = Vec::new();
+
+    let n0 = mem::size_of::<u32>() as u32 * 3;
+
+    if cert_len >= n0
+    {
+        let pS = cert as *const u32;
+        let s0 = u32::from_le( unsafe { *pS } );
+        let s1 = u32::from_le( unsafe { *(pS.offset(1)) } );
+        let s2 = u32::from_le( unsafe { *(pS.offset(2)) } );
+
+        let sTotal =
+            (n0 as u64) +
+            (s0 as u64) +
+            (s1 as u64) +
+            (s2 as u64);
+
+        if sTotal <= cert_len as u64
+        {
+            vCert = unsafe { slice::from_raw_parts(cert.offset(n0 as isize), s0 as usize).to_vec() };
+            vQ = unsafe { slice::from_raw_parts(cert.offset((n0 + s0) as isize), s1 as usize).to_vec() };
+            vC = unsafe { slice::from_raw_parts(cert.offset((n0 + s0 + s1) as isize), s2 as usize).to_vec() };
+        }
+
+    }
+
+    (vCert, vQ, vC)
+}
 
 ///
 /// `ecall_authenticate_new_node`
