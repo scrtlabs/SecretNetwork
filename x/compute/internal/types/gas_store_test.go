@@ -8,8 +8,8 @@ package types
 //	"github.com/stretchr/testify/require"
 //	dbm "github.com/tendermint/tm-db"
 //
-//	"github.com/cosmos/cosmos-sdk/store/dbadapter"
-//	"github.com/cosmos/cosmos-sdk/store/types"
+//	"cosmossdk.io/store/dbadapter"
+//	"cosmossdk.io/store/types"
 //)
 //
 //func bz(s string) []byte { return []byte(s) }

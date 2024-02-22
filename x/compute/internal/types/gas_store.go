@@ -8,8 +8,8 @@ package types
 //	"io"
 //	"time"
 //
-//	"github.com/cosmos/cosmos-sdk/store/types"
-//	stypes "github.com/cosmos/cosmos-sdk/store/types"
+//	"cosmossdk.io/store/types"
+//	stypes "cosmossdk.io/store/types"
 //	"github.com/cosmos/cosmos-sdk/telemetry"
 //	sdk "github.com/cosmos/cosmos-sdk/types"
 //)

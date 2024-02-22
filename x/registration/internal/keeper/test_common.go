@@ -35,7 +35,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/store"
+	"cosmossdk.io/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper/mock"
 	regtypes "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"

@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	stypes "github.com/cosmos/cosmos-sdk/store/types"
+	stypes "cosmossdk.io/store/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/stretchr/testify/require"
