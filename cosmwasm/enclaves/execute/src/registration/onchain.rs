@@ -18,7 +18,6 @@ use enclave_utils::{
 };
 
 use sgx_types::{sgx_report_body_t, sgx_ql_qv_result_t};
-use block_verifier::VERIFIED_BLOCK_MESSAGES;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SIGNING_METHOD;
@@ -33,6 +32,23 @@ use std::slice;
 
 #[cfg(feature = "light-client-validation")]
 use enclave_contract_engine::check_cert_in_current_block;
+
+#[cfg(feature = "light-client-validation")]
+use block_verifier::VERIFIED_BLOCK_MESSAGES;
+
+#[cfg(feature = "light-client-validation")]
+fn get_current_block_time_s() -> i64
+{
+    let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+    let tm_ns = verified_msgs.time();
+    return (tm_ns / 1000000000) as i64;
+}
+
+#[cfg(not(feature = "light-client-validation"))]
+fn get_current_block_time_s() -> i64
+{
+    return 0 as i64;
+}
 
 
 pub fn SplitCombinedCert(
@@ -156,11 +172,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
         // DCAP
         trace!("DCAP attestation");
 
-        let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
-        let tm_ns = verified_msgs.time();
-        let tm_s = (tm_ns / 1000000000) as i64;
-        //let tm : i64 = 0;
-
+        let tm_s = get_current_block_time_s();
         trace!("Current block time: {}", tm_s);
 
         // test self
