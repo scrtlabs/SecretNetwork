@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
+	snapshottypes "cosmossdk.io/store/snapshots/types"
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"

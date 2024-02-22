@@ -20,7 +20,7 @@ import (
 
 	//"github.com/tendermint/tendermint/libs/cli"
 
-	"github.com/cosmos/cosmos-sdk/snapshots"
+	"cosmossdk.io/store/snapshots"
 	"github.com/scrtlabs/SecretNetwork/app"
 
 	"github.com/spf13/cast"
