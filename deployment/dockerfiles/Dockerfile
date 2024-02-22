@@ -8,7 +8,7 @@
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
 ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2004-1.1.6
-ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.17
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.20
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
