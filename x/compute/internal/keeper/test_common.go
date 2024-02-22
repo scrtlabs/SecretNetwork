@@ -100,7 +100,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"cosmossdk.io/x/upgrade"
-	upgradeclient "cosmossdk.io/x/upgrade/client"
+	// upgradeclient "cosmossdk.io/x/upgrade/client"
 
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
@@ -211,14 +211,14 @@ var ModuleBasics = module.NewBasicManager(
 	staking.AppModuleBasic{},
 	mint.AppModuleBasic{},
 	distribution.AppModuleBasic{},
-	gov.NewAppModuleBasic(
-		paramsclient.ProposalHandler,
-		distrclient.ProposalHandler,
-		upgradeclient.ProposalHandler,
-		upgradeclient.CancelProposalHandler,
-		ibcclient.UpdateClientProposalHandler,
-		ibcclient.UpgradeProposalHandler,
-	),
+	// gov.NewAppModuleBasic(
+		// paramsclient.ProposalHandler,
+		// distrclient.ProposalHandler,
+		// upgradeclient.ProposalHandler,
+		// upgradeclient.CancelProposalHandler,
+		// ibcclient.UpdateClientProposalHandler,
+		// ibcclient.UpgradeProposalHandler,
+	// ),
 	params.AppModuleBasic{},
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},

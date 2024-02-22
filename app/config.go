@@ -25,7 +25,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"cosmossdk.io/x/upgrade"
-	upgradeclient "cosmossdk.io/x/upgrade/client"
+	// upgradeclient "cosmossdk.io/x/upgrade/client"
 	ica "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts"
 	ibcfee "github.com/cosmos/ibc-go/v8/modules/apps/29-fee"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
@@ -52,8 +52,8 @@ var mbasics = module.NewBasicManager(
 		gov.NewAppModuleBasic(
 			paramsclient.ProposalHandler,
 			distrclient.ProposalHandler,
-			upgradeclient.ProposalHandler,
-			upgradeclient.CancelProposalHandler,
+			// upgradeclient.ProposalHandler,
+			// upgradeclient.CancelProposalHandler,
 			ibcclient.UpdateClientProposalHandler,
 			ibcclient.UpgradeProposalHandler,
 		),

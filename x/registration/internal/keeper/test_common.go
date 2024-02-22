@@ -30,7 +30,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"cosmossdk.io/x/upgrade"
-	upgradeclient "cosmossdk.io/x/upgrade/client"
+	// upgradeclient "cosmossdk.io/x/upgrade/client"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -71,9 +71,9 @@ var ModuleBasics = module.NewBasicManager(
 	staking.AppModuleBasic{},
 	mint.AppModuleBasic{},
 	distribution.AppModuleBasic{},
-	gov.NewAppModuleBasic(
-		paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
-	),
+	// gov.NewAppModuleBasic(
+		// paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
+	// ),
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
 	// ibc.AppModuleBasic{},
