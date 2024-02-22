@@ -30,7 +30,7 @@ import (
 	ibcfee "github.com/cosmos/ibc-go/v8/modules/apps/29-fee"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
-	ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
+	// ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 
 	packetforwardrouter "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
@@ -54,8 +54,8 @@ var mbasics = module.NewBasicManager(
 			// distrclient.ProposalHandler,
 			// upgradeclient.ProposalHandler,
 			// upgradeclient.CancelProposalHandler,
-			ibcclient.UpdateClientProposalHandler,
-			ibcclient.UpgradeProposalHandler,
+			// ibcclient.UpdateClientProposalHandler,
+			// ibcclient.UpgradeProposalHandler,
 		),
 		params.AppModuleBasic{},
 		crisis.AppModuleBasic{},

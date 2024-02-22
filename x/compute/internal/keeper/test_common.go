@@ -29,7 +29,7 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
+	// ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
 	ibchost "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 
