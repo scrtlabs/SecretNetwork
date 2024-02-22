@@ -6,7 +6,7 @@ import "gogoproto/gogo.proto";
 import "ibc/applications/packetforward/v1/genesis.proto";
 import "google/api/annotations.proto";
 
-option go_package = "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4/router/types";
+option go_package = "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types";
 
 // Query provides defines the gRPC querier service.
 service Query {

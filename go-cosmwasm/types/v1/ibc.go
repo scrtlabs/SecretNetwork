@@ -1,7 +1,7 @@
 package v1types
 
 import (
-	ibcchanneltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010msgtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 )

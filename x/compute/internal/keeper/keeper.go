@@ -13,9 +13,9 @@ import (
 	"time"
 
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
-	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
-	portkeeper "github.com/cosmos/ibc-go/v4/modules/core/05-port/keeper"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
+	portkeeper "github.com/cosmos/ibc-go/v8/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"golang.org/x/crypto/ripemd160" //nolint:staticcheck
 
