@@ -37,7 +37,7 @@ import (
 	"cosmossdk.io/x/upgrade"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	ibcpacketforward "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/router"
+	ibcpacketforward "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
 	icacontroller "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller"
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/keeper"
 	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
@@ -59,8 +59,8 @@ import (
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 
-	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/router/keeper"
-	ibcpacketforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/router/types"
+	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/keeper"
+	ibcpacketforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types"
 
 	ibcfeekeeper "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/keeper"
 	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"

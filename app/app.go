@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/router/types"
+	packetforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types"
 	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 

@@ -33,7 +33,7 @@ import (
 	ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 
-	packetforwardrouter "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/router"
+	packetforwardrouter "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
