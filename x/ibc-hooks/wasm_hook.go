@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
 

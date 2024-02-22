@@ -22,7 +22,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	captypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	captypes "github.com/cosmos/ibc-go/modules/capability/types"
 	evtypes "cosmossdk.io/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"

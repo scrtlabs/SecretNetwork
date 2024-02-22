@@ -19,8 +19,8 @@ import (
 	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
-	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	feegrant "cosmossdk.io/x/feegrant"
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
@@ -66,7 +66,7 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	"github.com/cosmos/cosmos-sdk/x/capability"
+	"github.com/cosmos/ibc-go/modules/capability"
 
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"

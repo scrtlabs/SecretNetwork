@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
+	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v8/modules/core/05-port/keeper"

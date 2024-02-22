@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/capability"
+	"github.com/cosmos/ibc-go/modules/capability"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"cosmossdk.io/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/gov"
