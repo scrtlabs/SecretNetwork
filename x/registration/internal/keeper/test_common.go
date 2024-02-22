@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/capability"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	"github.com/cosmos/cosmos-sdk/x/evidence"
+	"cosmossdk.io/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	// "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"

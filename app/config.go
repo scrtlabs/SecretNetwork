@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
-	"github.com/cosmos/cosmos-sdk/x/evidence"
+	"cosmossdk.io/x/evidence"
 	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"

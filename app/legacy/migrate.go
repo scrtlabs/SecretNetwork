@@ -23,7 +23,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	captypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	evtypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	evtypes "cosmossdk.io/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 

@@ -21,7 +21,7 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	evidencetypes "cosmossdk.io/x/evidence/types"
 	feegrant "github.com/cosmos/cosmos-sdk/x/feegrant"
 	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -77,7 +77,7 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
 	"github.com/cosmos/cosmos-sdk/types/tx"
-	"github.com/cosmos/cosmos-sdk/x/evidence"
+	"cosmossdk.io/x/evidence"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
