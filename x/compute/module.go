@@ -22,7 +22,7 @@ import (
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
-	"github.com/scrtlabs/SecretNetwork/x/compute/client/rest"
+	// "github.com/scrtlabs/SecretNetwork/x/compute/client/rest"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -67,9 +67,9 @@ func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, _ client.TxEnco
 }
 
 // RegisterRESTRoutes registers the REST routes for the compute module.
-func (AppModuleBasic) RegisterRESTRoutes(ctx client.Context, rtr *mux.Router) {
-	rest.RegisterRoutes(ctx, rtr)
-}
+// func (AppModuleBasic) RegisterRESTRoutes(ctx client.Context, rtr *mux.Router) {
+	// rest.RegisterRoutes(ctx, rtr)
+// }
 
 // GetTxCmd returns the root tx command for the compute module.
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
