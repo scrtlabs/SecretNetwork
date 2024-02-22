@@ -19,7 +19,7 @@ import (
 
 	// "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
-	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
+	// distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
@@ -70,7 +70,7 @@ var ModuleBasics = module.NewBasicManager(
 	capability.AppModuleBasic{},
 	staking.AppModuleBasic{},
 	mint.AppModuleBasic{},
-	distribution.AppModuleBasic{},
+	// distribution.AppModuleBasic{},
 	// gov.NewAppModuleBasic(
 		// paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
 	// ),

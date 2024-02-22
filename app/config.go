@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/ibc-go/modules/capability"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
+	// distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	"cosmossdk.io/x/evidence"
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -51,7 +51,7 @@ var mbasics = module.NewBasicManager(
 		distr.AppModuleBasic{},
 		gov.NewAppModuleBasic(
 			paramsclient.ProposalHandler,
-			distrclient.ProposalHandler,
+			// distrclient.ProposalHandler,
 			// upgradeclient.ProposalHandler,
 			// upgradeclient.CancelProposalHandler,
 			ibcclient.UpdateClientProposalHandler,
