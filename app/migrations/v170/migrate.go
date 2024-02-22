@@ -1,12 +1,12 @@
-package legacy
+package migrations
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 
-	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v120"
-	v170registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v170"
+	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/migrations/v120"
+	v170registration "github.com/scrtlabs/SecretNetwork/x/registration/migrations/v170"
 )
 
 func Migrate(appState types.AppMap, _ client.Context) types.AppMap {

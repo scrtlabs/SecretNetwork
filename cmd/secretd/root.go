@@ -44,7 +44,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	secretlegacy "github.com/scrtlabs/SecretNetwork/app/legacy"
+	secretlegacy "github.com/scrtlabs/SecretNetwork/app/migrations"
 )
 
 // thanks @terra-project for this fix

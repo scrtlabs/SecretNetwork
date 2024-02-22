@@ -1,4 +1,4 @@
-package legacy
+package migrations
 
 import (
 	"encoding/json"
@@ -27,7 +27,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	legacy170 "github.com/scrtlabs/SecretNetwork/app/legacy/v170"
+	legacy170 "github.com/scrtlabs/SecretNetwork/app/migrations/v170"
 )
 
 const (
