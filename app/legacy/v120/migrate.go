@@ -34,7 +34,7 @@ import (
 	v040slashing "github.com/cosmos/cosmos-sdk/x/slashing/legacy/v040"
 	v038staking "github.com/cosmos/cosmos-sdk/x/staking/legacy/v038"
 	v040staking "github.com/cosmos/cosmos-sdk/x/staking/legacy/v040"
-	v038upgrade "github.com/cosmos/cosmos-sdk/x/upgrade/legacy/v038"
+	v038upgrade "cosmossdk.io/x/upgrade/legacy/v038"
 
 	v106registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v106"
 	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v120"
