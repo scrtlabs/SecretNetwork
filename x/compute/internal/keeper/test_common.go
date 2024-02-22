@@ -47,7 +47,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
+	// simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/std"
 	"cosmossdk.io/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"

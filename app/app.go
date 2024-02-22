@@ -21,7 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
+	// "github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
@@ -112,7 +112,7 @@ var (
 
 // Verify app interface at compile time
 var (
-	_ simapp.App                          = (*SecretNetworkApp)(nil)
+	// _ simapp.App                          = (*SecretNetworkApp)(nil)
 	_ servertypes.Application             = (*SecretNetworkApp)(nil)
 	_ servertypes.ApplicationQueryService = (*SecretNetworkApp)(nil)
 )
@@ -326,7 +326,7 @@ func (app *SecretNetworkApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBloc
 
 // InitChainer application update at chain initialization
 func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	var genesisState simapp.GenesisState
+	// var genesisState simapp.GenesisState
 	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}

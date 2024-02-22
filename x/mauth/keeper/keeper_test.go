@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/simapp"
+	// "github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 
 	"github.com/stretchr/testify/suite"
@@ -43,7 +43,7 @@ func init() {
 func SetupICATestingApp() (ibctesting.TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
 	// encCdc := icaapp.MakeEncodingConfig()
-	app := icaapp.NewSecretNetworkApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, icaapp.DefaultNodeHome, 5, false, simapp.EmptyAppOptions{}, compute.DefaultWasmConfig())
+	// app := icaapp.NewSecretNetworkApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, icaapp.DefaultNodeHome, 5, false, simapp.EmptyAppOptions{}, compute.DefaultWasmConfig())
 	// TODO: figure out if it's ok that w MakeEncodingConfig inside of our Genesis.go. It would be a different instance than the one used in app
 	return app, icaapp.NewDefaultGenesisState()
 }
