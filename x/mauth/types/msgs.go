@@ -7,6 +7,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
 	proto "github.com/gogo/protobuf/proto"
 )
 
@@ -28,7 +29,7 @@ func NewMsgRegisterAccount(owner, connectionID, _ string) *MsgRegisterAccount {
 // ValidateBasic implements sdk.Msg
 func (msg MsgRegisterAccount) ValidateBasic() error {
 	if strings.TrimSpace(msg.Owner) == "" {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "missing sender address")
+		return errorsmod.Wrap(sdkerrors.ErrInvalidAddress, "missing sender address")
 	}
 
 	return nil

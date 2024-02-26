@@ -1,6 +1,9 @@
 package util
 
-import sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+import (
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
+)
 
 const (
 	// Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -24,7 +27,7 @@ var AddressVerifier = func(bytes []byte) error {
 	// 20 bytes = module accounts, base accounts, secret contracts
 	// 32 bytes = ICA accounts
 	if len(bytes) != 20 && len(bytes) != 32 {
-		return sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "address length must be 20 or 32 bytes, got %d", len(bytes))
+		return errorsmod.Wrapf(sdkerrors.ErrUnknownAddress, "address length must be 20 or 32 bytes, got %d", len(bytes))
 	}
 
 	return nil

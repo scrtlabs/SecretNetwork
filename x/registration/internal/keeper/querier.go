@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 )
 
@@ -48,7 +49,7 @@ func (q GrpcQuerier) RegistrationKey(c context.Context, _ *empty.Empty) (*types.
 
 func (q GrpcQuerier) EncryptedSeed(c context.Context, req *types.QueryEncryptedSeedRequest) (*types.QueryEncryptedSeedResponse, error) {
 	if req.PubKey == nil {
-		return nil, sdkerrors.Wrap(types.ErrInvalid, "public key")
+		return nil, errorsmod.Wrap(types.ErrInvalid, "public key")
 	}
 	rsp, err := queryEncryptedSeed(sdk.UnwrapSDKContext(c), req.PubKey, q.keeper)
 	switch {
@@ -64,7 +65,7 @@ func queryMasterKey(ctx sdk.Context, keeper Keeper) (*types.GenesisState, error)
 	ioKey := keeper.GetMasterKey(ctx, types.MasterIoKeyId)
 	nodeKey := keeper.GetMasterKey(ctx, types.MasterNodeKeyId)
 	if ioKey == nil || nodeKey == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, "Chain has not been initialized yet")
+		return nil, errorsmod.Wrap(sdkerrors.ErrUnknownAddress, "Chain has not been initialized yet")
 	}
 
 	resp := &types.GenesisState{
@@ -79,7 +80,7 @@ func queryMasterKey(ctx sdk.Context, keeper Keeper) (*types.GenesisState, error)
 func queryEncryptedSeed(ctx sdk.Context, pubkeyBytes []byte, keeper Keeper) ([]byte, error) {
 	seed := keeper.getRegistrationInfo(ctx, pubkeyBytes)
 	if seed == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, "Node has not been authenticated yet")
+		return nil, errorsmod.Wrap(sdkerrors.ErrUnknownAddress, "Node has not been authenticated yet")
 	}
 
 	return seed.EncryptedSeed, nil

@@ -2,7 +2,6 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
@@ -41,7 +40,7 @@ func (i *Keeper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability
 
 	if status == types.IbcSwitchStatusOff {
 		println("Returning error!")
-		return sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
+		return errorsmod.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 	}
 
 	return i.channel.SendPacket(ctx, chanCap, packet)

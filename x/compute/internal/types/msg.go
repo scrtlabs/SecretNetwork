@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
 )
 
 func (msg MsgStoreCode) Route() string {
@@ -21,15 +22,15 @@ func (msg MsgStoreCode) ValidateBasic() error {
 	}
 
 	if err := validateWasmCode(msg.WASMByteCode); err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
 	}
 
 	if err := validateSourceURL(msg.Source); err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "source %s", err.Error())
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "source %s", err.Error())
 	}
 
 	if err := validateBuilder(msg.Builder); err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "builder %s", err.Error())
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "builder %s", err.Error())
 	}
 
 	return nil
@@ -57,7 +58,7 @@ func (msg MsgInstantiateContract) ValidateBasic() error {
 	}
 
 	if msg.CodeID == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code_id is required")
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "code_id is required")
 	}
 
 	if err := validateLabel(msg.Label); err != nil {
@@ -96,7 +97,7 @@ func (msg MsgExecuteContract) ValidateBasic() error {
 	}
 
 	if !msg.SentFunds.IsValid() {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
+		return errorsmod.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
 
 	return nil
@@ -120,13 +121,13 @@ func (msg MsgMigrateContract) Type() string {
 
 func (msg MsgMigrateContract) ValidateBasic() error {
 	if msg.CodeID == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return errorsmod.Wrap(err, "sender")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
-		return sdkerrors.Wrap(err, "contract")
+		return errorsmod.Wrap(err, "contract")
 	}
 
 	return nil
@@ -159,16 +160,16 @@ func (msg MsgUpdateAdmin) Type() string {
 
 func (msg MsgUpdateAdmin) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return errorsmod.Wrap(err, "sender")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
-		return sdkerrors.Wrap(err, "contract")
+		return errorsmod.Wrap(err, "contract")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.NewAdmin); err != nil {
-		return sdkerrors.Wrap(err, "new admin")
+		return errorsmod.Wrap(err, "new admin")
 	}
 	if strings.EqualFold(msg.Sender, msg.NewAdmin) {
-		return sdkerrors.Wrap(ErrInvalidMsg, "new admin is the same as the old")
+		return errorsmod.Wrap(ErrInvalidMsg, "new admin is the same as the old")
 	}
 	return nil
 }
@@ -195,10 +196,10 @@ func (msg MsgClearAdmin) Type() string {
 
 func (msg MsgClearAdmin) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return errorsmod.Wrap(err, "sender")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
-		return sdkerrors.Wrap(err, "contract")
+		return errorsmod.Wrap(err, "contract")
 	}
 	return nil
 }

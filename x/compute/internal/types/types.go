@@ -8,7 +8,7 @@ import (
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"cosmossdk.io/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	wasmTypesV010 "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -24,23 +24,23 @@ const (
 
 func (m Model) ValidateBasic() error {
 	if len(m.Key) == 0 {
-		return sdkerrors.Wrap(ErrEmpty, "key")
+		return errors.Wrap(ErrEmpty, "key")
 	}
 	return nil
 }
 
 func (c CodeInfo) ValidateBasic() error {
 	if len(c.CodeHash) == 0 {
-		return sdkerrors.Wrap(ErrEmpty, "code hash")
+		return errors.Wrap(ErrEmpty, "code hash")
 	}
 	if err := sdk.VerifyAddressFormat(c.Creator); err != nil {
-		return sdkerrors.Wrap(err, "creator")
+		return errors.Wrap(err, "creator")
 	}
 	if err := validateSourceURL(c.Source); err != nil {
-		return sdkerrors.Wrap(err, "source")
+		return errors.Wrap(err, "source")
 	}
 	if err := validateBuilder(c.Builder); err != nil {
-		return sdkerrors.Wrap(err, "builder")
+		return errors.Wrap(err, "builder")
 	}
 
 	return nil
@@ -71,13 +71,13 @@ func NewContractInfo(codeID uint64, creator sdk.AccAddress, admin string, adminP
 
 func (c *ContractInfo) ValidateBasic() error {
 	if c.CodeID == 0 {
-		return sdkerrors.Wrap(ErrEmpty, "code id")
+		return errors.Wrap(ErrEmpty, "code id")
 	}
 	if err := sdk.VerifyAddressFormat(c.Creator); err != nil {
-		return sdkerrors.Wrap(err, "creator")
+		return errors.Wrap(err, "creator")
 	}
 	if err := validateLabel(c.Label); err != nil {
-		return sdkerrors.Wrap(err, "label")
+		return errors.Wrap(err, "label")
 	}
 	return nil
 }
@@ -204,7 +204,7 @@ func NewCustomEvents(evts wasmTypesV1.Events, contractAddr sdk.AccAddress) (sdk.
 	for _, e := range evts {
 		typ := strings.TrimSpace(e.Type)
 		if len(typ) <= eventTypeMinLength {
-			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Event type too short: '%s'", typ))
+			return nil, errors.Wrap(ErrInvalidEvent, fmt.Sprintf("Event type too short: '%s'", typ))
 		}
 		attributes, err := contractSDKEventAttributes(e.Attributes, contractAddr)
 		if err != nil {
@@ -223,16 +223,16 @@ func contractSDKEventAttributes(customAttributes []wasmTypesV010.LogAttribute, c
 		// ensure key and value are non-empty (and trim what is there)
 		key := strings.TrimSpace(l.Key)
 		if len(key) == 0 {
-			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Empty attribute key. Value: %s", l.Value))
+			return nil, errors.Wrap(ErrInvalidEvent, fmt.Sprintf("Empty attribute key. Value: %s", l.Value))
 		}
 		value := strings.TrimSpace(l.Value)
 		// TODO: check if this is legal in the SDK - if it is, we can remove this check
 		if len(value) == 0 {
-			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Empty attribute value. Key: %s", key))
+			return nil, errors.Wrap(ErrInvalidEvent, fmt.Sprintf("Empty attribute value. Key: %s", key))
 		}
 		// and reserve all _* keys for our use (not contract)
 		if strings.HasPrefix(key, AttributeReservedPrefix) {
-			return nil, sdkerrors.Wrap(ErrInvalidEvent, fmt.Sprintf("Attribute key starts with reserved prefix %s: '%s'", AttributeReservedPrefix, key))
+			return nil, errors.Wrap(ErrInvalidEvent, fmt.Sprintf("Attribute key starts with reserved prefix %s: '%s'", AttributeReservedPrefix, key))
 		}
 		attrs = append(attrs, sdk.NewAttribute(key, value))
 	}

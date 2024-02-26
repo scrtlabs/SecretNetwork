@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
@@ -53,18 +54,18 @@ func getSizedEncSeed(seed []byte) []byte {
 func getNewSeedParams(path string) ([]byte, []byte) {
 	jsonContent, err := getFile(path)
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	var seedCfg types.SeedConfig
 	err = json.Unmarshal(jsonContent, &seedCfg)
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	pk, enc, err := seedCfg.Decode()
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	return enc, pk
@@ -73,23 +74,23 @@ func getNewSeedParams(path string) ([]byte, []byte) {
 func getLegacySeedParams(path string) ([]byte, []byte) {
 	jsonContent, err := getFile(path)
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	var seedCfg types.LegacySeedConfig
 	err = json.Unmarshal(jsonContent, &seedCfg)
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	cert, enc, err := seedCfg.Decode()
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	pk, err := fetchPubKeyFromLegacyCert(cert)
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	return enc, pk
@@ -124,7 +125,7 @@ func createOldSecret(key []byte, seedFilePath string, enclave EnclaveInterface) 
 func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	apiKey, err := types.GetApiKey()
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	var (
@@ -140,7 +141,7 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 	if !fileExists(seedPath) {
 		if !fileExists(legacySeedPath) {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", legacySeedPath)))
+			panic(errorsmod.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Searching for Seed configuration in path: %s was not found. Did you initialize the node?", legacySeedPath)))
 		}
 		encSeed, pk = getLegacySeedParams(legacySeedPath)
 	} else {
@@ -150,14 +151,14 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 	sizedEndSeed := getSizedEncSeed(encSeed)
 	err = validateEncryptedSeed(hex.EncodeToString(sizedEndSeed))
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	// On upgrade LoadSeed will write the new seed to "SeedPath -- seed.txt" which then will be parsed by the upgrade handler to create new_seed.json
 	// On registration both seed.jsםn and new_seed.json will be created by 'secretd q register secret-network-params' on manual flow or by auto-registration flow"
 	_, err = enclave.LoadSeed(pk, sizedEndSeed, apiKey)
 	if err != nil {
-		panic(sdkerrors.Wrap(types.ErrSeedInitFailed, err.Error()))
+		panic(errorsmod.Wrap(types.ErrSeedInitFailed, err.Error()))
 	}
 
 	if !fileExists(legacySeedPath) {
@@ -174,17 +175,17 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 
 		cert, err := os.ReadFile(sgxAttestationCertPath)
 		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to read attestation certificate at %s", sgxAttestationCertPath)))
+			panic(errorsmod.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("Failed to read attestation certificate at %s", sgxAttestationCertPath)))
 		}
 
 		key, err := ra.UNSAFE_VerifyRaCert(cert)
 		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, "Failed to get key from cert"))
+			panic(errorsmod.Wrap(types.ErrSeedInitFailed, "Failed to get key from cert"))
 		}
 
 		err = createOldSecret(key, legacySeedPath, enclave)
 		if err != nil {
-			panic(sdkerrors.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("%s was not found and could not be created", legacySeedPath)))
+			panic(errorsmod.Wrap(types.ErrSeedInitFailed, fmt.Sprintf("%s was not found and could not be created", legacySeedPath)))
 		}
 	}
 }
@@ -200,12 +201,12 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 
 		publicKey, err := ra.VerifyRaCert(certificate)
 		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
+			return nil, errorsmod.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
 
 		isAuth, err := k.isNodeAuthenticated(ctx, publicKey)
 		if err != nil {
-			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
+			return nil, errorsmod.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
 		if isAuth {
 			return k.getRegistrationInfo(ctx, publicKey).EncryptedSeed, nil
@@ -213,8 +214,8 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 
 		encSeed, err = k.enclave.GetEncryptedSeed(certificate)
 		if err != nil {
-			// return 0, sdkerrors.Wrap(err, "cosmwasm create")
-			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
+			// return 0, errorsmod.Wrap(err, "cosmwasm create")
+			return nil, errorsmod.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
 	}
 	fmt.Println("Done RegisterNode")
@@ -237,7 +238,7 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	// make sure this account can send it
 	for _, acct := range msg.GetSigners() {
 		if !acct.Equals(contractAddr) {
-			return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
+			return errorsmod.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
 		}
 	}
 
@@ -247,7 +248,7 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
 		h := k.router.Route(ctx, legacyMsg.Route())
 		if h == nil {
-			return sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, legacyMsg.Route())
+			return errorsmod.Wrap(sdkerrors.ErrUnknownRequest, legacyMsg.Route())
 		}
 		res, err = h(ctx, msg)
 		if err != nil {
@@ -288,7 +289,7 @@ func validateEncryptedSeed(encSeed string) error {
 	lenKey := len(encSeed) - 2
 
 	if (lenKey != types.EncryptedKeyLength && lenKey != types.LegacyEncryptedKeyLength) || !IsHexString(encSeed) {
-		return sdkerrors.Wrap(types.ErrSeedValidationParams, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
+		return errorsmod.Wrap(types.ErrSeedValidationParams, "Invalid parameter: `seed` in seed parameters. Did you initialize the node?")
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	errorsmod "cosmossdk.io/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
@@ -26,11 +27,11 @@ func (msg RaAuthenticate) ValidateBasic() error {
 	}
 
 	if len(msg.Certificate) == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "Authenticating certificate cannot be empty")
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "Authenticating certificate cannot be empty")
 	}
 
 	if len(msg.Certificate) > MaxCertificateSize {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "certificate length too large")
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "certificate length too large")
 	}
 
 	return validateCertificate(msg.Certificate)
