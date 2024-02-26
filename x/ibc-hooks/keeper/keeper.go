@@ -46,7 +46,8 @@ func (k Keeper) StorePacketCallback(ctx sdk.Context, channel string, packetSeque
 // GetPacketCallback returns the bech32 addr of the contract that is expecting a callback from a packet
 func (k Keeper) GetPacketCallback(ctx sdk.Context, channel string, packetSequence uint64) string {
 	store := k.storeService.OpenKVStore(ctx)
-	return string(store.Get(GetPacketKey(channel, packetSequence)))
+	value, _ := store.Get(GetPacketKey(channel, packetSequence))
+	return string(value)
 }
 
 // DeletePacketCallback deletes the callback from storage once it has been processed
