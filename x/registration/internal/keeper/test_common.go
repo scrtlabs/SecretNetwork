@@ -40,7 +40,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper/mock"
 	regtypes "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 	dbm "github.com/tendermint/tm-db"
 )
 

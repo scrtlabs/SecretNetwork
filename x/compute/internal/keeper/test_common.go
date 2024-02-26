@@ -36,7 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	tmenclave "github.com/scrtlabs/tm-secret-enclave"
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 

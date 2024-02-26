@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 	dbm "github.com/tendermint/tm-db"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"

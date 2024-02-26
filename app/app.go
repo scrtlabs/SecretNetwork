@@ -73,7 +73,7 @@ import (
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmlog "github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
@@ -191,7 +191,7 @@ type WasmWrapper struct {
 
 // NewSecretNetworkApp is a constructor function for enigmaChainApp
 func NewSecretNetworkApp(
-	logger tmlog.Logger,
+	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
 	loadLatest bool,

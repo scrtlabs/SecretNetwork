@@ -13,7 +13,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	protoio "github.com/gogo/protobuf/io"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 

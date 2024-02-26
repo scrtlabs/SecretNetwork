@@ -16,7 +16,7 @@ import (
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
