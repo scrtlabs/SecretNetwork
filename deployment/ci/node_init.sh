@@ -38,7 +38,7 @@ PUBLIC_KEY=$(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev
 
 echo "Public key: $(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )"
 
-secretd tx register auth /opt/secret/.sgx_secrets/attestation_cert.der -y --from a --gas-prices 0.25uscrt
+secretd tx register auth /opt/secret/.sgx_secrets/attestation_combined.bin -y --from a --gas-prices 0.25uscrt --gas 5000000
 
 sleep 10
 
