@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"cosmossdk.io/core/store"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
@@ -12,16 +13,16 @@ import (
 type Keeper struct {
 	cdc codec.Codec
 
-	storeKey sdk.StoreKey
+	storeService store.KVStoreService
 
 	scopedKeeper        capabilitykeeper.ScopedKeeper
 	icaControllerKeeper icacontrollerkeeper.Keeper
 }
 
-func NewKeeper(cdc codec.Codec, storeKey sdk.StoreKey, iaKeeper icacontrollerkeeper.Keeper, scopedKeeper capabilitykeeper.ScopedKeeper) Keeper {
+func NewKeeper(cdc codec.Codec, storeService store.KVStoreService, iaKeeper icacontrollerkeeper.Keeper, scopedKeeper capabilitykeeper.ScopedKeeper) Keeper {
 	return Keeper{
 		cdc:      cdc,
-		storeKey: storeKey,
+		storeService: storeService,
 
 		scopedKeeper:        scopedKeeper,
 		icaControllerKeeper: iaKeeper,
