@@ -1,6 +1,6 @@
 use sgx_types::{
     sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t,
-    sgx_status_t, sgx_target_info_t, sgx_ql_qe_report_info_t, sgx_isv_svn_t, sgx_ql_qv_result_t
+    sgx_status_t, sgx_target_info_t, sgx_ql_qe_report_info_t, sgx_ql_qv_result_t
 };
 
 extern "C" {

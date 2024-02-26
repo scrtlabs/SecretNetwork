@@ -295,41 +295,40 @@ pub fn get_mr_enclave() -> [u8; 32] {
 
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_quote_ecdsa(
-    vQuote : &Vec<u8>,
-    vCol : &Vec<u8>,
-    nTime: i64,
+    vec_quote : &Vec<u8>,
+    vec_coll : &Vec<u8>,
+    time_s: i64,
 ) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t>
 {
     let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();
-    let mut pSupp: [u8; 5000] = [0; 5000];
-    let mut nSupp: u32 = 0;
-    let mut nExpTime: i64 = 0;
-    let mut nExpStatus: u32 = 0;
-    let mut qvResult: sgx_ql_qv_result_t = sgx_ql_qv_result_t::default();
+    let mut p_supp: [u8; 5000] = [0; 5000];
+    let mut n_supp: u32 = 0;
+    let mut exp_time_s: i64 = 0;
+    let mut exp_status: u32 = 0;
+    let mut qv_result: sgx_ql_qv_result_t = sgx_ql_qv_result_t::default();
     let mut rt: sgx_status_t = sgx_status_t::default();
-    let mut ti: sgx_target_info_t = sgx_target_info_t::default();
 
     let mut ti: sgx_target_info_t = sgx_target_info_t::default();
     unsafe {
         sgx_self_target(&mut ti)
     };
 
-    let mut res = unsafe {
+    let res = unsafe {
         ocall_verify_quote_ecdsa(
             &mut rt as *mut sgx_status_t,
-            vQuote.as_ptr(),
-            vQuote.len() as u32,
-            vCol.as_ptr(),
-            vCol.len() as u32,
+            vec_quote.as_ptr(),
+            vec_quote.len() as u32,
+            vec_coll.as_ptr(),
+            vec_coll.len() as u32,
             &ti,
-            nTime,
+            time_s,
             &mut qe_report,
-            pSupp.as_mut_ptr(),
-            pSupp.len() as u32,
-            &mut nSupp,
-            &mut nExpTime,
-            &mut nExpStatus,
-            &mut qvResult)
+            p_supp.as_mut_ptr(),
+            p_supp.len() as u32,
+            &mut n_supp,
+            &mut exp_time_s,
+            &mut exp_status,
+            &mut qv_result)
     };
 
     if res != sgx_status_t::SGX_SUCCESS {
@@ -339,30 +338,30 @@ pub fn verify_quote_ecdsa(
         return Err(rt);
     }
 
-    match qvResult {
+    match qv_result {
         sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK => {},
         sgx_ql_qv_result_t::SGX_QL_QV_RESULT_SW_HARDENING_NEEDED => {},
         _ => {
-            trace!("Quote verification result: {}", qvResult);
+            trace!("Quote verification result: {}", qv_result);
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
     };
 
     // verify the qve report
-    if nTime != 0 {
-        nExpTime = nTime; // insist on our time, if supplied
+    if time_s != 0 {
+        exp_time_s = time_s; // insist on our time, if supplied
     }
 
     let qve_isvsvn_threshold: sgx_isv_svn_t = 3;
     let dcap_ret : sgx_quote3_error_t  = unsafe { sgx_tvl_verify_qve_report_and_identity(
-        vQuote.as_ptr(),
-        vQuote.len() as u32,
+        vec_quote.as_ptr(),
+        vec_quote.len() as u32,
         &qe_report,
-        nExpTime,
-        nExpStatus,
-        qvResult,
-        pSupp.as_ptr(),
-        nSupp,
+        exp_time_s,
+        exp_status,
+        qv_result,
+        p_supp.as_ptr(),
+        n_supp,
         qve_isvsvn_threshold) };
 
     if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
@@ -370,24 +369,24 @@ pub fn verify_quote_ecdsa(
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
     }
 
-    trace!("nSupp = {}", nSupp);
-    trace!("nExpTime = {}", nExpTime);
-    trace!("nExpStatus = {}", nExpStatus);
-    trace!("qvResult = {}", qvResult);
+    trace!("n_supp = {}", n_supp);
+    trace!("exp_time_s = {}", exp_time_s);
+    trace!("exp_status = {}", exp_status);
+    trace!("qv_result = {}", qv_result);
 
-    if vQuote.len() < mem::size_of::<sgx_quote_t>() {
+    if vec_quote.len() < mem::size_of::<sgx_quote_t>() {
         trace!("Quote too small");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    let my_pQuote = vQuote.as_ptr() as *const sgx_quote_t;
-    let report_body = unsafe { (*my_pQuote).report_body };
+    let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
+    let report_body = unsafe { (*my_p_quote).report_body };
 
     trace!("body.mr_signer = {:?}",  report_body.mr_signer.m);
     trace!("body.mr_enclave = {:?}", report_body.mr_enclave.m);
     trace!("body.report_data = {:?}", report_body.report_data.d);
 
-    Ok((report_body, qvResult))
+    Ok((report_body, qv_result))
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -430,20 +429,20 @@ pub fn get_quote_ecdsa(
         )
     };
 
-    if rt != sgx_status_t::SGX_SUCCESS {
-        trace!("sgx_create_report = {}", rt);
+    if res != sgx_status_t::SGX_SUCCESS {
+        trace!("sgx_create_report = {}", res);
     }
 
-    let mut vQuote : Vec<u8> = Vec::new();
-    vQuote.resize(quote_size as usize, 0);
+    let mut vec_quote : Vec<u8> = Vec::new();
+    vec_quote.resize(quote_size as usize, 0);
 
     res = unsafe {
 
         ocall_get_quote_ecdsa(
             &mut rt as *mut sgx_status_t,
             &my_report,
-            vQuote.as_mut_ptr(),
-            vQuote.len() as u32)
+            vec_quote.as_mut_ptr(),
+            vec_quote.len() as u32)
     };
 
     if res != sgx_status_t::SGX_SUCCESS {
@@ -454,18 +453,18 @@ pub fn get_quote_ecdsa(
         trace!("rt = {}", rt);
     }
 
-    let mut vCol : Vec<u8> = Vec::new();
-    vCol.resize(0x4000, 0);
-    let mut nCol : u32 = 0;
+    let mut vec_coll : Vec<u8> = Vec::new();
+    vec_coll.resize(0x4000, 0);
+    let mut size_coll : u32 = 0;
 
-    let mut res = unsafe {
+    let res = unsafe {
         ocall_get_quote_ecdsa_collateral(
             &mut rt as *mut sgx_status_t,
-            vQuote.as_ptr(),
-            vQuote.len() as u32,
-            vCol.as_mut_ptr(),
-            vCol.len() as u32,
-            &mut nCol)
+            vec_quote.as_ptr(),
+            vec_quote.len() as u32,
+            vec_coll.as_mut_ptr(),
+            vec_coll.len() as u32,
+            &mut size_coll)
     };
 
     if res != sgx_status_t::SGX_SUCCESS {
@@ -476,35 +475,34 @@ pub fn get_quote_ecdsa(
         trace!("rt = {}", rt);
     }
 
-    trace!("Collateral size = {}", nCol);
+    trace!("Collateral size = {}", size_coll);
 
-    let bAgain = nCol > vCol.len() as u32;
-    vCol.resize(nCol as usize, 0);
+    let call_again = size_coll > vec_coll.len() as u32;
+    vec_coll.resize(size_coll as usize, 0);
 
-    //if bAgain
+    if call_again
     {
         unsafe {
             ocall_get_quote_ecdsa_collateral(
                 &mut rt as *mut sgx_status_t,
-                vQuote.as_ptr(),
-                vQuote.len() as u32,
-                vCol.as_mut_ptr(),
-                vCol.len() as u32,
-                &mut nCol)
+                vec_quote.as_ptr(),
+                vec_quote.len() as u32,
+                vec_coll.as_mut_ptr(),
+                vec_coll.len() as u32,
+                &mut size_coll)
         };
     }
 
     if res == sgx_status_t::SGX_SUCCESS
     {
         // test self
-        let report_body = match verify_quote_ecdsa(&vQuote, &vCol, 0) {
+        match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
             Ok(r) => {
                 trace!("Self quote verified ok");
                 if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
                     // TODO: strict policy wrt own quote verification
                     trace!("WARNING: {}", r.1);
                 }
-                r.0
             }
             Err(e) => {
                 trace!("Self quote verification failed: {}", e);
@@ -514,7 +512,7 @@ pub fn get_quote_ecdsa(
     };
 
 
-    Ok((vQuote, vCol))
+    Ok((vec_quote, vec_coll))
 
 }
 

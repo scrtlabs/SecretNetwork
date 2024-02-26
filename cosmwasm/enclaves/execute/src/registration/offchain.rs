@@ -387,7 +387,7 @@ unsafe fn ecall_get_attestation_report_dcap(
     kp: &KeyPair,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t>
 {
-    let (vQuote, vColl) = match get_quote_ecdsa(&kp.get_pubkey()) {
+    let (vec_quote, vec_coll) = match get_quote_ecdsa(&kp.get_pubkey()) {
         Ok(r) => r,
         Err(e) => {
             warn!("Error creating attestation report");
@@ -395,15 +395,15 @@ unsafe fn ecall_get_attestation_report_dcap(
         }
     };
 
-    if let Err(status) = write_to_untrusted(&vQuote, ATTESTATION_DCAP_PATH.as_str()) {
+    if let Err(status) = write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str()) {
         return Err(status);
     }
 
-    if let Err(status) = write_to_untrusted(&vColl, COLLATERAL_DCAP_PATH.as_str()) {
+    if let Err(status) = write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str()) {
         return Err(status);
     }
 
-    return Ok((vQuote, vColl));
+    return Ok((vec_quote, vec_coll));
 }
 
 
@@ -439,17 +439,17 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     let mut size_dcap_c : u32 = 0;
 
     let res_epid = ecall_get_attestation_report_epid(api_key, api_key_len, &kp);
-    if let Ok(ref vCert) = res_epid {
-        size_epid = vCert.len() as u32;
+    if let Ok(ref vec_cert) = res_epid {
+        size_epid = vec_cert.len() as u32;
     }
 
     let res_dcap = ecall_get_attestation_report_dcap(&kp);
-    if let Ok((ref vQuote, ref vColl)) = res_dcap {
-        size_dcap_q = vQuote.len() as u32;
-        size_dcap_c = vColl.len() as u32;
+    if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
+        size_dcap_q = vec_quote.len() as u32;
+        size_dcap_c = vec_coll.len() as u32;
     }
 
-    let mut fOut = match File::create(CERT_COMBINED_PATH.as_str()) {
+    let mut f_out = match File::create(CERT_COMBINED_PATH.as_str()) {
         Ok(f) => f,
         Err(e) => {
             error!("failed to create file {}", e);
@@ -457,17 +457,17 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         }
     };
 
-    fOut.write(&(size_epid as u32).to_le_bytes());
-    fOut.write(&(size_dcap_q as u32).to_le_bytes());
-    fOut.write(&(size_dcap_c as u32).to_le_bytes());
+    f_out.write(&(size_epid as u32).to_le_bytes());
+    f_out.write(&(size_dcap_q as u32).to_le_bytes());
+    f_out.write(&(size_dcap_c as u32).to_le_bytes());
 
-    if let Ok(ref vCert) = res_epid {
-        fOut.write_all(vCert.as_slice());
+    if let Ok(ref vec_cert) = res_epid {
+        f_out.write_all(vec_cert.as_slice());
     }
 
-    if let Ok((vQuote, vColl)) = res_dcap {
-        fOut.write_all(vQuote.as_slice());
-        fOut.write_all(vColl.as_slice());
+    if let Ok((vec_quote, vec_coll)) = res_dcap {
+        f_out.write_all(vec_quote.as_slice());
+        f_out.write_all(vec_coll.as_slice());
     }
 
     if (size_epid == 0) && (size_dcap_q == 0) {
