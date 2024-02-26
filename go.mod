@@ -3,17 +3,10 @@ module github.com/scrtlabs/SecretNetwork
 go 1.21
 
 replace (
-	// github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.13-0.20230802150248-ea64f27dc58d
-
 	// CHANGE ME
 	github.com/cosmos/cosmos-sdk => /home/ilya/secret/cosmos-sdk
 
-	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
-	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	// github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
-
-	// CHANGE ME
 	github.com/tendermint/tendermint => /home/ilya/secret/tendermint
 )
 
@@ -50,6 +43,9 @@ require (
 )
 
 require (
+	cosmossdk.io/core v0.11.0
+	cosmossdk.io/errors v1.0.1
+	cosmossdk.io/log v1.3.0
 	cosmossdk.io/store v1.0.2
 	cosmossdk.io/x/evidence v0.1.0
 	cosmossdk.io/x/feegrant v0.1.0
@@ -68,10 +64,7 @@ require (
 	cosmossdk.io/api v0.7.2 // indirect
 	cosmossdk.io/client/v2 v2.0.0-beta.1 // indirect
 	cosmossdk.io/collections v0.4.0 // indirect
-	cosmossdk.io/core v0.11.0 // indirect
 	cosmossdk.io/depinject v1.0.0-alpha.4 // indirect
-	cosmossdk.io/errors v1.0.1 // indirect
-	cosmossdk.io/log v1.3.0 // indirect
 	cosmossdk.io/math v1.2.0 // indirect
 	cosmossdk.io/x/circuit v0.1.0 // indirect
 	cosmossdk.io/x/tx v0.13.0 // indirect
