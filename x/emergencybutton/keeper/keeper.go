@@ -4,6 +4,7 @@ import (
 	"cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
@@ -36,7 +37,7 @@ func NewKeeper(
 // SendPacket implements the ICS4 interface and is called when sending packets.
 // This method blocks the sending of the packet if the emergencybutton is turned off.
 // If the switcher param is not configured, packets are not blocked and handled by the wrapped IBC app
-func (i *Keeper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI) (uint64, error) {
+func (i *Keeper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability, sourcePort string, sourceChannel string, timeoutHeight ibcclienttypes.Height, timeoutTimestamp uint64, data []byte) (uint64, error) {
 	status := i.GetSwitchStatus(ctx)
 
 	if status == types.IbcSwitchStatusOff {
@@ -44,7 +45,7 @@ func (i *Keeper) SendPacket(ctx sdk.Context, chanCap *capabilitytypes.Capability
 		return 0, errors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 	}
 
-	return i.channel.SendPacket(ctx, chanCap, packet)
+	return i.channel.SendPacket(ctx, chanCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, data)
 }
 
 func (i *Keeper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilitytypes.Capability, packet exported.PacketI, ack exported.Acknowledgement) error {
