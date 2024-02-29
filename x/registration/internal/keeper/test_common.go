@@ -21,7 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	// distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
 	// ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
 
@@ -41,7 +41,7 @@ import (
 	regtypes "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	"github.com/stretchr/testify/require"
 	"cosmossdk.io/log"
-	dbm "github.com/tendermint/tm-db"
+	dbm "github.com/cometbft/cometbft-db"
 )
 
 func CreateTestSeedConfig(t *testing.T) []byte {

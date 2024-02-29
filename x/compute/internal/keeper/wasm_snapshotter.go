@@ -14,7 +14,7 @@ import (
 	protoio "github.com/gogo/protobuf/io"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"cosmossdk.io/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 )
 
 /*

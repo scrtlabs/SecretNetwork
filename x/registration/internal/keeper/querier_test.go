@@ -13,7 +13,7 @@ import (
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 )
 
 func TestNewQuerier(t *testing.T) {

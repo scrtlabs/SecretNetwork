@@ -2,7 +2,7 @@ package v106
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	tmBytes "github.com/tendermint/tendermint/libs/bytes"
+	tmBytes "github.com/cometbft/cometbft/libs/bytes"
 )
 
 const (

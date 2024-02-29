@@ -6,7 +6,7 @@ package types
 //	"testing"
 //
 //	"github.com/stretchr/testify/require"
-//	dbm "github.com/tendermint/tm-db"
+//	dbm "github.com/cometbft/cometbft-db"
 //
 //	"cosmossdk.io/store/dbadapter"
 //	"cosmossdk.io/store/types"

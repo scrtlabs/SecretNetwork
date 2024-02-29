@@ -6,7 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 )
 
 // BaseAppParamManager defines an interrace that BaseApp is expected to fullfil
