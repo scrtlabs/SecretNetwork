@@ -6,9 +6,9 @@ use std::{
 use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError, UserSpaceBuffer};
 use sgx_types::{
     c_int, sgx_calc_quote_size, sgx_enclave_id_t, sgx_epid_group_id_t, sgx_get_quote,
-    sgx_init_quote, sgx_platform_info_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_quote_t,
-    sgx_report_attestation_status, sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t,
-    sgx_update_info_bit_t,
+    sgx_init_quote, sgx_platform_info_t, sgx_ql_qe_report_info_t, sgx_ql_qv_result_t,
+    sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_quote_t, sgx_report_attestation_status,
+    sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t,
 };
 
 // ecalls
