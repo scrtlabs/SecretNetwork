@@ -22,6 +22,8 @@ use enclave_ffi_types::NodeAuthResult;
 
 use super::cert::{get_ias_auth_config, get_netscape_comment};
 
+use sgx_types::sgx_quote_t;
+
 #[derive(Debug)]
 pub enum Error {
     ReportParseError,
@@ -957,7 +959,7 @@ pub mod tests {
     pub fn test_attestation_dcap() {
         let (vec_quote, vec_coll, time_s) = load_attestation_dcap();
 
-        let res = verify_quote_ecdsa(vec_quote, vec_coll, time_s);
+        let res = verify_quote_ecdsa(&vec_quote, &vec_coll, time_s);
         assert!(res.is_ok());
     }
 
@@ -972,7 +974,7 @@ pub mod tests {
             (*p_data).d[6] = (*p_data).d[6] + 4;
         };
 
-        let res = verify_quote_ecdsa(vec_quote, vec_coll, time_s);
+        let res = verify_quote_ecdsa(&vec_quote, &vec_coll, time_s);
         assert!(res.is_ok());
     }
 }
