@@ -11,8 +11,9 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use enclave_crypto::consts::{
-    ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
-    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE, CERT_COMBINED_PATH,
+    ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
+    CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
+    SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -345,7 +346,6 @@ pub unsafe extern "C" fn ecall_init_node(
     sgx_status_t::SGX_SUCCESS
 }
 
-
 unsafe fn ecall_get_attestation_report_epid(
     api_key: *const u8,
     api_key_len: u32,
@@ -379,14 +379,12 @@ unsafe fn ecall_get_attestation_report_epid(
         crate::registration::print_report::print_local_report_info(cert.as_slice());
     }
 
-    return Ok(cert)
+    return Ok(cert);
 }
-
 
 unsafe fn ecall_get_attestation_report_dcap(
     kp: &KeyPair,
-) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t>
-{
+) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let (vec_quote, vec_coll) = match get_quote_ecdsa(&kp.get_pubkey()) {
         Ok(r) => r,
         Err(e) => {
@@ -405,8 +403,6 @@ unsafe fn ecall_get_attestation_report_dcap(
 
     return Ok((vec_quote, vec_coll));
 }
-
-
 
 #[no_mangle]
 /**
@@ -427,16 +423,27 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
 ) -> sgx_status_t {
-
     let kp = KEY_MANAGER.get_registration_key().unwrap();
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
     );
 
-    let mut size_epid : u32 = 0;
-    let mut size_dcap_q : u32 = 0;
-    let mut size_dcap_c : u32 = 0;
+    {
+        let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
+            Ok(f) => f,
+            Err(e) => {
+                error!("failed to create file {}", e);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        };
+
+        f_out.write(&kp.get_pubkey().to_vec());
+    }
+
+    let mut size_epid: u32 = 0;
+    let mut size_dcap_q: u32 = 0;
+    let mut size_dcap_c: u32 = 0;
 
     let res_epid = ecall_get_attestation_report_epid(api_key, api_key_len, &kp);
     if let Ok(ref vec_cert) = res_epid {
