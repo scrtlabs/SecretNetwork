@@ -971,10 +971,10 @@ pub mod tests {
         unsafe {
             let mut p_report = (*my_p_quote).report_body;
             let mut p_data = p_report.report_data;
-            (*p_data).d[6] = (*p_data).d[6] + 4;
+            p_data.d[6] = p_data.d[6] ^ 4;
         };
 
         let res = verify_quote_ecdsa(&vec_quote, &vec_coll, time_s);
-        assert!(res.is_ok());
+        assert!(!res.is_ok());
     }
 }
