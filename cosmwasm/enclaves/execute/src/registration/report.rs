@@ -964,7 +964,7 @@ pub mod tests {
     }
 
     pub fn test_attestation_dcap_temper() {
-        let (vec_quote, vec_coll, time_s) = load_attestation_dcap();
+        let (mut vec_quote, mut vec_coll, time_s) = load_attestation_dcap();
 
         // tamper with quote
         let mut my_p_quote = vec_quote.as_mut_ptr() as *mut sgx_quote_t;
