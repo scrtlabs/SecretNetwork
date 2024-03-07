@@ -62,6 +62,22 @@ func ParseCert() *cobra.Command {
 	return cmd
 }
 
+func DumpBin() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "dump [binary file]",
+		Short: "Dump a binary file",
+		Long: "Helper to display the contents of a binary file, and extract the public key of the secret node, which is used to" +
+			"register the node, during node initialization",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			println("This is a secretd only function, yo")
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "configure-secret [master-key] [seed]",
