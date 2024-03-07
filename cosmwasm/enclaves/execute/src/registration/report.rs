@@ -756,6 +756,8 @@ pub mod tests {
     use std::io::Read;
     use std::untrusted::fs::File;
 
+    use crate::registration::attestation::verify_quote_ecdsa;
+
     use super::*;
 
     fn tls_ra_cert_der_test() -> Vec<u8> {
@@ -931,5 +933,46 @@ pub mod tests {
         }
 
         assert!(report.is_ok());
+    }
+
+    fn load_attestation_dcap() -> (Vec<u8>, Vec<u8>, i64) {
+        let mut vec_quote = vec![];
+        {
+            let mut f =
+                File::open("../execute/src/registration/fixtures/attestation_dcap.quote").unwrap();
+            f.read_to_end(&mut vec_quote).unwrap();
+        }
+
+        let mut vec_coll = vec![];
+        {
+            let mut f = File::open(
+                "../execute/src/registration/fixtures/attestation_dcap.quote.collateral",
+            )
+            .unwrap();
+            f.read_to_end(&mut vec_coll).unwrap();
+        }
+        (vec_quote, vec_coll, 1709649832)
+    }
+
+    pub fn test_attestation_dcap() {
+        let (vec_quote, vec_coll, time_s) = load_attestation_dcap();
+
+        let res = verify_quote_ecdsa(vec_quote, vec_coll, time_s);
+        assert!(res.is_ok());
+    }
+
+    pub fn test_attestation_dcap_temper() {
+        let (vec_quote, vec_coll, time_s) = load_attestation_dcap();
+
+        // tamper with quote
+        let mut my_p_quote = vec_quote.as_mut_ptr() as *mut sgx_quote_t;
+        unsafe {
+            let mut p_report = (*my_p_quote).report_body;
+            let mut p_data = p_report.report_data;
+            (*p_data).d[6] = (*p_data).d[6] + 4;
+        };
+
+        let res = verify_quote_ecdsa(vec_quote, vec_coll, time_s);
+        assert!(res.is_ok());
     }
 }
