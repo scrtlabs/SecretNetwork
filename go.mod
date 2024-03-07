@@ -21,7 +21,7 @@ require (
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4 v4.1.1
 	github.com/cosmos/ibc-go/v4 v4.5.1
 	github.com/gogo/protobuf v1.3.3
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/gofuzz v1.2.0
 	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
@@ -43,7 +43,7 @@ require (
 	gonum.org/v1/gonum v0.14.0
 	google.golang.org/genproto v0.0.0-20230913181813-007df8e322eb // indirect
 	google.golang.org/grpc v1.58.2
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.33.0
 )
 
 require (
