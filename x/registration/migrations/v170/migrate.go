@@ -3,7 +3,7 @@ package v170
 import (
 	v170rk "github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	v170registration "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
-	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v120"
+	v120registration "github.com/scrtlabs/SecretNetwork/x/registration/migrations/v120"
 	v170ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 

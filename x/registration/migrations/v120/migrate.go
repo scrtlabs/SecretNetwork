@@ -1,7 +1,7 @@
 package v120
 
 import (
-	v106registration "github.com/scrtlabs/SecretNetwork/x/registration/legacy/v106"
+	v106registration "github.com/scrtlabs/SecretNetwork/x/registration/migrations/v106"
 )
 
 // Migrate accepts exported v1.0.6 x/registration genesis state and
