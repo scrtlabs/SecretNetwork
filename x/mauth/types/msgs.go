@@ -28,7 +28,7 @@ func NewMsgRegisterAccount(owner, connectionID, _ string) *MsgRegisterAccount {
 // ValidateBasic implements sdk.Msg
 func (msg MsgRegisterAccount) ValidateBasic() error {
 	if strings.TrimSpace(msg.Owner) == "" {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "missing sender address")
+		return sdkerrors.ErrInvalidAddress.Wrap("missing sender address")
 	}
 
 	return nil

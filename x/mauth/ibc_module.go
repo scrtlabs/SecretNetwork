@@ -105,7 +105,7 @@ func (im IBCModule) OnRecvPacket(
 	_ channeltypes.Packet,
 	_ sdk.AccAddress,
 ) ibcexported.Acknowledgement {
-	return channeltypes.NewErrorAcknowledgement(sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "cannot receive packet via interchain accounts authentication module"))
+	return channeltypes.NewErrorAcknowledgement(sdkerrors.ErrInvalidRequest.Wrapf("cannot receive packet via interchain accounts authentication module"))
 }
 
 // OnAcknowledgementPacket implements the IBCModule interface

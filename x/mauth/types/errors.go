@@ -1,10 +1,10 @@
 package types
 
 import (
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"cosmossdk.io/errors"
 )
 
 var (
-	ErrIBCAccountAlreadyExist = sdkerrors.Register(ModuleName, 2, "interchain account already registered")
-	ErrIBCAccountNotExist     = sdkerrors.Register(ModuleName, 3, "interchain account not exist")
+	ErrIBCAccountAlreadyExist = errors.Register(ModuleName, 2, "interchain account already registered")
+	ErrIBCAccountNotExist     = errors.Register(ModuleName, 3, "interchain account not exist")
 )
