@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"cosmossdk.io/core/store"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -23,11 +24,11 @@ type Keeper struct {
 	cdc      codec.BinaryCodec
 	storeService store.KVStoreService
 	enclave  EnclaveInterface
-	router   sdk.Router
+	router   baseapp.MessageRouter
 }
 
 // NewKeeper creates a new contract Keeper instance
-func NewKeeper(cdc codec.BinaryCodec, storeService store.KVStoreService, router sdk.Router, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, storeService store.KVStoreService, router baseapp.MessageRouter, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 	if !bootstrap {
 		InitializeNode(homeDir, enclave)
 	}
@@ -244,17 +245,14 @@ func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg 
 	}
 
 	var res *sdk.Result
-	var err error
 	// find the handler and execute it
-	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
-		h := k.router.Route(ctx, legacyMsg.Route())
-		if h == nil {
-		}
-		res, err = h(ctx, msg)
-		if err != nil {
-			return err
-		}
+	h := k.router.Handler(msg)
+	if h == nil {
 		return sdkerrors.ErrUnknownRequest.Wrapf("unrecognized message route: %s", sdk.MsgTypeURL(msg))
+	}
+	res, err = h(ctx, msg)
+	if err != nil {
+		return err
 	}
 
 	events := make(sdk.Events, len(res.Events))
