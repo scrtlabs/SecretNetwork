@@ -26,11 +26,11 @@ func (msg RaAuthenticate) ValidateBasic() error {
 	}
 
 	if len(msg.Certificate) == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "Authenticating certificate cannot be empty")
+		return sdkerrors.ErrInvalidRequest.Wrap("Authenticating certificate cannot be empty")
 	}
 
 	if len(msg.Certificate) > MaxCertificateSize {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "certificate length too large")
+		return sdkerrors.ErrInvalidRequest.Wrap("certificate length too large")
 	}
 
 	return validateCertificate(msg.Certificate)

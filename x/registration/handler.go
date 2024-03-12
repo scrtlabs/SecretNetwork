@@ -29,7 +29,7 @@ func NewHandler(k Keeper) sdk.Handler {
 
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
-			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
+			return nil, sdkerrors.ErrUnknownRequest.Wrap(errMsg)
 		}
 	}
 }
