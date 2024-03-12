@@ -2,11 +2,11 @@ package emergencybutton
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
 	"github.com/cosmos/ibc-go/v4/modules/core/exported"
+	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/emergencybutton/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 )
@@ -113,7 +113,7 @@ func (im IBCMiddleware) OnRecvPacket(
 ) exported.Acknowledgement {
 	if im.keeper.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff {
 		println("Returning error!")
-		err := sdkerrors.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
+		err := errorsmod.Wrap(types.ErrIbcOff, "Ibc packets are currently paused in the network")
 		return channeltypes.NewErrorAcknowledgement(err)
 	}
 
