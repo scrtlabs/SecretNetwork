@@ -3,30 +3,24 @@ package registration
 import (
 	"context"
 	"encoding/json"
-	"math/rand"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
-
-	"github.com/gorilla/mux"
-	"github.com/spf13/cobra"
-
-	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/scrtlabs/SecretNetwork/x/registration/client/cli"
-	"github.com/scrtlabs/SecretNetwork/x/registration/client/rest"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
-	_ module.AppModuleBasic = AppModuleBasic{}
+	_ module.AppModule              = AppModule{}
+	_ module.HasName                = AppModule{}
+	_ module.HasConsensusVersion    = AppModule{}
+	_ module.HasGenesis             = AppModule{}
+	_ module.HasServices            = AppModule{}
+	_ module.AppModuleBasic         = AppModuleBasic{}
 )
 
 // AppModuleBasic defines the basic application module used by the compute module.
@@ -67,21 +61,6 @@ func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, config client.T
 	return ValidateGenesis(data)
 }
 
-// RegisterRESTRoutes registers the REST routes for the compute module.
-func (AppModuleBasic) RegisterRESTRoutes(cliCtx client.Context, rtr *mux.Router) {
-	rest.RegisterRoutes(cliCtx, rtr)
-}
-
-// GetTxCmd returns the root tx command for the compute module.
-func (AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd()
-}
-
-// GetQueryCmd returns no root query command for the compute module.
-func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return cli.GetQueryCmd()
-}
-
 // RegisterInterfaceTypes implements InterfaceModule
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
@@ -107,30 +86,12 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
 }
 
-func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
-	return keeper.NewLegacyQuerier(am.keeper)
-}
-
-// RegisterInvariants registers the compute module invariants.
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
-// Route returns the message routing key for the compute module.
-func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(RouterKey, NewHandler(am.keeper))
-}
-
-// QuerierRoute returns the compute module's querier route name.
-func (AppModule) QuerierRoute() string {
-	return QuerierRoute
-}
-
 // InitGenesis performs genesis initialization for the compute module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
 	var genesisState GenesisState
 	cdc.MustUnmarshalJSON(data, &genesisState)
 	InitGenesis(ctx, am.keeper, genesisState)
-	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns the exported genesis state as raw bytes for the compute
@@ -140,38 +101,8 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 	return cdc.MustMarshalJSON(gs)
 }
 
-// BeginBlock returns the begin blocker for the compute module.
-func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
+// IsAppModule implements the appmodule.AppModule interface.
+func (AppModule) IsAppModule() {}
 
-// EndBlock returns the end blocker for the compute module. It returns no validator
-// updates.
-func (AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	return []abci.ValidatorUpdate{}
-}
-
-// ____________________________________________________________________________
-
-// AppModuleSimulation functions
-
-// GenerateGenesisState creates a randomized GenState of the bank module.
-func (AppModule) GenerateGenesisState(_ *module.SimulationState) {
-}
-
-// ProposalContents doesn't return any content functions for governance proposals.
-func (AppModule) ProposalContents(_ module.SimulationState) []simtypes.WeightedProposalContent {
-	return nil
-}
-
-// RandomizedParams creates randomized bank param changes for the simulator.
-func (AppModule) RandomizedParams(_ *rand.Rand) []simtypes.ParamChange {
-	return nil
-}
-
-// RegisterStoreDecoder registers a decoder for supply module's types
-func (am AppModule) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
-}
-
-// WeightedOperations returns the all the gov module operations with their respective weights.
-func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation { //nolint:all
-	return nil
-}
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (AppModule) IsOnePerModuleType() {}
