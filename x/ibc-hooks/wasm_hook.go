@@ -4,15 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	errorsmod "cosmossdk.io/errors"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
-	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
-	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 
 	computetypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
@@ -46,7 +47,7 @@ func (h WasmHooks) OnRecvPacketOverride(im IBCMiddleware, ctx sdk.Context, packe
 		// Not configured
 		return im.App.OnRecvPacket(ctx, packet, relayer)
 	}
-	isIcs20, data := isIcs20Packet(packet)
+	isIcs20, data := isIcs20Packet(packet.GetData())
 	if !isIcs20 {
 		return im.App.OnRecvPacket(ctx, packet, relayer)
 	}
@@ -143,12 +144,12 @@ func (h WasmHooks) execWasmMsg(ctx sdk.Context, execMsg *compute.MsgExecuteContr
 	)
 }
 
-func isIcs20Packet(packet channeltypes.Packet) (isIcs20 bool, ics20data transfertypes.FungibleTokenPacketData) {
-	var data transfertypes.FungibleTokenPacketData
-	if err := json.Unmarshal(packet.GetData(), &data); err != nil {
-		return false, data
+func isIcs20Packet(data []byte) (isIcs20 bool, ics20data transfertypes.FungibleTokenPacketData) {
+	var packetdata transfertypes.FungibleTokenPacketData
+	if err := json.Unmarshal(data, &packetdata); err != nil {
+		return false, packetdata
 	}
-	return true, data
+	return true, packetdata
 }
 
 // jsonStringHasKey parses the memo as a json object and checks if it contains the key.
@@ -236,57 +237,41 @@ func ValidateAndParseMemo(memo string, receiver string) (isWasmRouted bool, cont
 	return isWasmRouted, contractAddr, msgBytes, nil
 }
 
-func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap *capabilitytypes.Capability, packet ibcexported.PacketI) error {
-	concretePacket, ok := packet.(channeltypes.Packet)
-	if !ok {
-		return i.channel.SendPacket(ctx, chanCap, packet) // continue
-	}
-
-	isIcs20, data := isIcs20Packet(concretePacket)
+func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap *capabilitytypes.Capability, sourcePort string, sourceChannel string, timeoutHeight ibcclienttypes.Height, timeoutTimestamp uint64, data []byte) (sequence uint64, err error) {
+	isIcs20, ics20data := isIcs20Packet(data)
 	if !isIcs20 {
-		return i.channel.SendPacket(ctx, chanCap, packet) // continue
+		return i.channel.SendPacket(ctx, chanCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, data) // continue
 	}
 
-	isCallbackRouted, metadata := jsonStringHasKey(data.GetMemo(), types.IBCCallbackKey)
+	isCallbackRouted, metadata := jsonStringHasKey(ics20data.GetMemo(), types.IBCCallbackKey)
 	if !isCallbackRouted {
-		return i.channel.SendPacket(ctx, chanCap, packet) // continue
+		return i.channel.SendPacket(ctx, chanCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, data) // continue
 	}
 
 	// Originally, Osmosis removed the callback metadata from the memo as it had already fulfilled its purpose for them. We cannot do this on Secret, as later on the enclave needs to verify the contract address, and the only way to do this is to parse the memo of the original packet (which is signed by the relayer along with the ack/timeout) and compare it to the contract address that was given to the enclave.
 
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
-		return errorsmod.Wrap(err, "Send packet with callback error")
+		return 0, errorsmod.Wrap(err, "Send packet with callback error")
 	}
 
-	packetWithoutCallbackMemo := channeltypes.Packet{
-		Sequence:           concretePacket.Sequence,
-		SourcePort:         concretePacket.SourcePort,
-		SourceChannel:      concretePacket.SourceChannel,
-		DestinationPort:    concretePacket.DestinationPort,
-		DestinationChannel: concretePacket.DestinationChannel,
-		Data:               dataBytes,
-		TimeoutTimestamp:   concretePacket.TimeoutTimestamp,
-		TimeoutHeight:      concretePacket.TimeoutHeight,
-	}
-
-	err = i.channel.SendPacket(ctx, chanCap, packetWithoutCallbackMemo)
+	seq, err := i.channel.SendPacket(ctx, chanCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, dataBytes)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Make sure the callback contract is a string and a valid bech32 addr. If it isn't, ignore this packet
 	contract, ok := metadata[types.IBCCallbackKey].(string)
 	if !ok {
-		return nil
+		return 0, nil
 	}
 	_, err = sdk.AccAddressFromBech32(contract)
 	if err != nil {
-		return nil
+		return 0, nil
 	}
 
-	h.ibcHooksKeeper.StorePacketCallback(ctx, packet.GetSourceChannel(), packet.GetSequence(), contract)
-	return nil
+	h.ibcHooksKeeper.StorePacketCallback(ctx, sourceChannel, seq, contract)
+	return seq, nil
 }
 
 type (
