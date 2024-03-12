@@ -42,7 +42,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	dbm "github.com/tendermint/tm-db"
+	dbm "github.com/cosmos/cosmos-db"
 
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 )
