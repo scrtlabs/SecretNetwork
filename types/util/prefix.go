@@ -24,7 +24,7 @@ var AddressVerifier = func(bytes []byte) error {
 	// 20 bytes = module accounts, base accounts, secret contracts
 	// 32 bytes = ICA accounts
 	if len(bytes) != 20 && len(bytes) != 32 {
-		return sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "address length must be 20 or 32 bytes, got %d", len(bytes))
+		return sdkerrors.ErrUnknownAddress.Wrapf("address length must be 20 or 32 bytes, got %d", len(bytes))
 	}
 
 	return nil
