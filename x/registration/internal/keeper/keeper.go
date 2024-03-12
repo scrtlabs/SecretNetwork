@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -13,7 +14,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
@@ -21,14 +21,14 @@ import (
 
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
-	cdc      codec.BinaryCodec
 	storeService store.KVStoreService
+	cdc      codec.Codec
 	enclave  EnclaveInterface
 	router   baseapp.MessageRouter
 }
 
 // NewKeeper creates a new contract Keeper instance
-func NewKeeper(cdc codec.BinaryCodec, storeService store.KVStoreService, router baseapp.MessageRouter, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
+func NewKeeper(cdc codec.Codec, storeService store.KVStoreService, router baseapp.MessageRouter, enclave EnclaveInterface, homeDir string, bootstrap bool) Keeper {
 	if !bootstrap {
 		InitializeNode(homeDir, enclave)
 	}
@@ -238,8 +238,12 @@ func isSimulationMode(ctx sdk.Context) bool {
 
 func (k Keeper) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) error {
 	// make sure this account can send it
-	for _, acct := range msg.GetSigners() {
-		if !acct.Equals(contractAddr) {
+	signers, _, err := k.cdc.GetMsgV1Signers(msg)
+	if err != nil {
+		return err
+	}
+	for _, acct := range signers {
+		if !bytes.Equal(acct, contractAddr.Bytes()) {
 			return errorsmod.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
 		}
 	}
