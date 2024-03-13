@@ -59,11 +59,11 @@ func NewSDKMessageHandler(router MessageRouter, /*legacyRouter sdk.Router,*/ enc
 // IBCRawPacketHandler handels IBC.SendPacket messages which are published to an IBC channel.
 type IBCRawPacketHandler struct {
 	channelKeeper    channelkeeper.Keeper
-	ics4Wrapper      ibctransfertypes.ICS4Wrapper
+	ics4Wrapper      porttypes.ICS4Wrapper
 	capabilityKeeper capabilitykeeper.ScopedKeeper
 }
 
-func NewIBCRawPacketHandler(channelKeeper channelkeeper.Keeper, ics4Wrapper ibctransfertypes.ICS4Wrapper, capabilityKeeper capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
+func NewIBCRawPacketHandler(channelKeeper channelkeeper.Keeper, ics4Wrapper porttypes.ICS4Wrapper, capabilityKeeper capabilitykeeper.ScopedKeeper) IBCRawPacketHandler {
 	return IBCRawPacketHandler{
 		channelKeeper:    channelKeeper,
 		ics4Wrapper:      ics4Wrapper,
@@ -86,7 +86,7 @@ func NewMessageHandler(
 	// legacyMsgRouter sdk.Router,
 	customEncoders *MessageEncoders,
 	channelKeeper channelkeeper.Keeper,
-	ics4Wrapper ibctransfertypes.ICS4Wrapper,
+	ics4Wrapper porttypes.ICS4Wrapper,
 	capabilityKeeper capabilitykeeper.ScopedKeeper,
 	portSource types.ICS20TransferPortSource,
 	unpacker codectypes.AnyUnpacker,
@@ -131,31 +131,19 @@ func (h IBCRawPacketHandler) DispatchMsg(ctx sdk.Context, _ sdk.AccAddress, cont
 		return nil, nil, errorsmod.Wrapf(types.ErrEmpty, "ibc channel")
 	}
 
-	sequence, found := h.channelKeeper.GetNextSequenceSend(ctx, contractIBCPortID, contractIBCChannelID)
+	_, found := h.channelKeeper.GetNextSequenceSend(ctx, contractIBCPortID, contractIBCChannelID)
 	if !found {
 		return nil, nil, errorsmod.Wrapf(channeltypes.ErrSequenceSendNotFound,
 			"source port: %s, source channel: %s", contractIBCPortID, contractIBCChannelID,
 		)
 	}
 
-	channelInfo, ok := h.channelKeeper.GetChannel(ctx, contractIBCPortID, contractIBCChannelID)
-	if !ok {
-	}
 	channelCap, ok := h.capabilityKeeper.GetCapability(ctx, host.ChannelCapabilityPath(contractIBCPortID, contractIBCChannelID))
 	if !ok {
-	}
-	packet := channeltypes.NewPacket(
-		msg.IBC.SendPacket.Data,
-		sequence,
-		contractIBCPortID,
-		contractIBCChannelID,
-		channelInfo.Counterparty.PortId,
-		channelInfo.Counterparty.ChannelId,
-		convertWasmIBCTimeoutHeightToCosmosHeight(msg.IBC.SendPacket.Timeout.Block),
-		msg.IBC.SendPacket.Timeout.Timestamp,
-	)
-	return nil, nil, h.ics4Wrapper.SendPacket(ctx, channelCap, packet)
 		return nil, nil, errorsmod.Wrap(channeltypes.ErrChannelCapabilityNotFound, "module does not own channel capability")
+	}
+	_, err = h.ics4Wrapper.SendPacket(ctx, channelCap, contractIBCPortID, contractIBCChannelID, convertWasmIBCTimeoutHeightToCosmosHeight(msg.IBC.SendPacket.Timeout.Block), msg.IBC.SendPacket.Timeout.Timestamp, msg.IBC.SendPacket.Data)
+	return nil, nil, err
 }
 
 type (
