@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
@@ -40,13 +41,13 @@ func mintLostTokens(
 		panic(fmt.Sprintf("validator address is not valid bech32: %s", cosValAddress))
 	}
 
-	cosValidator, found := stakingKeeper.GetValidator(ctx, cosValAddress)
-	if !found {
+	cosValidator, err := stakingKeeper.GetValidator(ctx, cosValAddress)
+	if err != nil {
 		panic(fmt.Sprintf("cos validator '%s' not found", cosValAddress))
 	}
 
 	for _, mintRecord := range cosMints {
-		coinAmount, mintOk := sdk.NewIntFromString(mintRecord.AmountUscrt)
+		coinAmount, mintOk := math.NewIntFromString(mintRecord.AmountUscrt)
 		if !mintOk {
 			panic(fmt.Sprintf("error parsing mint of %suscrt to %s", mintRecord.AmountUscrt, mintRecord.Address))
 		}
