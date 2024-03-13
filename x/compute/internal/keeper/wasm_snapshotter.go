@@ -10,8 +10,8 @@ import (
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	protoio "github.com/gogo/protobuf/io"
+	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -138,7 +138,7 @@ func (ws *WasmSnapshotter) Restore(
 		if err == io.EOF {
 			return snapshottypes.SnapshotItem{}, nil
 		} else if err != nil {
-			return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "invalid protobuf message")
+			return snapshottypes.SnapshotItem{}, errorsmod.Wrap(err, "invalid protobuf message")
 		}
 
 		// if it is not another ExtensionPayload message, then it is not for us.
@@ -156,7 +156,7 @@ func (ws *WasmSnapshotter) Restore(
 
 		err = os.WriteFile(wasmFilePath, wasmBytes, 0o600 /* -rw------- */)
 		if err != nil {
-			return snapshottypes.SnapshotItem{}, sdkerrors.Wrapf(err, "failed to write wasm file '%v' to disk", wasmFilePath)
+			return snapshottypes.SnapshotItem{}, errorsmod.Wrapf(err, "failed to write wasm file '%v' to disk", wasmFilePath)
 		}
 	}
 }

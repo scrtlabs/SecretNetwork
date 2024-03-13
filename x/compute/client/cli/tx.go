@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/spf13/cobra"
@@ -460,20 +460,20 @@ func parseMigrateContractArgs(args []string, cliCtx client.Context) (types.MsgMi
 	// get the id of the code to instantiate
 	codeID, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code id")
+		return types.MsgMigrateContract{}, errorsmod.Wrap(err, "code id")
 	}
 	migrateMsg := types.SecretMsg{}
 
 	migrateMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[1])
 	if err != nil {
-		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "code hash")
+		return types.MsgMigrateContract{}, errorsmod.Wrap(err, "code hash")
 	}
 
 	migrateMsg.Msg = []byte(args[2])
 	wasmCtx := wasmUtils.WASMContext{CLIContext: cliCtx}
 	encryptedMsg, err := wasmCtx.Encrypt(migrateMsg.Serialize())
 	if err != nil {
-		return types.MsgMigrateContract{}, sdkerrors.Wrap(err, "encrypt")
+		return types.MsgMigrateContract{}, errorsmod.Wrap(err, "encrypt")
 	}
 	msg := types.MsgMigrateContract{
 		Sender:   cliCtx.GetFromAddress().String(),

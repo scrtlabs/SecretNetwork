@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	errors "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
@@ -35,7 +35,7 @@ const portIDPrefix = "wasm."
 
 func ContractFromPortID(portID string) (sdk.AccAddress, error) {
 	if !strings.HasPrefix(portID, portIDPrefix) {
-		return nil, sdkerrors.Wrapf(types.ErrInvalid, "without prefix")
+		return nil, errors.Wrapf(types.ErrInvalid, "without prefix")
 	}
 	return sdk.AccAddressFromBech32(portID[len(portIDPrefix):])
 }

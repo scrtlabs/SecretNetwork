@@ -9,6 +9,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	storetypes "cosmossdk.io/store/types"
+	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
@@ -55,7 +57,7 @@ func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryByContractA
 
 func (q GrpcQuerier) ContractsByCodeId(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryContractsByCodeIdResponse, error) {
 	if req.CodeId == 0 {
-		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+		return nil, errorsmod.Wrap(types.ErrInvalid, "code id")
 	}
 
 	response, err := queryContractListByCode(sdk.UnwrapSDKContext(c), req.CodeId, q.keeper)
@@ -92,7 +94,7 @@ func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecr
 
 func (q GrpcQuerier) Code(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryCodeResponse, error) {
 	if req.CodeId == 0 {
-		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+		return nil, errorsmod.Wrap(types.ErrInvalid, "code id")
 	}
 
 	response, err := queryCode(sdk.UnwrapSDKContext(c), req.CodeId, q.keeper)
@@ -257,7 +259,7 @@ func queryCode(ctx sdk.Context, codeId uint64, keeper Keeper) (*types.QueryCodeR
 
 	wasmBz, err := keeper.GetWasm(ctx, codeId)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "loading wasm code")
+		return nil, errorsmod.Wrap(err, "loading wasm code")
 	}
 
 	return &types.QueryCodeResponse{
@@ -284,7 +286,7 @@ func queryCodeList(ctx sdk.Context, keeper Keeper) ([]types.CodeInfoResponse, er
 func queryContractAddress(ctx sdk.Context, label string, keeper Keeper) (sdk.AccAddress, error) {
 	res := keeper.GetContractAddress(ctx, label)
 	if res == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownAddress, label)
+		return nil, sdkerrors.ErrUnknownAddress.Wrap(label)
 	}
 
 	return res, nil

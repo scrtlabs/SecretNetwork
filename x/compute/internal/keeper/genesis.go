@@ -2,7 +2,7 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	// authexported "github.com/cosmos/cosmos-sdk/x/auth/exported"
 	// "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
@@ -16,7 +16,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) error 
 	for i, code := range data.Codes {
 		err := keeper.importCode(ctx, code.CodeID, code.CodeInfo, code.CodeBytes)
 		if err != nil {
-			return sdkerrors.Wrapf(err, "code %d with id: %d", i, code.CodeID)
+			return errorsmod.Wrapf(err, "code %d with id: %d", i, code.CodeID)
 		}
 		if code.CodeID > maxCodeID {
 			maxCodeID = code.CodeID
@@ -28,7 +28,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) error 
 		contract := data.Contracts[i] // This is to prevent golint from complaining about referencing a for variable address
 		err := keeper.importContract(ctx, contract.ContractAddress, contract.ContractCustomInfo, &contract.ContractInfo, contract.ContractState)
 		if err != nil {
-			return sdkerrors.Wrapf(err, "contract number %d", i)
+			return errorsmod.Wrapf(err, "contract number %d", i)
 		}
 		maxContractID = i + 1 // not ideal but max(contractID) is not persisted otherwise
 	}
@@ -36,16 +36,16 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) error 
 	for i, seq := range data.Sequences {
 		err := keeper.importAutoIncrementID(ctx, seq.IDKey, seq.Value)
 		if err != nil {
-			return sdkerrors.Wrapf(err, "sequence number %d", i)
+			return errorsmod.Wrapf(err, "sequence number %d", i)
 		}
 	}
 
 	// sanity check seq values
 	if keeper.peekAutoIncrementID(ctx, types.KeyLastCodeID) <= maxCodeID {
-		return sdkerrors.Wrapf(types.ErrInvalid, "seq %s must be greater %d ", string(types.KeyLastCodeID), maxCodeID)
+		return errorsmod.Wrapf(types.ErrInvalid, "seq %s must be greater %d ", string(types.KeyLastCodeID), maxCodeID)
 	}
 	if keeper.peekAutoIncrementID(ctx, types.KeyLastInstanceID) <= uint64(maxContractID) {
-		return sdkerrors.Wrapf(types.ErrInvalid, "seq %s must be greater %d ", string(types.KeyLastInstanceID), maxContractID)
+		return errorsmod.Wrapf(types.ErrInvalid, "seq %s must be greater %d ", string(types.KeyLastInstanceID), maxContractID)
 	}
 	// keeper.setParams(ctx, data.Params)
 

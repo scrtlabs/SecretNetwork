@@ -21,6 +21,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	errorsmod "cosmossdk.io/errors"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
@@ -356,7 +357,7 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 		if request.Rewards != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Rewards.Delegator)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Rewards.Delegator)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Rewards.Delegator)
 			}
 
 			params := distrtypes.NewQueryDelegatorParams(addr)
@@ -373,14 +374,14 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 
 			query, err := distrkeeper.NewQuerier(keeper, codec.NewLegacyAmino() /* TODO: Is there a way to get an existing Amino codec? */)(ctx, route, req)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, err.Error())
+				return nil, sdkerrors.ErrUnknownRequest.Wrap(err.Error())
 			}
 
 			var res wasmTypes.RewardsResponse
 
 			err = json.Unmarshal(query, &res)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+				return nil, sdkerrors.ErrJSONMarshal.Wrap(err.Error())
 			}
 
 			for i, valRewards := range res.Rewards {
@@ -399,7 +400,7 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 
 			ret, err := json.Marshal(res)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
+				return nil, sdkerrors.ErrJSONMarshal.Wrap(err.Error())
 			}
 
 			return ret, nil
@@ -413,7 +414,7 @@ func BankQuerier(bankKeeper bankkeeper.ViewKeeper) func(ctx sdk.Context, request
 		if request.AllBalances != nil {
 			addr, err := sdk.AccAddressFromBech32(request.AllBalances.Address)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.AllBalances.Address)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.AllBalances.Address)
 			}
 			coins := bankKeeper.GetAllBalances(ctx, addr)
 			res := wasmTypes.AllBalancesResponse{
@@ -424,7 +425,7 @@ func BankQuerier(bankKeeper bankkeeper.ViewKeeper) func(ctx sdk.Context, request
 		if request.Balance != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Balance.Address)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Balance.Address)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Balance.Address)
 			}
 			coins := bankKeeper.GetAllBalances(ctx, addr)
 			amount := coins.AmountOf(request.Balance.Denom)
@@ -473,7 +474,7 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 		if request.AllDelegations != nil {
 			delegator, err := sdk.AccAddressFromBech32(request.AllDelegations.Delegator)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.AllDelegations.Delegator)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.AllDelegations.Delegator)
 			}
 			sdkDels := keeper.GetAllDelegatorDelegations(ctx, delegator)
 			delegations, err := sdkToDelegations(ctx, keeper, sdkDels)
@@ -488,11 +489,11 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 		if request.Delegation != nil {
 			delegator, err := sdk.AccAddressFromBech32(request.Delegation.Delegator)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Delegation.Delegator)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Delegation.Delegator)
 			}
 			validator, err := sdk.ValAddressFromBech32(request.Delegation.Validator)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Delegation.Validator)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Delegation.Validator)
 			}
 
 			var res wasmTypes.DelegationResponse
@@ -510,7 +511,7 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 
 			delegator, err := sdk.AccAddressFromBech32(request.UnBondingDelegations.Delegator)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Delegation.Delegator)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Delegation.Delegator)
 			}
 
 			unbondingDelegations := keeper.GetAllUnbondingDelegations(ctx, delegator)
@@ -596,18 +597,18 @@ func sdkToDelegations(ctx sdk.Context, keeper stakingkeeper.Keeper, delegations 
 	for i, d := range delegations {
 		delAddr, err := sdk.AccAddressFromBech32(d.DelegatorAddress)
 		if err != nil {
-			return nil, sdkerrors.Wrap(err, "delegator address")
+			return nil, errorsmod.Wrap(err, "delegator address")
 		}
 		valAddr, err := sdk.ValAddressFromBech32(d.ValidatorAddress)
 		if err != nil {
-			return nil, sdkerrors.Wrap(err, "validator address")
+			return nil, errorsmod.Wrap(err, "validator address")
 		}
 
 		// shares to amount logic comes from here:
 		// https://github.com/cosmos/cosmos-sdk/blob/v0.38.3/x/staking/keeper/querier.go#L404
 		val, found := keeper.GetValidator(ctx, valAddr)
 		if !found {
-			return nil, sdkerrors.Wrap(stakingtypes.ErrNoValidatorFound, "can't load validator for delegation")
+			return nil, errorsmod.Wrap(stakingtypes.ErrNoValidatorFound, "can't load validator for delegation")
 		}
 		amount := sdk.NewCoin(bondDenom, val.TokensFromShares(d.Shares).TruncateInt())
 
@@ -628,15 +629,15 @@ func sdkToDelegations(ctx sdk.Context, keeper stakingkeeper.Keeper, delegations 
 func sdkToFullDelegation(ctx sdk.Context, keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper, delegation stakingtypes.Delegation) (*wasmTypes.FullDelegation, error) {
 	delAddr, err := sdk.AccAddressFromBech32(delegation.DelegatorAddress)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "delegator address")
+		return nil, errorsmod.Wrap(err, "delegator address")
 	}
 	valAddr, err := sdk.ValAddressFromBech32(delegation.ValidatorAddress)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "validator address")
+		return nil, errorsmod.Wrap(err, "validator address")
 	}
 	val, found := keeper.GetValidator(ctx, valAddr)
 	if !found {
-		return nil, sdkerrors.Wrap(stakingtypes.ErrNoValidatorFound, "can't load validator for delegation")
+		return nil, errorsmod.Wrap(stakingtypes.ErrNoValidatorFound, "can't load validator for delegation")
 	}
 	bondDenom := keeper.BondDenom(ctx)
 	amount := sdk.NewCoin(bondDenom, val.TokensFromShares(delegation.Shares).TruncateInt())
@@ -701,14 +702,14 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 		if request.Smart != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Smart.ContractAddr)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Smart.ContractAddr)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Smart.ContractAddr)
 			}
 			return wasm.querySmartRecursive(ctx, addr, request.Smart.Msg, queryDepth, false)
 		}
 		if request.Raw != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Raw.ContractAddr)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.Raw.ContractAddr)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Raw.ContractAddr)
 			}
 			models := wasm.QueryRaw(ctx, addr, request.Raw.Key)
 			// TODO: do we want to change the return value?
@@ -717,11 +718,11 @@ func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuer
 		if request.ContractInfo != nil {
 			addr, err := sdk.AccAddressFromBech32(request.ContractInfo.ContractAddr)
 			if err != nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.ContractInfo.ContractAddr)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.ContractInfo.ContractAddr)
 			}
 			info := wasm.GetContractInfo(ctx, addr)
 			if info == nil {
-				return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, request.ContractInfo.ContractAddr)
+				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.ContractInfo.ContractAddr)
 			}
 
 			res := wasmTypes.ContractInfoResponse{
