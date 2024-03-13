@@ -21,15 +21,15 @@ type HandlerOptions struct {
 
 func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 	if options.HandlerOptions.AccountKeeper == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "account keeper is required for ante builder")
+		return nil, sdkerrors.ErrLogic.Wrap("account keeper is required for ante builder")
 	}
 
 	if options.HandlerOptions.BankKeeper == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "bank keeper is required for ante builder")
+		return nil, sdkerrors.ErrLogic.Wrap("bank keeper is required for ante builder")
 	}
 
 	if options.HandlerOptions.SignModeHandler == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "sign mode handler is required for ante builder")
+		return nil, sdkerrors.ErrLogic.Wrap("sign mode handler is required for ante builder")
 	}
 
 	sigGasConsumer := options.HandlerOptions.SigGasConsumer
