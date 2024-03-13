@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	errors "cosmossdk.io/errors"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
-	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 )
 
 // bindIbcPort will reserve the port.

@@ -4,7 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	fuzz "github.com/google/gofuzz"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	tmBytes "github.com/tendermint/tendermint/libs/bytes"
+	tmBytes "github.com/cometbft/cometbft/libs/bytes"
 )
 
 var ModelFuzzers = []interface{}{FuzzAddr, FuzzAbsoluteTxPosition, FuzzContractInfo, FuzzStateModel}

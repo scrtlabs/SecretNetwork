@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
-	channelkeeper "github.com/cosmos/ibc-go/v4/modules/core/04-channel/keeper"
-	portkeeper "github.com/cosmos/ibc-go/v4/modules/core/05-port/keeper"
+	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
+	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
+	portkeeper "github.com/cosmos/ibc-go/v8/modules/core/05-port/keeper"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"golang.org/x/crypto/ripemd160" //nolint:staticcheck
 
@@ -25,14 +25,14 @@ import (
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	// authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 	"cosmossdk.io/core/store"
 	storetypes "cosmossdk.io/store/types"
 
