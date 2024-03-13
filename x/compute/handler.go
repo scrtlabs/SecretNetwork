@@ -3,12 +3,13 @@ package compute
 import (
 	"fmt"
 
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	errorsmod "cosmossdk.io/errors"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
@@ -17,7 +18,7 @@ import (
 // as the new grpc handler truncates the data field if there's an error
 // this handler is only used here: https://github.com/scrtlabs/SecretNetwork/blob/d8492253/x/compute/internal/keeper/handler_plugin.go#L574-L582
 // As a reference point see the x/bank legacy msg handler which just wraps the new grpc handler https://github.com/scrtlabs/cosmos-sdk/blob/67c2d41286/x/bank/handler.go#L10-L30
-func NewHandler(k Keeper) sdk.Handler {
+func NewHandler(k Keeper) baseapp.MsgServiceHandler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
@@ -96,7 +97,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 		return &result, err
 	}
 
-	events := filteredMessageEvents(ctx.EventManager())
+	events := filteredMessageEvents(ctx.EventManager().(*sdk.EventManager))
 	custom := sdk.Events{sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
@@ -138,7 +139,7 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *MsgExecuteContract) (*sdk.Res
 		return res, err
 	}
 
-	events := filteredMessageEvents(ctx.EventManager())
+	events := filteredMessageEvents(ctx.EventManager().(*sdk.EventManager))
 	custom := sdk.Events{sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
@@ -165,7 +166,7 @@ func handleMigrate(ctx sdk.Context, k Keeper, msg *MsgMigrateContract) (*sdk.Res
 		return nil, err
 	}
 
-	events := filteredMessageEvents(ctx.EventManager())
+	events := filteredMessageEvents(ctx.EventManager().(*sdk.EventManager))
 	custom := sdk.Events{sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
@@ -193,7 +194,7 @@ func handleUpdateAdmin(ctx sdk.Context, k Keeper, msg *MsgUpdateAdmin) (*sdk.Res
 		return nil, err
 	}
 
-	events := filteredMessageEvents(ctx.EventManager())
+	events := filteredMessageEvents(ctx.EventManager().(*sdk.EventManager))
 	custom := sdk.Events{sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
@@ -217,7 +218,7 @@ func handleClearAdmin(ctx sdk.Context, k Keeper, msg *MsgClearAdmin) (*sdk.Resul
 		return nil, err
 	}
 
-	events := filteredMessageEvents(ctx.EventManager())
+	events := filteredMessageEvents(ctx.EventManager().(*sdk.EventManager))
 	custom := sdk.Events{sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
