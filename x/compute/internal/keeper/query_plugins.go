@@ -356,6 +356,8 @@ func MintQuerier(keeper mintkeeper.Keeper) func(ctx sdk.Context, request *wasmTy
 
 func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
+		// TODO: rewrite the function
+		/*
 		if request.Rewards != nil {
 			addr, err := sdk.AccAddressFromBech32(request.Rewards.Delegator)
 			if err != nil {
@@ -374,7 +376,7 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 			// })
 			route := []string{distrtypes.QueryDelegatorTotalRewards}
 
-			query, err := distrkeeper.NewQuerier(keeper, codec.NewLegacyAmino() /* TODO: Is there a way to get an existing Amino codec? */)(ctx, route, req)
+			query, err := distrkeeper.NewQuerier(keeper, codec.NewLegacyAmino())(ctx, route, req)
 			if err != nil {
 				return nil, sdkerrors.ErrUnknownRequest.Wrap(err.Error())
 			}
@@ -406,7 +408,7 @@ func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmT
 			}
 
 			return ret, nil
-		}
+		}*/
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown DistQuery variant"}
 	}
 }
@@ -677,13 +679,16 @@ func sdkToFullDelegation(ctx sdk.Context, keeper stakingkeeper.Keeper, distKeepe
 // FIXME: simplify this enormously when
 // https://github.com/cosmos/cosmos-sdk/issues/7466 is merged
 func getAccumulatedRewards(ctx sdk.Context, distKeeper distrkeeper.Keeper, delegation stakingtypes.Delegation) ([]wasmTypes.Coin, error) {
+	/*
 	// Try to get *delegator* reward info!
+
 	params := distrtypes.QueryDelegationRewardsRequest{
 		DelegatorAddress: delegation.DelegatorAddress,
 		ValidatorAddress: delegation.ValidatorAddress,
 	}
 	cache, _ := ctx.CacheContext()
-	qres, err := distKeeper.DelegationRewards(sdk.WrapSDKContext(cache), &params)
+	// TODO: rewrite the function
+	qres, err := distKeeper.Querier.DelegationRewards(sdk.WrapSDKContext(cache), &params)
 	if err != nil {
 		return nil, err
 	}
@@ -696,7 +701,8 @@ func getAccumulatedRewards(ctx sdk.Context, distKeeper distrkeeper.Keeper, deleg
 			Amount: r.Amount.TruncateInt().String(),
 		}
 	}
-	return rewards, nil
+	return rewards, nil*/
+	return nil, nil
 }
 
 func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
