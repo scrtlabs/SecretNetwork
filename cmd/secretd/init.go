@@ -12,12 +12,11 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	tmconfig "github.com/tendermint/tendermint/config"
+	tmconfig "github.com/cometbft/cometbft/config"
 
-	"github.com/tendermint/tendermint/libs/cli"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	tmrand "github.com/tendermint/tendermint/libs/rand"
-	"github.com/tendermint/tendermint/types"
+	"github.com/cometbft/cometbft/libs/cli"
+	tmos "github.com/cometbft/cometbft/libs/os"
+	tmrand "github.com/cometbft/cometbft/libs/rand"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -26,6 +25,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 )
 
 const (
@@ -103,7 +103,7 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 			tmConfig.P2P.MaxNumOutboundPeers = 40
 			tmConfig.Mempool.Size = 10000
 			tmConfig.StateSync.TrustPeriod = 112 * time.Hour
-			tmConfig.FastSync.Version = "v0"
+			tmConfig.BlockSync.Version = "v0"
 
 			// Get bip39 mnemonic
 			var mnemonic string
@@ -140,20 +140,20 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 				return errors.Wrap(err, "Failed to marshall default genesis state")
 			}
 
-			genDoc := &types.GenesisDoc{}
+			genDoc := &genutiltypes.AppGenesis{}
 			if _, err := os.Stat(genFile); err != nil {
 				if !os.IsNotExist(err) {
 					return err
 				}
 			} else {
-				genDoc, err = types.GenesisDocFromFile(genFile)
+				genDoc, err = genutiltypes.AppGenesisFromFile(genFile)
 				if err != nil {
 					return errors.Wrap(err, "Failed to read genesis doc from file")
 				}
 			}
 
 			genDoc.ChainID = chainID
-			genDoc.Validators = nil
+			genDoc.Consensus.Validators = nil
 			genDoc.AppState = appState
 
 			if err = genutil.ExportGenesisFile(genDoc, genFile); err != nil {

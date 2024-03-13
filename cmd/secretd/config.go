@@ -2,6 +2,7 @@ package main
 
 import (
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	cmtcfg "github.com/cometbft/cometbft/config"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 )
 
@@ -10,6 +11,18 @@ type SecretAppConfig struct {
 	serverconfig.Config
 
 	WASMConfig compute.WasmConfig `mapstructure:"wasm"`
+}
+
+// initCometBFTConfig helps to override default CometBFT Config values.
+// return cmtcfg.DefaultConfig if no custom configuration is required for the application.
+func initCometBFTConfig() *cmtcfg.Config {
+	cfg := cmtcfg.DefaultConfig()
+
+	// these values put a higher strain on node memory
+	// cfg.P2P.MaxNumInboundPeers = 100
+	// cfg.P2P.MaxNumOutboundPeers = 40
+
+	return cfg
 }
 
 // initAppConfig helps to override default appConfig template and configs.
@@ -38,7 +51,6 @@ func initAppConfig() (string, interface{}) {
 	srvCfg.API.Swagger = true
 	srvCfg.API.EnableUnsafeCORS = true
 	srvCfg.GRPCWeb.Enable = true
-	srvCfg.GRPCWeb.EnableUnsafeCORS = true
 
 	// defaulting this to false until we can verify it's amazballs
 	srvCfg.GRPC.Concurrency = false
