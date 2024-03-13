@@ -1,15 +1,15 @@
 package cli
 
 import (
-	"encoding/hex"
-	"encoding/json"
+	// "encoding/hex"
+	// "encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
-	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
+	// "github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -215,6 +215,8 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		}
 	} else {
 		// if we aren't creating an offline transaction we can validate the chosen label
+		// TODO: Fix
+		/*
 		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
 		res, _, _ := cliCtx.Query(route)
 		if res != nil {
@@ -229,7 +231,7 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		// todo: Add check that this is valid json and stuff
 		initMsg.Msg = []byte(args[1])
 
-		encryptedMsg, err = wasmCtx.Encrypt(initMsg.Serialize())
+		encryptedMsg, err = wasmCtx.Encrypt(initMsg.Serialize())*/
 	}
 
 	if err != nil {
@@ -291,27 +293,28 @@ func ExecuteContractCmd() *cobra.Command {
 			}
 
 			if len(args) == 1 {
+				// TODO: fix
 
-				if genOnly {
-					return fmt.Errorf("offline transactions must contain contract address")
-				}
+				// if genOnly {
+					// return fmt.Errorf("offline transactions must contain contract address")
+				// }
+//
+				// label, err := cmd.Flags().GetString(flagLabel)
+				// if err != nil {
+					// return fmt.Errorf("error with label: %s", err)
+				// }
+				// if label == "" {
+					// return fmt.Errorf("label or bech32 contract address is required")
+				// }
 
-				label, err := cmd.Flags().GetString(flagLabel)
-				if err != nil {
-					return fmt.Errorf("error with label: %s", err)
-				}
-				if label == "" {
-					return fmt.Errorf("label or bech32 contract address is required")
-				}
+				// route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
+				// res, _, err := cliCtx.Query(route)
+				// if err != nil {
+					// return err
+				// }
 
-				route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-				res, _, err := cliCtx.Query(route)
-				if err != nil {
-					return err
-				}
-
-				contractAddr = res
-				msg = []byte(args[0])
+				// contractAddr = res
+				// msg = []byte(args[0])
 			} else {
 				// get the id of the code to instantiate
 				res, err := sdk.AccAddressFromBech32(args[0])
@@ -393,6 +396,8 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 }
 
 func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
+	// TODO: fix
+	/*
 	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
 	res, _, err := cliCtx.Query(route)
 	if err != nil {
@@ -412,9 +417,13 @@ func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 	}
 
 	return []byte(codeResp.CodeHash), nil
+	*/
+	return nil, nil
 }
 
 func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddress) ([]byte, error) {
+	// TODO: fix
+	/*
 	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
 	res, _, err := cliCtx.Query(route)
 	if err != nil {
@@ -426,6 +435,8 @@ func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddres
 	}
 
 	return []byte(hex.EncodeToString(res)), nil
+	*/
+	return nil, nil
 }
 
 // MigrateContractCmd will migrate a contract to a new code version
