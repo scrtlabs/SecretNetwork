@@ -4,7 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gogo/protobuf/proto"
 	v120compute "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	v106compute "github.com/scrtlabs/SecretNetwork/x/compute/legacy/v106"
+	v106compute "github.com/scrtlabs/SecretNetwork/x/compute/migrations/v106"
 )
 
 // Migrate accepts exported v1.0.6 x/compute genesis state and
