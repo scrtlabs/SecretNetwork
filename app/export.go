@@ -3,18 +3,18 @@ package app
 import (
 	"encoding/json"
 
+	storetypes "cosmossdk.io/store/types"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
 func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jailAllowedAddrs []string, modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
 	// as if they could withdraw from the start of the next block
-	ctx := app.BaseApp.NewContext(true, tmproto.Header{Height: app.BaseApp.LastBlockHeight()})
+	ctx := app.BaseApp.NewContext(true)
 
 	// We export at last height + 1, because that's the height at which
 	// Tendermint will start InitChain.
@@ -24,14 +24,17 @@ func (app *SecretNetworkApp) ExportAppStateAndValidators(forZeroHeight bool, jai
 		app.prepForZeroHeightGenesis(ctx, jailAllowedAddrs)
 	}
 
-	genState := app.mm.ExportGenesis(ctx, app.appCodec, modulesToExport)
+	genState, err := app.mm.ExportGenesisForModules(ctx, app.appCodec, modulesToExport)
+	if err != nil {
+		return servertypes.ExportedApp{}, err
+	}
 
 	appState, err := json.MarshalIndent(genState, "", "  ")
 	if err != nil {
 		return servertypes.ExportedApp{}, err
 	}
 
-	validators, err := staking.WriteValidators(ctx, *app.AppKeepers.StakingKeeper)
+	validators, err := staking.WriteValidators(ctx, app.AppKeepers.StakingKeeper)
 	if err != nil {
 		return servertypes.ExportedApp{}, err
 	}
@@ -73,12 +76,13 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 
 	// withdraw all validator commission
 	app.AppKeepers.StakingKeeper.IterateValidators(ctx, func(_ int64, val stakingtypes.ValidatorI) (stop bool) {
-		_, _ = app.AppKeepers.DistrKeeper.WithdrawValidatorCommission(ctx, val.GetOperator())
+		valAddr, _ := sdk.ValAddressFromBech32(val.GetOperator())
+		_, _ = app.AppKeepers.DistrKeeper.WithdrawValidatorCommission(ctx, valAddr)
 		return false
 	})
 
 	// withdraw all delegator rewards
-	dels := app.AppKeepers.StakingKeeper.GetAllDelegations(ctx)
+	dels, _ := app.AppKeepers.StakingKeeper.GetAllDelegations(ctx)
 	for _, delegation := range dels {
 		valAddr, err := sdk.ValAddressFromBech32(delegation.ValidatorAddress)
 		if err != nil {
@@ -105,13 +109,14 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 
 	// reinitialize all validators
 	app.AppKeepers.StakingKeeper.IterateValidators(ctx, func(_ int64, val stakingtypes.ValidatorI) (stop bool) {
+		valAddr, _ := sdk.ValAddressFromBech32(val.GetOperator())
 		// donate any unwithdrawn outstanding reward fraction tokens to the community pool
-		scraps := app.AppKeepers.DistrKeeper.GetValidatorOutstandingRewardsCoins(ctx, val.GetOperator())
-		feePool := app.AppKeepers.DistrKeeper.GetFeePool(ctx)
+		scraps, _ := app.AppKeepers.DistrKeeper.GetValidatorOutstandingRewardsCoins(ctx, valAddr)
+		feePool, _ := app.AppKeepers.DistrKeeper.FeePool.Get(ctx)
 		feePool.CommunityPool = feePool.CommunityPool.Add(scraps...)
-		app.AppKeepers.DistrKeeper.SetFeePool(ctx, feePool)
+		app.AppKeepers.DistrKeeper.FeePool.Set(ctx, feePool)
 
-		app.AppKeepers.DistrKeeper.Hooks().AfterValidatorCreated(ctx, val.GetOperator())
+		app.AppKeepers.DistrKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
 		return false
 	})
 
@@ -157,13 +162,13 @@ func (app *SecretNetworkApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllow
 	// Iterate through validators by power descending, reset bond heights, and
 	// update bond intra-tx counters.
 	store := ctx.KVStore(app.AppKeepers.GetKey(stakingtypes.StoreKey))
-	iter := sdk.KVStoreReversePrefixIterator(store, stakingtypes.ValidatorsKey)
+	iter := storetypes.KVStoreReversePrefixIterator(store, stakingtypes.ValidatorsKey)
 	counter := int16(0)
 
 	for ; iter.Valid(); iter.Next() {
 		addr := sdk.ValAddress(iter.Key()[1:])
-		validator, found := app.AppKeepers.StakingKeeper.GetValidator(ctx, addr)
-		if !found {
+		validator, err := app.AppKeepers.StakingKeeper.GetValidator(ctx, addr)
+		if err != nil {
 			panic("expected validator, not found")
 		}
 
