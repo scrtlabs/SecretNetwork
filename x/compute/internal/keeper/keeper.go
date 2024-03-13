@@ -139,7 +139,7 @@ func NewKeeper(
 		capabilityKeeper: capabilityKeeper,
 		messenger: NewMessageHandler(
 			msgRouter,
-			legacyMsgRouter,
+			// legacyMsgRouter,
 			customEncoders,
 			channelKeeper,
 			ics4Wrapper,

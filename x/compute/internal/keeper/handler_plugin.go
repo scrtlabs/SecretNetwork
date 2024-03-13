@@ -44,14 +44,14 @@ type SDKMessageHandler struct {
 	// legacyRouter is used to route MsgExecuteContract & MsgInstantiateContrat.
 	// the reason is those msgs use the data field internally for reply, which is
 	// truncated if the msg erred
-	legacyRouter sdk.Router
+	// legacyRouter sdk.Router
 	encoders     MessageEncoders
 }
 
-func NewSDKMessageHandler(router MessageRouter, legacyRouter sdk.Router, encoders MessageEncoders) SDKMessageHandler {
+func NewSDKMessageHandler(router MessageRouter, /*legacyRouter sdk.Router,*/ encoders MessageEncoders) SDKMessageHandler {
 	return SDKMessageHandler{
 		router:       router,
-		legacyRouter: legacyRouter,
+		// legacyRouter: legacyRouter,
 		encoders:     encoders,
 	}
 }
@@ -83,7 +83,7 @@ func NewMessageHandlerChain(first Messenger, others ...Messenger) *MessageHandle
 
 func NewMessageHandler(
 	msgRouter MessageRouter,
-	legacyMsgRouter sdk.Router,
+	// legacyMsgRouter sdk.Router,
 	customEncoders *MessageEncoders,
 	channelKeeper channelkeeper.Keeper,
 	ics4Wrapper ibctransfertypes.ICS4Wrapper,
@@ -93,7 +93,7 @@ func NewMessageHandler(
 ) Messenger {
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
-		NewSDKMessageHandler(msgRouter, legacyMsgRouter, encoders),
+		NewSDKMessageHandler(msgRouter, /*legacyMsgRouter,*/ encoders),
 		NewIBCRawPacketHandler(channelKeeper, ics4Wrapper, capabilityKeeper),
 	)
 }
@@ -602,23 +602,25 @@ func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Ad
 		}
 	}
 
-	_, isMsgInitContract := msg.(*types.MsgInstantiateContract)
-	_, isMsgExecContract := msg.(*types.MsgExecuteContract)
 
-	if isMsgInitContract || isMsgExecContract {
-		// legacyMsgRouter logic (CosmWasm v0.10)
-		if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
-			msgRoute := legacyMsg.Route()
-			handler := h.legacyRouter.Route(ctx, msgRoute)
-			if handler == nil {
-			}
+	// TODO: check if it's necessary for new versions of cosmwasm
+	// _, isMsgInitContract := msg.(*types.MsgInstantiateContract)
+	// _, isMsgExecContract := msg.(*types.MsgExecuteContract)
 
-			return handler(ctx, msg)
-		}
-
-	}
-	   			return nil, sdkerrors.ErrUnknownRequest.Wrapf("can't route message %+v", msg)
-	   	return nil, sdkerrors.ErrUnknownRequest.Wrapf("unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))
+	// if isMsgInitContract || isMsgExecContract {
+	// 	// legacyMsgRouter logic (CosmWasm v0.10)
+	// 	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
+	// 		msgRoute := legacyMsg.Route()
+	// 		handler := h.legacyRouter.Route(ctx, msgRoute)
+	// 		if handler == nil {
+	// 			return nil, sdkerrors.ErrUnknownRequest.Wrapf("can't route message %+v", msg)
+	// 		}
+	//
+	// 		return handler(ctx, msg)
+	// 	}
+	//
+	// 	return nil, sdkerrors.ErrUnknownRequest.Wrapf("unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))
+	// }
 
 	// msgRouter logic (CosmWasm v1)
 
