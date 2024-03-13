@@ -7,14 +7,14 @@ import (
 	"os"
 	"path/filepath"
 
-	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	snapshottypes "cosmossdk.io/store/snapshots/types"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	protoio "github.com/gogo/protobuf/io"
 	errorsmod "cosmossdk.io/errors"
+	protoio "github.com/cosmos/gogoproto/io"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	"cosmossdk.io/log"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 )
 
 /*
@@ -113,7 +113,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 			return true
 		}
 
-		err = snapshottypes.WriteExtensionItem(protoWriter, wasmBytes)
+		err = snapshottypes.WriteExtensionPayload(protoWriter, wasmBytes)
 		if err != nil {
 			rerr = err
 			return true
@@ -160,3 +160,20 @@ func (ws *WasmSnapshotter) Restore(
 		}
 	}
 }
+
+func (ws *WasmSnapshotter) PruneSnapshotHeight(height int64) {
+	panic("not implemented")
+}
+
+func (ws *WasmSnapshotter) SetSnapshotInterval(snapshotInterval uint64) {
+	panic("not implemented")
+}
+
+func (ws *WasmSnapshotter) RestoreExtension(height uint64, format uint32, payloadReader snapshottypes.ExtensionPayloadReader) error {
+	panic("not implemented")
+}
+
+func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapshottypes.ExtensionPayloadWriter) error {
+	panic("not implemented")
+}
+
