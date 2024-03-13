@@ -35,13 +35,13 @@ import (
 	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
 	v1_11 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11"
 	v1_12 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.12"
-	v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
+	// v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
-	v1_9 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.9"
+	// v1_9 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.9"
 
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
@@ -97,13 +97,13 @@ var (
 	}
 
 	Upgrades = []upgrades.Upgrade{
-		v1_3.Upgrade,
+		// v1_3.Upgrade,
 		v1_4.Upgrade,
 		v1_5.Upgrade,
 		v1_6.Upgrade,
 		v1_7.Upgrade,
 		v1_8.Upgrade,
-		v1_9.Upgrade,
+		// v1_9.Upgrade,
 		v1_10.Upgrade,
 		v1_11.Upgrade,
 		v1_12.Upgrade,
