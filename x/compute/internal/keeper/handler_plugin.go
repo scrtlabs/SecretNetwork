@@ -579,17 +579,22 @@ func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddr
 }
 
 func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (*sdk.Result, error) {
-	if err := msg.ValidateBasic(); err != nil {
-		return nil, err
-	}
+	// TODO: find out if ValidateBasic is needed here
+	// if err := msg.ValidateBasic(); err != nil {
+		// return nil, err
+	// }
 
 	// make sure the contract account is also the "signer" on the message
-	for _, acct := range msg.GetSigners() {
-		if !acct.Equals(contractAddr) {
-			return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "contract doesn't have permission")
-		}
-	}
-
+	// TODO: find codec
+	// signers, _, err := k.cdc.GetMsgV1Signers(msg)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// for _, acct := range signers {
+	// 	if !bytes.Equal(acct, contractAddr.Bytes()) {
+	// 		return nil, sdkerrors.ErrUnauthorized.Wrap("contract doesn't have permission")
+	// 	}
+	// }
 
 	// TODO: check if it's necessary for new versions of cosmwasm
 	// _, isMsgInitContract := msg.(*types.MsgInstantiateContract)
