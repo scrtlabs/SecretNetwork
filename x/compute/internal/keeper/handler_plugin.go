@@ -290,7 +290,7 @@ func EncodeGovMsg(sender sdk.AccAddress, msg *v1wasmTypes.GovMsg) ([]sdk.Msg, er
 		return nil, err
 	}
 
-	sdkMsg := govtypes.NewMsgVote(sender, msg.Vote.ProposalId, option)
+	sdkMsg := govtypes.NewMsgVote(sender, msg.Vote.ProposalId, option, "")
 	return []sdk.Msg{sdkMsg}, nil
 }
 
@@ -391,7 +391,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk
 		//	ValidatorAddress: msg.Delegate.Validator,
 		//	Amount:           coin,
 		//}
-		sdkMsg := stakingtypes.NewMsgDelegate(sender, validator, coin)
+		sdkMsg := stakingtypes.NewMsgDelegate(sender.String(), validator.String(), coin)
 		return []sdk.Msg{sdkMsg}, nil
 
 	case msg.Redelegate != nil:
@@ -646,7 +646,7 @@ func convertWasmCoinsToSdkCoins(coins []wasmTypes.Coin) (sdk.Coins, error) {
 }
 
 func convertWasmCoinToSdkCoin(coin wasmTypes.Coin) (sdk.Coin, error) {
-	amount, ok := sdk.NewIntFromString(coin.Amount)
+	amount, ok := math.NewIntFromString(coin.Amount)
 	if !ok {
 		return sdk.Coin{}, sdkerrors.ErrInvalidCoins.Wrap(coin.Amount+coin.Denom)
 	}

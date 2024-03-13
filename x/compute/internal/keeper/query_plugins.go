@@ -39,7 +39,7 @@ var _ wasmTypes.Querier = QueryHandler{}
 func (q QueryHandler) Query(request wasmTypes.QueryRequest, queryDepth uint32, gasLimit uint64) ([]byte, error) {
 	// set a limit for a subctx
 	sdkGas := gasLimit / types.GasMultiplier
-	subctx := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas))
+	subctx := q.Ctx.WithGasMeter(storetypes.NewGasMeter(sdkGas))
 
 	// make sure we charge the higher level context even on panic
 	defer func() {
@@ -218,7 +218,7 @@ func StargateQuerier(queryRouter GRPCQueryRouter) func(ctx sdk.Context, request 
 			Data: msg.Data,
 			Path: msg.Path,
 		}
-		res, err := route(ctx, req)
+		res, err := route(ctx, &req)
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +229,11 @@ func StargateQuerier(queryRouter GRPCQueryRouter) func(ctx sdk.Context, request 
 func GovQuerier(keeper govkeeper.Keeper) func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {
 		if request.Proposals != nil {
-			proposals := keeper.GetProposals(ctx)
+			var proposals govtypes.Proposals
+			keeper.Proposals.Walk(ctx, nil, func(_ uint64, value govtypes.Proposal) (stop bool, err error) {
+				proposals = append(proposals, &value)
+				return false, nil
+			})
 
 			if len(proposals) == 0 {
 				return json.Marshal(wasmTypes.ProposalsResponse{
@@ -241,7 +245,7 @@ func GovQuerier(keeper govkeeper.Keeper) func(ctx sdk.Context, request *wasmType
 			for _, val := range proposals {
 				if val.Status == govtypes.StatusVotingPeriod {
 					activeProps = append(activeProps, wasmTypes.Proposal{
-						ProposalID:      val.ProposalId,
+						ProposalID:      val.Id,
 						VotingStartTime: uint64(val.VotingStartTime.Unix()),
 						VotingEndTime:   uint64(val.VotingEndTime.Unix()),
 					})
@@ -328,7 +332,7 @@ func IBCQuerier(wasm *Keeper, channelKeeper types.ChannelKeeper) func(ctx sdk.Co
 func MintQuerier(keeper mintkeeper.Keeper) func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *wasmTypes.MintQuery) ([]byte, error) {
 		if request.BondedRatio != nil {
-			total := keeper.BondedRatio(ctx)
+			total, _ := keeper.BondedRatio(ctx)
 
 			resp := wasmTypes.MintingBondedRatioResponse{
 				BondedRatio: total.String(),
@@ -337,7 +341,7 @@ func MintQuerier(keeper mintkeeper.Keeper) func(ctx sdk.Context, request *wasmTy
 			return json.Marshal(resp)
 		}
 		if request.Inflation != nil {
-			minter := keeper.GetMinter(ctx)
+			minter, _ := keeper.Minter.Get(ctx)
 			inflation := minter.Inflation
 
 			resp := wasmTypes.MintingInflationResponse{
@@ -446,14 +450,14 @@ func NoCustomQuerier(sdk.Context, json.RawMessage) ([]byte, error) {
 func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *wasmTypes.StakingQuery) ([]byte, error) {
 		if request.BondedDenom != nil {
-			denom := keeper.BondDenom(ctx)
+			denom, _ := keeper.BondDenom(ctx)
 			res := wasmTypes.BondedDenomResponse{
 				Denom: denom,
 			}
 			return json.Marshal(res)
 		}
 		if request.Validators != nil {
-			validators := keeper.GetBondedValidatorsByPower(ctx)
+			validators, _ := keeper.GetBondedValidatorsByPower(ctx)
 			// validators := keeper.GetAllValidators(ctx)
 			wasmVals := make([]wasmTypes.Validator, len(validators))
 			for i, v := range validators {
@@ -474,7 +478,7 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 			if err != nil {
 				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.AllDelegations.Delegator)
 			}
-			sdkDels := keeper.GetAllDelegatorDelegations(ctx, delegator)
+			sdkDels, _ := keeper.GetAllDelegatorDelegations(ctx, delegator)
 			delegations, err := sdkToDelegations(ctx, keeper, sdkDels)
 			if err != nil {
 				return nil, err
@@ -495,8 +499,8 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 			}
 
 			var res wasmTypes.DelegationResponse
-			d, found := keeper.GetDelegation(ctx, delegator, validator)
-			if found {
+			d, err := keeper.GetDelegation(ctx, delegator, validator)
+			if err == nil {
 				res.Delegation, err = sdkToFullDelegation(ctx, keeper, distKeeper, d)
 				if err != nil {
 					return nil, err
@@ -505,14 +509,14 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 			return json.Marshal(res)
 		}
 		if request.UnBondingDelegations != nil {
-			bondDenom := keeper.BondDenom(ctx)
+			bondDenom, _ := keeper.BondDenom(ctx)
 
 			delegator, err := sdk.AccAddressFromBech32(request.UnBondingDelegations.Delegator)
 			if err != nil {
 				return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Delegation.Delegator)
 			}
 
-			unbondingDelegations := keeper.GetAllUnbondingDelegations(ctx, delegator)
+			unbondingDelegations, _ := keeper.GetAllUnbondingDelegations(ctx, delegator)
 			if unbondingDelegations == nil {
 				unbondingDelegations = stakingtypes.UnbondingDelegations{}
 			}
@@ -533,9 +537,9 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 			if err != nil {
 				return nil, err
 			}
-			v, found := keeper.GetValidator(ctx, valAddr)
+			v, err := keeper.GetValidator(ctx, valAddr)
 			res := wasmTypes.ValidatorResponse{}
-			if found {
+			if err == nil {
 				res.Validator = &wasmTypes.Validator{
 					Address:       v.OperatorAddress,
 					Commission:    v.Commission.Rate.String(),
@@ -546,7 +550,7 @@ func StakingQuerier(keeper stakingkeeper.Keeper, distKeeper distrkeeper.Keeper) 
 			return json.Marshal(res)
 		}
 		if request.AllValidators != nil {
-			validators := keeper.GetBondedValidatorsByPower(ctx)
+			validators, _ := keeper.GetBondedValidatorsByPower(ctx)
 			// validators := keeper.GetAllValidators(ctx)
 			wasmVals := make([]wasmTypes.Validator, len(validators))
 			for i, v := range validators {
@@ -590,7 +594,7 @@ func sdkToUnbondingDelegations(bondDenom string, delegations stakingtypes.Unbond
 
 func sdkToDelegations(ctx sdk.Context, keeper stakingkeeper.Keeper, delegations []stakingtypes.Delegation) (wasmTypes.Delegations, error) {
 	result := make([]wasmTypes.Delegation, len(delegations))
-	bondDenom := keeper.BondDenom(ctx)
+	bondDenom, _ := keeper.BondDenom(ctx)
 
 	for i, d := range delegations {
 		delAddr, err := sdk.AccAddressFromBech32(d.DelegatorAddress)
@@ -604,8 +608,8 @@ func sdkToDelegations(ctx sdk.Context, keeper stakingkeeper.Keeper, delegations 
 
 		// shares to amount logic comes from here:
 		// https://github.com/cosmos/cosmos-sdk/blob/v0.38.3/x/staking/keeper/querier.go#L404
-		val, found := keeper.GetValidator(ctx, valAddr)
-		if !found {
+		val, err := keeper.GetValidator(ctx, valAddr)
+		if err != nil {
 			return nil, errorsmod.Wrap(stakingtypes.ErrNoValidatorFound, "can't load validator for delegation")
 		}
 		amount := sdk.NewCoin(bondDenom, val.TokensFromShares(d.Shares).TruncateInt())
@@ -633,11 +637,11 @@ func sdkToFullDelegation(ctx sdk.Context, keeper stakingkeeper.Keeper, distKeepe
 	if err != nil {
 		return nil, errorsmod.Wrap(err, "validator address")
 	}
-	val, found := keeper.GetValidator(ctx, valAddr)
-	if !found {
+	val, err := keeper.GetValidator(ctx, valAddr)
+	if err != nil {
 		return nil, errorsmod.Wrap(stakingtypes.ErrNoValidatorFound, "can't load validator for delegation")
 	}
-	bondDenom := keeper.BondDenom(ctx)
+	bondDenom, _ := keeper.BondDenom(ctx)
 	amount := sdk.NewCoin(bondDenom, val.TokensFromShares(delegation.Shares).TruncateInt())
 
 	delegationCoins := convertSdkCoinToWasmCoin(amount)
@@ -648,7 +652,7 @@ func sdkToFullDelegation(ctx sdk.Context, keeper stakingkeeper.Keeper, distKeepe
 	// otherwise, it can redelegate the full amount
 	// (there are cases of partial funds redelegated, but this is a start)
 	redelegateCoins := wasmTypes.NewCoin(0, bondDenom)
-	if !keeper.HasReceivingRedelegation(ctx, delAddr, valAddr) {
+	if has, _ := keeper.HasReceivingRedelegation(ctx, delAddr, valAddr); !has {
 		redelegateCoins = delegationCoins
 	}
 
