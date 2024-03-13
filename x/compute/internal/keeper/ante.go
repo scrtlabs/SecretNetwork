@@ -5,16 +5,17 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+	"cosmossdk.io/core/store"
 )
 
 // CountTXDecorator ante handler to count the tx position in a block.
 type CountTXDecorator struct {
-	storeKey sdk.StoreKey
+	storeService store.KVStoreService
 }
 
 // NewCountTXDecorator constructor
-func NewCountTXDecorator(storeKey sdk.StoreKey) *CountTXDecorator {
-	return &CountTXDecorator{storeKey: storeKey}
+func NewCountTXDecorator(storeService store.KVStoreService) *CountTXDecorator {
+	return &CountTXDecorator{storeService: storeService}
 }
 
 // AnteHandle handler stores a tx counter with current height encoded in the store to let the app handle
@@ -25,12 +26,12 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 	if simulate {
 		return next(ctx, tx, simulate)
 	}
-	store := ctx.KVStore(a.storeKey)
+	store := a.storeService.OpenKVStore(ctx)
 	currentHeight := ctx.BlockHeight()
 
 	var txCounter uint32 // start with 0
 	// load counter when exists
-	if bz := store.Get(types.TXCounterPrefix); bz != nil {
+	if bz, _ := store.Get(types.TXCounterPrefix); bz != nil {
 		lastHeight, val := decodeHeightCounter(bz)
 		if currentHeight == lastHeight {
 			// then use stored counter

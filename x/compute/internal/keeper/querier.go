@@ -79,7 +79,7 @@ func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecr
 		return nil, err
 	}
 
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	response, err := q.keeper.QuerySmart(ctx, contractAddress, req.Query, false)
 	switch {
@@ -129,7 +129,7 @@ func (q GrpcQuerier) CodeHashByContractAddress(c context.Context, req *types.Que
 		return nil, err
 	}
 
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	codeHashBz, err := queryCodeHashByAddress(ctx, contractAddress, q.keeper)
 	switch {
@@ -145,7 +145,7 @@ func (q GrpcQuerier) CodeHashByContractAddress(c context.Context, req *types.Que
 }
 
 func (q GrpcQuerier) CodeHashByCodeId(c context.Context, req *types.QueryByCodeIdRequest) (*types.QueryCodeHashResponse, error) {
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	codeHashBz, err := queryCodeHashByCodeID(ctx, req.CodeId, q.keeper)
 	switch {
@@ -166,7 +166,7 @@ func (q GrpcQuerier) LabelByAddress(c context.Context, req *types.QueryByContrac
 		return nil, err
 	}
 
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	response, err := queryContractInfo(ctx, contractAddress, q.keeper)
 	switch {
@@ -182,7 +182,7 @@ func (q GrpcQuerier) LabelByAddress(c context.Context, req *types.QueryByContrac
 }
 
 func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryByLabelRequest) (*types.QueryContractAddressResponse, error) {
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(q.keeper.queryGasLimit))
 
 	response, err := queryContractAddress(ctx, req.Label, q.keeper)
 	switch {
