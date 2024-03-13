@@ -1,4 +1,4 @@
-package legacy
+package migrations
 
 import (
 	"encoding/json"
@@ -10,24 +10,24 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmtypes "github.com/tendermint/tendermint/types"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	tmtypes "github.com/cometbft/cometbft/types"
 
-	ibcxfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
-	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
-	"github.com/cosmos/ibc-go/v4/modules/core/exported"
-	ibccoretypes "github.com/cosmos/ibc-go/v4/modules/core/types"
+	ibcxfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
+	"github.com/cosmos/ibc-go/v8/modules/core/exported"
+	ibccoretypes "github.com/cosmos/ibc-go/v8/modules/core/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	captypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	evtypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	captypes "github.com/cosmos/ibc-go/modules/capability/types"
+	evtypes "cosmossdk.io/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	legacy170 "github.com/scrtlabs/SecretNetwork/app/legacy/v170"
+	legacy170 "github.com/scrtlabs/SecretNetwork/app/migrations/v170"
 )
 
 const (
@@ -99,7 +99,7 @@ $ secretd migrate /path/to/genesis.json --chain-id=secret-4 --genesis-time=2019-
 			stakingGenesis.Params.HistoricalEntries = 10000
 
 			newGenState[ibcxfertypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(ibcTransferGenesis)
-			newGenState[host.ModuleName] = clientCtx.Codec.MustMarshalJSON(ibcCoreGenesis)
+			newGenState[host.SubModuleName] = clientCtx.Codec.MustMarshalJSON(ibcCoreGenesis)
 			newGenState[captypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(capGenesis)
 			newGenState[evtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(evGenesis)
 			newGenState[staking.ModuleName] = clientCtx.Codec.MustMarshalJSON(&stakingGenesis)
