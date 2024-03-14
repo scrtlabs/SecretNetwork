@@ -279,11 +279,7 @@ fn sgx_ql_qve_collateral_serialize(
 }
 
 
-fn sgx_ql_qve_collateral_deserialize(
-    p_ser: *const u8,
-    n_ser: u32,
-) -> sgx_ql_qve_collateral_t
-{
+fn sgx_ql_qve_collateral_deserialize(p_ser: *const u8, n_ser: u32) -> sgx_ql_qve_collateral_t {
     let mut res = sgx_ql_qve_collateral_t {
         version: 0,
         tee_type: 0,
@@ -352,10 +348,7 @@ fn sgx_ql_qve_collateral_deserialize(
                 res.qe_identity = p_ser.add(offs) as *mut i8;
             }
         }
-
     };
-
-
 
     return res; // unreachable
 }
@@ -392,23 +385,25 @@ pub extern "C" fn ocall_get_quote_ecdsa_collateral(
 #[no_mangle]
 pub extern "C" fn ocall_verify_quote_ecdsa(
     p_quote: *const u8,
-    n_quote:u32,
+    n_quote: u32,
     p_col: *const u8,
-    n_col:u32,
+    n_col: u32,
     p_target_info: *const sgx_target_info_t,
     time_s: i64,
     p_qve_report_info: *mut sgx_ql_qe_report_info_t,
     p_supp_data: *mut u8,
-    n_supp_data:u32,
+    n_supp_data: u32,
     p_supp_data_size: *mut u32,
     p_time_s: *mut i64,
     p_collateral_expiration_status: *mut u32,
     p_qv_result: *mut sgx_ql_qv_result_t,
-) -> sgx_status_t
-{
-    let mut time_use_s :time_t = time_s;
+) -> sgx_status_t {
+    let mut time_use_s: time_t = time_s;
     if time_s == 0 {
-        time_use_s = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as time_t;
+        time_use_s = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as time_t;
     }
 
     unsafe {
@@ -424,26 +419,22 @@ pub extern "C" fn ocall_verify_quote_ecdsa(
         let my_col = sgx_ql_qve_collateral_deserialize(p_col, n_col);
 
         sgx_qv_verify_quote(
-            p_quote, n_quote,
+            p_quote,
+            n_quote,
             &my_col,
             time_use_s,
             p_collateral_expiration_status,
             p_qv_result,
             p_qve_report_info,
             *p_supp_data_size,
-            p_supp_data);
+            p_supp_data,
+        );
 
         *p_time_s = time_use_s;
     };
 
     sgx_status_t::SGX_SUCCESS
 }
-
-
-
-
-
-
 
 #[no_mangle]
 pub extern "C" fn ocall_get_update_info(

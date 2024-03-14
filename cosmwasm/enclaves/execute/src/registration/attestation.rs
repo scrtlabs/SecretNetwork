@@ -295,11 +295,10 @@ pub fn get_mr_enclave() -> [u8; 32] {
 
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_quote_ecdsa(
-    vec_quote : &Vec<u8>,
-    vec_coll : &Vec<u8>,
+    vec_quote: &Vec<u8>,
+    vec_coll: &Vec<u8>,
     time_s: i64,
-) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t>
-{
+) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
     let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();
     let mut p_supp: [u8; 5000] = [0; 5000];
     let mut n_supp: u32 = 0;
@@ -366,7 +365,7 @@ pub fn verify_quote_ecdsa(
 
     if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
         trace!("QVE report verification result: {}", dcap_ret);
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     trace!("n_supp = {}", n_supp);
@@ -382,7 +381,7 @@ pub fn verify_quote_ecdsa(
     let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
     let report_body = unsafe { (*my_p_quote).report_body };
 
-    trace!("body.mr_signer = {:?}",  report_body.mr_signer.m);
+    trace!("body.mr_signer = {:?}", report_body.mr_signer.m);
     trace!("body.mr_enclave = {:?}", report_body.mr_enclave.m);
     trace!("body.report_data = {:?}", report_body.report_data.d);
 
