@@ -142,9 +142,8 @@ pub extern "C" fn ocall_get_quote(
 #[no_mangle]
 pub extern "C" fn ocall_get_quote_ecdsa_params(
     p_qe_info: *mut sgx_target_info_t,
-    p_quote_size: *mut u32
-) -> sgx_status_t
-{
+    p_quote_size: *mut u32,
+) -> sgx_status_t {
     let mut ret = unsafe { sgx_qe_get_target_info(p_qe_info) };
     if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
         trace!("sgx_qe_get_target_info returned {}", ret);
@@ -158,7 +157,7 @@ pub extern "C" fn ocall_get_quote_ecdsa_params(
     }
 
     unsafe {
-        trace!("*pQuoteSize = {}", *p_quote_size);
+        trace!("*QuoteSize = {}", *p_quote_size);
     }
 
     sgx_status_t::SGX_SUCCESS

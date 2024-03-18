@@ -27,37 +27,37 @@ extern "C" {
     ) -> sgx_status_t;
     pub fn ocall_get_quote_ecdsa_params(
         ret_val: *mut sgx_status_t,
-        pQeInfo: *mut sgx_target_info_t,
-        pQuoteSize: *mut u32,
+        p_qe_info: *mut sgx_target_info_t,
+        p_quote_size: *mut u32,
     ) -> sgx_status_t;
     pub fn ocall_get_quote_ecdsa(
         ret_val: *mut sgx_status_t,
-        pReport: *const sgx_report_t,
-        pQuote: *mut u8,
-        nQuote: u32,
+        p_report: *const sgx_report_t,
+        p_quote: *mut u8,
+        n_quote: u32,
     ) -> sgx_status_t;
     pub fn ocall_get_quote_ecdsa_collateral(
         ret_val: *mut sgx_status_t,
-        pQuote: *const u8,
-        nQuote: u32,
-        pCol: *mut u8,
-        nCol: u32,
-        pColOut: *mut u32
+        p_quote: *const u8,
+        n_quote: u32,
+        p_col: *mut u8,
+        n_col: u32,
+        p_col_out: *mut u32,
     ) -> sgx_status_t;
     pub fn ocall_verify_quote_ecdsa(
         ret_val: *mut sgx_status_t,
-        pQuote: *const u8,
-        nQuote:u32,
-        pCol: *const u8,
-        nCol:u32,
-        pTargetInfo: *const sgx_target_info_t,
-        nTime : i64,
+        p_quote: *const u8,
+        n_quote: u32,
+        p_col: *const u8,
+        n_col: u32,
+        p_target_info: *const sgx_target_info_t,
+        time_s: i64,
         p_qve_report_info: *mut sgx_ql_qe_report_info_t,
-        pSuppData: *mut u8,
-        nSuppData:u32,
-        pSuppDataActual: *mut u32,
-        pTime: *mut i64,
-        pCollateral_expiration_status: *mut u32,
-        pQvResult: *mut sgx_ql_qv_result_t,
+        p_supp_data: *mut u8,
+        n_supp_data: u32,
+        p_supp_data_size: *mut u32,
+        p_time_s: *mut i64,
+        p_collateral_expiration_status: *mut u32,
+        p_qv_result: *mut sgx_ql_qv_result_t,
     ) -> sgx_status_t;
 }

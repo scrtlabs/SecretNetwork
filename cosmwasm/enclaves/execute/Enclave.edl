@@ -238,38 +238,38 @@ enclave {
         );
 
         sgx_status_t ocall_get_quote_ecdsa_params(
-            [out] sgx_target_info_t* pQeInfo,
-            [out] uint32_t* pQuoteSize
+            [out] sgx_target_info_t* p_qe_info,
+            [out] uint32_t* p_quote_size
         );
 
         sgx_status_t ocall_get_quote_ecdsa(
-            [in] const sgx_report_t* pReport,
-            [out, size=nQuote] uint8_t* pQuote,
-            uint32_t nQuote
+            [in] const sgx_report_t* p_report,
+            [out, size=n_quote] uint8_t* p_quote,
+            uint32_t n_quote
         );
 
         sgx_status_t ocall_get_quote_ecdsa_collateral(
-            [in, size=nQuote] const uint8_t* pQuote,
-            uint32_t nQuote,
-            [out, size=nCol] uint8_t* pCol,
-            uint32_t nCol,
-            [out] uint32_t* pColOut
+            [in, size=n_quote] const uint8_t* p_quote,
+            uint32_t n_quote,
+            [out, size=n_col] uint8_t* p_col,
+            uint32_t n_col,
+            [out] uint32_t* p_col_out
         );
 
         sgx_status_t ocall_verify_quote_ecdsa(
-            [in, size=nQuote] const uint8_t* pQuote,
-            uint32_t nQuote,
-            [in, size=nCol] const uint8_t* pCol,
-            uint32_t nCol,
-            [in] const sgx_target_info_t* pTargetInfo,
-            int64_t nTime,
+            [in, size=n_quote] const uint8_t* p_quote,
+            uint32_t n_quote,
+            [in, size=n_col] const uint8_t* p_col,
+            uint32_t n_col,
+            [in] const sgx_target_info_t* p_target_info,
+            int64_t time_s,
             [out] sgx_ql_qe_report_info_t* p_qve_report_info,
-            [out, size=nSuppData] uint8_t* pSuppData,
-            uint32_t nSuppData,
-            [out] uint32_t* pSuppDataActual,
-            [out] int64_t* pTime,
-            [out] uint32_t* pCollateral_expiration_status,
-            [out] sgx_ql_qv_result_t* pQvResult
+            [out, size=n_supp_data] uint8_t* p_supp_data,
+            uint32_t n_supp_data,
+            [out] uint32_t* p_supp_data_size,
+            [out] int64_t* p_time_s,
+            [out] uint32_t* p_collateral_expiration_status,
+            [out] sgx_ql_qv_result_t* p_qv_result
         );
 
         sgx_status_t ocall_get_update_info(
