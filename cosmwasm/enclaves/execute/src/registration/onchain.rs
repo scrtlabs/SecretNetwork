@@ -187,7 +187,7 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
             }
         };
 
-        let res2 = verify_ra_report(report_body.mr_signer.m, report_body.mr_enclave.m, Some(SigningMethod::MRSIGNER));
+        let res2 = verify_ra_report(&report_body.mr_signer.m, &report_body.mr_enclave.m, Some(SigningMethod::MRSIGNER));
         if NodeAuthResult::Success != res2 {
             return res2;
         }

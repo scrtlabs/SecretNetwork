@@ -285,11 +285,10 @@ pub fn verify_ra_cert(
 }
 
 pub fn verify_ra_report(
-    report_mr_signer : [u8;32],
-    report_mr_enclave : [u8;32],
+    report_mr_signer: &[u8; 32],
+    report_mr_enclave : & [u8;32],
     override_verify_type: Option<SigningMethod>,
 ) -> NodeAuthResult {
-
     let signing_method: SigningMethod = match override_verify_type {
         Some(method) => method,
         None => SIGNING_METHOD,
@@ -301,7 +300,7 @@ pub fn verify_ra_report(
             let this_mr_enclave = get_mr_enclave();
             let this_mr_signer = MRSIGNER;
 
-            if report_mr_enclave != this_mr_enclave || report_mr_signer != this_mr_signer {
+            if (*report_mr_enclave) != this_mr_enclave || (*report_mr_signer) != this_mr_signer {
                 error!(
                     "Got a different mr_enclave or mr_signer than expected. Invalid certificate"
                 );
@@ -317,7 +316,7 @@ pub fn verify_ra_report(
             }
         }
         SigningMethod::MRSIGNER => {
-            if report_mr_signer != MRSIGNER {
+            if (*report_mr_signer) != MRSIGNER {
                 error!("Got a different mrsigner than expected. Invalid certificate");
                 warn!(
                     "received: {:?} \n expected: {:?}",
@@ -358,8 +357,8 @@ pub fn verify_ra_cert(
     }
 
     let res = verify_ra_report(
-        report.sgx_quote_body.isv_enclave_report.mr_signer,
-        report.sgx_quote_body.isv_enclave_report.mr_enclave,
+        &report.sgx_quote_body.isv_enclave_report.mr_signer,
+        &report.sgx_quote_body.isv_enclave_report.mr_enclave,
         override_verify_type);
 
     if res != NodeAuthResult::Success {
