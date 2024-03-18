@@ -47,8 +47,7 @@ fn get_current_block_time_s() -> i64
     return 0 as i64;
 }
 
-
-pub fn split_combined_cert(
+fn split_combined_cert(
     cert: *const u8,
     cert_len: u32,
 ) -> (Vec<u8>, Vec<u8>, Vec<u8>)
@@ -83,6 +82,64 @@ pub fn split_combined_cert(
 
     (vec_cert, vec_quote, vec_coll)
 }
+
+fn test_attestation_epid(cert_slice: &[u8], pub_key: &mut [u8; 32]) -> NodeAuthResult {
+    let pk = match verify_ra_cert(cert_slice, None, true) {
+        Ok(retval) => retval,
+        Err(e) => {
+            return e;
+        }
+    };
+
+    // just make sure the length isn't wrong for some reason (certificate may be malformed)
+    if pk.len() != PUBLIC_KEY_SIZE {
+        warn!(
+            "Got public key from certificate with the wrong size: {:?}",
+            pk.len()
+        );
+        return NodeAuthResult::MalformedPublicKey;
+    }
+
+    pub_key.copy_from_slice(&pk);
+    return NodeAuthResult::Success;
+}
+
+fn test_attestation_dcap(
+    vec_quote: &Vec<u8>,
+    vec_coll: &Vec<u8>,
+    pub_key: &mut [u8; 32],
+) -> NodeAuthResult {
+    let tm_s = get_current_block_time_s();
+    trace!("Current block time: {}", tm_s);
+
+    // test self
+    let report_body = match verify_quote_ecdsa(&vec_quote, &vec_coll, tm_s) {
+        Ok(r) => {
+            trace!("Remote quote verified ok");
+            if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+                trace!("WARNING: {}", r.1);
+            }
+            r.0
+        }
+        Err(e) => {
+            trace!("Remote quote verification failed: {}", e);
+            return NodeAuthResult::InvalidCert;
+        }
+    };
+
+    let veritication_res = verify_ra_report(
+        &report_body.mr_signer.m,
+        &report_body.mr_enclave.m,
+        Some(SigningMethod::MRSIGNER),
+    );
+    if NodeAuthResult::Success != veritication_res {
+        return veritication_res;
+    }
+
+    pub_key.copy_from_slice(&report_body.report_data.d[..32]);
+    return NodeAuthResult::Success;
+}
+
 
 ///
 /// `ecall_authenticate_new_node`
@@ -133,66 +190,19 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
         trace!("EPID attestation");
 
-        //let result = panic::catch_unwind(|| {
-        // verify certificate, and return the public key in the extra data of the report
-        let pk = match verify_ra_cert(cert_slice, None, true) {
-            Ok(retval) => {
-                retval
-            }
-            Err(e) => {
-                return e;
-            }
-        };
-
-        // just make sure the length isn't wrong for some reason (certificate may be malformed)
-        if pk.len() != PUBLIC_KEY_SIZE {
-            warn!(
-                    "Got public key from certificate with the wrong size: {:?}",
-                    pk.len()
-                );
-            return NodeAuthResult::MalformedPublicKey;
+        let res = test_attestation_epid(&vec_cert.as_slice(), &mut target_public_key);
+        if NodeAuthResult::Success != res {
+            return res;
         }
-
-        target_public_key.copy_from_slice(&pk);
-        //    NodeAuthResult::Success // not yet actually
-        //});
-
-        //if result.is_err() {
-        //    // There's no real need here to test if oom happened
-        //    get_then_clear_oom_happened();
-        //    warn!("Enclave call ecall_authenticate_new_node panic!");
-        //    return NodeAuthResult::Panic;
-        //}
 
     } else {
 
-        // DCAP
         trace!("DCAP attestation");
 
-        let tm_s = get_current_block_time_s();
-        trace!("Current block time: {}", tm_s);
-
-        // test self
-        let report_body = match verify_quote_ecdsa(&vec_quote, &vec_coll, tm_s) {
-            Ok(r) => {
-                trace!("Remote quote verified ok");
-                if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
-                    trace!("WARNING: {}", r.1);
-                }
-                r.0
-            }
-            Err(e) => {
-                trace!("Remote quote verification failed: {}", e);
-                return NodeAuthResult::InvalidCert;
-            }
-        };
-
-        let res2 = verify_ra_report(&report_body.mr_signer.m, &report_body.mr_enclave.m, Some(SigningMethod::MRSIGNER));
-        if NodeAuthResult::Success != res2 {
-            return res2;
+        let res = test_attestation_dcap(&vec_quote, &vec_coll, &mut target_public_key);
+        if NodeAuthResult::Success != res {
+            return res;
         }
-
-        target_public_key.copy_from_slice(&report_body.report_data.d[..32]);
     }
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
