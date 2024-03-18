@@ -388,52 +388,53 @@ pub fn verify_quote_ecdsa(
     Ok((report_body, qv_result))
 }
 
-#[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa(
-    pub_k: &[u8; 32],
-) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t>
-{
+fn test_sgx_call_res(
+    res: sgx_status_t,
+    retval: sgx_status_t,
+) -> Result<sgx_status_t, sgx_status_t> {
+    if sgx_status_t::SGX_SUCCESS != res {
+        return Err(res);
+    }
 
+    if sgx_status_t::SGX_SUCCESS != retval {
+        return Err(retval);
+    }
+
+    return Ok(sgx_status_t::SGX_SUCCESS);
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let mut qe_target_info = sgx_target_info_t::default();
     let mut quote_size: u32 = 0;
     let mut rt: sgx_status_t = sgx_status_t::default();
 
-    let mut res = unsafe {
+    let mut res: sgx_status_t = unsafe {
         ocall_get_quote_ecdsa_params(
             &mut rt as *mut sgx_status_t,
             &mut qe_target_info,
             &mut quote_size)
     };
 
-    if res != sgx_status_t::SGX_SUCCESS {
-        trace!("res = {}", res);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        trace!("rt = {}", rt);
+    if let Err(e) = test_sgx_call_res(res, rt) {
+        trace!("ocall_get_quote_ecdsa_params err = {}", e);
+        return Err(e);
     }
 
     trace!("ECDSA quote size = {}", quote_size);
 
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-    let mut my_report: sgx_report_t = sgx_report_t::default();
-
     report_data.d[..32].copy_from_slice(pub_k);
 
-    res = unsafe {
-        sgx_create_report(
-            &qe_target_info as *const sgx_target_info_t,
-            &report_data as *const sgx_report_data_t,
-            &mut my_report
-        )
+    let my_report: sgx_report_t = match rsgx_create_report(&qe_target_info, &report_data) {
+        Ok(r) => r,
+        Err(e) => {
+            trace!("sgx_create_report = {}", e);
+            return Err(e);
+        }
     };
 
-    if res != sgx_status_t::SGX_SUCCESS {
-        trace!("sgx_create_report = {}", res);
-    }
-
-    let mut vec_quote : Vec<u8> = Vec::new();
-    vec_quote.resize(quote_size as usize, 0);
+    let mut vec_quote : Vec<u8> = vec![0; quote_size as usize];
 
     res = unsafe {
 
@@ -444,19 +445,15 @@ pub fn get_quote_ecdsa(
             vec_quote.len() as u32)
     };
 
-    if res != sgx_status_t::SGX_SUCCESS {
-        trace!("res = {}", res);
+    if let Err(e) = test_sgx_call_res(res, rt) {
+        trace!("ocall_get_quote_ecdsa err = {}", e);
+        return Err(e);
     }
 
-    if rt != sgx_status_t::SGX_SUCCESS {
-        trace!("rt = {}", rt);
-    }
-
-    let mut vec_coll : Vec<u8> = Vec::new();
-    vec_coll.resize(0x4000, 0);
+    let mut vec_coll : Vec<u8> = vec![0; 0x4000 as usize]; 
     let mut size_coll : u32 = 0;
 
-    let res = unsafe {
+    res = unsafe {
         ocall_get_quote_ecdsa_collateral(
             &mut rt as *mut sgx_status_t,
             vec_quote.as_ptr(),
@@ -466,12 +463,9 @@ pub fn get_quote_ecdsa(
             &mut size_coll)
     };
 
-    if res != sgx_status_t::SGX_SUCCESS {
-        trace!("res = {}", res);
-    }
-
-    if rt != sgx_status_t::SGX_SUCCESS {
-        trace!("rt = {}", rt);
+    if let Err(e) = test_sgx_call_res(res, rt) {
+        trace!("ocall_get_quote_ecdsa_collateral err = {}", e);
+        return Err(e);
     }
 
     trace!("Collateral size = {}", size_coll);
@@ -481,7 +475,7 @@ pub fn get_quote_ecdsa(
 
     if call_again
     {
-        unsafe {
+        res = unsafe {
             ocall_get_quote_ecdsa_collateral(
                 &mut rt as *mut sgx_status_t,
                 vec_quote.as_ptr(),
@@ -490,26 +484,27 @@ pub fn get_quote_ecdsa(
                 vec_coll.len() as u32,
                 &mut size_coll)
         };
+
+        if let Err(e) = test_sgx_call_res(res, rt) {
+            trace!("ocall_get_quote_ecdsa_collateral again err = {}", e);
+            return Err(e);
+        }
     }
 
-    if res == sgx_status_t::SGX_SUCCESS
-    {
-        // test self
-        match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
-            Ok(r) => {
-                trace!("Self quote verified ok");
-                if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
-                    // TODO: strict policy wrt own quote verification
-                    trace!("WARNING: {}", r.1);
-                }
+    // test self
+    match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
+        Ok(r) => {
+            trace!("Self quote verified ok");
+            if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+                // TODO: strict policy wrt own quote verification
+                trace!("WARNING: {}", r.1);
             }
-            Err(e) => {
-                trace!("Self quote verification failed: {}", e);
-                return Err(e);
-            }
-        };
+        }
+        Err(e) => {
+            trace!("Self quote verification failed: {}", e);
+            return Err(e);
+        }
     };
-
 
     Ok((vec_quote, vec_coll))
 
