@@ -34,6 +34,9 @@ enclave {
             [out, count=32] uint8_t* public_key
         );
 
+        public sgx_status_t ecall_migrate_sealing(
+        );
+
         public sgx_status_t ecall_get_attestation_report(
             [in, count=api_key_len] const uint8_t* api_key,
             uint32_t api_key_len

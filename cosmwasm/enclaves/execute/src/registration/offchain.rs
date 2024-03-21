@@ -12,13 +12,16 @@ use std::io::prelude::*;
 
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
-    SIGNATURE_TYPE,
+    CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
+    GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH, PUBKEY_PATH,
+    REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
-
 use enclave_utils::pointers::validate_mut_slice;
+use enclave_utils::storage::migrate_file_from_2_17_safe;
+use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
+use enclave_utils::validator_set::VALIDATOR_SET_SEALING_PATH;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
@@ -418,7 +421,7 @@ unsafe fn ecall_get_attestation_report_dcap(
  * other creative usages.
  * # Safety
  * Something should go here
- */
+*/
 pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
@@ -584,4 +587,31 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
         warn!("Enclave call ecall_get_genesis_seed panic!");
         sgx_status_t::SGX_ERROR_UNEXPECTED
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
+    if let Err(e) = migrate_file_from_2_17_safe(&REGISTRATION_KEY_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&GENESIS_CONSENSUS_SEED_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&CURRENT_CONSENSUS_SEED_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&REK_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&IRS_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&VALIDATOR_SET_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&TX_BYTES_SEALING_PATH, true) {
+        return e;
+    }
+
+    sgx_status_t::SGX_SUCCESS
 }

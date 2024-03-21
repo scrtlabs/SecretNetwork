@@ -4,8 +4,10 @@ use core::mem;
 use core::ptr::null;
 use std::io::{Read, Write};
 use std::mem::*;
+use std::path::Path;
 use std::sgxfs::SgxFile;
 use std::slice;
+use std::untrusted::path::PathEx;
 
 use sgx_types::*;
 use std::untrusted::fs;
@@ -209,14 +211,22 @@ pub fn unseal_file_from_2_17(
     Ok(bytes)
 }
 
-pub fn migrate_file_from_2_17(sPath: &str, should_check_fname: bool) -> sgx_status_t {
-    let data = match unseal_file_from_2_17(sPath, should_check_fname) {
-        Ok(x) => x,
-        Err(e) => {
-            return e;
+pub fn migrate_file_from_2_17_safe(
+    sPath: &str,
+    should_check_fname: bool,
+) -> Result<(), sgx_status_t> {
+    if Path::new(sPath).exists() {
+        let data = match unseal_file_from_2_17(sPath, should_check_fname) {
+            Ok(x) => x,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+    
+        if let Err(e) = seal(data.as_slice(), sPath) {
+            return Err(e);
         }
-    };
+    }
 
-    seal(data.as_slice(), sPath);
-    return sgx_status_t::SGX_SUCCESS;
+    Ok(())
 }

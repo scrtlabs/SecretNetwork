@@ -36,6 +36,8 @@ extern "C" {
         public_key: &mut [u8; 32],
     ) -> sgx_status_t;
 
+    pub fn ecall_migrate_sealing(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+
     /// Trigger a query method in a wasm contract
     pub fn ecall_health_check(
         eid: sgx_enclave_id_t,
