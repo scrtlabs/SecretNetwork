@@ -93,6 +93,14 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 	return true, nil
 }
 
+func MigrateSealing() (bool, error) {
+	_, err := C.migrate_sealing()
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cache, error) {

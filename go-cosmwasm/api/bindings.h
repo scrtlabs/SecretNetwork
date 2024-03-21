@@ -211,6 +211,8 @@ Buffer migrate(cache_t *cache,
                Buffer admin,
                Buffer admin_proof);
 
+bool migrate_sealing(void);
+
 Buffer query(cache_t *cache,
              Buffer code_id,
              Buffer params,
