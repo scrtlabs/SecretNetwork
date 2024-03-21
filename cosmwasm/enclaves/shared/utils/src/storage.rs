@@ -2,6 +2,7 @@ use crate::results::UnwrapOrSgxErrorUnexpected;
 
 use core::mem;
 use core::ptr::null;
+use log::{error, info};
 use std::io::{Read, Write};
 use std::mem::*;
 use std::path::Path;
@@ -98,10 +99,10 @@ pub struct file_md {
 }
 
 pub fn unseal_file_from_2_17(
-    sPath: &str,
+    s_path: &str,
     should_check_fname: bool,
 ) -> Result<Vec<u8>, sgx_status_t> {
-    let mut file = match File::open(sPath) {
+    let mut file = match File::open(s_path) {
         Ok(f) => f,
         Err(e) => {
             return Err(/*e*/ sgx_status_t::SGX_ERROR_UNEXPECTED);
@@ -178,7 +179,7 @@ pub fn unseal_file_from_2_17(
         bytes.copy_from_slice(slice::from_raw_parts(md_decr.data.as_ptr(), ret_size));
 
         if should_check_fname {
-            let raw_path = sPath.as_bytes();
+            let raw_path = s_path.as_bytes();
 
             let mut fname0: usize = 0;
             for i in 0..raw_path.len() {
@@ -212,20 +213,35 @@ pub fn unseal_file_from_2_17(
 }
 
 pub fn migrate_file_from_2_17_safe(
-    sPath: &str,
+    s_path: &str,
     should_check_fname: bool,
 ) -> Result<(), sgx_status_t> {
-    if Path::new(sPath).exists() {
-        let data = match unseal_file_from_2_17(sPath, should_check_fname) {
+    if Path::new(s_path).exists() {
+
+        let data = match unseal_file_from_2_17(s_path, should_check_fname) {
             Ok(x) => x,
             Err(e) => {
+                error!("Couldn't unseal file {}, {}", s_path, e);
                 return Err(e);
             }
         };
+
+        let s_path_bkp = s_path.to_string() + ".bkp";
+        if let Err(e) = fs::copy(&s_path, &s_path_bkp) {
+            error!("Couldn't backup {} into {}, {}", s_path, s_path_bkp, e);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
     
-        if let Err(e) = seal(data.as_slice(), sPath) {
+        if let Err(e) = seal(data.as_slice(), s_path) {
+            error!("Couldn't RE-seal file {}, {}", s_path, e);
             return Err(e);
         }
+
+        info!("File {} successfully RE-sealed", s_path);
+    }
+    else
+    {
+        info!("File {} doesn't exist, skipping", s_path);
     }
 
     Ok(())
