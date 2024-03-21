@@ -180,6 +180,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		InitBootstrapCmd(),
 		ParseCert(),
 		DumpBin(),
+		MigrateSealings(),
 		ConfigureSecret(),
 		HealthCheck(),
 		ResetEnclave(),

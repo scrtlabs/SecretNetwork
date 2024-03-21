@@ -255,13 +255,34 @@ func DumpBin() *cobra.Command {
 			"register the node, during node initialization",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// parse coins trying to be sent
+
 			data, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
 			}
 
 			fmt.Printf("%s\n", hex.EncodeToString(data))
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func MigrateSealings() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "migrate_sealing",
+		Short: "Migrate sealed files to the current format",
+		Long: "Re-create SGX-sealed files according to the current format",
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			_, err := api.MigrateSealing()
+			if err != nil {
+				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
+			}
+
+			fmt.Printf("Migration succeeded\n")
 			return nil
 		},
 	}

@@ -140,7 +140,7 @@ pub fn untrusted_migrate_sealing() -> SgxResult<()> {
         .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
     let enclave = (*enclave_access_token)?;
 
-    info!("Initialized enclave successfully!");
+    //info!("Initialized enclave successfully!");
 
     let eid = enclave.geteid();
     let mut ret = sgx_status_t::SGX_SUCCESS;

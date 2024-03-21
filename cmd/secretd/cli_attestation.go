@@ -78,6 +78,21 @@ func DumpBin() *cobra.Command {
 	return cmd
 }
 
+func MigrateSealings() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "migrate_sealing",
+		Short: "Migrate sealed files to the current format",
+		Long: "Re-create SGX-sealed files according to the current format",
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			println("This is a secretd only function, yo")
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "configure-secret [master-key] [seed]",
