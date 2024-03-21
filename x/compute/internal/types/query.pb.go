@@ -9,9 +9,9 @@ import (
 	fmt "fmt"
 	types "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/cosmos/cosmos-sdk/types/query"
-	_ "github.com/gogo/protobuf/gogoproto"
-	grpc1 "github.com/gogo/protobuf/grpc"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -221,7 +221,8 @@ func (m *QuerySecretContractResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QuerySecretContractResponse proto.InternalMessageInfo
 
-// QueryContractInfoResponse is the response type for the Query/ContractInfo RPC method
+// QueryContractInfoResponse is the response type for the Query/ContractInfo RPC
+// method
 type QueryContractInfoResponse struct {
 	// contract_address is the bech32 human readable address of the contract
 	ContractAddress string `protobuf:"bytes,1,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
@@ -261,7 +262,8 @@ func (m *QueryContractInfoResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryContractInfoResponse proto.InternalMessageInfo
 
-// ContractInfoWithAddress adds the contract address to the ContractInfo representation
+// ContractInfoWithAddress adds the contract address to the ContractInfo
+// representation
 type ContractInfoWithAddress struct {
 	// contract_address is the bech32 human readable address of the contract
 	ContractAddress string `protobuf:"bytes,1,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`

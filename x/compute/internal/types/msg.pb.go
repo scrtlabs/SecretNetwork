@@ -8,9 +8,9 @@ import (
 	fmt "fmt"
 	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
 	types "github.com/cosmos/cosmos-sdk/types"
-	_ "github.com/gogo/protobuf/gogoproto"
-	grpc1 "github.com/gogo/protobuf/grpc"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -35,7 +35,8 @@ type MsgStoreCode struct {
 	Sender github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=sender,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender,omitempty"`
 	// WASMByteCode can be raw or gzip compressed
 	WASMByteCode []byte `protobuf:"bytes,2,opt,name=wasm_byte_code,json=wasmByteCode,proto3" json:"wasm_byte_code,omitempty"`
-	// Source is a valid absolute HTTPS URI to the contract's source code, optional
+	// Source is a valid absolute HTTPS URI to the contract's source code,
+	// optional
 	Source string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
 	// Builder is a valid docker image name with tag, optional
 	Builder string `protobuf:"bytes,4,opt,name=builder,proto3" json:"builder,omitempty"`
@@ -129,7 +130,8 @@ type MsgInstantiateContract struct {
 	// init_msg is an encrypted input to pass to the contract on init
 	InitMsg   []byte                                   `protobuf:"bytes,5,opt,name=init_msg,json=initMsg,proto3" json:"init_msg,omitempty"`
 	InitFunds github_com_cosmos_cosmos_sdk_types.Coins `protobuf:"bytes,6,rep,name=init_funds,json=initFunds,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"init_funds"`
-	// used internally for encryption, should always be empty in a signed transaction
+	// used internally for encryption, should always be empty in a signed
+	// transaction
 	CallbackSig []byte `protobuf:"bytes,7,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
 	// Admin is an optional address that can execute migrations
 	Admin string `protobuf:"bytes,8,opt,name=admin,proto3" json:"admin,omitempty"`
@@ -230,10 +232,12 @@ type MsgExecuteContract struct {
 	Contract github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,2,opt,name=contract,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"contract,omitempty"`
 	// msg is an encrypted input to pass to the contract on execute
 	Msg []byte `protobuf:"bytes,3,opt,name=msg,proto3" json:"msg,omitempty"`
-	// used internally for encryption, should always be empty in a signed transaction
+	// used internally for encryption, should always be empty in a signed
+	// transaction
 	CallbackCodeHash string                                   `protobuf:"bytes,4,opt,name=callback_code_hash,json=callbackCodeHash,proto3" json:"callback_code_hash,omitempty"`
 	SentFunds        github_com_cosmos_cosmos_sdk_types.Coins `protobuf:"bytes,5,rep,name=sent_funds,json=sentFunds,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"sent_funds"`
-	// used internally for encryption, should always be empty in a signed transaction
+	// used internally for encryption, should always be empty in a signed
+	// transaction
 	CallbackSig []byte `protobuf:"bytes,6,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
 }
 
@@ -326,9 +330,11 @@ type MsgMigrateContract struct {
 	CodeID uint64 `protobuf:"varint,3,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
 	// msg is an encrypted input to pass to the contract on migration
 	Msg []byte `protobuf:"bytes,4,opt,name=msg,proto3" json:"msg,omitempty"`
-	// used internally for encryption, should always be empty in a signed transaction
+	// used internally for encryption, should always be empty in a signed
+	// transaction
 	CallbackSig []byte `protobuf:"bytes,7,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
-	// used internally for encryption, should always be empty in a signed transaction
+	// used internally for encryption, should always be empty in a signed
+	// transaction
 	CallbackCodeHash string `protobuf:"bytes,8,opt,name=callback_code_hash,json=callbackCodeHash,proto3" json:"callback_code_hash,omitempty"`
 }
 
@@ -462,7 +468,8 @@ type MsgUpdateAdmin struct {
 	NewAdmin string `protobuf:"bytes,2,opt,name=new_admin,json=newAdmin,proto3" json:"new_admin,omitempty"`
 	// Contract is the address of the smart contract
 	Contract string `protobuf:"bytes,3,opt,name=contract,proto3" json:"contract,omitempty"`
-	// used internally for encryption, should always be empty in a signed transaction
+	// used internally for encryption, should always be empty in a signed
+	// transaction
 	CallbackSig []byte `protobuf:"bytes,7,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
 }
 
@@ -570,7 +577,8 @@ type MsgClearAdmin struct {
 	Sender string `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty"`
 	// Contract is the address of the smart contract
 	Contract string `protobuf:"bytes,3,opt,name=contract,proto3" json:"contract,omitempty"`
-	// used internally for encryption, should always be empty in a signed transaction
+	// used internally for encryption, should always be empty in a signed
+	// transaction
 	CallbackSig []byte `protobuf:"bytes,7,opt,name=callback_sig,json=callbackSig,proto3" json:"callback_sig,omitempty"`
 }
 
@@ -755,7 +763,7 @@ const _ = grpc.SupportPackageIsVersion4
 type MsgClient interface {
 	// StoreCode to submit Wasm code to the system
 	StoreCode(ctx context.Context, in *MsgStoreCode, opts ...grpc.CallOption) (*MsgStoreCodeResponse, error)
-	//  Instantiate creates a new smart contract instance for the given code id.
+	// Instantiate creates a new smart contract instance for the given code id.
 	InstantiateContract(ctx context.Context, in *MsgInstantiateContract, opts ...grpc.CallOption) (*MsgInstantiateContractResponse, error)
 	// Execute submits the given message data to a smart contract
 	ExecuteContract(ctx context.Context, in *MsgExecuteContract, opts ...grpc.CallOption) (*MsgExecuteContractResponse, error)
@@ -833,7 +841,7 @@ func (c *msgClient) ClearAdmin(ctx context.Context, in *MsgClearAdmin, opts ...g
 type MsgServer interface {
 	// StoreCode to submit Wasm code to the system
 	StoreCode(context.Context, *MsgStoreCode) (*MsgStoreCodeResponse, error)
-	//  Instantiate creates a new smart contract instance for the given code id.
+	// Instantiate creates a new smart contract instance for the given code id.
 	InstantiateContract(context.Context, *MsgInstantiateContract) (*MsgInstantiateContractResponse, error)
 	// Execute submits the given message data to a smart contract
 	ExecuteContract(context.Context, *MsgExecuteContract) (*MsgExecuteContractResponse, error)

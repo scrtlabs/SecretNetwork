@@ -6,9 +6,9 @@ package types
 import (
 	context "context"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	grpc1 "github.com/gogo/protobuf/grpc"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -28,7 +28,8 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// MsgToggleIbcSwitch represents a message to toggle the emergencybutton status by the defined pauser.
+// MsgToggleIbcSwitch represents a message to toggle the emergencybutton status
+// by the defined pauser.
 type MsgToggleIbcSwitch struct {
 	Sender string `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty"`
 }
@@ -151,7 +152,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type MsgClient interface {
-	// ToggleIbcSwitch defines a method for toggling the status of the emergencybutton.
+	// ToggleIbcSwitch defines a method for toggling the status of the
+	// emergencybutton.
 	ToggleIbcSwitch(ctx context.Context, in *MsgToggleIbcSwitch, opts ...grpc.CallOption) (*MsgToggleIbcSwitchResponse, error)
 }
 
@@ -174,7 +176,8 @@ func (c *msgClient) ToggleIbcSwitch(ctx context.Context, in *MsgToggleIbcSwitch,
 
 // MsgServer is the server API for Msg service.
 type MsgServer interface {
-	// ToggleIbcSwitch defines a method for toggling the status of the emergencybutton.
+	// ToggleIbcSwitch defines a method for toggling the status of the
+	// emergencybutton.
 	ToggleIbcSwitch(context.Context, *MsgToggleIbcSwitch) (*MsgToggleIbcSwitchResponse, error)
 }
 

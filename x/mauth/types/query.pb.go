@@ -6,9 +6,9 @@ package types
 import (
 	context "context"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	grpc1 "github.com/gogo/protobuf/grpc"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -29,7 +29,8 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// QueryInterchainAccountFromAddressRequest is the request type for the Query/InterchainAccountAddress RPC
+// QueryInterchainAccountFromAddressRequest is the request type for the
+// Query/InterchainAccountAddress RPC
 type QueryInterchainAccountFromAddressRequest struct {
 	Owner        string `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	ConnectionId string `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty" yaml:"connection_id"`
@@ -70,7 +71,8 @@ func (m *QueryInterchainAccountFromAddressRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryInterchainAccountFromAddressRequest proto.InternalMessageInfo
 
-// QueryInterchainAccountFromAddressResponse the response type for the Query/InterchainAccountAddress RPC
+// QueryInterchainAccountFromAddressResponse the response type for the
+// Query/InterchainAccountAddress RPC
 type QueryInterchainAccountFromAddressResponse struct {
 	InterchainAccountAddress string `protobuf:"bytes,1,opt,name=interchain_account_address,json=interchainAccountAddress,proto3" json:"interchain_account_address,omitempty" yaml:"interchain_account_address"`
 }
@@ -215,7 +217,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryClient interface {
-	// QueryInterchainAccountFromAddress returns the interchain account for given owner address on a given connection pair
+	// QueryInterchainAccountFromAddress returns the interchain account for given
+	// owner address on a given connection pair
 	InterchainAccountFromAddress(ctx context.Context, in *QueryInterchainAccountFromAddressRequest, opts ...grpc.CallOption) (*QueryInterchainAccountFromAddressResponse, error)
 }
 
@@ -238,7 +241,8 @@ func (c *queryClient) InterchainAccountFromAddress(ctx context.Context, in *Quer
 
 // QueryServer is the server API for Query service.
 type QueryServer interface {
-	// QueryInterchainAccountFromAddress returns the interchain account for given owner address on a given connection pair
+	// QueryInterchainAccountFromAddress returns the interchain account for given
+	// owner address on a given connection pair
 	InterchainAccountFromAddress(context.Context, *QueryInterchainAccountFromAddressRequest) (*QueryInterchainAccountFromAddressResponse, error)
 }
 

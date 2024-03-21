@@ -7,13 +7,13 @@ import (
 	bytes "bytes"
 	context "context"
 	fmt "fmt"
+	_ "github.com/cosmos/cosmos-proto"
 	types "github.com/cosmos/cosmos-sdk/codec/types"
 	_ "github.com/cosmos/cosmos-sdk/types"
 	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
-	_ "github.com/gogo/protobuf/gogoproto"
-	grpc1 "github.com/gogo/protobuf/grpc"
-	proto "github.com/gogo/protobuf/proto"
-	_ "github.com/regen-network/cosmos-proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -34,7 +34,8 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// MsgRegisterAccount registers an interchain account for the given owner over the specified connection pair
+// MsgRegisterAccount registers an interchain account for the given owner over
+// the specified connection pair
 type MsgRegisterAccount struct {
 	Owner        string `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	ConnectionId string `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty" yaml:"connection_id"`
@@ -111,7 +112,8 @@ func (m *MsgRegisterAccountResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgRegisterAccountResponse proto.InternalMessageInfo
 
-// MsgSubmitTx creates and submits an arbitrary transaction msg to be executed using an interchain account
+// MsgSubmitTx creates and submits an arbitrary transaction msg to be executed
+// using an interchain account
 type MsgSubmitTx struct {
 	Owner        github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,1,opt,name=owner,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"owner,omitempty"`
 	ConnectionId string                                        `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty" yaml:"connection_id"`
