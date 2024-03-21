@@ -565,45 +565,30 @@ aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
 
 ###############################################################################
-###                         Swagger & Protobuf                              ###
+###                                Protobuf                                 ###
 ###############################################################################
 
-.PHONY: update-swagger-openapi-docs statik statik-install proto-swagger-openapi-gen
+protoVer=0.14.0
+protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
+protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
 
-statik-install:
-	@echo "Installing statik..."
-	@go install github.com/rakyll/statik@v0.1.6
-
-statik:
-	statik -src=client/docs/static/ -dest=client/docs -f -m
-
-proto-swagger-openapi-gen:
-	cp go.mod /tmp/go.mod.bak
-	cp go.sum /tmp/go.sum.bak
-	@./scripts/protoc-swagger-openapi-gen.sh
-	cp /tmp/go.mod.bak go.mod
-	cp /tmp/go.sum.bak go.sum
-
-# Example `CHAIN_VERSION=v1.4.0 make update-swagger-openapi-docs`
-update-swagger-openapi-docs: statik-install proto-swagger-openapi-gen statik
-
-protoVer=v0.2
-
-proto-all: proto-lint proto-gen proto-swagger-openapi-gen
+proto-all: proto-format proto-gen proto-swagger-gen
 
 proto-gen:
-	cp go.mod /tmp/go.mod.bak
-	cp go.sum /tmp/go.sum.bak
 	@echo "Generating Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:$(protoVer) sh ./scripts/protocgen.sh
-	cp /tmp/go.mod.bak go.mod
-	cp /tmp/go.sum.bak go.sum
-	go mod tidy
+	@$(protoImage) sh ./scripts/protocgen.sh
+
+proto-swagger-gen:
+	@echo "Generating Protobuf Swagger"
+	@$(protoImage) sh ./scripts/protoc-swagger-gen.sh
+
+proto-format:
+	@$(protoImage) find ./proto -name "*.proto" -exec clang-format -i {} \;
 
 proto-lint:
-	@$(DOCKER_BUF) lint --error-format=json
+	@$(protoImage) buf lint --error-format=json
 
-.PHONY: proto-all proto-gen proto-format proto-lint proto-check-breaking
+.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint
 
 .PHONY: check-hw
 check-hw: build-linux

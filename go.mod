@@ -5,16 +5,15 @@ go 1.21
 replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.2
 	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240319223406-51e8978ed8d6
-	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 )
 
 require (
 	github.com/cometbft/cometbft v0.38.5
 	github.com/cosmos/cosmos-sdk v0.50.4
 	github.com/cosmos/go-bip39 v1.0.0
+	github.com/cosmos/gogoproto v1.4.11
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8 v8.0.1
 	github.com/cosmos/ibc-go/v8 v8.1.0
-	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.3
 	github.com/google/gofuzz v1.2.0
 	github.com/gorilla/mux v1.8.1
@@ -22,7 +21,6 @@ require (
 	github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
 	github.com/pkg/errors v0.9.1
 	github.com/rakyll/statik v0.1.7
-	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/rs/zerolog v1.32.0 // indirect
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/cobra v1.8.0
@@ -55,8 +53,9 @@ require (
 	cosmossdk.io/x/tx v0.13.0
 	github.com/cometbft/cometbft-db v0.9.1
 	github.com/cosmos/cosmos-db v1.0.0
-	github.com/cosmos/gogoproto v1.4.11
+	github.com/cosmos/cosmos-proto v1.0.0-beta.4
 	github.com/cosmos/rosetta v0.50.4
+	github.com/gogo/protobuf v1.3.2
 )
 
 require (
@@ -93,7 +92,6 @@ require (
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/coinbase/rosetta-sdk-go/types v1.0.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
-	github.com/cosmos/cosmos-proto v1.0.0-beta.4 // indirect
 	github.com/cosmos/gogogateway v1.2.0 // indirect
 	github.com/cosmos/iavl v1.0.1 // indirect
 	github.com/cosmos/ics23/go v0.10.0 // indirect
