@@ -29,6 +29,7 @@ import (
 
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
+	confixcmd "cosmossdk.io/tools/confix/cmd"
 	// tmcfg "github.com/cometbft/cometbft/config"
 	tmcli "github.com/cometbft/cometbft/libs/cli"
 	"cosmossdk.io/log"
@@ -174,6 +175,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		HealthCheck(),
 		ResetEnclave(),
 		AutoRegisterNode(),
+		confixcmd.ConfigCommand(),
 		keys.Commands(),
 	)
 
@@ -209,7 +211,7 @@ func queryCommand() *cobra.Command {
 		// S20GetQueryCmd(),
 	)
 
-	app.ModuleBasics().AddQueryCommands(cmd)
+	// app.ModuleBasics().AddQueryCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
 
@@ -240,7 +242,7 @@ func txCommand() *cobra.Command {
 		// S20GetTxCmd(),
 	)
 
-	app.ModuleBasics().AddTxCommands(cmd)
+	// app.ModuleBasics().AddTxCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
 
