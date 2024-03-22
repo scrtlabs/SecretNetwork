@@ -209,7 +209,7 @@ func queryCommand() *cobra.Command {
 		// S20GetQueryCmd(),
 	)
 
-	app.ModuleBasics().AddQueryCommands(cmd)
+	// app.ModuleBasics().AddQueryCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
 
@@ -240,7 +240,7 @@ func txCommand() *cobra.Command {
 		// S20GetTxCmd(),
 	)
 
-	app.ModuleBasics().AddTxCommands(cmd)
+	// app.ModuleBasics().AddTxCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
 
