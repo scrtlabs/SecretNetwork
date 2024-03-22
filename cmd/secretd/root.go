@@ -29,6 +29,7 @@ import (
 
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
+	confixcmd "cosmossdk.io/tools/confix/cmd"
 	// tmcfg "github.com/cometbft/cometbft/config"
 	tmcli "github.com/cometbft/cometbft/libs/cli"
 	"cosmossdk.io/log"
@@ -174,6 +175,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		HealthCheck(),
 		ResetEnclave(),
 		AutoRegisterNode(),
+		confixcmd.ConfigCommand(),
 		keys.Commands(),
 	)
 
