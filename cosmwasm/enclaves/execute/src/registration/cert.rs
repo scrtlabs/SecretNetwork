@@ -3,7 +3,6 @@
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
-#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 use num_bigint::BigUint;
 use sgx_tcrypto::SgxEccHandle;
@@ -18,13 +17,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use yasna::models::ObjectIdentifier;
 
 use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS};
-#[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
 use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::report::AdvisoryIDs;
 
-#[cfg(feature = "SGX_MODE_HW")]
 use super::attestation::get_mr_enclave;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};

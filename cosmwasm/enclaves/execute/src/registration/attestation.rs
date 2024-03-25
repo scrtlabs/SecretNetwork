@@ -287,11 +287,25 @@ pub fn in_grace_period(timestamp: u64) -> bool {
     timestamp < 1692626400_u64
 }
 
+#[cfg(not(feature = "SGX_MODE_HW"))]
+pub fn get_mr_enclave() -> [u8; 32] {
+    let mut ret: [u8; 32] = [0; 32];
+    ret
+}
+
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn get_mr_enclave() -> [u8; 32] {
     rsgx_self_report().body.mr_enclave.m
 }
 
+#[cfg(not(feature = "SGX_MODE_HW"))]
+pub fn verify_quote_ecdsa(
+    vec_quote: &Vec<u8>,
+    vec_coll: &Vec<u8>,
+    time_s: i64,
+) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
+    Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
+}
 
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_quote_ecdsa(
@@ -401,6 +415,11 @@ fn test_sgx_call_res(
     }
 
     return Ok(sgx_status_t::SGX_SUCCESS);
+}
+
+#[cfg(not(feature = "SGX_MODE_HW"))]
+pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+    Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
 }
 
 #[cfg(feature = "SGX_MODE_HW")]

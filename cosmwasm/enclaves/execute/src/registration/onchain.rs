@@ -19,7 +19,6 @@ use enclave_utils::{
 
 use sgx_types::sgx_ql_qv_result_t;
 
-#[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SigningMethod;
 
 use super::cert::verify_ra_cert;
