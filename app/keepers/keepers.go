@@ -69,7 +69,7 @@ import (
 	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
 
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
-	// ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 
 	ibchooks "github.com/scrtlabs/SecretNetwork/x/ibc-hooks"
 	ibchookskeeper "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
@@ -155,8 +155,8 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	homePath string,
 	logger log.Logger,
 ) {
-	// paramsKeeper := initParamsKeeper(appCodec, legacyAmino, ak.keys[paramstypes.StoreKey], ak.tKeys[paramstypes.TStoreKey])
-	// ak.ParamsKeeper = &paramsKeeper
+	paramsKeeper := initParamsKeeper(appCodec, legacyAmino, ak.keys[paramstypes.StoreKey], ak.tKeys[paramstypes.TStoreKey])
+	ak.ParamsKeeper = &paramsKeeper
 
 	// set the BaseApp's parameter store
 	// app.SetParamStore(ak.ParamsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
@@ -167,8 +167,8 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		runtime.NewKVStoreService(ak.keys[authtypes.StoreKey]),
 		authtypes.ProtoBaseAccount,
 		maccPerms,
-		authcodec.NewBech32Codec(sdk.Bech32MainPrefix),
-		sdk.Bech32MainPrefix,
+		authcodec.NewBech32Codec("secret"),
+		"secret",
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	ak.AccountKeeper = &accountKeeper
@@ -607,26 +607,25 @@ func (ak *SecretAppKeepers) InitKeys() {
 }
 
 // initParamsKeeper init params keeper and its subspaces
-/*
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
-	paramsKeeper.Subspace(authtypes.ModuleName)
-	paramsKeeper.Subspace(banktypes.ModuleName)
-	paramsKeeper.Subspace(stakingtypes.ModuleName)
-	paramsKeeper.Subspace(minttypes.ModuleName)
-	paramsKeeper.Subspace(distrtypes.ModuleName)
-	paramsKeeper.Subspace(slashingtypes.ModuleName)
-	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
+	// paramsKeeper.Subspace(authtypes.ModuleName)
+	// paramsKeeper.Subspace(banktypes.ModuleName)
+	// paramsKeeper.Subspace(stakingtypes.ModuleName)
+	// paramsKeeper.Subspace(minttypes.ModuleName)
+	// paramsKeeper.Subspace(distrtypes.ModuleName)
+	// paramsKeeper.Subspace(slashingtypes.ModuleName)
+	// paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibcexported.ModuleName)
-	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
-	paramsKeeper.Subspace(icahosttypes.SubModuleName)
-	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
-	paramsKeeper.Subspace(crisistypes.ModuleName)
+	// paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
+	// paramsKeeper.Subspace(icahosttypes.SubModuleName)
+	// paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
+	// paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
-	paramsKeeper.Subspace(reg.ModuleName)
-	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
+	// paramsKeeper.Subspace(reg.ModuleName)
+	// paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
 
 	return paramsKeeper
-}*/
+}

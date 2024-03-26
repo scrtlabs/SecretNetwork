@@ -13,6 +13,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	// "github.com/rs/zerolog"
+    "github.com/cosmos/cosmos-sdk/crypto/keyring"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/spf13/pflag"
@@ -44,6 +45,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+    simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"cosmossdk.io/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -141,6 +143,27 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
+
+    var tempDir = func() string {
+        dir, err := os.MkdirTemp("", "secretd")
+        if err != nil {
+            dir = app.DefaultNodeHome
+        }
+        defer os.RemoveAll(dir)
+
+        return dir
+    }
+
+    tempApp := app.NewSecretNetworkApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), compute.DefaultWasmConfig())
+
+    autoCliOpts := tempApp.AutoCliOpts()
+    initClientCtx, _ = clientconfig.ReadFromClientConfig(initClientCtx)
+    autoCliOpts.Keyring, _ = keyring.NewAutoCLIKeyring(initClientCtx.Keyring)
+    autoCliOpts.ClientCtx = initClientCtx
+
+    if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
+		panic(err)
+	}
 
 	return rootCmd, encodingConfig
 }
