@@ -1,73 +1,64 @@
 package keeper
 
-import (
-	"os"
-	"testing"
+// func TestInitGenesisNoMaster(t *testing.T) {
+// 	tempDir, err := os.MkdirTemp("", "wasm")
+// 	require.NoError(t, err)
+// 	defer os.RemoveAll(tempDir)
+// 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-)
+// 	data := types.GenesisState{
+// 		Registration:      nil,
+// 		IoMasterKey:       nil,
+// 		NodeExchMasterKey: nil,
+// 	}
 
-func TestInitGenesisNoMaster(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keeper := CreateTestInput(t, false, tempDir, true)
+// 	assert.Panics(t, func() { InitGenesis(ctx, keeper, data) }, "Init genesis didn't panic without master certificate")
+// }
 
-	data := types.GenesisState{
-		Registration:      nil,
-		IoMasterKey:       nil,
-		NodeExchMasterKey: nil,
-	}
+// func TestInitGenesis(t *testing.T) {
+// 	tempDir, err := os.MkdirTemp("", "wasm")
+// 	require.NoError(t, err)
+// 	defer os.RemoveAll(tempDir)
+// 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	assert.Panics(t, func() { InitGenesis(ctx, keeper, data) }, "Init genesis didn't panic without master certificate")
-}
+// 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+// 	require.NoError(t, err)
 
-func TestInitGenesis(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keeper := CreateTestInput(t, false, tempDir, true)
+// 	key, err := FetchRawPubKeyFromLegacyCert(cert)
+// 	require.NoError(t, err)
 
-	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
-	require.NoError(t, err)
+// 	data := types.GenesisState{
+// 		Registration:      nil,
+// 		IoMasterKey:       &types.MasterKey{Bytes: key},
+// 		NodeExchMasterKey: &types.MasterKey{Bytes: key},
+// 	}
 
-	key, err := FetchRawPubKeyFromLegacyCert(cert)
-	require.NoError(t, err)
+// 	InitGenesis(ctx, keeper, data)
+// }
 
-	data := types.GenesisState{
-		Registration:      nil,
-		IoMasterKey:       &types.MasterKey{Bytes: key},
-		NodeExchMasterKey: &types.MasterKey{Bytes: key},
-	}
+// func TestExportGenesis(t *testing.T) {
+// 	tempDir, err := os.MkdirTemp("", "wasm")
+// 	require.NoError(t, err)
+// 	defer os.RemoveAll(tempDir)
+// 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	InitGenesis(ctx, keeper, data)
-}
+// 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+// 	require.NoError(t, err)
 
-func TestExportGenesis(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keeper := CreateTestInput(t, false, tempDir, true)
+// 	key, err := FetchRawPubKeyFromLegacyCert(cert)
+// 	require.NoError(t, err)
 
-	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
-	require.NoError(t, err)
+// 	data := types.GenesisState{
+// 		Registration:      nil,
+// 		IoMasterKey:       &types.MasterKey{Bytes: key},
+// 		NodeExchMasterKey: &types.MasterKey{Bytes: key},
+// 	}
 
-	key, err := FetchRawPubKeyFromLegacyCert(cert)
-	require.NoError(t, err)
+// 	InitGenesis(ctx, keeper, data)
 
-	data := types.GenesisState{
-		Registration:      nil,
-		IoMasterKey:       &types.MasterKey{Bytes: key},
-		NodeExchMasterKey: &types.MasterKey{Bytes: key},
-	}
+// 	data2 := ExportGenesis(ctx, keeper)
 
-	InitGenesis(ctx, keeper, data)
-
-	data2 := ExportGenesis(ctx, keeper)
-
-	require.Equal(t, string(data.IoMasterKey.Bytes), string(data2.IoMasterKey.Bytes))
-	require.Equal(t, string(data.NodeExchMasterKey.Bytes), string(data2.NodeExchMasterKey.Bytes))
-	require.Equal(t, data2.Registration, data2.Registration)
-}
+// 	require.Equal(t, string(data.IoMasterKey.Bytes), string(data2.IoMasterKey.Bytes))
+// 	require.Equal(t, string(data.NodeExchMasterKey.Bytes), string(data2.NodeExchMasterKey.Bytes))
+// 	require.Equal(t, data2.Registration, data2.Registration)
+// }

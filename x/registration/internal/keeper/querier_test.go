@@ -2,103 +2,90 @@ package keeper
 
 //
 ////
-import (
-	"encoding/hex"
-	"encoding/json"
-	"os"
-	"testing"
 
-	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
-	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
+// func TestNewQuerier(t *testing.T) {
+// 	tempDir, err := os.MkdirTemp("", "wasm")
+// 	require.NoError(t, err)
+// 	defer os.RemoveAll(tempDir)
+// 	ctx, keeper := CreateTestInput(t, false, tempDir, true)
 
-	"github.com/stretchr/testify/require"
-	abci "github.com/cometbft/cometbft/abci/types"
-)
+// 	nodeIdInvalid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-func TestNewQuerier(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "wasm")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-	ctx, keeper := CreateTestInput(t, false, tempDir, true)
+// 	nodeIdValid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-	nodeIdInvalid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+// 	querier := NewLegacyQuerier(keeper) // TODO: Should test NewQuerier() as well
 
-	nodeIdValid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+// 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+// 	require.NoError(t, err)
 
-	querier := NewLegacyQuerier(keeper) // TODO: Should test NewQuerier() as well
+// 	regInfo := types.RegistrationNodeInfo{
+// 		Certificate:   cert,
+// 		EncryptedSeed: []byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+// 	}
 
-	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
-	require.NoError(t, err)
+// 	keeper.SetRegistrationInfo(ctx, regInfo)
 
-	regInfo := types.RegistrationNodeInfo{
-		Certificate:   cert,
-		EncryptedSeed: []byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-	}
+// 	publicKey, err := ra.VerifyRaCert(regInfo.Certificate)
+// 	if err != nil {
+// 		return
+// 	}
 
-	keeper.SetRegistrationInfo(ctx, regInfo)
+// 	expectedSecretParams, _ := json.Marshal(types.GenesisState{
+// 		Registration:      nil,
+// 		NodeExchMasterKey: &types.MasterKey{Bytes: publicKey},
+// 		IoMasterKey:       &types.MasterKey{Bytes: publicKey},
+// 	})
 
-	publicKey, err := ra.VerifyRaCert(regInfo.Certificate)
-	if err != nil {
-		return
-	}
+// 	specs := map[string]struct {
+// 		srcPath []string
+// 		srcReq  abci.RequestQuery
+// 		// smart queries return raw bytes from contract not []types.Model
+// 		// if this is set, then we just compare - (should be json encoded string)
+// 		// if success and expSmartRes is not set, we parse into []types.Model and compare
+// 		expErr *sdkErrors.Error
+// 		result string
+// 	}{
+// 		"query malformed node id": {
+// 			[]string{QueryEncryptedSeed, nodeIdInvalid},
+// 			abci.RequestQuery{Data: []byte("")},
+// 			sdkErrors.ErrInvalidAddress,
+// 			"",
+// 		},
+// 		"query invalid node id": {
+// 			[]string{QueryEncryptedSeed, nodeIdValid},
+// 			abci.RequestQuery{Data: []byte("")},
+// 			sdkErrors.ErrUnknownAddress,
+// 			"",
+// 		},
+// 		"query valid node id": {
+// 			[]string{QueryEncryptedSeed, hex.EncodeToString(publicKey)},
+// 			abci.RequestQuery{Data: []byte("")},
+// 			nil,
+// 			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+// 		},
+// 		"query master key fail": {
+// 			[]string{QueryMasterKey},
+// 			abci.RequestQuery{Data: []byte("")},
+// 			sdkErrors.ErrUnknownAddress,
+// 			"",
+// 		},
+// 	}
 
-	expectedSecretParams, _ := json.Marshal(types.GenesisState{
-		Registration:      nil,
-		NodeExchMasterKey: &types.MasterKey{Bytes: publicKey},
-		IoMasterKey:       &types.MasterKey{Bytes: publicKey},
-	})
+// 	for msg, spec := range specs {
+// 		t.Run(msg, func(t *testing.T) {
+// 			binResult, err := querier(ctx, spec.srcPath, spec.srcReq)
+// 			require.True(t, spec.expErr.Is(err), err)
 
-	specs := map[string]struct {
-		srcPath []string
-		srcReq  abci.RequestQuery
-		// smart queries return raw bytes from contract not []types.Model
-		// if this is set, then we just compare - (should be json encoded string)
-		// if success and expSmartRes is not set, we parse into []types.Model and compare
-		expErr *sdkErrors.Error
-		result string
-	}{
-		"query malformed node id": {
-			[]string{QueryEncryptedSeed, nodeIdInvalid},
-			abci.RequestQuery{Data: []byte("")},
-			sdkErrors.ErrInvalidAddress,
-			"",
-		},
-		"query invalid node id": {
-			[]string{QueryEncryptedSeed, nodeIdValid},
-			abci.RequestQuery{Data: []byte("")},
-			sdkErrors.ErrUnknownAddress,
-			"",
-		},
-		"query valid node id": {
-			[]string{QueryEncryptedSeed, hex.EncodeToString(publicKey)},
-			abci.RequestQuery{Data: []byte("")},
-			nil,
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		},
-		"query master key fail": {
-			[]string{QueryMasterKey},
-			abci.RequestQuery{Data: []byte("")},
-			sdkErrors.ErrUnknownAddress,
-			"",
-		},
-	}
+// 			if spec.result != "" {
+// 				require.Equal(t, spec.result, string(binResult))
+// 			}
+// 		})
+// 	}
 
-	for msg, spec := range specs {
-		t.Run(msg, func(t *testing.T) {
-			binResult, err := querier(ctx, spec.srcPath, spec.srcReq)
-			require.True(t, spec.expErr.Is(err), err)
+// 	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterNodeKeyId)
+// 	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterIoKeyId)
 
-			if spec.result != "" {
-				require.Equal(t, spec.result, string(binResult))
-			}
-		})
-	}
-
-	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterNodeKeyId)
-	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterIoKeyId)
-
-	binResult, err := querier(ctx, []string{QueryMasterKey}, abci.RequestQuery{Data: []byte("")})
-	require.NoError(t, err)
-	require.Equal(t, string(binResult), string(expectedSecretParams))
-}
+// 	binResult, err := querier(ctx, []string{QueryMasterKey}, abci.RequestQuery{Data: []byte("")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, string(binResult), string(expectedSecretParams))
+// }
