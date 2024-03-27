@@ -6,10 +6,6 @@ import (
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
-const (
-	MaxCertificateSize = 20 * 1024
-)
-
 type PublicKey []byte
 
 func (msg RaAuthenticate) Route() string {
@@ -29,10 +25,6 @@ func (msg RaAuthenticate) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "Authenticating certificate cannot be empty")
 	}
 
-	if len(msg.Certificate) > MaxCertificateSize {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "certificate length too large")
-	}
-
 	return validateCertificate(msg.Certificate)
 }
 
@@ -46,7 +38,7 @@ func (msg RaAuthenticate) GetSigners() []sdk.AccAddress {
 
 func validateCertificate(cert ra.Certificate) error {
 	// todo: add public key verification
-	_, err := ra.VerifyRaCert(cert)
+	_, err := ra.VerifyCombinedCert(cert)
 	if err != nil {
 		return err
 	}

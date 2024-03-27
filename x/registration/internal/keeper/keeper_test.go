@@ -77,7 +77,7 @@ func TestKeeper_RegisterNode(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw.combined")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{

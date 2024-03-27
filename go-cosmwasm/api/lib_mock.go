@@ -49,6 +49,10 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 
 type Querier = types.Querier
 
+func MigrateSealing() (bool, error) {
+	return false, nil
+}
+
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cache, error) {
 	//dir := sendSlice([]byte(dataDir))
 	//defer freeAfterSend(dir)

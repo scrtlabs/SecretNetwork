@@ -7,7 +7,7 @@ ARG SDK_VERSION=2.20
 ARG SGX_VERSION=2.20.100.4
 ARG PSW_VERSION=2.20.100.4-focal1
 ARG OS_REVESION=focal1
-
+ARG DCAP_VERSION=1.17.100.4-focal1
 #RUN apt-get update && \
 #    apt-get install -y --no-install-recommends \
 #    #### Base utilities ####
@@ -37,13 +37,19 @@ RUN apt-get update && \
     add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
     apt-get update && \
     apt-get install -y \
-        libsgx-aesm-epid-plugin=$PSW_VERSION \
-        libsgx-aesm-quote-ex-plugin=$PSW_VERSION \
         libsgx-aesm-launch-plugin=$PSW_VERSION \
         libsgx-enclave-common=$PSW_VERSION \
+        libsgx-epid=$PSW_VERSION \
+        libsgx-launch=$PSW_VERSION \
         libsgx-quote-ex=$PSW_VERSION \
         libsgx-uae-service=$PSW_VERSION \
-        sgx-aesm-service=$PSW_VERSION \
+        libsgx-qe3-logic=$DCAP_VERSION \
+        libsgx-pce-logic=$DCAP_VERSION \
+        libsgx-aesm-ecdsa-plugin=$PSW_VERSION \
+        libsgx-aesm-pce-plugin=$PSW_VERSION \
+        libsgx-dcap-ql=$DCAP_VERSION \
+        libsgx-dcap-quote-verify=$DCAP_VERSION \
+        libsgx-dcap-default-qpl=$DCAP_VERSION \
         libsgx-urts=$PSW_VERSION && \
     rm -rf /var/lib/apt/lists/* && \
     rm -rf /var/cache/apt/archives/* && \

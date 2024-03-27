@@ -3,7 +3,6 @@
 use bit_vec::BitVec;
 use chrono::Utc as TzUtc;
 use chrono::{Duration, TimeZone};
-#[cfg(feature = "SGX_MODE_HW")]
 use log::*;
 use num_bigint::BigUint;
 use sgx_tcrypto::SgxEccHandle;
@@ -18,13 +17,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use yasna::models::ObjectIdentifier;
 
 use enclave_crypto::consts::{SigningMethod, CERTEXPIRYDAYS};
-#[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::{MRSIGNER, SIGNING_METHOD};
 use enclave_ffi_types::NodeAuthResult;
 
 use crate::registration::report::AdvisoryIDs;
 
-#[cfg(feature = "SGX_MODE_HW")]
 use super::attestation::get_mr_enclave;
 #[cfg(feature = "SGX_MODE_HW")]
 use super::report::{AttestationReport, SgxQuoteStatus};
@@ -284,6 +281,54 @@ pub fn verify_ra_cert(
     Ok(pk)
 }
 
+pub fn verify_ra_report(
+    report_mr_signer: &[u8; 32],
+    report_mr_enclave : & [u8;32],
+    override_verify_type: Option<SigningMethod>,
+) -> NodeAuthResult {
+    let signing_method: SigningMethod = match override_verify_type {
+        Some(method) => method,
+        None => SIGNING_METHOD,
+    };
+
+    // verify certificate
+    match signing_method {
+        SigningMethod::MRENCLAVE => {
+            let this_mr_enclave = get_mr_enclave();
+            let this_mr_signer = MRSIGNER;
+
+            if (*report_mr_enclave) != this_mr_enclave || (*report_mr_signer) != this_mr_signer {
+                error!(
+                    "Got a different mr_enclave or mr_signer than expected. Invalid certificate"
+                );
+                warn!(
+                    "mr_enclave: received: {:?} \n expected: {:?}",
+                    report_mr_enclave, this_mr_enclave
+                );
+                warn!(
+                    "mr_signer: received: {:?} \n expected: {:?}",
+                    report_mr_signer, this_mr_signer
+                );
+                return NodeAuthResult::MrEnclaveMismatch;
+            }
+        }
+        SigningMethod::MRSIGNER => {
+            if (*report_mr_signer) != MRSIGNER {
+                error!("Got a different mrsigner than expected. Invalid certificate");
+                warn!(
+                    "received: {:?} \n expected: {:?}",
+                    report_mr_signer, MRSIGNER
+                );
+                return NodeAuthResult::MrSignerMismatch;
+            }
+        }
+        SigningMethod::NONE => {}
+    }
+
+    NodeAuthResult::Success
+}
+
+
 /// # Verifies remote attestation cert
 ///
 /// Logic:
@@ -308,57 +353,21 @@ pub fn verify_ra_cert(
         verify_quote_status(&report, &report.advisory_ids)?;
     }
 
-    let signing_method: SigningMethod = match override_verify_type {
-        Some(method) => method,
-        None => SIGNING_METHOD,
-    };
+    let res = verify_ra_report(
+        &report.sgx_quote_body.isv_enclave_report.mr_signer,
+        &report.sgx_quote_body.isv_enclave_report.mr_enclave,
+        override_verify_type);
 
-    // verify certificate
-    match signing_method {
-        SigningMethod::MRENCLAVE => {
-            let this_mr_enclave = get_mr_enclave();
-            let this_mr_signer = MRSIGNER;
+    if res != NodeAuthResult::Success {
+        return Err(res);
+    }
 
-            let crate::registration::report::SgxEnclaveReport {
-                mr_enclave: report_mr_enclave,
-                mr_signer: report_mr_signer,
-                ..
-            } = report.sgx_quote_body.isv_enclave_report;
-
-            if report_mr_enclave != this_mr_enclave || report_mr_signer != this_mr_signer {
-                error!(
-                    "Got a different mr_enclave or mr_signer than expected. Invalid certificate"
-                );
-                warn!(
-                    "mr_enclave: received: {:?} \n expected: {:?}",
-                    report_mr_enclave, this_mr_enclave
-                );
-                warn!(
-                    "mr_signer: received: {:?} \n expected: {:?}",
-                    report_mr_signer, this_mr_signer
-                );
-                return Err(NodeAuthResult::MrEnclaveMismatch);
-            }
-
-            if check_tcb_version {
-                // todo: change this to a parameters or const when we migrate the code to main
-                if report.tcb_eval_data_number < 16 {
-                    info!("Got an outdated certificate");
-                    return Err(NodeAuthResult::GroupOutOfDate);
-                }
-            }
+    if check_tcb_version {
+        // todo: change this to a parameters or const when we migrate the code to main
+        if report.tcb_eval_data_number < 16 {
+            info!("Got an outdated certificate");
+            return Err(NodeAuthResult::GroupOutOfDate);
         }
-        SigningMethod::MRSIGNER => {
-            if report.sgx_quote_body.isv_enclave_report.mr_signer != MRSIGNER {
-                error!("Got a different mrsigner than expected. Invalid certificate");
-                warn!(
-                    "received: {:?} \n expected: {:?}",
-                    report.sgx_quote_body.isv_enclave_report.mr_signer, MRSIGNER
-                );
-                return Err(NodeAuthResult::MrSignerMismatch);
-            }
-        }
-        SigningMethod::NONE => {}
     }
 
     let report_public_key = report.sgx_quote_body.isv_enclave_report.report_data[0..32].to_vec();
