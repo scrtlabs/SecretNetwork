@@ -441,7 +441,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
             }
         };
 
-        f_out.write(&kp.get_pubkey().to_vec());
+        f_out.write(&kp.get_pubkey().to_vec()).unwrap();
     }
 
     let mut size_epid: u32 = 0;
@@ -467,17 +467,17 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         }
     };
 
-    f_out.write(&(size_epid as u32).to_le_bytes());
-    f_out.write(&(size_dcap_q as u32).to_le_bytes());
-    f_out.write(&(size_dcap_c as u32).to_le_bytes());
+    f_out.write(&(size_epid as u32).to_le_bytes()).unwrap();
+    f_out.write(&(size_dcap_q as u32).to_le_bytes()).unwrap();
+    f_out.write(&(size_dcap_c as u32).to_le_bytes()).unwrap();
 
     if let Ok(ref vec_cert) = res_epid {
-        f_out.write_all(vec_cert.as_slice());
+        f_out.write_all(vec_cert.as_slice()).unwrap();
     }
 
     if let Ok((vec_quote, vec_coll)) = res_dcap {
-        f_out.write_all(vec_quote.as_slice());
-        f_out.write_all(vec_coll.as_slice());
+        f_out.write_all(vec_quote.as_slice()).unwrap();
+        f_out.write_all(vec_coll.as_slice()).unwrap();
     }
 
     if (size_epid == 0) && (size_dcap_q == 0) {

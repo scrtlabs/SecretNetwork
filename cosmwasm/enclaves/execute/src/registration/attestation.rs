@@ -19,8 +19,11 @@ use sgx_tcrypto::rsgx_sha256_slice;
 
 use sgx_tcrypto::SgxEccHandle;
 
-use sgx_types::{sgx_create_report, sgx_quote_sign_type_t, sgx_status_t, sgx_self_target, sgx_report_body_t,
-                sgx_ql_qe_report_info_t, sgx_isv_svn_t, sgx_ql_qv_result_t, sgx_quote3_error_t, sgx_tvl_verify_qve_report_and_identity, sgx_quote_t};
+use sgx_types::{
+    sgx_isv_svn_t, sgx_ql_qe_report_info_t, sgx_ql_qv_result_t, sgx_quote3_error_t,
+    sgx_quote_sign_type_t, sgx_quote_t, sgx_report_body_t, sgx_self_target, sgx_status_t,
+    sgx_tvl_verify_qve_report_and_identity,
+};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
@@ -57,8 +60,10 @@ use enclave_crypto::consts::{
 use std::sgxfs::remove as SgxFsRemove;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use super::ocalls::{ocall_get_ias_socket, ocall_get_quote, ocall_sgx_init_quote,
-    ocall_get_quote_ecdsa_params, ocall_get_quote_ecdsa, ocall_get_quote_ecdsa_collateral, ocall_verify_quote_ecdsa};
+use super::ocalls::{
+    ocall_get_ias_socket, ocall_get_quote, ocall_get_quote_ecdsa, ocall_get_quote_ecdsa_collateral,
+    ocall_get_quote_ecdsa_params, ocall_sgx_init_quote, ocall_verify_quote_ecdsa,
+};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
@@ -322,9 +327,7 @@ pub fn verify_quote_ecdsa(
     let mut rt: sgx_status_t = sgx_status_t::default();
 
     let mut ti: sgx_target_info_t = sgx_target_info_t::default();
-    unsafe {
-        sgx_self_target(&mut ti)
-    };
+    unsafe { sgx_self_target(&mut ti) };
 
     let res = unsafe {
         ocall_verify_quote_ecdsa(
@@ -341,7 +344,8 @@ pub fn verify_quote_ecdsa(
             &mut n_supp,
             &mut exp_time_s,
             &mut exp_status,
-            &mut qv_result)
+            &mut qv_result,
+        )
     };
 
     if res != sgx_status_t::SGX_SUCCESS {
@@ -352,8 +356,8 @@ pub fn verify_quote_ecdsa(
     }
 
     match qv_result {
-        sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK => {},
-        sgx_ql_qv_result_t::SGX_QL_QV_RESULT_SW_HARDENING_NEEDED => {},
+        sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK => {}
+        sgx_ql_qv_result_t::SGX_QL_QV_RESULT_SW_HARDENING_NEEDED => {}
         _ => {
             trace!("Quote verification result: {}", qv_result);
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
@@ -366,16 +370,19 @@ pub fn verify_quote_ecdsa(
     }
 
     let qve_isvsvn_threshold: sgx_isv_svn_t = 3;
-    let dcap_ret : sgx_quote3_error_t  = unsafe { sgx_tvl_verify_qve_report_and_identity(
-        vec_quote.as_ptr(),
-        vec_quote.len() as u32,
-        &qe_report,
-        exp_time_s,
-        exp_status,
-        qv_result,
-        p_supp.as_ptr(),
-        n_supp,
-        qve_isvsvn_threshold) };
+    let dcap_ret: sgx_quote3_error_t = unsafe {
+        sgx_tvl_verify_qve_report_and_identity(
+            vec_quote.as_ptr(),
+            vec_quote.len() as u32,
+            &qe_report,
+            exp_time_s,
+            exp_status,
+            qv_result,
+            p_supp.as_ptr(),
+            n_supp,
+            qve_isvsvn_threshold,
+        )
+    };
 
     if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
         trace!("QVE report verification result: {}", dcap_ret);
@@ -432,7 +439,8 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
         ocall_get_quote_ecdsa_params(
             &mut rt as *mut sgx_status_t,
             &mut qe_target_info,
-            &mut quote_size)
+            &mut quote_size,
+        )
     };
 
     if let Err(e) = test_sgx_call_res(res, rt) {
@@ -453,15 +461,15 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
         }
     };
 
-    let mut vec_quote : Vec<u8> = vec![0; quote_size as usize];
+    let mut vec_quote: Vec<u8> = vec![0; quote_size as usize];
 
     res = unsafe {
-
         ocall_get_quote_ecdsa(
             &mut rt as *mut sgx_status_t,
             &my_report,
             vec_quote.as_mut_ptr(),
-            vec_quote.len() as u32)
+            vec_quote.len() as u32,
+        )
     };
 
     if let Err(e) = test_sgx_call_res(res, rt) {
@@ -469,8 +477,8 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
         return Err(e);
     }
 
-    let mut vec_coll : Vec<u8> = vec![0; 0x4000 as usize]; 
-    let mut size_coll : u32 = 0;
+    let mut vec_coll: Vec<u8> = vec![0; 0x4000 as usize];
+    let mut size_coll: u32 = 0;
 
     res = unsafe {
         ocall_get_quote_ecdsa_collateral(
@@ -479,7 +487,8 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
             vec_quote.len() as u32,
             vec_coll.as_mut_ptr(),
             vec_coll.len() as u32,
-            &mut size_coll)
+            &mut size_coll,
+        )
     };
 
     if let Err(e) = test_sgx_call_res(res, rt) {
@@ -492,8 +501,7 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
     let call_again = size_coll > vec_coll.len() as u32;
     vec_coll.resize(size_coll as usize, 0);
 
-    if call_again
-    {
+    if call_again {
         res = unsafe {
             ocall_get_quote_ecdsa_collateral(
                 &mut rt as *mut sgx_status_t,
@@ -501,7 +509,8 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
                 vec_quote.len() as u32,
                 vec_coll.as_mut_ptr(),
                 vec_coll.len() as u32,
-                &mut size_coll)
+                &mut size_coll,
+            )
         };
 
         if let Err(e) = test_sgx_call_res(res, rt) {
@@ -526,7 +535,6 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
     };
 
     Ok((vec_quote, vec_coll))
-
 }
 
 //input: pub_k: &sgx_ec256_public_t, todo: make this the pubkey of the node
