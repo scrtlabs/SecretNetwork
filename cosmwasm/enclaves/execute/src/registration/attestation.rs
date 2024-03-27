@@ -318,8 +318,8 @@ pub fn verify_quote_ecdsa(
 
 #[cfg(feature = "SGX_MODE_HW")]
 pub fn verify_quote_ecdsa(
-    vec_quote: &Vec<u8>,
-    vec_coll: &Vec<u8>,
+    vec_quote: &[u8],
+    vec_coll: &[u8],
     time_s: i64,
 ) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
     let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();

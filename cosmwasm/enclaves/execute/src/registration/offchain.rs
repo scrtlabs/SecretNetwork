@@ -435,7 +435,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
             }
         };
 
-        f_out.write_all(&kp.get_pubkey().as_ref()).unwrap();
+        f_out.write_all(kp.get_pubkey().as_ref()).unwrap();
     }
 
     let mut size_epid: u32 = 0;

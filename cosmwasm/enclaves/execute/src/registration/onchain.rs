@@ -97,8 +97,8 @@ fn test_attestation_epid(cert_slice: &[u8], pub_key: &mut [u8; 32]) -> NodeAuthR
 }
 
 fn test_attestation_dcap(
-    vec_quote: &Vec<u8>,
-    vec_coll: &Vec<u8>,
+    vec_quote: &[u8],
+    vec_coll: &[u8],
     pub_key: &mut [u8; 32],
 ) -> NodeAuthResult {
     let tm_s = get_current_block_time_s();
