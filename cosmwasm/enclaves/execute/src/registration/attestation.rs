@@ -1,4 +1,6 @@
+#[cfg(feature = "SGX_MODE_HW")]
 use core::mem;
+
 use enclave_crypto::KeyPair;
 use std::vec::Vec;
 
@@ -19,11 +21,13 @@ use sgx_tcrypto::rsgx_sha256_slice;
 
 use sgx_tcrypto::SgxEccHandle;
 
+#[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
-    sgx_isv_svn_t, sgx_ql_qe_report_info_t, sgx_ql_qv_result_t, sgx_quote3_error_t,
-    sgx_quote_sign_type_t, sgx_quote_t, sgx_report_body_t, sgx_self_target, sgx_status_t,
+    sgx_isv_svn_t, sgx_ql_qe_report_info_t, sgx_quote3_error_t, sgx_quote_t, sgx_self_target,
     sgx_tvl_verify_qve_report_and_identity,
 };
+
+use sgx_types::{sgx_ql_qv_result_t, sgx_quote_sign_type_t, sgx_report_body_t, sgx_status_t};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_types::{
@@ -294,7 +298,7 @@ pub fn in_grace_period(timestamp: u64) -> bool {
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn get_mr_enclave() -> [u8; 32] {
-    let mut ret: [u8; 32] = [0; 32];
+    let ret: [u8; 32] = [0; 32];
     ret
 }
 
@@ -305,9 +309,9 @@ pub fn get_mr_enclave() -> [u8; 32] {
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
 pub fn verify_quote_ecdsa(
-    vec_quote: &Vec<u8>,
-    vec_coll: &Vec<u8>,
-    time_s: i64,
+    _vec_quote: &[u8],
+    _vec_coll: &[u8],
+    _time_s: i64,
 ) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
     Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
 }
@@ -409,6 +413,7 @@ pub fn verify_quote_ecdsa(
     Ok((report_body, qv_result))
 }
 
+#[cfg(feature = "SGX_MODE_HW")]
 fn test_sgx_call_res(
     res: sgx_status_t,
     retval: sgx_status_t,
@@ -421,11 +426,11 @@ fn test_sgx_call_res(
         return Err(retval);
     }
 
-    return Ok(sgx_status_t::SGX_SUCCESS);
+    Ok(sgx_status_t::SGX_SUCCESS)
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa(_pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
 }
 

@@ -365,7 +365,7 @@ unsafe fn ecall_get_attestation_report_epid(
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
     let (_private_key_der, cert) =
-        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice, None) {
+        match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key_slice, None) {
             Err(e) => {
                 warn!("Error in create_attestation_certificate: {:?}", e);
                 return Err(e);
@@ -373,16 +373,14 @@ unsafe fn ecall_get_attestation_report_epid(
             Ok(res) => res,
         };
 
-    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
-        return Err(status);
-    }
+    write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str())?;
 
     #[cfg(feature = "SGX_MODE_HW")]
     {
         crate::registration::print_report::print_local_report_info(cert.as_slice());
     }
 
-    return Ok(cert);
+    Ok(cert)
 }
 
 unsafe fn ecall_get_attestation_report_dcap(
@@ -396,15 +394,11 @@ unsafe fn ecall_get_attestation_report_dcap(
         }
     };
 
-    if let Err(status) = write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str()) {
-        return Err(status);
-    }
+    write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str())?;
 
-    if let Err(status) = write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str()) {
-        return Err(status);
-    }
+    write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str())?;
 
-    return Ok((vec_quote, vec_coll));
+    Ok((vec_quote, vec_coll))
 }
 
 #[no_mangle]
@@ -441,7 +435,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
             }
         };
 
-        f_out.write(&kp.get_pubkey().to_vec()).unwrap();
+        f_out.write_all(&kp.get_pubkey().as_ref()).unwrap();
     }
 
     let mut size_epid: u32 = 0;
@@ -467,9 +461,9 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         }
     };
 
-    f_out.write(&(size_epid as u32).to_le_bytes()).unwrap();
-    f_out.write(&(size_dcap_q as u32).to_le_bytes()).unwrap();
-    f_out.write(&(size_dcap_c as u32).to_le_bytes()).unwrap();
+    f_out.write_all(&size_epid.to_le_bytes()).unwrap();
+    f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
+    f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
 
     if let Ok(ref vec_cert) = res_epid {
         f_out.write_all(vec_cert.as_slice()).unwrap();

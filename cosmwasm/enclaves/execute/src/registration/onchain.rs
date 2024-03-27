@@ -6,9 +6,9 @@ use std::panic;
 
 use enclave_ffi_types::NodeAuthResult;
 
-use crate::registration::seed_exchange::SeedType;
 use crate::registration::attestation::verify_quote_ecdsa;
 use crate::registration::cert::verify_ra_report;
+use crate::registration::seed_exchange::SeedType;
 
 use enclave_crypto::consts::OUTPUT_ENCRYPTED_SEED_SIZE;
 use enclave_crypto::PUBLIC_KEY_SIZE;
@@ -33,50 +33,42 @@ use enclave_contract_engine::check_cert_in_current_block;
 use block_verifier::VERIFIED_BLOCK_MESSAGES;
 
 #[cfg(feature = "light-client-validation")]
-fn get_current_block_time_s() -> i64
-{
+fn get_current_block_time_s() -> i64 {
     let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
     let tm_ns = verified_msgs.time();
-    return (tm_ns / 1000000000) as i64;
+    (tm_ns / 1000000000) as i64
 }
 
 #[cfg(not(feature = "light-client-validation"))]
-fn get_current_block_time_s() -> i64
-{
+fn get_current_block_time_s() -> i64 {
     return 0 as i64;
 }
 
-fn split_combined_cert(
-    cert: *const u8,
-    cert_len: u32,
-) -> (Vec<u8>, Vec<u8>, Vec<u8>)
-{
-    let mut vec_cert : Vec<u8> = Vec::new();
-    let mut vec_quote : Vec<u8> = Vec::new();
-    let mut vec_coll : Vec<u8> = Vec::new();
+fn split_combined_cert(cert: *const u8, cert_len: u32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    let mut vec_cert: Vec<u8> = Vec::new();
+    let mut vec_quote: Vec<u8> = Vec::new();
+    let mut vec_coll: Vec<u8> = Vec::new();
 
     let n0 = mem::size_of::<u32>() as u32 * 3;
 
-    if cert_len >= n0
-    {
+    if cert_len >= n0 {
         let p_cert = cert as *const u32;
-        let s0 = u32::from_le( unsafe { *p_cert } );
-        let s1 = u32::from_le( unsafe { *(p_cert.offset(1)) } );
-        let s2 = u32::from_le( unsafe { *(p_cert.offset(2)) } );
+        let s0 = u32::from_le(unsafe { *p_cert });
+        let s1 = u32::from_le(unsafe { *(p_cert.offset(1)) });
+        let s2 = u32::from_le(unsafe { *(p_cert.offset(2)) });
 
-        let size_total =
-            (n0 as u64) +
-            (s0 as u64) +
-            (s1 as u64) +
-            (s2 as u64);
+        let size_total = (n0 as u64) + (s0 as u64) + (s1 as u64) + (s2 as u64);
 
-        if size_total <= cert_len as u64
-        {
-            vec_cert = unsafe { slice::from_raw_parts(cert.offset(n0 as isize), s0 as usize).to_vec() };
-            vec_quote = unsafe { slice::from_raw_parts(cert.offset((n0 + s0) as isize), s1 as usize).to_vec() };
-            vec_coll = unsafe { slice::from_raw_parts(cert.offset((n0 + s0 + s1) as isize), s2 as usize).to_vec() };
+        if size_total <= cert_len as u64 {
+            vec_cert =
+                unsafe { slice::from_raw_parts(cert.offset(n0 as isize), s0 as usize).to_vec() };
+            vec_quote = unsafe {
+                slice::from_raw_parts(cert.offset((n0 + s0) as isize), s1 as usize).to_vec()
+            };
+            vec_coll = unsafe {
+                slice::from_raw_parts(cert.offset((n0 + s0 + s1) as isize), s2 as usize).to_vec()
+            };
         }
-
     }
 
     (vec_cert, vec_quote, vec_coll)
@@ -100,7 +92,8 @@ fn test_attestation_epid(cert_slice: &[u8], pub_key: &mut [u8; 32]) -> NodeAuthR
     }
 
     pub_key.copy_from_slice(&pk);
-    return NodeAuthResult::Success;
+
+    NodeAuthResult::Success
 }
 
 fn test_attestation_dcap(
@@ -112,7 +105,7 @@ fn test_attestation_dcap(
     trace!("Current block time: {}", tm_s);
 
     // test self
-    let report_body = match verify_quote_ecdsa(&vec_quote, &vec_coll, tm_s) {
+    let report_body = match verify_quote_ecdsa(vec_quote, vec_coll, tm_s) {
         Ok(r) => {
             trace!("Remote quote verified ok");
             if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
@@ -136,9 +129,9 @@ fn test_attestation_dcap(
     }
 
     pub_key.copy_from_slice(&report_body.report_data.d[..32]);
-    return NodeAuthResult::Success;
-}
 
+    NodeAuthResult::Success
+}
 
 ///
 /// `ecall_authenticate_new_node`
@@ -181,7 +174,6 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     let (vec_cert, vec_quote, vec_coll) = split_combined_cert(cert, cert_len);
 
     if vec_quote.is_empty() || vec_coll.is_empty() {
-
         if vec_cert.is_empty() {
             warn!("No valid attestation method provided");
             return NodeAuthResult::InvalidCert;
@@ -189,13 +181,11 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
         trace!("EPID attestation");
 
-        let res = test_attestation_epid(&vec_cert.as_slice(), &mut target_public_key);
+        let res = test_attestation_epid(vec_cert.as_slice(), &mut target_public_key);
         if NodeAuthResult::Success != res {
             return res;
         }
-
     } else {
-
         trace!("DCAP attestation");
 
         let res = test_attestation_dcap(&vec_quote, &vec_coll, &mut target_public_key);
@@ -205,7 +195,6 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
     }
 
     let result = panic::catch_unwind(|| -> Result<Vec<u8>, NodeAuthResult> {
-
         trace!(
             "ecall_get_encrypted_seed target_public_key key pk: {:?}",
             &target_public_key.to_vec()
