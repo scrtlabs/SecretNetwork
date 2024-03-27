@@ -180,7 +180,7 @@ pub fn unseal_file_from_2_17(
 
             let mut fname0: usize = 0;
             for (i, ch) in raw_path.iter().enumerate() {
-                if *ch == b'/' as u8 {
+                if *ch == b'/' {
                     fname0 = i + 1;
                 }
             }

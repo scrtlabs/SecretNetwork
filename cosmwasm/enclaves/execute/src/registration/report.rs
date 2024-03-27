@@ -22,6 +22,9 @@ use enclave_ffi_types::NodeAuthResult;
 
 use super::cert::{get_ias_auth_config, get_netscape_comment};
 
+#[cfg(feature = "test")]
+use sgx_types::sgx_quote_t;
+
 #[derive(Debug)]
 pub enum Error {
     ReportParseError,
