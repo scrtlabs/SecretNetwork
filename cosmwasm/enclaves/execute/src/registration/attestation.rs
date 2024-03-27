@@ -482,7 +482,7 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
         return Err(e);
     }
 
-    let mut vec_coll: Vec<u8> = vec![0; 0x4000 as usize];
+    let mut vec_coll: Vec<u8> = vec![0; 0x4000];
     let mut size_coll: u32 = 0;
 
     res = unsafe {
