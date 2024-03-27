@@ -106,7 +106,7 @@ pub fn unseal_file_from_2_17(
     };
 
     let mut bytes = Vec::new();
-    if let Err(_) = file.read_to_end(&mut bytes) {
+    if file.read_to_end(&mut bytes).is_err() {
         return Err(/*e*/ sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
@@ -179,8 +179,8 @@ pub fn unseal_file_from_2_17(
             let raw_path = s_path.as_bytes();
 
             let mut fname0: usize = 0;
-            for i in 0..raw_path.len() {
-                if raw_path[i] == b'/' as u8 {
+            for (i, ch) in raw_path.iter().enumerate() {
+                if *ch == b'/' as u8 {
                     fname0 = i + 1;
                 }
             }
