@@ -4,11 +4,9 @@ use core::mem;
 use core::ptr::null;
 use log::{error, info};
 use std::io::{Read, Write};
-use std::mem::*;
 use std::path::Path;
 use std::sgxfs::SgxFile;
 use std::slice;
-use std::untrusted::path::PathEx;
 
 use sgx_types::*;
 use std::untrusted::fs;
@@ -54,11 +52,9 @@ pub fn rewrite_on_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<()> {
     write_to_untrusted(bytes, filepath)
 }
 
-
-
 //////////////
 #[repr(packed)]
-pub struct file_md_plain {
+pub struct FileMdPlain {
     pub file_id: u64,
     pub major_version: u8,
     pub minor_version: u8,
@@ -73,12 +69,12 @@ pub struct file_md_plain {
     pub update_flag: u8,
 }
 
-const file_md_encrypted_data_size: usize = 3072;
-const file_md_encrypted_filename_size: usize = 260;
+const FILE_MD_ENCRYPTED_DATA_SIZE: usize = 3072;
+const FILE_MD_ENCRYPTED_FILENAME_SIZE: usize = 260;
 
 #[repr(packed)]
-pub struct file_md_encrypted {
-    pub clean_filename: [u8; file_md_encrypted_filename_size],
+pub struct FileMdEncrypted {
+    pub clean_filename: [u8; FILE_MD_ENCRYPTED_FILENAME_SIZE],
     pub size: u64,
 
     // that was deleted in 2.18
@@ -88,13 +84,13 @@ pub struct file_md_encrypted {
     pub mht_key: [u8; 16],
     pub mht_gmac: [u8; 16],
 
-    pub data: [u8; file_md_encrypted_data_size],
+    pub data: [u8; FILE_MD_ENCRYPTED_DATA_SIZE],
 }
 
 #[repr(packed)]
-pub struct file_md {
-    pub plain: file_md_plain,
-    pub encr: file_md_encrypted,
+pub struct FileMd {
+    pub plain: FileMdPlain,
+    pub encr: FileMdEncrypted,
     pub padding: [u8; 610],
 }
 
@@ -104,34 +100,35 @@ pub fn unseal_file_from_2_17(
 ) -> Result<Vec<u8>, sgx_status_t> {
     let mut file = match File::open(s_path) {
         Ok(f) => f,
-        Err(e) => {
+        Err(_) => {
             return Err(/*e*/ sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
     };
 
     let mut bytes = Vec::new();
-    if let Err(e) = file.read_to_end(&mut bytes) {
+    if let Err(_) = file.read_to_end(&mut bytes) {
         return Err(/*e*/ sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    if bytes.len() < mem::size_of::<file_md>() {
+    if bytes.len() < mem::size_of::<FileMd>() {
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     unsafe {
-        let p_md = bytes.as_mut_ptr() as *const file_md;
+        let p_md = bytes.as_mut_ptr() as *const FileMd;
 
-        let mut key_request: sgx_key_request_t = sgx_key_request_t::default();
-
-        key_request.key_name = sgx_types::SGX_KEYSELECT_SEAL;
-        key_request.key_policy = sgx_types::SGX_KEYPOLICY_MRSIGNER;
+        let mut key_request = sgx_key_request_t {
+            key_name: sgx_types::SGX_KEYSELECT_SEAL,
+            key_policy: sgx_types::SGX_KEYPOLICY_MRSIGNER,
+            misc_mask: sgx_types::TSEAL_DEFAULT_MISCMASK,
+            isv_svn: (*p_md).plain.isv_svn,
+            ..Default::default()
+        };
 
         key_request.attribute_mask.flags = sgx_types::TSEAL_DEFAULT_FLAGSMASK;
         key_request.attribute_mask.xfrm = 0x0;
-        key_request.misc_mask = sgx_types::TSEAL_DEFAULT_MISCMASK;
 
         key_request.cpu_svn.svn = (*p_md).plain.cpu_svn;
-        key_request.isv_svn = (*p_md).plain.isv_svn;
         key_request.key_id.id = (*p_md).plain.key_id;
 
         let mut cur_key: sgx_key_128bit_t = sgx_key_128bit_t::default();
@@ -141,8 +138,8 @@ pub fn unseal_file_from_2_17(
             return Err(st);
         }
 
-        let mut md_decr: file_md_encrypted = file_md_encrypted {
-            clean_filename: [0; file_md_encrypted_filename_size],
+        let /* mut */ md_decr: FileMdEncrypted = FileMdEncrypted {
+            clean_filename: [0; FILE_MD_ENCRYPTED_FILENAME_SIZE],
             size: 0,
             mc_uuid: [0; 16],
             mc_value: 0,
@@ -157,7 +154,7 @@ pub fn unseal_file_from_2_17(
         st = sgx_rijndael128GCM_decrypt(
             &cur_key,
             std::ptr::addr_of!((*p_md).encr) as *const u8,
-            mem::size_of::<file_md_encrypted>() as u32,
+            mem::size_of::<FileMdEncrypted>() as u32,
             std::ptr::addr_of!(md_decr) as *mut uint8_t,
             p_iv.as_ptr() as *const u8,
             12,
@@ -171,7 +168,7 @@ pub fn unseal_file_from_2_17(
         }
 
         let ret_size = std::ptr::read_unaligned(std::ptr::addr_of!(md_decr.size)) as usize;
-        if ret_size > file_md_encrypted_data_size {
+        if ret_size > FILE_MD_ENCRYPTED_DATA_SIZE {
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
 
@@ -183,18 +180,18 @@ pub fn unseal_file_from_2_17(
 
             let mut fname0: usize = 0;
             for i in 0..raw_path.len() {
-                if raw_path[i] == '/' as u8 {
+                if raw_path[i] == b'/' as u8 {
                     fname0 = i + 1;
                 }
             }
 
             let file_name_len = raw_path.len() - fname0;
 
-            if file_name_len > file_md_encrypted_filename_size {
+            if file_name_len > FILE_MD_ENCRYPTED_FILENAME_SIZE {
                 return Err(sgx_status_t::SGX_ERROR_FILE_NAME_MISMATCH);
             }
 
-            if (file_name_len < file_md_encrypted_filename_size)
+            if (file_name_len < FILE_MD_ENCRYPTED_FILENAME_SIZE)
                 && (md_decr.clean_filename[file_name_len] != 0)
             {
                 return Err(sgx_status_t::SGX_ERROR_FILE_NAME_MISMATCH);
@@ -217,7 +214,6 @@ pub fn migrate_file_from_2_17_safe(
     should_check_fname: bool,
 ) -> Result<(), sgx_status_t> {
     if Path::new(s_path).exists() {
-
         let data = match unseal_file_from_2_17(s_path, should_check_fname) {
             Ok(x) => x,
             Err(e) => {
@@ -227,20 +223,18 @@ pub fn migrate_file_from_2_17_safe(
         };
 
         let s_path_bkp = s_path.to_string() + ".bkp";
-        if let Err(e) = fs::copy(&s_path, &s_path_bkp) {
+        if let Err(e) = fs::copy(s_path, &s_path_bkp) {
             error!("Couldn't backup {} into {}, {}", s_path, s_path_bkp, e);
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
-    
+
         if let Err(e) = seal(data.as_slice(), s_path) {
             error!("Couldn't RE-seal file {}, {}", s_path, e);
             return Err(e);
         }
 
         info!("File {} successfully RE-sealed", s_path);
-    }
-    else
-    {
+    } else {
         info!("File {} doesn't exist, skipping", s_path);
     }
 
