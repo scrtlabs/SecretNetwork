@@ -16,7 +16,6 @@ import (
 	regtypes "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	"github.com/stretchr/testify/require"
 
-	//"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -30,14 +29,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 
-	//"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
 	"cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
 	"cosmossdk.io/x/evidence"
 
-	//"cosmossdk.io/x/gov"
 	"cosmossdk.io/x/upgrade"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
@@ -45,12 +42,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	registrationmock "github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper/mock"
 )
-
-//"github.com/cosmos/ibc-go/v8/testing/simapp/params"
-
-// "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
-
-// ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
 
 type TestEncodingConfig struct {
 	InterfaceRegistry codec_types.InterfaceRegistry
@@ -94,9 +85,6 @@ var ModuleBasics = module.NewBasicManager(
 			// upgradeclient.ProposalHandler,
 		},
 	),
-	// gov.NewAppModuleBasic(
-	// 	paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
-	// ),
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
 	// ibc.AppModuleBasic{},
@@ -133,17 +121,12 @@ func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, bootstrap boo
 	require.Nil(t, err)
 
 	keys := storetypes.NewKVStoreKeys(regtypes.StoreKey)
-	// keys := storetypes.NewKVStoreKeys(regtypes.StoreKey)
-	// authority := authtypes.NewModuleAddress("gov").String()
 
 	// replace the logger by testing values in a real test case (e.g. log.NewTestLogger(t))
 	logger := log.NewNopLogger()
-	// cms := runtime.NewKVStoreService(keyContract)
 	db := dbm.NewMemDB()
 	cms := store.NewCommitMultiStore(db, logger, metrics.NewNoOpMetrics())
 
-	// cms := store.NewCommitMultiStore(db)
-	// key := storetypes.NewKVStoreKey("test")
 	cms.MountStoreWithDB(keys[regtypes.StoreKey], storetypes.StoreTypeIAVL, db)
 	err = cms.LoadLatestVersion()
 	require.Nil(t, err)
