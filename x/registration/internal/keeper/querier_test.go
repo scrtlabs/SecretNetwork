@@ -1,24 +1,110 @@
 package keeper
 
-// import (
-// 	"encoding/hex"
-// 	"encoding/json"
-// 	"os"
-// 	"testing"
+import (
+	"encoding/hex"
+	"fmt"
+	"os"
+	"testing"
 
-// 	"cosmossdk.io/api/tendermint/abci"
-// 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
-// 	errorsmod "cosmossdk.io/errors"
-// 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
-// 	"github.com/scrtlabs/SecretNetwork/x/registration"
-// 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
-// 	"github.com/stretchr/testify/require"
-// )
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
+	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
+	"github.com/stretchr/testify/require"
+)
 
 // //
 // ////
 
-// func TestNewQuerier(t *testing.T) {
+func TestNewQuerier_MasterKey(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keeper := CreateTestInput(t, false, tempDir, true)
+
+	querier := NewQuerier(keeper)
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+	require.NoError(t, err)
+
+	regInfo := types.RegistrationNodeInfo{
+		Certificate:   cert,
+		EncryptedSeed: []byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+	}
+
+	publicKey, err := ra.VerifyRaCert(regInfo.Certificate)
+	if err != nil {
+		return
+	}
+
+	keeper.SetRegistrationInfo(ctx, regInfo)
+	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterNodeKeyId)
+	keeper.SetMasterKey(ctx, types.MasterKey{Bytes: publicKey}, types.MasterIoKeyId)
+
+	keys, err := querier.RegistrationKey(ctx, nil)
+	require.NoError(t, err)
+	require.NotNil(t, keys)
+}
+
+func TestNewQuerier_MalformedNodeID(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keeper := CreateTestInput(t, false, tempDir, true)
+
+	nodeIdInvalid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+	querier := NewQuerier(keeper) // TODO: Should test NewQuerier() as well
+
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+	require.NoError(t, err)
+
+	regInfo := types.RegistrationNodeInfo{
+		Certificate:   cert,
+		EncryptedSeed: []byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+	}
+
+	keeper.SetRegistrationInfo(ctx, regInfo)
+
+	pubKey, err := hex.DecodeString(nodeIdInvalid)
+	require.NoError(t, err)
+
+	req := &types.QueryEncryptedSeedRequest{
+		PubKey: pubKey,
+	}
+	_, err = querier.EncryptedSeed(ctx, req)
+	require.True(t, sdkerrors.ErrUnknownAddress.Is(err), err)
+}
+
+func TestNewQuerier_ValidNodeID(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "wasm")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	ctx, keeper := CreateTestInput(t, false, tempDir, true)
+
+	querier := NewQuerier(keeper) // TODO: Should test NewQuerier() as well
+
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+	require.NoError(t, err)
+
+	regInfo := types.RegistrationNodeInfo{
+		Certificate:   cert,
+		EncryptedSeed: []byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+	}
+
+	keeper.SetRegistrationInfo(ctx, regInfo)
+
+	pubKey, err := ra.VerifyRaCert(regInfo.Certificate)
+	require.NoError(t, err)
+
+	req := &types.QueryEncryptedSeedRequest{
+		PubKey: pubKey,
+	}
+	res, err := querier.EncryptedSeed(ctx, req)
+	require.NoError(t, err)
+	fmt.Println("res:", res.String())
+	require.Equal(t, res.EncryptedSeed, regInfo.EncryptedSeed)
+}
+
+// func TestNewQuerier_Seed(t *testing.T) {
 // 	tempDir, err := os.MkdirTemp("", "wasm")
 // 	require.NoError(t, err)
 // 	defer os.RemoveAll(tempDir)
@@ -41,9 +127,7 @@ package keeper
 // 	keeper.SetRegistrationInfo(ctx, regInfo)
 
 // 	publicKey, err := ra.VerifyRaCert(regInfo.Certificate)
-// 	if err != nil {
-// 		return
-// 	}
+// 	require.NoError(t, err)
 
 // 	expectedSecretParams, _ := json.Marshal(types.GenesisState{
 // 		Registration:      nil,
@@ -88,7 +172,7 @@ package keeper
 
 // 	for msg, spec := range specs {
 // 		t.Run(msg, func(t *testing.T) {
-// 			binResult, err := querier.EncryptedSeed()(ctx, spec.srcPath, spec.srcReq)
+// 			binResult, err := querier(ctx, spec.srcPath, spec.srcReq)
 // 			require.True(t, spec.expErr.Is(err), err)
 
 // 			if spec.result != "" {
