@@ -1,92 +1,161 @@
 package keeper
 
+import (
+	"encoding/base64"
+	"encoding/json"
+	"os"
+	"testing"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codec_types "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/std"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/ibc-go/modules/capability"
+	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
+	regtypes "github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
+	"github.com/stretchr/testify/require"
+
+	//"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/crisis"
+	"github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
+	"github.com/cosmos/cosmos-sdk/x/mint"
+	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	"github.com/cosmos/cosmos-sdk/x/staking"
+
+	//"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+	"cosmossdk.io/log"
+	"cosmossdk.io/store"
+	"cosmossdk.io/store/metrics"
+	storetypes "cosmossdk.io/store/types"
+	"cosmossdk.io/x/evidence"
+
+	//"cosmossdk.io/x/gov"
+	"cosmossdk.io/x/upgrade"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/runtime"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	registrationmock "github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper/mock"
+)
+
 //"github.com/cosmos/ibc-go/v8/testing/simapp/params"
 
 // "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
 
 // ibc "github.com/cosmos/cosmos-sdk/x/ibc/core"
 
-// func CreateTestSeedConfig(t *testing.T) []byte {
-// 	seed := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-// 	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
-// 	require.NoError(t, err)
+type TestEncodingConfig struct {
+	InterfaceRegistry codec_types.InterfaceRegistry
+	Codec             codec.Codec
+	Marshaler         *codec.ProtoCodec
+	TxConfig          client.TxConfig
+	Amino             *codec.LegacyAmino
+}
 
-// 	key, err := fetchPubKeyFromLegacyCert(cert)
-// 	require.NoError(t, err)
+func CreateTestSeedConfig(t *testing.T) []byte {
+	seed := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+	require.NoError(t, err)
 
-// 	cfg := regtypes.SeedConfig{
-// 		EncryptedKey: seed,
-// 		MasterKey:    base64.StdEncoding.EncodeToString(key),
-// 		Version:      regtypes.SeedConfigVersion,
-// 	}
+	key, err := fetchPubKeyFromLegacyCert(cert)
+	require.NoError(t, err)
 
-// 	cfgBytes, err := json.Marshal(&cfg)
-// 	require.NoError(t, err)
+	cfg := regtypes.SeedConfig{
+		EncryptedKey: seed,
+		MasterKey:    base64.StdEncoding.EncodeToString(key),
+		Version:      regtypes.SeedConfigVersion,
+	}
 
-// 	return cfgBytes
-// }
+	cfgBytes, err := json.Marshal(&cfg)
+	require.NoError(t, err)
 
-// var ModuleBasics = module.NewBasicManager(
-// 	auth.AppModuleBasic{},
-// 	bank.AppModuleBasic{},
-// 	capability.AppModuleBasic{},
-// 	staking.AppModuleBasic{},
-// 	mint.AppModuleBasic{},
-// 	distribution.AppModuleBasic{},
-// 	gov.NewAppModuleBasic(
-// 		paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
-// 	),
-// 	crisis.AppModuleBasic{},
-// 	slashing.AppModuleBasic{},
-// 	// ibc.AppModuleBasic{},
-// 	upgrade.AppModuleBasic{},
-// 	evidence.AppModuleBasic{},
-// 	transfer.AppModuleBasic{},
-// )
+	return cfgBytes
+}
 
-// func MakeTestCodec() codec.Codec {
-// 	return MakeEncodingConfig().Marshaler
-// }
+var ModuleBasics = module.NewBasicManager(
+	auth.AppModuleBasic{},
+	bank.AppModuleBasic{},
+	capability.AppModuleBasic{},
+	staking.AppModuleBasic{},
+	mint.AppModuleBasic{},
+	distribution.AppModuleBasic{},
+	gov.NewAppModuleBasic(
+		[]govclient.ProposalHandler{
+			paramsclient.ProposalHandler,
+			// distrclient.ProposalHandler,
+			// upgradeclient.ProposalHandler,
+		},
+	),
+	// gov.NewAppModuleBasic(
+	// 	paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
+	// ),
+	crisis.AppModuleBasic{},
+	slashing.AppModuleBasic{},
+	// ibc.AppModuleBasic{},
+	upgrade.AppModuleBasic{},
+	evidence.AppModuleBasic{},
+	transfer.AppModuleBasic{},
+)
 
-// func MakeEncodingConfig() params.EncodingConfig {
-// 	amino := codec.NewLegacyAmino()
-// 	interfaceRegistry := types.NewInterfaceRegistry()
-// 	marshaler := codec.NewProtoCodec(interfaceRegistry)
-// 	txCfg := tx.NewTxConfig(marshaler, tx.DefaultSignModes)
+func MakeTestCodec() codec.Codec {
+	return MakeEncodingConfig().Marshaler
+}
 
-// 	std.RegisterInterfaces(interfaceRegistry)
-// 	std.RegisterLegacyAminoCodec(amino)
+func MakeEncodingConfig() TestEncodingConfig {
+	amino := codec.NewLegacyAmino()
+	interfaceRegistry := codec_types.NewInterfaceRegistry()
+	marshaler := codec.NewProtoCodec(interfaceRegistry)
+	txCfg := tx.NewTxConfig(marshaler, tx.DefaultSignModes)
 
-// 	ModuleBasics.RegisterLegacyAminoCodec(amino)
-// 	ModuleBasics.RegisterInterfaces(interfaceRegistry)
-// 	return params.EncodingConfig{
-// 		InterfaceRegistry: interfaceRegistry,
-// 		Marshaler:         marshaler,
-// 		TxConfig:          txCfg,
-// 		Amino:             amino,
-// 	}
-// }
+	std.RegisterInterfaces(interfaceRegistry)
+	std.RegisterLegacyAminoCodec(amino)
 
-// func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, bootstrap bool) (sdk.Context, Keeper) {
-// 	err := os.Setenv("SGX_MODE", "SW")
-// 	require.Nil(t, err)
+	ModuleBasics.RegisterLegacyAminoCodec(amino)
+	ModuleBasics.RegisterInterfaces(interfaceRegistry)
+	return TestEncodingConfig{
+		InterfaceRegistry: interfaceRegistry,
+		Marshaler:         marshaler,
+		TxConfig:          txCfg,
+		Amino:             amino,
+	}
+}
 
-// 	keyContract := sdk.NewKVStoreKey(regtypes.StoreKey)
+func CreateTestInput(t *testing.T, isCheckTx bool, tempDir string, bootstrap bool) (sdk.Context, Keeper) {
+	err := os.Setenv("SGX_MODE", "SW")
+	require.Nil(t, err)
 
-// 	db := dbm.NewMemDB()
-// 	ms := store.NewCommitMultiStore(db)
-// 	ms.MountStoreWithDB(keyContract, sdk.StoreTypeIAVL, db)
-// 	err = ms.LoadLatestVersion()
-// 	require.Nil(t, err)
+	keys := storetypes.NewKVStoreKeys(regtypes.StoreKey)
+	// keys := storetypes.NewKVStoreKeys(regtypes.StoreKey)
+	// authority := authtypes.NewModuleAddress("gov").String()
 
-// 	ctx := sdk.NewContext(ms, tmproto.Header{}, isCheckTx, log.NewNopLogger())
-// 	cdc := MakeTestCodec()
+	// replace the logger by testing values in a real test case (e.g. log.NewTestLogger(t))
+	logger := log.NewNopLogger()
+	// cms := runtime.NewKVStoreService(keyContract)
+	db := dbm.NewMemDB()
+	cms := store.NewCommitMultiStore(db, logger, metrics.NewNoOpMetrics())
 
-// 	// TODO: register more than bank.send
-// 	router := baseapp.NewRouter()
+	// cms := store.NewCommitMultiStore(db)
+	// key := storetypes.NewKVStoreKey("test")
+	cms.MountStoreWithDB(keys[regtypes.StoreKey], storetypes.StoreTypeIAVL, db)
+	err = cms.LoadLatestVersion()
+	require.Nil(t, err)
 
-// 	// Load default wasm config
-// 	keeper := NewKeeper(cdc, keyContract, router, mock.MockEnclaveApi{}, tempDir, bootstrap)
+	ctx := sdk.NewContext(cms, tmproto.Header{}, isCheckTx, log.NewNopLogger())
+	cdc := MakeTestCodec()
 
-// 	return ctx, keeper
-// }
+	// TODO: register more than bank.send
+	router := baseapp.NewMsgServiceRouter()
+
+	// Load default wasm config
+	keeper := NewKeeper(cdc, runtime.NewKVStoreService(keys[regtypes.StoreKey]), router, registrationmock.MockEnclaveApi{}, tempDir, bootstrap)
+
+	return ctx, keeper
+}
