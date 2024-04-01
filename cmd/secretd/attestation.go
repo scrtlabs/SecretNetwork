@@ -30,6 +30,8 @@ const (
 	flagReset                     = "reset"
 	flagPulsar                    = "pulsar"
 	flagCustomRegistrationService = "registration-service"
+	flag_no_epid                  = "no-epid"
+	flag_no_dcap                  = "no-dcap"
 )
 
 const (
@@ -95,7 +97,10 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			_, err = api.CreateAttestationReport(apiKeyFile)
+			no_epid, _ := cmd.Flags().GetBool(flag_no_epid)
+			no_dcap, _ := cmd.Flags().GetBool(flag_no_dcap)
+
+			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -103,6 +108,8 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 		},
 	}
 	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
+	cmd.Flags().Bool(flag_no_epid, false, "Optional flag to disable EPID attestation")
+	cmd.Flags().Bool(flag_no_dcap, false, "Optional flag to disable DCAP attestation")
 
 	return cmd
 }
@@ -479,7 +486,10 @@ Please report any issues with this command
 				return fmt.Errorf("failed to initialize enclave: %w", err)
 			}
 
-			_, err = api.CreateAttestationReport(apiKeyFile)
+			no_epid, _ := cmd.Flags().GetBool(flag_no_epid)
+			no_dcap, _ := cmd.Flags().GetBool(flag_no_dcap)
+
+			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -624,6 +634,9 @@ Please report any issues with this command
 
 	cmd.Flags().String(flagLegacyBootstrapNode, "", "DEPRECATED: This flag is no longer required or in use")
 	cmd.Flags().String(flagLegacyRegistrationNode, "", "DEPRECATED: This flag is no longer required or in use")
+
+	cmd.Flags().Bool(flag_no_epid, false, "Optional flag to disable EPID attestation")
+	cmd.Flags().Bool(flag_no_dcap, false, "Optional flag to disable DCAP attestation")
 
 	return cmd
 }

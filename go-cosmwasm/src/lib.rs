@@ -196,7 +196,11 @@ pub extern "C" fn init_node(
 }
 
 #[no_mangle]
-pub extern "C" fn create_attestation_report(api_key: Buffer, err: Option<&mut Buffer>) -> bool {
+pub extern "C" fn create_attestation_report(
+    api_key: Buffer,
+    flags: u32,
+    err: Option<&mut Buffer>,
+) -> bool {
     let api_key_slice = match unsafe { api_key.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
@@ -205,7 +209,7 @@ pub extern "C" fn create_attestation_report(api_key: Buffer, err: Option<&mut Bu
         Some(r) => r,
     };
 
-    if let Err(status) = create_attestation_report_u(api_key_slice) {
+    if let Err(status) = create_attestation_report_u(api_key_slice, flags) {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }

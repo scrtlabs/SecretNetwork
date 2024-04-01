@@ -260,7 +260,7 @@ func KeyGen() ([]byte, error) {
 }
 
 // KeyGen Seng KeyGen request to enclave
-func CreateAttestationReport(apiKey []byte) (bool, error) {
+func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool) (bool, error) {
 	//errmsg := C.Buffer{}
 	//_, err := C.create_attestation_report(&errmsg)
 	//if err != nil {

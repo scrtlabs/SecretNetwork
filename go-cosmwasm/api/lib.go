@@ -431,12 +431,20 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(apiKey []byte) (bool, error) {
+func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool) (bool, error) {
 	errmsg := C.Buffer{}
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.create_attestation_report(apiKeySlice, &errmsg)
+	flags := u32(0)
+	if no_epid {
+		flags |= u32(1)
+	}
+	if no_dcap {
+		flags |= u32(2);
+	}
+
+	_, err := C.create_attestation_report(apiKeySlice, flags, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

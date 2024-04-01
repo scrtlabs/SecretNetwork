@@ -349,7 +349,7 @@ pub unsafe extern "C" fn ecall_init_node(
     sgx_status_t::SGX_SUCCESS
 }
 
-unsafe fn ecall_get_attestation_report_epid(
+unsafe fn get_attestation_report_epid(
     api_key: *const u8,
     api_key_len: u32,
     kp: &KeyPair,
@@ -383,7 +383,7 @@ unsafe fn ecall_get_attestation_report_epid(
     Ok(cert)
 }
 
-unsafe fn ecall_get_attestation_report_dcap(
+unsafe fn get_attestation_report_dcap(
     kp: &KeyPair,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let (vec_quote, vec_coll) = match get_quote_ecdsa(&kp.get_pubkey()) {
@@ -419,6 +419,7 @@ unsafe fn ecall_get_attestation_report_dcap(
 pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
+    flags: u32,
 ) -> sgx_status_t {
     let kp = KEY_MANAGER.get_registration_key().unwrap();
     trace!(
@@ -442,12 +443,18 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     let mut size_dcap_q: u32 = 0;
     let mut size_dcap_c: u32 = 0;
 
-    let res_epid = ecall_get_attestation_report_epid(api_key, api_key_len, &kp);
+    let res_epid = match 1 & flags {
+        0 => get_attestation_report_epid(api_key, api_key_len, &kp),
+        _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
+    };
     if let Ok(ref vec_cert) = res_epid {
         size_epid = vec_cert.len() as u32;
     }
 
-    let res_dcap = ecall_get_attestation_report_dcap(&kp);
+    let res_dcap = match 2 & flags {
+        0 => get_attestation_report_dcap(&kp),
+        _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
+    };
     if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
         size_dcap_q = vec_quote.len() as u32;
         size_dcap_c = vec_coll.len() as u32;

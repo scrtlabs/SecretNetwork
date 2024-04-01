@@ -1,14 +1,14 @@
+use core::mem;
 use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::IntoRawFd;
-use core::mem;
 
-use std::{self, ptr};
-use std::ptr::{null_mut};
+use std::ptr::null_mut;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{self, ptr};
 
 use log::*;
 use sgx_types::*;
-use sgx_types::{sgx_status_t, SgxResult, sgx_ql_qve_collateral_t};
+use sgx_types::{sgx_ql_qve_collateral_t, sgx_status_t, SgxResult};
 
 use enclave_ffi_types::{NodeAuthResult, OUTPUT_ENCRYPTED_SEED_SIZE, SINGLE_ENCRYPTED_SEED_SIZE};
 
@@ -20,6 +20,7 @@ extern "C" {
         retval: *mut sgx_status_t,
         api_key: *const u8,
         api_key_len: u32,
+        flags: u32,
     ) -> sgx_status_t;
     pub fn ecall_authenticate_new_node(
         eid: sgx_enclave_id_t,
@@ -444,7 +445,7 @@ pub extern "C" fn ocall_get_update_info(
     unsafe { sgx_report_attestation_status(platform_blob, enclave_trusted, update_info) }
 }
 
-pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
+pub fn create_attestation_report_u(api_key: &[u8], flags: u32) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -455,7 +456,7 @@ pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let status = unsafe {
-        ecall_get_attestation_report(eid, &mut retval, api_key.as_ptr(), api_key.len() as u32)
+        ecall_get_attestation_report(eid, &mut retval, api_key.as_ptr(), api_key.len() as u32, flags)
     };
 
     if status != sgx_status_t::SGX_SUCCESS {
