@@ -322,6 +322,9 @@ pub fn verify_quote_ecdsa(
     vec_coll: &[u8],
     time_s: i64,
 ) -> Result<(sgx_report_body_t, sgx_ql_qv_result_t), sgx_status_t> {
+    //
+    // use sgx_types::sgx_ql_qv_supplemental_t;
+
     let mut qe_report: sgx_ql_qe_report_info_t = sgx_ql_qe_report_info_t::default();
     let mut p_supp: [u8; 5000] = [0; 5000];
     let mut n_supp: u32 = 0;
@@ -397,6 +400,33 @@ pub fn verify_quote_ecdsa(
     trace!("exp_time_s = {}", exp_time_s);
     trace!("exp_status = {}", exp_status);
     trace!("qv_result = {}", qv_result);
+
+    /*
+        if n_supp >= mem::size_of::<sgx_ql_qv_supplemental_t>() as u32 {
+            let p_supp_fmt = p_supp.as_ptr() as *const sgx_ql_qv_supplemental_t;
+            let supp = unsafe { *p_supp_fmt };
+
+            trace!("supp.ver = {}", supp.version);
+            trace!("supp.earliest_issue_date = {}", supp.earliest_issue_date);
+            trace!("supp.latest_issue_date = {}", supp.latest_issue_date);
+            trace!(
+                "supp.earliest_expiration_date = {}",
+                supp.earliest_expiration_date
+            );
+            trace!("supp.tcb_level_date_tag = {}", supp.tcb_level_date_tag);
+            trace!("supp.pck_crl_num = {}", supp.pck_crl_num);
+            trace!("supp.root_ca_crl_num = {}", supp.root_ca_crl_num);
+            trace!("supp.tcb_eval_ref_num = {}", supp.tcb_eval_ref_num);
+            trace!("supp.tcb_cpusvn = {:?}", supp.tcb_cpusvn.svn);
+            trace!("supp.tcb_pce_isvsvn = {}", supp.tcb_pce_isvsvn);
+            trace!("supp.pce_id = {}", supp.pce_id);
+        }
+    */
+
+    if exp_status != 0 {
+        trace!("DCAP Collateral expired");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+    }
 
     if vec_quote.len() < mem::size_of::<sgx_quote_t>() {
         trace!("Quote too small");
