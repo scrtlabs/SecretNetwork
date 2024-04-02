@@ -58,7 +58,6 @@ func (k Keeper) ListRegistrationInfo(ctx sdk.Context, cb func([]byte, types.Regi
 }
 
 func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
-
 	publicKey, err := ra.VerifyRaCert(certificate.Certificate)
 	if err != nil {
 		return

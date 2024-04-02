@@ -109,7 +109,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 				return err
 			}
 			initClientCtx, err = clientconfig.ReadFromClientConfig(initClientCtx)
-
 			if err != nil {
 				return err
 			}

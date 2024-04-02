@@ -441,7 +441,7 @@ func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool) (bool, e
 		flags |= u32(1)
 	}
 	if no_dcap {
-		flags |= u32(2);
+		flags |= u32(2)
 	}
 
 	_, err := C.create_attestation_report(apiKeySlice, flags, &errmsg)

@@ -35,11 +35,11 @@ func createUpgradeHandler(mm *module.Manager, _ *keepers.SecretAppKeepers, confi
 
 		ctx.Logger().Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
 
-		_, err := api.MigrateSealing();
+		_, err := api.MigrateSealing()
 		if err != nil {
 			return nil, err
 		}
 
-		return mm.RunMigrations(ctx, configurator, vm)		
+		return mm.RunMigrations(ctx, configurator, vm)
 	}
 }

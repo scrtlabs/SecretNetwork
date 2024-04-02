@@ -262,7 +262,6 @@ func DumpBin() *cobra.Command {
 			"register the node, during node initialization",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			data, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
@@ -280,10 +279,9 @@ func MigrateSealings() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migrate_sealing",
 		Short: "Migrate sealed files to the current format",
-		Long: "Re-create SGX-sealed files according to the current format",
-		Args: cobra.ExactArgs(0),
+		Long:  "Re-create SGX-sealed files according to the current format",
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			_, err := api.MigrateSealing()
 			if err != nil {
 				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
