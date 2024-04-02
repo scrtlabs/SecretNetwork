@@ -15,30 +15,29 @@ import (
 )
 
 type CombinedHdr struct {
-    M_CombinedSizes [3]uint32
+	M_CombinedSizes [3]uint32
 }
 
 type DcapQuote struct {
-    M_Opaque1       [48]byte // sgx_quote_t up to report_body
-    M_Opaque2       [320]byte // sgx_report_body_t up to report_ata
-    M_PubKey        [32]byte
-    M_Opaque3       [32]byte // remaining 32 bytes of report_data
-    M_SigLen        uint32
+	M_Opaque1 [48]byte  // sgx_quote_t up to report_body
+	M_Opaque2 [320]byte // sgx_report_body_t up to report_ata
+	M_PubKey  [32]byte
+	M_Opaque3 [32]byte // remaining 32 bytes of report_data
+	M_SigLen  uint32
 }
 
 func VerifyCombinedCert(blob []byte) ([]byte, error) {
-
 	var hdr CombinedHdr
 
 	if uintptr(len(blob)) < unsafe.Sizeof(hdr) {
-		return nil, errors.New("Combined hdr too small");
+		return nil, errors.New("Combined hdr too small")
 	}
 
 	{
 		buf := bytes.NewReader(blob)
 		err := binary.Read(buf, binary.LittleEndian, &hdr)
 		if err != nil {
-			return nil, err;
+			return nil, err
 		}
 	}
 
@@ -48,13 +47,13 @@ func VerifyCombinedCert(blob []byte) ([]byte, error) {
 	idx3 := idx2 + uintptr(hdr.M_CombinedSizes[2])
 
 	if uintptr(len(blob)) < idx3 {
-		return nil, errors.New("combined hdr invalid");
+		return nil, errors.New("combined hdr invalid")
 	}
 
 	if idx1 > idx0 {
-		ret_pk, ret_err := VerifyRaCert(blob[idx0:idx1]);
+		ret_pk, ret_err := VerifyRaCert(blob[idx0:idx1])
 		if ret_pk != nil {
-			fmt.Println("EPID quote Extracted pk: ", hex.EncodeToString(ret_pk[:]))
+			fmt.Println("EPID quote Extracted pk: ", hex.EncodeToString(ret_pk))
 		}
 		return ret_pk, ret_err
 	}
@@ -64,7 +63,6 @@ func VerifyCombinedCert(blob []byte) ([]byte, error) {
 
 		buf := bytes.NewReader(blob[idx1:idx2])
 		err := binary.Read(buf, binary.LittleEndian, &quote)
-
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +73,6 @@ func VerifyCombinedCert(blob []byte) ([]byte, error) {
 
 	return nil, errors.New("No valid attestatoin found")
 }
-
 
 /*
 	 Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
