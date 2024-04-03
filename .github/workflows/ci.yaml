@@ -114,30 +114,6 @@ jobs:
           wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
-      - name: Install Quote library SDK
-        run: |
-          sudo apt-get update
-          sudo apt-get install
-          curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
-          sudo add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
-          sudo apt-get update
-          DCAP_VERSION=1.17.100.4-focal1
-          PSW_VERSION=2.20.100.4-focal1
-          sudo apt-get install -y \
-              libsgx-aesm-launch-plugin=$PSW_VERSION \
-              libsgx-enclave-common=$PSW_VERSION \
-              libsgx-epid=$PSW_VERSION \
-              libsgx-launch=$PSW_VERSION \
-              libsgx-quote-ex=$PSW_VERSION \
-              libsgx-uae-service=$PSW_VERSION \
-              libsgx-qe3-logic=$DCAP_VERSION \
-              libsgx-pce-logic=$DCAP_VERSION \
-              libsgx-aesm-ecdsa-plugin=$PSW_VERSION \
-              libsgx-aesm-pce-plugin=$PSW_VERSION \
-              libsgx-dcap-ql=$DCAP_VERSION \
-              libsgx-dcap-quote-verify=$DCAP_VERSION \
-              libsgx-dcap-default-qpl=$DCAP_VERSION \
-              libsgx-urts=$PSW_VERSION
       - name: Download LocalSecret
         uses: actions/download-artifact@v3
         with:
@@ -185,6 +161,30 @@ jobs:
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
           find "$(pwd)" -name \*.wasm
+      - name: Install Quote library SDK
+        run: |
+          sudo apt-get update
+          sudo apt-get install
+          curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+          sudo add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
+          sudo apt-get update
+          DCAP_VERSION=1.17.100.4-focal1
+          PSW_VERSION=2.20.100.4-focal1
+          sudo apt-get install -y \
+              libsgx-aesm-launch-plugin=$PSW_VERSION \
+              libsgx-enclave-common=$PSW_VERSION \
+              libsgx-epid=$PSW_VERSION \
+              libsgx-launch=$PSW_VERSION \
+              libsgx-quote-ex=$PSW_VERSION \
+              libsgx-uae-service=$PSW_VERSION \
+              libsgx-qe3-logic=$DCAP_VERSION \
+              libsgx-pce-logic=$DCAP_VERSION \
+              libsgx-aesm-ecdsa-plugin=$PSW_VERSION \
+              libsgx-aesm-pce-plugin=$PSW_VERSION \
+              libsgx-dcap-ql=$DCAP_VERSION \
+              libsgx-dcap-quote-verify=$DCAP_VERSION \
+              libsgx-dcap-default-qpl=$DCAP_VERSION \
+              libsgx-urts=$PSW_VERSION
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
