@@ -116,8 +116,14 @@ jobs:
           echo yes | ./"$SDK_BIN"
       - name: Install Quote library SDK
         run: |
-          sudo apt update
-          sudo apt install -y libsgx-dcap-ql libsgx-dcap-quote-verify libsgx-dcap-default-qpl libsgx-urts
+          sudo apt-get update
+          sudo apt-get install
+          curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+          sudo add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
+          sudo apt-get update
+          DCAP_VERSION=1.17.100.4-focal1
+          PSW_VERSION=2.20.100.4-focal1
+          sudo apt-get install -y libsgx-dcap-ql=$DCAP_VERSION  libsgx-dcap-quote-verify=$DCAP_VERSION libsgx-dcap-default-qpl=$DCAP_VERSION libsgx-urts=$PSW_VERSION
       - name: Download LocalSecret
         uses: actions/download-artifact@v3
         with:
