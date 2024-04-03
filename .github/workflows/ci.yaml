@@ -137,7 +137,7 @@ jobs:
               libsgx-dcap-ql=$DCAP_VERSION \
               libsgx-dcap-quote-verify=$DCAP_VERSION \
               libsgx-dcap-default-qpl=$DCAP_VERSION \
-              libsgx-urts=$PSW_VERSION && \
+              libsgx-urts=$PSW_VERSION
       - name: Download LocalSecret
         uses: actions/download-artifact@v3
         with:
