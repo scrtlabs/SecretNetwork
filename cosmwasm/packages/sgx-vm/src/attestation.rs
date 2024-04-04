@@ -88,6 +88,7 @@ pub extern "C" fn ocall_get_sn_tss_socket(ret_fd: *mut c_int) -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ocall_get_quote(
     p_sigrl: *const u8,
@@ -140,6 +141,7 @@ pub extern "C" fn ocall_get_quote(
     ret
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ocall_get_quote_ecdsa_params(
     p_qe_info: *mut sgx_target_info_t,
@@ -164,6 +166,7 @@ pub extern "C" fn ocall_get_quote_ecdsa_params(
     sgx_status_t::SGX_SUCCESS
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ocall_get_quote_ecdsa(
     p_report: *const sgx_report_t,
@@ -353,6 +356,7 @@ fn sgx_ql_qve_collateral_deserialize(p_ser: *const u8, n_ser: u32) -> sgx_ql_qve
     return res; // unreachable
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ocall_get_quote_ecdsa_collateral(
     p_quote: *const u8,
@@ -382,6 +386,7 @@ pub extern "C" fn ocall_get_quote_ecdsa_collateral(
     sgx_status_t::SGX_SUCCESS
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ocall_verify_quote_ecdsa(
     p_quote: *const u8,
@@ -435,6 +440,75 @@ pub extern "C" fn ocall_verify_quote_ecdsa(
 
     sgx_status_t::SGX_SUCCESS
 }
+
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn ocall_get_quote(
+    _p_sigrl: *const u8,
+    _sigrl_len: u32,
+    _p_report: *const sgx_report_t,
+    _quote_type: sgx_quote_sign_type_t,
+    _p_spid: *const sgx_spid_t,
+    _p_nonce: *const sgx_quote_nonce_t,
+    _p_qe_report: *mut sgx_report_t,
+    _p_quote: *mut u8,
+    _maxlen: u32,
+    _p_quote_len: *mut u32,
+) -> sgx_status_t {
+    sgx_status_t::SGX_ERROR_SERVICE_UNAVAILABLE
+}
+
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn ocall_get_quote_ecdsa_params(
+    _p_qe_info: *mut sgx_target_info_t,
+    _p_quote_size: *mut u32,
+) -> sgx_status_t {
+    sgx_status_t::SGX_ERROR_SERVICE_UNAVAILABLE
+}
+
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn ocall_get_quote_ecdsa(
+    _p_report: *const sgx_report_t,
+    _p_quote: *mut u8,
+    _n_quote: u32,
+) -> sgx_status_t {
+    sgx_status_t::SGX_ERROR_SERVICE_UNAVAILABLE
+}
+
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn ocall_get_quote_ecdsa_collateral(
+    _p_quote: *const u8,
+    _n_quote: u32,
+    _p_col: *mut u8,
+    _n_col: u32,
+    _p_col_size: *mut u32,
+) -> sgx_status_t {
+    sgx_status_t::SGX_ERROR_SERVICE_UNAVAILABLE
+}
+
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn ocall_verify_quote_ecdsa(
+    _p_quote: *const u8,
+    _n_quote: u32,
+    _p_col: *const u8,
+    _n_col: u32,
+    _p_target_info: *const sgx_target_info_t,
+    _time_s: i64,
+    _p_qve_report_info: *mut sgx_ql_qe_report_info_t,
+    _p_supp_data: *mut u8,
+    _n_supp_data: u32,
+    _p_supp_data_size: *mut u32,
+    _p_time_s: *mut i64,
+    _p_collateral_expiration_status: *mut u32,
+    _p_qv_result: *mut sgx_ql_qv_result_t,
+) -> sgx_status_t {
+    sgx_status_t::SGX_ERROR_SERVICE_UNAVAILABLE
+}
+
 
 #[no_mangle]
 pub extern "C" fn ocall_get_update_info(
