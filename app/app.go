@@ -11,78 +11,84 @@ import (
 	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 
-    "cosmossdk.io/core/appmodule"
-    "cosmossdk.io/client/v2/autocli"
-    authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
-    runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
+	"cosmossdk.io/client/v2/autocli"
+	"cosmossdk.io/core/appmodule"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
 	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
+	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	"github.com/cosmos/cosmos-sdk/types/msgservice"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
+
 	// "github.com/cosmos/cosmos-sdk/simapp"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	"github.com/cosmos/gogoproto/proto"
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
-	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
-	"github.com/cosmos/gogoproto/proto"
 	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
 	v1_11 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11"
 	v1_12 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.12"
+
 	// v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
+
 	// v1_9 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.9"
 
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+
 	// authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
+	evidencetypes "cosmossdk.io/x/evidence/types"
+	"cosmossdk.io/x/feegrant"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
-	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	evidencetypes "cosmossdk.io/x/evidence/types"
-	"cosmossdk.io/x/feegrant"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+
+	// stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	"cosmossdk.io/log"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	dbm "github.com/cosmos/cosmos-db"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	stakingkeeper "github.com/cosmos/ibc-go/v8/testing/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	"github.com/spf13/cast"
-	abci "github.com/cometbft/cometbft/abci/types"
-	tmjson "github.com/cometbft/cometbft/libs/json"
-	"cosmossdk.io/log"
-	dbm "github.com/cosmos/cosmos-db"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/scrtlabs/SecretNetwork/client/docs/statik"
@@ -120,8 +126,8 @@ var (
 // Verify app interface at compile time
 var (
 	// _ simapp.App                          = (*SecretNetworkApp)(nil)
-	_ runtime.AppI                        = (*SecretNetworkApp)(nil)
-	_ servertypes.Application             = (*SecretNetworkApp)(nil)
+	_ runtime.AppI            = (*SecretNetworkApp)(nil)
+	_ servertypes.Application = (*SecretNetworkApp)(nil)
 )
 
 // SecretNetworkApp extended ABCI application
@@ -158,7 +164,7 @@ func (app *SecretNetworkApp) GetBaseApp() *baseapp.BaseApp {
 	return app.BaseApp
 }
 
-func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.Keeper {
+func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.StakingKeeper {
 	return *app.AppKeepers.StakingKeeper
 }
 
@@ -315,9 +321,9 @@ func NewSecretNetworkApp(
 			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
-		IBCKeeper:         app.AppKeepers.IbcKeeper,
-		WasmConfig:        computeConfig,
-		//TXCounterStoreService: //TODO,
+		IBCKeeper:  app.AppKeepers.IbcKeeper,
+		WasmConfig: computeConfig,
+		// TXCounterStoreService: //TODO,
 	})
 	if err != nil {
 		panic(fmt.Errorf("failed to create AnteHandler: %s", err))
