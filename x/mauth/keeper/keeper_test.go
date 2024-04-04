@@ -19,7 +19,9 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	icaapp "github.com/scrtlabs/SecretNetwork/app"
+	scrt "github.com/scrtlabs/SecretNetwork/types"
 )
 
 var (
@@ -45,6 +47,15 @@ func init() {
 func SetupICATestingApp() (ibctesting.TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
 	// encCdc := icaapp.MakeEncodingConfig()
+
+	config := sdk.GetConfig()
+	config.SetCoinType(scrt.CoinType)
+	config.SetPurpose(scrt.CoinPurpose)
+	config.SetBech32PrefixForAccount(scrt.Bech32PrefixAccAddr, scrt.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(scrt.Bech32PrefixValAddr, scrt.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
+	config.SetAddressVerifier(scrt.AddressVerifier)
+	config.Seal()
 
 	tempDir := func() string {
 		dir, err := os.MkdirTemp("", "secretd")
