@@ -2,17 +2,19 @@ package keeper_test
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	// "github.com/cosmos/cosmos-sdk/simapp"
-	"github.com/scrtlabs/SecretNetwork/x/compute"
+	compute "github.com/scrtlabs/SecretNetwork/x/compute"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/cometbft/cometbft/crypto"
+	//"github.com/cometbft/cometbft/crypto"
 	"cosmossdk.io/log"
-	dbm "github.com/cometbft/cometbft-db"
+	dbm "github.com/cosmos/cosmos-db"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	// sdk "github.com/cosmos/cosmos-sdk/types"
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
@@ -23,7 +25,7 @@ import (
 var (
 	// TestAccAddress defines a resuable bech32 address for testing purposes
 	// TODO: update crypto.AddressHash() when sdk uses address.Module()
-	TestAccAddress = icatypes.GenerateAddress(sdk.AccAddress(crypto.AddressHash([]byte(icatypes.ModuleName))), ibctesting.FirstConnectionID, TestPortID)
+	// TestAccAddress = icatypes.GenerateAddress(sdk.AccAddress(crypto.AddressHash([]byte(icatypes.ModuleName))), ibctesting.FirstConnectionID, TestPortID)
 	// TestOwnerAddress defines a reusable bech32 address for testing purposes
 	TestOwnerAddress = "cosmos17dtl0mjt3t77kpuhg2edqzjpszulwhgzuj9ljs"
 	// TestPortID defines a resuable port identifier for testing purposes
@@ -43,7 +45,20 @@ func init() {
 func SetupICATestingApp() (ibctesting.TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
 	// encCdc := icaapp.MakeEncodingConfig()
-	// app := icaapp.NewSecretNetworkApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, icaapp.DefaultNodeHome, 5, false, simapp.EmptyAppOptions{}, compute.DefaultWasmConfig())
+
+	tempDir := func() string {
+		dir, err := os.MkdirTemp("", "secretd")
+		if err != nil {
+			dir = icaapp.DefaultNodeHome
+		}
+		defer os.RemoveAll(dir)
+
+		return dir
+	}
+	// NewAppOptionsWithFlagHome(tempDir())
+	app := icaapp.NewSecretNetworkApp(log.NewNopLogger(), db, nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), compute.DefaultWasmConfig())
+
+	// app :=  icaapp.NewSecretNetworkApp(log.NewNopLogger(), db, nil, true, true, icaapp.DefaultNodeHome, 5, false, simapp.EmptyAppOptions{}, compute.DefaultWasmConfig())
 	// TODO: figure out if it's ok that w MakeEncodingConfig inside of our Genesis.go. It would be a different instance than the one used in app
 	return app, icaapp.NewDefaultGenesisState()
 }
@@ -82,8 +97,8 @@ func (suite *KeeperTestSuite) SetupTest() {
 
 func NewICAPath(chainA, chainB *ibctesting.TestChain) *ibctesting.Path {
 	path := ibctesting.NewPath(chainA, chainB)
-	path.EndpointA.ChannelConfig.PortID = icatypes.PortID
-	path.EndpointB.ChannelConfig.PortID = icatypes.PortID
+	path.EndpointA.ChannelConfig.PortID = icatypes.HostPortID
+	path.EndpointB.ChannelConfig.PortID = icatypes.HostPortID
 	path.EndpointA.ChannelConfig.Order = channeltypes.ORDERED
 	path.EndpointB.ChannelConfig.Order = channeltypes.ORDERED
 	path.EndpointA.ChannelConfig.Version = TestVersion
