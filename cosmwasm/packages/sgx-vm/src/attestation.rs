@@ -412,10 +412,18 @@ pub extern "C" fn ocall_verify_quote_ecdsa(
     }
 
     unsafe {
-        sgx_qv_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_PERSISTENT);
-        sgx_qv_get_quote_supplemental_data_size(p_supp_data_size);
+        let res0 = sgx_qv_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_PERSISTENT);
+        if sgx_quote3_error_t::SGX_QL_SUCCESS != res0 {
+            warn!("sgx_qv_set_enclave_load_policy: {}", res0);
+        }
+
+        let res1 = sgx_qv_get_quote_supplemental_data_size(p_supp_data_size);
+        if sgx_quote3_error_t::SGX_QL_SUCCESS != res1 {
+            warn!("sgx_qv_get_quote_supplemental_data_size: {}", res1);
+        }
 
         if *p_supp_data_size > n_supp_data {
+            warn!("supp data buf required: {}", *p_supp_data_size);
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
 
@@ -423,7 +431,7 @@ pub extern "C" fn ocall_verify_quote_ecdsa(
 
         let my_col = sgx_ql_qve_collateral_deserialize(p_col, n_col);
 
-        sgx_qv_verify_quote(
+        let res2 = sgx_qv_verify_quote(
             p_quote,
             n_quote,
             &my_col,
@@ -434,6 +442,9 @@ pub extern "C" fn ocall_verify_quote_ecdsa(
             *p_supp_data_size,
             p_supp_data,
         );
+        if sgx_quote3_error_t::SGX_QL_SUCCESS != res2 {
+            warn!("sgx_qv_verify_quote: {}", res2);
+        }
 
         *p_time_s = time_use_s;
     };

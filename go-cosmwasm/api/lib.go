@@ -8,6 +8,7 @@ package api
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"syscall"
@@ -94,9 +95,12 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 }
 
 func MigrateSealing() (bool, error) {
-	_, err := C.migrate_sealing()
+	ret, err := C.migrate_sealing()
 	if err != nil {
-		return false, nil
+		return false, err
+	}
+	if !ret {
+		return false, errors.New("Sealing migration failed")
 	}
 	return true, nil
 }
