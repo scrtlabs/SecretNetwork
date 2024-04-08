@@ -100,7 +100,7 @@ func MigrateSealing() (bool, error) {
 		return false, err
 	}
 	if !ret {
-		return false, errors.New("Sealing migration failed")
+		return false, errors.New("sealing migration failed")
 	}
 	return true, nil
 }
