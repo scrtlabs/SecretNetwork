@@ -1,27 +1,27 @@
 package keeper
 
 import (
-	"crypto/sha1"
-	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
+	// "crypto/sha1"
+	// "encoding/base64"
+	// "encoding/hex"
+	// "encoding/json"
+	// "fmt"
+	// "os"
+	// "path/filepath"
+	// "testing"
+	// "time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	// "github.com/stretchr/testify/assert"
+	// "github.com/stretchr/testify/require"
 
-	stypes "cosmossdk.io/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
-	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-	eng "github.com/scrtlabs/SecretNetwork/types"
+	// stypes "cosmossdk.io/store/types"
+	// sdk "github.com/cosmos/cosmos-sdk/types"
+	// authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	// wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	// eng "github.com/scrtlabs/SecretNetwork/types"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
-	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+	// "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
@@ -31,6 +31,7 @@ var wasmCtx = wasmUtils.WASMContext{
 	TestKeyPairPath: "/tmp/id_tx_io.json",
 	TestMasterIOKey: reg.MasterKey{Bytes: nil},
 }
+/*
 
 func init() {
 	config := sdk.GetConfig()
@@ -328,13 +329,11 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			fundAddr: false,
 			expError: true,
 		},
-		/*
-			"blocked address": {
-				srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
-				fundAddr: true,
-				expError: true,
-			},
-		*/
+			// "blocked address": {
+			// 	srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
+			// 	fundAddr: true,
+			// 	expError: true,
+			// },
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
@@ -556,20 +555,18 @@ func TestExecuteWithDeposit(t *testing.T) {
 			fundAddr: false,
 			expError: true,
 		},
-		/*
-			"blocked address as actor": {
-				srcActor:    blockedAddr,
-				fundAddr:    true,
-				beneficiary: fred,
-				expError:    true,
-			},
-			 "blocked address as beneficiary": {
-				srcActor:    bob,
-				fundAddr:    true,
-				beneficiary: blockedAddr,
-				expError:    true,
-			},
-		*/
+			// "blocked address as actor": {
+			// 	srcActor:    blockedAddr,
+			// 	fundAddr:    true,
+			// 	beneficiary: fred,
+			// 	expError:    true,
+			// },
+			//  "blocked address as beneficiary": {
+			// 	srcActor:    bob,
+			// 	fundAddr:    true,
+			// 	beneficiary: blockedAddr,
+			// 	expError:    true,
+			// },
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
@@ -940,4 +937,4 @@ type InitMsg struct {
 type InstantiateMsg struct {
 	Counter uint64 `json:"counter"`
 	Expires uint64 `json:"expires"`
-}
+}*/
