@@ -5,33 +5,32 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	// "os"
+	"os"
 	"regexp"
-	// "strconv"
-	// "strings"
+	"strconv"
+	"strings"
 	"testing"
-	// "time"
+	"time"
 
-	// "github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	stypes "cosmossdk.io/store/types"
-	// abci "github.com/cometbft/cometbft/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 
 	"github.com/stretchr/testify/require"
 
-	"cosmossdk.io/log"
+	"github.com/cometbft/cometbft/libs/log"
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-	// v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
-	// v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
-	// v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
+	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
-/*
 
 type TestContract struct {
 	CosmWasmVersion string
@@ -285,7 +284,6 @@ func getDecryptedData(t *testing.T, data []byte, nonce []byte) []byte {
 
 	return dataPlaintext
 }
-*/
 
 var contractErrorRegex = regexp.MustCompile(`.*encrypted: (.+): (?:instantiate|execute|migrate|query|reply to) contract failed`)
 
@@ -324,24 +322,24 @@ const defaultGasForTests uint64 = 500_000
 // in order to verify that every wasm call consumes gas
 type WasmCounterGasMeter struct {
 	wasmCounter uint64
-	gasMeter    stypes.GasMeter
+	gasMeter    sdk.GasMeter
 }
 
 func (wasmGasMeter *WasmCounterGasMeter) RefundGas(_ stypes.Gas, _ string) {}
 
-func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() stypes.Gas {
+func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() sdk.Gas {
 	return wasmGasMeter.gasMeter.GasConsumed()
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) GasConsumedToLimit() stypes.Gas {
+func (wasmGasMeter *WasmCounterGasMeter) GasConsumedToLimit() sdk.Gas {
 	return wasmGasMeter.gasMeter.GasConsumedToLimit()
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) Limit() stypes.Gas {
+func (wasmGasMeter *WasmCounterGasMeter) Limit() sdk.Gas {
 	return wasmGasMeter.gasMeter.Limit()
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) ConsumeGas(amount stypes.Gas, descriptor string) {
+func (wasmGasMeter *WasmCounterGasMeter) ConsumeGas(amount sdk.Gas, descriptor string) {
 	if (descriptor == "wasm contract" || descriptor == "contract sub-query") && amount > 0 {
 		wasmGasMeter.wasmCounter++
 	}
@@ -364,11 +362,7 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 	return wasmGasMeter.wasmCounter
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) GasRemaining() uint64 {
-	return wasmGasMeter.gasMeter.GasRemaining()
-}
-
-var _ stypes.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
+var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
 func queryHelper(
 	t *testing.T,
@@ -411,7 +405,7 @@ func queryHelperImpl(
 	// create new ctx with the same storage and set our gas meter
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -440,7 +434,6 @@ func queryHelperImpl(
 
 	return string(resultBz), cosmwasm.StdError{}
 }
-/*
 
 //func execHelperImpl(
 //	t *testing.T, keeper Keeper, ctx sdk.Context,
@@ -505,7 +498,6 @@ func execHelperMultipleCoins(
 	}
 	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, cosmwasm.StdError{}
 }
-*/
 
 func execHelper(
 	t *testing.T,
@@ -531,7 +523,7 @@ func execHelper(
 		return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, *err.CosmWasm
 	}
 	return results[0].Nonce, results[0].Ctx, results[0].Data, results[0].WasmEvents, results[0].GasUsed, cosmwasm.StdError{}
-}/*
+}
 
 func execHelperMultipleMsgs(
 	t *testing.T,
@@ -549,7 +541,6 @@ func execHelperMultipleMsgs(
 ) ([]ExecResult, *ErrorResult) {
 	return execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, execMsg, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewInt64Coin("denom", coin)), -1, shouldSkipAttributes...)
 }
-*/
 
 func execTxBuilderImpl(
 	t *testing.T,
@@ -592,7 +583,7 @@ func execTxBuilderImpl(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -611,7 +602,7 @@ func execTxBuilderImpl(
 		// simulate the check in baseapp
 		if keeper.LastMsgManager.GetMarker() {
 			errResult := ErrorResult{
-				Generic: sdkerrors.ErrLastTx.Wrap("Error"),
+				Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
 			}
 			return results, &errResult
 		}
@@ -716,7 +707,7 @@ func initHelperImpl(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -746,7 +737,6 @@ func initHelperImpl(
 
 	return nonce, ctx, contractAddress, wasmEvents, cosmwasm.StdError{}
 }
-/*
 
 // requireEvents checks events output
 // Events are now sorted (since wasmd v0.28),
@@ -824,7 +814,7 @@ func migrateHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -907,7 +897,7 @@ func updateAdminHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -1007,7 +997,7 @@ func fakeUpdateAdminHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -1193,7 +1183,7 @@ func fakeMigrateHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -1261,4 +1251,4 @@ func fakeMigrateHelper(
 	}
 
 	return result, nil
-}*/
+}

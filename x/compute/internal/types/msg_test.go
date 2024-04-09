@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-    "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -189,7 +188,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 				CodeID:    1,
 				Label:     "foo",
 				InitMsg:   []byte(`{"some": "data"}`),
-				InitFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: math.NewInt(200)}},
+				InitFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(200)}},
 			},
 			valid: true,
 		},
@@ -200,7 +199,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 				Label:   "foo",
 				InitMsg: []byte(`{"some": "data"}`),
 				// we cannot use sdk.NewCoin() constructors as they panic on creating invalid data (before we can test)
-				InitFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: math.NewInt(-200)}},
+				InitFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(-200)}},
 			},
 			valid: false,
 		},
@@ -264,7 +263,7 @@ func TestExecuteContractValidation(t *testing.T) {
 				Sender:    goodAddress,
 				Contract:  goodAddress,
 				Msg:       []byte(`{"some": "data"}`),
-				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: math.NewInt(200)}},
+				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(200)}},
 			},
 			valid: true,
 		},
@@ -303,7 +302,7 @@ func TestExecuteContractValidation(t *testing.T) {
 				Sender:    goodAddress,
 				Contract:  goodAddress,
 				Msg:       []byte(`{"some": "data"}`),
-				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: math.NewInt(-1)}},
+				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(-1)}},
 			},
 			valid: false,
 		},
@@ -312,7 +311,7 @@ func TestExecuteContractValidation(t *testing.T) {
 				Sender:    goodAddress,
 				Contract:  goodAddress,
 				Msg:       []byte(`{"some": "data"}`),
-				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: math.NewInt(1)}, sdk.Coin{Denom: "foobar", Amount: math.NewInt(1)}},
+				SentFunds: sdk.Coins{sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(1)}, sdk.Coin{Denom: "foobar", Amount: sdk.NewInt(1)}},
 			},
 			valid: false,
 		},
