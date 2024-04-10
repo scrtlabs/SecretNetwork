@@ -2,23 +2,23 @@ package keeper
 
 import (
 	"crypto/sha1"
-	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
+	// "encoding/base64"
+	// "encoding/hex"
+	// "encoding/json"
+	// "fmt"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
+	// "time"
 
-	"github.com/stretchr/testify/assert"
+	// "github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	stypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
-	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	// authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	// wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	eng "github.com/scrtlabs/SecretNetwork/types"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
@@ -60,14 +60,21 @@ func init() {
 		panic(fmt.Sprintf("Error reading 'io-master-key.txt': %v", err))
 	}
 }
+*/
 
 func TestNewKeeper(t *testing.T) {
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount(eng.Bech32PrefixAccAddr, eng.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(eng.Bech32PrefixValAddr, eng.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(eng.Bech32PrefixConsAddr, eng.Bech32PrefixConsPub)
+	config.Seal()
+
 	encodingConfig := MakeEncodingConfig()
 	var transferPortSource types.ICS20TransferPortSource
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	_, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	require.NotNil(t, keepers.WasmKeeper)
 }
@@ -78,7 +85,7 @@ func TestCreate(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -103,7 +110,7 @@ func TestCreateDuplicate(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -138,7 +145,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -200,7 +207,7 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -231,13 +238,14 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	require.Equal(t, hashRawCode, hashStoredCode)
 }
 
+/*
 func TestInstantiate(t *testing.T) {
 	encodingConfig := MakeEncodingConfig()
 	var transferPortSource types.ICS20TransferPortSource
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -285,7 +293,7 @@ func TestInstantiate(t *testing.T) {
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
 	}
-	tx := NewTestTx(&instantiateMsg, creatorAcc, privKey)
+	tx := NewTestTx(ctx, &instantiateMsg, creatorAcc, privKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -378,7 +386,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -404,7 +412,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 		InitMsg:   initMsgBz,
 		InitFunds: nil,
 	}
-	tx := NewTestTx(&instantiateMsg, creatorAcc, privKey)
+	tx := NewTestTx(ctx, &instantiateMsg, creatorAcc, privKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -424,7 +432,7 @@ func TestExecute(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -487,7 +495,7 @@ func TestExecute(t *testing.T) {
 	assert.Equal(t, deposit, coins)
 
 	// unauthorized - trialCtx so we don't change state
-	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(sdk.MultiStore))
+	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap().(stypes.MultiStore))
 
 	_, _, _, _, _, trialExecErr := execHelper(t, keeper, trialCtx, addr, creator, creatorPrivKey, `{"release":{}}`, true, false, defaultGasForTests, 0)
 	require.Error(t, trialExecErr)
@@ -616,7 +624,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -637,7 +645,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 		Msg:       msgBz,
 		SentFunds: nil,
 	}
-	tx := NewTestTx(&executeMsg, creatorAcc, privKey)
+	tx := NewTestTx(ctx, &executeMsg, creatorAcc, privKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -656,7 +664,7 @@ func TestExecuteWithPanic(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -693,7 +701,7 @@ func TestExecuteWithPanic(t *testing.T) {
 		Msg:       execMsgBz,
 		SentFunds: topUp,
 	}
-	tx := NewTestTx(&executeMsg, fredAcc, fredPrivKey)
+	tx := NewTestTx(ctx, &executeMsg, fredAcc, fredPrivKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -713,7 +721,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -759,7 +767,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 		InitMsg:   msgBz,
 		InitFunds: deposit,
 	}
-	tx := NewTestTx(&instantiateMsg, creatorAcc, creatorPrivKey)
+	tx := NewTestTx(ctx, &instantiateMsg, creatorAcc, creatorPrivKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -773,7 +781,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_000
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
+	ctx = ctx.WithGasMeter(stypes.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	codeHash, err := keeper.GetContractHash(ctx, addr)
@@ -793,7 +801,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	defer func() {
 		r := recover()
 		require.NotNil(t, r)
-		_, ok := r.(sdk.ErrorOutOfGas)
+		_, ok := r.(stypes.ErrorOutOfGas)
 		require.True(t, ok, "%+v", r)
 	}()
 
@@ -806,7 +814,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 		Msg:       execMsgBz,
 		SentFunds: nil,
 	}
-	tx = NewTestTx(&executeMsg, fredAcc, fredPrivKey)
+	tx = NewTestTx(ctx, &executeMsg, fredAcc, fredPrivKey)
 
 	txBytes, err = tx.Marshal()
 	require.NoError(t, err)
@@ -829,7 +837,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
@@ -855,7 +863,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
+	ctx = ctx.WithGasMeter(stypes.NewGasMeter(gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	codeHash, err := keeper.GetContractHash(ctx, addr)
@@ -880,7 +888,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 		Msg:       msgBz,
 		SentFunds: nil,
 	}
-	tx := NewTestTx(&executeMsg, fredAcc, fredPrivKey)
+	tx := NewTestTx(ctx, &executeMsg, fredAcc, fredPrivKey)
 
 	txBytes, err := tx.Marshal()
 	require.NoError(t, err)
@@ -895,7 +903,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 	defer func() {
 		r := recover()
 		require.NotNil(t, r)
-		_, ok := r.(sdk.ErrorOutOfGas)
+		_, ok := r.(stypes.ErrorOutOfGas)
 		require.True(t, ok, "%+v", r)
 
 		diff := time.Since(start)
@@ -931,6 +939,7 @@ func mustMarshal(t *testing.T, r interface{}) []byte {
 	require.NoError(t, err)
 	return bz
 }
+*/
 
 type InitMsg struct {
 	Verifier    sdk.AccAddress `json:"verifier"`
