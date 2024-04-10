@@ -1,6 +1,7 @@
 package keeper
 
 import (
+    // "context"
 	"crypto/rand"
 	// "crypto/sha256"
 	"encoding/binary"
@@ -18,6 +19,8 @@ import (
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
     authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+    scrt "github.com/scrtlabs/SecretNetwork/types"
+
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 
 	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -371,8 +374,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		runtime.NewKVStoreService(keys[authtypes.StoreKey]), // target store
 		authtypes.ProtoBaseAccount, // prototype
 		maccPerms,
-        authcodec.NewBech32Codec("secret"),
-        "secret",
+        authcodec.NewBech32Codec(scrt.Bech32PrefixAccAddr),
+        scrt.Bech32PrefixAccAddr,
         authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	blockedAddrs := make(map[string]bool)
@@ -401,8 +404,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		authKeeper,
 		bankKeeper,
         authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		authcodec.NewBech32Codec(sdk.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(sdk.Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(scrt.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(scrt.Bech32PrefixConsAddr),
 	)
 	stakingKeeper.SetParams(ctx, TestingStakeParams)
 
@@ -450,6 +453,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	notBondedPool := authtypes.NewEmptyModuleAccount(stakingtypes.NotBondedPoolName, authtypes.Burner, authtypes.Staking)
 	bondPool := authtypes.NewEmptyModuleAccount(stakingtypes.BondedPoolName, authtypes.Burner, authtypes.Staking)
 	feeCollectorAcc := authtypes.NewEmptyModuleAccount(authtypes.FeeCollectorName)
+
+    distrAcc.SetAccountNumber(1001);
+    bondPool.SetAccountNumber(1002);
+    notBondedPool.SetAccountNumber(1003);
+    feeCollectorAcc.SetAccountNumber(1004);
 
 	authKeeper.SetModuleAccount(ctx, distrAcc)
 	authKeeper.SetModuleAccount(ctx, bondPool)
@@ -701,7 +709,7 @@ func PrepareExecSignedTxWithMultipleMsgs(
 		senderPrivKeys[i] = senderPrivKey
 	}
 
-	preparedTx := NewTestTxMultiple(encryptedMsgs, creatorAccs, senderPrivKeys)
+	preparedTx := NewTestTxMultiple(ctx, encryptedMsgs, creatorAccs, senderPrivKeys)
 
 	txBytes, err := preparedTx.Marshal()
 	require.NoError(t, err)
@@ -711,7 +719,6 @@ func PrepareExecSignedTxWithMultipleMsgs(
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
-/*
 
 func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
@@ -723,7 +730,7 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 		Msg:       encMsg,
 		SentFunds: funds,
 	}
-	newTx := NewTestTx(&executeMsg, creatorAcc, privKey)
+	newTx := NewTestTx(ctx, &executeMsg, creatorAcc, privKey)
 
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
@@ -746,7 +753,7 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, 
 		InitFunds: funds,
 		Admin:     admin.String(),
 	}
-	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
+	newTx := NewTestTx(ctx, &initMsg, creatorAcc, privKey)
 
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
@@ -756,6 +763,7 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, 
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
+/*
 
 func prepareMigrateSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64) sdk.Context {
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
@@ -834,11 +842,13 @@ func PrepareSignedTx(t *testing.T,
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
+*/
 
-func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
-	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
+func NewTestTx(ctx sdk.Context, msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
+	return NewTestTxMultiple(ctx, []sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
 
+/*
 //func PrepareMultipleExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
 //	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
 //	require.NoError(t, err)
@@ -866,7 +876,7 @@ func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKe
 //}
 */
 
-func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
+func NewTestTxMultiple(ctx sdk.Context, msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
 		panic("length of `msgs` `creatorAccs` and `privKeys` must be the same")
 	}
@@ -911,7 +921,7 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 			AccountNumber: creatorAcc.GetAccountNumber(),
 			Sequence:      creatorAcc.GetSequence(),
 		}
-		bytesToSign, err := signModeHandler.GetSignBytes(sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
+		bytesToSign, err := authsigning.GetSignBytesAdapter(ctx, signModeHandler, sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
 		if err != nil {
 			panic(err)
 		}
@@ -947,6 +957,7 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 	priv, pub, addr := keyPubAddr()
 	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetPubKey(pub)
+    baseAcct.SetAccountNumber(2000);
 	am.SetAccount(ctx, baseAcct)
 
 	fundAccounts(ctx, am, bk, addr, coins)
