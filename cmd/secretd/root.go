@@ -12,8 +12,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
+
 	// "github.com/rs/zerolog"
-    "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/spf13/pflag"
@@ -28,14 +29,16 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	"github.com/scrtlabs/SecretNetwork/app"
 
+	confixcmd "cosmossdk.io/tools/confix/cmd"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
-	confixcmd "cosmossdk.io/tools/confix/cmd"
+
 	// tmcfg "github.com/cometbft/cometbft/config"
-	tmcli "github.com/cometbft/cometbft/libs/cli"
 	"cosmossdk.io/log"
+	tmcli "github.com/cometbft/cometbft/libs/cli"
 	dbm "github.com/cosmos/cosmos-db"
 
+	"cosmossdk.io/store"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	clientconfig "github.com/cosmos/cosmos-sdk/client/config"
@@ -45,14 +48,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-    simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
-	"cosmossdk.io/store"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
 	secretlegacy "github.com/scrtlabs/SecretNetwork/app/migrations"
 )
 
@@ -119,7 +121,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 				return err
 			}
 			initClientCtx, err = clientconfig.ReadFromClientConfig(initClientCtx)
-
 			if err != nil {
 				return err
 			}
@@ -144,24 +145,24 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 
 	initRootCmd(rootCmd, encodingConfig)
 
-    var tempDir = func() string {
-        dir, err := os.MkdirTemp("", "secretd")
-        if err != nil {
-            dir = app.DefaultNodeHome
-        }
-        defer os.RemoveAll(dir)
+	tempDir := func() string {
+		dir, err := os.MkdirTemp("", "secretd")
+		if err != nil {
+			dir = app.DefaultNodeHome
+		}
+		defer os.RemoveAll(dir)
 
-        return dir
-    }
+		return dir
+	}
 
-    tempApp := app.NewSecretNetworkApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), compute.DefaultWasmConfig())
+	tempApp := app.NewSecretNetworkApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), compute.DefaultWasmConfig())
 
-    autoCliOpts := tempApp.AutoCliOpts()
-    initClientCtx, _ = clientconfig.ReadFromClientConfig(initClientCtx)
-    autoCliOpts.Keyring, _ = keyring.NewAutoCLIKeyring(initClientCtx.Keyring)
-    autoCliOpts.ClientCtx = initClientCtx
+	autoCliOpts := tempApp.AutoCliOpts()
+	initClientCtx, _ = clientconfig.ReadFromClientConfig(initClientCtx)
+	autoCliOpts.Keyring, _ = keyring.NewAutoCLIKeyring(initClientCtx.Keyring)
+	autoCliOpts.ClientCtx = initClientCtx
 
-    if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
+	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
 		panic(err)
 	}
 
@@ -298,6 +299,11 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 
 	// fmt.Printf("bootstrap: %s\n", cast.ToString(bootstrap))
 
+	appGenesis, err := genutiltypes.AppGenesisFromFile(filepath.Join(app.DefaultNodeHome, "config", "genesis.json"))
+	if err != nil {
+		panic(err)
+	}
+
 	return app.NewSecretNetworkApp(logger, db, traceStore, true,
 		bootstrap,
 		appOpts,
@@ -313,6 +319,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		baseapp.SetSnapshot(snapshotStore, snapshottypes.NewSnapshotOptions(cast.ToUint64(appOpts.Get(server.FlagStateSyncSnapshotInterval)), cast.ToUint32(appOpts.Get(server.FlagStateSyncSnapshotKeepRecent)))),
 		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(server.FlagIAVLCacheSize))),
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(server.FlagDisableIAVLFastNode))),
+		baseapp.SetChainID(appGenesis.ChainID),
 	)
 }
 
