@@ -850,5 +850,6 @@ pub extern "C" fn migrate_sealing() -> bool {
         return false;
     }
 
+    clear_error();
     true
 }
