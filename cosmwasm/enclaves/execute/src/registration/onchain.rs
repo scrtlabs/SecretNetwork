@@ -74,7 +74,7 @@ fn split_combined_cert(cert: *const u8, cert_len: u32) -> (Vec<u8>, Vec<u8>, Vec
     (vec_cert, vec_quote, vec_coll)
 }
 
-fn test_attestation_epid(cert_slice: &[u8], pub_key: &mut [u8; 32]) -> NodeAuthResult {
+fn verify_attestation_epid(cert_slice: &[u8], pub_key: &mut [u8; 32]) -> NodeAuthResult {
     let pk = match verify_ra_cert(cert_slice, None, true) {
         Ok(retval) => retval,
         Err(e) => {
@@ -96,7 +96,7 @@ fn test_attestation_epid(cert_slice: &[u8], pub_key: &mut [u8; 32]) -> NodeAuthR
     NodeAuthResult::Success
 }
 
-fn test_attestation_dcap(
+fn verify_attestation_dcap(
     vec_quote: &[u8],
     vec_coll: &[u8],
     pub_key: &mut [u8; 32],
@@ -181,14 +181,14 @@ pub unsafe extern "C" fn ecall_authenticate_new_node(
 
         trace!("EPID attestation");
 
-        let res = test_attestation_epid(vec_cert.as_slice(), &mut target_public_key);
+        let res = verify_attestation_epid(vec_cert.as_slice(), &mut target_public_key);
         if NodeAuthResult::Success != res {
             return res;
         }
     } else {
         trace!("DCAP attestation");
 
-        let res = test_attestation_dcap(&vec_quote, &vec_coll, &mut target_public_key);
+        let res = verify_attestation_dcap(&vec_quote, &vec_coll, &mut target_public_key);
         if NodeAuthResult::Success != res {
             return res;
         }
