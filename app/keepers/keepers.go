@@ -4,9 +4,16 @@ import (
 	"path/filepath"
 
 	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
+	evidencekeeper "cosmossdk.io/x/evidence/keeper"
+	evidencetypes "cosmossdk.io/x/evidence/types"
+	"cosmossdk.io/x/feegrant"
+	feegrantkeeper "cosmossdk.io/x/feegrant/keeper"
+	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
@@ -14,16 +21,10 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
-	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	evidencekeeper "cosmossdk.io/x/evidence/keeper"
-	evidencetypes "cosmossdk.io/x/evidence/types"
-	"cosmossdk.io/x/feegrant"
-	feegrantkeeper "cosmossdk.io/x/feegrant/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
@@ -37,10 +38,9 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	storetypes "cosmossdk.io/store/types"
-	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
-	upgradetypes "cosmossdk.io/x/upgrade/types"
 	ibcpacketforward "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
+	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	icacontroller "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller"
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/keeper"
 	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
@@ -74,6 +74,8 @@ import (
 	ibchooks "github.com/scrtlabs/SecretNetwork/x/ibc-hooks"
 	ibchookskeeper "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
 	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
+
+	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 )
 
 type SecretAppKeepers struct {
@@ -116,6 +118,8 @@ type SecretAppKeepers struct {
 
 	ScopedComputeKeeper capabilitykeeper.ScopedKeeper
 
+	ConsensusParamsKeeper consensusparamkeeper.Keeper
+
 	// keys to access the substores
 	keys    map[string]*storetypes.KVStoreKey
 	tKeys   map[string]*storetypes.TransientStoreKey
@@ -154,10 +158,18 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	logger log.Logger,
+	event *runtime.EventService,
 ) {
 	paramsKeeper := initParamsKeeper(appCodec, legacyAmino, ak.keys[paramstypes.StoreKey], ak.tKeys[paramstypes.TStoreKey])
 	ak.ParamsKeeper = &paramsKeeper
 
+	ak.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(
+		appCodec,
+		runtime.NewKVStoreService(ak.keys[upgradetypes.StoreKey]),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		*event,
+	)
+	app.SetParamStore(&ak.ConsensusParamsKeeper.ParamsStore)
 	// set the BaseApp's parameter store
 	// app.SetParamStore(ak.ParamsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
 
@@ -182,7 +194,6 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		logger,
 	)
 	ak.BankKeeper = &bankKeeper
-
 
 	stakingKeeper := stakingkeeper.NewKeeper(
 		appCodec,
@@ -273,7 +284,7 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 
 	// Create IBC Keeper
 	ak.IbcKeeper = ibckeeper.NewKeeper(
-		appCodec, 
+		appCodec,
 		ak.keys[ibcexported.StoreKey],
 		ak.GetSubspace(ibcexported.ModuleName),
 		ak.StakingKeeper,
@@ -300,8 +311,8 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		ak.AccountKeeper,
 		ak.BankKeeper,
 		ak.StakingKeeper,
-		ak.DistrKeeper, 
-		app.MsgServiceRouter(), 
+		ak.DistrKeeper,
+		app.MsgServiceRouter(),
 		govConfig,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)

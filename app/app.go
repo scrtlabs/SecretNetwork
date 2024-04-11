@@ -150,6 +150,8 @@ type SecretNetworkApp struct {
 	sm *module.SimulationManager
 
 	configurator module.Configurator
+
+	event runtime.EventService
 }
 
 func (app *SecretNetworkApp) GetInterfaceRegistry() types.InterfaceRegistry {
@@ -263,7 +265,8 @@ func NewSecretNetworkApp(
 	homePath := cast.ToString(appOpts.Get(flags.FlagHome))
 	invCheckPeriod := cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod))
 
-	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger)
+	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger, &app.event)
+
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
 	app.setupUpgradeStoreLoaders()
 
