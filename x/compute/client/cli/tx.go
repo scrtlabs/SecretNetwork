@@ -98,7 +98,6 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 	// gzip the wasm file
 	if wasmUtils.IsWasm(wasm) {
 		wasm, err = wasmUtils.GzipIt(wasm)
-
 		if err != nil {
 			return types.MsgStoreCode{}, err
 		}

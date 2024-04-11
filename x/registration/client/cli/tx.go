@@ -49,7 +49,6 @@ func AuthenticateNodeCmd() *cobra.Command {
 				Certificate: cert,
 			}
 			err = msg.ValidateBasic()
-
 			if err != nil {
 				return err
 			}
