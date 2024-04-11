@@ -46,6 +46,8 @@ use std::{
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::cert::verify_ra_cert;
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+use crate::registration::offchain::get_attestation_report_dcap;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SIGNING_METHOD;
@@ -137,6 +139,11 @@ pub fn validate_enclave_version(
     api_key: &[u8],
     challenge: Option<&[u8]>,
 ) -> Result<(), sgx_status_t> {
+    let res_dcap = unsafe { get_attestation_report_dcap(&kp) };
+    if res_dcap.is_ok() {
+        return Ok(());
+    }
+
     // extract private key from KeyPair
     let ecc_handle = SgxEccHandle::new();
     let _result = ecc_handle.open();

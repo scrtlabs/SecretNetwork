@@ -383,7 +383,7 @@ unsafe fn get_attestation_report_epid(
     Ok(cert)
 }
 
-unsafe fn get_attestation_report_dcap(
+pub unsafe fn get_attestation_report_dcap(
     kp: &KeyPair,
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let (vec_quote, vec_coll) = match get_quote_ecdsa(&kp.get_pubkey()) {
