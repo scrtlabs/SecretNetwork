@@ -163,7 +163,6 @@ func (w *Wasmer) Instantiate(
 
 	var respV010orV1 V010orV1ContractInitResponse
 	err = json.Unmarshal(data, &respV010orV1)
-
 	if err != nil {
 		// unidentified response 🤷
 		return nil, nil, nil, gasUsed, fmt.Errorf("instantiate: cannot parse response from json: %w", err)
@@ -262,7 +261,6 @@ func (w *Wasmer) Execute(
 
 	var resp ContractExecResponse
 	err = json.Unmarshal(data, &resp)
-
 	if err != nil {
 		// unidentified response 🤷
 		return nil, gasUsed, fmt.Errorf("handle: cannot parse response from json: %w", err)
@@ -439,7 +437,6 @@ func (w *Wasmer) Migrate(
 
 	var respV010orV1 ContractExecResponse
 	err = json.Unmarshal(data, &respV010orV1)
-
 	if err != nil {
 		// unidentified response 🤷
 		return nil, nil, nil, gasUsed, fmt.Errorf("migrate: cannot parse response from json: %w", err)

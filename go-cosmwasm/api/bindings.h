@@ -151,7 +151,7 @@ void configure_enclave_runtime(EnclaveRuntimeConfig config, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
-bool create_attestation_report(Buffer api_key, Buffer *err);
+bool create_attestation_report(Buffer api_key, uint32_t flags, Buffer *err);
 
 void free_rust(Buffer buf);
 
@@ -210,6 +210,8 @@ Buffer migrate(cache_t *cache,
                Buffer sig_info,
                Buffer admin,
                Buffer admin_proof);
+
+bool migrate_sealing(void);
 
 Buffer query(cache_t *cache,
              Buffer code_id,

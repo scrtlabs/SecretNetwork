@@ -192,16 +192,19 @@ func InitializeNode(homeDir string, enclave EnclaveInterface) {
 func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byte, error) {
 	// fmt.Println("RegisterNode")
 	var encSeed []byte
+	var publicKey []byte
 
 	if isSimulationMode(ctx) {
 		// any sha256 hash is good enough
 		encSeed = make([]byte, 32)
 	} else {
 
-		publicKey, err := ra.VerifyRaCert(certificate)
+		publicKey_, err := ra.VerifyCombinedCert(certificate)
 		if err != nil {
 			return nil, sdkerrors.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
+
+		publicKey = publicKey_
 
 		isAuth, err := k.isNodeAuthenticated(ctx, publicKey)
 		if err != nil {
@@ -223,7 +226,12 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 		Certificate:   certificate,
 		EncryptedSeed: encSeed,
 	}
-	k.SetRegistrationInfo(ctx, regInfo)
+
+	if isSimulationMode(ctx) {
+		k.SetRegistrationInfo(ctx, regInfo)
+	} else {
+		k.SetRegistrationInfo_Verified(ctx, regInfo, publicKey)
+	}
 
 	return encSeed, nil
 }

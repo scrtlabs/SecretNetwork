@@ -39,13 +39,13 @@ cp /tmp/.secretd/keyring-test /root/.secretd/ -r
 
 SGX_MODE=SW  secretd init-enclave --reset
 
-PUBLIC_KEY=$(SGX_MODE=SW secretd parse /root/attestation_cert.der | cut -c 3- )
+PUBLIC_KEY=$(SGX_MODE=SW secretd dump /root/pubkey.bin)
 
 echo "Public key: $PUBLIC_KEY"
 
-SGX_MODE=SW secretd parse /root/attestation_cert.der
+SGX_MODE=SW secretd dump /root/pubkey.bin
 cat /root/attestation_cert.der
-tx_hash="$(SGX_MODE=SW secretd tx register auth /root/attestation_cert.der -y --from a --gas-prices 0.25uscrt | jq -r '.txhash')"
+tx_hash="$(SGX_MODE=SW secretd tx register auth /root/attestation_combined.bin -y --from a --gas-prices 0.25uscrt --gas 5000000 | jq -r '.txhash')"
 
 #secretd q tx "$tx_hash"
 sleep 15
