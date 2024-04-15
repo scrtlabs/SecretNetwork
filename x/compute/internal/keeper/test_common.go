@@ -1,11 +1,12 @@
 package keeper
 
 import (
+    // "context"
 	"crypto/rand"
-	// "crypto/sha256"
+	"crypto/sha256"
 	"encoding/binary"
-	// "encoding/hex"
-	// "fmt"
+	"encoding/hex"
+    "fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,6 +19,8 @@ import (
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
     authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+    scrt "github.com/scrtlabs/SecretNetwork/types"
+
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 
 	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
@@ -43,8 +46,10 @@ import (
 
 	// tmenclave "github.com/scrtlabs/tm-secret-enclave"
 	"cosmossdk.io/log"
+    sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+    errorsmod "cosmossdk.io/errors"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	// tmtypes "github.com/cometbft/cometbft/types"
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	dbm "github.com/cosmos/cosmos-db"
 
@@ -59,7 +64,6 @@ import (
     storetypes "cosmossdk.io/store/types"
     "cosmossdk.io/store/metrics"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	// sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 
@@ -333,11 +337,31 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	require.NoError(t, ms.LoadLatestVersion())
 
+    kvGasConfig := storetypes.GasConfig{
+        HasCost:          100,
+		DeleteCost:       100,
+		ReadCostFlat:     100,
+		ReadCostPerByte:  1,
+		WriteCostFlat:    200,
+		WriteCostPerByte: 5,
+		IterNextCostFlat: 5,
+    }
+
+    transientGasConfig := storetypes.GasConfig{
+        HasCost:          10,
+		DeleteCost:       10,
+		ReadCostFlat:     10,
+		ReadCostPerByte:  0,
+		WriteCostFlat:    20,
+		WriteCostPerByte: 1,
+		IterNextCostFlat: 1,
+    }
+
 	ctx := sdk.NewContext(ms, tmproto.Header{
 		Height:  1234567,
 		Time:    time.Date(2020, time.April, 22, 12, 0, 0, 0, time.UTC),
 		ChainID: TestConfig.ChainID,
-	}, isCheckTx, log.NewNopLogger())
+	}, isCheckTx, log.NewNopLogger()).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
 	encodingConfig := MakeEncodingConfig()
 	paramsKeeper := paramskeeper.NewKeeper(
 		encodingConfig.Codec,
@@ -371,8 +395,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		runtime.NewKVStoreService(keys[authtypes.StoreKey]), // target store
 		authtypes.ProtoBaseAccount, // prototype
 		maccPerms,
-        authcodec.NewBech32Codec("secret"),
-        "secret",
+        authcodec.NewBech32Codec(scrt.Bech32PrefixAccAddr),
+        scrt.Bech32PrefixAccAddr,
         authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	blockedAddrs := make(map[string]bool)
@@ -401,8 +425,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		authKeeper,
 		bankKeeper,
         authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		authcodec.NewBech32Codec(sdk.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(sdk.Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(scrt.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(scrt.Bech32PrefixConsAddr),
 	)
 	stakingKeeper.SetParams(ctx, TestingStakeParams)
 
@@ -450,6 +474,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	notBondedPool := authtypes.NewEmptyModuleAccount(stakingtypes.NotBondedPoolName, authtypes.Burner, authtypes.Staking)
 	bondPool := authtypes.NewEmptyModuleAccount(stakingtypes.BondedPoolName, authtypes.Burner, authtypes.Staking)
 	feeCollectorAcc := authtypes.NewEmptyModuleAccount(authtypes.FeeCollectorName)
+
+    distrAcc.SetAccountNumber(1001);
+    bondPool.SetAccountNumber(1002);
+    notBondedPool.SetAccountNumber(1003);
+    feeCollectorAcc.SetAccountNumber(1004);
 
 	authKeeper.SetModuleAccount(ctx, distrAcc)
 	authKeeper.SetModuleAccount(ctx, bondPool)
@@ -615,10 +644,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	return ctx, keepers
 }
-/*
 
 // TestHandler returns a wasm handler for tests (to avoid circular imports)
-func TestHandler(k Keeper) sdk.Handler {
+func TestHandler(k Keeper) baseapp.MsgServiceHandler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
 
@@ -629,7 +657,7 @@ func TestHandler(k Keeper) sdk.Handler {
 			return handleExecute(ctx, k, msg)
 		default:
 			errMsg := fmt.Sprintf("unrecognized wasm message type: %T", msg)
-			return nil, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, errMsg)
+			return nil, sdkerrors.ErrUnknownRequest.Wrap(errMsg)
 		}
 	}
 }
@@ -640,7 +668,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateC
 	if msg.Admin != "" {
 		admin, err = sdk.AccAddressFromBech32(msg.Admin)
 		if err != nil {
-			return nil, sdkerrors.Wrap(err, "admin")
+			return nil, errorsmod.Wrap(err, "admin")
 		}
 	}
 
@@ -673,7 +701,6 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract)
 	res.Events = ctx.EventManager().Events().ToABCIEvents()
 	return res, nil
 }
-*/
 
 func PrepareExecSignedTxWithMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
@@ -701,7 +728,7 @@ func PrepareExecSignedTxWithMultipleMsgs(
 		senderPrivKeys[i] = senderPrivKey
 	}
 
-	preparedTx := NewTestTxMultiple(encryptedMsgs, creatorAccs, senderPrivKeys)
+	preparedTx := NewTestTxMultiple(ctx, encryptedMsgs, creatorAccs, senderPrivKeys)
 
 	txBytes, err := preparedTx.Marshal()
 	require.NoError(t, err)
@@ -711,7 +738,6 @@ func PrepareExecSignedTxWithMultipleMsgs(
 	// updateLightClientHelper(t, ctx)
 	return ctx
 }
-/*
 
 func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
@@ -723,7 +749,7 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 		Msg:       encMsg,
 		SentFunds: funds,
 	}
-	newTx := NewTestTx(&executeMsg, creatorAcc, privKey)
+	newTx := NewTestTx(ctx, &executeMsg, creatorAcc, privKey)
 
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
@@ -746,7 +772,7 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, 
 		InitFunds: funds,
 		Admin:     admin.String(),
 	}
-	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
+	newTx := NewTestTx(ctx, &initMsg, creatorAcc, privKey)
 
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
@@ -767,7 +793,7 @@ func prepareMigrateSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contra
 		Contract: contractAddress,
 		Msg:      encMsg,
 	}
-	newTx := NewTestTx(&migrateMsg, creatorAcc, privKey)
+	newTx := NewTestTx(ctx, &migrateMsg, creatorAcc, privKey)
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
@@ -786,7 +812,7 @@ func prepareUpdateAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, co
 		Contract: contractAddress,
 		NewAdmin: newAdmin.String(),
 	}
-	newTx := NewTestTx(&sdkMsg, senderAccount, privKey)
+	newTx := NewTestTx(ctx, &sdkMsg, senderAccount, privKey)
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
@@ -804,7 +830,7 @@ func prepareClearAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, con
 		Sender:   sender.String(),
 		Contract: contractAddress,
 	}
-	newTx := NewTestTx(&sdkMsg, senderAccount, privKey)
+	newTx := NewTestTx(ctx, &sdkMsg, senderAccount, privKey)
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
@@ -824,7 +850,7 @@ func PrepareSignedTx(t *testing.T,
 	senderAccount, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
 	require.NoError(t, err)
 
-	newTx := NewTestTx(msg, senderAccount, snederPrivkey)
+	newTx := NewTestTx(ctx, msg, senderAccount, snederPrivkey)
 
 	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
@@ -835,8 +861,8 @@ func PrepareSignedTx(t *testing.T,
 	return ctx
 }
 
-func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
-	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
+func NewTestTx(ctx sdk.Context, msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
+	return NewTestTxMultiple(ctx, []sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
 
 //func PrepareMultipleExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
@@ -864,16 +890,15 @@ func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKe
 //  ctx = wasmtypes.WithTXCounter(ctx, 1)
 //	return ctx.WithTxBytes(txBytes)
 //}
-*/
 
-func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
+func NewTestTxMultiple(ctx sdk.Context, msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
 		panic("length of `msgs` `creatorAccs` and `privKeys` must be the same")
 	}
 
 	// There's no need to pass values to `NewTxConfig` because they get ignored by `NewTxBuilder` anyways,
 	// and we just need the builder, which can not be created any other way, apparently.
-	txConfig := authtx.NewTxConfig(nil, authtx.DefaultSignModes)
+	txConfig := authtx.NewTxConfig(MakeTestCodec(), authtx.DefaultSignModes)
 	signModeHandler := txConfig.SignModeHandler()
 	builder := txConfig.NewTxBuilder()
 	builder.SetFeeAmount(nil)
@@ -910,8 +935,9 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 			ChainID:       TestConfig.ChainID,
 			AccountNumber: creatorAcc.GetAccountNumber(),
 			Sequence:      creatorAcc.GetSequence(),
+            PubKey:         creatorAcc.GetPubKey(),
 		}
-		bytesToSign, err := signModeHandler.GetSignBytes(sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
+		bytesToSign, err := authsigning.GetSignBytesAdapter(ctx, signModeHandler, sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
 		if err != nil {
 			panic(err)
 		}
@@ -943,16 +969,16 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 	return newTx.GetProtoTx()
 }
 
-func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
+func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins, accountNumber uint64) (sdk.AccAddress, crypto.PrivKey) {
 	priv, pub, addr := keyPubAddr()
 	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetPubKey(pub)
+    baseAcct.SetAccountNumber(accountNumber);
 	am.SetAccount(ctx, baseAcct)
 
 	fundAccounts(ctx, am, bk, addr, coins)
 	return addr, priv
 }
-/*
 
 // StoreRandomOnNewBlock is used when height is incremented in tests, the random value for the new block needs to be
 // generated too (to pass as env)
@@ -962,7 +988,6 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 //	wasmKeeper.SetRandomSeed(ctx, random)
 //}
 
-*/
 const faucetAccountName = "faucet"
 
 func fundAccounts(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, addr sdk.AccAddress, coins sdk.Coins) {
@@ -1003,8 +1028,8 @@ type protoTxProvider interface {
 //
 //	return protoProvider.GetProtoTx(), nil
 //}
-/*
 
+/*
 func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	blockData := tmproto.Data{
 		Txs: [][]byte{ctx.TxBytes()},
@@ -1050,7 +1075,7 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 
 	_, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
 	require.NoError(t, err)
-}
+}*/
 
 func randVoteSet(
 	ctx sdk.Context,
@@ -1084,4 +1109,4 @@ func txhash(t *testing.T, ctx sdk.Context) string {
 	txhashBz := sha256.Sum256(ctx.TxBytes())
 	txhash := hex.EncodeToString(txhashBz[:])
 	return txhash
-}*/
+}
