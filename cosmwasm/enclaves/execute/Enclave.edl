@@ -5,6 +5,8 @@ enclave {
     from "sgx_net.edl" import *;
     from "sgx_time.edl" import *;
     include "sgx_quote.h"
+    include "sgx_ql_quote.h"
+    include "sgx_qve_header.h"
     from "sgx_backtrace.edl" import *;
     from "sgx_tstdc.edl" import *;
     from "sgx_tprotected_fs.edl" import *;
@@ -32,9 +34,13 @@ enclave {
             [out, count=32] uint8_t* public_key
         );
 
+        public sgx_status_t ecall_migrate_sealing(
+        );
+
         public sgx_status_t ecall_get_attestation_report(
             [in, count=api_key_len] const uint8_t* api_key,
-            uint32_t api_key_len
+            uint32_t api_key_len,
+            uint32_t flags
         );
 
         public NodeAuthResult ecall_authenticate_new_node(
@@ -233,6 +239,41 @@ enclave {
             [out, size=maxlen] sgx_quote_t *p_quote,
             uint32_t maxlen,
             [out] uint32_t* p_quote_len
+        );
+
+        sgx_status_t ocall_get_quote_ecdsa_params(
+            [out] sgx_target_info_t* p_qe_info,
+            [out] uint32_t* p_quote_size
+        );
+
+        sgx_status_t ocall_get_quote_ecdsa(
+            [in] const sgx_report_t* p_report,
+            [out, size=n_quote] uint8_t* p_quote,
+            uint32_t n_quote
+        );
+
+        sgx_status_t ocall_get_quote_ecdsa_collateral(
+            [in, size=n_quote] const uint8_t* p_quote,
+            uint32_t n_quote,
+            [out, size=n_col] uint8_t* p_col,
+            uint32_t n_col,
+            [out] uint32_t* p_col_out
+        );
+
+        sgx_status_t ocall_verify_quote_ecdsa(
+            [in, size=n_quote] const uint8_t* p_quote,
+            uint32_t n_quote,
+            [in, size=n_col] const uint8_t* p_col,
+            uint32_t n_col,
+            [in] const sgx_target_info_t* p_target_info,
+            int64_t time_s,
+            [out] sgx_ql_qe_report_info_t* p_qve_report_info,
+            [out, size=n_supp_data] uint8_t* p_supp_data,
+            uint32_t n_supp_data,
+            [out] uint32_t* p_supp_data_size,
+            [out] int64_t* p_time_s,
+            [out] uint32_t* p_collateral_expiration_status,
+            [out] sgx_ql_qv_result_t* p_qv_result
         );
 
         sgx_status_t ocall_get_update_info(

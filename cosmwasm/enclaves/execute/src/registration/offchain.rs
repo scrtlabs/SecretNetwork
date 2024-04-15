@@ -7,19 +7,26 @@ use sgx_types::sgx_status_t;
 use std::panic;
 use std::slice;
 
+use std::fs::File;
+use std::io::prelude::*;
+
 use enclave_crypto::consts::{
-    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
-    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
+    CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
+    GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH, PUBKEY_PATH,
+    REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
-
 use enclave_utils::pointers::validate_mut_slice;
+use enclave_utils::storage::migrate_file_from_2_17_safe;
+use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
+use enclave_utils::validator_set::VALIDATOR_SET_SEALING_PATH;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
-use super::attestation::create_attestation_certificate;
+use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
 
 use super::seed_service::get_next_consensus_seed_from_service;
 
@@ -342,6 +349,58 @@ pub unsafe extern "C" fn ecall_init_node(
     sgx_status_t::SGX_SUCCESS
 }
 
+unsafe fn get_attestation_report_epid(
+    api_key: *const u8,
+    api_key_len: u32,
+    kp: &KeyPair,
+) -> Result<Vec<u8>, sgx_status_t> {
+    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
+    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
+
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+    );
+    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
+    let (_private_key_der, cert) =
+        match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key_slice, None) {
+            Err(e) => {
+                warn!("Error in create_attestation_certificate: {:?}", e);
+                return Err(e);
+            }
+            Ok(res) => res,
+        };
+
+    write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str())?;
+
+    #[cfg(feature = "SGX_MODE_HW")]
+    {
+        crate::registration::print_report::print_local_report_info(cert.as_slice());
+    }
+
+    Ok(cert)
+}
+
+pub unsafe fn get_attestation_report_dcap(
+    kp: &KeyPair,
+) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+    let (vec_quote, vec_coll) = match get_quote_ecdsa(&kp.get_pubkey()) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Error creating attestation report");
+            return Err(e);
+        }
+    };
+
+    write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str())?;
+
+    write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str())?;
+
+    Ok((vec_quote, vec_coll))
+}
+
 #[no_mangle]
 /**
  * `ecall_get_attestation_report`
@@ -356,43 +415,77 @@ pub unsafe extern "C" fn ecall_init_node(
  * other creative usages.
  * # Safety
  * Something should go here
- */
+*/
 pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
+    flags: u32,
 ) -> sgx_status_t {
-    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
-
-    validate_const_ptr!(
-        api_key,
-        api_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
-
     let kp = KEY_MANAGER.get_registration_key().unwrap();
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
     );
-    let (_private_key_der, cert) =
-        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice, None) {
+
+    {
+        let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
+            Ok(f) => f,
             Err(e) => {
-                warn!("Error in create_attestation_certificate: {:?}", e);
-                return e;
+                error!("failed to create file {}", e);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
-            Ok(res) => res,
         };
 
-    //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
-        return status;
+        f_out.write_all(kp.get_pubkey().as_ref()).unwrap();
     }
 
-    #[cfg(feature = "SGX_MODE_HW")]
-    {
-        crate::registration::print_report::print_local_report_info(cert.as_slice());
+    let mut size_epid: u32 = 0;
+    let mut size_dcap_q: u32 = 0;
+    let mut size_dcap_c: u32 = 0;
+
+    let res_epid = match 1 & flags {
+        0 => get_attestation_report_epid(api_key, api_key_len, &kp),
+        _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
+    };
+    if let Ok(ref vec_cert) = res_epid {
+        size_epid = vec_cert.len() as u32;
+    }
+
+    let res_dcap = match 2 & flags {
+        0 => get_attestation_report_dcap(&kp),
+        _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
+    };
+    if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
+        size_dcap_q = vec_quote.len() as u32;
+        size_dcap_c = vec_coll.len() as u32;
+    }
+
+    let mut f_out = match File::create(CERT_COMBINED_PATH.as_str()) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("failed to create file {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    f_out.write_all(&size_epid.to_le_bytes()).unwrap();
+    f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
+    f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
+
+    if let Ok(ref vec_cert) = res_epid {
+        f_out.write_all(vec_cert.as_slice()).unwrap();
+    }
+
+    if let Ok((vec_quote, vec_coll)) = res_dcap {
+        f_out.write_all(vec_quote.as_slice()).unwrap();
+        f_out.write_all(vec_coll.as_slice()).unwrap();
+    }
+
+    if (size_epid == 0) && (size_dcap_q == 0) {
+        if let Err(status) = res_epid {
+            return status;
+        }
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     sgx_status_t::SGX_SUCCESS
@@ -495,4 +588,31 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
         warn!("Enclave call ecall_get_genesis_seed panic!");
         sgx_status_t::SGX_ERROR_UNEXPECTED
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
+    if let Err(e) = migrate_file_from_2_17_safe(&REGISTRATION_KEY_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&GENESIS_CONSENSUS_SEED_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&CURRENT_CONSENSUS_SEED_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&REK_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&IRS_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&VALIDATOR_SET_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&TX_BYTES_SEALING_PATH, true) {
+        return e;
+    }
+
+    sgx_status_t::SGX_SUCCESS
 }

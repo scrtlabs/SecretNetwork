@@ -109,7 +109,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 				return err
 			}
 			initClientCtx, err = clientconfig.ReadFromClientConfig(initClientCtx)
-
 			if err != nil {
 				return err
 			}
@@ -179,6 +178,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		InitAttestation(),
 		InitBootstrapCmd(),
 		ParseCert(),
+		DumpBin(),
+		MigrateSealings(),
 		ConfigureSecret(),
 		HealthCheck(),
 		ResetEnclave(),

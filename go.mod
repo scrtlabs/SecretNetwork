@@ -5,6 +5,8 @@ go 1.21
 replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
 	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.13-0.20240123105116-fa873fadfa55
+	// PFM: v4.1.1 + https://github.com/cosmos/ibc-apps/commit/455757bb5771c29cf2f83b59e37f6513e07c92be.patch
+	github.com/cosmos/ibc-apps/v4 => github.com/scrtlabs/ibc-apps/v4 v4.1.2-0.20240312165106-908dc3766519
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files
 	github.com/cosmos/ledger-cosmos-go => github.com/chillyvee/ledger-cosmos-go v0.12.2
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
@@ -17,7 +19,6 @@ replace (
 require (
 	github.com/cosmos/cosmos-sdk v0.45.16
 	github.com/cosmos/go-bip39 v1.0.0
-	// PFM: v4.1.0 + this fix https://github.com/cosmos/ibc-apps/pull/105
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4 v4.1.1
 	github.com/cosmos/ibc-go/v4 v4.5.1
 	github.com/gogo/protobuf v1.3.3

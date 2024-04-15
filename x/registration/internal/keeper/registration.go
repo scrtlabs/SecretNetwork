@@ -58,15 +58,16 @@ func (k Keeper) ListRegistrationInfo(ctx sdk.Context, cb func([]byte, types.Regi
 }
 
 func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
-	store := ctx.KVStore(k.storeKey)
-
 	publicKey, err := ra.VerifyRaCert(certificate.Certificate)
 	if err != nil {
 		return
 	}
 
-	// fmt.Println("pubkey", hex.EncodeToString(publicKey))
-	// fmt.Println("EncryptedSeed", hex.EncodeToString(certificate.EncryptedSeed))
+	k.SetRegistrationInfo_Verified(ctx, certificate, publicKey)
+}
+
+func (k Keeper) SetRegistrationInfo_Verified(ctx sdk.Context, certificate types.RegistrationNodeInfo, publicKey []byte) {
+	store := ctx.KVStore(k.storeKey)
 	store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
 }
 

@@ -12,18 +12,9 @@ If it is something that can be handled by a param change, discuss it on [the for
 
 For a bug that is non-sensitive and/or operational in nature rather than a critical vulnerability, please add it as a GitHub issue.
 
-If it is not triaged in a couple of days, feel free to tag `@reuvenpo`, `@toml01`, `@assafmo` or `@Cashmaney`.
-
 ## Critical bug or security issue
 
-If you're here because you're trying to figure out how to notify us of a security issue, go to [Discord](https://chat.scrt.network) or Telegram, and alert the core engineers:
-
-|        | Telegram      | Discord                    |
-| ------ | ------------- | -------------------------- |
-| Itzik  | `@Cashmaney3` | `Cashmaney#3500`           |
-| Assaf  | `@assafmo`    | `assafmo#9483`             |
-| Tom    | `@toml01`     | `toml#7076`                |
-| Reuven | `@ReuvenPo`   | `Reuven \| SCRT Labs#0732` |
+If you're here because you're trying to figure out how to notify us of a security issue, please email us at info@scrtlabs.com.
 
 Please avoid opening public issues on GitHub that contain information about a potential security vulnerability as this makes it difficult to reduce the impact and harm of valid security issues.
 
