@@ -13,14 +13,17 @@ import (
 	"time"
 
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
-	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v8/modules/core/05-port/keeper"
+	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"golang.org/x/crypto/ripemd160" //nolint:staticcheck
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
+	"cosmossdk.io/core/store"
+	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -32,16 +35,13 @@ import (
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	"cosmossdk.io/log"
-	"cosmossdk.io/core/store"
-	storetypes "cosmossdk.io/store/types"
 
-	"github.com/cosmos/cosmos-sdk/runtime"
-	"github.com/cosmos/cosmos-sdk/codec"
+	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	errorsmod "cosmossdk.io/errors"
 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm"
@@ -316,13 +316,13 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktx
 			ChainID:       ctx.ChainID(),
 			AccountNumber: signerAcc.GetAccountNumber(),
 			Sequence:      signerAcc.GetSequence() - 1,
-            PubKey:        signerAcc.GetPubKey(),
+			PubKey:        signerAcc.GetPubKey(),
 		}
 		txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
 		modeHandler := txConfig.SignModeHandler()
 		signBytes, err = authsigning.GetSignBytesAdapter(ctx, modeHandler, signMode, signingData, tx)
 		if err != nil {
-            return nil, 0, nil, nil, nil, errorsmod.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+			return nil, 0, nil, nil, nil, errorsmod.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
 		}
 	}
 

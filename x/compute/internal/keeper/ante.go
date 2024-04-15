@@ -3,9 +3,9 @@ package keeper
 import (
 	"encoding/binary"
 
+	"cosmossdk.io/core/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	"cosmossdk.io/core/store"
 )
 
 // CountTXDecorator ante handler to count the tx position in a block.

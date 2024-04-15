@@ -20,9 +20,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-    "cosmossdk.io/math"
-    errorsmod "cosmossdk.io/errors"
+	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
+	"cosmossdk.io/math"
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -413,25 +413,25 @@ func queryHelperImpl(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-    kvGasConfig := stypes.GasConfig{
-        HasCost:          100,
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
 		DeleteCost:       100,
 		ReadCostFlat:     100,
 		ReadCostPerByte:  1,
 		WriteCostFlat:    200,
 		WriteCostPerByte: 5,
 		IterNextCostFlat: 5,
-    }
+	}
 
-    transientGasConfig := stypes.GasConfig{
-        HasCost:          10,
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
 		DeleteCost:       10,
 		ReadCostFlat:     10,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    20,
 		WriteCostPerByte: 1,
 		IterNextCostFlat: 1,
-    }
+	}
 
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
@@ -612,25 +612,25 @@ func execTxBuilderImpl(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-    kvGasConfig := stypes.GasConfig{
-        HasCost:          100,
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
 		DeleteCost:       100,
 		ReadCostFlat:     100,
 		ReadCostPerByte:  1,
 		WriteCostFlat:    200,
 		WriteCostPerByte: 5,
 		IterNextCostFlat: 5,
-    }
+	}
 
-    transientGasConfig := stypes.GasConfig{
-        HasCost:          10,
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
 		DeleteCost:       10,
 		ReadCostFlat:     10,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    20,
 		WriteCostPerByte: 1,
 		IterNextCostFlat: 1,
-    }
+	}
 
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
@@ -757,25 +757,25 @@ func initHelperImpl(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-    kvGasConfig := stypes.GasConfig{
-        HasCost:          100,
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
 		DeleteCost:       100,
 		ReadCostFlat:     100,
 		ReadCostPerByte:  1,
 		WriteCostFlat:    200,
 		WriteCostPerByte: 5,
 		IterNextCostFlat: 5,
-    }
+	}
 
-    transientGasConfig := stypes.GasConfig{
-        HasCost:          10,
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
 		DeleteCost:       10,
 		ReadCostFlat:     10,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    20,
 		WriteCostPerByte: 1,
 		IterNextCostFlat: 1,
-    }
+	}
 
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
@@ -885,25 +885,25 @@ func migrateHelper(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-    kvGasConfig := stypes.GasConfig{
-        HasCost:          100,
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
 		DeleteCost:       100,
 		ReadCostFlat:     100,
 		ReadCostPerByte:  1,
 		WriteCostFlat:    200,
 		WriteCostPerByte: 5,
 		IterNextCostFlat: 5,
-    }
+	}
 
-    transientGasConfig := stypes.GasConfig{
-        HasCost:          10,
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
 		DeleteCost:       10,
 		ReadCostFlat:     10,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    20,
 		WriteCostPerByte: 1,
 		IterNextCostFlat: 1,
-    }
+	}
 
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
@@ -989,25 +989,25 @@ func updateAdminHelper(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-    kvGasConfig := stypes.GasConfig{
-        HasCost:          100,
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
 		DeleteCost:       100,
 		ReadCostFlat:     100,
 		ReadCostPerByte:  1,
 		WriteCostFlat:    200,
 		WriteCostPerByte: 5,
 		IterNextCostFlat: 5,
-    }
+	}
 
-    transientGasConfig := stypes.GasConfig{
-        HasCost:          10,
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
 		DeleteCost:       10,
 		ReadCostFlat:     10,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    20,
 		WriteCostPerByte: 1,
 		IterNextCostFlat: 1,
-    }
+	}
 
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
@@ -1110,25 +1110,25 @@ func fakeUpdateAdminHelper(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-    kvGasConfig := stypes.GasConfig{
-        HasCost:          100,
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
 		DeleteCost:       100,
 		ReadCostFlat:     100,
 		ReadCostPerByte:  1,
 		WriteCostFlat:    200,
 		WriteCostPerByte: 5,
 		IterNextCostFlat: 5,
-    }
+	}
 
-    transientGasConfig := stypes.GasConfig{
-        HasCost:          10,
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
 		DeleteCost:       10,
 		ReadCostFlat:     10,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    20,
 		WriteCostPerByte: 1,
 		IterNextCostFlat: 1,
-    }
+	}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -1316,25 +1316,25 @@ func fakeMigrateHelper(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-    kvGasConfig := stypes.GasConfig{
-        HasCost:          100,
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
 		DeleteCost:       100,
 		ReadCostFlat:     100,
 		ReadCostPerByte:  1,
 		WriteCostFlat:    200,
 		WriteCostPerByte: 5,
 		IterNextCostFlat: 5,
-    }
+	}
 
-    transientGasConfig := stypes.GasConfig{
-        HasCost:          10,
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
 		DeleteCost:       10,
 		ReadCostFlat:     10,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    20,
 		WriteCostPerByte: 1,
 		IterNextCostFlat: 1,
-    }
+	}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),

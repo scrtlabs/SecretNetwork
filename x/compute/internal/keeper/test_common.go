@@ -1,41 +1,41 @@
 package keeper
 
 import (
-    // "context"
+	// "context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-    "fmt"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-    moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
+	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 
-    "github.com/cosmos/cosmos-sdk/runtime"
+	"github.com/cosmos/cosmos-sdk/runtime"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
-    authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
-    scrt "github.com/scrtlabs/SecretNetwork/types"
+	scrt "github.com/scrtlabs/SecretNetwork/types"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 
 	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 
-    "cosmossdk.io/math"
+	"cosmossdk.io/math"
 
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
-	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
-	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	feegrant "cosmossdk.io/x/feegrant"
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
+	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	// // ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
@@ -45,11 +45,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	// tmenclave "github.com/scrtlabs/tm-secret-enclave"
+	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
-    sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-    errorsmod "cosmossdk.io/errors"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	dbm "github.com/cosmos/cosmos-db"
 
@@ -59,10 +59,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	// // simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	"github.com/cosmos/cosmos-sdk/std"
 	"cosmossdk.io/store"
-    storetypes "cosmossdk.io/store/types"
-    "cosmossdk.io/store/metrics"
+	"cosmossdk.io/store/metrics"
+	storetypes "cosmossdk.io/store/types"
+	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
@@ -75,10 +75,10 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	"github.com/cosmos/cosmos-sdk/x/bank"
-    govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
-    govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
 	"github.com/cosmos/ibc-go/modules/capability"
 
@@ -90,8 +90,8 @@ import (
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
-	"github.com/cosmos/cosmos-sdk/types/tx"
 	"cosmossdk.io/x/evidence"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -225,11 +225,11 @@ var ModuleBasics = module.NewBasicManager(
 	staking.AppModuleBasic{},
 	mint.AppModuleBasic{},
 	distribution.AppModuleBasic{},
-    gov.NewAppModuleBasic(
-        []govclient.ProposalHandler{
-            paramsclient.ProposalHandler,
-        },
-    ),
+	gov.NewAppModuleBasic(
+		[]govclient.ProposalHandler{
+			paramsclient.ProposalHandler,
+		},
+	),
 	params.AppModuleBasic{},
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
@@ -261,7 +261,7 @@ func MakeEncodingConfig() moduletestutil.TestEncodingConfig {
 	wasmtypes.RegisterLegacyAminoCodec(amino)
 	return moduletestutil.TestEncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
-		Codec:         codec,
+		Codec:             codec,
 		TxConfig:          txCfg,
 		Amino:             amino,
 	}
@@ -337,25 +337,25 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	require.NoError(t, ms.LoadLatestVersion())
 
-    kvGasConfig := storetypes.GasConfig{
-        HasCost:          100,
+	kvGasConfig := storetypes.GasConfig{
+		HasCost:          100,
 		DeleteCost:       100,
 		ReadCostFlat:     100,
 		ReadCostPerByte:  1,
 		WriteCostFlat:    200,
 		WriteCostPerByte: 5,
 		IterNextCostFlat: 5,
-    }
+	}
 
-    transientGasConfig := storetypes.GasConfig{
-        HasCost:          10,
+	transientGasConfig := storetypes.GasConfig{
+		HasCost:          10,
 		DeleteCost:       10,
 		ReadCostFlat:     10,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    20,
 		WriteCostPerByte: 1,
 		IterNextCostFlat: 1,
-    }
+	}
 
 	ctx := sdk.NewContext(ms, tmproto.Header{
 		Height:  1234567,
@@ -393,11 +393,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	authKeeper := authkeeper.NewAccountKeeper(
 		encodingConfig.Codec,
 		runtime.NewKVStoreService(keys[authtypes.StoreKey]), // target store
-		authtypes.ProtoBaseAccount, // prototype
+		authtypes.ProtoBaseAccount,                          // prototype
 		maccPerms,
-        authcodec.NewBech32Codec(scrt.Bech32PrefixAccAddr),
-        scrt.Bech32PrefixAccAddr,
-        authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authcodec.NewBech32Codec(scrt.Bech32PrefixAccAddr),
+		scrt.Bech32PrefixAccAddr,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	blockedAddrs := make(map[string]bool)
 	for acc := range maccPerms {
@@ -411,8 +411,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		runtime.NewKVStoreService(keys[banktypes.StoreKey]),
 		authKeeper,
 		blockedAddrs,
-        authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-        log.NewNopLogger(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		log.NewNopLogger(),
 	)
 
 	// bankParams = bankParams.SetSendEnabledParam(sdk.DefaultBondDenom, true)
@@ -424,7 +424,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		runtime.NewKVStoreService(keys[stakingtypes.StoreKey]),
 		authKeeper,
 		bankKeeper,
-        authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		authcodec.NewBech32Codec(scrt.Bech32PrefixValAddr),
 		authcodec.NewBech32Codec(scrt.Bech32PrefixConsAddr),
 	)
@@ -451,7 +451,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		bankKeeper,
 		stakingKeeper,
 		authtypes.FeeCollectorName,
-        authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	// set genesis items required for distribution
@@ -475,10 +475,10 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bondPool := authtypes.NewEmptyModuleAccount(stakingtypes.BondedPoolName, authtypes.Burner, authtypes.Staking)
 	feeCollectorAcc := authtypes.NewEmptyModuleAccount(authtypes.FeeCollectorName)
 
-    distrAcc.SetAccountNumber(1001);
-    bondPool.SetAccountNumber(1002);
-    notBondedPool.SetAccountNumber(1003);
-    feeCollectorAcc.SetAccountNumber(1004);
+	distrAcc.SetAccountNumber(1001)
+	bondPool.SetAccountNumber(1002)
+	notBondedPool.SetAccountNumber(1003)
+	feeCollectorAcc.SetAccountNumber(1004)
 
 	authKeeper.SetModuleAccount(ctx, distrAcc)
 	authKeeper.SetModuleAccount(ctx, bondPool)
@@ -497,9 +497,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// router.AddRoute(sdk.NewRoute(distrtypes.RouterKey, dh))
 
 	// govRouter := govtypes.NewRouter().
-		// AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
-		// AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
-		// AddRoute(distrtypes.RouterKey, distribution.NewCommunityPoolSpendProposalHandler(distKeeper))
+	// AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
+	// AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
+	// AddRoute(distrtypes.RouterKey, distribution.NewCommunityPoolSpendProposalHandler(distKeeper))
 	// // AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
 
 	govKeeper := govkeeper.NewKeeper(
@@ -620,7 +620,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	_, _ = rand.Read(random)
 	keeper.SetRandomSeed(ctx, random)
 
-    govSubSp, _ := paramsKeeper.GetSubspace(govtypes.ModuleName);
+	govSubSp, _ := paramsKeeper.GetSubspace(govtypes.ModuleName)
 
 	am := module.NewManager( // minimal module set that we use for message/ query tests
 		bank.NewAppModule(encodingConfig.Codec, bankKeeper, authKeeper, bankSubsp),
@@ -935,7 +935,7 @@ func NewTestTxMultiple(ctx sdk.Context, msgs []sdk.Msg, creatorAccs []authtypes.
 			ChainID:       TestConfig.ChainID,
 			AccountNumber: creatorAcc.GetAccountNumber(),
 			Sequence:      creatorAcc.GetSequence(),
-            PubKey:         creatorAcc.GetPubKey(),
+			PubKey:        creatorAcc.GetPubKey(),
 		}
 		bytesToSign, err := authsigning.GetSignBytesAdapter(ctx, signModeHandler, sdksigning.SignMode_SIGN_MODE_DIRECT, signerData, builder.GetTx())
 		if err != nil {
@@ -973,7 +973,7 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 	priv, pub, addr := keyPubAddr()
 	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetPubKey(pub)
-    baseAcct.SetAccountNumber(accountNumber);
+	baseAcct.SetAccountNumber(accountNumber)
 	am.SetAccount(ctx, baseAcct)
 
 	fundAccounts(ctx, am, bk, addr, coins)

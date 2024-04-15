@@ -11,10 +11,10 @@ import (
 
 	// "github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 
+	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	errorsmod "cosmossdk.io/errors"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/spf13/cobra"
@@ -217,21 +217,21 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		// if we aren't creating an offline transaction we can validate the chosen label
 		// TODO: Fix
 		/*
-		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-		res, _, _ := cliCtx.Query(route)
-		if res != nil {
-			return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
-		}
+			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
+			res, _, _ := cliCtx.Query(route)
+			if res != nil {
+				return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
+			}
 
-		initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[0])
-		if err != nil {
-			return types.MsgInstantiateContract{}, err
-		}
+			initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[0])
+			if err != nil {
+				return types.MsgInstantiateContract{}, err
+			}
 
-		// todo: Add check that this is valid json and stuff
-		initMsg.Msg = []byte(args[1])
+			// todo: Add check that this is valid json and stuff
+			initMsg.Msg = []byte(args[1])
 
-		encryptedMsg, err = wasmCtx.Encrypt(initMsg.Serialize())*/
+			encryptedMsg, err = wasmCtx.Encrypt(initMsg.Serialize())*/
 	}
 
 	if err != nil {
@@ -296,21 +296,21 @@ func ExecuteContractCmd() *cobra.Command {
 				// TODO: fix
 
 				// if genOnly {
-					// return fmt.Errorf("offline transactions must contain contract address")
+				// return fmt.Errorf("offline transactions must contain contract address")
 				// }
-//
+				//
 				// label, err := cmd.Flags().GetString(flagLabel)
 				// if err != nil {
-					// return fmt.Errorf("error with label: %s", err)
+				// return fmt.Errorf("error with label: %s", err)
 				// }
 				// if label == "" {
-					// return fmt.Errorf("label or bech32 contract address is required")
+				// return fmt.Errorf("label or bech32 contract address is required")
 				// }
 
 				// route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
 				// res, _, err := cliCtx.Query(route)
 				// if err != nil {
-					// return err
+				// return err
 				// }
 
 				// contractAddr = res
@@ -398,25 +398,25 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 	// TODO: fix
 	/*
-	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
-	res, _, err := cliCtx.Query(route)
-	if err != nil {
-		return nil, err
-	}
+		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
+		res, _, err := cliCtx.Query(route)
+		if err != nil {
+			return nil, err
+		}
 
-	// When querying for an unknown code id the output is an empty result (without any error)
-	if len(res) == 0 {
-		return nil, fmt.Errorf("failed to query contract code hash, unknown code id (%s)", codeID)
-	}
+		// When querying for an unknown code id the output is an empty result (without any error)
+		if len(res) == 0 {
+			return nil, fmt.Errorf("failed to query contract code hash, unknown code id (%s)", codeID)
+		}
 
-	var codeResp types.QueryCodeResponse
+		var codeResp types.QueryCodeResponse
 
-	err = json.Unmarshal(res, &codeResp)
-	if err != nil {
-		return nil, err
-	}
+		err = json.Unmarshal(res, &codeResp)
+		if err != nil {
+			return nil, err
+		}
 
-	return []byte(codeResp.CodeHash), nil
+		return []byte(codeResp.CodeHash), nil
 	*/
 	return nil, nil
 }
@@ -424,17 +424,17 @@ func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddress) ([]byte, error) {
 	// TODO: fix
 	/*
-	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
-	res, _, err := cliCtx.Query(route)
-	if err != nil {
-		return nil, err
-	}
+		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
+		res, _, err := cliCtx.Query(route)
+		if err != nil {
+			return nil, err
+		}
 
-	if len(res) == 0 {
-		return nil, fmt.Errorf("contract with address %s not found", contractAddr.String())
-	}
+		if len(res) == 0 {
+			return nil, fmt.Errorf("contract with address %s not found", contractAddr.String())
+		}
 
-	return []byte(hex.EncodeToString(res)), nil
+		return []byte(hex.EncodeToString(res)), nil
 	*/
 	return nil, nil
 }

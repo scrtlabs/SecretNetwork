@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	stypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec/legacy"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
-	stypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	"gonum.org/v1/gonum/stat"

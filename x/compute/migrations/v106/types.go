@@ -1,8 +1,8 @@
 package v106
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	tmBytes "github.com/cometbft/cometbft/libs/bytes"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (

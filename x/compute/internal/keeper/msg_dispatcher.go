@@ -9,15 +9,15 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	storetypes "cosmossdk.io/store/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	errorsmod "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
+	abci "github.com/cometbft/cometbft/abci/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v010wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	abci "github.com/cometbft/cometbft/abci/types"
 )
 
 // Messenger is an extension point for custom wasmd message handling

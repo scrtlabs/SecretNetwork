@@ -297,7 +297,7 @@ func TestInstantiate(t *testing.T) {
 	// create with no balance is also legal
 	contractAddr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract 1", nil, nil)
 	require.NoError(t, err)
-    // TODO: uncomment when all tests are fixed
+	// TODO: uncomment when all tests are fixed
 	// require.Equal(t, "secret1uhfqhj6cvt7983n6xdxkjhfvx9833qk5pmgfl4", contractAddr.String())
 
 	// gas can change +- 10% before we start failing, though maybe for consensus we should check a constant amount
@@ -329,11 +329,11 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			fundAddr: false,
 			expError: true,
 		},
-			// "blocked address": {
-			// 	srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
-			// 	fundAddr: true,
-			// 	expError: true,
-			// },
+		// "blocked address": {
+		// 	srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
+		// 	fundAddr: true,
+		// 	expError: true,
+		// },
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
@@ -466,7 +466,7 @@ func TestExecute(t *testing.T) {
 
 	require.NoError(t, err)
 
-    // TODO: uncomment when all tests are fixed
+	// TODO: uncomment when all tests are fixed
 	// require.Equal(t, "secret12exhpaft5rv3t8lcw9nykudxaddq2nmtv4r3tl", addr.String())
 
 	// ensure bob doesn't exist
@@ -556,18 +556,18 @@ func TestExecuteWithDeposit(t *testing.T) {
 			fundAddr: false,
 			expError: true,
 		},
-			// "blocked address as actor": {
-			// 	srcActor:    blockedAddr,
-			// 	fundAddr:    true,
-			// 	beneficiary: fred,
-			// 	expError:    true,
-			// },
-			//  "blocked address as beneficiary": {
-			// 	srcActor:    bob,
-			// 	fundAddr:    true,
-			// 	beneficiary: blockedAddr,
-			// 	expError:    true,
-			// },
+		// "blocked address as actor": {
+		// 	srcActor:    blockedAddr,
+		// 	fundAddr:    true,
+		// 	beneficiary: fred,
+		// 	expError:    true,
+		// },
+		//  "blocked address as beneficiary": {
+		// 	srcActor:    bob,
+		// 	fundAddr:    true,
+		// 	beneficiary: blockedAddr,
+		// 	expError:    true,
+		// },
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {

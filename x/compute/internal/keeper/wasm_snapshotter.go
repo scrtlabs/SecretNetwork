@@ -7,14 +7,14 @@ import (
 	"os"
 	"path/filepath"
 
+	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/log"
 	snapshottypes "cosmossdk.io/store/snapshots/types"
 	storetypes "cosmossdk.io/store/types"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	errorsmod "cosmossdk.io/errors"
 	protoio "github.com/cosmos/gogoproto/io"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-	"cosmossdk.io/log"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 )
 
 /*
@@ -176,4 +176,3 @@ func (ws *WasmSnapshotter) RestoreExtension(height uint64, format uint32, payloa
 func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapshottypes.ExtensionPayloadWriter) error {
 	panic("not implemented")
 }
-

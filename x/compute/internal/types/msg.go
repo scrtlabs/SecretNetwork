@@ -3,9 +3,9 @@ package types
 import (
 	"strings"
 
+	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	errorsmod "cosmossdk.io/errors"
 )
 
 func (msg MsgStoreCode) Route() string {

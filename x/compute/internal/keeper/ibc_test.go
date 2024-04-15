@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cometbft/cometbft/libs/log"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -16,7 +17,6 @@ import (
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
-	"github.com/cometbft/cometbft/libs/log"
 
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
