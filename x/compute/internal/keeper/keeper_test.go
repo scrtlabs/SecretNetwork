@@ -2,23 +2,23 @@ package keeper
 
 import (
 	"crypto/sha1"
-	// "encoding/base64"
-	// "encoding/hex"
-	// "encoding/json"
-	// "fmt"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
-	// "time"
+	"time"
 
-	// "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	stypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	// authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
-	// wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	eng "github.com/scrtlabs/SecretNetwork/types"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
@@ -60,7 +60,6 @@ func init() {
 		panic(fmt.Sprintf("Error reading 'io-master-key.txt': %v", err))
 	}
 }
-*/
 
 func TestNewKeeper(t *testing.T) {
 	config := sdk.GetConfig()
@@ -238,7 +237,6 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	require.Equal(t, hashRawCode, hashStoredCode)
 }
 
-/*
 func TestInstantiate(t *testing.T) {
 	encodingConfig := MakeEncodingConfig()
 	var transferPortSource types.ICS20TransferPortSource
@@ -336,13 +334,11 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			fundAddr: false,
 			expError: true,
 		},
-		/*
-			"blocked address": {
-				srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
-				fundAddr: true,
-				expError: true,
-			},
-		*/
+			// "blocked address": {
+			// 	srcActor: supply.NewModuleAddress(auth.FeeCollectorName),
+			// 	fundAddr: true,
+			// 	expError: true,
+			// },
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
@@ -564,20 +560,18 @@ func TestExecuteWithDeposit(t *testing.T) {
 			fundAddr: false,
 			expError: true,
 		},
-		/*
-			"blocked address as actor": {
-				srcActor:    blockedAddr,
-				fundAddr:    true,
-				beneficiary: fred,
-				expError:    true,
-			},
-			 "blocked address as beneficiary": {
-				srcActor:    bob,
-				fundAddr:    true,
-				beneficiary: blockedAddr,
-				expError:    true,
-			},
-		*/
+			// "blocked address as actor": {
+			// 	srcActor:    blockedAddr,
+			// 	fundAddr:    true,
+			// 	beneficiary: fred,
+			// 	expError:    true,
+			// },
+			//  "blocked address as beneficiary": {
+			// 	srcActor:    bob,
+			// 	fundAddr:    true,
+			// 	beneficiary: blockedAddr,
+			// 	expError:    true,
+			// },
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
@@ -939,7 +933,6 @@ func mustMarshal(t *testing.T, r interface{}) []byte {
 	require.NoError(t, err)
 	return bz
 }
-*/
 
 type InitMsg struct {
 	Verifier    sdk.AccAddress `json:"verifier"`
