@@ -83,7 +83,7 @@ func TestCreate(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2002)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2002)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -108,7 +108,7 @@ func TestCreateDuplicate(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2003)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2003)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -146,7 +146,7 @@ func TestCreateWithSimulation(t *testing.T) {
 		WithGasMeter(stypes.NewInfiniteGasMeter())
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2004)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2004)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -205,7 +205,7 @@ func TestCreateWithGzippedPayload(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2005)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2005)
 
 	wasmCode, err := os.ReadFile(filepath.Join(".", contractPath, "test_gzip_contract.wasm.gz"))
 	require.NoError(t, err)
@@ -242,7 +242,7 @@ func TestInstantiate(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2006)
+	creator, privKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2006)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -344,9 +344,9 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			if spec.fundAddr {
 				funds = 200
 			}
-			bob, bobPriv := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", funds)), 2007)
+			bob, bobPriv, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", funds)), 2007)
 
-			fred, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), 2008)
+			fred, _, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), 2008)
 
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: fred, Beneficiary: bob})
 			require.NoError(t, err)
@@ -382,7 +382,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2009)
+	creator, privKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 2009)
 
 	const nonExistingCodeID = 9999
 
@@ -429,8 +429,8 @@ func TestExecute(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2010)
-	fred, privFred := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 2011)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2010)
+	fred, privFred, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 2011)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -578,8 +578,8 @@ func TestExecuteWithDeposit(t *testing.T) {
 			if spec.fundAddr {
 				funds = 200
 			}
-			bob, bobPriv := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", funds)), 2012)
-			fred, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), 2013)
+			bob, bobPriv, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", funds)), 2012)
+			fred, _, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), 2013)
 
 			initMsgBz, err := json.Marshal(InitMsg{Verifier: bob, Beneficiary: fred})
 			require.NoError(t, err)
@@ -619,7 +619,7 @@ func TestExecuteWithNonExistingAddress(t *testing.T) {
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, privKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2014)
+	creator, privKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2014)
 
 	// unauthorized - trialCtx so we don't change state
 	nonExistingAddress := sdk.AccAddress([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
@@ -660,8 +660,8 @@ func TestExecuteWithPanic(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2015)
-	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 2016)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2015)
+	fred, fredPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 2016)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -717,8 +717,8 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2017)
-	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 2018)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2017)
+	fred, fredPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 2018)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -833,8 +833,8 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2019)
-	fred, fredPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 2020)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2019)
+	fred, fredPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 2020)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)

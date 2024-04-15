@@ -131,8 +131,8 @@ func setupBasicTest(t *testing.T, additionalCoinsInWallets sdk.Coins) (sdk.Conte
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
-	walletA, privKeyA := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...), 2021)
-	walletB, privKeyB := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...), 2022)
+	walletA, privKeyA, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...), 2021)
+	walletB, privKeyB, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...), 2022)
 
 	return ctx, keeper, walletA, privKeyA, walletB, privKeyB
 }

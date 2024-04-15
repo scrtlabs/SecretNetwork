@@ -156,7 +156,7 @@ func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAd
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, creatorPriv = CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2001)
+	creator, creatorPriv, _ = CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2001)
 
 	// store the code
 	wasmCode, err := os.ReadFile(TestContractPaths[benchContract])

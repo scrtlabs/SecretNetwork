@@ -475,10 +475,10 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bondPool := authtypes.NewEmptyModuleAccount(stakingtypes.BondedPoolName, authtypes.Burner, authtypes.Staking)
 	feeCollectorAcc := authtypes.NewEmptyModuleAccount(authtypes.FeeCollectorName)
 
-	distrAcc.SetAccountNumber(1001)
-	bondPool.SetAccountNumber(1002)
-	notBondedPool.SetAccountNumber(1003)
-	feeCollectorAcc.SetAccountNumber(1004)
+	distrAcc.SetAccountNumber(10001)
+	bondPool.SetAccountNumber(10002)
+	notBondedPool.SetAccountNumber(10003)
+	feeCollectorAcc.SetAccountNumber(10004)
 
 	authKeeper.SetModuleAccount(ctx, distrAcc)
 	authKeeper.SetModuleAccount(ctx, bondPool)
@@ -969,7 +969,7 @@ func NewTestTxMultiple(ctx sdk.Context, msgs []sdk.Msg, creatorAccs []authtypes.
 	return newTx.GetProtoTx()
 }
 
-func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins, accountNumber uint64) (sdk.AccAddress, crypto.PrivKey) {
+func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins, accountNumber uint64) (sdk.AccAddress, crypto.PrivKey, crypto.PubKey) {
 	priv, pub, addr := keyPubAddr()
 	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetPubKey(pub)
@@ -977,7 +977,7 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 	am.SetAccount(ctx, baseAcct)
 
 	fundAccounts(ctx, am, bk, addr, coins)
-	return addr, priv
+	return addr, priv, pub
 }
 
 // StoreRandomOnNewBlock is used when height is incremented in tests, the random value for the new block needs to be
