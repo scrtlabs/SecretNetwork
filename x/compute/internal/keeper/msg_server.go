@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	errorsmod "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"

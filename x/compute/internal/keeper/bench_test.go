@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	stypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec/legacy"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -150,12 +151,12 @@ func (b *BenchTime) PrintReport() {
 func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAddress, creatorPriv crypto.PrivKey, ctx sdk.Context, keeper Keeper) {
 	encodingConfig := MakeEncodingConfig()
 
-	encoders := DefaultEncoders(nil, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(nil, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, creatorPriv = CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	creator, creatorPriv, _ = CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 2001)
 
 	// store the code
 	wasmCode, err := os.ReadFile(TestContractPaths[benchContract])
@@ -266,7 +267,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 	// *** Measure baseline
 	timer := NewBenchTimer("base contract execution", Noop)
 	// make sure we set a limit before calling
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(100_000_000))
+	ctx = ctx.WithGasMeter(stypes.NewGasMeter(100_000_000))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	msg = buildBenchMessage(Noop, nil)
@@ -304,7 +305,7 @@ func TestRunExecuteBenchmarks(t *testing.T) {
 			timer := NewBenchTimer(name, tc.bench)
 			timer.SetBaselineValues(AvgGasBase, time.Duration(math.Floor(AvgTimeBase)))
 			// make sure we set a limit before calling
-			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
+			ctx = ctx.WithGasMeter(stypes.NewGasMeter(tc.gasLimit))
 			require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 			msg := buildBenchMessage(tc.bench, tc.params)
@@ -346,7 +347,7 @@ func TestRunQueryBenchmarks(t *testing.T) {
 	viewingKey := "my_vk"
 	t.Run("Set viewing key", func(t *testing.T) {
 		// make sure we set a limit before calling
-		ctx = ctx.WithGasMeter(sdk.NewGasMeter(1_000_000))
+		ctx = ctx.WithGasMeter(stypes.NewGasMeter(1_000_000))
 		require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 		msg := buildBenchMessage(BenchSetViewingKey, []ParamKeyValue{{key: "key", value: viewingKey}})

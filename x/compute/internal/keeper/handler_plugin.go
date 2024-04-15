@@ -8,11 +8,11 @@ import (
 	"cosmossdk.io/math"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
-	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 
 	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	v1wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
@@ -22,8 +22,8 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	errorsmod "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -45,14 +45,14 @@ type SDKMessageHandler struct {
 	// the reason is those msgs use the data field internally for reply, which is
 	// truncated if the msg erred
 	// legacyRouter sdk.Router
-	encoders     MessageEncoders
+	encoders MessageEncoders
 }
 
-func NewSDKMessageHandler(router MessageRouter, /*legacyRouter sdk.Router,*/ encoders MessageEncoders) SDKMessageHandler {
+func NewSDKMessageHandler(router MessageRouter /*legacyRouter sdk.Router,*/, encoders MessageEncoders) SDKMessageHandler {
 	return SDKMessageHandler{
-		router:       router,
+		router: router,
 		// legacyRouter: legacyRouter,
-		encoders:     encoders,
+		encoders: encoders,
 	}
 }
 
@@ -93,7 +93,7 @@ func NewMessageHandler(
 ) Messenger {
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
-		NewSDKMessageHandler(msgRouter, /*legacyMsgRouter,*/ encoders),
+		NewSDKMessageHandler(msgRouter /*legacyMsgRouter,*/, encoders),
 		NewIBCRawPacketHandler(channelKeeper, ics4Wrapper, capabilityKeeper),
 	)
 }
@@ -581,7 +581,7 @@ func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddr
 func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (*sdk.Result, error) {
 	// TODO: find out if ValidateBasic is needed here
 	// if err := msg.ValidateBasic(); err != nil {
-		// return nil, err
+	// return nil, err
 	// }
 
 	// make sure the contract account is also the "signer" on the message
@@ -653,7 +653,7 @@ func convertWasmCoinsToSdkCoins(coins []wasmTypes.Coin) (sdk.Coins, error) {
 func convertWasmCoinToSdkCoin(coin wasmTypes.Coin) (sdk.Coin, error) {
 	amount, ok := math.NewIntFromString(coin.Amount)
 	if !ok {
-		return sdk.Coin{}, sdkerrors.ErrInvalidCoins.Wrap(coin.Amount+coin.Denom)
+		return sdk.Coin{}, sdkerrors.ErrInvalidCoins.Wrap(coin.Amount + coin.Denom)
 	}
 	return sdk.Coin{
 		Denom:  coin.Denom,

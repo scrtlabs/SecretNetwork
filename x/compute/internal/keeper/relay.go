@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	errorsmod "cosmossdk.io/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"

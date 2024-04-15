@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"cosmossdk.io/store/prefix"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"

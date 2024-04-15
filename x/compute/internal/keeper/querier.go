@@ -7,10 +7,10 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 
+	errorsmod "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	storetypes "cosmossdk.io/store/types"
-	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 

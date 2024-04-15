@@ -6,9 +6,9 @@ import (
 	fmt "fmt"
 	"strings"
 
+	"cosmossdk.io/errors"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"cosmossdk.io/errors"
 	sdktxsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	wasmTypesV010 "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"

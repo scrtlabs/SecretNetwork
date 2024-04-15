@@ -3,8 +3,8 @@ package keeper
 import (
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	errors "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 

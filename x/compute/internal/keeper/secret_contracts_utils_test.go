@@ -20,7 +20,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cometbft/cometbft/libs/log"
+	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/log"
+	"cosmossdk.io/math"
 
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -125,12 +127,12 @@ func setupBasicTest(t *testing.T, additionalCoinsInWallets sdk.Coins) (sdk.Conte
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
-	walletA, privKeyA := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...))
-	walletB, privKeyB := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...))
+	walletA, privKeyA, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...), 2021)
+	walletB, privKeyB, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...), 2022)
 
 	return ctx, keeper, walletA, privKeyA, walletB, privKeyB
 }
@@ -322,24 +324,24 @@ const defaultGasForTests uint64 = 500_000
 // in order to verify that every wasm call consumes gas
 type WasmCounterGasMeter struct {
 	wasmCounter uint64
-	gasMeter    sdk.GasMeter
+	gasMeter    stypes.GasMeter
 }
 
 func (wasmGasMeter *WasmCounterGasMeter) RefundGas(_ stypes.Gas, _ string) {}
 
-func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() sdk.Gas {
+func (wasmGasMeter *WasmCounterGasMeter) GasConsumed() stypes.Gas {
 	return wasmGasMeter.gasMeter.GasConsumed()
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) GasConsumedToLimit() sdk.Gas {
+func (wasmGasMeter *WasmCounterGasMeter) GasConsumedToLimit() stypes.Gas {
 	return wasmGasMeter.gasMeter.GasConsumedToLimit()
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) Limit() sdk.Gas {
+func (wasmGasMeter *WasmCounterGasMeter) Limit() stypes.Gas {
 	return wasmGasMeter.gasMeter.Limit()
 }
 
-func (wasmGasMeter *WasmCounterGasMeter) ConsumeGas(amount sdk.Gas, descriptor string) {
+func (wasmGasMeter *WasmCounterGasMeter) ConsumeGas(amount stypes.Gas, descriptor string) {
 	if (descriptor == "wasm contract" || descriptor == "contract sub-query") && amount > 0 {
 		wasmGasMeter.wasmCounter++
 	}
@@ -362,7 +364,11 @@ func (wasmGasMeter *WasmCounterGasMeter) GetWasmCounter() uint64 {
 	return wasmGasMeter.wasmCounter
 }
 
-var _ sdk.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
+func (wasmGasMeter *WasmCounterGasMeter) GasRemaining() uint64 {
+	return wasmGasMeter.gasMeter.GasRemaining()
+}
+
+var _ stypes.GasMeter = (*WasmCounterGasMeter)(nil) // check interface
 
 func queryHelper(
 	t *testing.T,
@@ -405,13 +411,34 @@ func queryHelperImpl(
 	// create new ctx with the same storage and set our gas meter
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
+		DeleteCost:       100,
+		ReadCostFlat:     100,
+		ReadCostPerByte:  1,
+		WriteCostFlat:    200,
+		WriteCostPerByte: 5,
+		IterNextCostFlat: 5,
+	}
+
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
+		DeleteCost:       10,
+		ReadCostFlat:     10,
+		ReadCostPerByte:  0,
+		WriteCostFlat:    20,
+		WriteCostPerByte: 1,
+		IterNextCostFlat: 1,
+	}
+
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter)
+	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
 
 	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
 
@@ -458,7 +485,7 @@ func execHelperCustomWasmCount(
 	wasmCallCount int64,
 	shouldSkipAttributes ...bool,
 ) ([]byte, sdk.Context, []byte, []ContractEvent, uint64, cosmwasm.StdError) {
-	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewCoin("denom", sdk.NewInt(coin))), wasmCallCount, shouldSkipAttributes...)
+	results, err := execTxBuilderImpl(t, keeper, ctx, contractAddress, txSender, senderPrivKey, []string{execMsg}, isErrorEncrypted, isV1Contract, gas, sdk.NewCoins(sdk.NewCoin("denom", math.NewInt(coin))), wasmCallCount, shouldSkipAttributes...)
 
 	if len(results) != 1 {
 		panic("Single msg test somehow returned multiple results")
@@ -583,13 +610,34 @@ func execTxBuilderImpl(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
+		DeleteCost:       100,
+		ReadCostFlat:     100,
+		ReadCostPerByte:  1,
+		WriteCostFlat:    200,
+		WriteCostPerByte: 5,
+		IterNextCostFlat: 5,
+	}
+
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
+		DeleteCost:       10,
+		ReadCostFlat:     10,
+		ReadCostPerByte:  0,
+		WriteCostFlat:    20,
+		WriteCostPerByte: 1,
+		IterNextCostFlat: 1,
+	}
+
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter)
+	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
 
 	ctx = PrepareExecSignedTxWithMultipleMsgs(t, keeper, ctx, txSender, senderPrivKey, secretMsgsBz, contractAddress, coins)
 
@@ -602,7 +650,7 @@ func execTxBuilderImpl(
 		// simulate the check in baseapp
 		if keeper.LastMsgManager.GetMarker() {
 			errResult := ErrorResult{
-				Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
+				Generic: sdkerrors.ErrLastTx.Wrap("Error"),
 			}
 			return results, &errResult
 		}
@@ -707,13 +755,34 @@ func initHelperImpl(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
+		DeleteCost:       100,
+		ReadCostFlat:     100,
+		ReadCostPerByte:  1,
+		WriteCostFlat:    200,
+		WriteCostPerByte: 5,
+		IterNextCostFlat: 5,
+	}
+
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
+		DeleteCost:       10,
+		ReadCostFlat:     10,
+		ReadCostPerByte:  0,
+		WriteCostFlat:    20,
+		WriteCostPerByte: 1,
+		IterNextCostFlat: 1,
+	}
+
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter)
+	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, admin, creatorPrivKey, initMsgBz, codeID, sentFunds)
 	// make the label a random base64 string, because why not?
@@ -814,13 +883,34 @@ func migrateHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
+		DeleteCost:       100,
+		ReadCostFlat:     100,
+		ReadCostPerByte:  1,
+		WriteCostFlat:    200,
+		WriteCostPerByte: 5,
+		IterNextCostFlat: 5,
+	}
+
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
+		DeleteCost:       10,
+		ReadCostFlat:     10,
+		ReadCostPerByte:  0,
+		WriteCostFlat:    20,
+		WriteCostPerByte: 1,
+		IterNextCostFlat: 1,
+	}
+
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter)
+	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
 
 	ctx = prepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
 
@@ -830,7 +920,7 @@ func migrateHelper(
 	// simulate the check in baseapp
 	if keeper.LastMsgManager.GetMarker() {
 		errResult := ErrorResult{
-			Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
+			Generic: sdkerrors.ErrLastTx.Wrap("Error"),
 		}
 		return MigrateResult{}, &errResult
 	}
@@ -897,13 +987,34 @@ func updateAdminHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
+		DeleteCost:       100,
+		ReadCostFlat:     100,
+		ReadCostPerByte:  1,
+		WriteCostFlat:    200,
+		WriteCostPerByte: 5,
+		IterNextCostFlat: 5,
+	}
+
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
+		DeleteCost:       10,
+		ReadCostFlat:     10,
+		ReadCostPerByte:  0,
+		WriteCostFlat:    20,
+		WriteCostPerByte: 1,
+		IterNextCostFlat: 1,
+	}
+
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter)
+	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
 
 	if newAdmin.Empty() {
 		ctx = prepareClearAdminSignedTx(t, keeper, ctx, contractAddress.String(), sender, senderPrivkey)
@@ -940,7 +1051,7 @@ func fakeUpdateContractAdmin(ctx sdk.Context,
 
 	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, caller)
 	if err != nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+		return sdkerrors.ErrInvalidRequest.Wrap(err.Error())
 	}
 
 	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
@@ -997,13 +1108,33 @@ func fakeUpdateAdminHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
+		DeleteCost:       100,
+		ReadCostFlat:     100,
+		ReadCostPerByte:  1,
+		WriteCostFlat:    200,
+		WriteCostPerByte: 5,
+		IterNextCostFlat: 5,
+	}
+
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
+		DeleteCost:       10,
+		ReadCostFlat:     10,
+		ReadCostPerByte:  0,
+		WriteCostFlat:    20,
+		WriteCostPerByte: 1,
+		IterNextCostFlat: 1,
+	}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter)
+	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
 
 	if newAdmin.Empty() {
 		ctx = prepareClearAdminSignedTx(t, keeper, ctx, contractAddress.String(), sender, senderPrivkey)
@@ -1036,28 +1167,28 @@ func fakeMigrate(ctx sdk.Context,
 
 	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, caller)
 	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+		return nil, sdkerrors.ErrInvalidRequest.Wrap(err.Error())
 	}
 
 	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
 
 	contractInfo, _, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, sdkerrors.Wrap(err, "unknown contract").Error())
+		return nil, sdkerrors.ErrInvalidRequest.Wrap(errorsmod.Wrap(err, "unknown contract").Error())
 	}
 
 	newCodeInfo, err := k.GetCodeInfo(ctx, newCodeID)
 	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, sdkerrors.Wrap(err, "unknown code").Error())
+		return nil, sdkerrors.ErrInvalidRequest.Wrap(errorsmod.Wrap(err, "unknown code").Error())
 	}
 
 	// check for IBC flag
 	switch report, err := k.wasmer.AnalyzeCode(newCodeInfo.CodeHash); {
 	case err != nil:
-		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
+		return nil, errorsmod.Wrap(types.ErrMigrationFailed, err.Error())
 	case !report.HasIBCEntryPoints && contractInfo.IBCPortID != "":
 		// prevent update of ibc contract to non ibc contract
-		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, "requires ibc callbacks")
+		return nil, errorsmod.Wrap(types.ErrMigrationFailed, "requires ibc callbacks")
 	case report.HasIBCEntryPoints && contractInfo.IBCPortID == "":
 		// add ibc port
 		ibcPort, err := k.ensureIbcPort(ctx, contractAddress)
@@ -1096,11 +1227,11 @@ func fakeMigrate(ctx sdk.Context,
 		case v1wasmTypes.DataWithInternalReplyInfo:
 			result, jsonError = json.Marshal(res)
 			if jsonError != nil {
-				return nil, sdkerrors.Wrap(jsonError, "couldn't marshal internal reply info")
+				return nil, errorsmod.Wrap(jsonError, "couldn't marshal internal reply info")
 			}
 		}
 
-		return result, sdkerrors.Wrap(types.ErrMigrationFailed, migrateErr.Error())
+		return result, errorsmod.Wrap(types.ErrMigrationFailed, migrateErr.Error())
 	}
 
 	// update contract key with new one
@@ -1130,24 +1261,24 @@ func fakeMigrate(ctx sdk.Context,
 	case *v010wasmTypes.HandleResponse:
 		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
 		if err != nil {
-			return nil, sdkerrors.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
+			return nil, errorsmod.Wrap(err, "couldn't convert v0.10 messages to v1 messages")
 		}
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, subMessages, res.Log, []v1wasmTypes.Event{}, res.Data, msg, sigInfo)
 		if err != nil {
-			return nil, sdkerrors.Wrap(err, "dispatch")
+			return nil, errorsmod.Wrap(err, "dispatch")
 		}
 
 		return data, nil
 	case *v1wasmTypes.Response:
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, msg, sigInfo)
 		if err != nil {
-			return nil, sdkerrors.Wrap(err, "dispatch")
+			return nil, errorsmod.Wrap(err, "dispatch")
 		}
 
 		return data, nil
 	default:
-		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, fmt.Sprintf("cannot detect response type: %+v", res))
+		return nil, errorsmod.Wrap(types.ErrMigrationFailed, fmt.Sprintf("cannot detect response type: %+v", res))
 	}
 }
 
@@ -1183,13 +1314,33 @@ func fakeMigrateHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
+
+	kvGasConfig := stypes.GasConfig{
+		HasCost:          100,
+		DeleteCost:       100,
+		ReadCostFlat:     100,
+		ReadCostPerByte:  1,
+		WriteCostFlat:    200,
+		WriteCostPerByte: 5,
+		IterNextCostFlat: 5,
+	}
+
+	transientGasConfig := stypes.GasConfig{
+		HasCost:          10,
+		DeleteCost:       10,
+		ReadCostFlat:     10,
+		ReadCostPerByte:  0,
+		WriteCostFlat:    20,
+		WriteCostPerByte: 1,
+		IterNextCostFlat: 1,
+	}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter)
+	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
 
 	ctx = prepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
 
@@ -1199,7 +1350,7 @@ func fakeMigrateHelper(
 	// simulate the check in baseapp
 	if keeper.LastMsgManager.GetMarker() {
 		errResult := ErrorResult{
-			Generic: sdkerrors.Wrap(sdkerrors.ErrLastTx, "Error"),
+			Generic: sdkerrors.ErrLastTx.Wrap("Error"),
 		}
 		return MigrateResult{}, &errResult
 	}

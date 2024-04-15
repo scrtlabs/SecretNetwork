@@ -10,19 +10,19 @@ import (
 )
 
 const (
-	ModuleName                    = types.ModuleName
-	StoreKey                      = types.StoreKey
-	TStoreKey                     = types.TStoreKey
-	QuerierRoute                  = types.QuerierRoute
-	RouterKey                     = types.RouterKey
-	MaxWasmSize                   = types.MaxWasmSize
-	MaxLabelSize                  = types.MaxLabelSize
-	BuildTagRegexp                = types.BuildTagRegexp
-	MaxBuildTagSize               = types.MaxBuildTagSize
-	CustomEventType               = types.CustomEventType
-	AttributeKeyContractAddr      = types.AttributeKeyContractAddr
-	GasMultiplier                 = types.GasMultiplier
-	MaxGas                        = types.MaxGas
+	ModuleName               = types.ModuleName
+	StoreKey                 = types.StoreKey
+	TStoreKey                = types.TStoreKey
+	QuerierRoute             = types.QuerierRoute
+	RouterKey                = types.RouterKey
+	MaxWasmSize              = types.MaxWasmSize
+	MaxLabelSize             = types.MaxLabelSize
+	BuildTagRegexp           = types.BuildTagRegexp
+	MaxBuildTagSize          = types.MaxBuildTagSize
+	CustomEventType          = types.CustomEventType
+	AttributeKeyContractAddr = types.AttributeKeyContractAddr
+	GasMultiplier            = types.GasMultiplier
+	MaxGas                   = types.MaxGas
 	// QueryListContractByCode       = keeper.QueryListContractByCode
 	// QueryGetContract              = keeper.QueryGetContract
 	// QueryGetContractState         = keeper.QueryGetContractState
@@ -31,7 +31,7 @@ const (
 	// QueryContractKey              = keeper.QueryContractKey
 	// QueryContractAddress          = keeper.QueryContractAddress
 	// QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
-	DefaultConfigTemplate         = types.DefaultConfigTemplate
+	DefaultConfigTemplate = types.DefaultConfigTemplate
 )
 
 var (
@@ -62,21 +62,21 @@ var (
 	NewKeeper                 = keeper.NewKeeper
 	NewQuerier                = keeper.NewGrpcQuerier
 	// NewLegacyQuerier          = keeper.NewLegacyQuerier
-	DefaultQueryPlugins       = keeper.DefaultQueryPlugins
-	BankQuerier               = keeper.BankQuerier
-	NoCustomQuerier           = keeper.NoCustomQuerier
-	StakingQuerier            = keeper.StakingQuerier
-	WasmQuerier               = keeper.WasmQuerier
+	DefaultQueryPlugins = keeper.DefaultQueryPlugins
+	BankQuerier         = keeper.BankQuerier
+	NoCustomQuerier     = keeper.NoCustomQuerier
+	StakingQuerier      = keeper.StakingQuerier
+	WasmQuerier         = keeper.WasmQuerier
 	// MakeTestCodec             = keeper.MakeTestCodec
 	// CreateTestInput           = keeper.CreateTestInput
 	// CreateFakeFundedAccount   = keeper.CreateFakeFundedAccount
 	// TestHandler               = keeper.TestHandler
 	// PrepareInitSignedTx       = keeper.PrepareInitSignedTx
 	// PrepareExecSignedTx       = keeper.PrepareExecSignedTx
-	NewWasmSnapshotter        = keeper.NewWasmSnapshotter
-	ContractFromPortID        = keeper.ContractFromPortID
-	NewCountTXDecorator       = keeper.NewCountTXDecorator
-	NewMsgServerImpl          = keeper.NewMsgServerImpl
+	NewWasmSnapshotter  = keeper.NewWasmSnapshotter
+	ContractFromPortID  = keeper.ContractFromPortID
+	NewCountTXDecorator = keeper.NewCountTXDecorator
+	NewMsgServerImpl    = keeper.NewMsgServerImpl
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc

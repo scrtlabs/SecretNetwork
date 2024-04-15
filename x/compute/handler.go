@@ -5,11 +5,11 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	errorsmod "cosmossdk.io/errors"
+	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	errorsmod "cosmossdk.io/errors"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 

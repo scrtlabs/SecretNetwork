@@ -17,12 +17,12 @@ import (
 )
 
 var (
-	_ module.AppModule              = AppModule{}
-	_ module.HasName                = AppModule{}
-	_ module.HasGenesis             = AppModule{}
-	_ module.HasServices            = AppModule{}
-	_ module.HasConsensusVersion    = AppModule{}
-	_ module.AppModuleBasic         = AppModuleBasic{}
+	_ module.AppModule           = AppModule{}
+	_ module.HasName             = AppModule{}
+	_ module.HasGenesis          = AppModule{}
+	_ module.HasServices         = AppModule{}
+	_ module.HasConsensusVersion = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
 )
 
 // AppModuleBasic defines the basic application module used by the compute module.
