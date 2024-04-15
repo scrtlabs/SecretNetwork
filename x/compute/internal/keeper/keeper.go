@@ -25,7 +25,7 @@ import (
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	// authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
@@ -312,17 +312,17 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktx
 			return nil, 0, nil, nil, nil, errorsmod.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
 		}
 	} else {
-		// signingData := authsigning.SignerData{
-		// 	ChainID:       ctx.ChainID(),
-		// 	AccountNumber: signerAcc.GetAccountNumber(),
-		// 	Sequence:      signerAcc.GetSequence() - 1,
-		// }
-		// txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
-		// modeHandler := txConfig.SignModeHandler()
-		// TODO: FIX
-		// signBytes, err = modeHandler.GetSignBytes(signMode, signingData, tx)
-			return nil, 0, nil, nil, nil, errorsmod.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
+		signingData := authsigning.SignerData{
+			ChainID:       ctx.ChainID(),
+			AccountNumber: signerAcc.GetAccountNumber(),
+			Sequence:      signerAcc.GetSequence() - 1,
+            PubKey:        signerAcc.GetPubKey(),
+		}
+		txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
+		modeHandler := txConfig.SignModeHandler()
+		signBytes, err = authsigning.GetSignBytesAdapter(ctx, modeHandler, signMode, signingData, tx)
 		if err != nil {
+            return nil, 0, nil, nil, nil, errorsmod.Wrap(types.ErrSigFailed, fmt.Sprintf("Unable to recreate sign bytes for the tx: %s", err.Error()))
 		}
 	}
 
