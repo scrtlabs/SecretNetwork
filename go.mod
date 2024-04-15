@@ -20,7 +20,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.16
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v4 v4.1.1
-	github.com/cosmos/ibc-go/v4 v4.5.1
+	github.com/cosmos/ibc-go/v4 v4.6.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.3
 	github.com/google/gofuzz v1.2.0
