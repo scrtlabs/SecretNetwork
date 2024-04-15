@@ -4,7 +4,7 @@ go 1.21
 
 replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.13-0.20230802150248-ea64f27dc58d
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.45.13-0.20240123105116-fa873fadfa55
 	// PFM: v4.1.1 + https://github.com/cosmos/ibc-apps/commit/455757bb5771c29cf2f83b59e37f6513e07c92be.patch
 	github.com/cosmos/ibc-apps/v4 => github.com/scrtlabs/ibc-apps/v4 v4.1.2-0.20240312165106-908dc3766519
 	// Fix OSX Ledger Connection Issues - Premerged https://github.com/cosmos/ledger-cosmos-go/pull/36/files

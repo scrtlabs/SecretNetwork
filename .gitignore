@@ -45,3 +45,4 @@ x/compute/internal/keeper/testdata/test-contract/target
 x/compute/internal/keeper/testdata/v1-sanity-contract/target
 build
 check-hw/target
+cmd/secretd/__debug*
