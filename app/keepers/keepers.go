@@ -607,10 +607,12 @@ func (ak *SecretAppKeepers) InitKeys() {
 		feegrant.StoreKey,
 		authzkeeper.StoreKey,
 		icahosttypes.StoreKey,
+		icacontrollertypes.StoreKey,
 		ibcpacketforwardtypes.StoreKey,
 		ibcfeetypes.StoreKey,
 		ibcswitch.StoreKey,
 		ibchookstypes.StoreKey,
+		crisistypes.StoreKey,
 	)
 
 	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
