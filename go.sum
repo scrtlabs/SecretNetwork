@@ -955,8 +955,8 @@ github.com/sagikazarmark/slog-shim v0.1.0/go.mod h1:SrcSrq8aKtyuqEI1uvTDTK1arOWR
 github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da/go.mod h1:gi+0XIa01GRL2eRQVjQkKGqKF3SF9vZR/HnPullcV2E=
 github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71efZx0=
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
-github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240319223406-51e8978ed8d6 h1:X2vkCDte8W+UVJCPQziSSpQ0+v8eQ5+3lvK6hgm6qMc=
-github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240319223406-51e8978ed8d6/go.mod h1:ehEJ6NYUAKWxVGMczCoQJ9XXbEURe1T8KG7mL5PAMok=
+github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240416135944-cd9c24697359 h1:7wdVFnykc7X58o1bF+Wn72KWfWNBEQSJoeEt7ojj5a4=
+github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240416135944-cd9c24697359/go.mod h1:ehEJ6NYUAKWxVGMczCoQJ9XXbEURe1T8KG7mL5PAMok=
 github.com/scrtlabs/tendermint v0.38.2 h1:a2L2v70guPMvQNbr38Cl5jwuLRBJim1iznBV+4x7fyU=
 github.com/scrtlabs/tendermint v0.38.2/go.mod h1:FbzZXk9nkr7atxsGcBn6tlM6Q+BD4GA6wlgY5Qk3FzQ=
 github.com/scrtlabs/tm-secret-enclave v1.11.3 h1:3WVDS4x11tidRvCK/FbemtuVDMgujvSzMSt9sKLaMwY=
