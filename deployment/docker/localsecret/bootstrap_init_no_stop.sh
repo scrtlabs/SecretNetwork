@@ -17,27 +17,37 @@ then
   fast_blocks=${FAST_BLOCKS:-"false"}
 
   mkdir -p ./.sgx_secrets
-  secretd config chain-id "$chain_id"
-  secretd config output json
-  secretd config keyring-backend test
+  secretd config set client chain-id "$chain_id"
+  secretd config set client output json
+  secretd config set client keyring-backend test
 
   # export SECRET_NETWORK_CHAIN_ID=secretdev-1
   # export SECRET_NETWORK_KEYRING_BACKEND=test
   secretd init banana --chain-id "$chain_id"
 
   cp ~/node_key.json ~/.secretd/config/node_key.json
+  # jq '
+  #   .consensus_params.block.time_iota_ms = "10" |
+  #   .app_state.staking.params.unbonding_time = "90s" |
+  #   .app_state.gov.voting_params.voting_period = "90s" |
+  #   .app_state.gov.voting_params.expedited_voting_period = "15s" |
+  #   .app_state.crisis.constant_fee.denom = "uscrt" |
+  #   .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
+  #   .app_state.gov.deposit_params.min_expedited_deposit[0].denom = "uscrt" |
+  #   .app_state.mint.params.mint_denom = "uscrt" |
+  #   .app_state.staking.params.bond_denom = "uscrt"
+  # ' ~/.secretd/config/genesis.json > ~/.secretd/config/genesis.json.tmp && mv ~/.secretd/config/genesis.json{.tmp,}
+
   jq '
     .consensus_params.block.time_iota_ms = "10" |
     .app_state.staking.params.unbonding_time = "90s" |
     .app_state.gov.voting_params.voting_period = "90s" |
-    .app_state.gov.voting_params.expedited_voting_period = "15s" |
     .app_state.crisis.constant_fee.denom = "uscrt" |
     .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
-    .app_state.gov.deposit_params.min_expedited_deposit[0].denom = "uscrt" |
     .app_state.mint.params.mint_denom = "uscrt" |
     .app_state.staking.params.bond_denom = "uscrt"
   ' ~/.secretd/config/genesis.json > ~/.secretd/config/genesis.json.tmp && mv ~/.secretd/config/genesis.json{.tmp,}
-
+  
   if [ "${fast_blocks}" = "true" ]; then
     sed -E -i '/timeout_(propose|prevote|precommit|commit)/s/[0-9]+m?s/200ms/' ~/.secretd/config/config.toml
   fi
