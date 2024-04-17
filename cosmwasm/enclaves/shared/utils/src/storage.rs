@@ -76,6 +76,40 @@ const FILE_MD_ENCRYPTED_FILENAME_SIZE: usize = 260;
 const FILE_MD_ENCRYPTED_DATA_NODES: usize = 96;
 
 #[repr(packed)]
+pub struct FileDataKeyAndMac {
+    pub key: [u8; 16],
+    pub gmac: [u8; 16],
+}
+
+impl FileDataKeyAndMac {
+    unsafe fn decrypt_once(
+        &self,
+        p_src: *const uint8_t,
+        src_len: uint32_t,
+        p_dst: *mut uint8_t,
+        p_iv: &[u8; 12],
+    ) -> Result<(), sgx_status_t> {
+        let res = sgx_rijndael128GCM_decrypt(
+            &self.key,
+            p_src,
+            src_len,
+            p_dst,
+            p_iv.as_ptr(),
+            12,
+            null(),
+            0,
+            &self.gmac,
+        );
+
+        if sgx_status_t::SGX_SUCCESS != res {
+            return Err(res);
+        }
+
+        Ok(())
+    }
+}
+
+#[repr(packed)]
 pub struct FileMdEncrypted {
     pub clean_filename: [u8; FILE_MD_ENCRYPTED_FILENAME_SIZE],
     pub size: u64,
@@ -84,8 +118,7 @@ pub struct FileMdEncrypted {
     pub mc_uuid: [u8; 16],
     pub mc_value: u32,
 
-    pub mht_key: [u8; 16],
-    pub mht_gmac: [u8; 16],
+    pub root_mht: FileDataKeyAndMac,
 
     pub data: [u8; FILE_MD_ENCRYPTED_DATA_SIZE],
 }
@@ -98,15 +131,9 @@ pub struct FileMd {
 }
 
 #[repr(packed)]
-pub struct FileDataKeys {
-    pub key: [u8; 16],
-    pub gmac: [u8; 16],
-}
-
-#[repr(packed)]
 pub struct FileMhtNode {
-    pub data: [FileDataKeys; FILE_MD_ENCRYPTED_DATA_NODES],
-    pub lower_nodes: [FileDataKeys; 32],
+    pub data: [FileDataKeyAndMac; FILE_MD_ENCRYPTED_DATA_NODES],
+    pub lower_nodes: [FileDataKeyAndMac; 32],
 }
 
 pub fn unseal_file_from_2_17(
@@ -154,12 +181,17 @@ pub fn unseal_file_from_2_17(
         key_request.cpu_svn.svn = (*p_md).plain.cpu_svn;
         key_request.key_id.id = (*p_md).plain.key_id;
 
-        let mut cur_key: sgx_key_128bit_t = sgx_key_128bit_t::default();
+        let mut cur_key_mac = FileDataKeyAndMac {
+            key: sgx_key_128bit_t::default(),
+            gmac: (*p_md).plain.meta_data_gmac,
+        };
 
-        let mut st = sgx_get_key(&key_request, &mut cur_key);
-        if sgx_status_t::SGX_SUCCESS != st {
-            warn!("gen key failed");
-            return Err(st);
+        match sgx_get_key(&key_request, &mut cur_key_mac.key) {
+            sgx_status_t::SGX_SUCCESS => {}
+            err_code => {
+                warn!("gen key failed");
+                return Err(err_code);
+            }
         }
 
         let /* mut */ md_decr: FileMdEncrypted = FileMdEncrypted {
@@ -167,29 +199,23 @@ pub fn unseal_file_from_2_17(
             size: 0,
             mc_uuid: [0; 16],
             mc_value: 0,
-            mht_key: [0; 16],
-            mht_gmac: [0; 16],
-
-            data: [0; 3072],
+            root_mht: FileDataKeyAndMac{
+                key: [0; 16],
+                gmac: [0; 16],
+            },
+            data: [0; FILE_MD_ENCRYPTED_DATA_SIZE],
         };
 
         let p_iv: [u8; 12] = [0; 12];
 
-        st = sgx_rijndael128GCM_decrypt(
-            &cur_key,
+        if let Err(e) = cur_key_mac.decrypt_once(
             std::ptr::addr_of!((*p_md).encr) as *const u8,
             mem::size_of::<FileMdEncrypted>() as u32,
             std::ptr::addr_of!(md_decr) as *mut uint8_t,
-            p_iv.as_ptr() as *const u8,
-            12,
-            null(),
-            0,
-            &(*p_md).plain.meta_data_gmac,
-        );
-
-        if sgx_status_t::SGX_SUCCESS != st {
-            // warn!("decrypt file md failed");
-            return Err(st);
+            &p_iv,
+        ) {
+            warn!("decrypt file md failed");
+            return Err(e);
         }
 
         if should_check_fname {
@@ -256,19 +282,13 @@ pub fn unseal_file_from_2_17(
                 .offset(mem::size_of::<FileMd>() as isize)
                 as *mut FileMhtNode;
 
-            st = sgx_rijndael128GCM_decrypt(
-                &md_decr.mht_key,
+            if let Err(e) = md_decr.root_mht.decrypt_once(
                 p_mht_node as *const u8,
                 mem::size_of::<FileMhtNode>() as u32,
                 p_mht_node as *mut uint8_t,
-                p_iv.as_ptr() as *const u8,
-                12,
-                null(),
-                0,
-                &md_decr.mht_gmac,
-            );
-            if sgx_status_t::SGX_SUCCESS != st {
-                return Err(st);
+                &p_iv,
+            ) {
+                return Err(e);
             }
 
             let mut offs_src = mem::size_of::<FileMd>() + node_size;
@@ -276,19 +296,13 @@ pub fn unseal_file_from_2_17(
             for i_node in 0..num_nodes {
                 let keys = &(*p_mht_node).data[i_node];
 
-                st = sgx_rijndael128GCM_decrypt(
-                    &keys.key,
+                if let Err(e) = keys.decrypt_once(
                     bytes_src.as_ptr().offset(offs_src as isize),
                     node_size as u32,
                     bytes.as_mut_ptr().offset(offs_dst as isize),
-                    p_iv.as_ptr() as *const u8,
-                    12,
-                    null(),
-                    0,
-                    &keys.gmac,
-                );
-                if sgx_status_t::SGX_SUCCESS != st {
-                    return Err(st);
+                    &p_iv,
+                ) {
+                    return Err(e);
                 }
 
                 offs_src += node_size;
@@ -307,26 +321,30 @@ pub fn migrate_file_from_2_17_safe(
     should_check_fname: bool,
 ) -> Result<(), sgx_status_t> {
     if Path::new(s_path).exists() {
-        let data = match unseal_file_from_2_17(s_path, should_check_fname) {
-            Ok(x) => x,
-            Err(e) => {
-                error!("Couldn't unseal file {}, {}", s_path, e);
+        if SgxFile::open(s_path).is_ok() {
+            info!("File {} is already converted", s_path);
+        } else {
+            let data = match unseal_file_from_2_17(s_path, should_check_fname) {
+                Ok(x) => x,
+                Err(e) => {
+                    error!("Couldn't unseal file {}, {}", s_path, e);
+                    return Err(e);
+                }
+            };
+
+            let s_path_bkp = s_path.to_string() + ".bkp";
+            if let Err(e) = fs::copy(s_path, &s_path_bkp) {
+                error!("Couldn't backup {} into {}, {}", s_path, s_path_bkp, e);
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+
+            if let Err(e) = seal(data.as_slice(), s_path) {
+                error!("Couldn't RE-seal file {}, {}", s_path, e);
                 return Err(e);
             }
-        };
 
-        let s_path_bkp = s_path.to_string() + ".bkp";
-        if let Err(e) = fs::copy(s_path, &s_path_bkp) {
-            error!("Couldn't backup {} into {}, {}", s_path, s_path_bkp, e);
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            info!("File {} successfully RE-sealed", s_path);
         }
-
-        if let Err(e) = seal(data.as_slice(), s_path) {
-            error!("Couldn't RE-seal file {}, {}", s_path, e);
-            return Err(e);
-        }
-
-        info!("File {} successfully RE-sealed", s_path);
     } else {
         info!("File {} doesn't exist, skipping", s_path);
     }
