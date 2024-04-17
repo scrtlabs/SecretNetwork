@@ -2,9 +2,11 @@ use crate::results::UnwrapOrSgxErrorUnexpected;
 
 use core::mem;
 use core::ptr::null;
+use log::*;
 use log::{error, info};
 use std::io::{Read, Write};
 use std::path::Path;
+use std::ptr;
 use std::sgxfs::SgxFile;
 use std::slice;
 
@@ -71,6 +73,7 @@ pub struct FileMdPlain {
 
 const FILE_MD_ENCRYPTED_DATA_SIZE: usize = 3072;
 const FILE_MD_ENCRYPTED_FILENAME_SIZE: usize = 260;
+const FILE_MD_ENCRYPTED_DATA_NODES: usize = 96;
 
 #[repr(packed)]
 pub struct FileMdEncrypted {
@@ -94,28 +97,48 @@ pub struct FileMd {
     pub padding: [u8; 610],
 }
 
+#[repr(packed)]
+pub struct FileDataKeys {
+    pub key: [u8; 16],
+    pub gmac: [u8; 16],
+}
+
+#[repr(packed)]
+pub struct FileMhtNode {
+    pub data: [FileDataKeys; FILE_MD_ENCRYPTED_DATA_NODES],
+    pub lower_nodes: [FileDataKeys; 32],
+}
+
 pub fn unseal_file_from_2_17(
     s_path: &str,
     should_check_fname: bool,
 ) -> Result<Vec<u8>, sgx_status_t> {
     let mut file = match File::open(s_path) {
         Ok(f) => f,
-        Err(_) => {
-            return Err(/*e*/ sgx_status_t::SGX_ERROR_UNEXPECTED);
+        Err(e) => {
+            warn!("Failed to open file: {}", e);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
     };
 
     let mut bytes = Vec::new();
-    if file.read_to_end(&mut bytes).is_err() {
-        return Err(/*e*/ sgx_status_t::SGX_ERROR_UNEXPECTED);
+    if let Err(e) = file.read_to_end(&mut bytes) {
+        warn!("Failed to read file: {}", e);
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     if bytes.len() < mem::size_of::<FileMd>() {
+        warn!("file too small");
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     unsafe {
         let p_md = bytes.as_mut_ptr() as *const FileMd;
+
+        if (*p_md).plain.update_flag > 0 {
+            warn!("file left in recovery mode, unsupported");
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED); // we don't support recovery
+        }
 
         let mut key_request = sgx_key_request_t {
             key_name: sgx_types::SGX_KEYSELECT_SEAL,
@@ -135,6 +158,7 @@ pub fn unseal_file_from_2_17(
 
         let mut st = sgx_get_key(&key_request, &mut cur_key);
         if sgx_status_t::SGX_SUCCESS != st {
+            warn!("gen key failed");
             return Err(st);
         }
 
@@ -164,16 +188,9 @@ pub fn unseal_file_from_2_17(
         );
 
         if sgx_status_t::SGX_SUCCESS != st {
+            // warn!("decrypt file md failed");
             return Err(st);
         }
-
-        let ret_size = std::ptr::read_unaligned(std::ptr::addr_of!(md_decr.size)) as usize;
-        if ret_size > FILE_MD_ENCRYPTED_DATA_SIZE {
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-        }
-
-        bytes.resize(ret_size, 0);
-        bytes.copy_from_slice(slice::from_raw_parts(md_decr.data.as_ptr(), ret_size));
 
         if should_check_fname {
             let raw_path = s_path.as_bytes();
@@ -203,6 +220,82 @@ pub fn unseal_file_from_2_17(
             if src_name != dst_name {
                 return Err(sgx_status_t::SGX_ERROR_FILE_NAME_MISMATCH);
             }
+        }
+
+        let ret_size = std::ptr::read_unaligned(std::ptr::addr_of!(md_decr.size)) as usize;
+
+        if ret_size <= FILE_MD_ENCRYPTED_DATA_SIZE {
+            bytes.resize(ret_size, 0);
+            bytes.copy_from_slice(slice::from_raw_parts(md_decr.data.as_ptr(), ret_size));
+        } else {
+            let node_size = mem::size_of::<FileMd>(); // 4K
+
+            let num_nodes = (ret_size - FILE_MD_ENCRYPTED_DATA_SIZE + node_size - 1) / node_size;
+            if num_nodes > FILE_MD_ENCRYPTED_DATA_NODES {
+                warn!("too many nodes, indirect files not supported");
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+
+            let size_required = mem::size_of::<FileMd>() + node_size * (num_nodes + 1);
+            if bytes.len() < size_required {
+                warn!("file too short");
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+
+            let mut bytes_src = bytes;
+            bytes = Vec::new();
+            bytes.resize(FILE_MD_ENCRYPTED_DATA_SIZE + node_size * num_nodes, 7); // allocate with padding
+
+            let mut offs_dst = FILE_MD_ENCRYPTED_DATA_SIZE;
+
+            ptr::copy_nonoverlapping(md_decr.data.as_ptr(), bytes.as_mut_ptr(), offs_dst);
+
+            // Decode mht node
+            let p_mht_node = bytes_src
+                .as_mut_ptr()
+                .offset(mem::size_of::<FileMd>() as isize)
+                as *mut FileMhtNode;
+
+            st = sgx_rijndael128GCM_decrypt(
+                &md_decr.mht_key,
+                p_mht_node as *const u8,
+                mem::size_of::<FileMhtNode>() as u32,
+                p_mht_node as *mut uint8_t,
+                p_iv.as_ptr() as *const u8,
+                12,
+                null(),
+                0,
+                &md_decr.mht_gmac,
+            );
+            if sgx_status_t::SGX_SUCCESS != st {
+                return Err(st);
+            }
+
+            let mut offs_src = mem::size_of::<FileMd>() + node_size;
+
+            for i_node in 0..num_nodes {
+                let keys = &(*p_mht_node).data[i_node];
+
+                st = sgx_rijndael128GCM_decrypt(
+                    &keys.key,
+                    bytes_src.as_ptr().offset(offs_src as isize),
+                    node_size as u32,
+                    bytes.as_mut_ptr().offset(offs_dst as isize),
+                    p_iv.as_ptr() as *const u8,
+                    12,
+                    null(),
+                    0,
+                    &keys.gmac,
+                );
+                if sgx_status_t::SGX_SUCCESS != st {
+                    return Err(st);
+                }
+
+                offs_src += node_size;
+                offs_dst += node_size;
+            }
+
+            bytes.resize(ret_size, 0); // truncate the padding
         }
     };
 
