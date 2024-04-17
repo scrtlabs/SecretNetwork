@@ -208,15 +208,12 @@ pub fn unseal_file_from_2_17(
 
         let p_iv: [u8; 12] = [0; 12];
 
-        if let Err(e) = cur_key_mac.decrypt_once(
+        cur_key_mac.decrypt_once(
             std::ptr::addr_of!((*p_md).encr) as *const u8,
             mem::size_of::<FileMdEncrypted>() as u32,
             std::ptr::addr_of!(md_decr) as *mut uint8_t,
             &p_iv,
-        ) {
-            warn!("decrypt file md failed");
-            return Err(e);
-        }
+        )?;
 
         if should_check_fname {
             let raw_path = s_path.as_bytes();
@@ -277,33 +274,27 @@ pub fn unseal_file_from_2_17(
             ptr::copy_nonoverlapping(md_decr.data.as_ptr(), bytes.as_mut_ptr(), offs_dst);
 
             // Decode mht node
-            let p_mht_node = bytes_src
-                .as_mut_ptr()
-                .offset(mem::size_of::<FileMd>() as isize)
-                as *mut FileMhtNode;
+            let p_mht_node =
+                bytes_src.as_mut_ptr().add(mem::size_of::<FileMd>()) as *mut FileMhtNode;
 
-            if let Err(e) = md_decr.root_mht.decrypt_once(
+            md_decr.root_mht.decrypt_once(
                 p_mht_node as *const u8,
                 mem::size_of::<FileMhtNode>() as u32,
                 p_mht_node as *mut uint8_t,
                 &p_iv,
-            ) {
-                return Err(e);
-            }
+            )?;
 
             let mut offs_src = mem::size_of::<FileMd>() + node_size;
 
             for i_node in 0..num_nodes {
                 let keys = &(*p_mht_node).data[i_node];
 
-                if let Err(e) = keys.decrypt_once(
-                    bytes_src.as_ptr().offset(offs_src as isize),
+                keys.decrypt_once(
+                    bytes_src.as_ptr().add(offs_src),
                     node_size as u32,
-                    bytes.as_mut_ptr().offset(offs_dst as isize),
+                    bytes.as_mut_ptr().add(offs_dst),
                     &p_iv,
-                ) {
-                    return Err(e);
-                }
+                )?;
 
                 offs_src += node_size;
                 offs_dst += node_size;
