@@ -1,5 +1,12 @@
 # CHANGELOG
 
+# 1.13.0
+
+- Support DCAP attestation
+  - EPID attestation is still supported, until it'll be phased-out by Intel
+- Migrate to SGX 2.20
+- Bump github.com/cosmos/ibc-go/v4 from 4.5.1 to 4.6.0.
+
 # 1.12.0
 
 - Fix the hardcoded admins feature
