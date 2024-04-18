@@ -144,7 +144,7 @@ pub struct MigrationContext {
 }
 
 impl MigrationContext {
-    pub unsafe fn proceed_from_2_17(
+    pub fn proceed_from_2_17(
         &mut self,
         s_path: &str,
         should_check_fname: bool,
@@ -154,6 +154,14 @@ impl MigrationContext {
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
 
+        return unsafe { self.proceed_internal(s_path, should_check_fname) };
+    }
+
+    unsafe fn proceed_internal(
+        &mut self,
+        s_path: &str,
+        should_check_fname: bool,
+    ) -> Result<(), sgx_status_t> {
         let p_md = self.m_inp.as_mut_ptr() as *mut FileMd;
 
         if (*p_md).plain.update_flag > 0 {
@@ -181,50 +189,7 @@ impl MigrationContext {
         if ret_size <= FILE_MD_ENCRYPTED_DATA_SIZE {
             self.allocate_res(ret_size, ret_size, &*p_md_encr);
         } else {
-            let node_size = mem::size_of::<FileMd>(); // 4K
-
-            let mut data_nodes =
-                (ret_size - FILE_MD_ENCRYPTED_DATA_SIZE + node_size - 1) / node_size;
-            let mht_nodes = (data_nodes + FILE_NODE_DATA_NODES - 1) / FILE_NODE_DATA_NODES;
-
-            let size_required = mem::size_of::<FileMd>() + node_size * (data_nodes + mht_nodes);
-            if self.m_inp.len() < size_required {
-                warn!("file too short");
-                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-            }
-
-            // allocate with padding
-            self.allocate_res(
-                FILE_MD_ENCRYPTED_DATA_SIZE + node_size * data_nodes,
-                FILE_MD_ENCRYPTED_DATA_SIZE,
-                &*p_md_encr,
-            );
-
-            let mut offs_dst = FILE_MD_ENCRYPTED_DATA_SIZE;
-            let mut offs_src = mem::size_of::<FileMd>();
-
-            let mut p_mk_0 = std::ptr::addr_of_mut!((*p_md_encr).root_mht);
-            let mut p_mk_1 = p_mk_0.add(1);
-
-            loop {
-
-                let chunk = if data_nodes <= FILE_NODE_DATA_NODES { data_nodes } else { FILE_NODE_DATA_NODES };
-
-                let p_mht_node = self.process_mht_node(&(*p_mk_0), &mut offs_src, &mut offs_dst, chunk)?;
-
-                if chunk == data_nodes {
-                    break;
-                }
-
-                ptr::copy_nonoverlapping((*p_mht_node).lower_nodes.as_ptr(), p_mk_1, FILE_NODE_CHILD_NODES);
-
-                p_mk_0 = p_mk_0.add(1);
-                p_mk_1 = p_mk_1.add(FILE_NODE_CHILD_NODES);
-
-                data_nodes -= chunk;
-            }
-
-            self.m_res.resize(ret_size, 0); // truncate the padding
+            self.process_all_mht_nodes(ret_size, &mut *p_md_encr)?;
         }
 
         Ok(())
@@ -298,6 +263,66 @@ impl MigrationContext {
         ptr::copy_nonoverlapping(md.data.as_ptr(), self.m_res.as_mut_ptr(), size_from_md);
     }
 
+    unsafe fn process_all_mht_nodes(
+        &mut self,
+        ret_size: usize,
+        md: &mut FileMdEncrypted,
+    ) -> Result<(), sgx_status_t> {
+        let node_size = mem::size_of::<FileMd>(); // 4K
+
+        let mut data_nodes = (ret_size - FILE_MD_ENCRYPTED_DATA_SIZE + node_size - 1) / node_size;
+        let mht_nodes = (data_nodes + FILE_NODE_DATA_NODES - 1) / FILE_NODE_DATA_NODES;
+
+        let size_required = mem::size_of::<FileMd>() + node_size * (data_nodes + mht_nodes);
+        if self.m_inp.len() < size_required {
+            warn!("file too short");
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+
+        // allocate with padding
+        self.allocate_res(
+            FILE_MD_ENCRYPTED_DATA_SIZE + node_size * data_nodes,
+            FILE_MD_ENCRYPTED_DATA_SIZE,
+            &md,
+        );
+
+        let mut offs_dst = FILE_MD_ENCRYPTED_DATA_SIZE;
+        let mut offs_src = mem::size_of::<FileMd>();
+
+        let mut p_mk_0 = std::ptr::addr_of_mut!(md.root_mht);
+        let mut p_mk_1 = p_mk_0.add(1);
+
+        loop {
+            let chunk = if data_nodes <= FILE_NODE_DATA_NODES {
+                data_nodes
+            } else {
+                FILE_NODE_DATA_NODES
+            };
+
+            let p_mht_node =
+                self.process_mht_node(&(*p_mk_0), &mut offs_src, &mut offs_dst, chunk)?;
+
+            if chunk == data_nodes {
+                break;
+            }
+
+            ptr::copy_nonoverlapping(
+                (*p_mht_node).lower_nodes.as_ptr(),
+                p_mk_1,
+                FILE_NODE_CHILD_NODES,
+            );
+
+            p_mk_0 = p_mk_0.add(1);
+            p_mk_1 = p_mk_1.add(FILE_NODE_CHILD_NODES);
+
+            data_nodes -= chunk;
+        }
+
+        self.m_res.resize(ret_size, 0); // truncate the padding
+
+        Ok(())
+    }
+
     unsafe fn process_mht_node(
         &mut self,
         parent_km: &FileDataKeyAndMac,
@@ -356,7 +381,7 @@ pub fn unseal_file_from_2_17(
         return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
-    unsafe { mctx.proceed_from_2_17(s_path, should_check_fname) }?;
+    mctx.proceed_from_2_17(s_path, should_check_fname)?;
 
     Ok(mctx.m_res)
 }
