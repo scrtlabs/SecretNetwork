@@ -154,7 +154,7 @@ impl MigrationContext {
             return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
         }
 
-        return unsafe { self.proceed_internal(s_path, should_check_fname) };
+        unsafe { self.proceed_internal(s_path, should_check_fname) }
     }
 
     unsafe fn proceed_internal(
@@ -283,7 +283,7 @@ impl MigrationContext {
         self.allocate_res(
             FILE_MD_ENCRYPTED_DATA_SIZE + node_size * data_nodes,
             FILE_MD_ENCRYPTED_DATA_SIZE,
-            &md,
+            md,
         );
 
         let mut offs_dst = FILE_MD_ENCRYPTED_DATA_SIZE;
