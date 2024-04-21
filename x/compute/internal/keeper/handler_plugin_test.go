@@ -271,7 +271,7 @@ func TestEncoding(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			var ctx sdk.Context
-			encoder := DefaultEncoders(tc.transferPortSource, encodingConfig.Marshaler)
+			encoder := DefaultEncoders(tc.transferPortSource, encodingConfig.Codec)
 			v1input, _ := V010MsgToV1SubMsg(addr1.String(), tc.input)
 			res, err := encoder.Encode(ctx, tc.sender, tc.srcContractIBCPort, v1input.Msg)
 			if tc.isError {
