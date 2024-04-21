@@ -16,10 +16,10 @@ DEB_LIB_DIR ?= /usr/lib
 
 DB_BACKEND ?= goleveldb
 
-SGX_MODE ?= HW
+SGX_MODE ?= SW
 BRANCH ?= develop
 DEBUG ?= 0
-DOCKER_TAG ?= latest
+DOCKER_TAG ?= secret-0.50.x
 
 TM_SGX ?= true
 
@@ -140,13 +140,16 @@ ifeq ($(DB_BACKEND),rocksdb)
   ldflags += -extldflags "-lrocksdb -llz4"
 endif
 
-ldflags += -s -w
+#ldflags += -s -w
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
 GO_TAGS := $(build_tags)
 # -ldflags
 LD_FLAGS := $(ldflags)
+
+# Turn 
+GCFLAGS := -gcflags="-N -l"
 
 all: build_all
 
@@ -156,14 +159,14 @@ go.sum: go.mod
 
 # Build the CLI tool
 build_cli:
-	go build -o secretcli -mod=readonly -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -o secretcli -mod=readonly $(GCFLAGS) -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
 	xgo --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
-	go build -mod=readonly -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -mod=readonly $(GCFLAGS) -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build-secret: build-linux
 

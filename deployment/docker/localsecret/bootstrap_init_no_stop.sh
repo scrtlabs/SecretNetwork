@@ -65,20 +65,20 @@ then
   c_mnemonic="chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge"
   d_mnemonic="word twist toast cloth movie predict advance crumble escape whale sail such angry muffin balcony keen move employ cook valve hurt glimpse breeze brick"
 
-  echo $a_mnemonic | secretd keys add a --recover
-  echo $b_mnemonic | secretd keys add b --recover
-  echo $c_mnemonic | secretd keys add c --recover
-  echo $d_mnemonic | secretd keys add d --recover
+  echo $a_mnemonic | secretd keys add a --recover --keyring-backend test
+  echo $b_mnemonic | secretd keys add b --recover --keyring-backend test
+  echo $c_mnemonic | secretd keys add c --recover --keyring-backend test
+  echo $d_mnemonic | secretd keys add d --recover --keyring-backend test
 
-  secretd add-genesis-account "$(secretd keys show -a a)" 1000000000000000000uscrt
-  secretd add-genesis-account "$(secretd keys show -a b)" 1000000000000000000uscrt
-  secretd add-genesis-account "$(secretd keys show -a c)" 1000000000000000000uscrt
-  secretd add-genesis-account "$(secretd keys show -a d)" 1000000000000000000uscrt
+  secretd add-genesis-account "$(secretd keys show -a a --keyring-backend test)" 1000000000000000000uscrt --keyring-backend test
+  secretd add-genesis-account "$(secretd keys show -a b --keyring-backend test)" 1000000000000000000uscrt --keyring-backend test
+  secretd add-genesis-account "$(secretd keys show -a c --keyring-backend test)" 1000000000000000000uscrt --keyring-backend test
+  secretd add-genesis-account "$(secretd keys show -a d --keyring-backend test)" 1000000000000000000uscrt --keyring-backend test
 
-  secretd gentx a 1000000uscrt --chain-id "$chain_id"
-  secretd gentx b 1000000uscrt --chain-id "$chain_id"
-  secretd gentx c 1000000uscrt --chain-id "$chain_id"
-  secretd gentx d 1000000uscrt --chain-id "$chain_id"
+  secretd gentx a 1000000uscrt --chain-id "$chain_id" --keyring-backend test
+  secretd gentx b 1000000uscrt --chain-id "$chain_id" --keyring-backend test
+  secretd gentx c 1000000uscrt --chain-id "$chain_id" --keyring-backend test
+  secretd gentx d 1000000uscrt --chain-id "$chain_id" --keyring-backend test
 
   secretd collect-gentxs
   secretd validate-genesis
