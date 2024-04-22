@@ -19,6 +19,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
 	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	"github.com/cosmos/gogoproto/proto"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -74,11 +75,14 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
+	"cosmossdk.io/x/tx/signing"
+	"github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	"github.com/cosmos/ibc-go/modules/capability"
 
@@ -104,7 +108,7 @@ import (
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	// paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -248,7 +252,18 @@ func MakeTestCodec() codec.Codec {
 
 func MakeEncodingConfig() moduletestutil.TestEncodingConfig {
 	amino := codec.NewLegacyAmino()
-	interfaceRegistry := types.NewInterfaceRegistry()
+	interfaceRegistry, _ := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
+		ProtoFiles: proto.HybridResolver,
+		SigningOptions: signing.Options{
+			AddressCodec: address.Bech32Codec{
+				Bech32Prefix: sdk.GetConfig().GetBech32AccountAddrPrefix(),
+			},
+			ValidatorAddressCodec: address.Bech32Codec{
+				Bech32Prefix: sdk.GetConfig().GetBech32ValidatorAddrPrefix(),
+			},
+		},
+	})
+
 	codec := codec.NewProtoCodec(interfaceRegistry)
 	txCfg := authtx.NewTxConfig(codec, authtx.DefaultSignModes)
 
@@ -496,15 +511,21 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// dh := distribution.NewHandler(distKeeper)
 	// router.AddRoute(sdk.NewRoute(distrtypes.RouterKey, dh))
 
-	// govRouter := govtypes.NewRouter().
-	// AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
-	// AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper)).
+	govRouter := govv1beta1.NewRouter().
+		AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
+		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper))
 	// AddRoute(distrtypes.RouterKey, distribution.NewCommunityPoolSpendProposalHandler(distKeeper))
-	// // AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
+	// AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
+
+	queryRouter := baseapp.NewGRPCQueryRouter()
+	queryRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
+	msgRouter := baseapp.NewMsgServiceRouter()
+	msgRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
 
 	govKeeper := govkeeper.NewKeeper(
-		encodingConfig.Codec, runtime.NewKVStoreService(keys[govtypes.StoreKey]), authKeeper, bankKeeper, stakingKeeper, distKeeper, baseapp.NewMsgServiceRouter(), govtypes.DefaultConfig(), authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		encodingConfig.Codec, runtime.NewKVStoreService(keys[govtypes.StoreKey]), authKeeper, bankKeeper, stakingKeeper, distKeeper, msgRouter, govtypes.DefaultConfig(), authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
+	govKeeper.SetLegacyRouter(govRouter)
 
 	// bank := bankKeeper.
 	// bk := bank.Keeper(bankKeeper)
@@ -578,11 +599,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// banktypes.RegisterMsgServer(serviceRouter, bankMsgServer)
 	// stakingtypes.RegisterMsgServer(serviceRouter, stakingMsgServer)
 	// distrtypes.RegisterMsgServer(serviceRouter, distrMsgServer)
-
-	queryRouter := baseapp.NewGRPCQueryRouter()
-	queryRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
-	msgRouter := baseapp.NewMsgServiceRouter()
-	msgRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
 
 	bappTxMngr := baseapp.LastMsgMarkerContainer{}
 
