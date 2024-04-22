@@ -10,7 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	abci "github.com/cometbft/cometbft/abci/types"
+	errorsmod "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
+
+	// abci "github.com/cometbft/cometbft/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -25,14 +28,14 @@ func TestQueryContractLabel(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, privCreator := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
-	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
+	creator, privCreator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 1050)
+	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 1051)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -69,58 +72,44 @@ func TestQueryContractLabel(t *testing.T) {
 	require.NoError(t, err)
 
 	// this gets us full error, not redacted sdk.Error
-	q := NewLegacyQuerier(keeper)
+	q := NewGrpcQuerier(keeper)
 	specs := map[string]struct {
-		srcPath []string
-		srcReq  abci.RequestQuery
+		srcReq types.QueryByLabelRequest
 		// smart queries return raw bytes from contract not []types.Model
 		// if this is set, then we just compare - (should be json encoded string)
 		expSmartRes string
 		// if success and expSmartRes is not set, we parse into []types.Model and compare
 		expModelLen      int
 		expModelContains []types.Model
-		expErr           *sdkErrors.Error
+		expErr           *errorsmod.Error
 	}{
 		"query label available": {
-			srcPath: []string{QueryContractAddress, "banananana"},
-			srcReq:  abci.RequestQuery{},
-			expErr:  sdkErrors.ErrUnknownAddress,
+			srcReq: types.QueryByLabelRequest{Label: "banananana"},
+			expErr: sdkErrors.ErrUnknownAddress,
 		},
 		"query label exists": {
-			srcPath:     []string{QueryContractAddress, label},
-			srcReq:      abci.RequestQuery{},
-			expSmartRes: string(addr),
+			srcReq:      types.QueryByLabelRequest{Label: label},
+			expSmartRes: addr.String(),
 		},
 	}
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
 			// binResult, err := q(ctx, spec.srcPath, spec.srcReq)
-			binResult, err := q(ctx, spec.srcPath, spec.srcReq)
+			binResult, err := q.AddressByLabel(ctx, &spec.srcReq)
 			// require.True(t, spec.expErr.Is(err), "unexpected error")
 			require.True(t, spec.expErr.Is(err), err)
 
 			// if smart query, check custom response
 			if spec.expSmartRes != "" {
-				require.Equal(t, spec.expSmartRes, string(binResult))
+				require.Equal(t, spec.expSmartRes, binResult.ContractAddress)
 				return
-			}
-
-			// otherwise, check returned models
-			var r []types.Model
-			if spec.expErr == nil {
-				require.NoError(t, json.Unmarshal(binResult, &r))
-				require.NotNil(t, r)
-			}
-			require.Len(t, r, spec.expModelLen)
-			// and in result set
-			for _, v := range spec.expModelContains {
-				require.Contains(t, r, v)
 			}
 		})
 	}
 }
 
+/*
 func TestQueryContractState(t *testing.T) {
 	t.SkipNow() // cannot interact directly with state
 
@@ -129,14 +118,14 @@ func TestQueryContractState(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
-	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 10003)
+	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 10002)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -197,20 +186,18 @@ func TestQueryContractState(t *testing.T) {
 			srcReq:  abci.RequestQuery{Data: []byte(`{"raw":{"key":"config"}}`)},
 			expErr:  types.ErrQueryFailed,
 		},
-		/*
-			"query raw key": {
-				srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-				srcReq:           abci.RequestQuery{Data: []byte("foo")},
-				expModelLen:      1,
-				expModelContains: []types.Model{{Key: []byte("foo"), Value: []byte(`"bar"`)}},
-			},
-			"query raw binary key": {
-				srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-				srcReq:           abci.RequestQuery{Data: []byte{0x0, 0x1}},
-				expModelLen:      1,
-				expModelContains: []types.Model{{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)}},
-			},
-		*/
+			// "query raw key": {
+			// 	srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+			// 	srcReq:           abci.RequestQuery{Data: []byte("foo")},
+			// 	expModelLen:      1,
+			// 	expModelContains: []types.Model{{Key: []byte("foo"), Value: []byte(`"bar"`)}},
+			// },
+			// "query raw binary key": {
+			// 	srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+			// 	srcReq:           abci.RequestQuery{Data: []byte{0x0, 0x1}},
+			// 	expModelLen:      1,
+			// 	expModelContains: []types.Model{{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)}},
+			// },
 		"query smart": {
 			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
 			srcReq:      abci.RequestQuery{Data: []byte(`{"verifier":{}}`)},
@@ -226,13 +213,11 @@ func TestQueryContractState(t *testing.T) {
 			srcReq:  abci.RequestQuery{Data: []byte(`not a json string`)},
 			expErr:  types.ErrQueryFailed,
 		},
-		/*
-			"query unknown raw key": {
-				srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-				srcReq:      abci.RequestQuery{Data: []byte("unknown")},
-				expModelLen: 0,
-			},
-		*/
+			// "query unknown raw key": {
+			// 	srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+			// 	srcReq:      abci.RequestQuery{Data: []byte("unknown")},
+			// 	expModelLen: 0,
+			// },
 		"query with unknown address": {
 			srcPath:     []string{QueryGetContractState, anyAddr.String()},
 			expModelLen: 0,
@@ -266,6 +251,7 @@ func TestQueryContractState(t *testing.T) {
 		})
 	}
 }
+*/
 
 func TestListContractByCodeOrdering(t *testing.T) {
 	encodingConfig := MakeEncodingConfig()
@@ -273,14 +259,14 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	transferPortSource = MockIBCTransferKeeper{GetPortFn: func(ctx sdk.Context) string {
 		return "myTransferPort"
 	}}
-	encoders := DefaultEncoders(transferPortSource, encodingConfig.Marshaler)
+	encoders := DefaultEncoders(transferPortSource, encodingConfig.Codec)
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 1000000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 500))
-	creator, creatorPrivKey := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
-	anyAddr, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 10005)
+	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 1054)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -313,7 +299,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	var h int64 = 10
 	setBlock := func(ctx sdk.Context, height int64, wasmKeeper Keeper) sdk.Context {
 		ctx = ctx.WithBlockHeight(height)
-		meter := sdk.NewGasMeter(1000000)
+		meter := storetypes.NewGasMeter(1000000)
 		ctx = ctx.WithGasMeter(meter)
 		ctx = ctx.WithBlockGasMeter(meter)
 		// StoreRandomOnNewBlock(ctx, wasmKeeper)
@@ -337,7 +323,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 			InitMsg:   initMsgBz,
 			InitFunds: topUp,
 		}
-		tx := NewTestTx(&instantiateMsg, creatorAcc, creatorPrivKey)
+		tx := NewTestTx(ctx, &instantiateMsg, creatorAcc, creatorPrivKey)
 
 		txBytes, err := tx.Marshal()
 		require.NoError(t, err)
@@ -351,19 +337,14 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	}
 
 	// query and check the results are properly sorted
-	q := NewLegacyQuerier(keeper)
-	query := []string{QueryListContractByCode, fmt.Sprintf("%d", codeID)}
-	data := abci.RequestQuery{}
-	res, err := q(ctx, query, data)
+	q := NewGrpcQuerier(keeper)
+	query := types.QueryByCodeIdRequest{codeID}
+	res, err := q.ContractsByCodeId(ctx, &query)
 	require.NoError(t, err)
 
-	var contracts []types.ContractInfoWithAddress
-	err = json.Unmarshal(res, &contracts)
-	require.NoError(t, err)
+	require.Equal(t, 10, len(res.ContractInfos))
 
-	require.Equal(t, 10, len(contracts))
-
-	for i, contract := range contracts {
+	for i, contract := range res.ContractInfos {
 		require.Equal(t, fmt.Sprintf("contract %d", i), contract.Label)
 		require.NotEmpty(t, contract.ContractAddress)
 		// ensure these are not shown
