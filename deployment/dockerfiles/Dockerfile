@@ -340,7 +340,7 @@ ENTRYPOINT ["/bin/bash", "./create_check_hw_tar.sh"]
 # ***************** LOCALSECRET ************** #
 FROM release-image as build-localsecret
 
-RUN apt-get update && apt-get install -y vim-tiny
+RUN apt-get update && apt-get install -y vim-tiny && apt-get install -y gdb
 
 # RUN curl -LS1 https://go.dev/dl/go1.22.2.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz
 

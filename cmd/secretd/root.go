@@ -143,8 +143,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		SilenceUsage: true,
 	}
 
-	initRootCmd(rootCmd, encodingConfig)
-
 	tempDir := func() string {
 		dir, err := os.MkdirTemp("", "secretd")
 		if err != nil {
@@ -156,6 +154,8 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	}
 
 	tempApp := app.NewSecretNetworkApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), compute.DefaultWasmConfig())
+
+	initRootCmd(rootCmd, encodingConfig, app.ModuleBasics())
 
 	autoCliOpts := tempApp.AutoCliOpts()
 	initClientCtx, _ = clientconfig.ReadFromClientConfig(initClientCtx)
@@ -169,10 +169,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	return rootCmd, encodingConfig
 }
 
-func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
-	// TODO check gaia before make release candidate
-	// authclient.Codec = encodingConfig.Marshaler
-
+func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basicManager module.BasicManager) {
 	rootCmd.AddCommand(
 		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, app.ModuleBasics()[genutiltypes.ModuleName].(genutil.AppModuleBasic).GenTxValidator, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
@@ -190,6 +187,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	// add keybase, auxiliary RPC, query, and tx child commands
 	rootCmd.AddCommand(
 		server.StatusCommand(),
+		genesisCommand(encodingConfig.TxConfig, basicManager),
 		queryCommand(),
 		txCommand(),
 		InitAttestation(),
@@ -209,6 +207,16 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 	// This is needed for `newApp` and `exportAppStateAndTMValidators`
 	rootCmd.PersistentFlags().BoolVar(&bootstrap, flagIsBootstrap,
 		false, "Start the node as the bootstrap node for the network (only used when starting a new network)")
+}
+
+// genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter
+func genesisCommand(txConfig client.TxConfig, basicManager module.BasicManager, cmds ...*cobra.Command) *cobra.Command {
+	cmd := genutilcli.Commands(txConfig, basicManager, app.DefaultNodeHome)
+
+	for _, subCmd := range cmds {
+		cmd.AddCommand(subCmd)
+	}
+	return cmd
 }
 
 func addModuleInitFlags(startCmd *cobra.Command) {
