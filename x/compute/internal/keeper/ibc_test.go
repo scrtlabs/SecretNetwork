@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cometbft/cometbft/libs/log"
+	"cosmossdk.io/log"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -17,6 +17,8 @@ import (
 	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/stretchr/testify/require"
+
+	storetypes "cosmossdk.io/store/types"
 
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcchanneltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
@@ -38,7 +40,7 @@ func ibcChannelConnectHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, storetypes.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -114,7 +116,7 @@ func ibcChannelOpenHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, storetypes.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -201,7 +203,7 @@ func ibcChannelCloseHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, storetypes.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -313,7 +315,7 @@ func ibcPacketReceiveHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, storetypes.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -381,7 +383,7 @@ func ibcPacketAckHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, storetypes.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
@@ -443,7 +445,7 @@ func ibcPacketTimeoutHelper(
 	// create new ctx with the same storage and a gas limit
 	// this is to reset the event manager, so we won't get
 	// events from past calls
-	gasMeter := &WasmCounterGasMeter{0, sdk.NewGasMeter(gas)}
+	gasMeter := &WasmCounterGasMeter{0, storetypes.NewGasMeter(gas)}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),

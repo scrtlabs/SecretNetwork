@@ -320,7 +320,9 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
 
 			if reply.Result.Ok != nil {
-				err = json.Unmarshal(reply.Result.Ok.Data, &dataWithInternalReplyInfo)
+				// TODO: find better solution. reply.Result.Ok.Data is encoded with
+				// proto.Marshal (MsgExecuteContract), but I couldn't find how to Unmarshal it here
+				err = json.Unmarshal(reply.Result.Ok.Data[3:], &dataWithInternalReplyInfo)
 				if err != nil {
 					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
 				}
