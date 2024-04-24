@@ -324,9 +324,9 @@ func NewSecretNetworkApp(
 			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
-		IBCKeeper:  app.AppKeepers.IbcKeeper,
-		WasmConfig: computeConfig,
-		// TXCounterStoreService: //TODO,
+		IBCKeeper:             app.AppKeepers.IbcKeeper,
+		WasmConfig:            computeConfig,
+		TXCounterStoreService: app.AppKeepers.ComputeKeeper.GetStoreService(),
 	})
 	if err != nil {
 		panic(fmt.Errorf("failed to create AnteHandler: %s", err))
