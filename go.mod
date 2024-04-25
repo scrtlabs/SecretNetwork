@@ -4,7 +4,8 @@ go 1.21
 
 replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.2
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240422184153-f3bc77e3aea4
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240425202422-1b4ea7825406
+//github.com/cosmos/cosmos-sdk => ../../cosmos-sdk
 )
 
 require (
@@ -50,6 +51,7 @@ require (
 
 require (
 	cosmossdk.io/client/v2 v2.0.0-beta.1
+	cosmossdk.io/collections v0.4.0
 	cosmossdk.io/math v1.2.0
 	cosmossdk.io/tools/confix v0.1.0
 	cosmossdk.io/x/tx v0.13.0
@@ -67,7 +69,6 @@ require (
 	cloud.google.com/go/iam v1.1.5 // indirect
 	cloud.google.com/go/storage v1.35.1 // indirect
 	cosmossdk.io/api v0.7.3 // indirect
-	cosmossdk.io/collections v0.4.0 // indirect
 	cosmossdk.io/depinject v1.0.0-alpha.4 // indirect
 	cosmossdk.io/x/circuit v0.1.0 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect

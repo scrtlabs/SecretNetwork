@@ -172,11 +172,11 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basicManager module.BasicManager) {
 	rootCmd.AddCommand(
 		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
-		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, app.ModuleBasics()[genutiltypes.ModuleName].(genutil.AppModuleBasic).GenTxValidator, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
+		// genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, app.ModuleBasics()[genutiltypes.ModuleName].(genutil.AppModuleBasic).GenTxValidator, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
 		secretlegacy.MigrateGenesisCmd(),
-		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
-		genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
-		AddGenesisAccountCmd(app.DefaultNodeHome),
+		// genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
+		// genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
+		// AddGenesisAccountCmd(app.DefaultNodeHome, encodingConfig),
 		tmcli.NewCompletionCmd(rootCmd, true),
 		// testnetCmd(app.ModuleBasics, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
@@ -187,7 +187,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 	// add keybase, auxiliary RPC, query, and tx child commands
 	rootCmd.AddCommand(
 		server.StatusCommand(),
-		genesisCommand(encodingConfig.TxConfig, basicManager),
+		genesisCommand(encodingConfig, basicManager),
 		queryCommand(),
 		txCommand(),
 		InitAttestation(),
@@ -210,8 +210,39 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 }
 
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter
-func genesisCommand(txConfig client.TxConfig, basicManager module.BasicManager, cmds ...*cobra.Command) *cobra.Command {
-	cmd := genutilcli.Commands(txConfig, basicManager, app.DefaultNodeHome)
+func genesisCommand(eCfg app.EncodingConfig, basicManager module.BasicManager, cmds ...*cobra.Command) *cobra.Command {
+	// cmd := genutilcli.Commands(txConfig, basicManager, app.DefaultNodeHome)
+
+	// for _, subCmd := range cmds {
+	// 	cmd.AddCommand(subCmd)
+	// }
+	// return cmd
+
+	cmd := &cobra.Command{
+		Use:                        "genesis",
+		Short:                      "SecretNetwork genesis-related subcommands",
+		DisableFlagParsing:         false,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
+
+	cmd.AddCommand(
+		genutilcli.GenTxCmd(
+			basicManager,
+			eCfg.TxConfig,
+			banktypes.GenesisBalancesIterator{},
+			app.DefaultNodeHome,
+			eCfg.InterfaceRegistry.SigningContext().ValidatorAddressCodec()),
+		// genutilcli.MigrateGenesisCmd(migrationMap),
+		genutilcli.CollectGenTxsCmd(
+			banktypes.GenesisBalancesIterator{},
+			app.DefaultNodeHome,
+			gentxModule.GenTxValidator,
+			eCfg.InterfaceRegistry.SigningContext().ValidatorAddressCodec()),
+		genutilcli.ValidateGenesisCmd(basicManager),
+		AddGenesisAccountCmd(app.DefaultNodeHome, eCfg),
+	)
 
 	for _, subCmd := range cmds {
 		cmd.AddCommand(subCmd)

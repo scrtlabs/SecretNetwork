@@ -136,6 +136,7 @@ type SecretNetworkApp struct {
 	legacyAmino       *codec.LegacyAmino
 	appCodec          codec.Codec
 	interfaceRegistry types.InterfaceRegistry
+	txConfig          client.TxConfig
 
 	invCheckPeriod uint
 	bootstrap      bool
@@ -219,6 +220,10 @@ func (app *SecretNetworkApp) RegisterNodeService(clientCtx client.Context, cfg c
 	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter(), cfg)
 }
 
+func (app *SecretNetworkApp) TxConfig() client.TxConfig {
+	return app.txConfig
+}
+
 // WasmWrapper allows us to use namespacing in the config file
 // This is only used for parsing in the app, x/compute expects WasmConfig
 type WasmWrapper struct {
@@ -254,6 +259,7 @@ func NewSecretNetworkApp(
 		appCodec:          appCodec,
 		interfaceRegistry: interfaceRegistry,
 		bootstrap:         bootstrap,
+		txConfig:          encodingConfig.TxConfig,
 	}
 
 	app.AppKeepers.InitKeys()

@@ -9,7 +9,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -35,8 +34,11 @@ import (
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	packetforwardrouter "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
+	scrt "github.com/scrtlabs/SecretNetwork/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
@@ -110,24 +112,80 @@ type EncodingConfig struct {
 	Amino             *codec.LegacyAmino
 }
 
-func MakeEncodingConfig() EncodingConfig {
-	amino := codec.NewLegacyAmino()
-	interfaceRegistry, _ := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
+// func MakeEncodingConfig() EncodingConfig {
+// 	amino := codec.NewLegacyAmino()
+// 	interfaceRegistry, _ := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
+// 		ProtoFiles: proto.HybridResolver,
+// 		SigningOptions: signing.Options{
+// 			AddressCodec: address.Bech32Codec{
+// 				Bech32Prefix: sdk.GetConfig().GetBech32AccountAddrPrefix(),
+// 			},
+// 			ValidatorAddressCodec: address.Bech32Codec{
+// 				Bech32Prefix: sdk.GetConfig().GetBech32ValidatorAddrPrefix(),
+// 			},
+// 		},
+// 	})
+// 	appCodec := codec.NewProtoCodec(interfaceRegistry)
+// 	txCfg := tx.NewTxConfig(appCodec, tx.DefaultSignModes)
+
+// 	std.RegisterInterfaces(interfaceRegistry)
+// 	std.RegisterLegacyAminoCodec(amino)
+
+// 	ModuleBasics().RegisterLegacyAminoCodec(amino)
+// 	ModuleBasics().RegisterInterfaces(interfaceRegistry)
+
+// 	return EncodingConfig{
+// 		InterfaceRegistry: interfaceRegistry,
+// 		Codec:             appCodec,
+// 		TxConfig:          txCfg,
+// 		Amino:             amino,
+// 	}
+// }
+
+type (
+	CodecOptions struct {
+		AccAddressPrefix string
+		ValAddressPrefix string
+	}
+)
+
+func (o CodecOptions) NewInterfaceRegistry() codectypes.InterfaceRegistry {
+	accAddressPrefix := o.AccAddressPrefix
+	if accAddressPrefix == "" {
+		accAddressPrefix = scrt.Bech32PrefixAccAddr // sdk.GetConfig().GetBech32AccountAddrPrefix()
+	}
+
+	valAddressPrefix := o.ValAddressPrefix
+	if valAddressPrefix == "" {
+		valAddressPrefix = scrt.Bech32PrefixValAddr // sdk.GetConfig().GetBech32ValidatorAddrPrefix()
+	}
+
+	ir, err := codectypes.NewInterfaceRegistryWithOptions(codectypes.InterfaceRegistryOptions{
 		ProtoFiles: proto.HybridResolver,
 		SigningOptions: signing.Options{
-			AddressCodec: address.Bech32Codec{
-				Bech32Prefix: sdk.GetConfig().GetBech32AccountAddrPrefix(),
-			},
-			ValidatorAddressCodec: address.Bech32Codec{
-				Bech32Prefix: sdk.GetConfig().GetBech32ValidatorAddrPrefix(),
-			},
+			AddressCodec:          address.NewBech32Codec(accAddressPrefix),
+			ValidatorAddressCodec: address.NewBech32Codec(valAddressPrefix),
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+	return ir
+}
+
+func MakeEncodingConfig() EncodingConfig {
+	amino := codec.NewLegacyAmino()
+	interfaceRegistry := CodecOptions{
+		AccAddressPrefix: scrt.Bech32PrefixAccAddr,
+		ValAddressPrefix: scrt.Bech32PrefixValAddr,
+	}.NewInterfaceRegistry()
+
 	appCodec := codec.NewProtoCodec(interfaceRegistry)
 	txCfg := tx.NewTxConfig(appCodec, tx.DefaultSignModes)
 
-	std.RegisterInterfaces(interfaceRegistry)
-	std.RegisterLegacyAminoCodec(amino)
+	sdk.RegisterLegacyAminoCodec(amino)
+	sdk.RegisterInterfaces(interfaceRegistry)
+	cryptocodec.RegisterInterfaces(interfaceRegistry)
 
 	ModuleBasics().RegisterLegacyAminoCodec(amino)
 	ModuleBasics().RegisterInterfaces(interfaceRegistry)
