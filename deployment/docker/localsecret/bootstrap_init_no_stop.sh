@@ -80,11 +80,11 @@ then
   # secretd gentx c 1000000uscrt --chain-id "$chain_id"
   # secretd gentx d 1000000uscrt --chain-id "$chain_id"
 
-  secretd collect-gentxs
-  secretd validate-genesis
+  secretd genesis collect-gentxs
+  secretd genesis validate-genesis
 
   secretd init-bootstrap
-  secretd validate-genesis
+  secretd genesis validate-genesis
 
   # Setup LCD
   perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' ~/.secretd/config/app.toml
