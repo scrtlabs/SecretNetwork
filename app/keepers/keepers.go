@@ -76,6 +76,7 @@ import (
 	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
+	scrt "github.com/scrtlabs/SecretNetwork/types"
 )
 
 type SecretAppKeepers struct {
@@ -179,8 +180,8 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		runtime.NewKVStoreService(ak.keys[authtypes.StoreKey]),
 		authtypes.ProtoBaseAccount,
 		maccPerms,
-		authcodec.NewBech32Codec("secret"),
-		"secret",
+		authcodec.NewBech32Codec(scrt.Bech32PrefixAccAddr),
+		scrt.Bech32PrefixAccAddr,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	ak.AccountKeeper = &accountKeeper
@@ -201,8 +202,8 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		ak.AccountKeeper,
 		ak.BankKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		authcodec.NewBech32Codec(sdk.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(sdk.Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(scrt.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(scrt.Bech32PrefixConsAddr),
 	)
 	ak.StakingKeeper = stakingKeeper
 
