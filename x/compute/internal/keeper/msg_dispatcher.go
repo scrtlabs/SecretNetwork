@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/gogoproto/proto"
 
 	errorsmod "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
@@ -318,15 +319,42 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		if isReplyEncrypted(msg) {
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
+			var err error
 
 			if reply.Result.Ok != nil {
-				// TODO: find better solution. reply.Result.Ok.Data is encoded with
-				// proto.Marshal (MsgExecuteContract), but I couldn't find how to Unmarshal it here
-				err = json.Unmarshal(reply.Result.Ok.Data[3:], &dataWithInternalReplyInfo)
+				switch {
+				case msg.Msg.Wasm.Execute != nil:
+					sdkMsg := []sdk.Msg{&types.MsgExecuteContractResponse{}}
+					proto.Unmarshal(reply.Result.Ok.Data, sdkMsg[0])
+					err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgExecuteContractResponse).GetData()), &dataWithInternalReplyInfo)
+					break
+				case msg.Msg.Wasm.Instantiate != nil:
+					sdkMsg := []sdk.Msg{&types.MsgInstantiateContractResponse{}}
+					proto.Unmarshal(reply.Result.Ok.Data, sdkMsg[0])
+					err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgInstantiateContractResponse).GetData()), &dataWithInternalReplyInfo)
+					break
+				case msg.Msg.Wasm.Migrate != nil:
+					sdkMsg := []sdk.Msg{&types.MsgMigrateContract{}}
+					proto.Unmarshal(reply.Result.Ok.Data, sdkMsg[0])
+					err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgMigrateContractResponse).GetData()), &dataWithInternalReplyInfo)
+					break
+				// case msg.Msg.Wasm.UpdateAdmin != nil:
+				// sdkMsg := []sdk.Msg{&types.MsgUpdateAdmin{}}
+				// proto.Unmarshal(reply.Result.Ok.Data, sdkMsg[0])
+				// err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgUpdateAdminResponse).GetData()), &dataWithInternalReplyInfo)
+				// fmt.Println("SDKMSG UPDATE", sdkMsg)
+				// break;
+				// case msg.Msg.Wasm.ClearAdmin != nil:
+				// sdkMsg := []sdk.Msg{&types.MsgClearAdmin{}}
+				// proto.Unmarshal(reply.Result.Ok.Data, sdkMsg[0])
+				// err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgClearAdminResponse).GetData()), &dataWithInternalReplyInfo)
+				// fmt.Println("SDKMSG CLEAR", sdkMsg)
+				// break;
+				default:
+				}
 				if err != nil {
 					return nil, fmt.Errorf("cannot serialize v1 DataWithInternalReplyInfo into json: %w", err)
 				}
-
 				reply.Result.Ok.Data = dataWithInternalReplyInfo.Data
 			} else {
 				err = json.Unmarshal(data[0], &dataWithInternalReplyInfo)
