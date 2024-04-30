@@ -60,9 +60,6 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 	}
 
 	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, msg.Sender, adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
-	if err != nil {
-		return nil, err
-	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		sdk.EventTypeMessage,
@@ -76,7 +73,7 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 	return &types.MsgInstantiateContractResponse{
 		Address: contractAddr.String(),
 		Data:    data,
-	}, nil
+	}, err
 }
 
 func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
@@ -90,13 +87,10 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	))
 
 	data, err := m.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
-	if err != nil {
-		return nil, err
-	}
 
 	return &types.MsgExecuteContractResponse{
 		Data: data.Data,
-	}, nil
+	}, err
 }
 
 func (m msgServer) MigrateContract(goCtx context.Context, msg *types.MsgMigrateContract) (*types.MsgMigrateContractResponse, error) {

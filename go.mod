@@ -4,7 +4,7 @@ go 1.21
 
 replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.2
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240425202422-1b4ea7825406
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240430141305-0c252282579c
 //github.com/cosmos/cosmos-sdk => ../../cosmos-sdk
 )
 
@@ -29,7 +29,7 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.19.0
-	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
+	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a // indirect
 	gonum.org/v1/gonum v0.14.0
 	google.golang.org/genproto v0.0.0-20231211222908-989df2bf70f3 // indirect
 	google.golang.org/grpc v1.60.1
