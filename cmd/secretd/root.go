@@ -97,6 +97,8 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	config.SetAddressVerifier(scrt.AddressVerifier)
 	config.Seal()
 
+	// cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Codec).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -105,7 +107,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
 		// WithBroadcastMode(flags.BroadcastBlock).
-		WithHomeDir(app.DefaultNodeHome).
+		// WithHomeDir(app.DefaultNodeHome).
 		WithViper("SECRET")
 
 	rootCmd := &cobra.Command{
@@ -124,7 +126,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 			if err != nil {
 				return err
 			}
-
+			initClientCtx.WithKeyringDir(initClientCtx.HomeDir)
 			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
 				return err
 			}
@@ -338,7 +340,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 
 	// fmt.Printf("bootstrap: %s\n", cast.ToString(bootstrap))
 
-	appGenesis, err := genutiltypes.AppGenesisFromFile(filepath.Join(app.DefaultNodeHome, "config", "genesis.json"))
+	appGenesis, err := genutiltypes.AppGenesisFromFile(filepath.Join(cast.ToString(appOpts.Get(flags.FlagHome)), "config", "genesis.json"))
 	if err != nil {
 		panic(err)
 	}
