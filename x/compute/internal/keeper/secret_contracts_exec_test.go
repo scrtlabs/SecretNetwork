@@ -16,6 +16,8 @@ import (
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
+	stypes "cosmossdk.io/store/types"
+
 	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"golang.org/x/exp/slices"
 
@@ -1066,7 +1068,7 @@ func TestAllocateOnHeapFailBecauseGasLimit(t *testing.T) {
 			defer func() {
 				r := recover()
 				require.NotNil(t, r)
-				_, ok := r.(sdk.ErrorOutOfGas)
+				_, ok := r.(stypes.ErrorOutOfGas)
 				require.True(t, ok, "%+v", r)
 			}()
 
@@ -1191,7 +1193,7 @@ func TestBankMsgSend(t *testing.T) {
 							isSuccuss:      false,
 							balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
 							balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
-							errorMsg:       "encrypted: dispatch: submessages: 2denom is smaller than 3denom: insufficient funds",
+							errorMsg:       "encrypted: dispatch: submessages: spendable balance 2denom is smaller than 3denom: insufficient funds",
 						},
 						{
 							description:    "non-existing denom",
@@ -1199,7 +1201,7 @@ func TestBankMsgSend(t *testing.T) {
 							isSuccuss:      false,
 							balancesBefore: "5000assaf,200000denom 5000assaf,5000denom",
 							balancesAfter:  "4998assaf,199998denom 5000assaf,5000denom",
-							errorMsg:       "encrypted: dispatch: submessages: 0blabla is smaller than 1blabla: insufficient funds",
+							errorMsg:       "encrypted: dispatch: submessages: spendable balance 0blabla is smaller than 1blabla: insufficient funds",
 						},
 						{
 							description:    "none",
@@ -1292,7 +1294,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "one, missing",
 							coinsToSend:              `20one`,
 							isSuccess:                false,
-							errorMsg:                 "0one is smaller than 20one: insufficient funds",
+							errorMsg:                 "spendable balance 0one is smaller than 20one: insufficient funds",
 							balancesBefore:           "5000another",
 							balancesAfter:            "5000another",
 							destinationBalancesAfter: "",
@@ -1301,7 +1303,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "one, not enough",
 							coinsToSend:              `20one`,
 							isSuccess:                false,
-							errorMsg:                 "19one is smaller than 20one: insufficient funds",
+							errorMsg:                 "spendable balance 19one is smaller than 20one: insufficient funds",
 							balancesBefore:           "5000another,19one",
 							balancesAfter:            "5000another,19one",
 							destinationBalancesAfter: "",
@@ -1326,7 +1328,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, missing one",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "0assaf is smaller than 130assaf: insufficient funds",
+							errorMsg:                 "spendable balance 0assaf is smaller than 130assaf: insufficient funds",
 							balancesBefore:           "200000denom",
 							balancesAfter:            "200000denom",
 							destinationBalancesAfter: "",
@@ -1335,7 +1337,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, not enough of one of them",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "10denom is smaller than 15denom: insufficient funds",
+							errorMsg:                 "spendable balance 10denom is smaller than 15denom: insufficient funds",
 							balancesBefore:           "5000assaf,10denom",
 							balancesAfter:            "5000assaf,10denom",
 							destinationBalancesAfter: "",
@@ -1344,7 +1346,7 @@ func TestSendFunds(t *testing.T) {
 							description:              "multi-coin, not enough of all of them",
 							coinsToSend:              `130assaf,15denom`,
 							isSuccess:                false,
-							errorMsg:                 "12assaf is smaller than 130assaf: insufficient funds",
+							errorMsg:                 "spendable balance 12assaf is smaller than 130assaf: insufficient funds",
 							balancesBefore:           "12assaf,10denom",
 							balancesAfter:            "12assaf,10denom",
 							destinationBalancesAfter: "",
@@ -1353,8 +1355,8 @@ func TestSendFunds(t *testing.T) {
 						t.Run(test.description, func(t *testing.T) {
 							ctx, keeper, helperWallet, helperPrivKey, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
 
-							fundingWallet, fundingWalletPrivKey := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
-							receivingWallet, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins())
+							fundingWallet, fundingWalletPrivKey, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore), 4001)
+							receivingWallet, _, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(), 4002)
 
 							// verify that the account was funded correctly
 							fundingWalletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, fundingWallet)
@@ -2297,7 +2299,7 @@ func TestEvaporateGas(t *testing.T) {
 				defer func() {
 					r := recover()
 					require.NotNil(t, r)
-					_, ok := r.(sdk.ErrorOutOfGas)
+					_, ok := r.(stypes.ErrorOutOfGas)
 					require.True(t, ok, "%+v", r)
 				}()
 			}
@@ -2326,7 +2328,7 @@ func TestCheckGas(t *testing.T) {
 	gasUsed, err2 := strconv.ParseUint(execEvent[1].Value, 10, 64)
 	require.Empty(t, err2)
 
-	require.Equal(t, baseGasUsed-baseContractUsage, gasUsed+1)
+	require.Equal(t, baseGasUsed-baseContractUsage, gasUsed+4)
 }
 
 func TestConsumeExact(t *testing.T) {
@@ -2335,7 +2337,7 @@ func TestConsumeExact(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// not sure where the 16 extra gas comes vs the previous check_gas test, but it makes everything play nice, so....
-	baseContractUsage := types.InstanceCost + 1031 - 16
+	baseContractUsage := types.InstanceCost + 1031 - 13
 
 	for _, test := range []struct {
 		description   string
@@ -2369,7 +2371,7 @@ func TestConsumeExact(t *testing.T) {
 				defer func() {
 					r := recover()
 					require.NotNil(t, r)
-					_, ok := r.(sdk.ErrorOutOfGas)
+					_, ok := r.(stypes.ErrorOutOfGas)
 					require.True(t, ok, "%+v", r)
 				}()
 			}

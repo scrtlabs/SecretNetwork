@@ -88,9 +88,15 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 
 	data, err := m.keeper.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, wasmtypes.HandleTypeExecute)
 
-	return &types.MsgExecuteContractResponse{
-		Data: data.Data,
-	}, err
+	if data == nil {
+		return &types.MsgExecuteContractResponse{
+			Data: nil,
+		}, err
+	} else {
+		return &types.MsgExecuteContractResponse{
+			Data: data.Data,
+		}, err
+	}
 }
 
 func (m msgServer) MigrateContract(goCtx context.Context, msg *types.MsgMigrateContract) (*types.MsgMigrateContractResponse, error) {
