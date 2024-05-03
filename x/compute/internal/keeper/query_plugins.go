@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
@@ -11,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
@@ -356,59 +358,42 @@ func MintQuerier(keeper mintkeeper.Keeper) func(ctx sdk.Context, request *wasmTy
 
 func DistQuerier(keeper distrkeeper.Keeper) func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *wasmTypes.DistQuery) ([]byte, error) {
-		// TODO: rewrite the function
-		/*
-			if request.Rewards != nil {
-				addr, err := sdk.AccAddressFromBech32(request.Rewards.Delegator)
-				if err != nil {
-					return nil, sdkerrors.ErrInvalidAddress.Wrap(request.Rewards.Delegator)
+		if request.Rewards != nil {
+			req := distrtypes.QueryDelegationTotalRewardsRequest{
+				DelegatorAddress: request.Rewards.Delegator,
+			}
+
+			response, err := distrkeeper.NewQuerier(keeper).DelegationTotalRewards(ctx, &req)
+			if err != nil {
+				return nil, sdkerrors.ErrUnknownRequest.Wrap(err.Error())
+			}
+
+			var res wasmTypes.RewardsResponse
+			res.Rewards = make([]wasmTypes.Rewards, len(response.Rewards))
+
+			for i, valRewards := range response.Rewards {
+				res.Rewards[i].Validator = valRewards.ValidatorAddress
+				res.Rewards[i].Reward = make([]wasmTypes.Coin, len(valRewards.Reward))
+				for j, valReward := range valRewards.Reward {
+					// this is here so we can remove fractions of uscrt from the result
+					res.Rewards[i].Reward[j].Amount = strings.Split(valReward.Amount.String(), ".")[0]
+					res.Rewards[i].Reward[j].Denom = valReward.Denom
 				}
+			}
 
-				params := distrtypes.NewQueryDelegatorParams(addr)
+			res.Total = make([]wasmTypes.Coin, len(response.Total))
+			for i, val := range response.Total {
+				res.Total[i].Amount = strings.Split(val.Amount.String(), ".")[0]
+				res.Total[i].Denom = val.Denom
+			}
 
-				jsonParams, _ := json.Marshal(params)
+			ret, err := json.Marshal(res)
+			if err != nil {
+				return nil, sdkerrors.ErrJSONMarshal.Wrap(err.Error())
+			}
 
-				req := abci.RequestQuery{
-					Data: jsonParams,
-				}
-				// keeper.DelegationTotalRewards(ctx, distrtypes.QueryDelegationTotalRewardsRequest{
-				//	DelegatorAddress: request.Rewards.Delegator,
-				// })
-				route := []string{distrtypes.QueryDelegatorTotalRewards}
-
-				query, err := distrkeeper.NewQuerier(keeper, codec.NewLegacyAmino())(ctx, route, req)
-				if err != nil {
-					return nil, sdkerrors.ErrUnknownRequest.Wrap(err.Error())
-				}
-
-				var res wasmTypes.RewardsResponse
-
-				err = json.Unmarshal(query, &res)
-				if err != nil {
-					return nil, sdkerrors.ErrJSONMarshal.Wrap(err.Error())
-				}
-
-				for i, valRewards := range res.Rewards {
-					res.Rewards[i].Validator = valRewards.Validator
-					for j, valReward := range valRewards.Reward {
-						// this is here so we can remove fractions of uscrt from the result
-						res.Rewards[i].Reward[j].Amount = strings.Split(valReward.Amount, ".")[0]
-						res.Rewards[i].Reward[j].Denom = valReward.Denom
-					}
-				}
-
-				for i, val := range res.Total {
-					res.Total[i].Amount = strings.Split(val.Amount, ".")[0]
-					res.Total[i].Denom = val.Denom
-				}
-
-				ret, err := json.Marshal(res)
-				if err != nil {
-					return nil, sdkerrors.ErrJSONMarshal.Wrap(err.Error())
-				}
-
-				return ret, nil
-			}*/
+			return ret, nil
+		}
 		return nil, wasmTypes.UnsupportedRequest{Kind: "unknown DistQuery variant"}
 	}
 }
@@ -679,30 +664,28 @@ func sdkToFullDelegation(ctx sdk.Context, keeper stakingkeeper.Keeper, distKeepe
 // FIXME: simplify this enormously when
 // https://github.com/cosmos/cosmos-sdk/issues/7466 is merged
 func getAccumulatedRewards(ctx sdk.Context, distKeeper distrkeeper.Keeper, delegation stakingtypes.Delegation) ([]wasmTypes.Coin, error) {
-	/*
-		// Try to get *delegator* reward info!
+	// Try to get *delegator* reward info!
 
-		params := distrtypes.QueryDelegationRewardsRequest{
-			DelegatorAddress: delegation.DelegatorAddress,
-			ValidatorAddress: delegation.ValidatorAddress,
-		}
-		cache, _ := ctx.CacheContext()
-		// TODO: rewrite the function
-		qres, err := distKeeper.Querier.DelegationRewards(sdk.WrapSDKContext(cache), &params)
-		if err != nil {
-			return nil, err
-		}
+	params := distrtypes.QueryDelegationRewardsRequest{
+		DelegatorAddress: delegation.DelegatorAddress,
+		ValidatorAddress: delegation.ValidatorAddress,
+	}
+	cache, _ := ctx.CacheContext()
+	querier := distrkeeper.NewQuerier(distKeeper)
+	qres, err := querier.DelegationRewards(sdk.WrapSDKContext(cache), &params)
+	if err != nil {
+		return nil, err
+	}
 
-		// now we have it, convert it into wasmTypes
-		rewards := make([]wasmTypes.Coin, len(qres.Rewards))
-		for i, r := range qres.Rewards {
-			rewards[i] = wasmTypes.Coin{
-				Denom:  r.Denom,
-				Amount: r.Amount.TruncateInt().String(),
-			}
+	// now we have it, convert it into wasmTypes
+	rewards := make([]wasmTypes.Coin, len(qres.Rewards))
+	for i, r := range qres.Rewards {
+		rewards[i] = wasmTypes.Coin{
+			Denom:  r.Denom,
+			Amount: r.Amount.TruncateInt().String(),
 		}
-		return rewards, nil*/
-	return nil, nil
+	}
+	return rewards, nil
 }
 
 func WasmQuerier(wasm *Keeper) func(ctx sdk.Context, request *wasmTypes.WasmQuery, queryDepth uint32) ([]byte, error) {
