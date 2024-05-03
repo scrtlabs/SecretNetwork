@@ -79,4 +79,4 @@ fi
 
 
 # Start the secretd
-LOG_LEVEL=trace $SECRETD start --pruning=nothing --bootstrap --home=$SECRETD_HOME --log_level=trace
+LOG_LEVEL=trace $SECRETD start --pruning=nothing --bootstrap --home=$SECRETD_HOME --log_level=info
