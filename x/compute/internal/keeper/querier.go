@@ -113,13 +113,12 @@ func (q GrpcQuerier) Code(c context.Context, req *types.QueryByCodeIdRequest) (*
 
 func (q GrpcQuerier) Codes(c context.Context, _ *empty.Empty) (*types.QueryCodesResponse, error) {
 	response, err := queryCodeList(sdk.UnwrapSDKContext(c), q.keeper)
-	switch {
-	case err != nil:
+	if err != nil {
 		return nil, err
-	case response == nil:
-		return nil, types.ErrNotFound
 	}
-
+	if response == nil {
+		response = make([]types.CodeInfoResponse, 0)
+	}
 	return &types.QueryCodesResponse{CodeInfos: response}, nil
 }
 
