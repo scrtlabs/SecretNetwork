@@ -166,46 +166,11 @@ pub fn validate_enclave_version(
         sgx_status_t::SGX_ERROR_UNEXPECTED
     })?;
 
-    // let timestamp = crate::registration::report::AttestationReport::from_cert(&cert_der)
-    //     .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?
-    //     .timestamp;
-
-    // if result.is_err() && in_grace_period(timestamp) {
-    //     let ecc_handle = SgxEccHandle::new();
-    //     let _result = ecc_handle.open();
-    //
-    //     // use ephemeral key
-    //     let (prv_k, pub_k) = ecc_handle.create_key_pair().unwrap();
-    //
-    //     // call create_report using the secp256k1 public key, and __not__ the P256 one
-    //     let signed_report =
-    //         match create_attestation_report(&kp.get_pubkey(), sign_type, api_key, challenge, false)
-    //         {
-    //             Ok(r) => r,
-    //             Err(e) => {
-    //                 error!("Error creating attestation report");
-    //                 return Err(e);
-    //             }
-    //         };
-    //
-    //     let payload: String = serde_json::to_string(&signed_report).map_err(|_| {
-    //         error!("Error serializing report. May be malformed, or badly encoded");
-    //         sgx_status_t::SGX_ERROR_UNEXPECTED
-    //     })?;
-    //     let (_key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
-    //     let _result = ecc_handle.close();
-    //
-    //     let verify_result = verify_ra_cert(&cert_der, None, false);
-    //     if verify_result.is_err() {
-    //         #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-    //         remove_all_keys();
-    //     }
-    // } else
-
     let (_key_der, cert_der) = super::cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle)?;
     let _result = ecc_handle.close();
+
     if verify_ra_cert(&cert_der, None, true).is_err() {
-        remove_all_keys();
+        sgx_status_t::SGX_ERROR_UNEXPECTED
     }
 
     Ok(())
