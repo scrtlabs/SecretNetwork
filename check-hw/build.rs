@@ -11,4 +11,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=sgx_ukey_exchange");
     println!("cargo:rustc-link-lib=dylib=sgx_urts");
     println!("cargo:rustc-link-lib=dylib=sgx_uae_service");
+
+    println!("cargo:rustc-link-lib=dylib=sgx_dcap_ql");
+    println!("cargo:rustc-link-lib=dylib=sgx_dcap_quoteverify");
 }
