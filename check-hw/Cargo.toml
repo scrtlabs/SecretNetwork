@@ -23,3 +23,4 @@ enclave-ffi-types = { path = "../cosmwasm/enclaves/ffi-types", features = [
 clap = "2.33"
 parking_lot = "0.11"
 lazy_static = "1.4"
+log = "0.4.17"
