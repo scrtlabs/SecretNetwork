@@ -14,6 +14,9 @@ use crate::registration::attestation::create_attestation_report;
 #[cfg(feature = "SGX_MODE_HW")]
 use crate::registration::cert::verify_quote_status;
 
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::registration::offchain::get_attestation_report_dcap;
+
 #[cfg(not(feature = "epid_whitelist_disabled"))]
 use crate::registration::cert::check_epid_gid_is_whitelisted;
 
@@ -51,6 +54,12 @@ pub unsafe extern "C" fn ecall_check_patch_level(
     // CREATE THE ATTESTATION REPORT
     // generate temporary key for attestation
     let temp_key_result = enclave_crypto::KeyPair::new().unwrap();
+
+    let res_dcap = unsafe { get_attestation_report_dcap(&temp_key_result) };
+    if res_dcap.is_ok() {
+        println!("DCAP attestation ok");
+        return NodeAuthResult::Success;
+    }
 
     let signed_report = match create_attestation_report(
         &temp_key_result.get_pubkey(),

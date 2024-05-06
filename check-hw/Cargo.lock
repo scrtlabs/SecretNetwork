@@ -64,6 +64,7 @@ dependencies = [
  "clap",
  "enclave-ffi-types",
  "lazy_static",
+ "log",
  "parking_lot",
  "sgx_types",
  "sgx_urts",
