@@ -19,6 +19,7 @@ mod traits;
 
 // Secret Network specific modules
 mod attestation;
+mod attestation_dcap;
 mod enclave;
 mod enclave_config;
 mod seed;
