@@ -67,7 +67,6 @@ func StoreCodeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			msg, err := parseStoreCodeArgs(args, clientCtx, cmd.Flags())
 			if err != nil {
 				return err
@@ -98,7 +97,6 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 	// gzip the wasm file
 	if wasmUtils.IsWasm(wasm) {
 		wasm, err = wasmUtils.GzipIt(wasm)
-
 		if err != nil {
 			return types.MsgStoreCode{}, err
 		}
@@ -117,7 +115,7 @@ func parseStoreCodeArgs(args []string, cliCtx client.Context, flags *flag.FlagSe
 
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgStoreCode{
-		Sender:       cliCtx.GetFromAddress(),
+		Sender:       cliCtx.GetFromAddress().String(),
 		WASMByteCode: wasm,
 		Source:       source,
 		Builder:      builder,

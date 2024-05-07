@@ -17,7 +17,7 @@ func (msg MsgStoreCode) Type() string {
 }
 
 func (msg MsgStoreCode) ValidateBasic() error {
-	if err := sdk.VerifyAddressFormat(msg.Sender); err != nil {
+	if err := sdk.VerifyAddressFormat([]byte(msg.Sender)); err != nil {
 		return err
 	}
 
@@ -41,7 +41,7 @@ func (msg MsgStoreCode) GetSignBytes() []byte {
 }
 
 func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Sender}
+	return []sdk.AccAddress{[]byte(msg.Sender)}
 }
 
 func (msg MsgInstantiateContract) Route() string {

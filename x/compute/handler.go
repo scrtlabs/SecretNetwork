@@ -61,7 +61,7 @@ func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result,
 		return nil, err
 	}
 
-	codeID, err := k.Create(ctx, msg.Sender, msg.WASMByteCode, msg.Source, msg.Builder)
+	codeID, err := k.Create(ctx, []byte(msg.Sender), msg.WASMByteCode, msg.Source, msg.Builder)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func handleStoreCode(ctx sdk.Context, k Keeper, msg *MsgStoreCode) (*sdk.Result,
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(types.AttributeKeySigner, msg.Sender.String()),
+			sdk.NewAttribute(types.AttributeKeySigner, msg.Sender),
 			sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", codeID)),
 		),
 	})

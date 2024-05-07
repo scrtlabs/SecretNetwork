@@ -51,27 +51,27 @@ func TestStoreCodeValidation(t *testing.T) {
 		},
 		"correct minimal": {
 			msg: MsgStoreCode{
-				Sender:       goodAddress,
+				Sender:       goodAddress.String(),
 				WASMByteCode: []byte("foo"),
 			},
 			valid: true,
 		},
 		"missing code": {
 			msg: MsgStoreCode{
-				Sender: goodAddress,
+				Sender: goodAddress.String(),
 			},
 			valid: false,
 		},
 		"bad sender minimal": {
 			msg: MsgStoreCode{
-				Sender:       badAddress,
+				Sender:       badAddress.String(),
 				WASMByteCode: []byte("foo"),
 			},
 			valid: false,
 		},
 		"correct maximal": {
 			msg: MsgStoreCode{
-				Sender:       goodAddress,
+				Sender:       goodAddress.String(),
 				WASMByteCode: []byte("foo"),
 				Builder:      "confio/cosmwasm-opt:0.6.2",
 				Source:       "https://crates.io/api/v1/crates/cw-erc20/0.1.0/download",
@@ -80,7 +80,7 @@ func TestStoreCodeValidation(t *testing.T) {
 		},
 		"invalid builder": {
 			msg: MsgStoreCode{
-				Sender:       goodAddress,
+				Sender:       goodAddress.String(),
 				WASMByteCode: []byte("foo"),
 				Builder:      "-bad-opt:0.6.2",
 				Source:       "https://crates.io/api/v1/crates/cw-erc20/0.1.0/download",
@@ -89,7 +89,7 @@ func TestStoreCodeValidation(t *testing.T) {
 		},
 		"invalid source scheme": {
 			msg: MsgStoreCode{
-				Sender:       goodAddress,
+				Sender:       goodAddress.String(),
 				WASMByteCode: []byte("foo"),
 				Builder:      "cosmwasm-opt:0.6.2",
 				Source:       "ftp://crates.io/api/download.tar.gz",
@@ -98,7 +98,7 @@ func TestStoreCodeValidation(t *testing.T) {
 		},
 		"invalid source format": {
 			msg: MsgStoreCode{
-				Sender:       goodAddress,
+				Sender:       goodAddress.String(),
 				WASMByteCode: []byte("foo"),
 				Builder:      "cosmwasm-opt:0.6.2",
 				Source:       "/api/download-ss",

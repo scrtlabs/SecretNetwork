@@ -36,6 +36,7 @@ import (
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	packetforwardrouter "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
@@ -185,6 +186,7 @@ func MakeEncodingConfig() EncodingConfig {
 
 	sdk.RegisterLegacyAminoCodec(amino)
 	sdk.RegisterInterfaces(interfaceRegistry)
+	txtypes.RegisterInterfaces(interfaceRegistry)
 	cryptocodec.RegisterInterfaces(interfaceRegistry)
 
 	ModuleBasics().RegisterLegacyAminoCodec(amino)

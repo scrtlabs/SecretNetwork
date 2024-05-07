@@ -5,7 +5,7 @@ SECRETD_HOME=${2:-$HOME/.secretd_local}
 CHAINID=${3:-secretdev-1}
 SECRETD=${4:-"http://localhost:26657"}
 
-if ! [ -f $SECRETD_HOME/config/genesis.json ]; then
+if [ ! $SECRETD_HOME/config/genesis.json ]; then
   echo "Cannot find $SECRETD_HOME/config/genesis.json."
   exit 1
 fi
@@ -18,7 +18,7 @@ $SECRETCLI config set client output json
 $SECRETCLI config set client keyring-backend test
 $SECRETCLI config set client node $SECRETD
 
-$SECRETCLI status --output=json | js
+$SECRETCLI status --output=json | jq
 
 $SECRETCLI keys list --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq
 
@@ -39,25 +39,27 @@ $SECRETCLI q bank balances $address_b --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_c --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_d --home=$SECRETD_HOME --output=json | jq
 
-# $SECRETCLI tx bank send $address_a $address_b 10uscrt --gas=auto --gas-adjustment=1.0 --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq
-
 txhash=$($SECRETCLI tx bank send $address_a $address_b 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
-echo "FIX: $SECRETCLI q tx --type="hash" "$txhash" --home=$SECRETD_HOME"
+sleep 5s
+$SECRETCLI q tx --type="hash" "$txhash" --output=json | jq
 $SECRETCLI q bank balances $address_a --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_b --home=$SECRETD_HOME --output=json | jq
 
 txhash=$($SECRETCLI tx bank send $address_b $address_c 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
-echo "FIX: $SECRETCLI q tx --type="hash" "$txhash" --home=$SECRETD_HOME"
+sleep 5s
+$SECRETCLI q tx --type="hash" "$txhash" --output=json | jq
 $SECRETCLI q bank balances $address_b --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_c --home=$SECRETD_HOME --output=json | jq
 
 txhash=$($SECRETCLI tx bank send $address_c $address_d 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
-echo "FIX: $SECRETCLI q tx --type="hash" "$txhash" --home=$SECRETD_HOME"
+sleep 5s
+$SECRETCLI q tx --type="hash" "$txhash" --output=json | jq
 $SECRETCLI q bank balances $address_c --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_d --home=$SECRETD_HOME --output=json | jq
 
 txhash=$($SECRETCLI tx bank send $address_d $address_a 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
-echo "FIX: $SECRETCLI q tx --type="hash" "$txhash" --home=$SECRETD_HOME"
+sleep 5s
+$SECRETCLI q tx --type="hash" "$txhash" --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_d --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_a --home=$SECRETD_HOME --output=json | jq
 
@@ -81,44 +83,50 @@ $SECRETCLI q distribution commission $address_valop --output=json | jq
 echo "FIXME: get realistic height"
 $SECRETCLI q distribution slashes $address_valop "1" "10" --output=json | jq
 
-DIR=$(pwd)
-WORK_DIR=$(mktemp -d -p ${DIR})
-if [ ! -d $WORK_DIR ]; then
-  echo "Could not create $WORK_DIR"
-  exit 1
-fi
+# # DIR=$(pwd)
+# # WORK_DIR=$(mktemp -d -p ${DIR})
+# # if [ ! -d $WORK_DIR ]; then
+# #   echo "Could not create $WORK_DIR"
+# #   exit 1
+# # fi
 
-function cleanup {
-    echo "Clean up $WORK_DIR"
-    #rm -rf "$WORK_DIR"
-}
+# # function cleanup {
+# #     echo "Clean up $WORK_DIR"
+# #     #rm -rf "$WORK_DIR"
+# # }
 
-trap cleanup EXIT
+# # trap cleanup EXIT
 
 
-cd $WORK_DIR
+# # cd $WORK_DIR
 
-cargo generate --git https://github.com/scrtlabs/secret-template.git --name secret-test-contract 
+# # cargo generate --git https://github.com/scrtlabs/secret-template.git --name secret-test-contract 
 
-cd secret-test-contract
-make build
+# # cd secret-test-contract
+# # make build
 
-if [[ ! contract.wasm.gz ]];then
-    echo "failed to build a test contract"
-    cd -
-    return 1
-fi
+# # if [[ ! contract.wasm.gz ]];then
+# #     echo "failed to build a test contract"
+# #     cd -
+# #     return 1
+# # fi
 
-cd $DIR
-echo "FIXME: add deploy contract"
+# # cd $DIR
 
-$SECRETCLI keys add scrt_smart_contract -y --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq
-address_scrt=$($SECRETCLI keys show -a scrt_smart_contract --keyring-backend="test" --home=$SECRETD_HOME)
+$SECRETCLI keys add scrtsc --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq
+address_scrt=$($SECRETCLI keys show -a scrtsc --keyring-backend="test" --home=$SECRETD_HOME)
 $SECRETCLI q bank balances $address_scrt --home=$SECRETD_HOME --output=json | jq
-#curl http://localhost:5000/faucet?address=$address_scrt
-txhash=$($SECRETCLI tx bank send $address_a $address_scrt 100000uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx bank send $address_a $address_scrt 1000000uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
+sleep 5s
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq
 $SECRETCLI q bank balances $address_scrt --home=$SECRETD_HOME --output=json | jq
 
-$SECRETCLI tx compute store $WORK_DIR/secret-test-contract/contract.wasm -y --gas 50000 --from $address_scrt --chain-id=$CHAINID --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq
+txhash=$($SECRETCLI tx compute store ./integration-tests/test-contracts/contract.wasm.gz -y --gas 750000 --fees 10000uscrt --from $address_scrt --chain-id=$CHAINID --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq ".txhash" | sed 's/"//g')
+sleep 5s
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq
+$SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
 
-$SECRETCLI q compute list-code --home=$SECRETD_HOME
+txhash=$($SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --label counterContract -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq ".txhash" | sed 's/"//g')
+sleep 5s
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq
+$SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq

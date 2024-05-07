@@ -21,11 +21,11 @@ mod protobuf {
                 let entry_type = entry.file_type().expect("couldn't read entry type");
                 let entry_path = entry.path();
                 if entry_type.is_dir() {
-                    std::fs::remove_dir_all(&entry_path)
-                        .expect(&format!("failed to remove {:?}", entry_path));
+                    // std::fs::remove_dir_all(&entry_path)
+                    //     .expect(&format!("failed to remove {:?}", entry_path));
                 } else if entry_type.is_file() || entry_type.is_symlink() {
-                    std::fs::remove_file(&entry_path)
-                        .expect(&format!("failed to remove {:?}", entry_path));
+                    // std::fs::remove_file(&entry_path)
+                    //     .expect(&format!("failed to remove {:?}", entry_path));
                 }
             }
         }
