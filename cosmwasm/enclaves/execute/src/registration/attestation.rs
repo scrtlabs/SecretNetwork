@@ -170,7 +170,8 @@ pub fn validate_enclave_version(
     let _result = ecc_handle.close();
 
     if verify_ra_cert(&cert_der, None, true).is_err() {
-        sgx_status_t::SGX_ERROR_UNEXPECTED
+        error!("Error verifying report.");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     Ok(())
