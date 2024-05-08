@@ -317,7 +317,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		require.NoError(t, err)
 
 		instantiateMsg := types.MsgInstantiateContract{
-			Sender:    creator,
+			Sender:    creator.String(),
 			CodeID:    codeID,
 			Label:     fmt.Sprintf("contract %d", i),
 			InitMsg:   initMsgBz,

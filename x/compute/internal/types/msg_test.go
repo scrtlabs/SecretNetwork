@@ -145,7 +145,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 		},
 		"correct minimal": {
 			msg: MsgInstantiateContract{
-				Sender:  goodAddress,
+				Sender:  goodAddress.String(),
 				CodeID:  1,
 				Label:   "foo",
 				InitMsg: []byte("{}"),
@@ -154,7 +154,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 		},
 		"missing code": {
 			msg: MsgInstantiateContract{
-				Sender:  goodAddress,
+				Sender:  goodAddress.String(),
 				Label:   "foo",
 				InitMsg: []byte("{}"),
 			},
@@ -162,21 +162,21 @@ func TestInstantiateContractValidation(t *testing.T) {
 		},
 		"missing label": {
 			msg: MsgInstantiateContract{
-				Sender:  goodAddress,
+				Sender:  goodAddress.String(),
 				InitMsg: []byte("{}"),
 			},
 			valid: false,
 		},
 		"label too long": {
 			msg: MsgInstantiateContract{
-				Sender: goodAddress,
+				Sender: goodAddress.String(),
 				Label:  strings.Repeat("food", 33),
 			},
 			valid: false,
 		},
 		"bad sender minimal": {
 			msg: MsgInstantiateContract{
-				Sender:  badAddress,
+				Sender:  badAddress.String(),
 				CodeID:  1,
 				Label:   "foo",
 				InitMsg: []byte("{}"),
@@ -185,7 +185,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 		},
 		"correct maximal": {
 			msg: MsgInstantiateContract{
-				Sender:    goodAddress,
+				Sender:    goodAddress.String(),
 				CodeID:    1,
 				Label:     "foo",
 				InitMsg:   []byte(`{"some": "data"}`),
@@ -195,7 +195,7 @@ func TestInstantiateContractValidation(t *testing.T) {
 		},
 		"negative funds": {
 			msg: MsgInstantiateContract{
-				Sender:  goodAddress,
+				Sender:  goodAddress.String(),
 				CodeID:  1,
 				Label:   "foo",
 				InitMsg: []byte(`{"some": "data"}`),

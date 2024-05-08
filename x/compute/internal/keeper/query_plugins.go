@@ -204,6 +204,7 @@ var stargateQueryAllowlist = map[string]bool{
 	"/secret.compute.v1beta1.Query/CodeHashByCodeId":          true,
 	"/secret.compute.v1beta1.Query/LabelByAddress":            true,
 	"/secret.compute.v1beta1.Query/AddressByLabel":            true,
+	"/secret.compute.v1beta1.Query/ContractsByCodeId":         true,
 }
 
 func StargateQuerier(queryRouter GRPCQueryRouter) func(ctx sdk.Context, request *wasmTypes.StargateQuery) ([]byte, error) {

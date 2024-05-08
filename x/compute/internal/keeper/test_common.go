@@ -18,6 +18,7 @@ import (
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
+
 	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"github.com/cosmos/gogoproto/proto"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
@@ -39,6 +40,7 @@ import (
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+
 	// // ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
 	ibchost "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
@@ -59,6 +61,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+
 	// // simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"cosmossdk.io/store"
 	"cosmossdk.io/store/metrics"
@@ -688,7 +691,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateC
 		}
 	}
 
-	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, admin, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, []byte(msg.Sender), admin, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
 		result := sdk.Result{}
 		result.Data = data
@@ -781,7 +784,7 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, 
 	require.NoError(t, err)
 
 	initMsg := wasmtypes.MsgInstantiateContract{
-		Sender:    creator,
+		Sender:    creator.String(),
 		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   encMsg,

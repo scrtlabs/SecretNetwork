@@ -90,7 +90,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 		}
 	}
 
-	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, []byte(msg.Sender), adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
 		result := sdk.Result{}
 		result.Data = data
@@ -101,7 +101,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *MsgInstantiateContract) (
 	custom := sdk.Events{sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 		sdk.NewAttribute(types.AttributeKeyCodeID, fmt.Sprintf("%d", msg.CodeID)),
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddr.String()),
 	)}

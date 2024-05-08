@@ -59,12 +59,12 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 		}
 	}
 
-	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, msg.Sender, adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, []byte(msg.Sender), adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddr.String()),
 	))
 

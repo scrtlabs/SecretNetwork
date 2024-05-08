@@ -121,12 +121,13 @@ sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 $SECRETCLI q bank balances $address_scrt --home=$SECRETD_HOME --output=json | jq
 
-txhash=$($SECRETCLI tx compute store ./integration-tests/test-contracts/contract.wasm.gz -y --gas 750000 --fees 10000uscrt --from $address_scrt --chain-id=$CHAINID --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx compute store ./integration-tests/test-contracts/contract.wasm.gz -y --gas 950000 --fees 12500uscrt --from $address_scrt --chain-id=$CHAINID --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 $SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
 
-txhash=$($SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --label counterContract -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label counterContract -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
-$SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
+code_id=$($SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq ".code_infos[0].code_id" | sed 's/"//g')
+$SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq

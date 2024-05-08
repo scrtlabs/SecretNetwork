@@ -2,7 +2,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	// wasmvm "github.com/CosmWasm/wasmvm/v2"
 	"github.com/spf13/cobra"
@@ -25,7 +27,7 @@ func GetQueryCmd() *cobra.Command {
 	}
 	queryCmd.AddCommand(
 		GetCmdListCode(),
-		// GetCmdListContractByCode(),
+		GetCmdListContractByCode(),
 		// GetCmdQueryCode(),
 		// GetCmdQueryCodeInfo(),
 		// GetCmdGetContractInfo(),
@@ -69,51 +71,46 @@ func GetCmdListCode() *cobra.Command {
 	return cmd
 }
 
-// // GetCmdListContractByCode lists all wasm code uploaded for given code id
-// func GetCmdListContractByCode() *cobra.Command {
-// 	cmd := &cobra.Command{
-// 		Use:     "list-contract-by-code [code_id]",
-// 		Short:   "List wasm all bytecode on the chain for given code id",
-// 		Long:    "List wasm all bytecode on the chain for given code id",
-// 		Aliases: []string{"list-contracts-by-code", "list-contracts", "contracts", "lca"},
-// 		Args:    cobra.ExactArgs(1),
-// 		RunE: func(cmd *cobra.Command, args []string) error {
-// 			clientCtx, err := client.GetClientQueryContext(cmd)
-// 			if err != nil {
-// 				return err
-// 			}
+// GetCmdListContractByCode lists all wasm code uploaded for given code id
+func GetCmdListContractByCode() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "list-contract-by-code [code_id]",
+		Short:   "List wasm all bytecode on the chain for given code id",
+		Long:    "List wasm all bytecode on the chain for given code id",
+		Aliases: []string{"list-contracts-by-code", "list-contracts", "contracts", "lca"},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
-// 			codeID, err := strconv.ParseUint(args[0], 10, 64)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			if codeID == 0 {
-// 				return errors.New("empty code id")
-// 			}
+			codeID, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return err
+			}
+			if codeID == 0 {
+				return errors.New("empty code id")
+			}
 
-// 			pageReq, err := client.ReadPageRequest(withPageKeyDecoded(cmd.Flags()))
-// 			if err != nil {
-// 				return err
-// 			}
-// 			queryClient := types.NewQueryClient(clientCtx)
-// 			res, err := queryClient.ContractsByCode(
-// 				context.Background(),
-// 				&types.QueryContractsByCodeRequest{
-// 					CodeId:     codeID,
-// 					Pagination: pageReq,
-// 				},
-// 			)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			return clientCtx.PrintProto(res)
-// 		},
-// 		SilenceUsage: true,
-// 	}
-// 	flags.AddQueryFlagsToCmd(cmd)
-// 	addPaginationFlags(cmd, "list contracts by code")
-// 	return cmd
-// }
+			queryClient := types.NewQueryClient(clientCtx)
+			res, err := queryClient.ContractsByCodeId(
+				context.Background(),
+				&types.QueryByCodeIdRequest{
+					CodeId: codeID,
+				},
+			)
+			if err != nil {
+				return err
+			}
+			return clientCtx.PrintProto(res)
+		},
+		SilenceUsage: true,
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	addPaginationFlags(cmd, "list contracts by code")
+	return cmd
+}
 
 // // GetCmdQueryCode returns the bytecode for a given contract
 // func GetCmdQueryCode() *cobra.Command {

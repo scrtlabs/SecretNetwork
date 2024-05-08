@@ -243,7 +243,7 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
-		Sender:           cliCtx.GetFromAddress(),
+		Sender:           cliCtx.GetFromAddress().String(),
 		CallbackCodeHash: "",
 		CodeID:           codeID,
 		Label:            label,
