@@ -14,6 +14,19 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
+const (
+	QueryListContractByCode       = "list-contracts-by-code"
+	QueryGetContract              = "contract-info"
+	QueryGetContractState         = "contract-state"
+	QueryGetCode                  = "code"
+	QueryListCode                 = "list-code"
+	QueryContractAddress          = "label"
+	QueryContractKey              = "contract-key"
+	QueryContractHash             = "contract-hash"
+	QueryContractHashByCodeID     = "contract-hash-by-id"
+	QueryMethodContractStateSmart = "smart"
+)
+
 var _ types.QueryServer = GrpcQuerier{} // type assertion
 
 type GrpcQuerier struct {

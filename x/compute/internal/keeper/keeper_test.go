@@ -279,7 +279,7 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	instantiateMsg := types.MsgInstantiateContract{
-		Sender:    creator.String(),
+		Sender:    creator,
 		CodeID:    contractID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
@@ -397,7 +397,7 @@ func TestInstantiateWithNonExistingCodeID(t *testing.T) {
 	require.NoError(t, err)
 
 	instantiateMsg := types.MsgInstantiateContract{
-		Sender:    creator.String(),
+		Sender:    creator,
 		CodeID:    nonExistingCodeID,
 		Label:     "demo contract 1",
 		InitMsg:   initMsgBz,
@@ -751,7 +751,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 
 	instantiateMsg := types.MsgInstantiateContract{
-		Sender:    creator.String(),
+		Sender:    creator,
 		CodeID:    contractID,
 		Label:     "demo contract 1",
 		InitMsg:   msgBz,

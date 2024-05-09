@@ -31,7 +31,11 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 		sdk.NewAttribute(types.AttributeKeySigner, msg.Sender),
 	))
 
-	codeID, err := m.keeper.Create(ctx, []byte(msg.Sender), msg.WASMByteCode, msg.Source, msg.Builder)
+	sender, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, errorsmod.Wrap(err, "sender")
+	}
+	codeID, err := m.keeper.Create(ctx, sender, msg.WASMByteCode, msg.Source, msg.Builder)
 	if err != nil {
 		return nil, err
 	}
@@ -59,12 +63,16 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 		}
 	}
 
-	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, []byte(msg.Sender), adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	// sender, err := sdk.AccAddressFromBech32(msg.Sender)
+	// if err != nil {
+	// 	return nil, errorsmod.Wrap(err, "sender")
+	// }
+	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, msg.Sender, adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddr.String()),
 	))
 

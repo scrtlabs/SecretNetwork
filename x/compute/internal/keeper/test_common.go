@@ -784,7 +784,7 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, 
 	require.NoError(t, err)
 
 	initMsg := wasmtypes.MsgInstantiateContract{
-		Sender:    creator.String(),
+		Sender:    creator,
 		CodeID:    codeID,
 		Label:     "demo contract 1",
 		InitMsg:   encMsg,

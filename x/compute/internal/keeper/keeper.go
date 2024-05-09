@@ -266,16 +266,18 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktx
 		pkIndex = 0
 		sender = sdk.AccAddress(pubkeys[pkIndex].Address())
 	} else {
-		var _signers [][]byte // This is just used for the error message below
+		var _signers []string // This is just used for the error message below
 		for index, pubKey := range pubKeys {
-			thisSigner := pubKey.Address().Bytes()
-			_signers = append(_signers, thisSigner)
-			if bytes.Equal(thisSigner, sender.Bytes()) {
-				pkIndex = index
+			tx_pk_addr := sdk.AccAddress(pubKey.Address())
+			if tx_pk_addr != nil {
+				if bytes.Equal(tx_pk_addr, sender) {
+					pkIndex = index
+				}
 			}
+			_signers = append(_signers, string(tx_pk_addr))
 		}
 		if pkIndex == -1 {
-			return nil, 0, nil, nil, nil, errorsmod.Wrap(types.ErrSigFailed, fmt.Sprintf("Message sender: %v is not found in the tx signer set: %v, callback signature not provided", sender, _signers))
+			return nil, 0, nil, nil, nil, errorsmod.Wrap(types.ErrSigFailed, fmt.Sprintf("[Compute] Message sender: %v is not found in the tx signer set: %v, callback signature not provided", sender, _signers))
 		}
 	}
 

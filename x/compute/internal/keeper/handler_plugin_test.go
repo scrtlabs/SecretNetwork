@@ -146,7 +146,7 @@ func TestEncoding(t *testing.T) {
 			},
 			output: []sdk.Msg{
 				&types.MsgInstantiateContract{
-					Sender:    addr1.String(),
+					Sender:    addr1,
 					CodeID:    7,
 					Label:     "",
 					InitMsg:   jsonMsg,

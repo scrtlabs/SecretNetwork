@@ -13,13 +13,21 @@ fi
 set -x
 set -o errexit
 
+
+# ----- CLIENT CONFIGURATION - START -----
 $SECRETCLI config set client chain-id "$CHAINID"
 $SECRETCLI config set client output json
 $SECRETCLI config set client keyring-backend test
 $SECRETCLI config set client node $SECRETD
+# ----- CLIENT CONFIGURATION - END -----
 
+
+# ----- NODE STATUS CHECK - START -----
 $SECRETCLI status --output=json | jq
+# ----- NODE STATUS CHECK - END -----
 
+
+# ----- KEY OPERATIONS - START -----
 $SECRETCLI keys list --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq
 
 address_v=$($SECRETCLI keys show -a validator --keyring-backend="test" --home=$SECRETD_HOME)
@@ -33,7 +41,10 @@ key_a=$($SECRETCLI keys show -p a --keyring-backend="test" --home=$SECRETD_HOME)
 key_b=$($SECRETCLI keys show -p b --keyring-backend="test" --home=$SECRETD_HOME)
 key_c=$($SECRETCLI keys show -p c --keyring-backend="test" --home=$SECRETD_HOME)
 key_d=$($SECRETCLI keys show -p d --keyring-backend="test" --home=$SECRETD_HOME)
+# ----- KEY OPERATIONS - END -----
 
+
+# ----- BANK BALANCE TRANSERS - START -----
 $SECRETCLI q bank balances $address_a --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_b --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_c --home=$SECRETD_HOME --output=json | jq
@@ -62,8 +73,10 @@ sleep 5s
 $SECRETCLI q tx --type="hash" "$txhash" --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_d --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_a --home=$SECRETD_HOME --output=json | jq
+# ----- BANK BALANCE TRANSERS - END -----
 
 
+# ----- DISTRIBUTIONS - START -----
 $SECRETCLI q distribution params --output=json | jq
 
 $SECRETCLI q distribution community-pool --output=json | jq
@@ -82,7 +95,10 @@ $SECRETCLI q distribution commission $address_valop --output=json | jq
 
 echo "FIXME: get realistic height"
 $SECRETCLI q distribution slashes $address_valop "1" "10" --output=json | jq
+# ----- DISTRIBUTIONS - END -----
 
+
+# -------------------------------------------
 # # DIR=$(pwd)
 # # WORK_DIR=$(mktemp -d -p ${DIR})
 # # if [ ! -d $WORK_DIR ]; then
@@ -112,7 +128,9 @@ $SECRETCLI q distribution slashes $address_valop "1" "10" --output=json | jq
 # # fi
 
 # # cd $DIR
+# ----------------------------------------------
 
+# ----- SMART CONTRACTS - START -----
 $SECRETCLI keys add scrtsc --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq
 address_scrt=$($SECRETCLI keys show -a scrtsc --keyring-backend="test" --home=$SECRETD_HOME)
 $SECRETCLI q bank balances $address_scrt --home=$SECRETD_HOME --output=json | jq
@@ -128,6 +146,13 @@ $SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
 
 txhash=$($SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label counterContract -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq ".txhash" | sed 's/"//g')
 sleep 5s
-$SECRETCLI q tx --type=hash "$txhash" --output json | jq
+res=$($SECRETCLI q tx --type=hash "$txhash" --output json | jq)
+code_id=$(echo $res | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then 
+  echo $res | jq ".raw_log"
+  exit 1
+fi
+sleep 5s
 code_id=$($SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq ".code_infos[0].code_id" | sed 's/"//g')
 $SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq
+# ----- SMART CONTRACTS - END -----

@@ -9,7 +9,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
-	// "github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
+	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 
 	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -213,23 +213,22 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 		}
 	} else {
 		// if we aren't creating an offline transaction we can validate the chosen label
-		// TODO: Fix
-		/*
-			route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-			res, _, _ := cliCtx.Query(route)
-			if res != nil {
-				return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
-			}
 
-			initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[0])
-			if err != nil {
-				return types.MsgInstantiateContract{}, err
-			}
+		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
+		res, _, _ := cliCtx.Query(route)
+		if res != nil {
+			return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
+		}
 
-			// todo: Add check that this is valid json and stuff
-			initMsg.Msg = []byte(args[1])
+		initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[0])
+		if err != nil {
+			return types.MsgInstantiateContract{}, err
+		}
 
-			encryptedMsg, err = wasmCtx.Encrypt(initMsg.Serialize())*/
+		// todo: Add check that this is valid json and stuff
+		initMsg.Msg = []byte(args[1])
+
+		encryptedMsg, err = wasmCtx.Encrypt(initMsg.Serialize())
 	}
 
 	if err != nil {
@@ -240,15 +239,16 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 	if err != nil {
 		return types.MsgInstantiateContract{}, fmt.Errorf("admin: %s", err)
 	}
-
+	sndr := cliCtx.GetFromAddress()
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
-		Sender:           cliCtx.GetFromAddress().String(),
+		Sender:           sndr,
 		CallbackCodeHash: "",
 		CodeID:           codeID,
 		Label:            label,
 		InitFunds:        amount,
 		InitMsg:          encryptedMsg,
+		SenderAddress:    sndr.String(),
 	}
 
 	if admin != "" {

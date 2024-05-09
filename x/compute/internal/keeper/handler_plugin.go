@@ -506,7 +506,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *v1wasmTypes.WasmMsg) ([]sdk.Msg, 
 		}
 
 		sdkMsg := types.MsgInstantiateContract{
-			Sender:           sender.String(),
+			Sender:           sender,
 			CodeID:           msg.Instantiate.CodeID,
 			Label:            msg.Instantiate.Label,
 			CallbackCodeHash: msg.Instantiate.CallbackCodeHash,

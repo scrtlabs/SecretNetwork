@@ -10,28 +10,28 @@ import (
 )
 
 const (
-	ModuleName               = types.ModuleName
-	StoreKey                 = types.StoreKey
-	TStoreKey                = types.TStoreKey
-	QuerierRoute             = types.QuerierRoute
-	RouterKey                = types.RouterKey
-	MaxWasmSize              = types.MaxWasmSize
-	MaxLabelSize             = types.MaxLabelSize
-	BuildTagRegexp           = types.BuildTagRegexp
-	MaxBuildTagSize          = types.MaxBuildTagSize
-	CustomEventType          = types.CustomEventType
-	AttributeKeyContractAddr = types.AttributeKeyContractAddr
-	GasMultiplier            = types.GasMultiplier
-	MaxGas                   = types.MaxGas
-	// QueryListContractByCode       = keeper.QueryListContractByCode
-	// QueryGetContract              = keeper.QueryGetContract
-	// QueryGetContractState         = keeper.QueryGetContractState
-	// QueryGetCode                  = keeper.QueryGetCode
-	// QueryListCode                 = keeper.QueryListCode
-	// QueryContractKey              = keeper.QueryContractKey
-	// QueryContractAddress          = keeper.QueryContractAddress
-	// QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
-	DefaultConfigTemplate = types.DefaultConfigTemplate
+	ModuleName                    = types.ModuleName
+	StoreKey                      = types.StoreKey
+	TStoreKey                     = types.TStoreKey
+	QuerierRoute                  = types.QuerierRoute
+	RouterKey                     = types.RouterKey
+	MaxWasmSize                   = types.MaxWasmSize
+	MaxLabelSize                  = types.MaxLabelSize
+	BuildTagRegexp                = types.BuildTagRegexp
+	MaxBuildTagSize               = types.MaxBuildTagSize
+	CustomEventType               = types.CustomEventType
+	AttributeKeyContractAddr      = types.AttributeKeyContractAddr
+	GasMultiplier                 = types.GasMultiplier
+	MaxGas                        = types.MaxGas
+	QueryListContractByCode       = keeper.QueryListContractByCode
+	QueryGetContract              = keeper.QueryGetContract
+	QueryGetContractState         = keeper.QueryGetContractState
+	QueryGetCode                  = keeper.QueryGetCode
+	QueryListCode                 = keeper.QueryListCode
+	QueryContractKey              = keeper.QueryContractKey
+	QueryContractAddress          = keeper.QueryContractAddress
+	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
+	DefaultConfigTemplate         = types.DefaultConfigTemplate
 )
 
 var (
