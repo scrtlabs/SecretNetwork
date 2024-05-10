@@ -3,6 +3,8 @@ package cli
 import (
 	// "encoding/hex"
 	// "encoding/json"
+	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -136,7 +138,12 @@ func InstantiateContractCmd() *cobra.Command {
 				return err
 			}
 
-			msg, err := parseInstantiateArgs(args, cliCtx, cmd.Flags())
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			msg, err := parseInstantiateArgs(args, cliCtx, grpcCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -157,7 +164,7 @@ func InstantiateContractCmd() *cobra.Command {
 	return cmd
 }
 
-func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.FlagSet) (types.MsgInstantiateContract, error) {
+func parseInstantiateArgs(args []string, cliCtx client.Context, grpcCtx client.Context, initFlags *flag.FlagSet) (types.MsgInstantiateContract, error) {
 	// get the id of the code to instantiate
 	codeID, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil {
@@ -220,7 +227,7 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.
 			return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 		}
 
-		initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[0])
+		initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, grpcCtx, args[0])
 		if err != nil {
 			return types.MsgInstantiateContract{}, err
 		}
@@ -393,48 +400,41 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 	return tx.GenerateOrBroadcastTxCLI(cliCtx, cmd.Flags(), &msgExec)
 }
 
-func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
-	// TODO: fix
-	/*
-		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryGetCode, codeID)
-		res, _, err := cliCtx.Query(route)
-		if err != nil {
-			return nil, err
-		}
+func GetCodeHashByCodeId(cliCtx client.Context, grpcCtx client.Context, codeID string) ([]byte, error) {
+	id, err := strconv.Atoi(codeID)
+	if err != nil {
+		return nil, err
+	}
+	queryClient := types.NewQueryClient(grpcCtx)
+	res, err := queryClient.Code(
+		context.Background(),
+		&types.QueryByCodeIdRequest{
+			CodeId: uint64(id),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	// When querying for an unknown code id the output is an empty result (without any error)
+	if res == nil {
+		return nil, fmt.Errorf("failed to query contract code hash, unknown code id (%s)", codeID)
+	}
 
-		// When querying for an unknown code id the output is an empty result (without any error)
-		if len(res) == 0 {
-			return nil, fmt.Errorf("failed to query contract code hash, unknown code id (%s)", codeID)
-		}
-
-		var codeResp types.QueryCodeResponse
-
-		err = json.Unmarshal(res, &codeResp)
-		if err != nil {
-			return nil, err
-		}
-
-		return []byte(codeResp.CodeHash), nil
-	*/
-	return nil, nil
+	return []byte(res.CodeHash), nil
 }
 
 func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr sdk.AccAddress) ([]byte, error) {
-	// TODO: fix
-	/*
-		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
-		res, _, err := cliCtx.Query(route)
-		if err != nil {
-			return nil, err
-		}
+	route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractHash, contractAddr.String())
+	res, _, err := cliCtx.Query(route)
+	if err != nil {
+		return nil, err
+	}
 
-		if len(res) == 0 {
-			return nil, fmt.Errorf("contract with address %s not found", contractAddr.String())
-		}
+	if len(res) == 0 {
+		return nil, fmt.Errorf("contract with address %s not found", contractAddr.String())
+	}
 
-		return []byte(hex.EncodeToString(res)), nil
-	*/
-	return nil, nil
+	return []byte(hex.EncodeToString(res)), nil
 }
 
 // MigrateContractCmd will migrate a contract to a new code version
@@ -450,7 +450,12 @@ func MigrateContractCmd() *cobra.Command {
 				return err
 			}
 
-			msg, err := parseMigrateContractArgs(args, clientCtx)
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			msg, err := parseMigrateContractArgs(args, clientCtx, grpcCtx)
 			if err != nil {
 				return err
 			}
@@ -465,7 +470,7 @@ func MigrateContractCmd() *cobra.Command {
 	return cmd
 }
 
-func parseMigrateContractArgs(args []string, cliCtx client.Context) (types.MsgMigrateContract, error) {
+func parseMigrateContractArgs(args []string, cliCtx client.Context, grpcCtx client.Context) (types.MsgMigrateContract, error) {
 	// get the id of the code to instantiate
 	codeID, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
@@ -473,7 +478,7 @@ func parseMigrateContractArgs(args []string, cliCtx client.Context) (types.MsgMi
 	}
 	migrateMsg := types.SecretMsg{}
 
-	migrateMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[1])
+	migrateMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, grpcCtx, args[1])
 	if err != nil {
 		return types.MsgMigrateContract{}, errorsmod.Wrap(err, "code hash")
 	}

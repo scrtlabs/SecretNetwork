@@ -63,10 +63,6 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 		}
 	}
 
-	// sender, err := sdk.AccAddressFromBech32(msg.Sender)
-	// if err != nil {
-	// 	return nil, errorsmod.Wrap(err, "sender")
-	// }
 	contractAddr, data, err := m.keeper.Instantiate(ctx, msg.CodeID, msg.Sender, adminAddr, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
