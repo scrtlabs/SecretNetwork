@@ -12,6 +12,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -30,7 +31,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdListContractByCode(),
 		// GetCmdQueryCode(),
 		// GetCmdQueryCodeInfo(),
-		// GetCmdGetContractInfo(),
+		GetCmdGetContractInfo(),
 		// GetCmdGetContractHistory(),
 		// GetCmdGetContractState(),
 		// GetCmdListPinnedCode(),
@@ -194,41 +195,41 @@ func GetCmdListContractByCode() *cobra.Command {
 // 	return cmd
 // }
 
-// // GetCmdGetContractInfo gets details about a given contract
-// func GetCmdGetContractInfo() *cobra.Command {
-// 	cmd := &cobra.Command{
-// 		Use:     "contract [bech32_address]",
-// 		Short:   "Prints out metadata of a contract given its address",
-// 		Long:    "Prints out metadata of a contract given its address",
-// 		Aliases: []string{"meta", "c"},
-// 		Args:    cobra.ExactArgs(1),
-// 		RunE: func(cmd *cobra.Command, args []string) error {
-// 			clientCtx, err := client.GetClientQueryContext(cmd)
-// 			if err != nil {
-// 				return err
-// 			}
+// GetCmdGetContractInfo gets details about a given contract
+func GetCmdGetContractInfo() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "contract [bech32_address]",
+		Short:   "Prints out metadata of a contract given its address",
+		Long:    "Prints out metadata of a contract given its address",
+		Aliases: []string{"meta", "c"},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
 
-// 			_, err = sdk.AccAddressFromBech32(args[0])
-// 			if err != nil {
-// 				return err
-// 			}
-// 			queryClient := types.NewQueryClient(clientCtx)
-// 			res, err := queryClient.ContractInfo(
-// 				context.Background(),
-// 				&types.QueryContractInfoRequest{
-// 					Address: args[0],
-// 				},
-// 			)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			return clientCtx.PrintProto(res)
-// 		},
-// 		SilenceUsage: true,
-// 	}
-// 	flags.AddQueryFlagsToCmd(cmd)
-// 	return cmd
-// }
+			_, err = sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+			queryClient := types.NewQueryClient(clientCtx)
+			res, err := queryClient.ContractInfo(
+				context.Background(),
+				&types.QueryByContractAddressRequest{
+					ContractAddress: args[0],
+				},
+			)
+			if err != nil {
+				return err
+			}
+			return clientCtx.PrintProto(res)
+		},
+		SilenceUsage: true,
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
 
 // // GetCmdGetContractState dumps full internal state of a given contract
 // func GetCmdGetContractState() *cobra.Command {

@@ -1,0 +1,164 @@
+{
+  "height": "25",
+  "txhash": "804C6B6B1574CB16A482422391CF6A08AD5D590D4222AA0F81B70602AB85A53B",
+  "codespace": "compute",
+  "code": 16,
+  "data": "",
+  "raw_log": "failed to execute message; message index: 0: Message sender: 73656372657431756B6E67746168326667676B703774617A766B7A333632777076727879763070793679783030 is not found in the tx signer set: [[229 166 133 246 234 74 17 96 249 125 19 44 40 233 78 11 6 98 49 225]], callback signature not provided: parse signature failed",
+  "logs": [],
+  "info": "",
+  "gas_wanted": "200000",
+  "gas_used": "66601",
+  "tx": {
+    "@type": "/cosmos.tx.v1beta1.Tx",
+    "body": {
+      "messages": [
+        {
+          "@type": "/secret.compute.v1beta1.MsgInstantiateContract",
+          "sender": "secret1ukngtah2fggkp7tazvkz362wpvrxyv0py6yx00",
+          "callback_code_hash": "",
+          "code_id": "1",
+          "label": "counterContract",
+          "init_msg": null,
+          "init_funds": [],
+          "callback_sig": null,
+          "admin": ""
+        }
+      ],
+      "memo": "",
+      "timeout_height": "0",
+      "extension_options": [],
+      "non_critical_extension_options": []
+    },
+    "auth_info": {
+      "signer_infos": [
+        {
+          "public_key": {
+            "@type": "/cosmos.crypto.secp256k1.PubKey",
+            "key": "A9NL+s9IiIz7up1cwU3YjWeo7LrOnk+ATCQ8nLGSsVad"
+          },
+          "mode_info": {
+            "single": {
+              "mode": "SIGN_MODE_DIRECT"
+            }
+          },
+          "sequence": "1"
+        }
+      ],
+      "fee": {
+        "amount": [
+          {
+            "denom": "uscrt",
+            "amount": "5000"
+          }
+        ],
+        "gas_limit": "200000",
+        "payer": "",
+        "granter": ""
+      },
+      "tip": null
+    },
+    "signatures": [
+      "byvXeteMDXLXTKKsNfMAupdoDa2uFJMnl/s0YVq20phQEMKy+Jjlg4/PSNbY9Tszq0e2KA7VXXX68JbM7zb/MA=="
+    ]
+  },
+  "timestamp": "2024-05-08T23:12:13Z",
+  "events": [
+    {
+      "type": "coin_spent",
+      "attributes": [
+        {
+          "key": "spender",
+          "value": "secret1ukngtah2fggkp7tazvkz362wpvrxyv0py6yx00",
+          "index": true
+        },
+        {
+          "key": "amount",
+          "value": "5000uscrt",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "coin_received",
+      "attributes": [
+        {
+          "key": "receiver",
+          "value": "secret17xpfvakm2amg962yls6f84z3kell8c5ljuhfkp",
+          "index": true
+        },
+        {
+          "key": "amount",
+          "value": "5000uscrt",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "transfer",
+      "attributes": [
+        {
+          "key": "recipient",
+          "value": "secret17xpfvakm2amg962yls6f84z3kell8c5ljuhfkp",
+          "index": true
+        },
+        {
+          "key": "sender",
+          "value": "secret1ukngtah2fggkp7tazvkz362wpvrxyv0py6yx00",
+          "index": true
+        },
+        {
+          "key": "amount",
+          "value": "5000uscrt",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "attributes": [
+        {
+          "key": "sender",
+          "value": "secret1ukngtah2fggkp7tazvkz362wpvrxyv0py6yx00",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "fee",
+          "value": "5000uscrt",
+          "index": true
+        },
+        {
+          "key": "fee_payer",
+          "value": "secret1ukngtah2fggkp7tazvkz362wpvrxyv0py6yx00",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "acc_seq",
+          "value": "secret1ukngtah2fggkp7tazvkz362wpvrxyv0py6yx00/1",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "signature",
+          "value": "byvXeteMDXLXTKKsNfMAupdoDa2uFJMnl/s0YVq20phQEMKy+Jjlg4/PSNbY9Tszq0e2KA7VXXX68JbM7zb/MA==",
+          "index": true
+        }
+      ]
+    }
+  ]
+}
+
