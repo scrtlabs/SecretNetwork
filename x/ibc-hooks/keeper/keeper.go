@@ -5,8 +5,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types/address"
 
-	"cosmossdk.io/log"
 	"cosmossdk.io/core/store"
+	"cosmossdk.io/log"
 
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
@@ -40,7 +40,10 @@ func GetPacketKey(channel string, packetSequence uint64) []byte {
 // StorePacketCallback stores which contract will be listening for the ack or timeout of a packet
 func (k Keeper) StorePacketCallback(ctx sdk.Context, channel string, packetSequence uint64, contract string) {
 	store := k.storeService.OpenKVStore(ctx)
-	store.Set(GetPacketKey(channel, packetSequence), []byte(contract))
+	err := store.Set(GetPacketKey(channel, packetSequence), []byte(contract))
+	if err != nil {
+		ctx.Logger().Error("store callback", "store", err.Error())
+	}
 }
 
 // GetPacketCallback returns the bech32 addr of the contract that is expecting a callback from a packet
@@ -53,7 +56,10 @@ func (k Keeper) GetPacketCallback(ctx sdk.Context, channel string, packetSequenc
 // DeletePacketCallback deletes the callback from storage once it has been processed
 func (k Keeper) DeletePacketCallback(ctx sdk.Context, channel string, packetSequence uint64) {
 	store := k.storeService.OpenKVStore(ctx)
-	store.Delete(GetPacketKey(channel, packetSequence))
+	err := store.Delete(GetPacketKey(channel, packetSequence))
+	if err != nil {
+		ctx.Logger().Error("delete callback", "store", err.Error())
+	}
 }
 
 func DeriveIntermediateSender(channel, originalSender, bech32Prefix string) (string, error) {

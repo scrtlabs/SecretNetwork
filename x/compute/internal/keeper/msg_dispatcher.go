@@ -330,19 +330,25 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 			switch {
 			case msg.Msg.Wasm.Execute != nil:
 				sdkMsg := []sdk.Msg{&types.MsgExecuteContractResponse{}}
-				proto.Unmarshal(replyData, sdkMsg[0])
+				err = proto.Unmarshal(replyData, sdkMsg[0])
+				if err != nil {
+					ctx.Logger().Error("Unmarshal MsgExecuteContractResponse", "proto", err.Error())
+				}
 				err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgExecuteContractResponse).GetData()), &dataWithInternalReplyInfo)
-				break
 			case msg.Msg.Wasm.Instantiate != nil:
 				sdkMsg := []sdk.Msg{&types.MsgInstantiateContractResponse{}}
-				proto.Unmarshal(replyData, sdkMsg[0])
+				err = proto.Unmarshal(replyData, sdkMsg[0])
+				if err != nil {
+					ctx.Logger().Error("Unmarshal MsgInstantiateContractResponse", "proto", err.Error())
+				}
 				err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgInstantiateContractResponse).GetData()), &dataWithInternalReplyInfo)
-				break
 			case msg.Msg.Wasm.Migrate != nil:
 				sdkMsg := []sdk.Msg{&types.MsgMigrateContract{}}
-				proto.Unmarshal(replyData, sdkMsg[0])
+				err = proto.Unmarshal(replyData, sdkMsg[0])
+				if err != nil {
+					ctx.Logger().Error("Unmarshal MsgMigrateContract", "proto", err.Error())
+				}
 				err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgMigrateContractResponse).GetData()), &dataWithInternalReplyInfo)
-				break
 			// case msg.Msg.Wasm.UpdateAdmin != nil:
 			// sdkMsg := []sdk.Msg{&types.MsgUpdateAdmin{}}
 			// proto.Unmarshal(replyData, sdkMsg[0])

@@ -23,7 +23,10 @@ func (k Keeper) GetMasterKey(ctx sdk.Context, keyType string) *types.MasterKey {
 func (k Keeper) SetMasterKey(ctx sdk.Context, key types.MasterKey, keyType string) {
 	store := k.storeService.OpenKVStore(ctx)
 
-	store.Set(types.MasterKeyPrefix(keyType), k.cdc.MustMarshal(&key))
+	err := store.Set(types.MasterKeyPrefix(keyType), k.cdc.MustMarshal(&key))
+	if err != nil {
+		ctx.Logger().Error("set master key", "store", err.Error())
+	}
 }
 
 func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, keyType string) bool {
@@ -68,7 +71,10 @@ func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.Registrat
 
 	// fmt.Println("pubkey", hex.EncodeToString(publicKey))
 	// fmt.Println("EncryptedSeed", hex.EncodeToString(certificate.EncryptedSeed))
-	store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
+	err = store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
+	if err != nil {
+		ctx.Logger().Error("set registration info", "store", err.Error())
+	}
 }
 
 func (k Keeper) isNodeAuthenticated(ctx sdk.Context, publicKey types.NodeID) (bool, error) {

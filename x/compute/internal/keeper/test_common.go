@@ -434,7 +434,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	)
 
 	// bankParams = bankParams.SetSendEnabledParam(sdk.DefaultBondDenom, true)
-	bankKeeper.SetParams(ctx, banktypes.DefaultParams())
+	err = bankKeeper.SetParams(ctx, banktypes.DefaultParams())
+	require.NoError(t, err)
 
 	stakingSubsp, _ := paramsKeeper.GetSubspace(stakingtypes.ModuleName)
 	stakingKeeper := stakingkeeper.NewKeeper(
@@ -446,8 +447,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		authcodec.NewBech32Codec(scrt.Bech32PrefixValAddr),
 		authcodec.NewBech32Codec(scrt.Bech32PrefixConsAddr),
 	)
-	stakingKeeper.SetParams(ctx, TestingStakeParams)
-
+	err = stakingKeeper.SetParams(ctx, TestingStakeParams)
+	require.NoError(t, err)
 	// mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
 
 	// mintKeeper := mintkeeper.NewKeeper(encodingConfig.Marshaler,
@@ -473,8 +474,10 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	)
 
 	// set genesis items required for distribution
-	distKeeper.Params.Set(ctx, distrtypes.DefaultParams())
-	distKeeper.FeePool.Set(ctx, distrtypes.InitialFeePool())
+	err = distKeeper.Params.Set(ctx, distrtypes.DefaultParams())
+	require.NoError(t, err)
+	err = distKeeper.FeePool.Set(ctx, distrtypes.InitialFeePool())
+	require.NoError(t, err)
 	stakingKeeper.SetHooks(stakingtypes.NewMultiStakingHooks(distKeeper.Hooks()))
 
 	// set some funds ot pay out validatores, based on code from:

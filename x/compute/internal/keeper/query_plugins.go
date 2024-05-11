@@ -233,11 +233,13 @@ func GovQuerier(keeper govkeeper.Keeper) func(ctx sdk.Context, request *wasmType
 	return func(ctx sdk.Context, request *wasmTypes.GovQuery) ([]byte, error) {
 		if request.Proposals != nil {
 			var proposals govtypes.Proposals
-			keeper.Proposals.Walk(ctx, nil, func(_ uint64, value govtypes.Proposal) (stop bool, err error) {
+			err := keeper.Proposals.Walk(ctx, nil, func(_ uint64, value govtypes.Proposal) (stop bool, err error) {
 				proposals = append(proposals, &value)
 				return false, nil
 			})
-
+			if err != nil {
+				ctx.Logger().Error("gov keeper", "proposal", err.Error())
+			}
 			if len(proposals) == 0 {
 				return json.Marshal(wasmTypes.ProposalsResponse{
 					Proposals: []wasmTypes.Proposal{},
