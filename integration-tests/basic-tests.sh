@@ -99,35 +99,19 @@ $SECRETCLI q distribution slashes $address_valop "1" "10" --output=json | jq
 
 
 # -------------------------------------------
-# # DIR=$(pwd)
-# # WORK_DIR=$(mktemp -d -p ${DIR})
-# # if [ ! -d $WORK_DIR ]; then
-# #   echo "Could not create $WORK_DIR"
-# #   exit 1
-# # fi
+DIR=$(pwd)
+TMP_DIR=$(mktemp -d -p ${DIR})
+if [ ! -d $WORK_DIR ]; then
+  echo "Could not create $WORK_DIR"
+  exit 1
+fi
 
-# # function cleanup {
-# #     echo "Clean up $WORK_DIR"
-# #     #rm -rf "$WORK_DIR"
-# # }
+function cleanup {
+    echo "Clean up $TMP_DIR"
+    rm -rf "$TMP_DIR"
+}
 
-# # trap cleanup EXIT
-
-
-# # cd $WORK_DIR
-
-# # cargo generate --git https://github.com/scrtlabs/secret-template.git --name secret-test-contract 
-
-# # cd secret-test-contract
-# # make build
-
-# # if [[ ! contract.wasm.gz ]];then
-# #     echo "failed to build a test contract"
-# #     cd -
-# #     return 1
-# # fi
-
-# # cd $DIR
+trap cleanup EXIT
 # ----------------------------------------------
 
 # ----- SMART CONTRACTS - START -----
@@ -144,7 +128,12 @@ sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 $SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
 
-txhash=$($SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label counterContract -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq ".txhash" | sed 's/"//g')
+CONTRACT_LABEL="counterContract"
+
+TMPFILE=$(mktemp -p $TMP_DIR)
+
+
+txhash=$($SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label $CONTRACT_LABEL -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 res=$($SECRETCLI q tx --type=hash "$txhash" --output json | jq)
 code_id=$(echo $res | jq ".code")
@@ -158,4 +147,29 @@ $SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --outpu
 contr_addr=$($SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq ".contract_infos[0].contract_address" | sed 's/"//g')
 $SECRETCLI q compute contract $contr_addr --output json | jq
 $SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq
+# Scenario 1 - execute by query by contract label
+json_compute_s1=$(mktemp -p $TMP_DIR)
+$SECRETCLI tx compute execute --label $CONTRACT_LABEL --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend test --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s1
+code_id=$(cat $json_compute_s1 | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then 
+  cat $json_compute_s1 | jq ".raw_log"
+  exit 1
+fi
+txhash=$(cat $json_compute_s1 | jq ".txhash" | sed 's/"//g')
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq
+sleep 5s
+$SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq
+# Scenario 2 - execute by contract address
+json_compute_s2=$(mktemp -p $TMP_DIR)
+$SECRETCLI tx compute execute $contr_addr --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend test --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s2
+code_id=$(cat $json_compute_s2 | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then 
+  cat $json_compute_s2 | jq ".raw_log"
+  exit 1
+fi
+txhash=$(cat $json_compute_s1 | jq ".txhash" | sed 's/"//g')
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq
+sleep 5s
+$SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq
+
 # ----- SMART CONTRACTS - END -----

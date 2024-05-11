@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/spf13/cobra"
@@ -281,6 +282,7 @@ func ExecuteContractCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			var contractAddr []byte
 			var msg []byte
 			var codeHash string
@@ -297,28 +299,39 @@ func ExecuteContractCmd() *cobra.Command {
 			}
 
 			if len(args) == 1 {
-				// TODO: fix
+				if genOnly {
+					return fmt.Errorf("offline transactions must contain contract address")
+				}
 
-				// if genOnly {
-				// return fmt.Errorf("offline transactions must contain contract address")
-				// }
-				//
-				// label, err := cmd.Flags().GetString(flagLabel)
-				// if err != nil {
-				// return fmt.Errorf("error with label: %s", err)
-				// }
-				// if label == "" {
-				// return fmt.Errorf("label or bech32 contract address is required")
-				// }
+				label, err := cmd.Flags().GetString(flagLabel)
+				if err != nil {
+					return fmt.Errorf("error with label: %s", err)
+				}
+				if label == "" {
+					return fmt.Errorf("label or bech32 contract address is required")
+				}
 
-				// route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-				// res, _, err := cliCtx.Query(route)
-				// if err != nil {
-				// return err
-				// }
+				grpcCtx, err := client.GetClientQueryContext(cmd)
+				if err != nil {
+					return err
+				}
 
-				// contractAddr = res
-				// msg = []byte(args[0])
+				queryClient := types.NewQueryClient(grpcCtx)
+				res, err := queryClient.AddressByLabel(
+					context.Background(),
+					&types.QueryByLabelRequest{
+						Label: label,
+					},
+				)
+				if err != nil {
+					return sdkerrors.ErrNotFound.Wrapf("Contract by label %s not found. Error:%s", label, err)
+				}
+
+				contractAddr, err = sdk.AccAddressFromBech32(res.ContractAddress)
+				if err != nil {
+					return err
+				}
+				msg = []byte(args[0])
 			} else {
 				// get the id of the code to instantiate
 				res, err := sdk.AccAddressFromBech32(args[0])
@@ -378,11 +391,19 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 		execMsg.CodeHash = []byte(codeHash)
 		encryptedMsg, err = wasmCtx.OfflineEncrypt(execMsg.Serialize(), ioMasterKeyPath)
 	} else {
-		execMsg.CodeHash, err = GetCodeHashByContractAddr(cliCtx, contractAddress.String())
+		grpcCtx, err := client.GetClientQueryContext(cmd)
 		if err != nil {
 			return err
 		}
+
+		execMsg.CodeHash, err = GetCodeHashByContractAddr(grpcCtx, contractAddress.String())
+		if err != nil {
+			return sdkerrors.ErrNotFound.Wrapf("Contract address %s not found. Error:%s", contractAddress.String(), err)
+		}
 		encryptedMsg, err = wasmCtx.Encrypt(execMsg.Serialize())
+		if err != nil {
+			return fmt.Errorf("Failed to encrypt the message. Error:%s", err)
+		}
 	}
 	if err != nil {
 		return err
@@ -395,6 +416,7 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 		CallbackCodeHash: "",
 		SentFunds:        coins,
 		Msg:              encryptedMsg,
+		SenderAddress:    cliCtx.GetFromAddress().String(),
 	}
 	return tx.GenerateOrBroadcastTxCLI(cliCtx, cmd.Flags(), &msgExec)
 }
