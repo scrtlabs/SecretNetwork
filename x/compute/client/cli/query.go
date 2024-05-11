@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
@@ -15,6 +16,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
+
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	wasmUtils "github.com/scrtlabs/SecretNetwork/x/compute/client/utils"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -33,12 +37,90 @@ func GetQueryCmd() *cobra.Command {
 		// GetCmdQueryCodeInfo(),
 		GetCmdGetContractInfo(),
 		// GetCmdGetContractHistory(),
-		// GetCmdGetContractState(),
+		GetCmdGetContractStateSmart(),
 		// GetCmdListPinnedCode(),
 		// GetCmdQueryParams(),
 		// GetCmdListContractsByCreator(),
 	)
 	return queryCmd
+}
+
+func GetCmdGetContractStateSmart() *cobra.Command {
+	decoder := newArgDecoder(asciiDecodeString)
+	cmd := &cobra.Command{
+		Use:   "query [bech32_address] [query]",
+		Short: "Calls contract with given address with query data and prints the returned result",
+		Long:  "Calls contract with given address with query data and prints the returned result",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			queryData, err := decoder.DecodeString(args[1])
+			if err != nil {
+				return err
+			}
+
+			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
+
+			contractAddr, err := sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return sdkerrors.ErrInvalidAddress.Wrapf("Invalid contract address: %s", args[0])
+			}
+			codeHash, err := GetCodeHashByContractAddr(clientCtx, contractAddr.String())
+			if err != nil {
+				return sdkerrors.ErrNotFound.Wrapf("Contract with address %s not found", args[0])
+			}
+
+			msg := types.SecretMsg{
+				CodeHash: codeHash,
+				Msg:      queryData,
+			}
+
+			queryData, err = wasmCtx.Encrypt(msg.Serialize())
+			if err != nil {
+				return err
+			}
+			nonce, _, _, _ := parseEncryptedBlob(queryData) //nolint:dogsled // Ignoring error since we just encrypted it
+
+			queryClient := types.NewQueryClient(grpcCtx)
+			res, err := queryClient.QuerySecretContract(
+				context.Background(),
+				&types.QuerySecretContractRequest{
+					ContractAddress: args[0],
+					Query:           queryData,
+				},
+			)
+			if err != nil {
+				return sdkerrors.ErrNotFound.Wrapf("Failed to query secret contract %s. Error: %s", args[0], err)
+			}
+
+			var resDecrypted []byte
+			resDecrypted, err = wasmCtx.Decrypt(res.Data, nonce)
+			if err != nil {
+				return err
+			}
+			res.Data = resDecrypted
+			decodedResp, err := base64.StdEncoding.DecodeString(string(resDecrypted))
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(decodedResp))
+			return nil
+		},
+		SilenceUsage: true,
+	}
+	decoder.RegisterFlags(cmd.PersistentFlags(), "key argument")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdListCode -> gRPC into x/compute/internal/keeper/querier.go: Codes(c context.Context, _ *empty.Empty)
@@ -50,7 +132,7 @@ func GetCmdListCode() *cobra.Command {
 		Aliases: []string{"list-codes", "codes", "lco"},
 		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
+			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}

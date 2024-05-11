@@ -157,4 +157,5 @@ code_id=$($SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
 $SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq
 contr_addr=$($SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq ".contract_infos[0].contract_address" | sed 's/"//g')
 $SECRETCLI q compute contract $contr_addr --output json | jq
+$SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq
 # ----- SMART CONTRACTS - END -----
