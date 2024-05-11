@@ -146,7 +146,11 @@ code_id=$($SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
 $SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq
 contr_addr=$($SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq ".contract_infos[0].contract_address" | sed 's/"//g')
 $SECRETCLI q compute contract $contr_addr --output json | jq
-$SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq
+expected_count=$($SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq ".count")
+if [[ ${expected_count} -ne 1 ]]; then
+  echo "Expected count is 1, got ${expected_count}"
+  exit 1
+fi
 # Scenario 1 - execute by query by contract label
 json_compute_s1=$(mktemp -p $TMP_DIR)
 $SECRETCLI tx compute execute --label $CONTRACT_LABEL --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend test --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s1
@@ -156,9 +160,14 @@ if [[ ${code_id} -ne 0 ]]; then
   exit 1
 fi
 txhash=$(cat $json_compute_s1 | jq ".txhash" | sed 's/"//g')
+sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 sleep 5s
-$SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq
+expected_count=$($SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq '.count')
+if [[ ${expected_count} -ne 2 ]]; then
+  echo "Expected count is 2, got ${expected_count}"
+  exit 1
+fi
 # Scenario 2 - execute by contract address
 json_compute_s2=$(mktemp -p $TMP_DIR)
 $SECRETCLI tx compute execute $contr_addr --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend test --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s2
@@ -170,6 +179,10 @@ fi
 txhash=$(cat $json_compute_s1 | jq ".txhash" | sed 's/"//g')
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 sleep 5s
-$SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq
+expected_count=$($SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq '.count')
+if [[ ${expected_count} -ne 3 ]]; then
+  echo "Expected count is 3, got ${expected_count}"
+  exit 1
+fi
 
 # ----- SMART CONTRACTS - END -----
