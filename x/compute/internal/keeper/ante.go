@@ -39,7 +39,10 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 		} // else use `0` from above to start with
 	}
 	// store next counter value for current height
-	store.Set(types.TXCounterPrefix, encodeHeightCounter(currentHeight, txCounter+1))
+	err := store.Set(types.TXCounterPrefix, encodeHeightCounter(currentHeight, txCounter+1))
+	if err != nil {
+		ctx.Logger().Error("compute ante store set", "store", err.Error())
+	}
 
 	return next(types.WithTXCounter(ctx, txCounter), tx, simulate)
 }

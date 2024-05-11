@@ -21,9 +21,8 @@ type Keeper struct {
 
 func NewKeeper(cdc codec.Codec, storeService store.KVStoreService, iaKeeper icacontrollerkeeper.Keeper, scopedKeeper capabilitykeeper.ScopedKeeper) Keeper {
 	return Keeper{
-		cdc:      cdc,
-		storeService: storeService,
-
+		cdc:                 cdc,
+		storeService:        storeService,
 		scopedKeeper:        scopedKeeper,
 		icaControllerKeeper: iaKeeper,
 	}

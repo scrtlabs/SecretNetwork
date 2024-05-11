@@ -37,7 +37,7 @@ func GetTxCmd() *cobra.Command {
 func getRegisterAccountCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "register",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err

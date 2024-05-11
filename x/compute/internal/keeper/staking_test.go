@@ -497,7 +497,8 @@ func addValidator(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, accountKe
 
 // this will commit the current set, update the block height and set historic info
 // basically, letting two blocks pass
-func nextBlock(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, wasmKeeper Keeper) sdk.Context {
+func nextBlock(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, _ Keeper) sdk.Context {
+	// unusded param wasmKeeper
 	stakingKeeper.EndBlocker(ctx)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
 	stakingKeeper.BeginBlocker(ctx)

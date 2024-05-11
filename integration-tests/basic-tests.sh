@@ -133,12 +133,15 @@ CONTRACT_LABEL="counterContract"
 TMPFILE=$(mktemp -p $TMP_DIR)
 
 
-txhash=$($SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label $CONTRACT_LABEL -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq ".txhash" | sed 's/"//g')
+res_comp_1=$(mktemp -p $TMP_DIR)
+$SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label $CONTRACT_LABEL -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq > $res_comp_1
+txhash=$(cat $res_comp_1 | jq ".txhash" | sed 's/"//g')
 sleep 5s
-res=$($SECRETCLI q tx --type=hash "$txhash" --output json | jq)
-code_id=$(echo $res | jq ".code")
+res_q_tx=$(mktemp -p $TMP_DIR)
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq > $res_q_tx
+code_id=$(cat $res_q_tx | jq ".code")
 if [[ ${code_id} -ne 0 ]]; then 
-  echo $res | jq ".raw_log"
+  cat $res_q_tx | jq ".raw_log"
   exit 1
 fi
 sleep 5s

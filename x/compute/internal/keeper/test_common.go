@@ -496,10 +496,14 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bondPool := authtypes.NewEmptyModuleAccount(stakingtypes.BondedPoolName, authtypes.Burner, authtypes.Staking)
 	feeCollectorAcc := authtypes.NewEmptyModuleAccount(authtypes.FeeCollectorName)
 
-	distrAcc.SetAccountNumber(10001)
-	bondPool.SetAccountNumber(10002)
-	notBondedPool.SetAccountNumber(10003)
-	feeCollectorAcc.SetAccountNumber(10004)
+	err = distrAcc.SetAccountNumber(10001)
+	require.NoError(t, err)
+	err = bondPool.SetAccountNumber(10002)
+	require.NoError(t, err)
+	err = notBondedPool.SetAccountNumber(10003)
+	require.NoError(t, err)
+	err = feeCollectorAcc.SetAccountNumber(10004)
+	require.NoError(t, err)
 
 	authKeeper.SetModuleAccount(ctx, distrAcc)
 	authKeeper.SetModuleAccount(ctx, bondPool)
@@ -538,14 +542,16 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	// mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
 	mintKeeper := mintkeeper.NewKeeper(encodingConfig.Codec, runtime.NewKVStoreService(keys[minttypes.StoreKey]), stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName, authtypes.NewModuleAddress(govtypes.ModuleName).String())
-	mintKeeper.Minter.Set(ctx, minttypes.DefaultInitialMinter())
-
+	err = mintKeeper.Minter.Set(ctx, minttypes.DefaultInitialMinter())
+	require.NoError(t, err)
 	// keeper := NewKeeper(cdc, keyContract, accountKeeper, &bk, &govKeeper, &distKeeper, &mintKeeper, &stakingKeeper, router, tempDir, wasmConfig, supportedFeatures, encoders, queriers)
 	//// add wasm handler so we can loop-back (contracts calling contracts)
 	// router.AddRoute(wasmtypes.RouterKey, TestHandler(keeper))
 
-	govKeeper.ProposalID.Set(ctx, govv1.DefaultStartingProposalID)
-	govKeeper.Params.Set(ctx, govv1.DefaultParams())
+	err = govKeeper.ProposalID.Set(ctx, govv1.DefaultStartingProposalID)
+	require.NoError(t, err)
+	err = govKeeper.Params.Set(ctx, govv1.DefaultParams())
+	require.NoError(t, err)
 	// gh := gov.NewHandler(govKeeper)
 	// router.AddRoute(sdk.NewRoute(govtypes.RouterKey, gh))
 
@@ -650,7 +656,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		distribution.NewAppModule(encodingConfig.Codec, distKeeper, authKeeper, bankKeeper, stakingKeeper, distSubsp),
 		gov.NewAppModule(encodingConfig.Codec, govKeeper, authKeeper, bankKeeper, govSubSp),
 	)
-	am.RegisterServices(module.NewConfigurator(encodingConfig.Codec, msgRouter, queryRouter))
+	err = am.RegisterServices(module.NewConfigurator(encodingConfig.Codec, msgRouter, queryRouter))
+	require.NoError(t, err)
 	wasmtypes.RegisterMsgServer(msgRouter, NewMsgServerImpl(keeper))
 	wasmtypes.RegisterQueryServer(queryRouter, NewGrpcQuerier(keeper))
 
@@ -995,7 +1002,10 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 	priv, pub, addr := keyPubAddr()
 	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetPubKey(pub)
-	baseAcct.SetAccountNumber(accountNumber)
+	err := baseAcct.SetAccountNumber(accountNumber)
+	if err != nil {
+		ctx.Logger().Error("SetAccountNumber", "account", err.Error())
+	}
 	am.SetAccount(ctx, baseAcct)
 
 	fundAccounts(ctx, am, bk, addr, coins)

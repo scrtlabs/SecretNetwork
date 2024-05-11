@@ -227,7 +227,7 @@ func ParseCert() *cobra.Command {
 		Long: "Helper to verify generated credentials, and extract the public key of the secret node, which is used to" +
 			"register the node, during node initialization",
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			// parse coins trying to be sent
 			cert, err := os.ReadFile(args[0])
 			if err != nil {
@@ -308,7 +308,7 @@ func HealthCheck() *cobra.Command {
 		Short: "Test enclave status",
 		Long:  "Help diagnose issues by performing a basic sanity test that SGX is working properly",
 		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			res, err := api.HealthCheck()
 			if err != nil {
 				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)

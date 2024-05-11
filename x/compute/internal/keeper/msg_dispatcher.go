@@ -60,8 +60,8 @@ func sdkAttributesToWasmVMAttributes(attrs []abci.EventAttribute) []v010wasmType
 	res := make([]v010wasmTypes.LogAttribute, len(attrs))
 	for i, attr := range attrs {
 		res[i] = v010wasmTypes.LogAttribute{
-			Key:   string(attr.Key),
-			Value: string(attr.Value),
+			Key:   attr.Key,
+			Value: attr.Value,
 		}
 	}
 	return res
@@ -334,21 +334,21 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 				if err != nil {
 					ctx.Logger().Error("Unmarshal MsgExecuteContractResponse", "proto", err.Error())
 				}
-				err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgExecuteContractResponse).GetData()), &dataWithInternalReplyInfo)
+				err = json.Unmarshal(sdkMsg[0].(*types.MsgExecuteContractResponse).GetData(), &dataWithInternalReplyInfo)
 			case msg.Msg.Wasm.Instantiate != nil:
 				sdkMsg := []sdk.Msg{&types.MsgInstantiateContractResponse{}}
 				err = proto.Unmarshal(replyData, sdkMsg[0])
 				if err != nil {
 					ctx.Logger().Error("Unmarshal MsgInstantiateContractResponse", "proto", err.Error())
 				}
-				err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgInstantiateContractResponse).GetData()), &dataWithInternalReplyInfo)
+				err = json.Unmarshal(sdkMsg[0].(*types.MsgInstantiateContractResponse).GetData(), &dataWithInternalReplyInfo)
 			case msg.Msg.Wasm.Migrate != nil:
 				sdkMsg := []sdk.Msg{&types.MsgMigrateContract{}}
 				err = proto.Unmarshal(replyData, sdkMsg[0])
 				if err != nil {
 					ctx.Logger().Error("Unmarshal MsgMigrateContract", "proto", err.Error())
 				}
-				err = json.Unmarshal([]byte(sdkMsg[0].(*types.MsgMigrateContractResponse).GetData()), &dataWithInternalReplyInfo)
+				err = json.Unmarshal(sdkMsg[0].(*types.MsgMigrateContractResponse).GetData(), &dataWithInternalReplyInfo)
 			// case msg.Msg.Wasm.UpdateAdmin != nil:
 			// sdkMsg := []sdk.Msg{&types.MsgUpdateAdmin{}}
 			// proto.Unmarshal(replyData, sdkMsg[0])

@@ -250,7 +250,7 @@ func generateMultisigAccountFromPublicKeys(ctx sdk.Context, keeper Keeper, pubKe
 
 func prepareInitSignedTxMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, codeID uint64,
+	creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, _ uint64,
 ) sdk.Context {
 	accounts := make([]authtypes.AccountI, len(creators))
 	for i, acc := range creators {

@@ -295,7 +295,8 @@ func EncodeGovMsg(sender sdk.AccAddress, msg *v1wasmTypes.GovMsg) ([]sdk.Msg, er
 }
 
 func EncodeIBCMsg(portSource types.ICS20TransferPortSource) func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *v1wasmTypes.IBCMsg) ([]sdk.Msg, error) {
-	return func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *v1wasmTypes.IBCMsg) ([]sdk.Msg, error) {
+	return func(ctx sdk.Context, sender sdk.AccAddress, _ string, msg *v1wasmTypes.IBCMsg) ([]sdk.Msg, error) {
+		// param contractIBCPortID unused - replace with _
 		switch {
 		case msg.CloseChannel != nil:
 			return []sdk.Msg{&channeltypes.MsgChannelCloseInit{

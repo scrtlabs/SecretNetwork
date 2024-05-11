@@ -131,7 +131,7 @@ func GetCmdListCode() *cobra.Command {
 		Long:    "List all wasm bytecode on the chain",
 		Aliases: []string{"list-codes", "codes", "lco"},
 		Args:    cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err

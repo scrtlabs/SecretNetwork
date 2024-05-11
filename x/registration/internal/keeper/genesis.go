@@ -28,10 +28,14 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) *types.GenesisState {
 	genState.NodeExchMasterKey = keeper.GetMasterKey(ctx, types.MasterNodeKeyId)
 	genState.IoMasterKey = keeper.GetMasterKey(ctx, types.MasterIoKeyId)
 
-	keeper.ListRegistrationInfo(ctx, func(pubkey []byte, regInfo types.RegistrationNodeInfo) bool {
-		genState.Registration = append(genState.Registration, &regInfo)
-		return false
-	})
+	keeper.ListRegistrationInfo(
+		ctx,
+		func(_ []byte, regInfo types.RegistrationNodeInfo) bool {
+			// unused param pubkey
+			genState.Registration = append(genState.Registration, &regInfo)
+			return false
+		},
+	)
 
 	return &genState
 }

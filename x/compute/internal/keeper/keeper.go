@@ -207,7 +207,10 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 		return errorsmod.Wrapf(types.ErrDuplicate, "duplicate code: %d", codeID)
 	}
 	// 0x01 | codeID (uint64) -> ContractInfo
-	store.Set(key, k.cdc.MustMarshal(&codeInfo))
+	err = store.Set(key, k.cdc.MustMarshal(&codeInfo))
+	if err != nil {
+		ctx.Logger().Error("store codeId -> codeInfo", "store", err.Error())
+	}
 	return nil
 }
 

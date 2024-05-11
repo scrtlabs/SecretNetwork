@@ -402,7 +402,7 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 		}
 		encryptedMsg, err = wasmCtx.Encrypt(execMsg.Serialize())
 		if err != nil {
-			return fmt.Errorf("Failed to encrypt the message. Error:%s", err)
+			return fmt.Errorf("failed to encrypt the message. Error:%s", err.Error())
 		}
 	}
 	if err != nil {

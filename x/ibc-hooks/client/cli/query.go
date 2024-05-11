@@ -56,7 +56,7 @@ $ %s query ibc-hooks wasm-hooks-sender channel-42 juno12smx2wdlyttvyzvzg54y2vnqw
 			),
 		),
 		Args: cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			channelID := args[0]
 			originalSender := args[1]
 			// ToDo: Make this flexible as an arg

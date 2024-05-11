@@ -297,7 +297,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	// manage some realistic block settings
 	var h int64 = 10
-	setBlock := func(ctx sdk.Context, height int64, wasmKeeper Keeper) sdk.Context {
+	setBlock := func(ctx sdk.Context, height int64, _ Keeper) sdk.Context {
 		ctx = ctx.WithBlockHeight(height)
 		meter := storetypes.NewGasMeter(1000000)
 		ctx = ctx.WithGasMeter(meter)
@@ -338,7 +338,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	// query and check the results are properly sorted
 	q := NewGrpcQuerier(keeper)
-	query := types.QueryByCodeIdRequest{codeID}
+	query := types.QueryByCodeIdRequest{CodeId: codeID}
 	res, err := q.ContractsByCodeId(ctx, &query)
 	require.NoError(t, err)
 
