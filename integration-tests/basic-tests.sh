@@ -192,4 +192,77 @@ fi
 # ------ STAKING - START ----------
 val_addr=$($SECRETCLI keys show validator --bech val -a --keyring-backend test --home $SECRETD_HOME)
 $SECRETCLI query staking delegations-to $val_addr --output json | jq
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI query staking delegations-to $val_addr"
+    exit 1
+fi
+json_delegate=$(mktemp -p $TMP_DIR)
+$SECRETCLI tx staking delegate $val_addr 500uscrt -y --from a --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json| jq > $json_delegate
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI tx staking delegate $val_addr 500uscrt -y --from a --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt"
+    exit 1
+fi
+code_id=$(cat $json_delegate | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then 
+  cat $json_delegate | jq ".raw_log"
+  exit 1
+fi
+txhash=$(cat $json_delegate | jq ".txhash" | sed 's/"//g')
+sleep 5s
+json_delegate_tx=$(mktemp -p $TMP_DIR)
+$SECRETCLI q tx --type hash $txhash --output json | jq > $json_delegate_tx
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI q tx --type hash $txhash"
+    exit 1
+fi
+code_id=$(cat $json_delegate_tx | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then 
+  cat $json_delegate_tx | jq ".raw_log"
+  exit 1
+fi
+echo "Blcok height:" $(cat $json_delegate_tx | jq ".height")
+echo "Tx:" $(cat $json_delegate_tx | jq ".tx" | jq)
+
+$SECRETCLI query staking delegations-to $val_addr --output json | jq
 # -------- STAKING - END ----------
+
+# -------- BANKING - START --------
+val_addr=$($SECRETCLI keys show -a validator --keyring-backend test --home $SECRETD_HOME)
+recep_addr=$($SECRETCLI keys show -a a --keyring-backend test --home $SECRETD_HOME)
+$SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only --output json | jq
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only"
+    exit 1
+fi
+json_bank_send=$(mktemp -p $TMP_DIR)
+$SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y --output json | jq > $json_bank_send
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y"
+    exit 1
+fi
+code_id=$(cat $json_bank_send | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then 
+  cat $json_bank_send | jq ".raw_log"
+  exit 1
+fi
+txhash=$(cat $json_bank_send | jq ".txhash" | sed 's/"//g')
+sleep 5s
+json_bank_send_tx=$(mktemp -p $TMP_DIR)
+$SECRETCLI q tx --type hash $txhash --output json | jq > $json_bank_send_tx
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI q tx --type hash $txhash"
+    exit 1
+fi
+code_id=$(cat $json_bank_send_tx | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then 
+  cat $json_bank_send_tx | jq ".raw_log"
+  exit 1
+fi
+
+# -------- BANKING - END ----------
