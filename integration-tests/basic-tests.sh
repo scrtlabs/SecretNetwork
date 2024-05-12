@@ -187,5 +187,9 @@ if [[ ${expected_count} -ne 3 ]]; then
   echo "Expected count is 3, got ${expected_count}"
   exit 1
 fi
-
 # ----- SMART CONTRACTS - END -----
+
+# ------ STAKING - START ----------
+val_addr=$($SECRETCLI keys show validator --bech val -a --keyring-backend test --home $SECRETD_HOME)
+$SECRETCLI query staking delegations-to $val_addr --output json | jq
+# -------- STAKING - END ----------
