@@ -226,23 +226,35 @@ fi
 echo "Blcok height:" $(cat $json_delegate_tx | jq ".height")
 echo "Tx:" $(cat $json_delegate_tx | jq ".tx" | jq)
 
-$SECRETCLI query staking delegations-to $val_addr --output json | jq
+json_q_stakes=$(mktemp -p $TMP_DIR)
+$SECRETCLI query staking delegations-to $val_addr --output json | jq > $json_q_stakes
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI query staking delegations-to $val_addr"
+    exit 1
+fi
+jq_staking_query=".delegation_responses[] | select ( .delegation.delegator_address | contains(\"$address_a\") )"
+staking_amount_a=$(cat $json_q_stakes | jq -c "$jq_staking_query" | jq '.balance.amount' | sed 's/"//g')
+if [ $staking_amount_a -ne 500 ]; then
+  echo "Error => Staking amount for account a with $val_addr is incorrect. Expected 500, got $staking_amount_a"
+  exit 1
+fi
 # -------- STAKING - END ----------
 
 # -------- BANKING - START --------
 val_addr=$($SECRETCLI keys show -a validator --keyring-backend test --home $SECRETD_HOME)
 recep_addr=$($SECRETCLI keys show -a a --keyring-backend test --home $SECRETD_HOME)
-$SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only --output json | jq
+$SECRETCLI tx bank send $val_addr $recep_addr 500stake --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only --output json | jq
 retVal=$?
 if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only"
+    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500stake --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only"
     exit 1
 fi
 json_bank_send=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y --output json | jq > $json_bank_send
+$SECRETCLI tx bank send $val_addr $recep_addr 500stake --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y --output json | jq > $json_bank_send
 retVal=$?
 if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y"
+    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500stake --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y"
     exit 1
 fi
 code_id=$(cat $json_bank_send | jq ".code")
