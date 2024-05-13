@@ -193,6 +193,20 @@ fi
 # ----- SMART CONTRACTS - END -----
 
 # ------ STAKING - START ----------
+$SECRETCLI q staking params --output json | jq
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI q staking params"
+    exit 1
+fi
+
+$SECRETCLI q staking validators --chain-id $CHAINID --output json | jq
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI q staking validators --chain-id $CHAINID"
+    exit 1
+fi
+
 val_addr=$($SECRETCLI keys show validator --bech val -a --keyring-backend test --home $SECRETD_HOME)
 $SECRETCLI query staking delegations-to $val_addr --output json | jq
 retVal=$?
@@ -200,6 +214,14 @@ if [ $retVal -ne 0 ]; then
     echo "Error => $SECRETCLI query staking delegations-to $val_addr"
     exit 1
 fi
+
+$SECRETCLI q staking validator $val_addr --chain-id $CHAINID --output json | jq
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error => $SECRETCLI q staking validator $val_addr --chain-id $CHAINID"
+    exit 1
+fi
+
 
 # Account A stakes 500uscrt to validator
 if ! staking_delegate $val_addr $address_a 500; then 
@@ -242,6 +264,12 @@ fi
 # Check account D stake with validator - should be 5000
 if ! staking_check $val_addr $address_d 5000; then
   echo "Staking delegations from $address_d to $val_addr is not 5000"
+  exit 1
+fi
+
+# Withdraw rewards from A
+if ! staking_withdraw_rewards $val_addr $address_a; then
+  echo "Withdrawing rewards for $address_a from $val_addr failed"
   exit 1
 fi
 
