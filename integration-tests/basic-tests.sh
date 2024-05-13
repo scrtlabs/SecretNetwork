@@ -13,6 +13,9 @@ fi
 set -x
 set -o errexit
 
+THIS=`readlink -f "${BASH_SOURCE[0]}" 2>/dev/null||echo $0`
+DIR=`dirname "${THIS}"`
+. "$DIR/integration_test_funcs.sh"
 
 # ----- CLIENT CONFIGURATION - START -----
 $SECRETCLI config set client chain-id "$CHAINID"
@@ -197,48 +200,51 @@ if [ $retVal -ne 0 ]; then
     echo "Error => $SECRETCLI query staking delegations-to $val_addr"
     exit 1
 fi
-json_delegate=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx staking delegate $val_addr 500uscrt -y --from a --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json| jq > $json_delegate
-retVal=$?
-if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI tx staking delegate $val_addr 500uscrt -y --from a --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt"
-    exit 1
-fi
-code_id=$(cat $json_delegate | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then 
-  cat $json_delegate | jq ".raw_log"
-  exit 1
-fi
-txhash=$(cat $json_delegate | jq ".txhash" | sed 's/"//g')
-sleep 5s
-json_delegate_tx=$(mktemp -p $TMP_DIR)
-$SECRETCLI q tx --type hash $txhash --output json | jq > $json_delegate_tx
-retVal=$?
-if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI q tx --type hash $txhash"
-    exit 1
-fi
-code_id=$(cat $json_delegate_tx | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then 
-  cat $json_delegate_tx | jq ".raw_log"
-  exit 1
-fi
-echo "Blcok height:" $(cat $json_delegate_tx | jq ".height")
-echo "Tx:" $(cat $json_delegate_tx | jq ".tx" | jq)
 
-json_q_stakes=$(mktemp -p $TMP_DIR)
-$SECRETCLI query staking delegations-to $val_addr --output json | jq > $json_q_stakes
-retVal=$?
-if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI query staking delegations-to $val_addr"
-    exit 1
-fi
-jq_staking_query=".delegation_responses[] | select ( .delegation.delegator_address | contains(\"$address_a\") )"
-staking_amount_a=$(cat $json_q_stakes | jq -c "$jq_staking_query" | jq '.balance.amount' | sed 's/"//g')
-if [ $staking_amount_a -ne 500 ]; then
-  echo "Error => Staking amount for account a with $val_addr is incorrect. Expected 500, got $staking_amount_a"
+# Account A stakes 500uscrt to validator
+if ! staking_delegate $val_addr $address_a 500; then 
+  echo "Staking validation from $address_a to $val_addr with 500uscrt failed"
   exit 1
 fi
+# Check account A stake with validator - should be 500
+if ! staking_check $val_addr $address_a 500; then
+  echo "Staking delegations from $address_a to $val_addr is not 500"
+  exit 1
+fi
+
+# Account B stakes 1000uscrt to validator
+if ! staking_delegate $val_addr $address_b 1000; then 
+  echo "Staking validation from $address_b to $val_addr with 1000uscrt failed"
+  exit 1
+fi
+# Check account B stake with validator - should be 1000
+if ! staking_check $val_addr $address_b 1000; then
+  echo "Staking delegations from $address_b to $val_addr is not 1000"
+  exit 1
+fi
+
+# Account C stakes 1500uscrt to validator
+if ! staking_delegate $val_addr $address_c 1500; then 
+  echo "Staking validation from $address_c to $val_addr with 1500uscrt failed"
+  exit 1
+fi
+# Check account C stake with validator - should be 1500
+if ! staking_check $val_addr $address_c 1500; then
+  echo "Staking delegations from $address_c to $val_addr is not 1500"
+  exit 1
+fi
+
+# Account D stakes 5000uscrt to validator
+if ! staking_delegate $val_addr $address_d 5000; then 
+  echo "Staking validation from $address_d to $val_addr with 5000uscrt failed"
+  exit 1
+fi
+# Check account D stake with validator - should be 5000
+if ! staking_check $val_addr $address_d 5000; then
+  echo "Staking delegations from $address_d to $val_addr is not 5000"
+  exit 1
+fi
+
 # -------- STAKING - END ----------
 
 # -------- BANKING - START --------
