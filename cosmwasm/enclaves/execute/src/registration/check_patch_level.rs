@@ -15,7 +15,16 @@ use crate::registration::attestation::create_attestation_report;
 use crate::registration::cert::verify_quote_status;
 
 #[cfg(feature = "SGX_MODE_HW")]
-use crate::registration::offchain::get_attestation_report_dcap;
+use crate::registration::attestation::get_quote_ecdsa_untested;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::registration::attestation::verify_quote_ecdsa;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use enclave_utils::storage::write_to_untrusted;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::sgx_types::sgx_ql_qv_result_t;
 
 #[cfg(not(feature = "epid_whitelist_disabled"))]
 use crate::registration::cert::check_epid_gid_is_whitelisted;
@@ -35,11 +44,37 @@ pub unsafe extern "C" fn ecall_check_patch_level(
     panic!("unimplemented")
 }
 
-/// # Safety
-/// Don't forget to check the input length of api_key_len
-#[no_mangle]
 #[cfg(feature = "SGX_MODE_HW")]
-pub unsafe extern "C" fn ecall_check_patch_level(
+unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> NodeAuthResult {
+    match get_quote_ecdsa_untested(pub_k) {
+        Ok((vec_quote, vec_coll)) => {
+            match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
+                Ok(r) => {
+                    if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+                        println!("WARNING: {}", r.1);
+                    }
+
+                    println!("DCAP attestation obtained and verified ok");
+                    return NodeAuthResult::Success;
+                }
+                Err(e) => {
+                    println!("DCAP quote obtained, but failed to verify it: {}", e);
+
+                    let _ = write_to_untrusted(&vec_quote, "dcap_quote.bin");
+                    let _ = write_to_untrusted(&vec_coll, "dcap_collateral.bin");
+                }
+            };
+        }
+        Err(e) => {
+            println!("Failed to obtain DCAP attestation: {}", e);
+        }
+    }
+    NodeAuthResult::InvalidCert
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+unsafe fn check_patch_level_epid(
+    pub_k: &[u8; 32],
     api_key: *const u8,
     api_key_len: u32,
 ) -> NodeAuthResult {
@@ -51,29 +86,14 @@ pub unsafe extern "C" fn ecall_check_patch_level(
 
     let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
 
-    // CREATE THE ATTESTATION REPORT
-    // generate temporary key for attestation
-    let temp_key_result = enclave_crypto::KeyPair::new().unwrap();
-
-    let res_dcap = unsafe { get_attestation_report_dcap(&temp_key_result) };
-    if res_dcap.is_ok() {
-        println!("DCAP attestation ok");
-        return NodeAuthResult::Success;
-    }
-
-    let signed_report = match create_attestation_report(
-        &temp_key_result.get_pubkey(),
-        SIGNATURE_TYPE,
-        api_key_slice,
-        None,
-        true,
-    ) {
-        Ok(r) => r,
-        Err(_e) => {
-            error!("Error creating attestation report");
-            return NodeAuthResult::InvalidCert;
-        }
-    };
+    let signed_report =
+        match create_attestation_report(pub_k, SIGNATURE_TYPE, api_key_slice, None, true) {
+            Ok(r) => r,
+            Err(_e) => {
+                error!("Error creating attestation report");
+                return NodeAuthResult::InvalidCert;
+            }
+        };
 
     let payload: String = serde_json::to_string(&signed_report)
         .map_err(|_| {
@@ -150,4 +170,27 @@ pub unsafe extern "C" fn ecall_check_patch_level(
         },
         _ => NodeAuthResult::Success,
     }
+}
+
+/// # Safety
+/// Don't forget to check the input length of api_key_len
+#[no_mangle]
+#[cfg(feature = "SGX_MODE_HW")]
+pub unsafe extern "C" fn ecall_check_patch_level(
+    api_key: *const u8,
+    api_key_len: u32,
+) -> NodeAuthResult {
+    let temp_key_result = enclave_crypto::KeyPair::new().unwrap();
+
+    let res1 = check_patch_level_dcap(&temp_key_result.get_pubkey());
+    let res2 = check_patch_level_epid(&temp_key_result.get_pubkey(), api_key, api_key_len);
+
+    println!("DCAP attestation: {}", res1);
+    println!("EPID attestation: {}", res2);
+
+    if NodeAuthResult::Success == res1 {
+        return res1;
+    }
+
+    res2
 }

@@ -170,7 +170,8 @@ pub fn validate_enclave_version(
     let _result = ecc_handle.close();
 
     if verify_ra_cert(&cert_der, None, true).is_err() {
-        sgx_status_t::SGX_ERROR_UNEXPECTED
+        error!("Error verifying report.");
+        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
     }
 
     Ok(())
@@ -437,7 +438,7 @@ pub fn get_quote_ecdsa(_pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_stat
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa_untested(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let mut qe_target_info = sgx_target_info_t::default();
     let mut quote_size: u32 = 0;
     let mut rt: sgx_status_t = sgx_status_t::default();
@@ -525,6 +526,13 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
             return Err(e);
         }
     }
+
+    Ok((vec_quote, vec_coll))
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+    let (vec_quote, vec_coll) = get_quote_ecdsa_untested(pub_k)?;
 
     // test self
     match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
