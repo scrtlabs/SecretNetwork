@@ -46,8 +46,8 @@ use std::{
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::cert::verify_ra_cert;
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-use crate::registration::offchain::get_attestation_report_dcap;
+//#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+//use crate::registration::offchain::get_attestation_report_dcap;
 
 #[cfg(feature = "SGX_MODE_HW")]
 use enclave_crypto::consts::SIGNING_METHOD;
@@ -133,14 +133,39 @@ pub fn create_attestation_certificate(
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+pub fn validate_enclave_version_dcap(kp: &KeyPair) -> Result<(), sgx_status_t> {
+    let (vec_quote, vec_coll) = get_quote_ecdsa_untested(kp)?;
+
+    // test self
+    match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
+        Ok(r) => {
+            trace!("Self quote verified ok");
+            if r.1 != sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK {
+                // TODO: strict policy wrt own quote verification
+                trace!("WARNING: {}", r.1);
+            }
+        }
+        Err(e) => {
+            trace!("Self quote verification failed: {}", e);
+
+            write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str())?;
+            write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str())?;
+
+            return Err(e);
+        }
+    };
+
+    Ok(())
+}
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 pub fn validate_enclave_version(
     kp: &KeyPair,
     sign_type: sgx_quote_sign_type_t,
     api_key: &[u8],
     challenge: Option<&[u8]>,
 ) -> Result<(), sgx_status_t> {
-    let res_dcap = unsafe { get_attestation_report_dcap(&kp) };
-    if res_dcap.is_ok() {
+    if validate_enclave_version_dcap(kp).is_ok() {
         return Ok(());
     }
 
@@ -438,7 +463,7 @@ pub fn get_quote_ecdsa(_pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_stat
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa_untested(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let mut qe_target_info = sgx_target_info_t::default();
     let mut quote_size: u32 = 0;
     let mut rt: sgx_status_t = sgx_status_t::default();
@@ -526,6 +551,13 @@ pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_statu
             return Err(e);
         }
     }
+
+    Ok((vec_quote, vec_coll))
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+    let (vec_quote, vec_coll) = get_quote_ecdsa_untested(pub_k)?;
 
     // test self
     match verify_quote_ecdsa(&vec_quote, &vec_coll, 0) {
