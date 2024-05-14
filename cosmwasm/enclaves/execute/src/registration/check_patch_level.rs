@@ -69,7 +69,7 @@ unsafe fn check_patch_level_dcap(pub_k: &[u8; 32]) -> NodeAuthResult {
             println!("Failed to obtain DCAP attestation: {}", e);
         }
     }
-    return NodeAuthResult::InvalidCert;
+    NodeAuthResult::InvalidCert
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -192,5 +192,5 @@ pub unsafe extern "C" fn ecall_check_patch_level(
         return res1;
     }
 
-    return res2;
+    res2
 }
