@@ -3,9 +3,31 @@
   "info": {
     "title": "Secret Network",
     "description": "A REST interface for queries and transactions",
-    "version": "v1.12"
+    "version": ""
   },
   "apis": [
+    {
+      "url": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/app/v1alpha1/query.swagger.jsonCode"
+        }
+      }
+    },
     {
       "url": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.json",
       "operationIds": {
@@ -13,7 +35,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/auth/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -24,7 +57,40 @@
           "Params": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/authz/v1beta1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -35,7 +101,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -46,7 +123,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/base/node/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -57,7 +145,62 @@
           "Params": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/base/tendermint/v1beta1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/circuit/v1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/consensus/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -68,7 +211,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/distribution/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -79,7 +233,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/evidence/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -90,7 +255,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/feegrant/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -101,7 +277,62 @@
           "Params": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/gov/v1beta1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/gov/v1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/group/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -112,7 +343,62 @@
           "Params": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/mint/v1beta1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/nft/v1beta1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/orm/query/v1alpha1/query.swagger.jsonCode"
         }
       }
     },
@@ -123,7 +409,40 @@
           "Params": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/params/v1beta1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/query/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -134,7 +453,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/slashing/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -145,7 +475,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/staking/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -156,7 +497,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonCode"
         }
       }
     },
@@ -167,7 +519,18 @@
           "Params": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -178,7 +541,18 @@
           "Params": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc/applications/fee/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -189,7 +563,18 @@
           "Params": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/controller/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -200,18 +585,18 @@
           "Params": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonUpgradedConsensusState"
-        }
-      }
-    },
-    {
-      "url": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.json",
-      "operationIds": {
-        "rename": {
-          "Params": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.jsonParams",
-          "Pool": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.jsonPool",
-          "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/packetforward/v1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc/applications/interchain_accounts/host/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -222,7 +607,18 @@
           "Params": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -233,7 +629,18 @@
           "Params": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -244,7 +651,18 @@
           "Params": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc/core/client/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -255,7 +673,40 @@
           "Params": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc/core/connection/v1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
+      "url": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc/lightclients/wasm/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -266,7 +717,18 @@
           "Params": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/secret/compute/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -277,7 +739,18 @@
           "Params": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/secret/emergencybutton/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -288,7 +761,18 @@
           "Params": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/secret/intertx/v1beta1/query.swagger.jsonCode"
         }
       }
     },
@@ -299,7 +783,18 @@
           "Params": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonParams",
           "Pool": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonPool",
           "DelegatorValidators": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonUpgradedConsensusState"
+          "UpgradedConsensusState": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonCode"
         }
       }
     },

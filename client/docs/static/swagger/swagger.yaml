@@ -468,7 +468,7 @@ paths:
   /cosmos/auth/v1beta1/accounts/{address}:
     get:
       summary: Account returns account details based on address.
-      operationId: Account
+      operationId: AccountById
       responses:
         '200':
           description: A successful response.

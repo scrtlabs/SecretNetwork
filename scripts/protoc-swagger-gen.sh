@@ -25,7 +25,7 @@ perl -i -pe 's/"(Query|Service)"/"gRPC Gateway API"/' $(find ./tmp-swagger-gen -
   # giving all of them a unique name
   find ../../tmp-swagger-gen -name 'query.swagger.json' -o -name 'fixed-service.swagger.json' | 
     sort |
-    awk '{print "{\"url\":\""$1"\",\"operationIds\":{\"rename\":{\"Params\":\""$1"Params\",\"Pool\":\""$1"Pool\",\"DelegatorValidators\":\""$1"DelegatorValidators\",\"UpgradedConsensusState\":\""$1"UpgradedConsensusState\"}}}"}' |
+    awk '{print "{\"url\":\""$1"\",\"operationIds\":{\"rename\":{\"Params\":\""$1"Params\",\"Pool\":\""$1"Pool\",\"DelegatorValidators\":\""$1"DelegatorValidators\",\"UpgradedConsensusState\":\""$1"UpgradedConsensusState\",\"Accounts\":\""$1"Accounts\",\"Account\":\""$1"Account\",\"Proposal\":\""$1"Proposal\",\"Proposals\":\""$1"Proposals\",\"Deposits\":\""$1"Deposits\",\"Deposit\":\""$1"Deposit\",\"TallyResult\":\""$1"TallyResult\",\"Votes\":\""$1"Votes\",\"Vote\":\""$1"Vote\",\"Balance\":\""$1"Balance\",\"Code\":\""$1"Code\"}}}"}' |
     jq -s '{swagger:"2.0","info":{"title":"Secret Network","description":"A REST interface for queries and transactions","version":"'"${CHAIN_VERSION}"'"},apis:.} | .apis += [{"url":"./swagger_legacy.yaml","dereference":{"circular":"ignore"}}]' > ./config.json
 
   # Derive openapi & swagger from config.json
