@@ -86,8 +86,6 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 // NewRootCmd creates a new root command for simd. It is called once in the
 // main function.
 func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
-	encodingConfig := app.MakeEncodingConfig()
-
 	config := sdk.GetConfig()
 	config.SetCoinType(scrt.CoinType)
 	config.SetPurpose(scrt.CoinPurpose)
@@ -96,6 +94,8 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	config.SetBech32PrefixForConsensusNode(scrt.Bech32PrefixConsAddr, scrt.Bech32PrefixConsPub)
 	config.SetAddressVerifier(scrt.AddressVerifier)
 	config.Seal()
+
+	encodingConfig := app.MakeEncodingConfig()
 
 	// cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
