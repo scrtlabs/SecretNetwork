@@ -79,4 +79,4 @@ fi
 
 
 # Start the secretd
-LOG_LEVEL=trace $SECRETD start --pruning=nothing --bootstrap --home=$SECRETD_HOME --log_level=debug
+SGX_MODE=SW RUST_BACKTRACE=1 SKIP_LIGHT_CLIENT_VALIDATION=true $SECRETD start --pruning=nothing --bootstrap --home=$SECRETD_HOME --log_level=debug

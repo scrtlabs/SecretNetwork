@@ -273,6 +273,54 @@ if ! staking_withdraw_rewards $val_addr $address_a; then
   exit 1
 fi
 
+# Check stakes for A
+if ! staking_query_delegation $val_addr $address_a; then
+  echo "Query delegations for $address_a with $val_addr is 0uscrt"
+  exit 1
+fi
+
+# Check stakes for B
+if ! staking_query_delegation $val_addr $address_b; then
+  echo "Query delegations for $address_b with $val_addr is 0uscrt"
+  exit 1
+fi
+
+# Check stakes for C
+if ! staking_query_delegation $val_addr $address_c; then
+  echo "Query delegations for $address_c with $val_addr is 0uscrt"
+  exit 1
+fi
+
+# Check stakes for D
+if ! staking_query_delegation $val_addr $address_d; then
+  echo "Query delegations for $address_d with $val_addr is 0uscrt"
+  exit 1
+fi
+
+# Check all stakes for A
+if ! staking_query_delegations $address_a; then
+  echo "Query delegations for $address_a"
+  exit 1
+fi
+
+# Check all stakes for B
+if ! staking_query_delegations $address_b; then
+  echo "Query delegations for $address_b"
+  exit 1
+fi
+
+# Check all stakes for C
+if ! staking_query_delegations $address_c; then
+  echo "Query delegations for $address_c"
+  exit 1
+fi
+
+# Check all stakes for D
+if ! staking_query_delegations $address_d; then
+  echo "Query delegations for $address_d"
+  exit 1
+fi
+
 # -------- STAKING - END ----------
 
 # -------- BANKING - START --------

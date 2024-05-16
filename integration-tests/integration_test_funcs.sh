@@ -1,5 +1,43 @@
 
 # ---------- STAKING ----------
+# Staking queries - delegations from delegator with specific validator
+# Args:
+#   validator operator address
+#   delegator address
+function staking_query_delegation() {
+    local val_addr=${1:?}
+    local del_addr=${2:?}
+    json_query=$(mktemp -p $TMP_DIR)
+    $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID --output json | jq > $json_query
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error =>  $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID"
+        return 1
+    fi
+    amount=$(cat $json_query | jq '.delegation_response.balance.amount' | sed 's/"//g')
+    if [ $amount -eq 0 ]; then
+        echo "Error => ${del_addr} amount is ${amount}"
+        return 1
+    fi
+    return 0
+}
+
+# Staking queries - delegations from delegator
+# Args:
+#   delegator address
+function staking_query_delegations() {
+    local del_addr=${1:?}
+    json_query=$(mktemp -p $TMP_DIR)
+    $SECRETCLI q staking delegations ${del_addr} --chain-id $CHAINID --output json | jq > $json_query
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error =>  $SECRETCLI q staking delegations ${del_addr} --chain-id $CHAINID"
+        return 1
+    fi
+    cat $json_query | jq -c '.delegation_responses[] | select ( .balance.amount )' | jq
+    return 0
+}
+
 # Staking delegation
 # Args:
 #   validator address
