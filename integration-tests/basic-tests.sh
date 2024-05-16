@@ -222,7 +222,6 @@ if [ $retVal -ne 0 ]; then
     exit 1
 fi
 
-
 # Account A stakes 500uscrt to validator
 if ! staking_delegate $val_addr $address_a 500; then 
   echo "Staking validation from $address_a to $val_addr with 500uscrt failed"
@@ -323,20 +322,64 @@ fi
 
 # -------- STAKING - END ----------
 
+# NOTE: this section should run after staking!
+# ------ UNBONDING - START --------
+if ! staking_unbond $val_addr $address_a 250; then
+  echo "Tx staking unbond for $address_a from $val_addr with the amount 250 failed"
+  exit 1
+fi 
+
+if ! check_unbound $val_addr $address_a 250; then
+  echo "Delegator ${address_a} new delegated amount with $val_addrs is not 250"
+  exit 1
+fi
+
+if ! staking_unbond $val_addr $address_b 500; then
+  echo "Tx staking unbond for $address_b from $val_addr with the amount 500 failed"
+  exit 1
+fi 
+
+if ! check_unbound $val_addr $address_b 500; then
+  echo "Delegator ${address_b} new delegated amount with $val_addrs is not 500"
+  exit 1
+fi
+
+if ! staking_unbond $val_addr $address_c 500; then
+  echo "Tx staking unbond for $address_c from $val_addr with the amount 500 failed"
+  exit 1
+fi 
+
+if ! check_unbound $val_addr $address_c 1000; then
+  echo "Delegator ${address_c} new delegated amount with $val_addrs is not 1000"
+  exit 1
+fi
+
+if ! staking_unbond $val_addr $address_d 2500; then
+  echo "Tx staking unbond for $address_d from $val_addr with the amount 2500 failed"
+  exit 1
+fi 
+
+if ! check_unbound $val_addr $address_d 2500; then
+  echo "Delegator ${address_d} new delegated amount with $val_addrs is not 2500"
+  exit 1
+fi
+
+# ------ UNBONDING - END ----------
+
 # -------- BANKING - START --------
 val_addr=$($SECRETCLI keys show -a validator --keyring-backend test --home $SECRETD_HOME)
 recep_addr=$($SECRETCLI keys show -a a --keyring-backend test --home $SECRETD_HOME)
-$SECRETCLI tx bank send $val_addr $recep_addr 500stake --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only --output json | jq
+$SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only --output json | jq
 retVal=$?
 if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500stake --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only"
+    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only"
     exit 1
 fi
 json_bank_send=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx bank send $val_addr $recep_addr 500stake --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y --output json | jq > $json_bank_send
+$SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y --output json | jq > $json_bank_send
 retVal=$?
 if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500stake --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y"
+    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y"
     exit 1
 fi
 code_id=$(cat $json_bank_send | jq ".code")

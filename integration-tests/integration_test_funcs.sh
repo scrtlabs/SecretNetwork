@@ -1,4 +1,71 @@
 
+# --------- UNBONDING ---------
+# Staking unbound - unbound certian funds back from the validator to the delegator
+# Args:
+#   validator operator address
+#   delegator address
+#   amount to unbound
+function staking_unbond() {
+    local val_addr=${1:?}
+    local del_addr=${2:?}
+    local -i amount=${3:?}
+
+    json_unbond=$(mktemp -p $TMP_DIR)
+
+    $SECRETCLI tx staking unbond $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json | jq > $json_unbond
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error =>  $SECRETCLI tx staking unbond $val_addr ${amount}uscrt --from $del_addr --chain-id $CHAINID"
+        return 1
+    fi
+    code_id=$(cat $json_unbond | jq ".code")
+    if [[ ${code_id} -ne 0 ]]; then 
+        cat $json_unbond | jq ".raw_log"
+        return 1
+    fi
+    txhash=$(cat $json_unbond | jq ".txhash" | sed 's/"//g')
+    sleep 5s
+    json_unbond_tx=$(mktemp -p $TMP_DIR)
+    $SECRETCLI q tx --type hash $txhash --output json | jq > $json_unbond_tx
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error => $SECRETCLI q tx --type hash $txhash"
+        return 1
+    fi
+    code_id=$(cat $json_unbond_tx | jq ".code")
+    if [[ ${code_id} -ne 0 ]]; then 
+        $(cat $json_unbond_tx | jq ".raw_log")
+        return 1
+    fi
+    return 0
+}
+
+# Check if the remaining balance matches the expected value
+# Args:
+#   validator operator address
+#   delegator address
+#   expected amount
+function check_unbound() {
+    local val_addr=${1:?}
+    local del_addr=${2:?}
+    local -i expected_amount=${3:?}
+
+    json_query=$(mktemp -p $TMP_DIR)
+    $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID --output json | jq > $json_query
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error =>  $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID"
+        return 1
+    fi
+    amount=$(cat $json_query | jq '.delegation_response.balance.amount' | sed 's/"//g')
+    if [ $amount -ne $expected_amount ]; then
+        echo "Error => ${del_addr} expected amount is ${expected_amount}, factual is ${amount}"
+        return 1
+    fi
+    return 0
+}
+# ------ UNBONDING - END ------
+
 # ---------- STAKING ----------
 # Staking queries - delegations from delegator with specific validator
 # Args:
