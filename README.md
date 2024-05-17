@@ -143,10 +143,10 @@ For the latest documentation, check out [https://docs.scrt.network](https://docs
 # Community
 
 - Homepage: [https://scrt.network](https://scrt.network)
-- Blog: [https://blog.scrt.network](https://blog.scrt.network)
+- Blog: [https://scrt.network/blog/](https://scrt.network/blog/)
 - Forum: [https://forum.scrt.network](https://forum.scrt.network)
 - Docs: [https://docs.scrt.network](https://docs.scrt.network)
-- Discord: [https://chat.scrt.network](https://chat.scrt.network)
+- Discord: [https://scrt.network/discord](https://scrt.network/discord)
 - Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
 - Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
 - Community Secret Nodes Telegram: [https://t.me/secretnodes](https://t.me/secretnodes)
