@@ -1,4 +1,3 @@
-
 # --------- UNBONDING ---------
 # Staking check unbonding delegations
 # Args:
@@ -11,7 +10,7 @@ function staking_check_unbonding() {
     local -i expected_amount=${3:?}
 
     json_unbond=$(mktemp -p $TMP_DIR)
-    $SECRETCLI q staking unbonding-delegation $del_addr $val_addr --output json | jq > $json_unbond
+    $SECRETCLI q staking unbonding-delegation $del_addr $val_addr --output json | jq >$json_unbond
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error =>  $SECRETCLI q staking unbonding-delegation $del_addr $val_addr"
@@ -23,7 +22,7 @@ function staking_check_unbonding() {
         echo "[1] Unbond balance ${balance} for ${del_addr} with ${val_addr} does not match expected balance ${expected_amount}"
         return 1
     fi
-    $SECRETCLI q staking unbonding-delegations $del_addr --output json | jq > $json_unbond
+    $SECRETCLI q staking unbonding-delegations $del_addr --output json | jq >$json_unbond
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error =>  $SECRETCLI q staking unbonding-delegations $del_addr"
@@ -62,28 +61,28 @@ function staking_unbond() {
 
     json_unbond=$(mktemp -p $TMP_DIR)
 
-    $SECRETCLI tx staking unbond $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json | jq > $json_unbond
+    $SECRETCLI tx staking unbond $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json | jq >$json_unbond
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error =>  $SECRETCLI tx staking unbond $val_addr ${amount}uscrt --from $del_addr --chain-id $CHAINID"
         return 1
     fi
     code_id=$(cat $json_unbond | jq ".code")
-    if [[ ${code_id} -ne 0 ]]; then 
+    if [[ ${code_id} -ne 0 ]]; then
         cat $json_unbond | jq ".raw_log"
         return 1
     fi
     txhash=$(cat $json_unbond | jq ".txhash" | sed 's/"//g')
     sleep 5s
     json_unbond_tx=$(mktemp -p $TMP_DIR)
-    $SECRETCLI q tx --type hash $txhash --output json | jq > $json_unbond_tx
+    $SECRETCLI q tx --type hash $txhash --output json | jq >$json_unbond_tx
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error => $SECRETCLI q tx --type hash $txhash"
         return 1
     fi
     code_id=$(cat $json_unbond_tx | jq ".code")
-    if [[ ${code_id} -ne 0 ]]; then 
+    if [[ ${code_id} -ne 0 ]]; then
         $(cat $json_unbond_tx | jq ".raw_log")
         return 1
     fi
@@ -101,7 +100,7 @@ function check_unbound() {
     local -i expected_amount=${3:?}
 
     json_query=$(mktemp -p $TMP_DIR)
-    $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID --output json | jq > $json_query
+    $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID --output json | jq >$json_query
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error =>  $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID"
@@ -120,7 +119,7 @@ function check_unbound() {
 # Staking query pool - check that bonded and unbonded pools are > 0
 function staking_check_pools() {
     json_query=$(mktemp -p $TMP_DIR)
-    $SECRETCLI q staking pool --output json | jq > $json_query
+    $SECRETCLI q staking pool --output json | jq >$json_query
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error =>  $SECRETCLI q staking pool"
@@ -147,7 +146,7 @@ function staking_query_delegation() {
     local val_addr=${1:?}
     local del_addr=${2:?}
     json_query=$(mktemp -p $TMP_DIR)
-    $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID --output json | jq > $json_query
+    $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID --output json | jq >$json_query
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error =>  $SECRETCLI q staking delegation ${del_addr} ${val_addr} --chain-id $CHAINID"
@@ -167,7 +166,7 @@ function staking_query_delegation() {
 function staking_query_delegations() {
     local del_addr=${1:?}
     json_query=$(mktemp -p $TMP_DIR)
-    $SECRETCLI q staking delegations ${del_addr} --chain-id $CHAINID --output json | jq > $json_query
+    $SECRETCLI q staking delegations ${del_addr} --chain-id $CHAINID --output json | jq >$json_query
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error =>  $SECRETCLI q staking delegations ${del_addr} --chain-id $CHAINID"
@@ -187,28 +186,28 @@ function staking_delegate() {
     local del_addr=${2:?}
     local -i amount=${3:?}
     json_delegate=$(mktemp -p $TMP_DIR)
-    $SECRETCLI tx staking delegate $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json| jq > $json_delegate
+    $SECRETCLI tx staking delegate $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json | jq >$json_delegate
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error => $SECRETCLI tx staking delegate $val_addr 500uscrt -y --from a --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt"
         return 1
     fi
     code_id=$(cat $json_delegate | jq ".code")
-    if [[ ${code_id} -ne 0 ]]; then 
+    if [[ ${code_id} -ne 0 ]]; then
         cat $json_delegate | jq ".raw_log"
         return 1
     fi
     txhash=$(cat $json_delegate | jq ".txhash" | sed 's/"//g')
     sleep 5s
     json_delegate_tx=$(mktemp -p $TMP_DIR)
-    $SECRETCLI q tx --type hash $txhash --output json | jq > $json_delegate_tx
+    $SECRETCLI q tx --type hash $txhash --output json | jq >$json_delegate_tx
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error => $SECRETCLI q tx --type hash $txhash"
         return 1
     fi
     code_id=$(cat $json_delegate_tx | jq ".code")
-    if [[ ${code_id} -ne 0 ]]; then 
+    if [[ ${code_id} -ne 0 ]]; then
         $(cat $json_delegate_tx | jq ".raw_log")
         return 1
     fi
@@ -227,7 +226,7 @@ function staking_check() {
     local del_addr=${2:?}
     local -i amount=${3:?}
     json_q_stakes=$(mktemp -p $TMP_DIR)
-    $SECRETCLI query staking delegations-to $val_addr --output json | jq > $json_q_stakes
+    $SECRETCLI query staking delegations-to $val_addr --output json | jq >$json_q_stakes
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error => $SECRETCLI query staking delegations-to $val_addr"
@@ -250,28 +249,28 @@ function staking_withdraw_rewards() {
     local val_addr=${1:?}
     local del_addr=${2:?}
     json_withdraw=$(mktemp -p $TMP_DIR)
-    $SECRETCLI tx distribution withdraw-rewards $val_addr -y --from $del_addr --keyring-backend test --home $SECRETD_HOME --chain-id $CHAINID --output json --fees 3000uscrt | jq > $json_withdraw
+    $SECRETCLI tx distribution withdraw-rewards $val_addr -y --from $del_addr --keyring-backend test --home $SECRETD_HOME --chain-id $CHAINID --output json --fees 3000uscrt | jq >$json_withdraw
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error => $SECRETCLI tx distribution withdraw-rewards $val_addr -y --from $del_addr --keyring-backend test --home $SECRETD_HOME --chain-id $CHAINID --output json --fees 3000uscrt"
         return 1
     fi
     code_id=$(cat $json_withdraw | jq ".code")
-    if [[ ${code_id} -ne 0 ]]; then 
+    if [[ ${code_id} -ne 0 ]]; then
         cat $json_withdraw | jq ".raw_log"
         return 1
     fi
     txhash=$(cat $json_withdraw | jq ".txhash" | sed 's/"//g')
     sleep 5s
     json_withdraw_tx=$(mktemp -p $TMP_DIR)
-    $SECRETCLI q tx --type hash $txhash --output json | jq > $json_withdraw_tx
+    $SECRETCLI q tx --type hash $txhash --output json | jq >$json_withdraw_tx
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error => $SECRETCLI q tx --type hash $txhash"
         return 1
     fi
     code_id=$(cat $json_withdraw_tx | jq ".code")
-    if [[ ${code_id} -ne 0 ]]; then 
+    if [[ ${code_id} -ne 0 ]]; then
         $(cat $json_withdraw_tx | jq ".raw_log")
         return 1
     fi

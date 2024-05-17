@@ -107,7 +107,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
 		// WithBroadcastMode(flags.BroadcastBlock).
-		// WithHomeDir(app.DefaultNodeHome).
+		WithHomeDir(app.DefaultNodeHome).
 		WithViper("SECRET")
 
 	rootCmd := &cobra.Command{
