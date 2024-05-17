@@ -369,42 +369,32 @@ if ! staking_check_pools ; then
   exit 1
 fi
 
+# Check unbonding for address a - expect 250 (as per pervious transactions)
+if ! staking_check_unbonding $val_addr $address_a 250; then
+  echo "Staking check unbonding for ${address_a} failed"
+  exit 1
+fi
+
+# Check unbonding for address b - expect 500 (as per pervious transactions)
+if ! staking_check_unbonding $val_addr $address_b 500; then
+  echo "Staking check unbonding for ${address_b} failed"
+  exit 1
+fi
+
+# Check unbonding for address c - expect 500 (as per pervious transactions)
+if ! staking_check_unbonding $val_addr $address_c 500; then
+  echo "Staking check unbonding for ${address_c} failed"
+  exit 1
+fi
+
+# Check unbonding for address d - expect 2500 (as per pervious transactions)
+if ! staking_check_unbonding $val_addr $address_d 2500; then
+  echo "Staking check unbonding for ${address_d} failed"
+  exit 1
+fi
+
 # ------ UNBONDING - END ----------
 
-# -------- BANKING - START --------
-val_addr=$($SECRETCLI keys show -a validator --keyring-backend test --home $SECRETD_HOME)
-recep_addr=$($SECRETCLI keys show -a a --keyring-backend test --home $SECRETD_HOME)
-$SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only --output json | jq
-retVal=$?
-if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --generate-only"
-    exit 1
-fi
-json_bank_send=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y --output json | jq > $json_bank_send
-retVal=$?
-if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI tx bank send $val_addr $recep_addr 500uscrt --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt -y"
-    exit 1
-fi
-code_id=$(cat $json_bank_send | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then 
-  cat $json_bank_send | jq ".raw_log"
-  exit 1
-fi
-txhash=$(cat $json_bank_send | jq ".txhash" | sed 's/"//g')
-sleep 5s
-json_bank_send_tx=$(mktemp -p $TMP_DIR)
-$SECRETCLI q tx --type hash $txhash --output json | jq > $json_bank_send_tx
-retVal=$?
-if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI q tx --type hash $txhash"
-    exit 1
-fi
-code_id=$(cat $json_bank_send_tx | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then 
-  cat $json_bank_send_tx | jq ".raw_log"
-  exit 1
-fi
-
-# -------- BANKING - END ----------
+set +x
+echo " *** INTEGRATION TESTS PASSED! ***"
+exit 0

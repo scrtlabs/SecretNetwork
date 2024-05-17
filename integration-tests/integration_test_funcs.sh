@@ -1,5 +1,55 @@
 
 # --------- UNBONDING ---------
+# Staking check unbonding delegations
+# Args:
+#   validator operator address
+#   delegator address
+#   expected amount
+function staking_check_unbonding() {
+    local val_addr=${1:?}
+    local del_addr=${2:?}
+    local -i expected_amount=${3:?}
+
+    json_unbond=$(mktemp -p $TMP_DIR)
+    $SECRETCLI q staking unbonding-delegation $del_addr $val_addr --output json | jq > $json_unbond
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error =>  $SECRETCLI q staking unbonding-delegation $del_addr $val_addr"
+        return 1
+    fi
+    cat $json_unbond | jq
+    local balance=$(cat $json_unbond | jq '.unbond.entries[0].balance' | sed 's/"//g')
+    if [ $balance -ne $expected_amount ]; then
+        echo "[1] Unbond balance ${balance} for ${del_addr} with ${val_addr} does not match expected balance ${expected_amount}"
+        return 1
+    fi
+    $SECRETCLI q staking unbonding-delegations $del_addr --output json | jq > $json_unbond
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error =>  $SECRETCLI q staking unbonding-delegations $del_addr"
+        return 1
+    fi
+    cat $json_unbond | jq
+    balance=$(cat $json_unbond | jq -c ".unbonding_responses[] | select ( .validator_address | contains(\"$val_address\"))" | jq '.entries[0].balance' | sed 's/"//g')
+    if [ $balance -ne $expected_amount ]; then
+        echo "[2] Unbond balance ${balance} for ${del_addr} does not match expected balance ${expected_amount}"
+        return 1
+    fi
+    $SECRETCLI q staking unbonding-delegations-from $val_addr --output json | jq
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error =>  $SECRETCLI q staking unbonding-delegations-from $val_addr"
+        return 1
+    fi
+    cat $json_unbond | jq
+    balance=$(cat $json_unbond | jq -c ".unbonding_responses[] | select ( .delegator_address | contains(\"$del_address\"))" | jq '.entries[0].balance' | sed 's/"//g')
+    if [ $balance -ne $expected_amount ]; then
+        echo "[3] Unbond balance ${balance} for ${del_addr} with ${val_addr} does not match expected balance ${expected_amount}"
+        return 1
+    fi
+    return 0
+}
+
 # Staking unbound - unbound certian funds back from the validator to the delegator
 # Args:
 #   validator operator address
