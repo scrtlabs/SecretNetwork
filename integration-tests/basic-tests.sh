@@ -364,6 +364,11 @@ if ! check_unbound $val_addr $address_d 2500; then
   exit 1
 fi
 
+if ! staking_check_pools ; then
+  echo "Staking pools are zeroes"
+  exit 1
+fi
+
 # ------ UNBONDING - END ----------
 
 # -------- BANKING - START --------

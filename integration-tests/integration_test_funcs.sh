@@ -67,6 +67,28 @@ function check_unbound() {
 # ------ UNBONDING - END ------
 
 # ---------- STAKING ----------
+# Staking query pool - check that bonded and unbonded pools are > 0
+function staking_check_pools() {
+    json_query=$(mktemp -p $TMP_DIR)
+    $SECRETCLI q staking pool --output json | jq > $json_query
+    retVal=$?
+    if [ $retVal -ne 0 ]; then
+        echo "Error =>  $SECRETCLI q staking pool"
+        return 1
+    fi
+    local bonded_tokens=$(cat $json_query | jq '.pool.bonded_tokens' | sed 's/"//g')
+    if [ $bonded_tokens -eq 0 ]; then
+        echo "Error => Bonded token amount is ${bonded_tokens}"
+        return 1
+    fi
+    local not_bonded_tokens=$(cat $json_query | jq '.pool.not_bonded_tokens' | sed 's/"//g')
+    if [ $not_bonded_tokens -eq 0 ]; then
+        echo "Error => Not Bonded token amount is ${not_bonded_tokens}"
+        return 1
+    fi
+    return 0
+}
+
 # Staking queries - delegations from delegator with specific validator
 # Args:
 #   validator operator address
