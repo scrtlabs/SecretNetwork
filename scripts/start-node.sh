@@ -8,6 +8,7 @@ CHAINID=${3:-secretdev-1}
 ENABLE_FAUCET=${4:-"false"}
 
 LOG_LEVEL=${LOG_LEVEL:-"info"}
+KEYRING=${KEYRING:-"test"}
 
 rm -rf $SECRETD_HOME
 
@@ -36,7 +37,7 @@ trap cleanup EXIT
 
 $SECRETD config set client chain-id "$CHAINID"
 $SECRETD config set client output json
-$SECRETD config set client keyring-backend test
+$SECRETD config set client keyring-backend ${KEYRING}
 
 # Build genesis file incl account for passed address
 #coins="500000000000uscrt,500000000000uscrt"

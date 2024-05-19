@@ -61,7 +61,7 @@ function staking_unbond() {
 
     json_unbond=$(mktemp -p $TMP_DIR)
 
-    $SECRETCLI tx staking unbond $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json | jq >$json_unbond
+    $SECRETCLI tx staking unbond $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend ${KEYRING} --home $SECRETD_HOME --fees 3000uscrt --output json | jq >$json_unbond
     retVal=$?
     if [ $retVal -ne 0 ]; then
         echo "Error =>  $SECRETCLI tx staking unbond $val_addr ${amount}uscrt --from $del_addr --chain-id $CHAINID"
@@ -186,10 +186,10 @@ function staking_delegate() {
     local del_addr=${2:?}
     local -i amount=${3:?}
     json_delegate=$(mktemp -p $TMP_DIR)
-    $SECRETCLI tx staking delegate $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt --output json | jq >$json_delegate
+    $SECRETCLI tx staking delegate $val_addr ${amount}uscrt -y --from $del_addr --chain-id $CHAINID --keyring-backend ${KEYRING} --home $SECRETD_HOME --fees 3000uscrt --output json | jq >$json_delegate
     retVal=$?
     if [ $retVal -ne 0 ]; then
-        echo "Error => $SECRETCLI tx staking delegate $val_addr 500uscrt -y --from a --chain-id $CHAINID --keyring-backend test --home $SECRETD_HOME --fees 3000uscrt"
+        echo "Error => $SECRETCLI tx staking delegate $val_addr 500uscrt -y --from a --chain-id $CHAINID --keyring-backend ${KEYRING} --home $SECRETD_HOME --fees 3000uscrt"
         return 1
     fi
     code_id=$(cat $json_delegate | jq ".code")
@@ -249,10 +249,10 @@ function staking_withdraw_rewards() {
     local val_addr=${1:?}
     local del_addr=${2:?}
     json_withdraw=$(mktemp -p $TMP_DIR)
-    $SECRETCLI tx distribution withdraw-rewards $val_addr -y --from $del_addr --keyring-backend test --home $SECRETD_HOME --chain-id $CHAINID --output json --fees 3000uscrt | jq >$json_withdraw
+    $SECRETCLI tx distribution withdraw-rewards $val_addr -y --from $del_addr --keyring-backend ${KEYRING} --home $SECRETD_HOME --chain-id $CHAINID --output json --fees 3000uscrt | jq >$json_withdraw
     retVal=$?
     if [ $retVal -ne 0 ]; then
-        echo "Error => $SECRETCLI tx distribution withdraw-rewards $val_addr -y --from $del_addr --keyring-backend test --home $SECRETD_HOME --chain-id $CHAINID --output json --fees 3000uscrt"
+        echo "Error => $SECRETCLI tx distribution withdraw-rewards $val_addr -y --from $del_addr --keyring-backend ${KEYRING} --home $SECRETD_HOME --chain-id $CHAINID --output json --fees 3000uscrt"
         return 1
     fi
     code_id=$(cat $json_withdraw | jq ".code")

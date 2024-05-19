@@ -2,8 +2,9 @@
 
 SECRETCLI=${1:-./secretcli}
 SECRETD_HOME=${2:-$HOME/.secretd_local}
-CHAINID=${3:-secretdev-1}
-SECRETD=${4:-"http://localhost:26657"}
+CHAINID=${3:-"secretdev-1"}
+KEYRING=${4:-"test"}
+SECRETD=${5:-"http://localhost:26657"}
 
 if [ ! $SECRETD_HOME/config/genesis.json ]; then
   echo "Cannot find $SECRETD_HOME/config/genesis.json."
@@ -31,19 +32,19 @@ $SECRETCLI status --output=json | jq
 
 
 # ----- KEY OPERATIONS - START -----
-$SECRETCLI keys list --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq
+$SECRETCLI keys list --keyring-backend ${KEYRING} --home=$SECRETD_HOME --output=json | jq
 
-address_v=$($SECRETCLI keys show -a validator --keyring-backend="test" --home=$SECRETD_HOME)
+address_v=$($SECRETCLI keys show -a validator --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 
-address_a=$($SECRETCLI keys show -a a --keyring-backend="test" --home=$SECRETD_HOME)
-address_b=$($SECRETCLI keys show -a b --keyring-backend="test" --home=$SECRETD_HOME)
-address_c=$($SECRETCLI keys show -a c --keyring-backend="test" --home=$SECRETD_HOME)
-address_d=$($SECRETCLI keys show -a d --keyring-backend="test" --home=$SECRETD_HOME)
+address_a=$($SECRETCLI keys show -a a --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
+address_b=$($SECRETCLI keys show -a b --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
+address_c=$($SECRETCLI keys show -a c --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
+address_d=$($SECRETCLI keys show -a d --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 
-key_a=$($SECRETCLI keys show -p a --keyring-backend="test" --home=$SECRETD_HOME)
-key_b=$($SECRETCLI keys show -p b --keyring-backend="test" --home=$SECRETD_HOME)
-key_c=$($SECRETCLI keys show -p c --keyring-backend="test" --home=$SECRETD_HOME)
-key_d=$($SECRETCLI keys show -p d --keyring-backend="test" --home=$SECRETD_HOME)
+key_a=$($SECRETCLI keys show -p a --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
+key_b=$($SECRETCLI keys show -p b --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
+key_c=$($SECRETCLI keys show -p c --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
+key_d=$($SECRETCLI keys show -p d --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 # ----- KEY OPERATIONS - END -----
 
 
@@ -53,25 +54,25 @@ $SECRETCLI q bank balances $address_b --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_c --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_d --home=$SECRETD_HOME --output=json | jq
 
-txhash=$($SECRETCLI tx bank send $address_a $address_b 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx bank send $address_a $address_b 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend ${KEYRING} --output=json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type="hash" "$txhash" --output=json | jq
 $SECRETCLI q bank balances $address_a --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_b --home=$SECRETD_HOME --output=json | jq
 
-txhash=$($SECRETCLI tx bank send $address_b $address_c 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx bank send $address_b $address_c 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend ${KEYRING} --output=json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type="hash" "$txhash" --output=json | jq
 $SECRETCLI q bank balances $address_b --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_c --home=$SECRETD_HOME --output=json | jq
 
-txhash=$($SECRETCLI tx bank send $address_c $address_d 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx bank send $address_c $address_d 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend ${KEYRING} --output=json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type="hash" "$txhash" --output=json | jq
 $SECRETCLI q bank balances $address_c --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_d --home=$SECRETD_HOME --output=json | jq
 
-txhash=$($SECRETCLI tx bank send $address_d $address_a 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx bank send $address_d $address_a 10uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend ${KEYRING} --output=json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type="hash" "$txhash" --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_d --home=$SECRETD_HOME --output=json | jq
@@ -118,15 +119,15 @@ trap cleanup EXIT
 # ----------------------------------------------
 
 # ----- SMART CONTRACTS - START -----
-$SECRETCLI keys add scrtsc --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq
-address_scrt=$($SECRETCLI keys show -a scrtsc --keyring-backend="test" --home=$SECRETD_HOME)
+$SECRETCLI keys add scrtsc --keyring-backend ${KEYRING} --home=$SECRETD_HOME --output=json | jq
+address_scrt=$($SECRETCLI keys show -a scrtsc --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 $SECRETCLI q bank balances $address_scrt --home=$SECRETD_HOME --output=json | jq
-txhash=$($SECRETCLI tx bank send $address_a $address_scrt 1000000uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend="test" --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx bank send $address_a $address_scrt 1000000uscrt --gas-prices=0.25uscrt -y --chain-id=$CHAINID --home=$SECRETD_HOME --keyring-backend ${KEYRING} --output=json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 $SECRETCLI q bank balances $address_scrt --home=$SECRETD_HOME --output=json | jq
 
-txhash=$($SECRETCLI tx compute store ./integration-tests/test-contracts/contract.wasm.gz -y --gas 950000 --fees 12500uscrt --from $address_scrt --chain-id=$CHAINID --keyring-backend="test" --home=$SECRETD_HOME --output=json | jq ".txhash" | sed 's/"//g')
+txhash=$($SECRETCLI tx compute store ./integration-tests/test-contracts/contract.wasm.gz -y --gas 950000 --fees 12500uscrt --from $address_scrt --chain-id=$CHAINID --keyring-backend ${KEYRING} --home=$SECRETD_HOME --output=json | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 $SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
@@ -137,7 +138,7 @@ TMPFILE=$(mktemp -p $TMP_DIR)
 
 
 res_comp_1=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label $CONTRACT_LABEL -y --keyring-backend=test --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq > $res_comp_1
+$SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label $CONTRACT_LABEL -y --keyring-backend ${KEYRING} --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq > $res_comp_1
 txhash=$(cat $res_comp_1 | jq ".txhash" | sed 's/"//g')
 sleep 5s
 res_q_tx=$(mktemp -p $TMP_DIR)
@@ -159,7 +160,7 @@ if [[ ${expected_count} -ne 1 ]]; then
 fi
 # Scenario 1 - execute by query by contract label
 json_compute_s1=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute execute --label $CONTRACT_LABEL --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend test --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s1
+$SECRETCLI tx compute execute --label $CONTRACT_LABEL --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s1
 code_id=$(cat $json_compute_s1 | jq ".code")
 if [[ ${code_id} -ne 0 ]]; then 
   cat $json_compute_s1 | jq ".raw_log"
@@ -176,7 +177,7 @@ if [[ ${expected_count} -ne 2 ]]; then
 fi
 # Scenario 2 - execute by contract address
 json_compute_s2=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute execute $contr_addr --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend test --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s2
+$SECRETCLI tx compute execute $contr_addr --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s2
 code_id=$(cat $json_compute_s2 | jq ".code")
 if [[ ${code_id} -ne 0 ]]; then 
   cat $json_compute_s2 | jq ".raw_log"
@@ -207,7 +208,7 @@ if [ $retVal -ne 0 ]; then
     exit 1
 fi
 
-val_addr=$($SECRETCLI keys show validator --bech val -a --keyring-backend test --home $SECRETD_HOME)
+val_addr=$($SECRETCLI keys show validator --bech val -a --keyring-backend ${KEYRING} --home $SECRETD_HOME)
 $SECRETCLI query staking delegations-to $val_addr --output json | jq
 retVal=$?
 if [ $retVal -ne 0 ]; then

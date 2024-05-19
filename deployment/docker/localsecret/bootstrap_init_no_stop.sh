@@ -113,4 +113,4 @@ if [ "${SLEEP}" = "true" ]; then
   sleep infinity
 fi
 
-RUST_BACKTRACE=1 LOG_LEVEL="$LOG_LEVEL" secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap --log_level debug
+RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap --log_level ${LOG_LEVEL}
