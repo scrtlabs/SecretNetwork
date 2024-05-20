@@ -396,6 +396,103 @@ fi
 
 # ------ UNBONDING - END ----------
 
+# ------ SIGNING - START --------
+function cleanup_tmp_files {
+    echo "Clean up temp dir"
+    rm -fvr $TMP_DIR
+}
+
+TMP_DIR=$(mktemp -d -p $(pwd))
+unsigned_tx_file=$TMP_DIR/unsigned_tx.json
+amount_to_send="10000"
+$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fees=5000uscrt --generate-only --output=json > $unsigned_tx_file
+
+unsigned_tx_file_aux=$TMP_DIR/unsigned_tx_aux.json
+amount_to_send="10000"
+$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fee-payer=${address_b} --fees=5000uscrt --generate-only --output=json > $unsigned_tx_file_aux
+
+# direct sign mode
+signed_tx_file_direct=$TMP_DIR/signed_tx_direct.json
+$SECRETCLI tx sign $unsigned_tx_file --from $address_a > $signed_tx_file_direct
+txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct --from $address_a --output=json | jq '.txhash' | tr -d '"')
+sleep 5s
+if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
+    cleanup_tmp_files
+    exit 1
+fi
+
+# amino-json sign mode
+signed_tx_file_amino=$TMP_DIR/signed_tx_amino.json
+$SECRETCLI tx sign $unsigned_tx_file --from $address_a --sign-mode=amino-json > $signed_tx_file_amino
+txhash=$($SECRETCLI tx broadcast $signed_tx_file_amino --from $address_a --output=json | jq '.txhash' | tr -d '"')
+sleep 5s
+if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
+    cleanup_tmp_files
+    exit 1
+fi
+
+# direct aux sign mode
+signed_tx_file_direct_aux=$TMP_DIR/signed_tx_direct_aux.json
+signed_tx_file_direct_aux_final=$TMP_DIR/signed_tx_direct_aux_final.json
+$SECRETCLI tx sign $unsigned_tx_file_aux --from $address_a --sign-mode=direct-aux > $signed_tx_file_direct_aux
+$SECRETCLI tx sign $signed_tx_file_direct_aux --from $address_b > $signed_tx_file_direct_aux_final
+txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct_aux_final --from $address_b --output=json | jq '.txhash' | tr -d '"')
+sleep 5s
+if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
+    cleanup_tmp_files
+    exit 1
+fi
+
+# encode/decode tx
+encoded_tx=$TMP_DIR/encoded_tx
+decoded_tx=$TMP_DIR/decoded_tx
+if [[ $($SECRETCLI tx encode $signed_tx_file_direct_aux_final > $encoded_tx) ]]; then
+    cleanup_tmp_files
+    exit 1
+fi
+if [[ $($SECRETCLI tx decode $(cat $encoded_tx) > $decoded_tx) ]]; then
+    cleanup_tmp_files
+    exit 1
+fi
+
+# remove newline 
+signed_tx_file_direct_aux_final_truncated=$TMP_DIR/tx.json
+cat $signed_tx_file_direct_aux_final | tr -d '\n' > $signed_tx_file_direct_aux_final_truncated
+
+diff $decoded_tx $signed_tx_file_direct_aux_final_truncated > /dev/null
+if [[ ! $? ]]; then
+    cleanup_tmp_files
+    exit 1
+fi
+
+# multisig
+$SECRETCLI keys add --multisig=a,b,c --multisig-threshold 2 abc --home=$SECRETD_HOME
+address_abc=$($SECRETCLI keys show -a abc --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
+
+$SECRETCLI q bank balance abc uscrt --output=json | jq '.balance.amount'
+$SECRETCLI tx bank send $address_a $address_abc 100000uscrt --fees=2500uscrt -y
+sleep 5s
+$SECRETCLI q bank balance abc uscrt --output=json | jq '.balance.amount'
+
+unsigned_tx_file_multisig=$TMP_DIR/unsigned_tx_multisig.json
+signed_a=$TMP_DIR/aSig.json
+signed_b=$TMP_DIR/bSig.json
+signed_multisig=$TMP_DIR/signed_multisig.json
+amount_to_send_multisig="1000"
+$SECRETCLI tx bank send $address_abc $address_a ${amount_to_send_multisig}uscrt --fees=5000uscrt --generate-only --output=json > $unsigned_tx_file_multisig
+
+$SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig > $signed_a
+$SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig > $signed_b
+$SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b --output json > $signed_multisig
+txhash=$($SECRETCLI tx broadcast $signed_multisig --from a | jq '.txhash' | tr -d '"')
+sleep 5s
+if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
+    cleanup_tmp_files
+    exit 1
+fi
+cleanup_tmp_files
+# ------ SIGNING - END --------
+
 set +x
 echo " *** INTEGRATION TESTS PASSED! ***"
 exit 0
