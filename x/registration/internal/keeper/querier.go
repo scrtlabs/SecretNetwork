@@ -11,6 +11,11 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 )
 
+const (
+	QueryEncryptedSeed = "seed"
+	QueryMasterKey     = "master-key"
+)
+
 type GrpcQuerier struct {
 	keeper Keeper
 }

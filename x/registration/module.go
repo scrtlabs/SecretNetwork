@@ -9,18 +9,20 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 
+	"github.com/spf13/cobra"
+
+	abci "github.com/cometbft/cometbft/abci/types"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/scrtlabs/SecretNetwork/x/registration/client/cli"
 )
 
 var (
-	_ module.AppModule              = AppModule{}
-	_ module.HasName                = AppModule{}
-	_ module.HasConsensusVersion    = AppModule{}
-	_ module.HasGenesis             = AppModule{}
-	_ module.HasServices            = AppModule{}
-	_ module.AppModuleBasic         = AppModuleBasic{}
+	_ module.AppModule      = AppModule{}
+	_ module.AppModuleBasic = AppModuleBasic{}
 )
 
 // AppModuleBasic defines the basic application module used by the compute module.
@@ -61,6 +63,16 @@ func (AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, config client.T
 	return ValidateGenesis(data)
 }
 
+// GetTxCmd returns the root tx command for the compute module.
+func (AppModuleBasic) GetTxCmd() *cobra.Command {
+	return cli.GetTxCmd()
+}
+
+// GetQueryCmd returns no root query command for the compute module.
+func (AppModuleBasic) GetQueryCmd() *cobra.Command {
+	return cli.GetQueryCmd()
+}
+
 // RegisterInterfaceTypes implements InterfaceModule
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
@@ -86,12 +98,21 @@ func (am AppModule) RegisterServices(configurator module.Configurator) {
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
 }
 
+// RegisterInvariants registers the compute module invariants.
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
+
+// QuerierRoute returns the compute module's querier route name.
+func (AppModule) QuerierRoute() string {
+	return QuerierRoute
+}
+
 // InitGenesis performs genesis initialization for the compute module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
 	var genesisState GenesisState
 	cdc.MustUnmarshalJSON(data, &genesisState)
 	InitGenesis(ctx, am.keeper, genesisState)
+	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns the exported genesis state as raw bytes for the compute
@@ -101,8 +122,17 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 	return cdc.MustMarshalJSON(gs)
 }
 
-// IsAppModule implements the appmodule.AppModule interface.
-func (AppModule) IsAppModule() {}
+// BeginBlock returns the begin blocker for the compute module.
+func (am AppModule) BeginBlock(_ sdk.Context) {}
 
-// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
-func (AppModule) IsOnePerModuleType() {}
+// EndBlock returns the end blocker for the compute module. It returns no validator
+// updates.
+func (AppModule) EndBlock(_ sdk.Context) []abci.ValidatorUpdate {
+	return []abci.ValidatorUpdate{}
+}
+
+// IsAppModule implements the appmodule.AppModule interface.
+func (am AppModule) IsAppModule() {}
+
+// IsOnePerModuleType is a marker function just indicates that this is a one-per-module type.
+func (am AppModule) IsOnePerModuleType() {}
