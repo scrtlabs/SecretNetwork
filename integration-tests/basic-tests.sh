@@ -14,8 +14,8 @@ fi
 set -x
 set -o errexit
 
-THIS=`readlink -f "${BASH_SOURCE[0]}" 2>/dev/null||echo $0`
-DIR=`dirname "${THIS}"`
+THIS=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo $0)
+DIR=$(dirname "${THIS}")
 . "$DIR/integration_test_funcs.sh"
 
 # ----- CLIENT CONFIGURATION - START -----
@@ -25,11 +25,9 @@ $SECRETCLI config set client keyring-backend test
 $SECRETCLI config set client node $SECRETD
 # ----- CLIENT CONFIGURATION - END -----
 
-
 # ----- NODE STATUS CHECK - START -----
 $SECRETCLI status --output=json | jq
 # ----- NODE STATUS CHECK - END -----
-
 
 # ----- KEY OPERATIONS - START -----
 $SECRETCLI keys list --keyring-backend ${KEYRING} --home=$SECRETD_HOME --output=json | jq
@@ -46,7 +44,6 @@ key_b=$($SECRETCLI keys show -p b --keyring-backend ${KEYRING} --home=$SECRETD_H
 key_c=$($SECRETCLI keys show -p c --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 key_d=$($SECRETCLI keys show -p d --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 # ----- KEY OPERATIONS - END -----
-
 
 # ----- BANK BALANCE TRANSERS - START -----
 $SECRETCLI q bank balances $address_a --home=$SECRETD_HOME --output=json | jq
@@ -79,7 +76,6 @@ $SECRETCLI q bank balances $address_d --home=$SECRETD_HOME --output=json | jq
 $SECRETCLI q bank balances $address_a --home=$SECRETD_HOME --output=json | jq
 # ----- BANK BALANCE TRANSERS - END -----
 
-
 # ----- DISTRIBUTIONS - START -----
 $SECRETCLI q distribution params --output=json | jq
 
@@ -87,9 +83,9 @@ $SECRETCLI q distribution community-pool --output=json | jq
 
 address_valop=$(jq '.app_state.genutil.gen_txs[0].body.messages[0].validator_address' $SECRETD_HOME/config/genesis.json)
 
-if [[ -z $address_valop ]];then
-    echo "No GENESIS tx in genesis.json"
-    exit 1
+if [[ -z $address_valop ]]; then
+  echo "No GENESIS tx in genesis.json"
+  exit 1
 fi
 
 address_valop=$(echo $address_valop | sed 's/"//g')
@@ -101,7 +97,6 @@ echo "FIXME: get realistic height"
 $SECRETCLI q distribution slashes $address_valop "1" "10" --output=json | jq
 # ----- DISTRIBUTIONS - END -----
 
-
 # -------------------------------------------
 DIR=$(pwd)
 TMP_DIR=$(mktemp -d -p ${DIR})
@@ -111,8 +106,8 @@ if [ ! -d $WORK_DIR ]; then
 fi
 
 function cleanup {
-    echo "Clean up $TMP_DIR"
-    rm -rf "$TMP_DIR"
+  echo "Clean up $TMP_DIR"
+  rm -rf "$TMP_DIR"
 }
 
 trap cleanup EXIT
@@ -136,15 +131,14 @@ CONTRACT_LABEL="counterContract"
 
 TMPFILE=$(mktemp -p $TMP_DIR)
 
-
 res_comp_1=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label $CONTRACT_LABEL -y --keyring-backend ${KEYRING} --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq > $res_comp_1
+$SECRETCLI tx compute instantiate 1 '{"count": 1}' --from $address_scrt --fees 5000uscrt --label $CONTRACT_LABEL -y --keyring-backend ${KEYRING} --home=$SECRETD_HOME --chain-id $CHAINID --output json | jq >$res_comp_1
 txhash=$(cat $res_comp_1 | jq ".txhash" | sed 's/"//g')
 sleep 5s
 res_q_tx=$(mktemp -p $TMP_DIR)
-$SECRETCLI q tx --type=hash "$txhash" --output json | jq > $res_q_tx
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq >$res_q_tx
 code_id=$(cat $res_q_tx | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then 
+if [[ ${code_id} -ne 0 ]]; then
   cat $res_q_tx | jq ".raw_log"
   exit 1
 fi
@@ -153,16 +147,16 @@ code_id=$($SECRETCLI q compute list-code --home=$SECRETD_HOME --output json | jq
 $SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq
 contr_addr=$($SECRETCLI q compute list-contract-by-code $code_id --home=$SECRETD_HOME --output json | jq ".contract_infos[0].contract_address" | sed 's/"//g')
 $SECRETCLI q compute contract $contr_addr --output json | jq
-expected_count=$($SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq ".count")
+expected_count=$($SECRETCLI q compute query $contr_addr '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq ".count")
 if [[ ${expected_count} -ne 1 ]]; then
   echo "Expected count is 1, got ${expected_count}"
   exit 1
 fi
 # Scenario 1 - execute by query by contract label
 json_compute_s1=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute execute --label $CONTRACT_LABEL --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s1
+$SECRETCLI tx compute execute --label $CONTRACT_LABEL --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --fees 3000uscrt --output json | jq >$json_compute_s1
 code_id=$(cat $json_compute_s1 | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then 
+if [[ ${code_id} -ne 0 ]]; then
   cat $json_compute_s1 | jq ".raw_log"
   exit 1
 fi
@@ -170,23 +164,23 @@ txhash=$(cat $json_compute_s1 | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 sleep 5s
-expected_count=$($SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq '.count')
+expected_count=$($SECRETCLI q compute query $contr_addr '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq '.count')
 if [[ ${expected_count} -ne 2 ]]; then
   echo "Expected count is 2, got ${expected_count}"
   exit 1
 fi
 # Scenario 2 - execute by contract address
 json_compute_s2=$(mktemp -p $TMP_DIR)
-$SECRETCLI tx compute execute $contr_addr --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --fees 3000uscrt --output json | jq > $json_compute_s2
+$SECRETCLI tx compute execute $contr_addr --from scrtsc '{"increment":{}}' -y --home $SECRETD_HOME --keyring-backend ${KEYRING} --chain-id $CHAINID --fees 3000uscrt --output json | jq >$json_compute_s2
 code_id=$(cat $json_compute_s2 | jq ".code")
-if [[ ${code_id} -ne 0 ]]; then 
+if [[ ${code_id} -ne 0 ]]; then
   cat $json_compute_s2 | jq ".raw_log"
   exit 1
 fi
 txhash=$(cat $json_compute_s1 | jq ".txhash" | sed 's/"//g')
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
 sleep 5s
-expected_count=$($SECRETCLI q compute query $contr_addr  '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq '.count')
+expected_count=$($SECRETCLI q compute query $contr_addr '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq '.count')
 if [[ ${expected_count} -ne 3 ]]; then
   echo "Expected count is 3, got ${expected_count}"
   exit 1
@@ -197,34 +191,34 @@ fi
 $SECRETCLI q staking params --output json | jq
 retVal=$?
 if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI q staking params"
-    exit 1
+  echo "Error => $SECRETCLI q staking params"
+  exit 1
 fi
 
 $SECRETCLI q staking validators --chain-id $CHAINID --output json | jq
 retVal=$?
 if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI q staking validators --chain-id $CHAINID"
-    exit 1
+  echo "Error => $SECRETCLI q staking validators --chain-id $CHAINID"
+  exit 1
 fi
 
 val_addr=$($SECRETCLI keys show validator --bech val -a --keyring-backend ${KEYRING} --home $SECRETD_HOME)
 $SECRETCLI query staking delegations-to $val_addr --output json | jq
 retVal=$?
 if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI query staking delegations-to $val_addr"
-    exit 1
+  echo "Error => $SECRETCLI query staking delegations-to $val_addr"
+  exit 1
 fi
 
 $SECRETCLI q staking validator $val_addr --chain-id $CHAINID --output json | jq
 retVal=$?
 if [ $retVal -ne 0 ]; then
-    echo "Error => $SECRETCLI q staking validator $val_addr --chain-id $CHAINID"
-    exit 1
+  echo "Error => $SECRETCLI q staking validator $val_addr --chain-id $CHAINID"
+  exit 1
 fi
 
 # Account A stakes 500uscrt to validator
-if ! staking_delegate $val_addr $address_a 500; then 
+if ! staking_delegate $val_addr $address_a 500; then
   echo "Staking validation from $address_a to $val_addr with 500uscrt failed"
   exit 1
 fi
@@ -235,7 +229,7 @@ if ! staking_check $val_addr $address_a 500; then
 fi
 
 # Account B stakes 1000uscrt to validator
-if ! staking_delegate $val_addr $address_b 1000; then 
+if ! staking_delegate $val_addr $address_b 1000; then
   echo "Staking validation from $address_b to $val_addr with 1000uscrt failed"
   exit 1
 fi
@@ -246,7 +240,7 @@ if ! staking_check $val_addr $address_b 1000; then
 fi
 
 # Account C stakes 1500uscrt to validator
-if ! staking_delegate $val_addr $address_c 1500; then 
+if ! staking_delegate $val_addr $address_c 1500; then
   echo "Staking validation from $address_c to $val_addr with 1500uscrt failed"
   exit 1
 fi
@@ -257,7 +251,7 @@ if ! staking_check $val_addr $address_c 1500; then
 fi
 
 # Account D stakes 5000uscrt to validator
-if ! staking_delegate $val_addr $address_d 5000; then 
+if ! staking_delegate $val_addr $address_d 5000; then
   echo "Staking validation from $address_d to $val_addr with 5000uscrt failed"
   exit 1
 fi
@@ -328,7 +322,7 @@ fi
 if ! staking_unbond $val_addr $address_a 250; then
   echo "Tx staking unbond for $address_a from $val_addr with the amount 250 failed"
   exit 1
-fi 
+fi
 
 if ! check_unbound $val_addr $address_a 250; then
   echo "Delegator ${address_a} new delegated amount with $val_addrs is not 250"
@@ -338,7 +332,7 @@ fi
 if ! staking_unbond $val_addr $address_b 500; then
   echo "Tx staking unbond for $address_b from $val_addr with the amount 500 failed"
   exit 1
-fi 
+fi
 
 if ! check_unbound $val_addr $address_b 500; then
   echo "Delegator ${address_b} new delegated amount with $val_addrs is not 500"
@@ -348,7 +342,7 @@ fi
 if ! staking_unbond $val_addr $address_c 500; then
   echo "Tx staking unbond for $address_c from $val_addr with the amount 500 failed"
   exit 1
-fi 
+fi
 
 if ! check_unbound $val_addr $address_c 1000; then
   echo "Delegator ${address_c} new delegated amount with $val_addrs is not 1000"
@@ -358,14 +352,14 @@ fi
 if ! staking_unbond $val_addr $address_d 2500; then
   echo "Tx staking unbond for $address_d from $val_addr with the amount 2500 failed"
   exit 1
-fi 
+fi
 
 if ! check_unbound $val_addr $address_d 2500; then
   echo "Delegator ${address_d} new delegated amount with $val_addrs is not 2500"
   exit 1
 fi
 
-if ! staking_check_pools ; then
+if ! staking_check_pools; then
   echo "Staking pools are zeroes"
   exit 1
 fi
@@ -405,64 +399,64 @@ fi
 #TMP_DIR=$(mktemp -d -p $(pwd))
 unsigned_tx_file=$TMP_DIR/unsigned_tx.json
 amount_to_send="10000"
-$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fees=5000uscrt --generate-only --output=json > $unsigned_tx_file
+$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fees=5000uscrt --generate-only --output=json >$unsigned_tx_file
 
 unsigned_tx_file_aux=$TMP_DIR/unsigned_tx_aux.json
 amount_to_send="10000"
-$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fee-payer=${address_b} --fees=5000uscrt --generate-only --output=json > $unsigned_tx_file_aux
+$SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fee-payer=${address_b} --fees=5000uscrt --generate-only --output=json >$unsigned_tx_file_aux
 
 # direct sign mode
 signed_tx_file_direct=$TMP_DIR/signed_tx_direct.json
-$SECRETCLI tx sign $unsigned_tx_file --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_tx_file_direct
+$SECRETCLI tx sign $unsigned_tx_file --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_tx_file_direct
 txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
-    cleanup_tmp_files
-    exit 1
+  cleanup_tmp_files
+  exit 1
 fi
 
 # amino-json sign mode
 signed_tx_file_amino=$TMP_DIR/signed_tx_amino.json
-$SECRETCLI tx sign $unsigned_tx_file --from $address_a --sign-mode=amino-json  --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_tx_file_amino
+$SECRETCLI tx sign $unsigned_tx_file --from $address_a --sign-mode=amino-json --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_tx_file_amino
 txhash=$($SECRETCLI tx broadcast $signed_tx_file_amino --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
-    cleanup_tmp_files
-    exit 1
+  cleanup_tmp_files
+  exit 1
 fi
 
 # direct aux sign mode
 signed_tx_file_direct_aux=$TMP_DIR/signed_tx_direct_aux.json
 signed_tx_file_direct_aux_final=$TMP_DIR/signed_tx_direct_aux_final.json
-$SECRETCLI tx sign $unsigned_tx_file_aux --from $address_a --sign-mode=direct-aux --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_tx_file_direct_aux
-$SECRETCLI tx sign $signed_tx_file_direct_aux --from $address_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_tx_file_direct_aux_final
-txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct_aux_final --from $address_b  --keyring-backend ${KEYRING} --home ${SECRETD_HOME}  --output=json | jq '.txhash' | tr -d '"')
+$SECRETCLI tx sign $unsigned_tx_file_aux --from $address_a --sign-mode=direct-aux --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_tx_file_direct_aux
+$SECRETCLI tx sign $signed_tx_file_direct_aux --from $address_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_tx_file_direct_aux_final
+txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct_aux_final --from $address_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
-    cleanup_tmp_files
-    exit 1
+  cleanup_tmp_files
+  exit 1
 fi
 
 # encode/decode tx
 encoded_tx=$TMP_DIR/encoded_tx
 decoded_tx=$TMP_DIR/decoded_tx
-if [[ $($SECRETCLI tx encode $signed_tx_file_direct_aux_final > $encoded_tx) ]]; then
-    cleanup_tmp_files
-    exit 1
+if [[ $($SECRETCLI tx encode $signed_tx_file_direct_aux_final >$encoded_tx) ]]; then
+  cleanup_tmp_files
+  exit 1
 fi
-if [[ $($SECRETCLI tx decode $(cat $encoded_tx) > $decoded_tx) ]]; then
-    cleanup_tmp_files
-    exit 1
+if [[ $($SECRETCLI tx decode $(cat $encoded_tx) >$decoded_tx) ]]; then
+  cleanup_tmp_files
+  exit 1
 fi
 
-# remove newline 
+# remove newline
 signed_tx_file_direct_aux_final_truncated=$TMP_DIR/tx.json
-cat $signed_tx_file_direct_aux_final | tr -d '\n' > $signed_tx_file_direct_aux_final_truncated
+cat $signed_tx_file_direct_aux_final | tr -d '\n' >$signed_tx_file_direct_aux_final_truncated
 
-diff $decoded_tx $signed_tx_file_direct_aux_final_truncated > /dev/null
+diff $decoded_tx $signed_tx_file_direct_aux_final_truncated >/dev/null
 if [[ ! $? ]]; then
-    cleanup_tmp_files
-    exit 1
+  cleanup_tmp_files
+  exit 1
 fi
 
 # multisig
@@ -479,18 +473,17 @@ signed_a=$TMP_DIR/aSig.json
 signed_b=$TMP_DIR/bSig.json
 signed_multisig=$TMP_DIR/signed_multisig.json
 amount_to_send_multisig="1000"
-$SECRETCLI tx bank send $address_abc $address_a ${amount_to_send_multisig}uscrt --fees=5000uscrt --generate-only --output=json > $unsigned_tx_file_multisig
+$SECRETCLI tx bank send $address_abc $address_a ${amount_to_send_multisig}uscrt --fees=5000uscrt --generate-only --output=json >$unsigned_tx_file_multisig
 
-$SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_a
-$SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_b
-$SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json > $signed_multisig
+$SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_a
+$SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_b
+$SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json >$signed_multisig
 txhash=$($SECRETCLI tx broadcast $signed_multisig --from a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
-    cleanup_tmp_files
-    exit 1
+  echo "Error: Failed to query tx by hash $txhash"
+  exit 1
 fi
-cleanup_tmp_files
 # ------ SIGNING - END --------
 
 set +x
