@@ -78,7 +78,7 @@ func GetCmdMasterParams() *cobra.Command {
 		Short: "Get parameters for the secret network",
 		Long:  "Get parameters for the secret network - writes the parameters to [master-cert.der] by default",
 		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			grpcCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
@@ -109,6 +109,18 @@ func GetCmdMasterParams() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			report, _ := json.Marshal(
+				struct {
+					Io_exch   string `json:"io-X-master-key"`
+					Node_exch string `json:"node-X-master-key"`
+				}{
+					Io_exch:   base64.StdEncoding.EncodeToString(keys.IoMasterKey.Bytes),
+					Node_exch: base64.StdEncoding.EncodeToString(keys.NodeExchMasterKey.Bytes),
+				},
+			)
+
+			fmt.Printf("%s/n", string(report))
 
 			return nil
 		},

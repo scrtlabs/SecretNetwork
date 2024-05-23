@@ -2,12 +2,13 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/golang/protobuf/ptypes/empty"
 
+	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 )
 
@@ -47,8 +48,12 @@ func (q GrpcQuerier) RegistrationKey(c context.Context, _ *empty.Empty) (*types.
 	case rsp == nil:
 		return nil, types.ErrNotFound
 	}
+	keys, err := json.Marshal(rsp)
+	if err != nil {
+		return nil, err
+	}
 	return &types.Key{
-		Key: rsp.NodeExchMasterKey.Bytes,
+		Key: keys,
 	}, nil
 }
 
