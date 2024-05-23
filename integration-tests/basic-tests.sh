@@ -397,12 +397,12 @@ fi
 # ------ UNBONDING - END ----------
 
 # ------ SIGNING - START --------
-function cleanup_tmp_files {
-    echo "Clean up temp dir"
-    rm -fvr $TMP_DIR
-}
-
-TMP_DIR=$(mktemp -d -p $(pwd))
+# Note: TMP_DIR is already available and the cleanup with trap on exit set
+# function cleanup_tmp_files {
+#     echo "Clean up temp dir"
+#     rm -fvr $TMP_DIR
+# }
+#TMP_DIR=$(mktemp -d -p $(pwd))
 unsigned_tx_file=$TMP_DIR/unsigned_tx.json
 amount_to_send="10000"
 $SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fees=5000uscrt --generate-only --output=json > $unsigned_tx_file
@@ -413,8 +413,8 @@ $SECRETCLI tx bank send $address_a $address_b ${amount_to_send}uscrt --fee-payer
 
 # direct sign mode
 signed_tx_file_direct=$TMP_DIR/signed_tx_direct.json
-$SECRETCLI tx sign $unsigned_tx_file --from $address_a > $signed_tx_file_direct
-txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct --from $address_a --output=json | jq '.txhash' | tr -d '"')
+$SECRETCLI tx sign $unsigned_tx_file --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_tx_file_direct
+txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
     cleanup_tmp_files
@@ -423,8 +423,8 @@ fi
 
 # amino-json sign mode
 signed_tx_file_amino=$TMP_DIR/signed_tx_amino.json
-$SECRETCLI tx sign $unsigned_tx_file --from $address_a --sign-mode=amino-json > $signed_tx_file_amino
-txhash=$($SECRETCLI tx broadcast $signed_tx_file_amino --from $address_a --output=json | jq '.txhash' | tr -d '"')
+$SECRETCLI tx sign $unsigned_tx_file --from $address_a --sign-mode=amino-json  --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_tx_file_amino
+txhash=$($SECRETCLI tx broadcast $signed_tx_file_amino --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
     cleanup_tmp_files
@@ -434,9 +434,9 @@ fi
 # direct aux sign mode
 signed_tx_file_direct_aux=$TMP_DIR/signed_tx_direct_aux.json
 signed_tx_file_direct_aux_final=$TMP_DIR/signed_tx_direct_aux_final.json
-$SECRETCLI tx sign $unsigned_tx_file_aux --from $address_a --sign-mode=direct-aux > $signed_tx_file_direct_aux
-$SECRETCLI tx sign $signed_tx_file_direct_aux --from $address_b > $signed_tx_file_direct_aux_final
-txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct_aux_final --from $address_b --output=json | jq '.txhash' | tr -d '"')
+$SECRETCLI tx sign $unsigned_tx_file_aux --from $address_a --sign-mode=direct-aux --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_tx_file_direct_aux
+$SECRETCLI tx sign $signed_tx_file_direct_aux --from $address_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_tx_file_direct_aux_final
+txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct_aux_final --from $address_b  --keyring-backend ${KEYRING} --home ${SECRETD_HOME}  --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
     cleanup_tmp_files
@@ -470,7 +470,7 @@ $SECRETCLI keys add --multisig=a,b,c --multisig-threshold 2 abc --home=$SECRETD_
 address_abc=$($SECRETCLI keys show -a abc --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 
 $SECRETCLI q bank balance abc uscrt --output=json | jq '.balance.amount'
-$SECRETCLI tx bank send $address_a $address_abc 100000uscrt --fees=2500uscrt -y
+$SECRETCLI tx bank send $address_a $address_abc 100000uscrt --fees=2500uscrt -y --keyring-backend ${KEYRING} --home ${SECRETD_HOME}
 sleep 5s
 $SECRETCLI q bank balance abc uscrt --output=json | jq '.balance.amount'
 
@@ -481,10 +481,10 @@ signed_multisig=$TMP_DIR/signed_multisig.json
 amount_to_send_multisig="1000"
 $SECRETCLI tx bank send $address_abc $address_a ${amount_to_send_multisig}uscrt --fees=5000uscrt --generate-only --output=json > $unsigned_tx_file_multisig
 
-$SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig > $signed_a
-$SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig > $signed_b
-$SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b --output json > $signed_multisig
-txhash=$($SECRETCLI tx broadcast $signed_multisig --from a | jq '.txhash' | tr -d '"')
+$SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_a
+$SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} > $signed_b
+$SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json > $signed_multisig
+txhash=$($SECRETCLI tx broadcast $signed_multisig --from a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
     cleanup_tmp_files
