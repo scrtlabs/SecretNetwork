@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 
 	"github.com/spf13/cobra"
@@ -95,16 +96,12 @@ func NewAppModule(keeper Keeper) AppModule {
 }
 
 func (am AppModule) RegisterServices(configurator module.Configurator) {
+	types.RegisterMsgServer(configurator.MsgServer(), keeper.NewMsgServerImpl(am.keeper, ModuleName))
 	types.RegisterQueryServer(configurator.QueryServer(), NewQuerier(am.keeper))
 }
 
 // RegisterInvariants registers the compute module invariants.
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
-// QuerierRoute returns the compute module's querier route name.
-func (AppModule) QuerierRoute() string {
-	return QuerierRoute
-}
 
 // InitGenesis performs genesis initialization for the compute module. It returns
 // no validator updates.

@@ -18,6 +18,7 @@ func TestMsgRaAuthenticateRoute(t *testing.T) {
 	msg := RaAuthenticate{
 		addr1,
 		cert,
+		"from",
 	}
 
 	require.Equal(t, msg.Route(), RouterKey)
@@ -46,15 +47,18 @@ func TestMsgSendValidation(t *testing.T) {
 		{true, RaAuthenticate{
 			addr0,
 			cert,
+			"qwlnmxj7prpx8rysxm2u",
 		}},
 		// invalid address send
 		{false, RaAuthenticate{
 			addr0,
 			invalidCert,
+			"qwlnmxj7prpx8rysxm2u",
 		}}, // malformed certificate
 		{false, RaAuthenticate{
 			addr0,
 			certBadSig,
+			"qwlnmxj7prpx8rysxm2u",
 		}}, // certificate with a bad signature
 	}
 
@@ -77,6 +81,7 @@ func TestMsgSendGetSignBytes(t *testing.T) {
 	msg := RaAuthenticate{
 		addr0,
 		cert,
+		"qwlnmxj7prpx8rysxm2u",
 	}
 	res := msg.GetSignBytes()
 	expected := `{"type":"reg/authenticate","value":{"ra_cert":"MIIBkzCCATmgAwIBAgIBATAKBggqhkjOPQQDAjAUMRIwEAYDVQQDDAlFbmlnbWFURUUwHhcNMjAwNTI1MDc1MzM0WhcNMjAwODIzMDc1MzM0WjAnMSUwIwYDVQQDDBxFbmlnbWFDaGFpbiBOb2RlIENlcnRpZmljYXRlMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeG13Xxb1oWAqeBSahnmi8rEQH5Q3pGa+knDNikM7AIels1eqEpEebKV8RDxRlb4EdmAHPtxp5xVB6pDI/vh7wKNpMGcwZQYJYIZIAYb4QgENBFgwSEdyb3FpMjhIcFM1aFhNODNzZDZrL2lJbGdjckZjM3IrTmpHa2R3VU16ZEJCQnFZKzd5ZXg4c2V1eERaeG9lb1JmS0l6R0xZMDMrVVdrZzl2K3V5UT09MAoGCCqGSM49BAMCA0gAMEUCIFCpcWt77lCX+I8WpuRpkGdHYSp/KeCM5lEbfkls/VolAiEAulO7Btux2jcE8QP3Mo9/7cGm/BykxZxAbJIjO9AqLHY=","sender":"cosmos1w9mkcmnd0p4rwurjwpursunewdux6vn4d4tp6g"}}`
@@ -92,6 +97,7 @@ func TestMsgSendGetSigners(t *testing.T) {
 	msg := RaAuthenticate{
 		addr0,
 		cert,
+		"qwlnmxj7prpx8rysxm2u",
 	}
 	res := msg.GetSigners()
 	// TODO: fix this !

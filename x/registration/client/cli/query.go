@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	flag "github.com/spf13/pflag"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/scrtlabs/SecretNetwork/x/registration/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 )
 

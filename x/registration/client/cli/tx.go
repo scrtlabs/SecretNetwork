@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -44,13 +45,16 @@ func AuthenticateNodeCmd() *cobra.Command {
 			}
 
 			// build and sign the transaction, then broadcast to Tendermint
+			addr := clientCtx.GetFromAddress()
 			msg := types.RaAuthenticate{
-				Sender:      clientCtx.GetFromAddress(),
-				Certificate: cert,
+				Sender:        addr,
+				Certificate:   cert,
+				SenderAddress: addr.String(),
 			}
-			err = msg.ValidateBasic()
 
+			err = msg.ValidateBasic()
 			if err != nil {
+				fmt.Println("<<<------------------------------------------------>>>")
 				return err
 			}
 
