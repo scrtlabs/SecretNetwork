@@ -57,6 +57,10 @@ func (m msgServer) RegisterAuth(goCtx context.Context, msg *types.RaAuthenticate
 	})
 
 	events, err := json.Marshal(ctx.EventManager().ABCIEvents())
+	if err != nil {
+		ctx.Logger().Error("Marshal ABCIEvents", "error", err.Error())
+		return nil, err
+	}
 
 	return &types.RaAuthenticateResponse{
 		Data:   fmt.Sprintf("S: %02x", encSeed),

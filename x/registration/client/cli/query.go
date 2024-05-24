@@ -52,11 +52,16 @@ func GetCmdEncryptedSeed() *cobra.Command {
 				return fmt.Errorf("invalid Node ID format (req: hex string of length %d)", types.PublicKeyLength)
 			}
 
+			pubKey, err := hex.DecodeString(nodeId)
+			if err != nil {
+				return fmt.Errorf("failed to decode node id %s as string", nodeId)
+			}
+
 			queryClient := types.NewQueryClient(grpcCtx)
 			res, err := queryClient.EncryptedSeed(
 				context.Background(),
 				&types.QueryEncryptedSeedRequest{
-					PubKey: []byte(nodeId),
+					PubKey: pubKey,
 				},
 			)
 			if err != nil {

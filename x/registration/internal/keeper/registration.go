@@ -61,12 +61,13 @@ func (k Keeper) ListRegistrationInfo(ctx sdk.Context, cb func([]byte, types.Regi
 	}
 }
 
-func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) {
+func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.RegistrationNodeInfo) error {
 	store := k.storeService.OpenKVStore(ctx)
 
 	publicKey, err := ra.VerifyRaCert(certificate.Certificate)
 	if err != nil {
-		return
+		ctx.Logger().Error("verify reg/auth certificate", "verify", err.Error())
+		return err
 	}
 
 	// fmt.Println("pubkey", hex.EncodeToString(publicKey))
@@ -74,7 +75,9 @@ func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.Registrat
 	err = store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
 	if err != nil {
 		ctx.Logger().Error("set registration info", "store", err.Error())
+		return err
 	}
+	return nil
 }
 
 func (k Keeper) isNodeAuthenticated(ctx sdk.Context, publicKey types.NodeID) (bool, error) {

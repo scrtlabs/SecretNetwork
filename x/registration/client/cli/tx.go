@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -54,7 +53,6 @@ func AuthenticateNodeCmd() *cobra.Command {
 
 			err = msg.ValidateBasic()
 			if err != nil {
-				fmt.Println("<<<------------------------------------------------>>>")
 				return err
 			}
 

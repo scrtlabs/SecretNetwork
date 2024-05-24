@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 
 	"cosmossdk.io/core/store"
+	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	errorsmod "cosmossdk.io/errors"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
@@ -22,9 +22,9 @@ import (
 // Keeper will have a reference to Wasmer with it's own data directory.
 type Keeper struct {
 	storeService store.KVStoreService
-	cdc      codec.Codec
-	enclave  EnclaveInterface
-	router   baseapp.MessageRouter
+	cdc          codec.Codec
+	enclave      EnclaveInterface
+	router       baseapp.MessageRouter
 }
 
 // NewKeeper creates a new contract Keeper instance
@@ -35,9 +35,9 @@ func NewKeeper(cdc codec.Codec, storeService store.KVStoreService, router baseap
 
 	return Keeper{
 		storeService: storeService,
-		cdc:      cdc,
-		router:   router,
-		enclave:  enclave,
+		cdc:          cdc,
+		router:       router,
+		enclave:      enclave,
 	}
 }
 
@@ -220,14 +220,17 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 			return nil, errorsmod.Wrap(types.ErrAuthenticateFailed, err.Error())
 		}
 	}
-	fmt.Println("Done RegisterNode")
-	fmt.Println("Got seed: ", hex.EncodeToString(encSeed))
+
 	regInfo := types.RegistrationNodeInfo{
 		Certificate:   certificate,
 		EncryptedSeed: encSeed,
 	}
-	k.SetRegistrationInfo(ctx, regInfo)
-
+	
+	if err := k.SetRegistrationInfo(ctx, regInfo); err != nil {
+		ctx.Logger().Error("[-] Register node failed", "error", err.Error())
+	} else {
+		ctx.Logger().Info("[+] Register node success", "seed", hex.EncodeToString(encSeed))
+	}
 	return encSeed, nil
 }
 
