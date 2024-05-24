@@ -65,24 +65,29 @@ a_mnemonic="grant rice replace explain federal release fix clever romance raise 
 b_mnemonic="jelly shadow frog dirt dragon use armed praise universe win jungle close inmate rain oil canvas beauty pioneer chef soccer icon dizzy thunder meadow"
 c_mnemonic="chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge"
 d_mnemonic="word twist toast cloth movie predict advance crumble escape whale sail such angry muffin balcony keen move employ cook valve hurt glimpse breeze brick"
+x_mnemonic="black foot thrive monkey tenant fashion blouse general adult orient grass enact eight tiger color castle rebuild puzzle much gap connect slice print gossip"
 
 echo $v_mnemonic | $SECRETD keys add validator --recover --keyring-backend="test" --home=$SECRETD_HOME
 echo $a_mnemonic | $SECRETD keys add a --recover --keyring-backend="test" --home=$SECRETD_HOME
 echo $b_mnemonic | $SECRETD keys add b --recover --keyring-backend="test" --home=$SECRETD_HOME
 echo $c_mnemonic | $SECRETD keys add c --recover --keyring-backend="test" --home=$SECRETD_HOME
 echo $d_mnemonic | $SECRETD keys add d --recover --keyring-backend="test" --home=$SECRETD_HOME
+echo $x_mnemonic | $SECRETD keys add userx --recover --keyring-backend="test" --home=$SECRETD_HOME
+
 
 address_v=$($SECRETD keys show -a validator --keyring-backend="test" --home $SECRETD_HOME)
 address_a=$($SECRETD keys show -a a --keyring-backend="test" --home $SECRETD_HOME)
 address_b=$($SECRETD keys show -a b --keyring-backend="test" --home $SECRETD_HOME)
 address_c=$($SECRETD keys show -a c --keyring-backend="test" --home $SECRETD_HOME)
 address_d=$($SECRETD keys show -a d --keyring-backend="test" --home $SECRETD_HOME)
+address_x=$($SECRETD keys show -a userx --keyring-backend="test" --home $SECRETD_HOME)
 
 echo "[*] Account validator: $address_v"
 echo "[+] Account         a: $address_a"
 echo "[+] Account         b: $address_b"
 echo "[+] Account         c: $address_c"
 echo "[+] Account         d: $address_d"
+echo "[+] Account     userx: $address_x"
 
 $SECRETD genesis add-genesis-account validator $coins --keyring-backend="test" --home=$SECRETD_HOME
 retVal=$?

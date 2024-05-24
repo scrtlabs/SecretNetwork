@@ -1,22 +1,43 @@
 #!/bin/bash
 
+export SGX_MODE=SW
 SECRETCLI=${1:-./secretcli}
 SECRETD_HOME=${2:-$HOME/.secretd_local}
 CHAINID=${3:-"secretdev-1"}
 KEYRING=${4:-"test"}
 SECRETD=${5:-"http://localhost:26657"}
-
+SCRT_SGX_STORAGE=/opt/secret/.sgx_secrets
 if [ ! $SECRETD_HOME/config/genesis.json ]; then
   echo "Cannot find $SECRETD_HOME/config/genesis.json."
   exit 1
 fi
 
-set -x
+if [ ! -z $BASIC_TEST_DEBUG ]; then
+  set -x
+else
+  set +x
+fi
 set -o errexit
 
+# -------------------------------------------
 THIS=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo $0)
 DIR=$(dirname "${THIS}")
 . "$DIR/integration_test_funcs.sh"
+
+TMP_DIR=$(mktemp -d -p ${DIR})
+if [ ! -d $WORK_DIR ]; then
+  echo "Could not create $WORK_DIR"
+  exit 1
+fi
+
+function cleanup {
+  echo "Clean up $TMP_DIR"
+  rm -rf "$TMP_DIR"
+}
+
+trap cleanup EXIT
+# ----------------------------------------------
+
 
 # ----- CLIENT CONFIGURATION - START -----
 $SECRETCLI config set client chain-id "$CHAINID"
@@ -28,6 +49,88 @@ $SECRETCLI config set client node $SECRETD
 # ----- NODE STATUS CHECK - START -----
 $SECRETCLI status --output=json | jq
 # ----- NODE STATUS CHECK - END -----
+
+# ------ NODE REGISTRATION - START ------
+if [ -f $SCRT_SGX_STORAGE/attectation_cert.der ]; then
+  rm ${SCRT_SGX_STORAGE}/attectation_cert.der
+fi
+./secretd init-enclave
+if [ $? -ne 0 ]; then
+  echo "Failed to initialize SGX enclave"
+  exit 1
+fi
+
+if [ ! -f ${SCRT_SGX_STORAGE}/attestation_cert.der ]; then
+  echo "Failed to generate attestation_cert.der certificate"
+  exit 1
+fi
+
+PUBLIC_KEY=$(./secretd parse ${SCRT_SGX_STORAGE}/attestation_cert.der  2> /dev/null | cut -c 3-)
+if [ -z $PUBLIC_KEY ]; then
+  echo "Failed to parse attestation_cert.der certificate"
+  exit 1
+fi
+echo "Certificate public key: $PUBLIC_KEY"
+
+# On-chain registration and attestation
+json_register=$(mktemp -p $TMP_DIR)
+./secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_cert.der -y --from a --fees 3000uscrt --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json | jq > $json_register
+if [ $? -ne 0 ]; then
+  echo "Failed to register/auth node"
+  exit 1
+fi
+code_id=$(cat $json_register | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then
+  echo "Failed to register/auth node. Code: ${code_id}. Error: $(cat $json_register | jq '.raw_log')"
+  exit 1
+fi
+sleep 5s
+txhash=$(cat $json_register | jq ".txhash" | tr -d '"')
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq > $json_register
+code_id=$(cat $json_register | jq ".code")
+if [[ ${code_id} -ne 0 ]]; then
+  echo "Failed to register/auth node. Error: $(cat $json_register | jq '.raw_log')"
+  exit 1
+fi
+
+SEED=$(./secretd query register seed $PUBLIC_KEY | cut -c 3-)
+if [ -z $SEED ]; then 
+  echo "Failed to obtain encrypted seed"
+  exit 1
+fi
+echo "Encrypted seed: $SEED"
+sleep 5s
+./secretd query register secret-network-params
+if [ ! -f ./io-master-key.txt ] || [ ! -f ./node-master-key.txt ]; then
+  echo "Failed to generate IO and Node Exch master key"
+  exit 1
+fi
+ls -lh ./io-master-key.txt ./node-master-key.txt
+
+mkdir -p ${SECRETD_HOME}/.node
+./secretd configure-secret node-master-key.txt $SEED --home ${SECRETD_HOME}
+if [ $? -ne 0 ]; then
+  echo "Failed to configure secret node"
+  exit 1
+fi
+
+# Skip adding persistent peers seeds to config
+
+# Optimize SGX memory for heavy contract calculations (e.g. NFT minting)
+sed -i.bak -e "s/^contract-memory-enclave-cache-size *=.*/contract-memory-enclave-cache-size = \"15\"/" ${SECRETD_HOME}/config/app.toml
+
+# Set min gas price
+perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.0125uscrt"/' ${SECRETD_HOME}/config/app.toml
+
+NODE_ID=$(./secretd tendermint show-node-id --home ${SECRETD_HOME})
+if [ -z $NODE_ID ]; then
+  echo "Failed to obtain node id"
+  exit 1
+fi
+echo "Node ID: ${NODE_ID}"
+echo "<======= Secret Node registration successful ======>"
+
+# ------ NODE REGISTRATION - END --------
 
 # ----- KEY OPERATIONS - START -----
 $SECRETCLI keys list --keyring-backend ${KEYRING} --home=$SECRETD_HOME --output=json | jq
@@ -97,22 +200,6 @@ echo "FIXME: get realistic height"
 $SECRETCLI q distribution slashes $address_valop "1" "10" --output=json | jq
 # ----- DISTRIBUTIONS - END -----
 
-# -------------------------------------------
-DIR=$(pwd)
-TMP_DIR=$(mktemp -d -p ${DIR})
-if [ ! -d $WORK_DIR ]; then
-  echo "Could not create $WORK_DIR"
-  exit 1
-fi
-
-function cleanup {
-  echo "Clean up $TMP_DIR"
-  rm -rf "$TMP_DIR"
-}
-
-trap cleanup EXIT
-# ----------------------------------------------
-
 # ----- SMART CONTRACTS - START -----
 $SECRETCLI keys add scrtsc --keyring-backend ${KEYRING} --home=$SECRETD_HOME --output=json | jq
 address_scrt=$($SECRETCLI keys show -a scrtsc --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
@@ -163,7 +250,7 @@ fi
 txhash=$(cat $json_compute_s1 | jq ".txhash" | sed 's/"//g')
 sleep 5s
 $SECRETCLI q tx --type=hash "$txhash" --output json | jq
-sleep 5s
+
 expected_count=$($SECRETCLI q compute query $contr_addr '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq '.count')
 if [[ ${expected_count} -ne 2 ]]; then
   echo "Expected count is 2, got ${expected_count}"
@@ -177,9 +264,10 @@ if [[ ${code_id} -ne 0 ]]; then
   cat $json_compute_s2 | jq ".raw_log"
   exit 1
 fi
-txhash=$(cat $json_compute_s1 | jq ".txhash" | sed 's/"//g')
-$SECRETCLI q tx --type=hash "$txhash" --output json | jq
 sleep 5s
+txhash=$(cat $json_compute_s2 | jq ".txhash" | sed 's/"//g')
+$SECRETCLI q tx --type=hash "$txhash" --output json | jq
+
 expected_count=$($SECRETCLI q compute query $contr_addr '{"get_count": {}}' --home=$SECRETD_HOME --output json | jq '.count')
 if [[ ${expected_count} -ne 3 ]]; then
   echo "Expected count is 3, got ${expected_count}"

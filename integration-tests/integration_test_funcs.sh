@@ -211,7 +211,7 @@ function staking_delegate() {
         $(cat $json_delegate_tx | jq ".raw_log")
         return 1
     fi
-    echo "Blcok height:" $(cat $json_delegate_tx | jq ".height")
+    echo "Block height:" $(cat $json_delegate_tx | jq ".height")
     cat $json_delegate_tx | jq ".tx" | jq
     return 0
 }
