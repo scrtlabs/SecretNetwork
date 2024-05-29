@@ -499,7 +499,7 @@ $SECRETCLI tx sign $unsigned_tx_file --from $address_a --keyring-backend ${KEYRI
 txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
-  cleanup_tmp_files
+  echo "Failed to query tx $txhash"
   exit 1
 fi
 
@@ -509,7 +509,7 @@ $SECRETCLI tx sign $unsigned_tx_file --from $address_a --sign-mode=amino-json --
 txhash=$($SECRETCLI tx broadcast $signed_tx_file_amino --from $address_a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
-  cleanup_tmp_files
+  echo "Failed to query tx $txhash"
   exit 1
 fi
 
@@ -521,7 +521,7 @@ $SECRETCLI tx sign $signed_tx_file_direct_aux --from $address_b --keyring-backen
 txhash=$($SECRETCLI tx broadcast $signed_tx_file_direct_aux_final --from $address_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output=json | jq '.txhash' | tr -d '"')
 sleep 5s
 if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
-  cleanup_tmp_files
+  echo "Failed to query tx $txhash"
   exit 1
 fi
 
@@ -529,11 +529,11 @@ fi
 encoded_tx=$TMP_DIR/encoded_tx
 decoded_tx=$TMP_DIR/decoded_tx
 if [[ $($SECRETCLI tx encode $signed_tx_file_direct_aux_final >$encoded_tx) ]]; then
-  cleanup_tmp_files
+  echo "Failed to encode tx $signed_tx_file_direct_aux_final"
   exit 1
 fi
 if [[ $($SECRETCLI tx decode $(cat $encoded_tx) >$decoded_tx) ]]; then
-  cleanup_tmp_files
+  echo "Failed to decode tx"
   exit 1
 fi
 
@@ -543,7 +543,7 @@ cat $signed_tx_file_direct_aux_final | tr -d '\n' >$signed_tx_file_direct_aux_fi
 
 diff $decoded_tx $signed_tx_file_direct_aux_final_truncated >/dev/null
 if [[ ! $? ]]; then
-  cleanup_tmp_files
+  echo "Failed to match decoded and signed txs"
   exit 1
 fi
 
@@ -564,14 +564,36 @@ amount_to_send_multisig="1000"
 $SECRETCLI tx bank send $address_abc $address_a ${amount_to_send_multisig}uscrt --fees=5000uscrt --generate-only --output=json >$unsigned_tx_file_multisig
 
 $SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_a
+if [ $? -ne 0]; then
+  echo "Failed to $SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig"
+  exit 1
+fi
 $SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_b
+if [ $? -ne 0]; then
+  echo "Failed to $SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig"
+  exit 1
+fi
 $SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json >$signed_multisig
-txhash=$($SECRETCLI tx broadcast $signed_multisig --from a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} | jq '.txhash' | tr -d '"')
-sleep 5s
-if [[ ! $($SECRETCLI q tx --type="hash" $txhash --output=json | jq) ]]; then
+if [ $? -ne 0]; then
+  echo "Failed to $SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b"
+  exit 1
+fi
+
+tx_bc_ms=$(mktemp -p $TMP_DIR)
+$SECRETCLI tx broadcast $signed_multisig --from a --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json | jq > $tx_bc_ms
+if [ $? -ne 0 ]; then
+  echo "Failed to $SECRETCLI tx broadcast $signed_multisig --from a"
+  exit 1
+fi
+txhash=$(cat $tx_bc_ms | jq '.txhash' | tr -d '"')
+sleep 10s
+qtx_json=$(mktemp -p $TMP_DIR)
+$SECRETCLI q tx --type="hash" $txhash --output=json > $qtx_json
+if [ $? -ne 0 ]; then
   echo "Error: Failed to query tx by hash $txhash"
   exit 1
 fi
+echo "Tx: $txhash Code:$(cat $qtx_json | jq '.code') RawLog:$(cat $qtx_json | jq '.raw_log')"
 # ------ SIGNING - END --------
 
 set +x
