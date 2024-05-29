@@ -7,12 +7,14 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
+	tm_type "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/scrt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
@@ -136,38 +138,48 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 }
 
 // BeginBlock returns the begin blocker for the compute module.
-/*
-// TODO:FIX
-func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBlock) {
-	header, err := beginBlock.Header.Marshal()
+func (am AppModule) BeginBlock(ctx sdk.Context) {
+	// Note: as of tendermint v0.38.0 block begin request info is no longer available
+	block_header := ctx.BlockHeader()
+	header, err := block_header.Marshal()
 	if err != nil {
-		ctx.Logger().Error("Failed to marshal header")
+		ctx.Logger().Error("Failed to marshal block header")
 		panic(err)
 	}
+	commit := ctx.CometInfo().GetLastCommit()
+	voteInfos := commit.Votes()
+	var commitSigs []tm_type.CommitSig
+	for i := 0; i < voteInfos.Len(); i++ {
+		voteInfo := voteInfos.Get(i)
+		commitSigs = append(commitSigs, tm_type.CommitSig{
+			BlockIdFlag: tm_type.BlockIDFlag(voteInfo.GetBlockIDFlag()),
+			ValidatorAddress: voteInfo.Validator().Address(),
+		})
+	} 
 
-	// There is a possibility, specifically was found on upgrade block, when there are no pre-commits at all (beginBlock.Commit == nil)
-	// In this case Marshal will fail with a Seg Fault.
-	// The fix below it a temporary fix until we will investigate the issue in tendermint.
-	if beginBlock.Commit == nil {
-		ctx.Logger().Info(fmt.Sprintf("Skipping commit submission to the enclave for block %d\n", beginBlock.Header.Height))
-		return
+	tm_commit := tm_type.Commit{
+		Height:  ctx.BlockHeight(),
+		Round:   commit.Round(),
+		BlockID: block_header.LastBlockId,
+		Signatures: commitSigs,
 	}
 
-	commit, err := beginBlock.Commit.Marshal()
+	b_commit, err := tm_commit.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal commit")
 		panic(err)
 	}
 
-	data, err := beginBlock.Data.Marshal()
+ 	x2_data := scrt.UnFlatten(ctx.TxBytes())
+	tm_data := tm_type.Data{Txs: x2_data}
+	data, err := tm_data.Marshal()
 	if err != nil {
-		ctx.Logger().Error("Failed to marshal data")
+		ctx.Logger().Error("Failed to marshal tx data")
 		panic(err)
 	}
-
-	if beginBlock.Header.EncryptedRandom != nil {
-		randomAndProof := append(beginBlock.Header.EncryptedRandom.Random, beginBlock.Header.EncryptedRandom.Proof...) //nolint:all
-		random, err := api.SubmitBlockSignatures(header, commit, data, randomAndProof)
+	if block_header.EncryptedRandom != nil {
+		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...) //nolint:all
+		random, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
 		if err != nil {
 			ctx.Logger().Error("Failed to submit block signatures")
 			panic(err)
@@ -177,7 +189,7 @@ func (am AppModule) BeginBlock(ctx sdk.Context, beginBlock abci.RequestBeginBloc
 	} else {
 		println("No random got from TM header")
 	}
-}*/
+}
 
 // IsAppModule implements the appmodule.AppModule interface.
 func (AppModule) IsAppModule() {}
