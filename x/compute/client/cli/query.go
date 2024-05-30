@@ -63,58 +63,17 @@ func GetCmdGetContractStateSmart() *cobra.Command {
 				return err
 			}
 
+			contractAddr, err := sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return sdkerrors.ErrInvalidAddress.Wrapf("Invalid contract address: %s", args[0])
+			}
+
 			queryData, err := decoder.DecodeString(args[1])
 			if err != nil {
 				return err
 			}
 
-			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
-
-			contractAddr, err := sdk.AccAddressFromBech32(args[0])
-			if err != nil {
-				return sdkerrors.ErrInvalidAddress.Wrapf("Invalid contract address: %s", args[0])
-			}
-			codeHash, err := GetCodeHashByContractAddr(clientCtx, contractAddr.String())
-			if err != nil {
-				return sdkerrors.ErrNotFound.Wrapf("Contract with address %s not found", args[0])
-			}
-
-			msg := types.SecretMsg{
-				CodeHash: codeHash,
-				Msg:      queryData,
-			}
-
-			queryData, err = wasmCtx.Encrypt(msg.Serialize())
-			if err != nil {
-				return err
-			}
-			nonce, _, _, _ := parseEncryptedBlob(queryData) //nolint:dogsled // Ignoring error since we just encrypted it
-
-			queryClient := types.NewQueryClient(grpcCtx)
-			res, err := queryClient.QuerySecretContract(
-				context.Background(),
-				&types.QuerySecretContractRequest{
-					ContractAddress: args[0],
-					Query:           queryData,
-				},
-			)
-			if err != nil {
-				return sdkerrors.ErrNotFound.Wrapf("Failed to query secret contract %s. Error: %s", args[0], err)
-			}
-
-			var resDecrypted []byte
-			resDecrypted, err = wasmCtx.Decrypt(res.Data, nonce)
-			if err != nil {
-				return err
-			}
-			res.Data = resDecrypted
-			decodedResp, err := base64.StdEncoding.DecodeString(string(resDecrypted))
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(string(decodedResp))
-			return nil
+			return QueryWithData(contractAddr, queryData, clientCtx, grpcCtx)
 		},
 		SilenceUsage: true,
 	}
@@ -675,6 +634,52 @@ func GetCmdGetContractInfo() *cobra.Command {
 
 // 	return cmd
 // }
+
+func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, clientCtx client.Context, grpcCtx client.Context) error {
+	wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
+
+	codeHash, err := GetCodeHashByContractAddr(clientCtx, contractAddress.String())
+	if err != nil {
+		return sdkerrors.ErrNotFound.Wrapf("Contract with address %s not found", contractAddress)
+	}
+
+	msg := types.SecretMsg{
+		CodeHash: codeHash,
+		Msg:      queryData,
+	}
+
+	queryData, err = wasmCtx.Encrypt(msg.Serialize())
+	if err != nil {
+		return err
+	}
+	nonce, _, _, _ := parseEncryptedBlob(queryData) //nolint:dogsled // Ignoring error since we just encrypted it
+
+	queryClient := types.NewQueryClient(grpcCtx)
+	res, err := queryClient.QuerySecretContract(
+		context.Background(),
+		&types.QuerySecretContractRequest{
+			ContractAddress: contractAddress.String(),
+			Query:           queryData,
+		},
+	)
+	if err != nil {
+		return sdkerrors.ErrNotFound.Wrapf("Failed to query secret contract %s. Error: %s", contractAddress, err)
+	}
+
+	var resDecrypted []byte
+	resDecrypted, err = wasmCtx.Decrypt(res.Data, nonce)
+	if err != nil {
+		return err
+	}
+	res.Data = resDecrypted
+	decodedResp, err := base64.StdEncoding.DecodeString(string(resDecrypted))
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(decodedResp))
+	return nil
+}
 
 // supports a subset of the SDK pagination params for better resource utilization
 func addPaginationFlags(cmd *cobra.Command, query string) {
