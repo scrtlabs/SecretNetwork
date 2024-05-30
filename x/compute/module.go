@@ -138,13 +138,14 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 }
 
 // BeginBlock returns the begin blocker for the compute module.
-func (am AppModule) BeginBlock(ctx sdk.Context) {
+func (am AppModule) BeginBlock(c context.Context) error {
 	// Note: as of tendermint v0.38.0 block begin request info is no longer available
+	ctx := c.(sdk.Context)
 	block_header := ctx.BlockHeader()
 	header, err := block_header.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal block header")
-		panic(err)
+		return err
 	}
 	commit := ctx.CometInfo().GetLastCommit()
 	voteInfos := commit.Votes()
@@ -167,7 +168,7 @@ func (am AppModule) BeginBlock(ctx sdk.Context) {
 	b_commit, err := tm_commit.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal commit")
-		panic(err)
+		return err
 	}
 
  	x2_data := scrt.UnFlatten(ctx.TxBytes())
@@ -175,20 +176,21 @@ func (am AppModule) BeginBlock(ctx sdk.Context) {
 	data, err := tm_data.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal tx data")
-		panic(err)
+		return err
 	}
 	if block_header.EncryptedRandom != nil {
 		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...) //nolint:all
 		random, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
 		if err != nil {
 			ctx.Logger().Error("Failed to submit block signatures")
-			panic(err)
+			return err
 		}
 
 		am.keeper.SetRandomSeed(ctx, random)
 	} else {
-		println("No random got from TM header")
+		ctx.Logger().Debug("Non-encrypted block", "Block_hash", block_header.LastBlockId.Hash, "Height", ctx.BlockHeight(), "Txs", len(x2_data))
 	}
+	return nil
 }
 
 // IsAppModule implements the appmodule.AppModule interface.
