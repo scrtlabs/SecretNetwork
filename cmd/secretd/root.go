@@ -273,7 +273,7 @@ func queryCommand() *cobra.Command {
 		// rpc.BlockCommand(),
 		authcmd.QueryTxsByEventsCmd(),
 		authcmd.QueryTxCmd(),
-		// S20GetQueryCmd(),
+		S20GetQueryCmd(),
 	)
 
 	// app.ModuleBasics().AddQueryCommands(cmd)
@@ -304,7 +304,7 @@ func txCommand() *cobra.Command {
 		authcmd.GetDecodeCommand(),
 		flags.LineBreak,
 		// vestingcli.GetTxCmd(),
-		// S20GetTxCmd(),
+		S20GetTxCmd(),
 	)
 
 	// app.ModuleBasics().AddTxCommands(cmd)
