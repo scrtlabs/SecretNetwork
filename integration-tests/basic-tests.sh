@@ -564,17 +564,17 @@ amount_to_send_multisig="1000"
 $SECRETCLI tx bank send $address_abc $address_a ${amount_to_send_multisig}uscrt --fees=5000uscrt --generate-only --output=json >$unsigned_tx_file_multisig
 
 $SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_a
-if [ $? -ne 0]; then
+if [ $? -ne 0 ]; then
   echo "Failed to $SECRETCLI tx sign --multisig=abc --from a --output=json $unsigned_tx_file_multisig"
   exit 1
 fi
 $SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig --keyring-backend ${KEYRING} --home ${SECRETD_HOME} >$signed_b
-if [ $? -ne 0]; then
+if [ $? -ne 0 ]; then
   echo "Failed to $SECRETCLI tx sign --multisig=abc --from b --output=json $unsigned_tx_file_multisig"
   exit 1
 fi
 $SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b --keyring-backend ${KEYRING} --home ${SECRETD_HOME} --output json >$signed_multisig
-if [ $? -ne 0]; then
+if [ $? -ne 0 ]; then
   echo "Failed to $SECRETCLI tx multisign $unsigned_tx_file_multisig abc $signed_a $signed_b"
   exit 1
 fi
