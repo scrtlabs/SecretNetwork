@@ -953,8 +953,8 @@ github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71e
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
 github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240529120705-b14ea50dd3e8 h1:KsmPdy4+sokLfUn+eZjNI8HwslZA/rSvYt62fVzvNSE=
 github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240529120705-b14ea50dd3e8/go.mod h1:ehEJ6NYUAKWxVGMczCoQJ9XXbEURe1T8KG7mL5PAMok=
-github.com/scrtlabs/cosmos-sdk-store v1.0.3 h1:CBzurqDLXOGGLFPnMvGUKqL4lvnnBPVY28ZhVEpPID0=
-github.com/scrtlabs/cosmos-sdk-store v1.0.3/go.mod h1:EFtENTqVTuWwitGW1VwaBct+yDagk7oG/axBMPH+FXs=
+github.com/scrtlabs/cosmos-sdk-store v0.0.0-20240503174325-24af5792d3d8 h1:LCBzeTOOU7r6KWTmGvlovG5vWUY4cormesAr3gMW+40=
+github.com/scrtlabs/cosmos-sdk-store v0.0.0-20240503174325-24af5792d3d8/go.mod h1:EFtENTqVTuWwitGW1VwaBct+yDagk7oG/axBMPH+FXs=
 github.com/scrtlabs/iavl v1.0.1 h1:WL9YhEvOp+guahFQD25m67NvVyrX3jC90sVpebODDVc=
 github.com/scrtlabs/iavl v1.0.1/go.mod h1:8xIUkgVvwvVrBu81scdPty+/Dx9GqwHnAvXz4cwF7RY=
 github.com/scrtlabs/tendermint v0.38.2 h1:a2L2v70guPMvQNbr38Cl5jwuLRBJim1iznBV+4x7fyU=

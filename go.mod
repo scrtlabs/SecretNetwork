@@ -3,7 +3,7 @@ module github.com/scrtlabs/SecretNetwork
 go 1.21
 
 replace (
-	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v1.0.3
+	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v0.0.0-20240503174325-24af5792d3d8
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.2
 	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240529120705-b14ea50dd3e8
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.0.1
