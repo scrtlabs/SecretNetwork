@@ -42,7 +42,7 @@ Click the button below to start a new development environment:
 ### Install prerequisite packages
 
 ```
-apt-get install -y --no-install-recommends g++ libtool automake autoconf clang
+apt-get install -y --no-install-recommends g++ libtool automake autoconf clang jq
 ```
 
 #### Ubuntu 22+
@@ -161,6 +161,27 @@ Still, the non-enclave code can be modified and ran on mainnet as long as there 
 To build run all tests, use `make go-tests`
 
 ## Start local network
+
+Before you run your dev node, you need to point to the shared libraries needed by __secretd__:
+```
+export SCRT_ENCLAVE_DIR=~/SecretNetwork/go-cosmwasm
+```
+In order to run __secretd__ you need to have built _librust_cosmwasm_enclave.signed.so_ and _tendermint_enclave.so_.
+The latter can be built by cloning:
+```
+git clone git@github.com:scrtlabs/tm-secret-enclave.git ~/tm-secret-enclave
+```
+This repo also uses submodules:
+```
+cd tm-secret-enclave
+git submodule init
+git submodule update --remote
+``
+and build _tendermint_enclave.so_:
+```
+make build-rust
+```
+You may want to copy _tendermint_enclave.so_ to ~/SecretNetwork/go-cosmwasm
 
 Run `./scripts/start-node.sh`
 
