@@ -56,7 +56,12 @@ dpkg -i libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
 
 ### Clone Repo
 
-Clone this repo to your favorite working directory
+Clone this repo to your favorite working directory. e.g. ~/SecretNetwork
+```
+git clone git@github.com:scrtlabs/SecretNetwork.git ~/SecretNetwork
+cd ~SecretNetwork
+git checkout <work-branch>
+```
 
 ### Install Rust
 
@@ -66,7 +71,7 @@ Install rust from [https://rustup.rs/](https://rustup.rs/).
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Then, add the rust-src component. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - 
+Then, while in your __SecretNetwork__ add the _rust-src_ componenti and _wasm32-unknown-unknown_ target. This will also install the version of rust that is defined by the workspace (in `rust-toolchain`) - 
 ```
 rustup component add rust-src
 ```
@@ -79,6 +84,7 @@ rustup target add wasm32-unknown-unknown
 ### Install Go (v1.18+)
 
 Install go from [https://go.dev/doc/install](https://go.dev/doc/install)
+Any version up to 1.22.4 should work.
 
 #### Install gobindata
 
@@ -95,6 +101,28 @@ For a simple install, run the [install-sgx.sh](./scripts/install-sgx.sh) script 
 chmod +x ./scripts/install-sgx.sh
 sudo ./scripts/install-sgx.sh true true true false
 ```
+After SGX installs successfully, please add the following line to your _.bashrc_ file
+```
+SGX_HOME=/opt/intel/sgxsdk # or the directory where installed it if defferent
+. ${SGX_HOME}/environment
+```
+and
+```
+source ~/.bashrc
+```
+to bring into your shell the important paths from SGX that you will need when building _SecretNetwork_
+
+It may be worth mentioning that your LIBRARY_PATH should also point to SGX_SDK/sdk_libs
+
+If you plan to run in **SGX_MODE=SW** indicate it by exporting SGX_MODE
+```
+export SGX_SDK=/opt/intel/sgxsdk
+```
+There is one more important step you need to do:
+```
+ln -s $SGX_HOME/lib64/libsgx_epid.so $SGX_HOME/sdk_libs/libsgx_epid.so
+```
+as this library will be required during building.
 
 Note: If you are using WSL you'll need to use the 5.15 kernel which you can find how to do [here](https://github.com/scrtlabs/SecretNetwork/blob/master/docs/SGX%20on%20WSL%20(SW).md), otherwise you'll have to run anything SGX related only in docker
   
