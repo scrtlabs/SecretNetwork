@@ -1,15 +1,22 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 
+	"github.com/gogo/protobuf/proto"
+
 	// wasmvm "github.com/CosmWasm/wasmvm/v2"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/emptypb"
+
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -36,7 +43,9 @@ func GetQueryCmd() *cobra.Command {
 		// GetCmdQueryCode(),
 		// GetCmdQueryCodeInfo(),
 		GetCmdGetContractInfo(),
+		GetQueryDecryptTxCmd(),
 		// GetCmdGetContractHistory(),
+		GetCmdCodeHashByContractAddress(),
 		GetCmdGetContractStateSmart(),
 		// GetCmdListPinnedCode(),
 		// GetCmdQueryParams(),
@@ -78,6 +87,39 @@ func GetCmdGetContractStateSmart() *cobra.Command {
 		SilenceUsage: true,
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "key argument")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// GetCmdListCode lists all wasm code uploaded
+func GetCmdCodeHashByContractAddress() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "contract-hash [address]",
+		Short: "Return the code hash of a contract",
+		Long:  "Return the code hash of a contract",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(grpcCtx)
+			res, err := queryClient.CodeHashByContractAddress(
+				context.Background(),
+				&types.QueryByContractAddressRequest{
+					ContractAddress: args[0],
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("error querying contract hash: %s", err)
+			}
+
+			fmt.Printf("0x%s\n", res.CodeHash)
+			return nil
+		},
+	}
+
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
@@ -268,6 +310,209 @@ func GetCmdGetContractInfo() *cobra.Command {
 		},
 		SilenceUsage: true,
 	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func GetQueryDecryptTxCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "tx [hash]",
+		Short: "Query for a transaction by hash in a committed block, decrypt input and outputs if I'm the tx sender",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			result, err := authtx.QueryTx(clientCtx, args[0])
+			if err != nil {
+				return err
+			}
+
+			if result.Empty() {
+				return fmt.Errorf("no transaction found with hash %s", args[0])
+			}
+
+			txInputs := result.GetTx().GetMsgs()
+
+			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
+			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
+			if err != nil {
+				return fmt.Errorf("error in GetTxSenderKeyPair: %w", err)
+			}
+
+			answers := types.DecryptedAnswers{
+				Answers:        make([]*types.DecryptedAnswer, len(txInputs)),
+				OutputLogs:     []sdk.StringEvent{},
+				OutputError:    "",
+				PlaintextError: "",
+			}
+			nonces := make([][]byte, len(txInputs))
+
+			for i, tx := range txInputs {
+				var encryptedInput []byte
+				answers.Answers[i] = &types.DecryptedAnswer{}
+
+				switch txInput := tx.(type) {
+				case *types.MsgExecuteContract:
+					{
+						encryptedInput = txInput.Msg
+						answers.Answers[i].Type = "execute"
+					}
+				case *types.MsgInstantiateContract:
+					{
+						encryptedInput = txInput.InitMsg
+						answers.Answers[i].Type = "instantiate"
+					}
+				}
+
+				if encryptedInput != nil {
+					nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(encryptedInput)
+					if err != nil {
+						return fmt.Errorf("can't parse encrypted blob: %w", err)
+					}
+
+					if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
+						return fmt.Errorf("cannot decrypt, not original tx sender")
+					}
+
+					var plaintextInput []byte
+					if len(ciphertextInput) > 0 {
+						plaintextInput, err = wasmCtx.Decrypt(ciphertextInput, nonce)
+						if err != nil {
+							return fmt.Errorf("error while trying to decrypt the tx input: %w", err)
+						}
+					}
+
+					answers.Answers[i].Input = string(plaintextInput)
+					nonces[i] = nonce
+				}
+			}
+
+			dataOutputHexB64 := result.Data
+			if dataOutputHexB64 != "" {
+				dataOutputAsProtobuf, err := hex.DecodeString(dataOutputHexB64)
+				if err != nil {
+					return fmt.Errorf("error while trying to decode the encrypted output data from hex string: %w", err)
+				}
+
+				var txData sdk.TxMsgData
+				err = proto.Unmarshal(dataOutputAsProtobuf, &txData)
+				if err != nil {
+					return fmt.Errorf("error while trying to parse data as protobuf: %w: %s", err, dataOutputHexB64)
+				}
+
+				for i, msgData := range txData.MsgResponses {
+					if len(msgData.Value) != 0 {
+						var dataField []byte
+						switch {
+						case msgData.TypeUrl == "/secret.compute.v1beta1.MsgInstantiateContractResponse":
+							var msgResponse types.MsgInstantiateContractResponse
+							err := proto.Unmarshal(msgData.Value, &msgResponse)
+							if err != nil {
+								continue
+							}
+
+							dataField = msgResponse.Data
+						case msgData.TypeUrl == "/secret.compute.v1beta1.MsgExecuteContractResponse":
+							var msgResponse types.MsgExecuteContractResponse
+							err := proto.Unmarshal(msgData.Value, &msgResponse)
+							if err != nil {
+								continue
+							}
+
+							dataField = msgResponse.Data
+						default:
+							continue
+						}
+
+						dataPlaintextB64Bz, err := wasmCtx.Decrypt(dataField, nonces[i])
+						if err != nil {
+							continue
+						}
+						dataPlaintextB64 := string(dataPlaintextB64Bz)
+						answers.Answers[i].OutputData = dataPlaintextB64
+
+						dataPlaintext, err := base64.StdEncoding.DecodeString(dataPlaintextB64)
+						if err != nil {
+							continue
+						}
+
+						answers.Answers[i].OutputDataAsString = string(dataPlaintext)
+					}
+				}
+			}
+
+			// decrypt logs
+			answers.OutputLogs = []sdk.StringEvent{}
+			for _, e := range result.Events {
+				if e.Type == "wasm" {
+					for i, a := range e.Attributes {
+						if a.Key != "contract_address" {
+							// key
+							if a.Key != "" {
+								// Try to decrypt the log key. If it doesn't look encrypted, leave it as-is
+								keyCiphertext, err := base64.StdEncoding.DecodeString(a.Key)
+								if err != nil {
+									continue
+								}
+
+								for _, nonce := range nonces {
+									keyPlaintext, err := wasmCtx.Decrypt(keyCiphertext, nonce)
+									if err != nil {
+										continue
+									}
+									a.Key = string(keyPlaintext)
+									break
+								}
+							}
+
+							// value
+							if a.Value != "" {
+								// Try to decrypt the log value. If it doesn't look encrypted, leave it as-is
+								valueCiphertext, err := base64.StdEncoding.DecodeString(a.Value)
+								if err != nil {
+									continue
+								}
+								for _, nonce := range nonces {
+									valuePlaintext, err := wasmCtx.Decrypt(valueCiphertext, nonce)
+									if err != nil {
+										continue
+									}
+									a.Value = string(valuePlaintext)
+									break
+								}
+							}
+							e.Attributes[i] = a
+						}
+					}
+					answers.OutputLogs = append(answers.OutputLogs, sdk.StringifyEvent(e))
+				}
+			}
+
+			if types.IsEncryptedErrorCode(result.Code) && types.ContainsEncryptedString(result.RawLog) {
+				for i, nonce := range nonces {
+					stdErr, err := wasmCtx.DecryptError(result.RawLog, nonce)
+					if err != nil {
+						continue
+					}
+					answers.OutputError = string(append(json.RawMessage(fmt.Sprintf("message index %d: ", i)), stdErr...))
+					break
+				}
+			} else if types.ContainsEnclaveError(result.RawLog) {
+				answers.PlaintextError = result.RawLog
+			}
+
+			jsonBz, err := json.MarshalIndent(answers, "", "    ")
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintString(string(jsonBz))
+		},
+	}
+
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
