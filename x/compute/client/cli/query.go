@@ -45,6 +45,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdGetContractInfo(),
 		GetQueryDecryptTxCmd(),
 		// GetCmdGetContractHistory(),
+		GetCmdCodeHashByContractAddress(),
 		GetCmdGetContractStateSmart(),
 		// GetCmdListPinnedCode(),
 		// GetCmdQueryParams(),
@@ -86,6 +87,39 @@ func GetCmdGetContractStateSmart() *cobra.Command {
 		SilenceUsage: true,
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "key argument")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// GetCmdListCode lists all wasm code uploaded
+func GetCmdCodeHashByContractAddress() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "contract-hash [address]",
+		Short: "Return the code hash of a contract",
+		Long:  "Return the code hash of a contract",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(grpcCtx)
+			res, err := queryClient.CodeHashByContractAddress(
+				context.Background(),
+				&types.QueryByContractAddressRequest{
+					ContractAddress: args[0],
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("error querying contract hash: %s", err)
+			}
+
+			fmt.Printf("0x%s\n", res.CodeHash)
+			return nil
+		},
+	}
+
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
