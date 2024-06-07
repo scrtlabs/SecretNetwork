@@ -13,7 +13,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	// wasmvm "github.com/CosmWasm/wasmvm/v2"
+	cosmwasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/spf13/cobra"
+
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -908,7 +910,24 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, clientCtx c
 		},
 	)
 	if err != nil {
-		return sdkerrors.ErrNotFound.Wrapf("Failed to query secret contract %s. Error: %s", contractAddress, err)
+		if types.ErrContainsQueryError(err) {
+			errorPlainBz, err := wasmCtx.DecryptError(err.Error(), nonce)
+			if err != nil {
+				return err
+			}
+			var stdErr cosmwasmTypes.StdError
+			err = json.Unmarshal(errorPlainBz, &stdErr)
+			if err != nil {
+				return fmt.Errorf("query result: %s", string(errorPlainBz))
+			}
+
+			return fmt.Errorf("query result: %s", stdErr.Error())
+		}
+		// Itzik: Commenting this as it might have been a placeholder for encrypting
+		// else if strings.Contains(err.Error(), "EnclaveErr") {
+		//	return err
+		//}
+		return err
 	}
 
 	var resDecrypted []byte
