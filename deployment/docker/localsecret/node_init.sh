@@ -12,12 +12,20 @@ KEYRING=${KEYRING:-"test"}
 MONIKER=${MONIKER:-"banana"}
 custom_script_path=${POST_INIT_SCRIPT:-"/root/post_init.sh"}
 
-RPC_URL="172.17.0.2:26657"
-FAUCET_URL="172.17.0.2:5000"
+if [ ! -v ${SCRT_RPC_IP} ]; then
+  echo "Set SCRT_RPC_IP to point to the network interface to bind the rpc service to"
+  exit 1
+fi
+RPC_URL="${SCRT_RPC_IP}:26657"
+FAUCET_URL="${SCRT_RPC_IP}:5000"
 
 SCRT_HOME=${SECRETD_HOME:-$HOME/.secretd}
 SCRT_SGX_STORAGE=/opt/secret/.sgx_secrets
-SCRT_ENCLAVE_DIR=/usr/lib
+if [ ! -v ${SCRT_ENCLAVE_DIR} ]; then
+  echo "SCRT_ENCLAVE_DIR is not set"
+  exit 1
+fi
+# SCRT_ENCLAVE_DIR=/usr/lib
 
 GENESIS_file=${SCRT_HOME}/config/genesis.json
 if [ ! -e $GENESIS_file ]; then
@@ -69,6 +77,7 @@ if [ ! -e $GENESIS_file ]; then
   perl -i -pe 's/max_subscriptions_per_client.+/max_subscriptions_per_client = 50/' ~/.secretd/config/config.toml
 fi
 
+# CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
 setsid lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
 
 . ./node_start.sh

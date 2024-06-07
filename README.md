@@ -42,8 +42,23 @@ Click the button below to start a new development environment:
 ### Install prerequisite packages
 
 ```
-apt-get install -y --no-install-recommends g++ libtool automake autoconf clang jq
+apt-get install -y --no-install-recommends g++ libtool automake autoconf clang
 ```
+
+#### Optinal packages to install ((needed for local testing))
+```
+sudo apt install -y  jq nodejs npm
+```
+
+Note: lcp - Simple proxy to bypass CORS issues. It solve the issue
+```
+No 'Access-Control-Allow-Origin' header is present on the requested resource. Origin 'http://localhost:3000' is therefore not allowed access. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disable
+```
+You may need to isntall __lcp__ CORS bypass proxy if you plan on running your network of nodes locally:
+```
+sudo npm install -g local-cors-proxy
+```
+
 
 #### Ubuntu 22+
 

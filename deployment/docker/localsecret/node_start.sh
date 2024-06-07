@@ -49,7 +49,7 @@ function InitBootstrap() {
 
       if [ "${ENABLE_FAUCET}" = "true" ]; then
             # Setup faucet
-            setsid /usr/bin/node /root/faucet_server.js &
+            setsid /usr/bin/node ./faucet/faucet_server.js &
       fi
 
       # secretd keys list | jq
@@ -65,7 +65,7 @@ function InitNode() {
       secretd config set client node tcp://${RPC_URL}
 
       echo "Give a bootstrap node time to start..."
-      sleep 15s
+      sleep 5s
 
       # Download genesis.json from the bootstrap node
       curl http://${RPC_URL}/genesis | jq '.result.genesis' >${SCRT_HOME}/config/genesis.json
@@ -140,17 +140,17 @@ function InitNode() {
 
       # Get ready to run our own node:
       # Open RPC port to all interfaces
-      perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:36657"/' ${SCRT_HOME}/config/config.toml
+      perl -i -pe 's/laddr = .+?26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' ${SCRT_HOME}/config/config.toml
       # Open P2P port to all interfaces
-      perl -i -pe 's/laddr = .+?26656"/laddr = "tcp:\/\/0.0.0.0:36656"/' ${SCRT_HOME}/config/config.toml
+      perl -i -pe 's/laddr = .+?26656"/laddr = "tcp:\/\/0.0.0.0:26656"/' ${SCRT_HOME}/config/config.toml
 
-      secretd config set client node tcp://172.17.0.3:36657
+      secretd config set client node tcp://0.0.0.0:26657
 
       secretd init-bootstrap ./node-master-key.txt ./io-master-key.txt 
 
       return 0
 
-      RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://172.17.0.3:36657 --log_level ${LOG_LEVEL} &
+      RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --log_level ${LOG_LEVEL} &
 
       sleep 10s
 
