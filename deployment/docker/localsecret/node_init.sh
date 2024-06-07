@@ -12,7 +12,7 @@ KEYRING=${KEYRING:-"test"}
 MONIKER=${MONIKER:-"banana"}
 custom_script_path=${POST_INIT_SCRIPT:-"/root/post_init.sh"}
 
-if [ ! -v ${SCRT_RPC_IP} ]; then
+if [ -v ${SCRT_RPC_IP} ]; then
   echo "Set SCRT_RPC_IP to point to the network interface to bind the rpc service to"
   exit 1
 fi
@@ -21,7 +21,7 @@ FAUCET_URL="${SCRT_RPC_IP}:5000"
 
 SCRT_HOME=${SECRETD_HOME:-$HOME/.secretd}
 SCRT_SGX_STORAGE=/opt/secret/.sgx_secrets
-if [ ! -v ${SCRT_ENCLAVE_DIR} ]; then
+if [ -v ${SCRT_ENCLAVE_DIR} ]; then
   echo "SCRT_ENCLAVE_DIR is not set"
   exit 1
 fi

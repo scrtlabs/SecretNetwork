@@ -44,7 +44,7 @@ function InitBootstrap() {
       secretd genesis collect-gentxs
       secretd genesis validate-genesis
 
-      secretd init-bootstrap
+      secretd init-bootstrap node-master-key.txt io-master-key.txt
       secretd genesis validate-genesis
 
       if [ "${ENABLE_FAUCET}" = "true" ]; then
