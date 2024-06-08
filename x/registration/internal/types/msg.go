@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
+	"golang.org/x/xerrors"
 )
 
 const (
@@ -48,7 +49,7 @@ func validateCertificate(cert ra.Certificate) error {
 	// todo: add public key verification
 	_, err := ra.VerifyRaCert(cert)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Certificate validation failed: %v", err)
 	}
 
 	return nil
