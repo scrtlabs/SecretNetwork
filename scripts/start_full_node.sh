@@ -8,6 +8,8 @@ SECRETD=${SECRETD:-/usr/local/bin/secretd}
 SCRT_ENVLAVE_DIR=${SCRT_ENCLAVE_DIR:-"/usr/local/lib/scrt"}
 SCRT_KEYRING=${SCRT_KEYRING:-"test"}
 SCRT_HOME=${SCRT_HOME:-${HOME}/.secretd}
+SCRT_SGX_STORAGE=${SCRT_SGX_STORAGE:-"/opt/secret/.sgx_secrets"}
+
 if [ -v ${SCRT_BOOTSTRAP} ]; then
 	echo "Please set SCRT_BOOTSTRAP to point to bootstrap node ip"
 	exit 1
@@ -16,6 +18,9 @@ if [ -v ${SCRT_BOOTSTRAP_NODE_ID} ]; then
 	echo "Please set SCRT_BOOTSTRAP_NODE_ID to point to bootstrap node id"
 	exit 1
 fi
+mkdir -p ${SCRT_SGX_STORAGE}
+
+# Full clean up of the node before start
 rm -fr ${SCRT_HOME}
 echo "Init SGX enclave"
 secretd reset-enclave
@@ -43,10 +48,6 @@ if [ ! -s ${SCRT_HOME}/config/genesis.json ]; then
 fi
 
 cat ${SCRT_HOME}/config/genesis.json | sha256sum
-
-SCRT_SGX_STORAGE=${SCRT_SGX_STORAGE:-"/opt/secret/.sgx_secrets"}
-mkdir -p ${SCRT_SGX_STORAGE}
-
 
 ls -lh ${SCRT_SGX_STORAGE}/attestation_cert.der
 
