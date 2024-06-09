@@ -114,12 +114,12 @@ secretd genesis collect-gentxs
 secretd genesis validate-genesis
 
 # generate node master keys
-secretd q register secret-network-params
-ls -lh ./io-master-key.txt ./node-master-key.txt
-mkdir -p ${SCRT_HOME}/keys
-cp ./io-master-key.txt ./node-master-key.txt ${SCRT_HOME}/keys/
+# secretd q register secret-network-params
+# ls -lh ./io-master-key.txt ./node-master-key.txt
+# mkdir -p ${SCRT_HOME}/keys
+# cp ./io-master-key.txt ./node-master-key.txt ${SCRT_HOME}/keys/
 
-secretd init-bootstrap ${SCRT_HOME}/keys/node-master-key.txt ${SCRT_HOME}/keys/io-master-key.txt
+secretd init-bootstrap ./node-master-key.txt ./io-master-key.txt
 secretd genesis validate-genesis
 
 if [ "${ENABLE_FAUCET}" = "true" ]; then
