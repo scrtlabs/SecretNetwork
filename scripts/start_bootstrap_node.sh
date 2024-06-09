@@ -91,6 +91,13 @@ if [ ${ENABLE_FAUCET} = "true" ]; then
       fi
 fi
 
+_pid_=$(ps -ef | grep "lcp --proxyUrl" | grep -v grep | awk '{print $2}')
+if [ ! -z "${_pid_}" ]; then
+    echo "Faucet app is running with PID:${_pid_}. Stopping..."
+    kill -HUP ${_pid_} && echo "Successfully stopped PID:" {$_pid_}
+fi
+
+
 # Create keys
 CreateKeys
 
