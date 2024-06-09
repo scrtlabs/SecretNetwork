@@ -63,9 +63,12 @@ PUBLIC_KEY=$(secretd parse $SCRT_SGX_STORAGE/attestation_cert.der 2>/dev/null | 
 echo "Public key: ${PUBLIC_KEY}"
 
 # fund wallet
-SCRT_WALLET="a"
-SCRT_WALLET_MNEMONIC="grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
-echo ${SCRT_WALLET_MNEMONIC} | secretd keys add ${SCRT_WALLET} --recover
+THIS=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo $0)
+DIR=$(dirname "${THIS}")
+. "$DIR/create_keys.sh"
+
+CreateKeys
+SCRT_WALLET=a
 
 txhash=$(secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_cert.der -y --fees 3000uscrt --from ${SCRT_WALLET} | jq '.txhash' | tr -d '"')
 sleep 5s
