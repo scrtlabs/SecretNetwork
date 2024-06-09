@@ -47,9 +47,9 @@ func AuthenticateNodeCmd() *cobra.Command {
 			// build and sign the transaction, then broadcast to Tendermint
 			addr := clientCtx.GetFromAddress()
 			msg := types.RaAuthenticate{
-				Sender:        addr,
-				Certificate:   cert,
-				SenderAddress: addr.String(),
+				Sender:      addr.String(),
+				Certificate: cert,
+				SenderAddr:  addr,
 			}
 			err = msg.ValidateBasic()
 			if err != nil {

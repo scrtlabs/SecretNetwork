@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/scrtlabs/SecretNetwork/x/registration/internal/types"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
-	abci "github.com/cometbft/cometbft/abci/types"
 )
 
 const (
@@ -68,7 +68,7 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
 			sdk.NewAttribute(sdk.AttributeKeyModule, ModuleName),
-			sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
+			sdk.NewAttribute(AttributeSigner, msg.Sender),
 			sdk.NewAttribute(AttributeEncryptedSeed, fmt.Sprintf("0x%02x", encSeed)),
 			sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("0x%s", hex.EncodeToString(pubkey))),
 		),

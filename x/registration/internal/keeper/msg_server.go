@@ -50,7 +50,7 @@ func (m msgServer) RegisterAuth(goCtx context.Context, msg *types.RaAuthenticate
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
 			sdk.NewAttribute(sdk.AttributeKeyModule, m.module),
-			sdk.NewAttribute(AttributeSigner, msg.Sender.String()),
+			sdk.NewAttribute(AttributeSigner, msg.Sender),
 			sdk.NewAttribute(AttributeEncryptedSeed, fmt.Sprintf("0x%02x", encSeed)),
 			sdk.NewAttribute(AttributeNodeID, fmt.Sprintf("0x%s", hex.EncodeToString(pubkey))),
 		),
