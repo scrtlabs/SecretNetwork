@@ -20,6 +20,12 @@ if [ -v ${SCRT_BOOTSTRAP_NODE_ID} ]; then
 fi
 mkdir -p ${SCRT_SGX_STORAGE}
 
+_pid_=$(ps -ef | grep "lcp --proxyUrl" | grep -v grep | awk '{print $2}')
+if [ ! -z "${_pid_}" ]; then
+    echo "Faucet app is running with PID:${_pid_}. Stopping..."
+    kill -HUP ${_pid_} && echo "Successfully stopped PID:" {$_pid_}
+fi
+
 # Full clean up of the node before start
 rm -fr ${SCRT_HOME}
 echo "Init SGX enclave"
