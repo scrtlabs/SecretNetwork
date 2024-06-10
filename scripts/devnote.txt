@@ -1,10 +1,16 @@
 How to deploy dev test net
+
 Create a bootstrap node
-export BOOTSTRAP=true
-and run ./scripts/node_init.sh
+export SCRT_CHAINID=secretdev-1
+export SCRT_MONIKER=scrt
+export SGX_MODE=SW
+and run ./scripts/start_bootstrap_node.sh
 You will need to run: secretd tendermint show-node-id
 Note the bootstrap node IP. Make sure the ports for 26656 snd 26657 are open and the machine is reachable
-On full nodes
+On full nodes: secretd tendermint show-node-id 
+export SCRT_CHAINID=secretdev-1
+export SCRT_MONIKER=scrt
+export SGX_MODE=SW
 export SCRT_BOOTSTRAP=<bootstrap IP>
 export SCRT_BOOTSTRAP_NODE_ID=<bootstrap node id>
 
