@@ -49484,6 +49484,49 @@ paths:
                       format: byte
       tags:
         - gRPC Gateway API
+  /ibc/apps/packetforward/v1/params:
+    get:
+      summary: Params queries all parameters of the packetforward module.
+      operationId: ../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonParams
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              params:
+                description: params defines the parameters of the module.
+                type: object
+                properties:
+                  fee_percentage:
+                    type: string
+            description: >-
+              QueryParamsResponse is the response type for the Query/Params RPC
+              method.
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      tags:
+        - gRPC Gateway API
   /ibc/core/channel/v1/channels:
     get:
       summary: Channels queries all the IBC channels of a chain.
@@ -105883,6 +105926,22 @@ definitions:
     description: >-
       QueryTotalEscrowForDenomResponse is the response type for
       TotalEscrowForDenom RPC method.
+  packetforward.v1.Params:
+    type: object
+    properties:
+      fee_percentage:
+        type: string
+    description: Params defines the set of packetforward parameters.
+  packetforward.v1.QueryParamsResponse:
+    type: object
+    properties:
+      params:
+        description: params defines the parameters of the module.
+        type: object
+        properties:
+          fee_percentage:
+            type: string
+    description: QueryParamsResponse is the response type for the Query/Params RPC method.
   ibc.core.channel.v1.Channel:
     type: object
     properties:

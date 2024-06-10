@@ -39,7 +39,8 @@ type RaAuthenticate struct {
 	//                        "github.com/cosmos/cosmos-sdk/types.AccAddress" ];
 	Sender      string                                                                          `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty"`
 	Certificate github_com_scrtlabs_SecretNetwork_x_registration_remote_attestation.Certificate `protobuf:"bytes,2,opt,name=certificate,proto3,casttype=github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation.Certificate" json:"ra_cert"`
-	// string sender_address = 3 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+	// string sender_address = 3 [ (cosmos_proto.scalar) = "cosmos.AddressString"
+	// ];
 	SenderAddr github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,3,opt,name=sender_addr,json=senderAddr,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"sender_addr,omitempty"`
 }
 

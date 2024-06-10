@@ -623,6 +623,28 @@
       }
     },
     {
+      "url": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.json",
+      "operationIds": {
+        "rename": {
+          "Params": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonParams",
+          "Pool": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonPool",
+          "DelegatorValidators": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonDelegatorValidators",
+          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonUpgradedConsensusState",
+          "Accounts": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonAccounts",
+          "Account": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonAccount",
+          "Proposal": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonProposal",
+          "Proposals": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonProposals",
+          "Deposits": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonDeposits",
+          "Deposit": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonDeposit",
+          "TallyResult": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonTallyResult",
+          "Votes": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonVotes",
+          "Vote": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonVote",
+          "Balance": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonBalance",
+          "Code": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonCode"
+        }
+      }
+    },
+    {
       "url": "../../tmp-swagger-gen/ibc/core/channel/v1/query.swagger.json",
       "operationIds": {
         "rename": {
