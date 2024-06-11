@@ -263,7 +263,7 @@ clean:
 
 check_get_go:
 	@echo "Checking if go installer is present locally"
-	@[ ! -f ./go1.22.2.linux-amd64.tar.gz ] && echo "go1.22.2 installer not found locally" && wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz || true
+	@[ ! -f ./go1.22.3.linux-amd64.tar.gz ] && echo "go1.22.3 installer not found locally" && wget https://go.dev/dl/go1.22.3.linux-amd64.tar.gz || true
 	
 # Build localsecret - dockerized local chain for development and testing. In this version SGX is ran in software/simulation mode
 localsecret: check_get_go
