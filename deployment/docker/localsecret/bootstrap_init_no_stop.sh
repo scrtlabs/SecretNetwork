@@ -91,6 +91,7 @@ if [ ! -e "$file" ]; then
   secretd genesis validate-genesis
 
   # Setup LCD
+  perl -i -pe 's/localhost/0.0.0.0/' ~/.secretd/config/app.toml
   perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' ~/.secretd/config/app.toml
   perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ~/.secretd/config/app.toml
   perl -i -pe 's/concurrency = false/concurrency = true/' ~/.secretd/config/app.toml
