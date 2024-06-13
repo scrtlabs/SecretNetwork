@@ -76,6 +76,7 @@ import (
 	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
+	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 )
 
@@ -623,8 +624,17 @@ func (ak *SecretAppKeepers) InitKeys() {
 // initParamsKeeper init params keeper and its subspaces
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
+	subspaceParams := []paramtypes.ParamSetPair{
+		paramtypes.NewParamSetPair([]byte("MaxMemoCharacters"), uint64(256), valMaxMemoCharacters),
+		paramtypes.NewParamSetPair([]byte("TxSigLimit"), uint64(7), valTxSigLimit),
+		paramtypes.NewParamSetPair([]byte("TxSizeCostPerByte"), uint64(10), valTxSizeCostPerByte),
+		paramtypes.NewParamSetPair([]byte("SigVerifyCostED25519"), uint64(590), valSigVerifyCostED25519),
+		paramtypes.NewParamSetPair([]byte("SigVerifyCostSecp256k1"), uint64(1000), valSigVerifyCostSecp256k1),
+	}
 
-	// paramsKeeper.Subspace(authtypes.ModuleName)
+	authsub := paramsKeeper.Subspace(authtypes.ModuleName)
+
+	authsub.WithKeyTable(paramtypes.NewKeyTable(subspaceParams...))
 	// paramsKeeper.Subspace(banktypes.ModuleName)
 	// paramsKeeper.Subspace(stakingtypes.ModuleName)
 	// paramsKeeper.Subspace(minttypes.ModuleName)
