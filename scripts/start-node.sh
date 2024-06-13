@@ -41,7 +41,7 @@ $SECRETD config set client keyring-backend ${KEYRING}
 
 # Build genesis file incl account for passed address
 #coins="500000000000uscrt,500000000000uscrt"
-coins="500000000000uscrt"
+coins="90000000000000000uscrt"
 $SECRETD init --chain-id $CHAINID $CHAINID --home=$SECRETD_HOME
 retVal=$?
 if [ $retVal -ne 0 ]; then
