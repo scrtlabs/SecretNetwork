@@ -4,7 +4,7 @@ set -oe errexit
 
 SGX_MODE=SW
 SGX_DEBUG=0
-LOG_LEVEL=${LOG_LEVEL:-"info"}
+LOG_LEVEL=${LOG_LEVEL:-"trace"}
 
 ENABLE_FAUCET=${1:-"true"}
 KEYRING=${SCRT_KEYRING:-"test"}
@@ -25,6 +25,7 @@ DIR=$(dirname "${THIS}")
 . "$DIR/create_keys.sh"
  
 GENESIS_file=${SCRT_HOME}/config/genesis.json
+rm -fr ${SCRT_HOME}
 if [ ! -e $GENESIS_file ]; then
   # No genesis file found. Fresh start. Clean up
   rm -rf $SCRT_HOME
@@ -70,7 +71,7 @@ if [ ! -e $GENESIS_file ]; then
   fi
 
   # Setup LCD
-  perl -i -pe 's;address = "tcp://0.0.0.0:1317";address = "tcp://0.0.0.0:1316";' ${SCRT_HOME}/config/app.toml
+  perl -i -pe 's;address = "tcp://localhost:1317";address = "tcp://10.14.0.5:1316";' ${SCRT_HOME}/config/app.toml
   perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ${SCRT_HOME}/config/app.toml
   perl -i -pe 's/concurrency = false/concurrency = true/' ${SCRT_HOME}/config/app.toml
 
@@ -78,10 +79,7 @@ if [ ! -e $GENESIS_file ]; then
   perl -i -pe 's/max_subscription_clients.+/max_subscription_clients = 100/' ${SCRT_HOME}/config/config.toml
   perl -i -pe 's/max_subscriptions_per_client.+/max_subscriptions_per_client = 50/' ${SCRT_HOME}/config/config.toml
 fi
-
-# CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
-setsid lcp --proxyUrl http://localhost:1316 --port 1317 --proxyPartial '' &
-
+ 
 # kill faucet if still running
 if [ ${ENABLE_FAUCET} = "true" ]; then
       _pid_=$(ps -ef | grep node.*faucet.* | grep -v grep | awk '{print $2}')
@@ -97,12 +95,14 @@ if [ ! -z "${_pid_}" ]; then
     kill -HUP ${_pid_} && echo "Successfully stopped PID:" {$_pid_}
 fi
 
+sleep 5s
+
 
 # Create keys
 CreateKeys
 
 # Preload genesis accounts with funds
-ico=1000000000000000000
+ico=9000000000000000000000
 
 echo "---------- PRELOAD GENESIS ACCOUNTS ----------"
 secretd genesis add-genesis-account validator ${ico}uscrt
@@ -127,11 +127,13 @@ secretd genesis validate-genesis
 # cp ./io-master-key.txt ./node-master-key.txt ${SCRT_HOME}/keys/
 
 secretd init-bootstrap ./node-master-key.txt ./io-master-key.txt
-secretd genesis validate-genesis
 
 if [ "${ENABLE_FAUCET}" = "true" ]; then
       # Setup faucet
       setsid $(which node) ${DIR}/faucet/faucet_server.js &
 fi
+
+# CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
+setsid lcp --proxyUrl http://10.14.0.5:1316 --port 1317 --proxyPartial '' &
 
 RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap --log_level ${LOG_LEVEL}

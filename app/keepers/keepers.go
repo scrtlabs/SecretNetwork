@@ -27,6 +27,7 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -76,7 +77,7 @@ import (
 	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	// paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 )
 
@@ -306,7 +307,6 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(ak.IbcKeeper.ClientKeeper))
 
 	govConfig := govtypes.DefaultConfig()
-
 	govKeeper := govkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(ak.keys[govtypes.StoreKey]),
@@ -624,31 +624,33 @@ func (ak *SecretAppKeepers) InitKeys() {
 // initParamsKeeper init params keeper and its subspaces
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
-	subspaceParams := []paramtypes.ParamSetPair{
-		paramtypes.NewParamSetPair([]byte("MaxMemoCharacters"), uint64(256), valMaxMemoCharacters),
-		paramtypes.NewParamSetPair([]byte("TxSigLimit"), uint64(7), valTxSigLimit),
-		paramtypes.NewParamSetPair([]byte("TxSizeCostPerByte"), uint64(10), valTxSizeCostPerByte),
-		paramtypes.NewParamSetPair([]byte("SigVerifyCostED25519"), uint64(590), valSigVerifyCostED25519),
-		paramtypes.NewParamSetPair([]byte("SigVerifyCostSecp256k1"), uint64(1000), valSigVerifyCostSecp256k1),
-	}
+	// subspaceParams := []paramtypes.ParamSetPair{
+	// 	paramtypes.NewParamSetPair([]byte("MaxMemoCharacters"), uint64(256), valMaxMemoCharacters),
+	// 	paramtypes.NewParamSetPair([]byte("TxSigLimit"), uint64(7), valTxSigLimit),
+	// 	paramtypes.NewParamSetPair([]byte("TxSizeCostPerByte"), uint64(10), valTxSizeCostPerByte),
+	// 	paramtypes.NewParamSetPair([]byte("SigVerifyCostED25519"), uint64(590), valSigVerifyCostED25519),
+	// 	paramtypes.NewParamSetPair([]byte("SigVerifyCostSecp256k1"), uint64(1000), valSigVerifyCostSecp256k1),
+	// }
 
-	authsub := paramsKeeper.Subspace(authtypes.ModuleName)
+	// authsub := paramsKeeper.Subspace(authtypes.ModuleName)
 
-	authsub.WithKeyTable(paramtypes.NewKeyTable(subspaceParams...))
-	// paramsKeeper.Subspace(banktypes.ModuleName)
-	// paramsKeeper.Subspace(stakingtypes.ModuleName)
-	// paramsKeeper.Subspace(minttypes.ModuleName)
-	// paramsKeeper.Subspace(distrtypes.ModuleName)
-	// paramsKeeper.Subspace(slashingtypes.ModuleName)
-	// paramsKeeper.Subspace(ibctransfertypes.ModuleName)
+	// authsub.WithKeyTable(paramtypes.NewKeyTable(subspaceParams...))
+
+	paramsKeeper.Subspace(authtypes.ModuleName).WithKeyTable(authtypes.ParamKeyTable())
+	paramsKeeper.Subspace(banktypes.ModuleName)
+	paramsKeeper.Subspace(stakingtypes.ModuleName)
+	paramsKeeper.Subspace(minttypes.ModuleName)
+	paramsKeeper.Subspace(distrtypes.ModuleName)
+	paramsKeeper.Subspace(slashingtypes.ModuleName)
+	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibcexported.ModuleName)
-	// paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
-	// paramsKeeper.Subspace(icahosttypes.SubModuleName)
-	// paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
-	// paramsKeeper.Subspace(crisistypes.ModuleName)
+	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
+	paramsKeeper.Subspace(icahosttypes.SubModuleName)
+	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypesv1.ParamKeyTable())
+	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
-	// paramsKeeper.Subspace(reg.ModuleName)
-	// paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
+	paramsKeeper.Subspace(reg.ModuleName)
+	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
 
 	return paramsKeeper
