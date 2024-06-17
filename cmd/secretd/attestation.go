@@ -41,7 +41,7 @@ const (
 
 const (
 	mainnetRegistrationService = "https://mainnet-register.scrtlabs.com/api/registernode"
-	pulsarRegistrationService  = "https://testnet-register.scrtlabs.com/api/registernode"
+	pulsarRegistrationService  = "https://registration-service-testnet.azurewebsites.net/api/registernode"
 )
 
 func InitAttestation() *cobra.Command {
@@ -452,7 +452,7 @@ Please report any issues with this command
 			}
 
 			sgxEnclaveKeyPath := filepath.Join(sgxSecretsFolder, reg.EnclaveRegistrationKey)
-			sgxAttestationCert := filepath.Join(sgxSecretsFolder, reg.AttestationCertPath)
+			sgxAttestationCombined := filepath.Join(sgxSecretsFolder, reg.AttestationCombinedPath)
 
 			resetFlag, err := cmd.Flags().GetBool(flagReset)
 			if err != nil {
@@ -472,7 +472,7 @@ Please report any issues with this command
 				}
 			} else {
 				fmt.Println("Reset enclave flag set, generating new enclave registration key. You must now re-register the node")
-				_ = os.Remove(sgxAttestationCert)
+				_ = os.Remove(sgxAttestationCombined)
 				_, err := api.KeyGen()
 				if err != nil {
 					return fmt.Errorf("failed to initialize enclave: %w", err)
@@ -493,14 +493,14 @@ Please report any issues with this command
 			}
 
 			// read the attestation certificate that we just created
-			cert, err := os.ReadFile(sgxAttestationCert)
+			certCombined, err := os.ReadFile(sgxAttestationCombined)
 			if err != nil {
-				_ = os.Remove(sgxAttestationCert)
+				_ = os.Remove(sgxAttestationCombined)
 				return err
 			}
 
 			// verify certificate
-			_, err = ra.UNSAFE_VerifyRaCert(cert)
+			_, err = ra.VerifyCombinedCert(certCombined)
 			if err != nil {
 				return err
 			}
@@ -531,7 +531,7 @@ Please report any issues with this command
 			// call registration service to register us
 			data := []byte(fmt.Sprintf(`{
 				"certificate": "%s"
-			}`, base64.StdEncoding.EncodeToString(cert)))
+			}`, base64.StdEncoding.EncodeToString(certCombined)))
 
 			resp, err := http.Post(regUrl, "application/json", bytes.NewBuffer(data))
 			if err != nil {
