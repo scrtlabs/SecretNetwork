@@ -51,6 +51,7 @@ if [ ! -e $GENESIS_file ]; then
     .app_state.crisis.constant_fee.denom = "uscrt" |
     .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
     .app_state.gov.params.min_deposit[0].denom = "uscrt" |
+    .app_state.gov.params.expedited_min_deposit[0].denom = "uscrt" |
     .app_state.mint.params.mint_denom = "uscrt" |
     .app_state.staking.params.bond_denom = "uscrt"
   ' > ${SCRT_HOME}/config/genesis.json.tmp
