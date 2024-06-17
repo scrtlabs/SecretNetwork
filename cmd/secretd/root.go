@@ -20,6 +20,10 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
+
 	rosettacmd "github.com/cosmos/rosetta/cmd"
 
 	//"github.com/cometbft/cometbft/libs/cli"
@@ -95,7 +99,24 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	config.SetAddressVerifier(scrt.AddressVerifier)
 	config.Seal()
 
-	encodingConfig := app.MakeEncodingConfig()
+	tempDir := func() string {
+		dir, err := os.MkdirTemp("", "secretd")
+		if err != nil {
+			dir = app.DefaultNodeHome
+		}
+		defer os.RemoveAll(dir)
+
+		return dir
+	}
+
+	tempApp := app.NewSecretNetworkApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), compute.DefaultWasmConfig())
+
+	encodingConfig := app.EncodingConfig{
+		InterfaceRegistry: tempApp.GetInterfaceRegistry(),
+		Codec:             tempApp.AppCodec(),
+		TxConfig:          tempApp.TxConfig(),
+		Amino:             tempApp.LegacyAmino(),
+	}
 
 	// cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
@@ -127,6 +148,23 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 				return err
 			}
 			initClientCtx.WithKeyringDir(initClientCtx.HomeDir)
+			if !initClientCtx.Offline {
+				enabledSignModes := append(authtx.DefaultSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
+				txConfigOpts := authtx.ConfigOptions{
+					EnabledSignModes:           enabledSignModes,
+					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
+				}
+				txConfig, err := authtx.NewTxConfigWithOptions(
+					initClientCtx.Codec,
+					txConfigOpts,
+				)
+				if err != nil {
+					return err
+				}
+
+				initClientCtx = initClientCtx.WithTxConfig(txConfig)
+			}
+
 			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
 				return err
 			}
@@ -144,18 +182,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		},
 		SilenceUsage: true,
 	}
-
-	tempDir := func() string {
-		dir, err := os.MkdirTemp("", "secretd")
-		if err != nil {
-			dir = app.DefaultNodeHome
-		}
-		defer os.RemoveAll(dir)
-
-		return dir
-	}
-
-	tempApp := app.NewSecretNetworkApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), compute.DefaultWasmConfig())
 
 	initRootCmd(rootCmd, encodingConfig, app.ModuleBasics())
 
