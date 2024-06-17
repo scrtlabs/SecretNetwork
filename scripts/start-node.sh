@@ -49,16 +49,18 @@ if [ $retVal -ne 0 ]; then
   exit 1
 fi
 
-jq '
-.consensus_params.block.time_iota_ms = "10" |
-.app_state.staking.params.unbonding_time = "90s" |
-.app_state.gov.voting_params.voting_period = "90s" |
-.app_state.crisis.constant_fee.denom = "uscrt" |
-.app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
-.app_state.mint.params.mint_denom = "uscrt" |
-.app_state.staking.params.bond_denom = "uscrt"
-' $SECRETD_HOME/config/genesis.json > $SECRETD_HOME/config/genesis.json.tmp
-mv ${SECRETD_HOME}/config/genesis.json.tmp ${SECRETD_HOME}/config/genesis.json
+cat ${SECRETD_HOME}/config/genesis.json | jq '
+  .consensus_params.block.time_iota_ms = "10" |
+  .app_state.staking.params.unbonding_time = "90s" |
+  .app_state.gov.voting_params.voting_period = "90s" |
+  .app_state.crisis.constant_fee.denom = "uscrt" |
+  .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
+  .app_state.gov.params.min_deposit[0].denom = "uscrt" |
+  .app_state.gov.params.expedited_min_deposit[0].denom = "uscrt" |
+  .app_state.mint.params.mint_denom = "uscrt" |
+  .app_state.staking.params.bond_denom = "uscrt"
+' > ${SECRETD_HOME}/config/genesis.json.tmp
+mv ${SECRETD_HOME}/config/genesis.json{.tmp,}
 
 v_mnemonic="push certain add next grape invite tobacco bubble text romance again lava crater pill genius vital fresh guard great patch knee series era tonight"
 a_mnemonic="grant rice replace explain federal release fix clever romance raise often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
@@ -135,7 +137,7 @@ $SECRETD init-bootstrap ./node-master-key.txt ./io-master-key.txt --home=$SECRET
 #$SECRETD init-bootstrap --home $SECRETD_HOME
 
 # Set proper defaults and change ports
-sed -i 's#"tcp://127.0.0.1:26657"#"tcp://0.0.0.0:26657"#g' $SECRETD_HOME/config/config.toml
+sed -i 's#"tcp://localhost:26657"#"tcp://0.0.0.0:26657"#g' $SECRETD_HOME/config/config.toml
 #sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/g' $SECRETD_HOME/config/config.toml
 #sed -i 's/timeout_propose = "3s"/timeout_propose = "1s"/g' $SECRETD_HOME/config/config.toml
 #sed -i 's/index_all_keys = false/index_all_keys = true/g' $SECRETD_HOME/config/config.toml
