@@ -26,6 +26,7 @@ const (
 )
 
 const AttestationCertPath = "attestation_cert.der"
+const AttestationCombinedPath = "attestation_combined.bin"
 
 type NodeID []byte
 
