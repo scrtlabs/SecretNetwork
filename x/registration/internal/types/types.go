@@ -25,8 +25,10 @@ const (
 	SeedConfigVersion         = 2
 )
 
-const AttestationCertPath = "attestation_cert.der"
-const AttestationCombinedPath = "attestation_combined.bin"
+const (
+	AttestationCertPath     = "attestation_cert.der"
+	AttestationCombinedPath = "attestation_combined.bin"
+)
 
 type NodeID []byte
 
