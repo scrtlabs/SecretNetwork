@@ -20,6 +20,7 @@ import (
 	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
@@ -27,7 +28,11 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
+	scrt "github.com/scrtlabs/SecretNetwork/types"
 
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
+	sigtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	// "github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -179,10 +184,6 @@ func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper 
 	return app.AppKeepers.ScopedIBCKeeper
 }
 
-func (app *SecretNetworkApp) GetTxConfig() client.TxConfig {
-	return MakeEncodingConfig().TxConfig
-}
-
 func (app *SecretNetworkApp) AppCodec() codec.Codec {
 	return app.appCodec
 }
@@ -241,16 +242,29 @@ func NewSecretNetworkApp(
 	computeConfig *compute.WasmConfig,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *SecretNetworkApp {
-	encodingConfig := MakeEncodingConfig()
-	appCodec, legacyAmino := encodingConfig.Codec, encodingConfig.Amino
-	interfaceRegistry := encodingConfig.InterfaceRegistry
+	legacyAmino := codec.NewLegacyAmino()
+	interfaceRegistry := CodecOptions{
+		AccAddressPrefix: scrt.Bech32PrefixAccAddr,
+		ValAddressPrefix: scrt.Bech32PrefixValAddr,
+	}.NewInterfaceRegistry()
+
+	appCodec := codec.NewProtoCodec(interfaceRegistry)
+	txCfg := authtx.NewTxConfig(appCodec, authtx.DefaultSignModes)
+
+	sdk.RegisterLegacyAminoCodec(legacyAmino)
+	sdk.RegisterInterfaces(interfaceRegistry)
+	txtypes.RegisterInterfaces(interfaceRegistry)
+	cryptocodec.RegisterInterfaces(interfaceRegistry)
+
+	ModuleBasics().RegisterLegacyAminoCodec(legacyAmino)
+	ModuleBasics().RegisterInterfaces(interfaceRegistry)
 
 	// BaseApp handles interactions with Tendermint through the ABCI protocol
-	bApp := baseapp.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), baseAppOptions...)
+	bApp := baseapp.NewBaseApp(appName, logger, db, txCfg.TxDecoder(), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
-	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
+	bApp.SetTxEncoder(txCfg.TxEncoder())
 
 	// Initialize our application with the store keys it requires
 	app := &SecretNetworkApp{
@@ -259,7 +273,7 @@ func NewSecretNetworkApp(
 		appCodec:          appCodec,
 		interfaceRegistry: interfaceRegistry,
 		bootstrap:         bootstrap,
-		txConfig:          encodingConfig.TxConfig,
+		txConfig:          txCfg,
 	}
 
 	app.AppKeepers.InitKeys()
@@ -273,6 +287,20 @@ func NewSecretNetworkApp(
 
 	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger, &app.event)
 
+	enabledSignModes := append(authtx.DefaultSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
+	txConfigOpts := authtx.ConfigOptions{
+		EnabledSignModes:           enabledSignModes,
+		TextualCoinMetadataQueryFn: txmodule.NewBankKeeperCoinMetadataQueryFn(app.AppKeepers.BankKeeper),
+	}
+	txConfig, err := authtx.NewTxConfigWithOptions(
+		appCodec,
+		txConfigOpts,
+	)
+	if err != nil {
+		panic(err)
+	}
+	app.txConfig = txConfig
+
 	app.AppKeepers.InitCustomKeepers(appCodec, legacyAmino, bApp, bootstrap, homePath, computeConfig)
 	app.setupUpgradeStoreLoaders()
 
@@ -282,7 +310,7 @@ func NewSecretNetworkApp(
 
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
-	app.mm = module.NewManager(Modules(app, encodingConfig, skipGenesisInvariants)...)
+	app.mm = module.NewManager(Modules(app, appCodec, skipGenesisInvariants)...)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
 	// there is nothing left over in the validator fee pool, so as to keep the
@@ -309,7 +337,7 @@ func NewSecretNetworkApp(
 	app.mm.RegisterInvariants(app.AppKeepers.CrisisKeeper)
 
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
-	err := app.mm.RegisterServices(app.configurator)
+	err = app.mm.RegisterServices(app.configurator)
 	if err != nil {
 		panic(err)
 	}
@@ -327,7 +355,7 @@ func NewSecretNetworkApp(
 			AccountKeeper:   app.AppKeepers.AccountKeeper,
 			BankKeeper:      *app.AppKeepers.BankKeeper,
 			FeegrantKeeper:  app.AppKeepers.FeegrantKeeper,
-			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
+			SignModeHandler: app.txConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
 		IBCKeeper:             app.AppKeepers.IbcKeeper,
