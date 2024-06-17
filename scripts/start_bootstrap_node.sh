@@ -50,6 +50,7 @@ if [ ! -e $GENESIS_file ]; then
     .app_state.gov.voting_params.voting_period = "90s" |
     .app_state.crisis.constant_fee.denom = "uscrt" |
     .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
+    .app_state.gov.params.min_deposit[0].denom = "uscrt" |
     .app_state.mint.params.mint_denom = "uscrt" |
     .app_state.staking.params.bond_denom = "uscrt"
   ' > ${SCRT_HOME}/config/genesis.json.tmp
@@ -91,7 +92,7 @@ fi
 
 _pid_=$(ps -ef | grep "lcp --proxyUrl" | grep -v grep | awk '{print $2}')
 if [ ! -z "${_pid_}" ]; then
-    echo "Faucet app is running with PID:${_pid_}. Stopping..."
+    echo "COR prody is running with PID:${_pid_}. Stopping..."
     kill -HUP ${_pid_} && echo "Successfully stopped PID:" {$_pid_}
 fi
 
