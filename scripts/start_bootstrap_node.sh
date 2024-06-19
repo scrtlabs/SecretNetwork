@@ -73,7 +73,7 @@ if [ ! -e $GENESIS_file ]; then
   fi
 
   # Setup LCD
-  perl -i -pe 's;address = "tcp://localhost:1317";address = "tcp://10.14.0.5:1316";' ${SCRT_HOME}/config/app.toml
+  perl -i -pe 's;address = "tcp://localhost:1317";address = "tcp://0.0.0.0:1316";' ${SCRT_HOME}/config/app.toml
   perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ${SCRT_HOME}/config/app.toml
   perl -i -pe 's/concurrency = false/concurrency = true/' ${SCRT_HOME}/config/app.toml
 
@@ -136,6 +136,6 @@ if [ "${ENABLE_FAUCET}" = "true" ]; then
 fi
 
 # CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
-setsid lcp --proxyUrl http://10.14.0.5:1316 --port 1317 --proxyPartial '' &
+setsid lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
 
 RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap --log_level ${LOG_LEVEL}

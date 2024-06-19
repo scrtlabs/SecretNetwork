@@ -1,9 +1,9 @@
 #!/usr/bin/bash
 set -x
 set -oe errexit
-SGX_MODE=SW
-SCRT_CHAINID=${SCRT_CHAINID:-”secretdev-1”}
-SCRT_MONIKER=${SCRT_MONIKER:-”scrt”}
+export SGX_MODE=SW
+export SCRT_CHAINID=${SCRT_CHAINID:-secretdev-1}
+SCRT_MONIKER=${SCRT_MONIKER:-scrt}
 SECRETD=${SECRETD:-/usr/local/bin/secretd}
 SCRT_ENVLAVE_DIR=${SCRT_ENCLAVE_DIR:-"/usr/local/lib/scrt"}
 SCRT_KEYRING=${SCRT_KEYRING:-"test"}
@@ -70,7 +70,7 @@ DIR=$(dirname "${THIS}")
 CreateKeys
 SCRT_WALLET=a
 
-txhash=$(secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_cert.der -y --fees 3000uscrt --from ${SCRT_WALLET} | jq '.txhash' | tr -d '"')
+txhash=$(secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_cert.der -y --fees 3000uscrt --from ${SCRT_WALLET} --chain-id ${SCRT_CHAINID} | jq '.txhash' | tr -d '"')
 sleep 5s
 secretd q tx --type hash ${txhash}
 # pull and check node encryption seed from the network
@@ -87,9 +87,12 @@ cat ${SCRT_HOME}/config/genesis.json | jq '
     .app_state.gov.voting_params.voting_period = "90s" |
     .app_state.crisis.constant_fee.denom = "uscrt" |
     .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
+    .app_state.gov.params.min_deposit[0].denom = "uscrt" |
+    .app_state.gov.params.expedited_min_deposit[0].denom = "uscrt" |
     .app_state.mint.params.mint_denom = "uscrt" |
     .app_state.staking.params.bond_denom = "uscrt"
   ' > ${SCRT_HOME}/config/genesis.json.tmp
+
  mv ${SCRT_HOME}/config/genesis.json.tmp ${SCRT_HOME}/config/genesis.json
 
  if [ ! -s ${SCRT_HOME}/config/genesis.json ]; then
@@ -124,10 +127,10 @@ perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.0125uscrt"/' $
 secretd tendermint show-node-id
 
 # no need to use bootstrap node at this point - point to local secretd
-secretd config set client node tcp://localhost:26657
+secretd config set client node tcp://10.14.0.6:26657
 
 # Done with configuration
-secretd start
+secretd start --rpc.laddr tcp://10.14.0.6:26657
 
 
 
