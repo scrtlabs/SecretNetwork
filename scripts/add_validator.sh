@@ -19,7 +19,7 @@ jq -n \
   "min-self-delegation": "1"
 }' > ./validator.json.tmp
 
-cat ./validator.json.tmp | sed 's/\\"/"/g' > validator.json
+cat ./validator.json.tmp | sed 's/\\"/"/g; s/"{/{/g; s/}"/}/g' > validator.json
 
 # Note: to test redelegations all keys must be present on all nodes
 secretd tx staking create-validator ./validator.json --from a --fees 5000uscrt
