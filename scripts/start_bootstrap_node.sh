@@ -2,7 +2,7 @@
 set -x
 set -oe errexit
 
-SGX_MODE=SW
+export SGX_MODE=SW
 SGX_DEBUG=0
 LOG_LEVEL=${LOG_LEVEL:-"trace"}
 
