@@ -67,6 +67,15 @@ THIS=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo $0)
 DIR=$(dirname "${THIS}")
 . "$DIR/create_keys.sh"
 
+# Setup LCD
+perl -i -pe 's;address = "tcp://localhost:1317";address = "tcp://0.0.0.0:1316";' ${SCRT_HOME}/config/app.toml
+perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ${SCRT_HOME}/config/app.toml
+perl -i -pe 's/concurrency = false/concurrency = true/' ${SCRT_HOME}/config/app.toml
+
+# Prevent max connections error
+perl -i -pe 's/max_subscription_clients.+/max_subscription_clients = 100/' ${SCRT_HOME}/config/config.toml
+perl -i -pe 's/max_subscriptions_per_client.+/max_subscriptions_per_client = 50/' ${SCRT_HOME}/config/config.toml
+
 CreateKeys
 SCRT_WALLET=a
 
@@ -129,7 +138,9 @@ secretd tendermint show-node-id
 # no need to use bootstrap node at this point - point to local secretd
 secretd config set client node tcp://10.14.0.6:26657
 
-# Done with configuration
+# CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
+setsid lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
+# Start CORs proxy right before secretd
 secretd start --rpc.laddr tcp://10.14.0.6:26657
 
 
