@@ -74,6 +74,7 @@ if [ ! -e $GENESIS_file ]; then
 
   # Setup LCD
   perl -i -pe 's;address = "tcp://localhost:1317";address = "tcp://0.0.0.0:1316";' ${SCRT_HOME}/config/app.toml
+  perl -i -pe 's;address = "localhost:9090";address = "0.0.0.0:9090";' ${SCRT_HOME}/config/app.toml
   perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ${SCRT_HOME}/config/app.toml
   perl -i -pe 's/concurrency = false/concurrency = true/' ${SCRT_HOME}/config/app.toml
 
