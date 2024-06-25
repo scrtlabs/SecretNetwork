@@ -37,6 +37,7 @@ import (
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
+	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
@@ -82,6 +83,7 @@ func Modules(
 		authzmodule.NewAppModule(appCodec, *app.AppKeepers.AuthzKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, app.GetInterfaceRegistry()),
 		reg.NewAppModule(*app.AppKeepers.RegKeeper),
 		ibc.NewAppModule(app.AppKeepers.IbcKeeper),
+		ibctm.NewAppModule(),
 		transfer.NewAppModule(app.AppKeepers.TransferKeeper),
 		ica.NewAppModule(app.AppKeepers.ICAControllerKeeper, app.AppKeepers.ICAHostKeeper),
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper, app.AppKeepers.GetSubspace(packetforwardtypes.ModuleName)),

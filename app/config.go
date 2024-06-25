@@ -32,6 +32,7 @@ import (
 	ibcfee "github.com/cosmos/ibc-go/v8/modules/apps/29-fee"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
+	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -73,6 +74,7 @@ var mbasics = module.NewBasicManager(
 
 		// ibc modules
 		ibc.AppModuleBasic{},
+		ibctm.AppModuleBasic{},
 		ica.AppModuleBasic{},
 		packetforwardrouter.AppModuleBasic{},
 		ibcfee.AppModuleBasic{},
