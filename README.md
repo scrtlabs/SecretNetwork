@@ -137,7 +137,7 @@ It may be worth mentioning that your LIBRARY_PATH should also point to SGX_SDK/s
 
 If you plan to run in **SGX_MODE=SW** indicate it by exporting SGX_MODE
 ```
-export SGX_SDK=/opt/intel/sgxsdk
+export SGX_MODE=SW
 ```
 There is one more important step you need to do:
 ```
@@ -162,6 +162,11 @@ We use `incubator-teaclave-sgx-sdk` as a submodule. To compile the code, you mus
 git submodule init
 git submodule update --remote
 ```
+
+## Optional (docker)
+If you plan on re-generating proto files, you need docker installed. How to install you can reference the following link: 
+[How to install docker on Ubuntu 22.04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04)
+
 
 # Build from Source
 
