@@ -110,6 +110,7 @@ mod protobuf {
                     from_ibc("core/channel/v1/tx.proto"),
                     from_ibc("core/channel/v1/channel.proto"),
                     from_ibc("core/client/v1/client.proto"),
+                    from_ibc("core/channel/v1/channel_upgrade.proto"),
                 ],
             ),
             ("src/ibc", &[from_cosmos("upgrade/v1beta1/upgrade.proto")]),

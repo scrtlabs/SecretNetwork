@@ -343,10 +343,12 @@ impl ::protobuf::reflect::ProtobufValue for PrivKey {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\"cosmos/crypto/secp256k1/keys.proto\x12\x17cosmos.crypto.secp256k1\
-    \x1a\x14gogoproto/gogo.proto\"\x20\n\x06PubKey\x12\x10\n\x03key\x18\x01\
-    \x20\x01(\x0cR\x03key:\x04\x98\xa0\x1f\0\"\x1b\n\x07PrivKey\x12\x10\n\
-    \x03key\x18\x01\x20\x01(\x0cR\x03keyB4Z2github.com/cosmos/cosmos-sdk/cry\
-    pto/keys/secp256k1b\x06proto3\
+    \x1a\x11amino/amino.proto\x1a\x14gogoproto/gogo.proto\"M\n\x06PubKey\x12\
+    \x10\n\x03key\x18\x01\x20\x01(\x0cR\x03key:1\x98\xa0\x1f\0\x8a\xe7\xb0*\
+    \x1atendermint/PubKeySecp256k1\x92\xe7\xb0*\tkey_field\"K\n\x07PrivKey\
+    \x12\x10\n\x03key\x18\x01\x20\x01(\x0cR\x03key:.\x8a\xe7\xb0*\x1btenderm\
+    int/PrivKeySecp256k1\x92\xe7\xb0*\tkey_fieldB4Z2github.com/cosmos/cosmos\
+    -sdk/crypto/keys/secp256k1b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

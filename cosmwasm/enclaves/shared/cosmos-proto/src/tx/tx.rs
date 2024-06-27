@@ -24,164 +24,6 @@
 // const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_25_2;
 
 #[derive(PartialEq,Clone,Default)]
-pub struct Txs {
-    // message fields
-    pub tx: ::protobuf::RepeatedField<::std::vec::Vec<u8>>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a Txs {
-    fn default() -> &'a Txs {
-        <Txs as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl Txs {
-    pub fn new() -> Txs {
-        ::std::default::Default::default()
-    }
-
-    // repeated bytes tx = 1;
-
-
-    pub fn get_tx(&self) -> &[::std::vec::Vec<u8>] {
-        &self.tx
-    }
-    pub fn clear_tx(&mut self) {
-        self.tx.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_tx(&mut self, v: ::protobuf::RepeatedField<::std::vec::Vec<u8>>) {
-        self.tx = v;
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_tx(&mut self) -> &mut ::protobuf::RepeatedField<::std::vec::Vec<u8>> {
-        &mut self.tx
-    }
-
-    // Take field
-    pub fn take_tx(&mut self) -> ::protobuf::RepeatedField<::std::vec::Vec<u8>> {
-        ::std::mem::replace(&mut self.tx, ::protobuf::RepeatedField::new())
-    }
-}
-
-impl ::protobuf::Message for Txs {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_repeated_bytes_into(wire_type, is, &mut self.tx)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        for value in &self.tx {
-            my_size += ::protobuf::rt::bytes_size(1, &value);
-        };
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        for v in &self.tx {
-            os.write_bytes(1, &v)?;
-        };
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Txs {
-        Txs::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
-        descriptor.get(|| {
-            let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                "tx",
-                |m: &Txs| { &m.tx },
-                |m: &mut Txs| { &mut m.tx },
-            ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Txs>(
-                "Txs",
-                fields,
-                file_descriptor_proto()
-            )
-        })
-    }
-
-    fn default_instance() -> &'static Txs {
-        static instance: ::protobuf::rt::LazyV2<Txs> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(Txs::new)
-    }
-}
-
-impl ::protobuf::Clear for Txs {
-    fn clear(&mut self) {
-        self.tx.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Txs {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Txs {
-    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
-        ::protobuf::reflect::ReflectValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
 pub struct Tx {
     // message fields
     pub body: ::protobuf::SingularPtrField<TxBody>,
@@ -974,6 +816,391 @@ impl ::protobuf::reflect::ProtobufValue for SignDoc {
 }
 
 #[derive(PartialEq,Clone,Default)]
+pub struct SignDocDirectAux {
+    // message fields
+    pub body_bytes: ::std::vec::Vec<u8>,
+    pub public_key: ::protobuf::SingularPtrField<::protobuf::well_known_types::Any>,
+    pub chain_id: ::std::string::String,
+    pub account_number: u64,
+    pub sequence: u64,
+    pub tip: ::protobuf::SingularPtrField<Tip>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a SignDocDirectAux {
+    fn default() -> &'a SignDocDirectAux {
+        <SignDocDirectAux as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl SignDocDirectAux {
+    pub fn new() -> SignDocDirectAux {
+        ::std::default::Default::default()
+    }
+
+    // bytes body_bytes = 1;
+
+
+    pub fn get_body_bytes(&self) -> &[u8] {
+        &self.body_bytes
+    }
+    pub fn clear_body_bytes(&mut self) {
+        self.body_bytes.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_body_bytes(&mut self, v: ::std::vec::Vec<u8>) {
+        self.body_bytes = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_body_bytes(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.body_bytes
+    }
+
+    // Take field
+    pub fn take_body_bytes(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.body_bytes, ::std::vec::Vec::new())
+    }
+
+    // .google.protobuf.Any public_key = 2;
+
+
+    pub fn get_public_key(&self) -> &::protobuf::well_known_types::Any {
+        self.public_key.as_ref().unwrap_or_else(|| <::protobuf::well_known_types::Any as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_public_key(&mut self) {
+        self.public_key.clear();
+    }
+
+    pub fn has_public_key(&self) -> bool {
+        self.public_key.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_public_key(&mut self, v: ::protobuf::well_known_types::Any) {
+        self.public_key = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_public_key(&mut self) -> &mut ::protobuf::well_known_types::Any {
+        if self.public_key.is_none() {
+            self.public_key.set_default();
+        }
+        self.public_key.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_public_key(&mut self) -> ::protobuf::well_known_types::Any {
+        self.public_key.take().unwrap_or_else(|| ::protobuf::well_known_types::Any::new())
+    }
+
+    // string chain_id = 3;
+
+
+    pub fn get_chain_id(&self) -> &str {
+        &self.chain_id
+    }
+    pub fn clear_chain_id(&mut self) {
+        self.chain_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_chain_id(&mut self, v: ::std::string::String) {
+        self.chain_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_chain_id(&mut self) -> &mut ::std::string::String {
+        &mut self.chain_id
+    }
+
+    // Take field
+    pub fn take_chain_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.chain_id, ::std::string::String::new())
+    }
+
+    // uint64 account_number = 4;
+
+
+    pub fn get_account_number(&self) -> u64 {
+        self.account_number
+    }
+    pub fn clear_account_number(&mut self) {
+        self.account_number = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_account_number(&mut self, v: u64) {
+        self.account_number = v;
+    }
+
+    // uint64 sequence = 5;
+
+
+    pub fn get_sequence(&self) -> u64 {
+        self.sequence
+    }
+    pub fn clear_sequence(&mut self) {
+        self.sequence = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_sequence(&mut self, v: u64) {
+        self.sequence = v;
+    }
+
+    // .cosmos.tx.v1beta1.Tip tip = 6;
+
+
+    pub fn get_tip(&self) -> &Tip {
+        self.tip.as_ref().unwrap_or_else(|| <Tip as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_tip(&mut self) {
+        self.tip.clear();
+    }
+
+    pub fn has_tip(&self) -> bool {
+        self.tip.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_tip(&mut self, v: Tip) {
+        self.tip = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_tip(&mut self) -> &mut Tip {
+        if self.tip.is_none() {
+            self.tip.set_default();
+        }
+        self.tip.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_tip(&mut self) -> Tip {
+        self.tip.take().unwrap_or_else(|| Tip::new())
+    }
+}
+
+impl ::protobuf::Message for SignDocDirectAux {
+    fn is_initialized(&self) -> bool {
+        for v in &self.public_key {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.tip {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.body_bytes)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.public_key)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.chain_id)?;
+                },
+                4 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.account_number = tmp;
+                },
+                5 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.sequence = tmp;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.tip)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.body_bytes.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.body_bytes);
+        }
+        if let Some(ref v) = self.public_key.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if !self.chain_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.chain_id);
+        }
+        if self.account_number != 0 {
+            my_size += ::protobuf::rt::value_size(4, self.account_number, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.sequence != 0 {
+            my_size += ::protobuf::rt::value_size(5, self.sequence, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if let Some(ref v) = self.tip.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.body_bytes.is_empty() {
+            os.write_bytes(1, &self.body_bytes)?;
+        }
+        if let Some(ref v) = self.public_key.as_ref() {
+            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if !self.chain_id.is_empty() {
+            os.write_string(3, &self.chain_id)?;
+        }
+        if self.account_number != 0 {
+            os.write_uint64(4, self.account_number)?;
+        }
+        if self.sequence != 0 {
+            os.write_uint64(5, self.sequence)?;
+        }
+        if let Some(ref v) = self.tip.as_ref() {
+            os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> SignDocDirectAux {
+        SignDocDirectAux::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "body_bytes",
+                |m: &SignDocDirectAux| { &m.body_bytes },
+                |m: &mut SignDocDirectAux| { &mut m.body_bytes },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<::protobuf::well_known_types::Any>>(
+                "public_key",
+                |m: &SignDocDirectAux| { &m.public_key },
+                |m: &mut SignDocDirectAux| { &mut m.public_key },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "chain_id",
+                |m: &SignDocDirectAux| { &m.chain_id },
+                |m: &mut SignDocDirectAux| { &mut m.chain_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "account_number",
+                |m: &SignDocDirectAux| { &m.account_number },
+                |m: &mut SignDocDirectAux| { &mut m.account_number },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "sequence",
+                |m: &SignDocDirectAux| { &m.sequence },
+                |m: &mut SignDocDirectAux| { &mut m.sequence },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Tip>>(
+                "tip",
+                |m: &SignDocDirectAux| { &m.tip },
+                |m: &mut SignDocDirectAux| { &mut m.tip },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<SignDocDirectAux>(
+                "SignDocDirectAux",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static SignDocDirectAux {
+        static instance: ::protobuf::rt::LazyV2<SignDocDirectAux> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(SignDocDirectAux::new)
+    }
+}
+
+impl ::protobuf::Clear for SignDocDirectAux {
+    fn clear(&mut self) {
+        self.body_bytes.clear();
+        self.public_key.clear();
+        self.chain_id.clear();
+        self.account_number = 0;
+        self.sequence = 0;
+        self.tip.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for SignDocDirectAux {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for SignDocDirectAux {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct TxBody {
     // message fields
     pub messages: ::protobuf::RepeatedField<::protobuf::well_known_types::Any>,
@@ -1319,6 +1546,7 @@ pub struct AuthInfo {
     // message fields
     pub signer_infos: ::protobuf::RepeatedField<SignerInfo>,
     pub fee: ::protobuf::SingularPtrField<Fee>,
+    pub tip: ::protobuf::SingularPtrField<Tip>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1392,6 +1620,39 @@ impl AuthInfo {
     pub fn take_fee(&mut self) -> Fee {
         self.fee.take().unwrap_or_else(|| Fee::new())
     }
+
+    // .cosmos.tx.v1beta1.Tip tip = 3;
+
+
+    pub fn get_tip(&self) -> &Tip {
+        self.tip.as_ref().unwrap_or_else(|| <Tip as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_tip(&mut self) {
+        self.tip.clear();
+    }
+
+    pub fn has_tip(&self) -> bool {
+        self.tip.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_tip(&mut self, v: Tip) {
+        self.tip = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_tip(&mut self) -> &mut Tip {
+        if self.tip.is_none() {
+            self.tip.set_default();
+        }
+        self.tip.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_tip(&mut self) -> Tip {
+        self.tip.take().unwrap_or_else(|| Tip::new())
+    }
 }
 
 impl ::protobuf::Message for AuthInfo {
@@ -1402,6 +1663,11 @@ impl ::protobuf::Message for AuthInfo {
             }
         };
         for v in &self.fee {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.tip {
             if !v.is_initialized() {
                 return false;
             }
@@ -1418,6 +1684,9 @@ impl ::protobuf::Message for AuthInfo {
                 },
                 2 => {
                     ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.fee)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.tip)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1439,6 +1708,10 @@ impl ::protobuf::Message for AuthInfo {
             let len = v.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
+        if let Some(ref v) = self.tip.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1452,6 +1725,11 @@ impl ::protobuf::Message for AuthInfo {
         };
         if let Some(ref v) = self.fee.as_ref() {
             os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if let Some(ref v) = self.tip.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         }
@@ -1503,6 +1781,11 @@ impl ::protobuf::Message for AuthInfo {
                 |m: &AuthInfo| { &m.fee },
                 |m: &mut AuthInfo| { &mut m.fee },
             ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Tip>>(
+                "tip",
+                |m: &AuthInfo| { &m.tip },
+                |m: &mut AuthInfo| { &mut m.tip },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<AuthInfo>(
                 "AuthInfo",
                 fields,
@@ -1521,6 +1804,7 @@ impl ::protobuf::Clear for AuthInfo {
     fn clear(&mut self) {
         self.signer_infos.clear();
         self.fee.clear();
+        self.tip.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2741,30 +3025,534 @@ impl ::protobuf::reflect::ProtobufValue for Fee {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct Tip {
+    // message fields
+    pub amount: ::protobuf::RepeatedField<super::coin::Coin>,
+    pub tipper: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Tip {
+    fn default() -> &'a Tip {
+        <Tip as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Tip {
+    pub fn new() -> Tip {
+        ::std::default::Default::default()
+    }
+
+    // repeated .cosmos.base.v1beta1.Coin amount = 1;
+
+
+    pub fn get_amount(&self) -> &[super::coin::Coin] {
+        &self.amount
+    }
+    pub fn clear_amount(&mut self) {
+        self.amount.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_amount(&mut self, v: ::protobuf::RepeatedField<super::coin::Coin>) {
+        self.amount = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_amount(&mut self) -> &mut ::protobuf::RepeatedField<super::coin::Coin> {
+        &mut self.amount
+    }
+
+    // Take field
+    pub fn take_amount(&mut self) -> ::protobuf::RepeatedField<super::coin::Coin> {
+        ::std::mem::replace(&mut self.amount, ::protobuf::RepeatedField::new())
+    }
+
+    // string tipper = 2;
+
+
+    pub fn get_tipper(&self) -> &str {
+        &self.tipper
+    }
+    pub fn clear_tipper(&mut self) {
+        self.tipper.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_tipper(&mut self, v: ::std::string::String) {
+        self.tipper = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_tipper(&mut self) -> &mut ::std::string::String {
+        &mut self.tipper
+    }
+
+    // Take field
+    pub fn take_tipper(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.tipper, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for Tip {
+    fn is_initialized(&self) -> bool {
+        for v in &self.amount {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.amount)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.tipper)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        for value in &self.amount {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        };
+        if !self.tipper.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.tipper);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        for v in &self.amount {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        };
+        if !self.tipper.is_empty() {
+            os.write_string(2, &self.tipper)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Tip {
+        Tip::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::coin::Coin>>(
+                "amount",
+                |m: &Tip| { &m.amount },
+                |m: &mut Tip| { &mut m.amount },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "tipper",
+                |m: &Tip| { &m.tipper },
+                |m: &mut Tip| { &mut m.tipper },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Tip>(
+                "Tip",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Tip {
+        static instance: ::protobuf::rt::LazyV2<Tip> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Tip::new)
+    }
+}
+
+impl ::protobuf::Clear for Tip {
+    fn clear(&mut self) {
+        self.amount.clear();
+        self.tipper.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Tip {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Tip {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct AuxSignerData {
+    // message fields
+    pub address: ::std::string::String,
+    pub sign_doc: ::protobuf::SingularPtrField<SignDocDirectAux>,
+    pub mode: super::signing::SignMode,
+    pub sig: ::std::vec::Vec<u8>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a AuxSignerData {
+    fn default() -> &'a AuxSignerData {
+        <AuxSignerData as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl AuxSignerData {
+    pub fn new() -> AuxSignerData {
+        ::std::default::Default::default()
+    }
+
+    // string address = 1;
+
+
+    pub fn get_address(&self) -> &str {
+        &self.address
+    }
+    pub fn clear_address(&mut self) {
+        self.address.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_address(&mut self, v: ::std::string::String) {
+        self.address = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_address(&mut self) -> &mut ::std::string::String {
+        &mut self.address
+    }
+
+    // Take field
+    pub fn take_address(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.address, ::std::string::String::new())
+    }
+
+    // .cosmos.tx.v1beta1.SignDocDirectAux sign_doc = 2;
+
+
+    pub fn get_sign_doc(&self) -> &SignDocDirectAux {
+        self.sign_doc.as_ref().unwrap_or_else(|| <SignDocDirectAux as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_sign_doc(&mut self) {
+        self.sign_doc.clear();
+    }
+
+    pub fn has_sign_doc(&self) -> bool {
+        self.sign_doc.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_sign_doc(&mut self, v: SignDocDirectAux) {
+        self.sign_doc = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_sign_doc(&mut self) -> &mut SignDocDirectAux {
+        if self.sign_doc.is_none() {
+            self.sign_doc.set_default();
+        }
+        self.sign_doc.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_sign_doc(&mut self) -> SignDocDirectAux {
+        self.sign_doc.take().unwrap_or_else(|| SignDocDirectAux::new())
+    }
+
+    // .cosmos.tx.signing.v1beta1.SignMode mode = 3;
+
+
+    pub fn get_mode(&self) -> super::signing::SignMode {
+        self.mode
+    }
+    pub fn clear_mode(&mut self) {
+        self.mode = super::signing::SignMode::SIGN_MODE_UNSPECIFIED;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_mode(&mut self, v: super::signing::SignMode) {
+        self.mode = v;
+    }
+
+    // bytes sig = 4;
+
+
+    pub fn get_sig(&self) -> &[u8] {
+        &self.sig
+    }
+    pub fn clear_sig(&mut self) {
+        self.sig.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_sig(&mut self, v: ::std::vec::Vec<u8>) {
+        self.sig = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_sig(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.sig
+    }
+
+    // Take field
+    pub fn take_sig(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.sig, ::std::vec::Vec::new())
+    }
+}
+
+impl ::protobuf::Message for AuxSignerData {
+    fn is_initialized(&self) -> bool {
+        for v in &self.sign_doc {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.address)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.sign_doc)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.mode, 3, &mut self.unknown_fields)?
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.sig)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.address.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.address);
+        }
+        if let Some(ref v) = self.sign_doc.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if self.mode != super::signing::SignMode::SIGN_MODE_UNSPECIFIED {
+            my_size += ::protobuf::rt::enum_size(3, self.mode);
+        }
+        if !self.sig.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(4, &self.sig);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.address.is_empty() {
+            os.write_string(1, &self.address)?;
+        }
+        if let Some(ref v) = self.sign_doc.as_ref() {
+            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if self.mode != super::signing::SignMode::SIGN_MODE_UNSPECIFIED {
+            os.write_enum(3, ::protobuf::ProtobufEnum::value(&self.mode))?;
+        }
+        if !self.sig.is_empty() {
+            os.write_bytes(4, &self.sig)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> AuxSignerData {
+        AuxSignerData::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "address",
+                |m: &AuxSignerData| { &m.address },
+                |m: &mut AuxSignerData| { &mut m.address },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<SignDocDirectAux>>(
+                "sign_doc",
+                |m: &AuxSignerData| { &m.sign_doc },
+                |m: &mut AuxSignerData| { &mut m.sign_doc },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<super::signing::SignMode>>(
+                "mode",
+                |m: &AuxSignerData| { &m.mode },
+                |m: &mut AuxSignerData| { &mut m.mode },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "sig",
+                |m: &AuxSignerData| { &m.sig },
+                |m: &mut AuxSignerData| { &mut m.sig },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<AuxSignerData>(
+                "AuxSignerData",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static AuxSignerData {
+        static instance: ::protobuf::rt::LazyV2<AuxSignerData> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(AuxSignerData::new)
+    }
+}
+
+impl ::protobuf::Clear for AuxSignerData {
+    fn clear(&mut self) {
+        self.address.clear();
+        self.sign_doc.clear();
+        self.mode = super::signing::SignMode::SIGN_MODE_UNSPECIFIED;
+        self.sig.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for AuxSignerData {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for AuxSignerData {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x1acosmos/tx/v1beta1/tx.proto\x12\x11cosmos.tx.v1beta1\x1a\x14gogopro\
-    to/gogo.proto\x1a-cosmos/crypto/multisig/v1beta1/multisig.proto\x1a\x1ec\
-    osmos/base/v1beta1/coin.proto\x1a'cosmos/tx/signing/v1beta1/signing.prot\
-    o\x1a\x19google/protobuf/any.proto\"\x15\n\x03Txs\x12\x0e\n\x02tx\x18\
-    \x01\x20\x03(\x0cR\x02tx\"\x8d\x01\n\x02Tx\x12-\n\x04body\x18\x01\x20\
-    \x01(\x0b2\x19.cosmos.tx.v1beta1.TxBodyR\x04body\x128\n\tauth_info\x18\
-    \x02\x20\x01(\x0b2\x1b.cosmos.tx.v1beta1.AuthInfoR\x08authInfo\x12\x1e\n\
-    \nsignatures\x18\x03\x20\x03(\x0cR\nsignatures\"n\n\x05TxRaw\x12\x1d\n\n\
-    body_bytes\x18\x01\x20\x01(\x0cR\tbodyBytes\x12&\n\x0fauth_info_bytes\
-    \x18\x02\x20\x01(\x0cR\rauthInfoBytes\x12\x1e\n\nsignatures\x18\x03\x20\
-    \x03(\x0cR\nsignatures\"\x92\x01\n\x07SignDoc\x12\x1d\n\nbody_bytes\x18\
-    \x01\x20\x01(\x0cR\tbodyBytes\x12&\n\x0fauth_info_bytes\x18\x02\x20\x01(\
-    \x0cR\rauthInfoBytes\x12\x19\n\x08chain_id\x18\x03\x20\x01(\tR\x07chainI\
-    d\x12%\n\x0eaccount_number\x18\x04\x20\x01(\x04R\raccountNumber\"\x95\
-    \x02\n\x06TxBody\x120\n\x08messages\x18\x01\x20\x03(\x0b2\x14.google.pro\
-    tobuf.AnyR\x08messages\x12\x12\n\x04memo\x18\x02\x20\x01(\tR\x04memo\x12\
-    %\n\x0etimeout_height\x18\x03\x20\x01(\x04R\rtimeoutHeight\x12B\n\x11ext\
-    ension_options\x18\xff\x07\x20\x03(\x0b2\x14.google.protobuf.AnyR\x10ext\
-    ensionOptions\x12Z\n\x1enon_critical_extension_options\x18\xff\x0f\x20\
-    \x03(\x0b2\x14.google.protobuf.AnyR\x1bnonCriticalExtensionOptions\"v\n\
-    \x08AuthInfo\x12@\n\x0csigner_infos\x18\x01\x20\x03(\x0b2\x1d.cosmos.tx.\
-    v1beta1.SignerInfoR\x0bsignerInfos\x12(\n\x03fee\x18\x02\x20\x01(\x0b2\
-    \x16.cosmos.tx.v1beta1.FeeR\x03fee\"\x97\x01\n\nSignerInfo\x123\n\npubli\
+    \n\x1acosmos/tx/v1beta1/tx.proto\x12\x11cosmos.tx.v1beta1\x1a\x11amino/a\
+    mino.proto\x1a\x14gogoproto/gogo.proto\x1a-cosmos/crypto/multisig/v1beta\
+    1/multisig.proto\x1a\x1ecosmos/base/v1beta1/coin.proto\x1a'cosmos/tx/sig\
+    ning/v1beta1/signing.proto\x1a\x19google/protobuf/any.proto\x1a\x19cosmo\
+    s_proto/cosmos.proto\"\x8d\x01\n\x02Tx\x12-\n\x04body\x18\x01\x20\x01(\
+    \x0b2\x19.cosmos.tx.v1beta1.TxBodyR\x04body\x128\n\tauth_info\x18\x02\
+    \x20\x01(\x0b2\x1b.cosmos.tx.v1beta1.AuthInfoR\x08authInfo\x12\x1e\n\nsi\
+    gnatures\x18\x03\x20\x03(\x0cR\nsignatures\"n\n\x05TxRaw\x12\x1d\n\nbody\
+    _bytes\x18\x01\x20\x01(\x0cR\tbodyBytes\x12&\n\x0fauth_info_bytes\x18\
+    \x02\x20\x01(\x0cR\rauthInfoBytes\x12\x1e\n\nsignatures\x18\x03\x20\x03(\
+    \x0cR\nsignatures\"\x92\x01\n\x07SignDoc\x12\x1d\n\nbody_bytes\x18\x01\
+    \x20\x01(\x0cR\tbodyBytes\x12&\n\x0fauth_info_bytes\x18\x02\x20\x01(\x0c\
+    R\rauthInfoBytes\x12\x19\n\x08chain_id\x18\x03\x20\x01(\tR\x07chainId\
+    \x12%\n\x0eaccount_number\x18\x04\x20\x01(\x04R\raccountNumber\"\xf2\x01\
+    \n\x10SignDocDirectAux\x12\x1d\n\nbody_bytes\x18\x01\x20\x01(\x0cR\tbody\
+    Bytes\x123\n\npublic_key\x18\x02\x20\x01(\x0b2\x14.google.protobuf.AnyR\
+    \tpublicKey\x12\x19\n\x08chain_id\x18\x03\x20\x01(\tR\x07chainId\x12%\n\
+    \x0eaccount_number\x18\x04\x20\x01(\x04R\raccountNumber\x12\x1a\n\x08seq\
+    uence\x18\x05\x20\x01(\x04R\x08sequence\x12,\n\x03tip\x18\x06\x20\x01(\
+    \x0b2\x16.cosmos.tx.v1beta1.TipR\x03tipB\x02\x18\x01\"\x95\x02\n\x06TxBo\
+    dy\x120\n\x08messages\x18\x01\x20\x03(\x0b2\x14.google.protobuf.AnyR\x08\
+    messages\x12\x12\n\x04memo\x18\x02\x20\x01(\tR\x04memo\x12%\n\x0etimeout\
+    _height\x18\x03\x20\x01(\x04R\rtimeoutHeight\x12B\n\x11extension_options\
+    \x18\xff\x07\x20\x03(\x0b2\x14.google.protobuf.AnyR\x10extensionOptions\
+    \x12Z\n\x1enon_critical_extension_options\x18\xff\x0f\x20\x03(\x0b2\x14.\
+    google.protobuf.AnyR\x1bnonCriticalExtensionOptions\"\xa4\x01\n\x08AuthI\
+    nfo\x12@\n\x0csigner_infos\x18\x01\x20\x03(\x0b2\x1d.cosmos.tx.v1beta1.S\
+    ignerInfoR\x0bsignerInfos\x12(\n\x03fee\x18\x02\x20\x01(\x0b2\x16.cosmos\
+    .tx.v1beta1.FeeR\x03fee\x12,\n\x03tip\x18\x03\x20\x01(\x0b2\x16.cosmos.t\
+    x.v1beta1.TipR\x03tipB\x02\x18\x01\"\x97\x01\n\nSignerInfo\x123\n\npubli\
     c_key\x18\x01\x20\x01(\x0b2\x14.google.protobuf.AnyR\tpublicKey\x128\n\t\
     mode_info\x18\x02\x20\x01(\x0b2\x1b.cosmos.tx.v1beta1.ModeInfoR\x08modeI\
     nfo\x12\x1a\n\x08sequence\x18\x03\x20\x01(\x04R\x08sequence\"\xe0\x02\n\
@@ -2775,12 +3563,22 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x1a\x90\x01\n\x05Multi\x12K\n\x08bitarray\x18\x01\x20\x01(\x0b2/.cosmos\
     .crypto.multisig.v1beta1.CompactBitArrayR\x08bitarray\x12:\n\nmode_infos\
     \x18\x02\x20\x03(\x0b2\x1b.cosmos.tx.v1beta1.ModeInfoR\tmodeInfosB\x05\n\
-    \x03sum\"\xb7\x01\n\x03Fee\x12c\n\x06amount\x18\x01\x20\x03(\x0b2\x19.co\
-    smos.base.v1beta1.CoinR\x06amountB0\xaa\xdf\x1f(github.com/cosmos/cosmos\
-    -sdk/types.Coins\xc8\xde\x1f\0\x12\x1b\n\tgas_limit\x18\x02\x20\x01(\x04\
-    R\x08gasLimit\x12\x14\n\x05payer\x18\x03\x20\x01(\tR\x05payer\x12\x18\n\
-    \x07granter\x18\x04\x20\x01(\tR\x07granterB'Z%github.com/cosmos/cosmos-s\
-    dk/types/txb\x06proto3\
+    \x03sum\"\x81\x02\n\x03Fee\x12y\n\x06amount\x18\x01\x20\x03(\x0b2\x19.co\
+    smos.base.v1beta1.CoinR\x06amountBF\xc8\xde\x1f\0\xa8\xe7\xb0*\x01\xaa\
+    \xdf\x1f(github.com/cosmos/cosmos-sdk/types.Coins\x9a\xe7\xb0*\x0clegacy\
+    _coins\x12\x1b\n\tgas_limit\x18\x02\x20\x01(\x04R\x08gasLimit\x12.\n\x05\
+    payer\x18\x03\x20\x01(\tR\x05payerB\x18\xd2\xb4-\x14cosmos.AddressString\
+    \x122\n\x07granter\x18\x04\x20\x01(\tR\x07granterB\x18\xd2\xb4-\x14cosmo\
+    s.AddressString\"\xb6\x01\n\x03Tip\x12y\n\x06amount\x18\x01\x20\x03(\x0b\
+    2\x19.cosmos.base.v1beta1.CoinR\x06amountBF\xc8\xde\x1f\0\xa8\xe7\xb0*\
+    \x01\xaa\xdf\x1f(github.com/cosmos/cosmos-sdk/types.Coins\x9a\xe7\xb0*\
+    \x0clegacy_coins\x120\n\x06tipper\x18\x02\x20\x01(\tR\x06tipperB\x18\xd2\
+    \xb4-\x14cosmos.AddressString:\x02\x18\x01\"\xce\x01\n\rAuxSignerData\
+    \x122\n\x07address\x18\x01\x20\x01(\tR\x07addressB\x18\xd2\xb4-\x14cosmo\
+    s.AddressString\x12>\n\x08sign_doc\x18\x02\x20\x01(\x0b2#.cosmos.tx.v1be\
+    ta1.SignDocDirectAuxR\x07signDoc\x127\n\x04mode\x18\x03\x20\x01(\x0e2#.c\
+    osmos.tx.signing.v1beta1.SignModeR\x04mode\x12\x10\n\x03sig\x18\x04\x20\
+    \x01(\x0cR\x03sigB'Z%github.com/cosmos/cosmos-sdk/types/txb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

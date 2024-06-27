@@ -343,11 +343,13 @@ impl ::protobuf::reflect::ProtobufValue for PrivKey {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x20cosmos/crypto/ed25519/keys.proto\x12\x15cosmos.crypto.ed25519\x1a\
-    \x14gogoproto/gogo.proto\">\n\x06PubKey\x12.\n\x03key\x18\x01\x20\x01(\
-    \x0cR\x03keyB\x1c\xfa\xde\x1f\x18crypto/ed25519.PublicKey:\x04\x98\xa0\
-    \x1f\0\":\n\x07PrivKey\x12/\n\x03key\x18\x01\x20\x01(\x0cR\x03keyB\x1d\
-    \xfa\xde\x1f\x19crypto/ed25519.PrivateKeyB2Z0github.com/cosmos/cosmos-sd\
-    k/crypto/keys/ed25519b\x06proto3\
+    \x11amino/amino.proto\x1a\x14gogoproto/gogo.proto\"i\n\x06PubKey\x12.\n\
+    \x03key\x18\x01\x20\x01(\x0cR\x03keyB\x1c\xfa\xde\x1f\x18crypto/ed25519.\
+    PublicKey:/\x98\xa0\x1f\0\x8a\xe7\xb0*\x18tendermint/PubKeyEd25519\x92\
+    \xe7\xb0*\tkey_field\"h\n\x07PrivKey\x12/\n\x03key\x18\x01\x20\x01(\x0cR\
+    \x03keyB\x1d\xfa\xde\x1f\x19crypto/ed25519.PrivateKey:,\x8a\xe7\xb0*\x19\
+    tendermint/PrivKeyEd25519\x92\xe7\xb0*\tkey_fieldB2Z0github.com/cosmos/c\
+    osmos-sdk/crypto/keys/ed25519b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

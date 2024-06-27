@@ -26,8 +26,9 @@
 #[derive(PartialEq,Clone,Default)]
 pub struct RaAuthenticate {
     // message fields
-    pub sender: ::std::vec::Vec<u8>,
+    pub sender: ::std::string::String,
     pub certificate: ::std::vec::Vec<u8>,
+    pub sender_addr: ::std::vec::Vec<u8>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -44,10 +45,10 @@ impl RaAuthenticate {
         ::std::default::Default::default()
     }
 
-    // bytes sender = 1;
+    // string sender = 1;
 
 
-    pub fn get_sender(&self) -> &[u8] {
+    pub fn get_sender(&self) -> &str {
         &self.sender
     }
     pub fn clear_sender(&mut self) {
@@ -55,19 +56,19 @@ impl RaAuthenticate {
     }
 
     // Param is passed by value, moved
-    pub fn set_sender(&mut self, v: ::std::vec::Vec<u8>) {
+    pub fn set_sender(&mut self, v: ::std::string::String) {
         self.sender = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_sender(&mut self) -> &mut ::std::vec::Vec<u8> {
+    pub fn mut_sender(&mut self) -> &mut ::std::string::String {
         &mut self.sender
     }
 
     // Take field
-    pub fn take_sender(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.sender, ::std::vec::Vec::new())
+    pub fn take_sender(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.sender, ::std::string::String::new())
     }
 
     // bytes certificate = 2;
@@ -95,6 +96,32 @@ impl RaAuthenticate {
     pub fn take_certificate(&mut self) -> ::std::vec::Vec<u8> {
         ::std::mem::replace(&mut self.certificate, ::std::vec::Vec::new())
     }
+
+    // bytes sender_addr = 3;
+
+
+    pub fn get_sender_addr(&self) -> &[u8] {
+        &self.sender_addr
+    }
+    pub fn clear_sender_addr(&mut self) {
+        self.sender_addr.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_sender_addr(&mut self, v: ::std::vec::Vec<u8>) {
+        self.sender_addr = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_sender_addr(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.sender_addr
+    }
+
+    // Take field
+    pub fn take_sender_addr(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.sender_addr, ::std::vec::Vec::new())
+    }
 }
 
 impl ::protobuf::Message for RaAuthenticate {
@@ -107,10 +134,13 @@ impl ::protobuf::Message for RaAuthenticate {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.sender)?;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.sender)?;
                 },
                 2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.certificate)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.sender_addr)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -125,10 +155,13 @@ impl ::protobuf::Message for RaAuthenticate {
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
         if !self.sender.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.sender);
+            my_size += ::protobuf::rt::string_size(1, &self.sender);
         }
         if !self.certificate.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.certificate);
+        }
+        if !self.sender_addr.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(3, &self.sender_addr);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -137,10 +170,13 @@ impl ::protobuf::Message for RaAuthenticate {
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
         if !self.sender.is_empty() {
-            os.write_bytes(1, &self.sender)?;
+            os.write_string(1, &self.sender)?;
         }
         if !self.certificate.is_empty() {
             os.write_bytes(2, &self.certificate)?;
+        }
+        if !self.sender_addr.is_empty() {
+            os.write_bytes(3, &self.sender_addr)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -180,7 +216,7 @@ impl ::protobuf::Message for RaAuthenticate {
         static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
         descriptor.get(|| {
             let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "sender",
                 |m: &RaAuthenticate| { &m.sender },
                 |m: &mut RaAuthenticate| { &mut m.sender },
@@ -189,6 +225,11 @@ impl ::protobuf::Message for RaAuthenticate {
                 "certificate",
                 |m: &RaAuthenticate| { &m.certificate },
                 |m: &mut RaAuthenticate| { &mut m.certificate },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
+                "sender_addr",
+                |m: &RaAuthenticate| { &m.sender_addr },
+                |m: &mut RaAuthenticate| { &mut m.sender_addr },
             ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<RaAuthenticate>(
                 "RaAuthenticate",
@@ -208,6 +249,7 @@ impl ::protobuf::Clear for RaAuthenticate {
     fn clear(&mut self) {
         self.sender.clear();
         self.certificate.clear();
+        self.sender_addr.clear();
         self.unknown_fields.clear();
     }
 }
@@ -219,6 +261,207 @@ impl ::std::fmt::Debug for RaAuthenticate {
 }
 
 impl ::protobuf::reflect::ProtobufValue for RaAuthenticate {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct RaAuthenticateResponse {
+    // message fields
+    pub data: ::std::string::String,
+    pub events: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a RaAuthenticateResponse {
+    fn default() -> &'a RaAuthenticateResponse {
+        <RaAuthenticateResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl RaAuthenticateResponse {
+    pub fn new() -> RaAuthenticateResponse {
+        ::std::default::Default::default()
+    }
+
+    // string data = 1;
+
+
+    pub fn get_data(&self) -> &str {
+        &self.data
+    }
+    pub fn clear_data(&mut self) {
+        self.data.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_data(&mut self, v: ::std::string::String) {
+        self.data = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_data(&mut self) -> &mut ::std::string::String {
+        &mut self.data
+    }
+
+    // Take field
+    pub fn take_data(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.data, ::std::string::String::new())
+    }
+
+    // string events = 2;
+
+
+    pub fn get_events(&self) -> &str {
+        &self.events
+    }
+    pub fn clear_events(&mut self) {
+        self.events.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_events(&mut self, v: ::std::string::String) {
+        self.events = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_events(&mut self) -> &mut ::std::string::String {
+        &mut self.events
+    }
+
+    // Take field
+    pub fn take_events(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.events, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for RaAuthenticateResponse {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.data)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.events)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.data.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.data);
+        }
+        if !self.events.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.events);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.data.is_empty() {
+            os.write_string(1, &self.data)?;
+        }
+        if !self.events.is_empty() {
+            os.write_string(2, &self.events)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> RaAuthenticateResponse {
+        RaAuthenticateResponse::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "data",
+                |m: &RaAuthenticateResponse| { &m.data },
+                |m: &mut RaAuthenticateResponse| { &mut m.data },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "events",
+                |m: &RaAuthenticateResponse| { &m.events },
+                |m: &mut RaAuthenticateResponse| { &mut m.events },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<RaAuthenticateResponse>(
+                "RaAuthenticateResponse",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static RaAuthenticateResponse {
+        static instance: ::protobuf::rt::LazyV2<RaAuthenticateResponse> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(RaAuthenticateResponse::new)
+    }
+}
+
+impl ::protobuf::Clear for RaAuthenticateResponse {
+    fn clear(&mut self) {
+        self.data.clear();
+        self.events.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for RaAuthenticateResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for RaAuthenticateResponse {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
     }
@@ -544,15 +787,22 @@ impl ::protobuf::reflect::ProtobufValue for Key {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n%secret/registration/v1beta1/msg.proto\x12\x1bsecret.registration.v1be\
-    ta1\x1a\x14gogoproto/gogo.proto\"\xde\x01\n\x0eRaAuthenticate\x12I\n\x06\
-    sender\x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-github.com/cosmos/c\
-    osmos-sdk/types.AccAddress\x12\x80\x01\n\x0bcertificate\x18\x02\x20\x01(\
-    \x0cR\x0bcertificateB^\xfa\xde\x1fOgithub.com/scrtlabs/SecretNetwork/x/r\
-    egistration/remote_attestation.Certificate\xea\xde\x1f\x07ra_cert\"!\n\t\
-    MasterKey\x12\x14\n\x05bytes\x18\x01\x20\x01(\x0cR\x05bytes\"\x20\n\x03K\
-    ey\x12\x19\n\x03key\x18\x01\x20\x01(\x0cR\x03keyB\x07\xea\xde\x1f\x03key\
-    BIZ?github.com/scrtlabs/SecretNetwork/x/registration/internal/types\xc8\
-    \xe1\x1e\0\xa8\xe2\x1e\x01b\x06proto3\
+    ta1\x1a\x14gogoproto/gogo.proto\x1a\x19cosmos_proto/cosmos.proto\x1a\x17\
+    cosmos/msg/v1/msg.proto\x1a\x1ecosmos/base/v1beta1/coin.proto\"\xaa\x02\
+    \n\x0eRaAuthenticate\x120\n\x06sender\x18\x01\x20\x01(\tR\x06senderB\x18\
+    \xd2\xb4-\x14cosmos.AddressString\x12\x80\x01\n\x0bcertificate\x18\x02\
+    \x20\x01(\x0cR\x0bcertificateB^\xfa\xde\x1fOgithub.com/scrtlabs/SecretNe\
+    twork/x/registration/remote_attestation.Certificate\xea\xde\x1f\x07ra_ce\
+    rt\x12R\n\x0bsender_addr\x18\x03\x20\x01(\x0cR\nsenderAddrB1\xfa\xde\x1f\
+    -github.com/cosmos/cosmos-sdk/types.AccAddress:\x0f\x88\xa0\x1f\0\x82\
+    \xe7\xb0*\x06sender\"D\n\x16RaAuthenticateResponse\x12\x12\n\x04data\x18\
+    \x01\x20\x01(\tR\x04data\x12\x16\n\x06events\x18\x02\x20\x01(\tR\x06even\
+    ts\"!\n\tMasterKey\x12\x14\n\x05bytes\x18\x01\x20\x01(\x0cR\x05bytes\"\
+    \x20\n\x03Key\x12\x19\n\x03key\x18\x01\x20\x01(\x0cR\x03keyB\x07\xea\xde\
+    \x1f\x03key2~\n\x03Msg\x12p\n\x0cRegisterAuth\x12+.secret.registration.v\
+    1beta1.RaAuthenticate\x1a3.secret.registration.v1beta1.RaAuthenticateRes\
+    ponse\x1a\x05\x80\xe7\xb0*\x01BIZ?github.com/scrtlabs/SecretNetwork/x/re\
+    gistration/internal/types\xc8\xe1\x1e\0\xa8\xe2\x1e\x01b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

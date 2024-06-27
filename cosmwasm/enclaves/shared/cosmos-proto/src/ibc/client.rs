@@ -679,6 +679,351 @@ impl ::protobuf::reflect::ProtobufValue for ClientConsensusStates {
 }
 
 #[derive(PartialEq,Clone,Default)]
+pub struct Height {
+    // message fields
+    pub revision_number: u64,
+    pub revision_height: u64,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Height {
+    fn default() -> &'a Height {
+        <Height as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Height {
+    pub fn new() -> Height {
+        ::std::default::Default::default()
+    }
+
+    // uint64 revision_number = 1;
+
+
+    pub fn get_revision_number(&self) -> u64 {
+        self.revision_number
+    }
+    pub fn clear_revision_number(&mut self) {
+        self.revision_number = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_revision_number(&mut self, v: u64) {
+        self.revision_number = v;
+    }
+
+    // uint64 revision_height = 2;
+
+
+    pub fn get_revision_height(&self) -> u64 {
+        self.revision_height
+    }
+    pub fn clear_revision_height(&mut self) {
+        self.revision_height = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_revision_height(&mut self, v: u64) {
+        self.revision_height = v;
+    }
+}
+
+impl ::protobuf::Message for Height {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.revision_number = tmp;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.revision_height = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.revision_number != 0 {
+            my_size += ::protobuf::rt::value_size(1, self.revision_number, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.revision_height != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.revision_height, ::protobuf::wire_format::WireTypeVarint);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if self.revision_number != 0 {
+            os.write_uint64(1, self.revision_number)?;
+        }
+        if self.revision_height != 0 {
+            os.write_uint64(2, self.revision_height)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Height {
+        Height::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "revision_number",
+                |m: &Height| { &m.revision_number },
+                |m: &mut Height| { &mut m.revision_number },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "revision_height",
+                |m: &Height| { &m.revision_height },
+                |m: &mut Height| { &mut m.revision_height },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Height>(
+                "Height",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Height {
+        static instance: ::protobuf::rt::LazyV2<Height> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Height::new)
+    }
+}
+
+impl ::protobuf::Clear for Height {
+    fn clear(&mut self) {
+        self.revision_number = 0;
+        self.revision_height = 0;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Height {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Height {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct Params {
+    // message fields
+    pub allowed_clients: ::protobuf::RepeatedField<::std::string::String>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Params {
+    fn default() -> &'a Params {
+        <Params as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Params {
+    pub fn new() -> Params {
+        ::std::default::Default::default()
+    }
+
+    // repeated string allowed_clients = 1;
+
+
+    pub fn get_allowed_clients(&self) -> &[::std::string::String] {
+        &self.allowed_clients
+    }
+    pub fn clear_allowed_clients(&mut self) {
+        self.allowed_clients.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_allowed_clients(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.allowed_clients = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_allowed_clients(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.allowed_clients
+    }
+
+    // Take field
+    pub fn take_allowed_clients(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.allowed_clients, ::protobuf::RepeatedField::new())
+    }
+}
+
+impl ::protobuf::Message for Params {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.allowed_clients)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        for value in &self.allowed_clients {
+            my_size += ::protobuf::rt::string_size(1, &value);
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        for v in &self.allowed_clients {
+            os.write_string(1, &v)?;
+        };
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Params {
+        Params::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "allowed_clients",
+                |m: &Params| { &m.allowed_clients },
+                |m: &mut Params| { &mut m.allowed_clients },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Params>(
+                "Params",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Params {
+        static instance: ::protobuf::rt::LazyV2<Params> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Params::new)
+    }
+}
+
+impl ::protobuf::Clear for Params {
+    fn clear(&mut self) {
+        self.allowed_clients.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Params {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Params {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct ClientUpdateProposal {
     // message fields
     pub title: ::std::string::String,
@@ -1278,386 +1623,37 @@ impl ::protobuf::reflect::ProtobufValue for UpgradeProposal {
     }
 }
 
-#[derive(PartialEq,Clone,Default)]
-pub struct Height {
-    // message fields
-    pub revision_number: u64,
-    pub revision_height: u64,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a Height {
-    fn default() -> &'a Height {
-        <Height as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl Height {
-    pub fn new() -> Height {
-        ::std::default::Default::default()
-    }
-
-    // uint64 revision_number = 1;
-
-
-    pub fn get_revision_number(&self) -> u64 {
-        self.revision_number
-    }
-    pub fn clear_revision_number(&mut self) {
-        self.revision_number = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_revision_number(&mut self, v: u64) {
-        self.revision_number = v;
-    }
-
-    // uint64 revision_height = 2;
-
-
-    pub fn get_revision_height(&self) -> u64 {
-        self.revision_height
-    }
-    pub fn clear_revision_height(&mut self) {
-        self.revision_height = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_revision_height(&mut self, v: u64) {
-        self.revision_height = v;
-    }
-}
-
-impl ::protobuf::Message for Height {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_uint64()?;
-                    self.revision_number = tmp;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_uint64()?;
-                    self.revision_height = tmp;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if self.revision_number != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.revision_number, ::protobuf::wire_format::WireTypeVarint);
-        }
-        if self.revision_height != 0 {
-            my_size += ::protobuf::rt::value_size(2, self.revision_height, ::protobuf::wire_format::WireTypeVarint);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if self.revision_number != 0 {
-            os.write_uint64(1, self.revision_number)?;
-        }
-        if self.revision_height != 0 {
-            os.write_uint64(2, self.revision_height)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Height {
-        Height::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
-        descriptor.get(|| {
-            let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
-                "revision_number",
-                |m: &Height| { &m.revision_number },
-                |m: &mut Height| { &mut m.revision_number },
-            ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
-                "revision_height",
-                |m: &Height| { &m.revision_height },
-                |m: &mut Height| { &mut m.revision_height },
-            ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Height>(
-                "Height",
-                fields,
-                file_descriptor_proto()
-            )
-        })
-    }
-
-    fn default_instance() -> &'static Height {
-        static instance: ::protobuf::rt::LazyV2<Height> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(Height::new)
-    }
-}
-
-impl ::protobuf::Clear for Height {
-    fn clear(&mut self) {
-        self.revision_number = 0;
-        self.revision_height = 0;
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Height {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Height {
-    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
-        ::protobuf::reflect::ReflectValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct Params {
-    // message fields
-    pub allowed_clients: ::protobuf::RepeatedField<::std::string::String>,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a Params {
-    fn default() -> &'a Params {
-        <Params as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl Params {
-    pub fn new() -> Params {
-        ::std::default::Default::default()
-    }
-
-    // repeated string allowed_clients = 1;
-
-
-    pub fn get_allowed_clients(&self) -> &[::std::string::String] {
-        &self.allowed_clients
-    }
-    pub fn clear_allowed_clients(&mut self) {
-        self.allowed_clients.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_allowed_clients(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
-        self.allowed_clients = v;
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_allowed_clients(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
-        &mut self.allowed_clients
-    }
-
-    // Take field
-    pub fn take_allowed_clients(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
-        ::std::mem::replace(&mut self.allowed_clients, ::protobuf::RepeatedField::new())
-    }
-}
-
-impl ::protobuf::Message for Params {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.allowed_clients)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        for value in &self.allowed_clients {
-            my_size += ::protobuf::rt::string_size(1, &value);
-        };
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        for v in &self.allowed_clients {
-            os.write_string(1, &v)?;
-        };
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Params {
-        Params::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
-        descriptor.get(|| {
-            let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "allowed_clients",
-                |m: &Params| { &m.allowed_clients },
-                |m: &mut Params| { &mut m.allowed_clients },
-            ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Params>(
-                "Params",
-                fields,
-                file_descriptor_proto()
-            )
-        })
-    }
-
-    fn default_instance() -> &'static Params {
-        static instance: ::protobuf::rt::LazyV2<Params> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(Params::new)
-    }
-}
-
-impl ::protobuf::Clear for Params {
-    fn clear(&mut self) {
-        self.allowed_clients.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Params {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Params {
-    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
-        ::protobuf::reflect::ReflectValueRef::Message(self)
-    }
-}
-
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x1fibc/core/client/v1/client.proto\x12\x12ibc.core.client.v1\x1a\x14g\
-    ogoproto/gogo.proto\x1a\x19google/protobuf/any.proto\x1a$cosmos/upgrade/\
-    v1beta1/upgrade.proto\x1a\x19cosmos_proto/cosmos.proto\"\x9c\x01\n\x15Id\
-    entifiedClientState\x121\n\tclient_id\x18\x01\x20\x01(\tR\x08clientIdB\
-    \x14\xf2\xde\x1f\x10yaml:\"client_id\"\x12P\n\x0cclient_state\x18\x02\
-    \x20\x01(\x0b2\x14.google.protobuf.AnyR\x0bclientStateB\x17\xf2\xde\x1f\
-    \x13yaml:\"client_state\"\"\xaf\x01\n\x18ConsensusStateWithHeight\x128\n\
-    \x06height\x18\x01\x20\x01(\x0b2\x1a.ibc.core.client.v1.HeightR\x06heigh\
-    tB\x04\xc8\xde\x1f\0\x12Y\n\x0fconsensus_state\x18\x02\x20\x01(\x0b2\x14\
-    .google.protobuf.AnyR\x0econsensusStateB\x1a\xf2\xde\x1f\x16yaml:\"conse\
-    nsus_state\"\"\xc4\x01\n\x15ClientConsensusStates\x121\n\tclient_id\x18\
-    \x01\x20\x01(\tR\x08clientIdB\x14\xf2\xde\x1f\x10yaml:\"client_id\"\x12x\
-    \n\x10consensus_states\x18\x02\x20\x03(\x0b2,.ibc.core.client.v1.Consens\
-    usStateWithHeightR\x0fconsensusStatesB\x1f\xf2\xde\x1f\x17yaml:\"consens\
-    us_states\"\xc8\xde\x1f\0\"\x8f\x02\n\x14ClientUpdateProposal\x12\x14\n\
-    \x05title\x18\x01\x20\x01(\tR\x05title\x12\x20\n\x0bdescription\x18\x02\
-    \x20\x01(\tR\x0bdescription\x12H\n\x11subject_client_id\x18\x03\x20\x01(\
-    \tR\x0fsubjectClientIdB\x1c\xf2\xde\x1f\x18yaml:\"subject_client_id\"\
-    \x12Q\n\x14substitute_client_id\x18\x04\x20\x01(\tR\x12substituteClientI\
-    dB\x1f\xf2\xde\x1f\x1byaml:\"substitute_client_id\":\"\xd2\xb4-\x1acosmo\
-    s.gov.v1beta1.Content\x88\xa0\x1f\0\"\x99\x02\n\x0fUpgradeProposal\x12\
-    \x14\n\x05title\x18\x01\x20\x01(\tR\x05title\x12\x20\n\x0bdescription\
-    \x18\x02\x20\x01(\tR\x0bdescription\x126\n\x04plan\x18\x03\x20\x01(\x0b2\
-    \x1c.cosmos.upgrade.v1beta1.PlanR\x04planB\x04\xc8\xde\x1f\0\x12j\n\x15u\
-    pgraded_client_state\x18\x04\x20\x01(\x0b2\x14.google.protobuf.AnyR\x13u\
-    pgradedClientStateB\x20\xf2\xde\x1f\x1cyaml:\"upgraded_client_state\":*\
-    \xd2\xb4-\x1acosmos.gov.v1beta1.Content\xe8\xa0\x1f\x01\x88\xa0\x1f\0\
-    \x98\xa0\x1f\0\"\x9c\x01\n\x06Height\x12C\n\x0frevision_number\x18\x01\
-    \x20\x01(\x04R\x0erevisionNumberB\x1a\xf2\xde\x1f\x16yaml:\"revision_num\
-    ber\"\x12C\n\x0frevision_height\x18\x02\x20\x01(\x04R\x0erevisionHeightB\
-    \x1a\xf2\xde\x1f\x16yaml:\"revision_height\":\x08\x88\xa0\x1f\0\x98\xa0\
-    \x1f\0\"M\n\x06Params\x12C\n\x0fallowed_clients\x18\x01\x20\x03(\tR\x0ea\
-    llowedClientsB\x1a\xf2\xde\x1f\x16yaml:\"allowed_clients\"B:Z8github.com\
-    /cosmos/ibc-go/v4/modules/core/02-client/typesb\x06proto3\
+    \n\x1fibc/core/client/v1/client.proto\x12\x12ibc.core.client.v1\x1a$cosm\
+    os/upgrade/v1beta1/upgrade.proto\x1a\x19cosmos_proto/cosmos.proto\x1a\
+    \x14gogoproto/gogo.proto\x1a\x19google/protobuf/any.proto\"m\n\x15Identi\
+    fiedClientState\x12\x1b\n\tclient_id\x18\x01\x20\x01(\tR\x08clientId\x12\
+    7\n\x0cclient_state\x18\x02\x20\x01(\x0b2\x14.google.protobuf.AnyR\x0bcl\
+    ientState\"\x93\x01\n\x18ConsensusStateWithHeight\x128\n\x06height\x18\
+    \x01\x20\x01(\x0b2\x1a.ibc.core.client.v1.HeightR\x06heightB\x04\xc8\xde\
+    \x1f\0\x12=\n\x0fconsensus_state\x18\x02\x20\x01(\x0b2\x14.google.protob\
+    uf.AnyR\x0econsensusState\"\x93\x01\n\x15ClientConsensusStates\x12\x1b\n\
+    \tclient_id\x18\x01\x20\x01(\tR\x08clientId\x12]\n\x10consensus_states\
+    \x18\x02\x20\x03(\x0b2,.ibc.core.client.v1.ConsensusStateWithHeightR\x0f\
+    consensusStatesB\x04\xc8\xde\x1f\0\"d\n\x06Height\x12'\n\x0frevision_num\
+    ber\x18\x01\x20\x01(\x04R\x0erevisionNumber\x12'\n\x0frevision_height\
+    \x18\x02\x20\x01(\x04R\x0erevisionHeight:\x08\x88\xa0\x1f\0\x98\xa0\x1f\
+    \0\"1\n\x06Params\x12'\n\x0fallowed_clients\x18\x01\x20\x03(\tR\x0eallow\
+    edClients\"\x91\x02\n\x14ClientUpdateProposal\x12\x14\n\x05title\x18\x01\
+    \x20\x01(\tR\x05title\x12\x20\n\x0bdescription\x18\x02\x20\x01(\tR\x0bde\
+    scription\x12H\n\x11subject_client_id\x18\x03\x20\x01(\tR\x0fsubjectClie\
+    ntIdB\x1c\xf2\xde\x1f\x18yaml:\"subject_client_id\"\x12Q\n\x14substitute\
+    _client_id\x18\x04\x20\x01(\tR\x12substituteClientIdB\x1f\xf2\xde\x1f\
+    \x1byaml:\"substitute_client_id\":$\x18\x01\xca\xb4-\x1acosmos.gov.v1bet\
+    a1.Content\x88\xa0\x1f\0\"\x9b\x02\n\x0fUpgradeProposal\x12\x14\n\x05tit\
+    le\x18\x01\x20\x01(\tR\x05title\x12\x20\n\x0bdescription\x18\x02\x20\x01\
+    (\tR\x0bdescription\x126\n\x04plan\x18\x03\x20\x01(\x0b2\x1c.cosmos.upgr\
+    ade.v1beta1.PlanR\x04planB\x04\xc8\xde\x1f\0\x12j\n\x15upgraded_client_s\
+    tate\x18\x04\x20\x01(\x0b2\x14.google.protobuf.AnyR\x13upgradedClientSta\
+    teB\x20\xf2\xde\x1f\x1cyaml:\"upgraded_client_state\":,\x18\x01\xca\xb4-\
+    \x1acosmos.gov.v1beta1.Content\xe8\xa0\x1f\x01\x88\xa0\x1f\0\x98\xa0\x1f\
+    \0B:Z8github.com/cosmos/ibc-go/v8/modules/core/02-client/typesb\x06proto\
+    3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;
