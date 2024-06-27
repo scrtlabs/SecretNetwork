@@ -73,7 +73,7 @@ The build depends on libssl1.1. Install using:
 wget https://debian.mirror.ac.za/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
 ```
 ```bash
-sudo dpkg -i libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
+sudo dpkg -i libssl1.1_1.1.1w-0+deb11u1_amd64.deb
 ```
 ### Clone Repo
 
