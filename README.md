@@ -137,7 +137,7 @@ It may be worth mentioning that your LIBRARY_PATH should also point to SGX_SDK/s
 
 If you plan to run in **SGX_MODE=SW** indicate it by exporting SGX_MODE
 ```
-export SGX_SDK=/opt/intel/sgxsdk
+export SGX_MODE=SW
 ```
 There is one more important step you need to do:
 ```
