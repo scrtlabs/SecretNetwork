@@ -163,6 +163,10 @@ git submodule init
 git submodule update --remote
 ```
 
+# If you plan on re-generating proto files, you need docker installed. How to install you can reference the following link: 
+[How to install docker on Ubuntu 22.04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04)
+
+
 # Build from Source
 
 Use `make build-linux` to build the entire codebase. This will build both the Rust (enclave & contract engine) and the Go (blockchain) code.
