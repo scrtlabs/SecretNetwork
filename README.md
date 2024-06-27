@@ -71,9 +71,10 @@ The build depends on libssl1.1. Install using:
 
 ```bash
 wget https://debian.mirror.ac.za/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
-dpkg -i libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
 ```
-
+```bash
+sudo dpkg -i libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
+```
 ### Clone Repo
 
 Clone this repo to your favorite working directory. e.g. ~/SecretNetwork
