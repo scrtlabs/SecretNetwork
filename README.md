@@ -42,12 +42,16 @@ Click the button below to start a new development environment:
 ### Install prerequisite packages
 
 ```
-apt-get install -y --no-install-recommends g++ libtool automake autoconf clang
+sudo apt-get install -y --no-install-recommends g++ libtool automake autoconf clang
 ```
 
 #### Optinal packages to install ((needed for local testing))
 ```
 sudo apt install -y  jq nodejs npm
+```
+### Consider installing nvm (https://github.com/nvm-sh/nvm)
+```
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 ```
 
 Note: lcp - Simple proxy to bypass CORS issues. It solve the issue
