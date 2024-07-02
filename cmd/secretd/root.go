@@ -15,13 +15,17 @@ import (
 
 	// "github.com/rs/zerolog"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	eip191 "github.com/scrtlabs/SecretNetwork/eip191"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
+	txsigning "cosmossdk.io/x/tx/signing"
+	"cosmossdk.io/x/tx/signing/aminojson"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 
 	rosettacmd "github.com/cosmos/rosetta/cmd"
@@ -149,10 +153,24 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 			}
 			initClientCtx.WithKeyringDir(initClientCtx.HomeDir)
 			if !initClientCtx.Offline {
+				signingOpts, err := authtx.NewDefaultSigningOptions()
+				if err != nil {
+					return err
+				}
+				signingOpts.FileResolver = encodingConfig.Codec.InterfaceRegistry()
+				aminoHandler := aminojson.NewSignModeHandler(aminojson.SignModeHandlerOptions{
+					FileResolver: signingOpts.FileResolver,
+					TypeResolver: signingOpts.TypeResolver,
+				})
+				eip191Handler := eip191.NewSignModeHandler(eip191.SignModeHandlerOptions{
+					AminoJsonSignModeHandler: aminoHandler,
+				})
+
 				enabledSignModes := append(authtx.DefaultSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
 				txConfigOpts := authtx.ConfigOptions{
 					EnabledSignModes:           enabledSignModes,
 					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
+					CustomSignModes:            [](txsigning.SignModeHandler){*eip191Handler},
 				}
 				txConfig, err := authtx.NewTxConfigWithOptions(
 					initClientCtx.Codec,

@@ -24,6 +24,8 @@ import (
 	"cosmossdk.io/core/store"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
+	txsigning "cosmossdk.io/x/tx/signing"
+	"cosmossdk.io/x/tx/signing/aminojson"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	codedctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -35,6 +37,7 @@ import (
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	eip191 "github.com/scrtlabs/SecretNetwork/eip191"
 
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
@@ -325,12 +328,36 @@ func (k Keeper) GetTxInfo(ctx sdk.Context, sender sdk.AccAddress) ([]byte, sdktx
 		}
 	} else {
 		signingData := authsigning.SignerData{
+			Address:       signerAcc.GetAddress().String(),
 			ChainID:       ctx.ChainID(),
 			AccountNumber: signerAcc.GetAccountNumber(),
 			Sequence:      signerAcc.GetSequence() - 1,
 			PubKey:        signerAcc.GetPubKey(),
 		}
-		txConfig := authtx.NewTxConfig(k.cdc.(*codec.ProtoCodec), authtx.DefaultSignModes)
+		signingOpts, err := authtx.NewDefaultSigningOptions()
+		if err != nil {
+			panic(err)
+		}
+		signingOpts.FileResolver = k.cdc.(*codec.ProtoCodec).InterfaceRegistry()
+
+		aminoHandler := aminojson.NewSignModeHandler(aminojson.SignModeHandlerOptions{
+			FileResolver: signingOpts.FileResolver,
+			TypeResolver: signingOpts.TypeResolver,
+		})
+		eip191Handler := eip191.NewSignModeHandler(eip191.SignModeHandlerOptions{
+			AminoJsonSignModeHandler: aminoHandler,
+		})
+		txConfigOpts := authtx.ConfigOptions{
+			EnabledSignModes: authtx.DefaultSignModes,
+			CustomSignModes:  [](txsigning.SignModeHandler){*eip191Handler},
+		}
+		txConfig, err := authtx.NewTxConfigWithOptions(
+			k.cdc.(*codec.ProtoCodec),
+			txConfigOpts,
+		)
+		if err != nil {
+			panic(err)
+		}
 		modeHandler := txConfig.SignModeHandler()
 		signBytes, err = authsigning.GetSignBytesAdapter(ctx, modeHandler, signMode, signingData, tx)
 		if err != nil {

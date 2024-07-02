@@ -13,6 +13,8 @@ import (
 
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
+	txsigning "cosmossdk.io/x/tx/signing"
+	"cosmossdk.io/x/tx/signing/aminojson"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -28,6 +30,7 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
+	eip191 "github.com/scrtlabs/SecretNetwork/eip191"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
@@ -288,9 +291,25 @@ func NewSecretNetworkApp(
 	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger, &app.event)
 
 	enabledSignModes := append(authtx.DefaultSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
+
+	signingOpts, err := authtx.NewDefaultSigningOptions()
+	if err != nil {
+		return nil
+	}
+	signingOpts.FileResolver = appCodec.InterfaceRegistry()
+
+	aminoHandler := aminojson.NewSignModeHandler(aminojson.SignModeHandlerOptions{
+		FileResolver: signingOpts.FileResolver,
+		TypeResolver: signingOpts.TypeResolver,
+	})
+	eip191Handler := eip191.NewSignModeHandler(eip191.SignModeHandlerOptions{
+		AminoJsonSignModeHandler: aminoHandler,
+	})
+
 	txConfigOpts := authtx.ConfigOptions{
 		EnabledSignModes:           enabledSignModes,
 		TextualCoinMetadataQueryFn: txmodule.NewBankKeeperCoinMetadataQueryFn(app.AppKeepers.BankKeeper),
+		CustomSignModes:            [](txsigning.SignModeHandler){*eip191Handler},
 	}
 	txConfig, err := authtx.NewTxConfigWithOptions(
 		appCodec,
