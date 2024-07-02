@@ -13,8 +13,8 @@ use std::io::prelude::*;
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
     CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
-    GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH, PUBKEY_PATH,
-    REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH, MIGRATION_CERT_PATH,
+    PUBKEY_PATH, REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -373,8 +373,6 @@ unsafe fn get_attestation_report_epid(
             Ok(res) => res,
         };
 
-    write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str())?;
-
     #[cfg(feature = "SGX_MODE_HW")]
     {
         crate::registration::print_report::print_local_report_info(cert.as_slice());
@@ -394,16 +392,13 @@ pub unsafe fn get_attestation_report_dcap(
         }
     };
 
-    write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str())?;
-
-    write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str())?;
-
     Ok((vec_quote, vec_coll))
 }
 
 pub fn save_attestation_combined(
     res_dcap: &Result<(Vec<u8>, Vec<u8>), sgx_status_t>,
     res_epid: &Result<Vec<u8>, sgx_status_t>,
+    is_migration_report: bool,
 ) -> sgx_status_t {
     let mut size_epid: u32 = 0;
     let mut size_dcap_q: u32 = 0;
@@ -411,14 +406,29 @@ pub fn save_attestation_combined(
 
     if let Ok(ref vec_cert) = res_epid {
         size_epid = vec_cert.len() as u32;
+
+        if !is_migration_report {
+            write_to_untrusted(vec_cert.as_slice(), ATTESTATION_CERT_PATH.as_str()).unwrap();
+        }
     }
 
     if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
         size_dcap_q = vec_quote.len() as u32;
         size_dcap_c = vec_coll.len() as u32;
+
+        if !is_migration_report {
+            write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str()).unwrap();
+            write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str()).unwrap();
+        }
     }
 
-    let mut f_out = match File::create(CERT_COMBINED_PATH.as_str()) {
+    let out_path: &String = if is_migration_report {
+        &MIGRATION_CERT_PATH
+    } else {
+        &CERT_COMBINED_PATH
+    };
+
+    let mut f_out = match File::create(out_path.as_str()) {
         Ok(f) => f,
         Err(e) => {
             error!("failed to create file {}", e);
@@ -449,7 +459,6 @@ pub fn save_attestation_combined(
     sgx_status_t::SGX_SUCCESS
 }
 
-
 #[no_mangle]
 /**
  * `ecall_get_attestation_report`
@@ -470,24 +479,32 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key_len: u32,
     flags: u32,
 ) -> sgx_status_t {
-    let kp = KEY_MANAGER.get_registration_key().unwrap();
-    trace!(
-        "ecall_get_attestation_report key pk: {:?}",
-        &kp.get_pubkey().to_vec()
-    );
+    let (kp, is_migration_report) = match 0x10 & flags {
+        0x10 => {
+            // migration report
+            (KEY_MANAGER.get_registration_key().unwrap(), true)
+        }
+        _ => {
+            // standard network registration report
+            let kp = KEY_MANAGER.get_registration_key().unwrap();
+            trace!(
+                "ecall_get_attestation_report key pk: {:?}",
+                &kp.get_pubkey().to_vec()
+            );
 
-    {
-        let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
-            Ok(f) => f,
-            Err(e) => {
-                error!("failed to create file {}", e);
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        };
+            let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
+                Ok(f) => f,
+                Err(e) => {
+                    error!("failed to create file {}", e);
+                    return sgx_status_t::SGX_ERROR_UNEXPECTED;
+                }
+            };
 
-        f_out.write_all(kp.get_pubkey().as_ref()).unwrap();
-    }
+            f_out.write_all(kp.get_pubkey().as_ref()).unwrap();
 
+            (kp, false)
+        }
+    };
 
     let res_epid = match 1 & flags {
         0 => get_attestation_report_epid(api_key, api_key_len, &kp),
@@ -499,7 +516,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
     };
 
-    save_attestation_combined(&res_dcap, &res_epid)
+    save_attestation_combined(&res_dcap, &res_epid, is_migration_report)
 }
 
 ///
