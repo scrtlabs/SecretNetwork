@@ -401,6 +401,55 @@ pub unsafe fn get_attestation_report_dcap(
     Ok((vec_quote, vec_coll))
 }
 
+pub fn save_attestation_combined(
+    res_dcap: &Result<(Vec<u8>, Vec<u8>), sgx_status_t>,
+    res_epid: &Result<Vec<u8>, sgx_status_t>,
+) -> sgx_status_t {
+    let mut size_epid: u32 = 0;
+    let mut size_dcap_q: u32 = 0;
+    let mut size_dcap_c: u32 = 0;
+
+    if let Ok(ref vec_cert) = res_epid {
+        size_epid = vec_cert.len() as u32;
+    }
+
+    if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
+        size_dcap_q = vec_quote.len() as u32;
+        size_dcap_c = vec_coll.len() as u32;
+    }
+
+    let mut f_out = match File::create(CERT_COMBINED_PATH.as_str()) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("failed to create file {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    f_out.write_all(&size_epid.to_le_bytes()).unwrap();
+    f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
+    f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
+
+    if let Ok(ref vec_cert) = res_epid {
+        f_out.write_all(vec_cert.as_slice()).unwrap();
+    }
+
+    if let Ok((vec_quote, vec_coll)) = res_dcap {
+        f_out.write_all(vec_quote.as_slice()).unwrap();
+        f_out.write_all(vec_coll.as_slice()).unwrap();
+    }
+
+    if (size_epid == 0) && (size_dcap_q == 0) {
+        if let Err(status) = res_epid {
+            return *status;
+        }
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+
 #[no_mangle]
 /**
  * `ecall_get_attestation_report`
@@ -439,56 +488,18 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         f_out.write_all(kp.get_pubkey().as_ref()).unwrap();
     }
 
-    let mut size_epid: u32 = 0;
-    let mut size_dcap_q: u32 = 0;
-    let mut size_dcap_c: u32 = 0;
 
     let res_epid = match 1 & flags {
         0 => get_attestation_report_epid(api_key, api_key_len, &kp),
         _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
     };
-    if let Ok(ref vec_cert) = res_epid {
-        size_epid = vec_cert.len() as u32;
-    }
 
     let res_dcap = match 2 & flags {
         0 => get_attestation_report_dcap(&kp),
         _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
     };
-    if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
-        size_dcap_q = vec_quote.len() as u32;
-        size_dcap_c = vec_coll.len() as u32;
-    }
 
-    let mut f_out = match File::create(CERT_COMBINED_PATH.as_str()) {
-        Ok(f) => f,
-        Err(e) => {
-            error!("failed to create file {}", e);
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-    };
-
-    f_out.write_all(&size_epid.to_le_bytes()).unwrap();
-    f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
-    f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
-
-    if let Ok(ref vec_cert) = res_epid {
-        f_out.write_all(vec_cert.as_slice()).unwrap();
-    }
-
-    if let Ok((vec_quote, vec_coll)) = res_dcap {
-        f_out.write_all(vec_quote.as_slice()).unwrap();
-        f_out.write_all(vec_coll.as_slice()).unwrap();
-    }
-
-    if (size_epid == 0) && (size_dcap_q == 0) {
-        if let Err(status) = res_epid {
-            return status;
-        }
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    }
-
-    sgx_status_t::SGX_SUCCESS
+    save_attestation_combined(&res_dcap, &res_epid)
 }
 
 ///
