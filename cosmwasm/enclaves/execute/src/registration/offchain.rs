@@ -3,6 +3,7 @@
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
 use log::*;
+use sgx_types::sgx_key_128bit_t;
 use sgx_types::sgx_status_t;
 use std::panic;
 use std::slice;
@@ -17,14 +18,13 @@ use enclave_crypto::consts::{
     PUBKEY_PATH, REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
-use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_crypto::{ed25519::Ed25519PrivateKey, KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::migrate_file_from_2_17_safe;
 use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
 use enclave_utils::validator_set::VALIDATOR_SET_SEALING_PATH;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
-
-use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
 use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
 
@@ -459,6 +459,35 @@ pub fn save_attestation_combined(
     sgx_status_t::SGX_SUCCESS
 }
 
+fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
+    let mut key_request = sgx_types::sgx_key_request_t {
+        key_name: sgx_types::SGX_KEYSELECT_SEAL,
+        key_policy: sgx_types::SGX_KEYPOLICY_MRENCLAVE | sgx_types::SGX_KEYPOLICY_MRSIGNER,
+        misc_mask: sgx_types::TSEAL_DEFAULT_MISCMASK,
+        ..Default::default()
+    };
+
+    if seed.len() > key_request.key_id.id.len() {
+        panic!("seed too long: {:?}", seed);
+    }
+
+    key_request.key_id.id[..seed.len()].copy_from_slice(seed);
+
+    key_request.attribute_mask.flags = sgx_types::TSEAL_DEFAULT_FLAGSMASK;
+
+    sgx_tse::rsgx_get_key(&key_request).unwrap()
+}
+
+fn get_migration_kp() -> KeyPair {
+    let mut buf = Ed25519PrivateKey::default();
+    let raw_key = buf.get_mut();
+
+    raw_key[0..16].copy_from_slice(&get_key_from_seed("secret_migrate.1".as_bytes()));
+    raw_key[16..32].copy_from_slice(&get_key_from_seed("secret_migrate.2".as_bytes()));
+
+    KeyPair::from(buf)
+}
+
 #[no_mangle]
 /**
  * `ecall_get_attestation_report`
@@ -482,7 +511,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     let (kp, is_migration_report) = match 0x10 & flags {
         0x10 => {
             // migration report
-            (KEY_MANAGER.get_registration_key().unwrap(), true)
+            (get_migration_kp(), true)
         }
         _ => {
             // standard network registration report
