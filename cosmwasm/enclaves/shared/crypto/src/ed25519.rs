@@ -45,16 +45,19 @@ pub struct KeyPair {
 }
 
 impl KeyPair {
+    pub fn sk_to_pk(sk: &Ed25519PrivateKey) -> Ed25519PublicKey {
+        let sk_raw = x25519_dalek::StaticSecret::from((*sk).to_owned().key.r as [u8; 32]);
+        let pk = x25519_dalek::PublicKey::from(&sk_raw);
+        *pk.as_bytes()
+    }
+
     pub fn new() -> Result<Self, CryptoError> {
         let mut secret_key = Ed25519PrivateKey::default();
         rand_slice(secret_key.get_mut())?;
 
-        let sk = x25519_dalek::StaticSecret::from(secret_key.to_owned().key.r as [u8; 32]);
-        let pk = x25519_dalek::PublicKey::from(&sk);
-
         Ok(Self {
             secret_key,
-            public_key: *pk.as_bytes(),
+            public_key: Self::sk_to_pk(&secret_key),
         })
     }
 
@@ -85,11 +88,9 @@ impl<T: AlignedMemory + ExportECKey> From<T> for KeyPair {
         let mut secret_key = Ed25519PrivateKey::default();
         secret_key.get_mut().copy_from_slice(value.key_ref());
 
-        let my_secret = x25519_dalek::StaticSecret::from(secret_key.to_owned().key.r as [u8; 32]);
-        let pk = x25519_dalek::PublicKey::from(&my_secret);
         Self {
             secret_key,
-            public_key: *pk.as_bytes(),
+            public_key: Self::sk_to_pk(&secret_key),
         }
     }
 }
