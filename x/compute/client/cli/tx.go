@@ -10,8 +10,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
-	"github.com/scrtlabs/SecretNetwork/x/compute/internal/keeper"
-
 	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -221,9 +219,8 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, grpcCtx client.C
 	} else {
 		// if we aren't creating an offline transaction we can validate the chosen label
 
-		route := fmt.Sprintf("custom/%s/%s/%s", types.QuerierRoute, keeper.QueryContractAddress, label)
-		res, _, _ := cliCtx.Query(route)
-		if res != nil {
+		res, _ := GetContractAddressByLabel(label, grpcCtx)
+		if res != "" {
 			return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 		}
 
@@ -456,6 +453,17 @@ func GetCodeHashByContractAddr(grpcCtx client.Context, contractAddr string) ([]b
 		return nil, err
 	}
 	return []byte(res.CodeHash), nil
+}
+
+func GetContractAddressByLabel(label string, grpcCtx client.Context) (string, error) {
+	queryClient := types.NewQueryClient(grpcCtx)
+	response, err := queryClient.AddressByLabel(context.Background(), &types.QueryByLabelRequest{
+		Label: label,
+	})
+	if err != nil {
+		return "", err
+	}
+	return response.ContractAddress, nil
 }
 
 // MigrateContractCmd will migrate a contract to a new code version
