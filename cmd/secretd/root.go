@@ -228,6 +228,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 		ParseCert(),
 		DumpBin(),
 		MigrateSealings(),
+		ExportSealings(),
 		ConfigureSecret(),
 		HealthCheck(),
 		ResetEnclave(),

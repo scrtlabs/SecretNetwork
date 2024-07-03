@@ -105,6 +105,17 @@ func MigrateSealing() (bool, error) {
 	return true, nil
 }
 
+func ExportSealing() (bool, error) {
+	ret, err := C.export_sealing()
+	if err != nil {
+		return false, err
+	}
+	if !ret {
+		return false, errors.New("sealing export failed")
+	}
+	return true, nil
+}
+
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cache, error) {
