@@ -153,6 +153,8 @@ Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
 bool create_attestation_report(Buffer api_key, uint32_t flags, Buffer *err);
 
+bool export_sealing(void);
+
 void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);

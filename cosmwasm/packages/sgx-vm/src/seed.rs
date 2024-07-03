@@ -38,6 +38,8 @@ extern "C" {
 
     pub fn ecall_migrate_sealing(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 
+    pub fn ecall_export_sealing(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+
     /// Trigger a query method in a wasm contract
     pub fn ecall_health_check(
         eid: sgx_enclave_id_t,
@@ -145,6 +147,31 @@ pub fn untrusted_migrate_sealing() -> SgxResult<()> {
     let eid = enclave.geteid();
     let mut ret = sgx_status_t::SGX_SUCCESS;
     let status = unsafe { ecall_migrate_sealing(eid, &mut ret) };
+
+    if status != sgx_status_t::SGX_SUCCESS {
+        return Err(status);
+    }
+
+    if ret != sgx_status_t::SGX_SUCCESS {
+        return Err(ret);
+    }
+
+    Ok(())
+}
+
+pub fn untrusted_export_sealing() -> SgxResult<()> {
+    // Bind the token to a local variable to ensure its
+    // destructor runs in the end of the function
+    let enclave_access_token = ENCLAVE_DOORBELL
+        .get_access(1) // This can never be recursive
+        .ok_or(sgx_status_t::SGX_ERROR_BUSY)?;
+    let enclave = (*enclave_access_token)?;
+
+    //info!("Initialized enclave successfully!");
+
+    let eid = enclave.geteid();
+    let mut ret = sgx_status_t::SGX_SUCCESS;
+    let status = unsafe { ecall_export_sealing(eid, &mut ret) };
 
     if status != sgx_status_t::SGX_SUCCESS {
         return Err(status);

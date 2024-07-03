@@ -673,3 +673,8 @@ pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
 
     sgx_status_t::SGX_SUCCESS
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
+    sgx_status_t::SGX_ERROR_UNEXPECTED
+}

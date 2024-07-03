@@ -37,6 +37,9 @@ enclave {
         public sgx_status_t ecall_migrate_sealing(
         );
 
+        public sgx_status_t ecall_export_sealing(
+        );
+
         public sgx_status_t ecall_get_attestation_report(
             [in, count=api_key_len] const uint8_t* api_key,
             uint32_t api_key_len,

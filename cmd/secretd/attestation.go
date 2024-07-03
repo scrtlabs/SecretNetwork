@@ -295,6 +295,26 @@ func MigrateSealings() *cobra.Command {
 	return cmd
 }
 
+func ExportSealings() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "export_sealing",
+		Short: "Export sealed files for the next enclave",
+		Long:  "Export sealed files for the next enclave, that has been approved for migration",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, err := api.ExportSealing()
+			if err != nil {
+				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
+			}
+
+			fmt.Printf("Export succeeded\n")
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "configure-secret [master-key] [seed]",
