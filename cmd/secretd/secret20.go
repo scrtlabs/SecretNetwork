@@ -5,14 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/scrtlabs/SecretNetwork/x/compute/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -67,10 +65,10 @@ func S20GetTxCmd() *cobra.Command {
 
 func S20TransferHistoryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "transfers [contract address] [account] [viewing_key] [optional: page, default: 0] [optional: page_size, default: 10]",
+		Use:   "transfers [contract address] [account] [viewing_key] [optional: page, default: 0] [optional: page_size, default: 10] [optional: should_filter_decoys, default: false]",
 		Short: "View your transfer history",
 		Long:  `Print out transfer you have been a part of - either as a sender or recipient`,
-		Args:  cobra.RangeArgs(3, 5),
+		Args:  cobra.RangeArgs(3, 6),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
@@ -82,7 +80,7 @@ func S20TransferHistoryCmd() *cobra.Command {
 				return err
 			}
 
-			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], grpcCtx)
 			if err != nil {
 				return err
 			}
@@ -99,6 +97,7 @@ func S20TransferHistoryCmd() *cobra.Command {
 
 			var page uint64
 			var pageSize uint64 = 10
+			var shouldFilterDecoys bool = false
 
 			if len(args) >= 4 {
 				page, err = strconv.ParseUint(args[3], 10, 32)
@@ -107,14 +106,21 @@ func S20TransferHistoryCmd() *cobra.Command {
 				}
 			}
 
-			if len(args) == 5 {
+			if len(args) >= 5 {
 				pageSize, err = strconv.ParseUint(args[4], 10, 32)
 				if err != nil {
 					return err
 				}
 			}
 
-			queryData, err := queryTransferHistoryMsg(addr, key, uint32(page), uint32(pageSize))
+			if len(args) >= 6 {
+				shouldFilterDecoys, err = strconv.ParseBool(args[5])
+				if err != nil {
+					return err
+				}
+			}
+
+			queryData, err := queryTransferHistoryMsg(addr, key, uint32(page), uint32(pageSize), shouldFilterDecoys)
 			if err != nil {
 				return err
 			}
@@ -133,11 +139,11 @@ func S20TransferHistoryCmd() *cobra.Command {
 
 func S20TransactionHistoryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "txs [contract address] [account] [viewing_key] [optional: page, default: 0] [optional: page_size, default: 10]",
+		Use:   "txs [contract address] [account] [viewing_key] [optional: page, default: 0] [optional: page_size, default: 10] [optional: should_filter_decoys, default: false]",
 		Short: "View your full transaction history",
 		Long: `Print out transactions you have been a part of - either as a sender or recipient.
 Unlike the transfers query, this query shows all kinds of transactions with the contract.`,
-		Args: cobra.RangeArgs(3, 5),
+		Args: cobra.RangeArgs(3, 6),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
@@ -149,7 +155,7 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 				return err
 			}
 
-			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], grpcCtx)
 			if err != nil {
 				return err
 			}
@@ -166,6 +172,7 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 
 			var page uint64
 			var pageSize uint64 = 10
+			var shouldFilterDecoys bool = false
 
 			if len(args) >= 4 {
 				page, err = strconv.ParseUint(args[3], 10, 32)
@@ -174,14 +181,21 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 				}
 			}
 
-			if len(args) == 5 {
+			if len(args) >= 5 {
 				pageSize, err = strconv.ParseUint(args[4], 10, 32)
 				if err != nil {
 					return err
 				}
 			}
 
-			queryData, err := queryTransactionHistoryMsg(addr, key, uint32(page), uint32(pageSize))
+			if len(args) == 6 {
+				shouldFilterDecoys, err = strconv.ParseBool(args[5])
+				if err != nil {
+					return err
+				}
+			}
+
+			queryData, err := queryTransactionHistoryMsg(addr, key, uint32(page), uint32(pageSize), shouldFilterDecoys)
 			if err != nil {
 				return err
 			}
@@ -216,7 +230,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 				return err
 			}
 
-			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], grpcCtx)
 			if err != nil {
 				return err
 			}
@@ -248,17 +262,16 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 	return cmd
 }
 
-func addressFromBechOrLabel(addressOrLabel string, cliCtx client.Context) (sdk.AccAddress, error) {
-	contractAddr, err := sdk.AccAddressFromBech32(addressOrLabel)
+func addressFromBechOrLabel(addressOrLabel string, grpcCtx client.Context) (sdk.AccAddress, error) {
+	contractAddrBech32, err := cli.GetContractAddressByLabel(addressOrLabel, grpcCtx)
+	var contractAddr sdk.AccAddress
 	if err != nil {
-		route := fmt.Sprintf("custom/%s/%s/%s", compute.QuerierRoute, compute.QueryContractAddress, addressOrLabel)
-		res, _, err := cliCtx.Query(route)
+		contractAddr, err = sdk.AccAddressFromBech32(addressOrLabel)
 		if err != nil {
 			return sdk.AccAddress{}, errors.New("requires either contract address or valid label")
 		}
-
-		// We assume that the query above returns a valid address
-		contractAddr = res
+	} else {
+		contractAddr, _ = sdk.AccAddressFromBech32(contractAddrBech32)
 	}
 	return contractAddr, nil
 }
@@ -545,10 +558,11 @@ type TransferHistoryMsg struct {
 }
 
 type TransferHistoryMsgInner struct {
-	Address  sdk.AccAddress `json:"address"`
-	Key      string         `json:"key"`
-	Page     uint32         `json:"page"`
-	PageSize uint32         `json:"page_size"`
+	Address            sdk.AccAddress `json:"address"`
+	Key                string         `json:"key"`
+	Page               uint32         `json:"page"`
+	PageSize           uint32         `json:"page_size"`
+	ShouldFilterDecoys bool           `json:"should_filter_decoys"`
 }
 
 type TransactionHistoryMsg struct {
@@ -556,10 +570,11 @@ type TransactionHistoryMsg struct {
 }
 
 type TransactionHistoryMsgInner struct {
-	Address  sdk.AccAddress `json:"address"`
-	Key      string         `json:"key"`
-	Page     uint32         `json:"page"`
-	PageSize uint32         `json:"page_size"`
+	Address            sdk.AccAddress `json:"address"`
+	Key                string         `json:"key"`
+	Page               uint32         `json:"page"`
+	PageSize           uint32         `json:"page_size"`
+	ShouldFilterDecoys bool           `json:"should_filter_decoys"`
 }
 
 type BalanceMsg struct {
@@ -638,13 +653,14 @@ func spacePad(blockSize int, message string) string {
 	return message + strings.Repeat(" ", missing)
 }
 
-func queryTransferHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page uint32, pageSize uint32) ([]byte, error) {
+func queryTransferHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page uint32, pageSize uint32, shouldFilterDecoys bool) ([]byte, error) {
 	msg := TransferHistoryMsg{
 		TransferHistory: TransferHistoryMsgInner{
-			Address:  fromAddress,
-			Key:      viewingKey,
-			Page:     page,
-			PageSize: pageSize,
+			Address:            fromAddress,
+			Key:                viewingKey,
+			Page:               page,
+			PageSize:           pageSize,
+			ShouldFilterDecoys: shouldFilterDecoys,
 		},
 	}
 	jsonMsg, err := json.Marshal(&msg)
@@ -655,13 +671,14 @@ func queryTransferHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page
 	return []byte(spacePad(MessageBlockSize, string(jsonMsg))), nil
 }
 
-func queryTransactionHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page uint32, pageSize uint32) ([]byte, error) {
+func queryTransactionHistoryMsg(fromAddress sdk.AccAddress, viewingKey string, page uint32, pageSize uint32, shouldFilterDecoys bool) ([]byte, error) {
 	msg := TransactionHistoryMsg{
 		TransactionHistory: TransactionHistoryMsgInner{
-			Address:  fromAddress,
-			Key:      viewingKey,
-			Page:     page,
-			PageSize: pageSize,
+			Address:            fromAddress,
+			Key:                viewingKey,
+			Page:               page,
+			PageSize:           pageSize,
+			ShouldFilterDecoys: shouldFilterDecoys,
 		},
 	}
 	jsonMsg, err := json.Marshal(&msg)
