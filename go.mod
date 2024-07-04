@@ -46,7 +46,7 @@ require (
 )
 
 require (
-	golang.org/x/text v0.14.0
+	golang.org/x/text v0.16.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20230913181813-007df8e322eb
 )
 
