@@ -18,6 +18,38 @@ use std::untrusted::fs::File;
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
 
+fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
+    let mut key_request = sgx_types::sgx_key_request_t {
+        key_name: sgx_types::SGX_KEYSELECT_SEAL,
+        key_policy: sgx_types::SGX_KEYPOLICY_MRENCLAVE | sgx_types::SGX_KEYPOLICY_MRSIGNER,
+        misc_mask: sgx_types::TSEAL_DEFAULT_MISCMASK,
+        ..Default::default()
+    };
+
+    if seed.len() > key_request.key_id.id.len() {
+        panic!("seed too long: {:?}", seed);
+    }
+
+    key_request.key_id.id[..seed.len()].copy_from_slice(seed);
+
+    key_request.attribute_mask.flags = sgx_types::TSEAL_DEFAULT_FLAGSMASK;
+
+    let mut key = sgx_key_128bit_t::default();
+    let res = unsafe { sgx_get_key(&key_request, &mut key) };
+
+    if res != sgx_status_t::SGX_SUCCESS {
+        panic!("sealing key derive failed: {}", res);
+    }
+
+    key
+}
+
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
+}
+
 pub fn write_to_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<()> {
     let mut f = File::create(filepath)
         .sgx_error_with_log(&format!("Creating file '{}' failed", filepath))?;

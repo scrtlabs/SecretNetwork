@@ -4,7 +4,6 @@ use core::convert::TryInto;
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
 use log::*;
-use sgx_types::sgx_key_128bit_t;
 use sgx_types::sgx_report_body_t;
 use sgx_types::sgx_status_t;
 use std::panic;
@@ -20,11 +19,11 @@ use enclave_crypto::consts::{
     PUBKEY_PATH, REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
-use lazy_static::lazy_static;
-use enclave_crypto::{ed25519::Ed25519PrivateKey, KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::migrate_file_from_2_17_safe;
+use enclave_utils::storage::SEALING_KDK;
 use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
 use enclave_utils::validator_set::VALIDATOR_SET_SEALING_PATH;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
@@ -463,41 +462,10 @@ pub fn save_attestation_combined(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
-    let mut key_request = sgx_types::sgx_key_request_t {
-        key_name: sgx_types::SGX_KEYSELECT_SEAL,
-        key_policy: sgx_types::SGX_KEYPOLICY_MRENCLAVE | sgx_types::SGX_KEYPOLICY_MRSIGNER,
-        misc_mask: sgx_types::TSEAL_DEFAULT_MISCMASK,
-        ..Default::default()
-    };
-
-    if seed.len() > key_request.key_id.id.len() {
-        panic!("seed too long: {:?}", seed);
-    }
-
-    key_request.key_id.id[..seed.len()].copy_from_slice(seed);
-
-    key_request.attribute_mask.flags = sgx_types::TSEAL_DEFAULT_FLAGSMASK;
-
-    sgx_tse::rsgx_get_key(&key_request).unwrap()
-}
-
-lazy_static! {
-    pub static ref SEALING_KDK: KeyPair = {
-        let mut buf = Ed25519PrivateKey::default();
-        let raw_key = buf.get_mut();
-
-        raw_key[0..16].copy_from_slice(&get_key_from_seed("seal.kdk.1".as_bytes()));
-        raw_key[16..32].copy_from_slice(&get_key_from_seed("seal.kdk.2".as_bytes()));
-
-        KeyPair::from(buf)
-    };
-}
-
-fn dh_xor(my_k: &KeyPair, other_k: &[u8; 32], data: &mut [u8; 32]) {
+fn dh_xor(my_k: &KeyPair, other_k: &[u8; 32], data: &mut [u8; 16]) {
     let dhk = my_k.diffie_hellman(other_k);
-    for i in 0..32 {
-        data[i] ^= dhk[i];
+    for i in 0..16 {
+        data[i] ^= dhk[i] ^ dhk[i + 16];
     }
 }
 
@@ -535,7 +503,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key_len: u32,
     flags: u32,
 ) -> sgx_status_t {
-    let mut report_data: [u8; 64] = [0; 64];
+    let mut report_data: [u8; 48] = [0; 48];
 
     let (kp, is_migration_report) = match 0x10 & flags {
         0x10 => {
@@ -545,10 +513,10 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
             let nnc = KeyPair::new().unwrap();
             let pub_k = &prev_report.report_data.d[0..32].try_into().unwrap();
 
-            let kdk = SEALING_KDK.get_privkey();
-            trace!("*** Sealing kdk: {:?}", kdk);
+            let kdk: &[u8; 16] = &SEALING_KDK;
+            //trace!("*** Sealing kdk: {:?}", kdk);
 
-            let mut dst: &mut [u8; 32] = (&mut report_data[32..64]).try_into().unwrap();
+            let mut dst: &mut [u8; 16] = (&mut report_data[32..48]).try_into().unwrap();
             dst.copy_from_slice(kdk);
 
             dh_xor(&nnc, pub_k, &mut dst);
@@ -725,13 +693,13 @@ pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
     let mut next_report = get_report_body(MIGRATION_CERT_PATH.as_str());
 
     let pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
-    let mut kdk: &mut [u8; 32] = (&mut next_report.report_data.d[32..64]).try_into().unwrap();
+    let mut kdk: &mut [u8; 16] = (&mut next_report.report_data.d[32..48]).try_into().unwrap();
 
     let kp = KEY_MANAGER.get_registration_key().unwrap();
 
     dh_xor(&kp, &pub_k, &mut kdk);
 
-    trace!("*** Sealing kdk: {:?}", kdk);
+    //trace!("*** Sealing kdk: {:?}", kdk);
 
     sgx_status_t::SGX_SUCCESS
 }
