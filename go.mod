@@ -37,7 +37,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tendermint/tendermint v0.34.27
 	github.com/tendermint/tm-db v0.6.7
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.24.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	gonum.org/v1/gonum v0.14.0
 	google.golang.org/genproto v0.0.0-20230913181813-007df8e322eb // indirect
@@ -46,7 +46,7 @@ require (
 )
 
 require (
-	golang.org/x/text v0.14.0
+	golang.org/x/text v0.16.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20230913181813-007df8e322eb
 )
 
@@ -154,9 +154,9 @@ require (
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/term v0.15.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/term v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230920204549-e6e6cdab5c13 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
