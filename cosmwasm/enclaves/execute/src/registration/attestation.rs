@@ -139,7 +139,7 @@ pub fn validate_enclave_version(
     api_key: &[u8],
     challenge: Option<&[u8]>,
 ) -> Result<(), sgx_status_t> {
-    let res_dcap = unsafe { get_attestation_report_dcap(&kp) };
+    let res_dcap = unsafe { get_attestation_report_dcap(&kp.get_pubkey()) };
     if res_dcap.is_ok() {
         return Ok(());
     }
@@ -433,12 +433,12 @@ fn test_sgx_call_res(
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn get_quote_ecdsa(_pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa(_pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     Err(sgx_status_t::SGX_ERROR_NO_DEVICE)
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa_untested(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let mut qe_target_info = sgx_target_info_t::default();
     let mut quote_size: u32 = 0;
     let mut rt: sgx_status_t = sgx_status_t::default();
@@ -459,7 +459,7 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), 
     trace!("ECDSA quote size = {}", quote_size);
 
     let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-    report_data.d[..32].copy_from_slice(pub_k);
+    report_data.d[..pub_k.len()].copy_from_slice(pub_k);
 
     let my_report: sgx_report_t = match rsgx_create_report(&qe_target_info, &report_data) {
         Ok(r) => r,
@@ -531,7 +531,7 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), 
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
-pub fn get_quote_ecdsa(pub_k: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+pub fn get_quote_ecdsa(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
     let (vec_quote, vec_coll) = get_quote_ecdsa_untested(pub_k)?;
 
     // test self

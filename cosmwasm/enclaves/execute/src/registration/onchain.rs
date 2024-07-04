@@ -44,7 +44,7 @@ fn get_current_block_time_s() -> i64 {
     return 0 as i64;
 }
 
-fn split_combined_cert(cert: *const u8, cert_len: u32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+pub fn split_combined_cert(cert: *const u8, cert_len: u32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let mut vec_cert: Vec<u8> = Vec::new();
     let mut vec_quote: Vec<u8> = Vec::new();
     let mut vec_coll: Vec<u8> = Vec::new();

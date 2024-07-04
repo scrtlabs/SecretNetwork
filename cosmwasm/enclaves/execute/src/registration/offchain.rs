@@ -1,9 +1,11 @@
 //!
+use core::convert::TryInto;
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
 use log::*;
 use sgx_types::sgx_key_128bit_t;
+use sgx_types::sgx_report_body_t;
 use sgx_types::sgx_status_t;
 use std::panic;
 use std::slice;
@@ -18,6 +20,7 @@ use enclave_crypto::consts::{
     PUBKEY_PATH, REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
+use lazy_static::lazy_static;
 use enclave_crypto::{ed25519::Ed25519PrivateKey, KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::pointers::validate_mut_slice;
@@ -27,8 +30,9 @@ use enclave_utils::validator_set::VALIDATOR_SET_SEALING_PATH;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
-
 use super::seed_service::get_next_consensus_seed_from_service;
+use crate::registration::attestation::verify_quote_ecdsa;
+use crate::registration::onchain::split_combined_cert;
 
 use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
@@ -382,9 +386,9 @@ unsafe fn get_attestation_report_epid(
 }
 
 pub unsafe fn get_attestation_report_dcap(
-    kp: &KeyPair,
+    pub_k: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
-    let (vec_quote, vec_coll) = match get_quote_ecdsa(&kp.get_pubkey()) {
+    let (vec_quote, vec_coll) = match get_quote_ecdsa(pub_k) {
         Ok(r) => r,
         Err(e) => {
             warn!("Error creating attestation report");
@@ -478,14 +482,37 @@ fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
     sgx_tse::rsgx_get_key(&key_request).unwrap()
 }
 
-fn get_migration_kp() -> KeyPair {
-    let mut buf = Ed25519PrivateKey::default();
-    let raw_key = buf.get_mut();
+lazy_static! {
+    pub static ref SEALING_KDK: KeyPair = {
+        let mut buf = Ed25519PrivateKey::default();
+        let raw_key = buf.get_mut();
 
-    raw_key[0..16].copy_from_slice(&get_key_from_seed("secret_migrate.1".as_bytes()));
-    raw_key[16..32].copy_from_slice(&get_key_from_seed("secret_migrate.2".as_bytes()));
+        raw_key[0..16].copy_from_slice(&get_key_from_seed("seal.kdk.1".as_bytes()));
+        raw_key[16..32].copy_from_slice(&get_key_from_seed("seal.kdk.2".as_bytes()));
 
-    KeyPair::from(buf)
+        KeyPair::from(buf)
+    };
+}
+
+fn dh_xor(my_k: &KeyPair, other_k: &[u8; 32], data: &mut [u8; 32]) {
+    let dhk = my_k.diffie_hellman(other_k);
+    for i in 0..32 {
+        data[i] ^= dhk[i];
+    }
+}
+
+fn get_report_body(path: &str) -> sgx_report_body_t {
+    let (_, vec_quote, vec_coll) = {
+        let mut f_in = File::open(path).unwrap();
+        let mut cert = vec![];
+        f_in.read_to_end(&mut cert).unwrap();
+
+        split_combined_cert(cert.as_ptr(), cert.len() as u32)
+    };
+
+    verify_quote_ecdsa(vec_quote.as_slice(), vec_coll.as_slice(), 0)
+        .unwrap()
+        .0
 }
 
 #[no_mangle]
@@ -508,10 +535,25 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key_len: u32,
     flags: u32,
 ) -> sgx_status_t {
+    let mut report_data: [u8; 64] = [0; 64];
+
     let (kp, is_migration_report) = match 0x10 & flags {
         0x10 => {
             // migration report
-            (get_migration_kp(), true)
+            let prev_report = get_report_body(CERT_COMBINED_PATH.as_str());
+
+            let nnc = KeyPair::new().unwrap();
+            let pub_k = &prev_report.report_data.d[0..32].try_into().unwrap();
+
+            let kdk = SEALING_KDK.get_privkey();
+            trace!("*** Sealing kdk: {:?}", kdk);
+
+            let mut dst: &mut [u8; 32] = (&mut report_data[32..64]).try_into().unwrap();
+            dst.copy_from_slice(kdk);
+
+            dh_xor(&nnc, pub_k, &mut dst);
+
+            (nnc, true)
         }
         _ => {
             // standard network registration report
@@ -541,7 +583,10 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     };
 
     let res_dcap = match 2 & flags {
-        0 => get_attestation_report_dcap(&kp),
+        0 => {
+            report_data[0..32].copy_from_slice(&kp.get_pubkey());
+            get_attestation_report_dcap(&report_data)
+        },
         _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
     };
 
@@ -676,5 +721,17 @@ pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
 
 #[no_mangle]
 pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
-    sgx_status_t::SGX_ERROR_UNEXPECTED
+    // migration report
+    let mut next_report = get_report_body(MIGRATION_CERT_PATH.as_str());
+
+    let pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
+    let mut kdk: &mut [u8; 32] = (&mut next_report.report_data.d[32..64]).try_into().unwrap();
+
+    let kp = KEY_MANAGER.get_registration_key().unwrap();
+
+    dh_xor(&kp, &pub_k, &mut kdk);
+
+    trace!("*** Sealing kdk: {:?}", kdk);
+
+    sgx_status_t::SGX_SUCCESS
 }
