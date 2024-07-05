@@ -4,8 +4,8 @@ go 1.21
 
 replace (
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v0.0.0-20240612161540-9bf1d0b79274
-	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.2
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240703093418-cff5d8cdc00c
+	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20240705091810-ec5bb61a3e75
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240705092556-88d76737af69
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.0.1
 )
 
