@@ -551,10 +551,10 @@ fi
 $SECRETCLI keys add --multisig=a,b,c --multisig-threshold 2 abc --home=$SECRETD_HOME
 address_abc=$($SECRETCLI keys show -a abc --keyring-backend ${KEYRING} --home=$SECRETD_HOME)
 
-$SECRETCLI q bank balance abc uscrt --output=json | jq '.balance.amount'
+$SECRETCLI q bank balance $address_abc uscrt --output=json | jq '.balance.amount'
 $SECRETCLI tx bank send $address_a $address_abc 100000uscrt --fees=2500uscrt -y --keyring-backend ${KEYRING} --home ${SECRETD_HOME}
 sleep 5s
-$SECRETCLI q bank balance abc uscrt --output=json | jq '.balance.amount'
+$SECRETCLI q bank balance $address_abc uscrt --output=json | jq '.balance.amount'
 
 unsigned_tx_file_multisig=$TMP_DIR/unsigned_tx_multisig.json
 signed_a=$TMP_DIR/aSig.json
@@ -586,7 +586,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 txhash=$(cat $tx_bc_ms | jq '.txhash' | tr -d '"')
-sleep 10s
+sleep 5s
 qtx_json=$(mktemp -p $TMP_DIR)
 $SECRETCLI q tx --type="hash" $txhash --output=json > $qtx_json
 if [ $? -ne 0 ]; then
