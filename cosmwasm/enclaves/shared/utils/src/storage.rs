@@ -454,6 +454,40 @@ pub fn migrate_file_from_2_17_safe(
     Ok(())
 }
 
+pub fn export_file_to_kdk_safe(s_path: &str, kdk: &sgx_key_128bit_t) -> Result<(), sgx_status_t> {
+    if Path::new(s_path).exists() {
+        let mut f_in = match SgxFile::open(s_path) {
+            Err(err) => {
+                info!("Can't open input File {}, {}", s_path, err);
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+            Ok(f) => f,
+        };
+
+        let mut data = vec![];
+        f_in.read_to_end(&mut data)
+            .sgx_error_with_log(&format!("Reading sealed file '{}' failed", s_path))?;
+
+        let s_path_out = s_path.to_owned() + ".exp";
+        let mut f_out = match SgxFile::create_ex(&s_path_out, &kdk) {
+            Err(err) => {
+                info!("Can't open output File {}, {}", s_path_out, err);
+                return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            }
+            Ok(f) => f,
+        };
+
+        f_out
+            .write_all(data.as_slice())
+            .sgx_error_with_log(&format!("Writing sealed file '{}' failed", s_path_out))?;
+
+        info!("File {} successfully exported", s_path);
+    } else {
+        info!("File {} doesn't exist, skipping", s_path);
+    }
+
+    Ok(())
+}
 
 /*
 pub fn test_migration_once(size: usize) {
