@@ -22,6 +22,7 @@ use enclave_crypto::consts::{
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::pointers::validate_mut_slice;
+use enclave_utils::storage::export_file_to_kdk_safe;
 use enclave_utils::storage::migrate_file_from_2_17_safe;
 use enclave_utils::storage::SEALING_KDK;
 use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
@@ -554,7 +555,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
         0 => {
             report_data[0..32].copy_from_slice(&kp.get_pubkey());
             get_attestation_report_dcap(&report_data)
-        },
+        }
         _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
     };
 
@@ -687,10 +688,20 @@ pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
+fn is_export_approved(_report: &sgx_report_body_t) -> bool {
+    // TODO
+    false
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
     // migration report
     let mut next_report = get_report_body(MIGRATION_CERT_PATH.as_str());
+
+    if !is_export_approved(&next_report) {
+        trace!("Export sealing not authorized");
+        return sgx_status_t::SGX_ERROR_NO_PRIVILEGE;
+    }
 
     let pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
     let mut kdk: &mut [u8; 16] = (&mut next_report.report_data.d[32..48]).try_into().unwrap();
@@ -698,6 +709,28 @@ pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
     let kp = KEY_MANAGER.get_registration_key().unwrap();
 
     dh_xor(&kp, &pub_k, &mut kdk);
+
+    if let Err(e) = export_file_to_kdk_safe(&REGISTRATION_KEY_SEALING_PATH, &kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&GENESIS_CONSENSUS_SEED_SEALING_PATH, &kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&CURRENT_CONSENSUS_SEED_SEALING_PATH, &kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&REK_PATH, &kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&IRS_PATH, &kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&VALIDATOR_SET_SEALING_PATH, &kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&TX_BYTES_SEALING_PATH, &kdk) {
+        return e;
+    }
 
     //trace!("*** Sealing kdk: {:?}", kdk);
 
