@@ -469,7 +469,7 @@ pub fn export_file_to_kdk_safe(s_path: &str, kdk: &sgx_key_128bit_t) -> Result<(
             .sgx_error_with_log(&format!("Reading sealed file '{}' failed", s_path))?;
 
         let s_path_out = s_path.to_owned() + ".exp";
-        let mut f_out = match SgxFile::create_ex(&s_path_out, &kdk) {
+        let mut f_out = match SgxFile::create_ex(&s_path_out, kdk) {
             Err(err) => {
                 info!("Can't open output File {}, {}", s_path_out, err);
                 return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
