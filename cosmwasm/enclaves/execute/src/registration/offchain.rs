@@ -421,8 +421,8 @@ pub fn save_attestation_combined(
         size_dcap_c = vec_coll.len() as u32;
 
         if !is_migration_report {
-            write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str()).unwrap();
-            write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str()).unwrap();
+            write_to_untrusted(vec_quote, ATTESTATION_DCAP_PATH.as_str()).unwrap();
+            write_to_untrusted(vec_coll, COLLATERAL_DCAP_PATH.as_str()).unwrap();
         }
     }
 
@@ -517,10 +517,10 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
             let kdk: &[u8; 16] = &SEALING_KDK;
             //trace!("*** Sealing kdk: {:?}", kdk);
 
-            let mut dst: &mut [u8; 16] = (&mut report_data[32..48]).try_into().unwrap();
+            let dst: &mut [u8; 16] = (&mut report_data[32..48]).try_into().unwrap();
             dst.copy_from_slice(kdk);
 
-            dh_xor(&nnc, pub_k, &mut dst);
+            dh_xor(&nnc, pub_k, dst);
 
             (nnc, true)
         }
@@ -704,31 +704,31 @@ pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
     }
 
     let pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
-    let mut kdk: &mut [u8; 16] = (&mut next_report.report_data.d[32..48]).try_into().unwrap();
+    let kdk: &mut [u8; 16] = (&mut next_report.report_data.d[32..48]).try_into().unwrap();
 
     let kp = KEY_MANAGER.get_registration_key().unwrap();
 
-    dh_xor(&kp, &pub_k, &mut kdk);
+    dh_xor(&kp, pub_k, kdk);
 
-    if let Err(e) = export_file_to_kdk_safe(&REGISTRATION_KEY_SEALING_PATH, &kdk) {
+    if let Err(e) = export_file_to_kdk_safe(&REGISTRATION_KEY_SEALING_PATH, kdk) {
         return e;
     }
-    if let Err(e) = export_file_to_kdk_safe(&GENESIS_CONSENSUS_SEED_SEALING_PATH, &kdk) {
+    if let Err(e) = export_file_to_kdk_safe(&GENESIS_CONSENSUS_SEED_SEALING_PATH, kdk) {
         return e;
     }
-    if let Err(e) = export_file_to_kdk_safe(&CURRENT_CONSENSUS_SEED_SEALING_PATH, &kdk) {
+    if let Err(e) = export_file_to_kdk_safe(&CURRENT_CONSENSUS_SEED_SEALING_PATH, kdk) {
         return e;
     }
-    if let Err(e) = export_file_to_kdk_safe(&REK_PATH, &kdk) {
+    if let Err(e) = export_file_to_kdk_safe(&REK_PATH, kdk) {
         return e;
     }
-    if let Err(e) = export_file_to_kdk_safe(&IRS_PATH, &kdk) {
+    if let Err(e) = export_file_to_kdk_safe(&IRS_PATH, kdk) {
         return e;
     }
-    if let Err(e) = export_file_to_kdk_safe(&VALIDATOR_SET_SEALING_PATH, &kdk) {
+    if let Err(e) = export_file_to_kdk_safe(&VALIDATOR_SET_SEALING_PATH, kdk) {
         return e;
     }
-    if let Err(e) = export_file_to_kdk_safe(&TX_BYTES_SEALING_PATH, &kdk) {
+    if let Err(e) = export_file_to_kdk_safe(&TX_BYTES_SEALING_PATH, kdk) {
         return e;
     }
 
