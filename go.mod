@@ -4,16 +4,16 @@ go 1.21
 
 replace (
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v0.0.0-20240709111432-a66f64b2f1d4
-	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.0-dev.0.20240710074838-baf366b5af1a
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240709112748-68e02040d5d8
+	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.0-dev.0.20240716092925-e358458fc927
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240716091438-a02a17a7d506
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.0.0-alpha.1.0.20240710081403-73fd37d68158
 )
 
 require (
-	github.com/cometbft/cometbft v0.38.7
+	github.com/cometbft/cometbft v0.38.9
 	github.com/cosmos/cosmos-sdk v0.50.4
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/gogoproto v1.4.12
+	github.com/cosmos/gogoproto v1.5.0
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8 v8.0.1
 	github.com/cosmos/ibc-go/v8 v8.1.0
 	github.com/golang/protobuf v1.5.4
@@ -148,6 +148,7 @@ require (
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/hdevalence/ed25519consensus v0.1.0 // indirect
