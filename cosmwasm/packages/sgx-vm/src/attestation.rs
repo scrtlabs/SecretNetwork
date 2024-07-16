@@ -17,6 +17,7 @@ extern "C" {
         retval: *mut sgx_status_t,
         api_key: *const u8,
         api_key_len: u32,
+        flags: u32,
     ) -> sgx_status_t;
     pub fn ecall_authenticate_new_node(
         eid: sgx_enclave_id_t,
@@ -84,6 +85,7 @@ pub extern "C" fn ocall_get_sn_tss_socket(ret_fd: *mut c_int) -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ocall_get_quote(
     p_sigrl: *const u8,
@@ -136,6 +138,23 @@ pub extern "C" fn ocall_get_quote(
     ret
 }
 
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn ocall_get_quote(
+    _p_sigrl: *const u8,
+    _sigrl_len: u32,
+    _p_report: *const sgx_report_t,
+    _quote_type: sgx_quote_sign_type_t,
+    _p_spid: *const sgx_spid_t,
+    _p_nonce: *const sgx_quote_nonce_t,
+    _p_qe_report: *mut sgx_report_t,
+    _p_quote: *mut u8,
+    _maxlen: u32,
+    _p_quote_len: *mut u32,
+) -> sgx_status_t {
+    sgx_status_t::SGX_ERROR_SERVICE_UNAVAILABLE
+}
+
 #[no_mangle]
 pub extern "C" fn ocall_get_update_info(
     platform_blob: *const sgx_platform_info_t,
@@ -145,7 +164,7 @@ pub extern "C" fn ocall_get_update_info(
     unsafe { sgx_report_attestation_status(platform_blob, enclave_trusted, update_info) }
 }
 
-pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
+pub fn create_attestation_report_u(api_key: &[u8], flags: u32) -> SgxResult<()> {
     // Bind the token to a local variable to ensure its
     // destructor runs in the end of the function
     let enclave_access_token = ENCLAVE_DOORBELL
@@ -156,7 +175,7 @@ pub fn create_attestation_report_u(api_key: &[u8]) -> SgxResult<()> {
     let eid = enclave.geteid();
     let mut retval = sgx_status_t::SGX_SUCCESS;
     let status = unsafe {
-        ecall_get_attestation_report(eid, &mut retval, api_key.as_ptr(), api_key.len() as u32)
+        ecall_get_attestation_report(eid, &mut retval, api_key.as_ptr(), api_key.len() as u32, flags)
     };
 
     if status != sgx_status_t::SGX_SUCCESS {

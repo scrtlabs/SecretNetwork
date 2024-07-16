@@ -54,7 +54,7 @@ func handleRaAuthenticate(ctx sdk.Context, k Keeper, msg *types.RaAuthenticate) 
 		return nil, err
 	}
 
-	pubkey, err := ra.VerifyRaCert(msg.Certificate)
+	pubkey, err := ra.VerifyCombinedCert(msg.Certificate)
 	if err != nil {
 		return nil, err
 	}

@@ -36,6 +36,7 @@ import (
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	sigtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
+
 	// "github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -52,8 +53,7 @@ import (
 	v1_10 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.10"
 	v1_11 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.11"
 	v1_12 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.12"
-
-	// v1_3 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.3"
+	v1_13 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.13"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
@@ -128,6 +128,7 @@ var (
 		v1_10.Upgrade,
 		v1_11.Upgrade,
 		v1_12.Upgrade,
+		v1_13.Upgrade,
 	}
 )
 

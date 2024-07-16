@@ -4,9 +4,16 @@ go 1.21
 
 replace (
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v0.0.0-20240709111432-a66f64b2f1d4
-	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.0-dev.0.20240716092925-e358458fc927
 	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240716091438-a02a17a7d506
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.0.0-alpha.1.0.20240710081403-73fd37d68158
+	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
+	// PFM: v4.1.1 + https://github.com/cosmos/ibc-apps/commit/455757bb5771c29cf2f83b59e37f6513e07c92be.patch
+	github.com/cosmos/ibc-apps/v4 => github.com/scrtlabs/ibc-apps/v4 v4.1.2-0.20240312165106-908dc3766519
+	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	github.com/scrtlabs/tm-secret-enclave => github.com/scrtlabs/tm-secret-enclave v1.11.1
+	github.com/tendermint/tendermint => github.com/scrtlabs/tendermint v1.9.0-scrt.0.20230802144651-d62916253d52
+	// enforce grpc version
+	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
 
 require (
@@ -17,6 +24,8 @@ require (
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8 v8.0.1
 	github.com/cosmos/ibc-go/v8 v8.1.0
 	github.com/golang/protobuf v1.5.4
+	github.com/cosmos/ibc-go/v4 v4.6.0
+	github.com/gogo/protobuf v1.3.3
 	github.com/google/gofuzz v1.2.0
 	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
@@ -103,6 +112,11 @@ require (
 	github.com/cosmos/rosetta-sdk-go v0.10.0 // indirect
 	github.com/creachadair/atomicfile v0.3.1 // indirect
 	github.com/creachadair/tomledit v0.0.24 // indirect
+	github.com/cometbft/cometbft-db v0.7.0 // indirect
+	github.com/cosmos/cosmos-db v0.0.0-20221226095112-f3c38ecb5e32 // indirect
+	github.com/cosmos/cosmos-proto v1.0.0-beta.1 // indirect
+	github.com/cosmos/gorocksdb v1.2.0 // indirect
+	github.com/creachadair/taskgroup v0.3.2 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
@@ -216,6 +230,7 @@ require (
 	google.golang.org/api v0.162.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
+	go.uber.org/atomic v1.10.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -7,8 +7,8 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2004-1.1.5
-ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.17
+ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2004-1.1.6
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.20-dcap
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
@@ -312,7 +312,7 @@ WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/
 
 COPY check-hw check-hw
 
-RUN STORAGE_PATH=`echo ${VERSION} | sed -e 's/\.//g' | head -c 2` \
+RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O check-hw/check_hw_enclave.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librust_cosmwasm_enclave.signed.so
 COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so check-hw/check_hw_enclave_testnet.so
 

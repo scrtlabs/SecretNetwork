@@ -27,6 +27,7 @@ use cosmwasm_sgx_vm::{
 use cosmwasm_sgx_vm::{
     create_attestation_report_u, untrusted_get_encrypted_genesis_seed,
     untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
+    untrusted_migrate_sealing,
 };
 
 use ctor::ctor;
@@ -195,7 +196,11 @@ pub extern "C" fn init_node(
 }
 
 #[no_mangle]
-pub extern "C" fn create_attestation_report(api_key: Buffer, err: Option<&mut Buffer>) -> bool {
+pub extern "C" fn create_attestation_report(
+    api_key: Buffer,
+    flags: u32,
+    err: Option<&mut Buffer>,
+) -> bool {
     let api_key_slice = match unsafe { api_key.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
@@ -204,7 +209,7 @@ pub extern "C" fn create_attestation_report(api_key: Buffer, err: Option<&mut Bu
         Some(r) => r,
     };
 
-    if let Err(status) = create_attestation_report_u(api_key_slice) {
+    if let Err(status) = create_attestation_report_u(api_key_slice, flags) {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }
@@ -836,4 +841,15 @@ pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
             Buffer::from_vec(r.to_vec())
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn migrate_sealing() -> bool {
+    if let Err(e) = untrusted_migrate_sealing() {
+        error!("migrate_sealing error: {}", e);
+        return false;
+    }
+
+    clear_error();
+    true
 }

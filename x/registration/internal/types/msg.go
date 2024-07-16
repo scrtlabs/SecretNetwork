@@ -7,10 +7,6 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const (
-	MaxCertificateSize = 20 * 1024
-)
-
 type PublicKey []byte
 
 func (msg RaAuthenticate) Route() string {
@@ -34,10 +30,6 @@ func (msg RaAuthenticate) ValidateBasic() error {
 		return sdkerrors.ErrInvalidRequest.Wrap("Authenticating certificate cannot be empty")
 	}
 
-	if len(msg.Certificate) > MaxCertificateSize {
-		return sdkerrors.ErrInvalidRequest.Wrap("certificate length too large")
-	}
-
 	return validateCertificate(msg.Certificate)
 }
 
@@ -51,7 +43,7 @@ func (msg RaAuthenticate) GetSigners() []string {
 
 func validateCertificate(cert ra.Certificate) error {
 	// todo: add public key verification
-	_, err := ra.VerifyRaCert(cert)
+	_, err := ra.VerifyCombinedCert(cert)
 	if err != nil {
 		return xerrors.Errorf("Certificate validation failed: %v", err)
 	}

@@ -8,6 +8,7 @@ package api
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"syscall"
@@ -89,6 +90,17 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 	_, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
+	}
+	return true, nil
+}
+
+func MigrateSealing() (bool, error) {
+	ret, err := C.migrate_sealing()
+	if err != nil {
+		return false, err
+	}
+	if !ret {
+		return false, errors.New("sealing migration failed")
 	}
 	return true, nil
 }
@@ -423,12 +435,20 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(apiKey []byte) (bool, error) {
+func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool) (bool, error) {
 	errmsg := C.Buffer{}
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.create_attestation_report(apiKeySlice, &errmsg)
+	flags := u32(0)
+	if no_epid {
+		flags |= u32(1)
+	}
+	if no_dcap {
+		flags |= u32(2)
+	}
+
+	_, err := C.create_attestation_report(apiKeySlice, flags, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}

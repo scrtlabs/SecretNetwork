@@ -10,7 +10,7 @@ use crate::{enclave_api::ecall_check_patch_level, types::EnclaveDoorbell};
 
 use enclave_ffi_types::NodeAuthResult;
 
-const ENCLAVE_FILE_TESTNET: &str = "check_hw_testnet_enclave.so";
+const ENCLAVE_FILE_TESTNET: &str = "check_hw_enclave_testnet.so";
 const ENCLAVE_FILE_MAINNET: &str = "check_hw_enclave.so";
 const TCS_NUM: u8 = 1;
 
