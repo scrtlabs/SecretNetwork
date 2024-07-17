@@ -122,6 +122,7 @@ COPY app app
 COPY go.mod .
 COPY go.sum .
 COPY cmd cmd
+COPY eip191 eip191
 COPY Makefile .
 RUN true
 COPY client client
