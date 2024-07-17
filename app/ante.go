@@ -15,8 +15,8 @@ import (
 type HandlerOptions struct {
 	ante.HandlerOptions
 
-	IBCKeeper         *keeper.Keeper
-	WasmConfig        *compute.WasmConfig
+	IBCKeeper             *keeper.Keeper
+	WasmConfig            *compute.WasmConfig
 	TXCounterStoreService store.KVStoreService
 }
 
@@ -41,6 +41,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 	anteDecorators := []sdk.AnteDecorator{
 		compute.NewCountTXDecorator(options.TXCounterStoreService),
 		ante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
+		ante.NewExtensionOptionsDecorator(nil),
 		ante.NewValidateBasicDecorator(),
 		ante.NewTxTimeoutHeightDecorator(),
 		ante.NewValidateMemoDecorator(options.HandlerOptions.AccountKeeper),
