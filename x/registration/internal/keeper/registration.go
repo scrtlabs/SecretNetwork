@@ -75,7 +75,7 @@ func (k Keeper) SetRegistrationInfo_Verified(ctx sdk.Context, certificate types.
 	store := k.storeService.OpenKVStore(ctx)
 	// fmt.Println("pubkey", hex.EncodeToString(publicKey))
 	// fmt.Println("EncryptedSeed", hex.EncodeToString(certificate.EncryptedSeed))
-	err = store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
+	err := store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
 	if err != nil {
 		ctx.Logger().Error("set registration info", "store", err.Error())
 		return err

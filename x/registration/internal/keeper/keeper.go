@@ -229,10 +229,11 @@ func (k Keeper) RegisterNode(ctx sdk.Context, certificate ra.Certificate) ([]byt
 		EncryptedSeed: encSeed,
 	}
 
+	var err error
 	if isSimulationMode(ctx) {
-		err := k.SetRegistrationInfo(ctx, regInfo)
+		err = k.SetRegistrationInfo(ctx, regInfo)
 	} else {
-		err := k.SetRegistrationInfo_Verified(ctx, regInfo, publicKey)
+		err = k.SetRegistrationInfo_Verified(ctx, regInfo, publicKey)
 	}
 
 	if err != nil {
