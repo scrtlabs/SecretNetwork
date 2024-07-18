@@ -212,7 +212,7 @@ This repo also uses submodules:
 cd tm-secret-enclave
 git submodule init
 git submodule update --remote
-``
+```
 and build _tendermint_enclave.so_:
 ```
 make build-rust
