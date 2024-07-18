@@ -146,6 +146,16 @@ ln -s $SGX_HOME/lib64/libsgx_epid.so $SGX_HOME/sdk_libs/libsgx_epid.so
 as this library will be required during building.
 
 Note: If you are using WSL you'll need to use the 5.15 kernel which you can find how to do [here](https://github.com/scrtlabs/SecretNetwork/blob/master/docs/SGX%20on%20WSL%20(SW).md), otherwise you'll have to run anything SGX related only in docker
+
+### Install DCAP
+```
+sudo apt-get install libsgx-epid libsgx-quote-ex libsgx-dcap-ql
+```
+assume LIB_PATH points to /usr/lib/x86_64-linux-gnu/
+```
+sudo ln -s $LIB_PATH/libsgx_dcap_ql.so.1 $LIB_PATH/libsgx_dcap_ql.so
+sudo ln -s $LIB_PATH/libsgx_dcap_quoteverify.so.1 $LIB_PATH/libsgx_dcap_quoteverify.so
+```
   
 ### Install Xargo
 
