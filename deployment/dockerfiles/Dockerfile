@@ -344,9 +344,9 @@ FROM release-image as build-localsecret
 RUN apt-get update && apt-get install -y vim-tiny gdb
 
 # too long, copy local
-RUN curl -LS1 https://go.dev/dl/go1.22.3.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
+RUN curl -LS1 https://go.dev/dl/go1.22.3.linux-amd64.tar.gz | tar -C /usr/local -xz
 # COPY go1.22.3.linux-amd64.tar.gz go1.22.3.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
+# RUN tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
 
 RUN /usr/local/go/bin/go install github.com/go-delve/delve/cmd/dlv@latest
 
