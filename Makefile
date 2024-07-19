@@ -172,7 +172,7 @@ build-secret: build-linux
 
 build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES)" FEATURES_U="$(FEATURES_U)  light-client-validation go-tests" SGX_MODE="$(SGX_MODE)" $(MAKE) -C go-cosmwasm build-rust
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES) light-client-validation" FEATURES_U="$(FEATURES_U)  light-client-validation go-tests" SGX_MODE="$(SGX_MODE)" $(MAKE) -C go-cosmwasm build-rust
 
 build-tm-secret-enclave:
 	git clone https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
