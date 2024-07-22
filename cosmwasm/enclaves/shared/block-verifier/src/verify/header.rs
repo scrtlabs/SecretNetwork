@@ -4,6 +4,7 @@ use tendermint::block::signed_header::SignedHeader;
 use tendermint::block::{Commit, Header};
 use tendermint::validator::Set;
 use tendermint_light_client_verifier::types::UntrustedBlockState;
+use tendermint_proto::v0_38::types::Header as RawHeader;
 use tendermint_proto::Protobuf;
 
 use crate::verify::block::verify_block;
@@ -14,7 +15,7 @@ pub fn validate_block_header(
     height: u64,
     commit: Commit,
 ) -> Result<SignedHeader, sgx_status_t> {
-    let header = Header::decode(block_header_slice).map_err(|e| {
+    let header = <Header as Protobuf<RawHeader>>::decode(block_header_slice).map_err(|e| {
         error!("Error parsing header from proto: {:?}", e);
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     })?;
