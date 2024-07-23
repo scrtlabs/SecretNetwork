@@ -69,8 +69,10 @@ DIR=$(dirname "${THIS}")
 
 # Setup LCD
 perl -i -pe 's;address = "tcp://localhost:1317";address = "tcp://0.0.0.0:1316";' ${SCRT_HOME}/config/app.toml
+perl -i -pe 's;address = "tcp://localhost:9090";address = "tcp://0.0.0.0:9090";' ${SCRT_HOME}/config/app.toml
 perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ${SCRT_HOME}/config/app.toml
 perl -i -pe 's/concurrency = false/concurrency = true/' ${SCRT_HOME}/config/app.toml
+perl -i -pe 's;laddr = "tcp://127.0.0.1:26657";laddr = "tcp://0.0.0.0:26657";' ${SCRT_HOME}/config/config.toml
 
 # Prevent max connections error
 perl -i -pe 's/max_subscription_clients.+/max_subscription_clients = 100/' ${SCRT_HOME}/config/config.toml
@@ -78,10 +80,11 @@ perl -i -pe 's/max_subscriptions_per_client.+/max_subscriptions_per_client = 50/
 
 CreateKeys
 SCRT_WALLET=a
+secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_combined.bin -y --fees 3000uscrt --from ${SCRT_WALLET} --chain-id ${SCRT_CHAINID}
 
-txhash=$(secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_cert.der -y --fees 3000uscrt --from ${SCRT_WALLET} --chain-id ${SCRT_CHAINID} | jq '.txhash' | tr -d '"')
+# txhash=$(secretd tx register auth ${SCRT_SGX_STORAGE}/attestation_combined.bin -y --fees 3000uscrt --from ${SCRT_WALLET} --chain-id ${SCRT_CHAINID} | jq '.txhash' | tr -d '"')
 sleep 5s
-secretd q tx --type hash ${txhash}
+# secretd q tx --type hash ${txhash}
 # pull and check node encryption seed from the network
 SEED=$(secretd q register seed ${PUBLIC_KEY} | cut -c 3-)
 echo ${SEED}
@@ -136,12 +139,12 @@ perl -i -pe 's/^minimum-gas-prices = .+?$/minimum-gas-prices = "0.0125uscrt"/' $
 secretd tendermint show-node-id
 
 # no need to use bootstrap node at this point - point to local secretd
-secretd config set client node tcp://10.14.0.6:26657
+secretd config set client node tcp://0.0.0.0:26657
 
 # CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
 setsid lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
 # Start CORs proxy right before secretd
-secretd start --rpc.laddr tcp://10.14.0.6:26657
+nohup secretd start --rpc.laddr tcp://0.0.0.0:26657 &> secretd.full.log &
 
 
 

@@ -38,7 +38,7 @@ function execShellCommand(cmd) {
  * @returns result of executing the command.
  */
 async function send_command(src_key_name, src_address, dest_address, amount) {
-  const send_message = `secretd tx bank send ${src_address} ${dest_address} ${amount}${DENOM} --from ${src_key_name} --gas-prices 0.25uscrt -y`;
+  const send_message = `secretd tx bank send ${src_address} ${dest_address} ${amount}${DENOM} --from ${src_key_name} --gas-prices 0.25uscrt -y 2> /dev/null`;
   console.log(`send_message: \n ${send_message}`);
 
   const result = await execShellCommand(send_message);
@@ -57,7 +57,7 @@ async function get_address(key_name) {
     return faucet_address;
   }
 
-  const list_keys = "secretd keys list";
+  const list_keys = "secretd keys list --output json 2> /dev/null";
   const result = await execShellCommand(list_keys);
 
   for (index in result) {

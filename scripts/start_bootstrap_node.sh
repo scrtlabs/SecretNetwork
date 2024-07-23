@@ -4,9 +4,9 @@ set -oe errexit
 
 export SGX_MODE=SW
 SGX_DEBUG=0
-LOG_LEVEL=${LOG_LEVEL:-"trace"}
+LOG_LEVEL=${LOG_LEVEL:-"info"}
 
-ENABLE_FAUCET=${1:-"true"}
+ENABLE_FAUCET=${ENABLE_FAUCET:-"true"}
 KEYRING=${SCRT_KEYRING:-"test"}
 MONIKER=${SCRT_MONIKER:-"scrt"}
 
@@ -77,6 +77,7 @@ if [ ! -e $GENESIS_file ]; then
   perl -i -pe 's;address = "localhost:9090";address = "0.0.0.0:9090";' ${SCRT_HOME}/config/app.toml
   perl -i -pe 's/enable-unsafe-cors = false/enable-unsafe-cors = true/' ${SCRT_HOME}/config/app.toml
   perl -i -pe 's/concurrency = false/concurrency = true/' ${SCRT_HOME}/config/app.toml
+  perl -i -pe 's;laddr = "tcp://127.0.0.1:26657";laddr = "tcp://0.0.0.0:26657";' ${SCRT_HOME}/config/config.toml
 
   # Prevent max connections error
   perl -i -pe 's/max_subscription_clients.+/max_subscription_clients = 100/' ${SCRT_HOME}/config/config.toml
@@ -139,4 +140,4 @@ fi
 # CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
 setsid lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
 
-RUST_BACKTRACE=1 secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap --log_level ${LOG_LEVEL}
+nohup secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap --log_level ${LOG_LEVEL} &> secretd.bootstrap.log &
