@@ -78,7 +78,7 @@ impl SecretMessage {
         nonce: IoNonce,
         user_public_key: Ed25519PublicKey,
     ) -> Result<Self, EnclaveError> {
-        let msg = base64::decode(&msg_b64.to_owned().into_bytes()).map_err(|err| {
+        let msg = base64::decode(msg_b64.to_owned().into_bytes()).map_err(|err| {
             error!(
                 "got an error while trying to decode msg to next contract as base64 {:?}: {:?}",
                 msg_b64, err

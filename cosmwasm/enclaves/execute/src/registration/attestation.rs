@@ -862,8 +862,8 @@ fn parse_response_attn_report(resp: &[u8]) -> SgxResult<(String, Vec<u8>, Vec<u8
         info!("Attestation report: {}", attn_report);
     }
 
-    let sig_bytes = base64::decode(&sig).unwrap();
-    let sig_cert_bytes = base64::decode(&sig_cert).unwrap();
+    let sig_bytes = base64::decode(sig).unwrap();
+    let sig_cert_bytes = base64::decode(sig_cert).unwrap();
     // len_num == 0
     Ok((attn_report, sig_bytes, sig_cert_bytes))
 }
