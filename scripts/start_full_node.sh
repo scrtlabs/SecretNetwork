@@ -142,7 +142,8 @@ secretd tendermint show-node-id
 secretd config set client node tcp://0.0.0.0:26657
 
 # CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
-setsid lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
+nohup lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
+# setsid lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
 # Start CORs proxy right before secretd
 nohup secretd start --rpc.laddr tcp://0.0.0.0:26657 &> secretd.full.log &
 

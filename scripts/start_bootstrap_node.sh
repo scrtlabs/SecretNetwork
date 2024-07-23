@@ -138,6 +138,7 @@ if [ "${ENABLE_FAUCET}" = "true" ]; then
 fi
 
 # CORS bypass proxy [if missing, install via npm: npm install -g local-cors-proxy]
-setsid lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
+nohup lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
+# setsid lcp --proxyUrl http://0.0.0.0:1316 --port 1317 --proxyPartial '' &
 
 nohup secretd start --rpc.laddr tcp://0.0.0.0:26657 --bootstrap --log_level ${LOG_LEVEL} &> secretd.bootstrap.log &
