@@ -364,5 +364,6 @@ jobs:
           perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
           yarn
           docker compose -f ./test/docker-compose.yml up -d > docker-compose.log 2>&1
+          sleep 10
           yarn test-ci || { cat docker-compose.log; exit 1; }
           make kill-localsecret
