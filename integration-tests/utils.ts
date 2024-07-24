@@ -11,6 +11,29 @@ import {
 import { State as ChannelState } from "secretjs/dist/grpc_gateway/ibc/core/channel/v1/channel.pb";
 import { State as ConnectionState } from "secretjs/dist/grpc_gateway/ibc/core/connection/v1/connection.pb";
 
+export function getValueFromEvents(
+  events: any[] | undefined,
+  key: string,
+  counter = 1,
+): string {
+  if (!events) {
+    return "";
+  }
+
+ let cnt = 0;
+  for (const e of events) {
+    for (const a of e.attributes) {
+      if (`${e.type}.${a.key}` === key) {
+        ++cnt;    
+        if (cnt === counter)
+            return String(a.value);
+      }
+    }
+  }
+
+  return "";
+}
+
 export class Contract {
   address: string;
   codeId: number;
