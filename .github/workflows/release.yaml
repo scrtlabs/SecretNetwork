@@ -278,9 +278,9 @@ jobs:
     needs: [
         native-build-cli,
         build-deb-testnet,
-        build-deb-mainnet,
+        # build-deb-mainnet,
         MacOS-ARM64-CLI,
-        check-hw-tool,
+        # check-hw-tool,
         # check-hw-tool-mainnet
       ]
     runs-on: ubuntu-20.04
