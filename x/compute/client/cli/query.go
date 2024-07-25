@@ -48,8 +48,47 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdQueryLabel(),
 		GetCmdCodeHashByContractAddress(),
 		GetCmdGetContractStateSmart(),
+		GetCmdCodeHashByCodeID(),
 	)
 	return queryCmd
+}
+
+// GetCmdCodeHashByID return the code hash of a contract by ID
+func GetCmdCodeHashByCodeID() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "contract-hash-by-id [code_id]",
+		Short: "Return the code hash of a contract represented by ID",
+		Long:  "Return the code hash of a contract represented by ID",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			codeID, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(grpcCtx)
+			res, err := queryClient.Code(
+				context.Background(),
+				&types.QueryByCodeIdRequest{
+					CodeId: codeID,
+				},
+			)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("0x%s\n", res.CodeHash)
+			return nil
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 func GetCmdQueryLabel() *cobra.Command {
