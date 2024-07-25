@@ -103,7 +103,7 @@ func GetCmdDecryptText() *cobra.Command {
 			"is required for data that is unavailable to be decrypted using the 'query compute tx' command",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			grpcCtx, err := client.GetClientQueryContext(cmd)
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -120,7 +120,7 @@ func GetCmdDecryptText() *cobra.Command {
 				return fmt.Errorf("error while parsing encrypted blob: %w", err)
 			}
 
-			wasmCtx := wasmUtils.WASMContext{CLIContext: grpcCtx}
+			wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
 			if err != nil {
 				return fmt.Errorf("error while getting tx sender key pair: %w", err)
@@ -152,7 +152,7 @@ func GetCmdCodeHashByCodeID() *cobra.Command {
 		Long:  "Return the code hash of a contract represented by ID",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			grpcCtx, err := client.GetClientQueryContext(cmd)
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -162,7 +162,7 @@ func GetCmdCodeHashByCodeID() *cobra.Command {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(grpcCtx)
+			queryClient := types.NewQueryClient(clientCtx)
 			res, err := queryClient.Code(
 				context.Background(),
 				&types.QueryByCodeIdRequest{
@@ -189,12 +189,12 @@ func GetCmdQueryLabel() *cobra.Command {
 		Long:  "Check if a label is in use",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			grpcCtx, err := client.GetClientQueryContext(cmd)
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			res, err := GetContractAddressByLabel(args[0], grpcCtx)
+			res, err := GetContractAddressByLabel(args[0], clientCtx)
 
 			if err != nil {
 				if err == sdkerrors.ErrUnknownAddress {
@@ -223,7 +223,7 @@ func GetCmdQueryCode() *cobra.Command {
 		Long:  "Downloads wasm bytecode for given code id",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			grpcCtx, err := client.GetClientQueryContext(cmd)
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
@@ -233,7 +233,7 @@ func GetCmdQueryCode() *cobra.Command {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(grpcCtx)
+			queryClient := types.NewQueryClient(clientCtx)
 			res, err := queryClient.Code(context.Background(), &types.QueryByCodeIdRequest{
 				CodeId: codeID,
 			})
@@ -263,11 +263,6 @@ func GetCmdGetContractStateSmart() *cobra.Command {
 				return err
 			}
 
-			grpcCtx, err := client.GetClientQueryContext(cmd)
-			if err != nil {
-				return err
-			}
-
 			contractAddr, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
 				return sdkerrors.ErrInvalidAddress.Wrapf("Invalid contract address: %s", args[0])
@@ -278,7 +273,7 @@ func GetCmdGetContractStateSmart() *cobra.Command {
 				return err
 			}
 
-			return QueryWithData(contractAddr, queryData, clientCtx, grpcCtx)
+			return QueryWithData(contractAddr, queryData, clientCtx)
 		},
 		SilenceUsage: true,
 	}
@@ -295,12 +290,12 @@ func GetCmdCodeHashByContractAddress() *cobra.Command {
 		Long:  "Return the code hash of a contract",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			grpcCtx, err := client.GetClientQueryContext(cmd)
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(grpcCtx)
+			queryClient := types.NewQueryClient(clientCtx)
 			res, err := queryClient.CodeHashByContractAddress(
 				context.Background(),
 				&types.QueryByContractAddressRequest{
@@ -631,7 +626,7 @@ func GetQueryDecryptTxCmd() *cobra.Command {
 	return cmd
 }
 
-func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, clientCtx client.Context, grpcCtx client.Context) error {
+func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, clientCtx client.Context) error {
 	wasmCtx := wasmUtils.WASMContext{CLIContext: clientCtx}
 
 	codeHash, err := GetCodeHashByContractAddr(clientCtx, contractAddress.String())
@@ -650,7 +645,7 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, clientCtx c
 	}
 	nonce, _, _, _ := parseEncryptedBlob(queryData) //nolint:dogsled // Ignoring error since we just encrypted it
 
-	queryClient := types.NewQueryClient(grpcCtx)
+	queryClient := types.NewQueryClient(clientCtx)
 	res, err := queryClient.QuerySecretContract(
 		context.Background(),
 		&types.QuerySecretContractRequest{
@@ -694,8 +689,8 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, clientCtx c
 	return nil
 }
 
-func GetContractAddressByLabel(label string, grpcCtx client.Context) (string, error) {
-	queryClient := types.NewQueryClient(grpcCtx)
+func GetContractAddressByLabel(label string, clientCtx client.Context) (string, error) {
+	queryClient := types.NewQueryClient(clientCtx)
 	response, err := queryClient.AddressByLabel(context.Background(), &types.QueryByLabelRequest{
 		Label: label,
 	})

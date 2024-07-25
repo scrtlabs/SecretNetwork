@@ -75,12 +75,7 @@ func S20TransferHistoryCmd() *cobra.Command {
 				return err
 			}
 
-			grpcCtx, err := client.GetClientQueryContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			contractAddr, err := addressFromBechOrLabel(args[0], grpcCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
 			}
@@ -125,7 +120,7 @@ func S20TransferHistoryCmd() *cobra.Command {
 				return err
 			}
 
-			err = cli.QueryWithData(contractAddr, queryData, cliCtx, grpcCtx)
+			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
 			if err != nil {
 				return err
 			}
@@ -150,12 +145,7 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 				return err
 			}
 
-			grpcCtx, err := client.GetClientQueryContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			contractAddr, err := addressFromBechOrLabel(args[0], grpcCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
 			}
@@ -200,7 +190,7 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 				return err
 			}
 
-			err = cli.QueryWithData(contractAddr, queryData, cliCtx, grpcCtx)
+			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
 			if err != nil {
 				return err
 			}
@@ -225,12 +215,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 				return err
 			}
 
-			grpcCtx, err := client.GetClientQueryContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			contractAddr, err := addressFromBechOrLabel(args[0], grpcCtx)
+			contractAddr, err := addressFromBechOrLabel(args[0], cliCtx)
 			if err != nil {
 				return err
 			}
@@ -250,7 +235,7 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 				return err
 			}
 
-			err = cli.QueryWithData(contractAddr, queryData, cliCtx, grpcCtx)
+			err = cli.QueryWithData(contractAddr, queryData, cliCtx)
 			if err != nil {
 				return err
 			}
@@ -262,8 +247,8 @@ key yet, use the "create-viewing-key" command. Otherwise, you can still see your
 	return cmd
 }
 
-func addressFromBechOrLabel(addressOrLabel string, grpcCtx client.Context) (sdk.AccAddress, error) {
-	contractAddrBech32, err := cli.GetContractAddressByLabel(addressOrLabel, grpcCtx)
+func addressFromBechOrLabel(addressOrLabel string, cliCtx client.Context) (sdk.AccAddress, error) {
+	contractAddrBech32, err := cli.GetContractAddressByLabel(addressOrLabel, cliCtx)
 	var contractAddr sdk.AccAddress
 	if err != nil {
 		contractAddr, err = sdk.AccAddressFromBech32(addressOrLabel)

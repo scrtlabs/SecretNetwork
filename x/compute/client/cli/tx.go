@@ -136,12 +136,7 @@ func InstantiateContractCmd() *cobra.Command {
 				return err
 			}
 
-			grpcCtx, err := client.GetClientQueryContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			msg, err := parseInstantiateArgs(args, cliCtx, grpcCtx, cmd.Flags())
+			msg, err := parseInstantiateArgs(args, cliCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -162,7 +157,7 @@ func InstantiateContractCmd() *cobra.Command {
 	return cmd
 }
 
-func parseInstantiateArgs(args []string, cliCtx client.Context, grpcCtx client.Context, initFlags *flag.FlagSet) (types.MsgInstantiateContract, error) {
+func parseInstantiateArgs(args []string, cliCtx client.Context, initFlags *flag.FlagSet) (types.MsgInstantiateContract, error) {
 	// get the id of the code to instantiate
 	codeID, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil {
@@ -219,12 +214,12 @@ func parseInstantiateArgs(args []string, cliCtx client.Context, grpcCtx client.C
 	} else {
 		// if we aren't creating an offline transaction we can validate the chosen label
 
-		res, _ := GetContractAddressByLabel(label, grpcCtx)
+		res, _ := GetContractAddressByLabel(label, cliCtx)
 		if res != "" {
 			return types.MsgInstantiateContract{}, fmt.Errorf("label already exists. You must choose a unique label for your contract instance")
 		}
 
-		initMsg.CodeHash, err = GetCodeHashByCodeId(grpcCtx, args[0])
+		initMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[0])
 		if err != nil {
 			return types.MsgInstantiateContract{}, err
 		}
@@ -308,12 +303,12 @@ func ExecuteContractCmd() *cobra.Command {
 					return fmt.Errorf("label or bech32 contract address is required")
 				}
 
-				grpcCtx, err := client.GetClientQueryContext(cmd)
+				cliCtx, err := client.GetClientQueryContext(cmd)
 				if err != nil {
 					return err
 				}
 
-				queryClient := types.NewQueryClient(grpcCtx)
+				queryClient := types.NewQueryClient(cliCtx)
 				res, err := queryClient.AddressByLabel(
 					context.Background(),
 					&types.QueryByLabelRequest{
@@ -388,12 +383,12 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 		execMsg.CodeHash = []byte(codeHash)
 		encryptedMsg, err = wasmCtx.OfflineEncrypt(execMsg.Serialize(), ioMasterKeyPath)
 	} else {
-		grpcCtx, err := client.GetClientQueryContext(cmd)
+		cliCtx, err := client.GetClientQueryContext(cmd)
 		if err != nil {
 			return err
 		}
 
-		execMsg.CodeHash, err = GetCodeHashByContractAddr(grpcCtx, contractAddress.String())
+		execMsg.CodeHash, err = GetCodeHashByContractAddr(cliCtx, contractAddress.String())
 		if err != nil {
 			return sdkerrors.ErrNotFound.Wrapf("Contract address %s not found. Error:%s", contractAddress.String(), err)
 		}
@@ -418,12 +413,12 @@ func ExecuteWithData(cmd *cobra.Command, contractAddress sdk.AccAddress, msg []b
 	return tx.GenerateOrBroadcastTxCLI(cliCtx, cmd.Flags(), &msgExec)
 }
 
-func GetCodeHashByCodeId(grpcCtx client.Context, codeID string) ([]byte, error) {
+func GetCodeHashByCodeId(cliCtx client.Context, codeID string) ([]byte, error) {
 	id, err := strconv.Atoi(codeID)
 	if err != nil {
 		return nil, err
 	}
-	queryClient := types.NewQueryClient(grpcCtx)
+	queryClient := types.NewQueryClient(cliCtx)
 	res, err := queryClient.Code(
 		context.Background(),
 		&types.QueryByCodeIdRequest{
@@ -441,8 +436,8 @@ func GetCodeHashByCodeId(grpcCtx client.Context, codeID string) ([]byte, error) 
 	return []byte(res.CodeHash), nil
 }
 
-func GetCodeHashByContractAddr(grpcCtx client.Context, contractAddr string) ([]byte, error) {
-	queryClient := types.NewQueryClient(grpcCtx)
+func GetCodeHashByContractAddr(cliCtx client.Context, contractAddr string) ([]byte, error) {
+	queryClient := types.NewQueryClient(cliCtx)
 	res, err := queryClient.CodeHashByContractAddress(
 		context.Background(),
 		&types.QueryByContractAddressRequest{
@@ -463,24 +458,19 @@ func MigrateContractCmd() *cobra.Command {
 		Aliases: []string{"update", "mig", "m"},
 		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			cliCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			grpcCtx, err := client.GetClientQueryContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			msg, err := parseMigrateContractArgs(args, clientCtx, grpcCtx)
+			msg, err := parseMigrateContractArgs(args, cliCtx)
 			if err != nil {
 				return err
 			}
 			if err := msg.ValidateBasic(); err != nil {
 				return nil
 			}
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
+			return tx.GenerateOrBroadcastTxCLI(cliCtx, cmd.Flags(), &msg)
 		},
 		SilenceUsage: true,
 	}
@@ -488,7 +478,7 @@ func MigrateContractCmd() *cobra.Command {
 	return cmd
 }
 
-func parseMigrateContractArgs(args []string, cliCtx client.Context, grpcCtx client.Context) (types.MsgMigrateContract, error) {
+func parseMigrateContractArgs(args []string, cliCtx client.Context) (types.MsgMigrateContract, error) {
 	// get the id of the code to instantiate
 	codeID, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
@@ -496,7 +486,7 @@ func parseMigrateContractArgs(args []string, cliCtx client.Context, grpcCtx clie
 	}
 	migrateMsg := types.SecretMsg{}
 
-	migrateMsg.CodeHash, err = GetCodeHashByCodeId(grpcCtx, args[1])
+	migrateMsg.CodeHash, err = GetCodeHashByCodeId(cliCtx, args[1])
 	if err != nil {
 		return types.MsgMigrateContract{}, errorsmod.Wrap(err, "code hash")
 	}
