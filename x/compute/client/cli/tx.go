@@ -455,17 +455,6 @@ func GetCodeHashByContractAddr(grpcCtx client.Context, contractAddr string) ([]b
 	return []byte(res.CodeHash), nil
 }
 
-func GetContractAddressByLabel(label string, grpcCtx client.Context) (string, error) {
-	queryClient := types.NewQueryClient(grpcCtx)
-	response, err := queryClient.AddressByLabel(context.Background(), &types.QueryByLabelRequest{
-		Label: label,
-	})
-	if err != nil {
-		return "", err
-	}
-	return response.ContractAddress, nil
-}
-
 // MigrateContractCmd will migrate a contract to a new code version
 func MigrateContractCmd() *cobra.Command {
 	cmd := &cobra.Command{

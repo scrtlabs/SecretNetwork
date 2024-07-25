@@ -45,10 +45,44 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdQueryCode(),
 		GetCmdGetContractInfo(),
 		GetQueryDecryptTxCmd(),
+		GetCmdQueryLabel(),
 		GetCmdCodeHashByContractAddress(),
 		GetCmdGetContractStateSmart(),
 	)
 	return queryCmd
+}
+
+func GetCmdQueryLabel() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "label [label]",
+		Short: "Check if a label is in use",
+		Long:  "Check if a label is in use",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			res, err := GetContractAddressByLabel(args[0], grpcCtx)
+
+			if err != nil {
+				if err == sdkerrors.ErrUnknownAddress {
+					fmt.Printf("Label is available and not in use\n")
+					return nil
+				}
+
+				return fmt.Errorf("error querying: %s", err)
+			}
+
+			fmt.Printf("Label is in use by contract address: %s\n", res)
+
+			return nil
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdQueryCode returns the bytecode for a given contract
@@ -528,6 +562,17 @@ func QueryWithData(contractAddress sdk.AccAddress, queryData []byte, clientCtx c
 
 	fmt.Println(string(decodedResp))
 	return nil
+}
+
+func GetContractAddressByLabel(label string, grpcCtx client.Context) (string, error) {
+	queryClient := types.NewQueryClient(grpcCtx)
+	response, err := queryClient.AddressByLabel(context.Background(), &types.QueryByLabelRequest{
+		Label: label,
+	})
+	if err != nil {
+		return "", err
+	}
+	return response.ContractAddress, nil
 }
 
 // supports a subset of the SDK pagination params for better resource utilization
