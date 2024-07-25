@@ -49,8 +49,58 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdCodeHashByContractAddress(),
 		GetCmdGetContractStateSmart(),
 		GetCmdCodeHashByCodeID(),
+		GetCmdDecryptText(),
 	)
 	return queryCmd
+}
+
+func GetCmdDecryptText() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "decrypt [encrypted_data]",
+		Short: "Attempt to decrypt an encrypted blob",
+		Long: "Attempt to decrypt a base-64 encoded encrypted message. This is intended to be used if manual decrypt" +
+			"is required for data that is unavailable to be decrypted using the 'query compute tx' command",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			encodedInput := args[0]
+
+			dataCipherBz, err := base64.StdEncoding.DecodeString(encodedInput)
+			if err != nil {
+				return fmt.Errorf("error while trying to decode the encrypted output data from base64: %w", err)
+			}
+
+			nonce, originalTxSenderPubkey, ciphertextInput, err := parseEncryptedBlob(dataCipherBz)
+			if err != nil {
+				return fmt.Errorf("error while parsing encrypted blob: %w", err)
+			}
+
+			wasmCtx := wasmUtils.WASMContext{CLIContext: grpcCtx}
+			_, myPubkey, err := wasmCtx.GetTxSenderKeyPair()
+			if err != nil {
+				return fmt.Errorf("error while getting tx sender key pair: %w", err)
+			}
+
+			if !bytes.Equal(originalTxSenderPubkey, myPubkey) {
+				return fmt.Errorf("cannot decrypt, not original tx sender")
+			}
+
+			dataPlaintextB64Bz, err := wasmCtx.Decrypt(ciphertextInput, nonce)
+			if err != nil {
+				return fmt.Errorf("error while trying to decrypt the output data: %w", err)
+			}
+
+			fmt.Printf("Decrypted data: %s\n", dataPlaintextB64Bz)
+			return nil
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdCodeHashByID return the code hash of a contract by ID
