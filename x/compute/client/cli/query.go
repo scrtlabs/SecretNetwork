@@ -50,8 +50,49 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdGetContractStateSmart(),
 		GetCmdCodeHashByCodeID(),
 		GetCmdDecryptText(),
+		GetCmdGetContractHistory(),
 	)
 	return queryCmd
+}
+
+// GetCmdGetContractHistory prints the code history for a given contract
+func GetCmdGetContractHistory() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "contract-history [bech32_address]",
+		Short:   "Prints out the code history for a contract given its address",
+		Long:    "Prints out the code history for a contract given its address",
+		Aliases: []string{"history", "hist", "ch"},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			_, err = sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(clientCtx)
+			res, err := queryClient.ContractHistory(
+				context.Background(),
+				&types.QueryContractHistoryRequest{
+					ContractAddress: args[0],
+				},
+			)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(res)
+		},
+		SilenceUsage: true,
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "contract history")
+	return cmd
 }
 
 func GetCmdDecryptText() *cobra.Command {
