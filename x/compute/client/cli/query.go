@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/gogo/protobuf/proto"
@@ -41,12 +42,48 @@ func GetQueryCmd() *cobra.Command {
 	queryCmd.AddCommand(
 		GetCmdListCode(),
 		GetCmdListContractByCode(),
+		GetCmdQueryCode(),
 		GetCmdGetContractInfo(),
 		GetQueryDecryptTxCmd(),
 		GetCmdCodeHashByContractAddress(),
 		GetCmdGetContractStateSmart(),
 	)
 	return queryCmd
+}
+
+// GetCmdQueryCode returns the bytecode for a given contract
+func GetCmdQueryCode() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "code [code_id] [output filename]",
+		Short: "Downloads wasm bytecode for given code id",
+		Long:  "Downloads wasm bytecode for given code id",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			grpcCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			codeID, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(grpcCtx)
+			res, err := queryClient.Code(context.Background(), &types.QueryByCodeIdRequest{
+				CodeId: codeID,
+			})
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Downloading wasm code to %s\n", args[1])
+			return os.WriteFile(args[1], res.Wasm, 0o600)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 func GetCmdGetContractStateSmart() *cobra.Command {
