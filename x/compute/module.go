@@ -147,31 +147,15 @@ func (am AppModule) BeginBlock(c context.Context) error {
 		ctx.Logger().Error("Failed to marshal block header")
 		return err
 	}
-	commit := ctx.CometInfo().GetLastCommit()
-	voteInfos := commit.Votes()
-	var commitSigs []tm_type.CommitSig
-	for i := 0; i < voteInfos.Len(); i++ {
-		voteInfo := voteInfos.Get(i)
-		commitSigs = append(commitSigs, tm_type.CommitSig{
-			BlockIdFlag: tm_type.BlockIDFlag(voteInfo.GetBlockIDFlag()),
-			ValidatorAddress: voteInfo.Validator().Address(),
-		})
-	} 
 
-	tm_commit := tm_type.Commit{
-		Height:  ctx.BlockHeight(),
-		Round:   commit.Round(),
-		BlockID: block_header.LastBlockId,
-		Signatures: commitSigs,
-	}
-
-	b_commit, err := tm_commit.Marshal()
+	commit := ctx.Commit()
+	b_commit, err := commit.Marshal()
 	if err != nil {
 		ctx.Logger().Error("Failed to marshal commit")
 		return err
 	}
 
- 	x2_data := scrt.UnFlatten(ctx.TxBytes())
+	x2_data := scrt.UnFlatten(ctx.TxBytes())
 	tm_data := tm_type.Data{Txs: x2_data}
 	data, err := tm_data.Marshal()
 	if err != nil {
