@@ -292,7 +292,7 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES_U=debug-print,random,go-tests
+            FEATURES_U=debug-print,random,light-client-validation,go-tests
             SGX_MODE=SW
           target: build-localsecret
           # cache-from: type=gha
