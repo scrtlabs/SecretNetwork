@@ -13,7 +13,6 @@ use std::slice;
 use sgx_types::*;
 use std::untrusted::fs;
 use std::untrusted::fs::File;
-use std::untrusted::path::PathEx;
 
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
