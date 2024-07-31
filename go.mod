@@ -3,9 +3,10 @@ module github.com/scrtlabs/SecretNetwork
 go 1.21
 
 replace (
+	cosmossdk.io/api => github.com/scrtlabs/cosmos-sdk-api v0.0.0-20240731090936-97358c773b67
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v0.0.0-20240709111432-a66f64b2f1d4
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.0-dev.0.20240729151849-eb53eeaca72d
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240729203810-30cef60e4b1e
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240731090454-9394e6edde01
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.0.0-alpha.1.0.20240710081403-73fd37d68158
 )
 
