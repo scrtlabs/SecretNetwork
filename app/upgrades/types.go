@@ -2,11 +2,11 @@ package upgrades
 
 import (
 	store "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	abci "github.com/cometbft/cometbft/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
-	abci "github.com/cometbft/cometbft/types"
 )
 
 // BaseAppParamManager defines an interrace that BaseApp is expected to fullfil

@@ -27,7 +27,6 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -52,8 +51,6 @@ import (
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client"
-	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
@@ -77,7 +74,7 @@ import (
 	ibchookstypes "github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
-	// paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 )
 
@@ -168,13 +165,11 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 
 	ak.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(ak.keys[upgradetypes.StoreKey]),
+		runtime.NewKVStoreService(ak.keys[consensusparamtypes.StoreKey]),
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		*event,
 	)
 	app.SetParamStore(&ak.ConsensusParamsKeeper.ParamsStore)
-	// set the BaseApp's parameter store
-	// app.SetParamStore(ak.ParamsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
 
 	// add keepers
 	accountKeeper := authkeeper.NewAccountKeeper(
@@ -303,8 +298,7 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	// by granting the governance module the right to execute the message.
 	// See: https://docs.cosmos.network/main/modules/gov#proposal-messages
 	govRouter.AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
-		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(*ak.ParamsKeeper)).
-		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(ak.IbcKeeper.ClientKeeper))
+		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(*ak.ParamsKeeper))
 
 	govConfig := govtypes.DefaultConfig()
 	govKeeper := govkeeper.NewKeeper(
@@ -624,19 +618,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 // initParamsKeeper init params keeper and its subspaces
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
-	// subspaceParams := []paramtypes.ParamSetPair{
-	// 	paramtypes.NewParamSetPair([]byte("MaxMemoCharacters"), uint64(256), valMaxMemoCharacters),
-	// 	paramtypes.NewParamSetPair([]byte("TxSigLimit"), uint64(7), valTxSigLimit),
-	// 	paramtypes.NewParamSetPair([]byte("TxSizeCostPerByte"), uint64(10), valTxSizeCostPerByte),
-	// 	paramtypes.NewParamSetPair([]byte("SigVerifyCostED25519"), uint64(590), valSigVerifyCostED25519),
-	// 	paramtypes.NewParamSetPair([]byte("SigVerifyCostSecp256k1"), uint64(1000), valSigVerifyCostSecp256k1),
-	// }
-
-	// authsub := paramsKeeper.Subspace(authtypes.ModuleName)
-
-	// authsub.WithKeyTable(paramtypes.NewKeyTable(subspaceParams...))
-
-	paramsKeeper.Subspace(authtypes.ModuleName).WithKeyTable(authtypes.ParamKeyTable())
+	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)
 	paramsKeeper.Subspace(stakingtypes.ModuleName)
 	paramsKeeper.Subspace(minttypes.ModuleName)
@@ -646,7 +628,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(ibcexported.ModuleName)
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
-	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypesv1.ParamKeyTable())
+	paramsKeeper.Subspace(govtypes.ModuleName)
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)

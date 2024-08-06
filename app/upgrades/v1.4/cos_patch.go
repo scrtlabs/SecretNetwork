@@ -97,7 +97,10 @@ func revertTombstone(ctx sdk.Context, slashingKeeper *slashingkeeper.Keeper) err
 	slashingKeeper.RevertTombstone(ctx, cosConsAddress)
 
 	// Set jail until=now, the validator then must unjail manually
-	slashingKeeper.JailUntil(ctx, cosConsAddress, ctx.BlockTime())
+	err = slashingKeeper.JailUntil(ctx, cosConsAddress, ctx.BlockTime())
+	if err != nil {
+		panic(fmt.Sprintf("failed to jail: %s", cosValAddress))
+	}
 
 	return nil
 }

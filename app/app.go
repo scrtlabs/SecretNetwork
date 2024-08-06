@@ -37,7 +37,6 @@ import (
 	sigtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 
-	// "github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -60,14 +59,11 @@ import (
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
 
-	// v1_9 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.9"
-
 	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 
-	// authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -84,7 +80,6 @@ import (
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 
-	// stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	"cosmossdk.io/log"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -118,13 +113,11 @@ var (
 	}
 
 	Upgrades = []upgrades.Upgrade{
-		// v1_3.Upgrade,
 		v1_4.Upgrade,
 		v1_5.Upgrade,
 		v1_6.Upgrade,
 		v1_7.Upgrade,
 		v1_8.Upgrade,
-		// v1_9.Upgrade,
 		v1_10.Upgrade,
 		v1_11.Upgrade,
 		v1_12.Upgrade,
@@ -134,7 +127,6 @@ var (
 
 // Verify app interface at compile time
 var (
-	// _ simapp.App                          = (*SecretNetworkApp)(nil)
 	_ runtime.AppI            = (*SecretNetworkApp)(nil)
 	_ servertypes.Application = (*SecretNetworkApp)(nil)
 )
@@ -166,10 +158,6 @@ type SecretNetworkApp struct {
 
 func (app *SecretNetworkApp) GetInterfaceRegistry() types.InterfaceRegistry {
 	return app.interfaceRegistry
-}
-
-func (app *SecretNetworkApp) GetCodec() codec.Codec {
-	return app.appCodec
 }
 
 func (app *SecretNetworkApp) GetBaseApp() *baseapp.BaseApp {
@@ -291,7 +279,8 @@ func NewSecretNetworkApp(
 
 	app.AppKeepers.InitSdkKeepers(appCodec, legacyAmino, bApp, ModuleAccountPermissions, app.BlockedAddrs(), invCheckPeriod, skipUpgradeHeights, homePath, logger, &app.event)
 
-	enabledSignModes := append(authtx.DefaultSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
+	enabledSignModes := authtx.DefaultSignModes
+	enabledSignModes = append(enabledSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
 
 	signingOpts, err := authtx.NewDefaultSigningOptions()
 	if err != nil {
@@ -445,7 +434,9 @@ func (app *SecretNetworkApp) InitChainer(ctx sdk.Context, req *abci.RequestInitC
 		panic(err)
 	}
 
-	app.AppKeepers.UpgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap())
+	if err := app.AppKeepers.UpgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap()); err != nil {
+		panic(err)
+	}
 
 	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
 }

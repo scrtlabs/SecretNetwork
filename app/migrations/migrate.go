@@ -8,24 +8,24 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/x/authz"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmtypes "github.com/cometbft/cometbft/types"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 
 	ibcxfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibccoretypes "github.com/cosmos/ibc-go/v8/modules/core/types"
 
+	evtypes "cosmossdk.io/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	captypes "github.com/cosmos/ibc-go/modules/capability/types"
-	evtypes "cosmossdk.io/x/evidence/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
+	captypes "github.com/cosmos/ibc-go/modules/capability/types"
 
 	legacy170 "github.com/scrtlabs/SecretNetwork/app/migrations/v170"
 )

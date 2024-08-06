@@ -7,8 +7,8 @@ import (
 
 	"cosmossdk.io/log"
 	store "cosmossdk.io/store/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 )
