@@ -749,7 +749,7 @@ func PrepareExecSignedTxWithMultipleMsgs(
 		encryptedMsgs = append(encryptedMsgs, &executeMsg)
 	}
 
-	creatorAccs := make([]authtypes.AccountI, len(encryptedMsgs))
+	creatorAccs := make([]sdk.AccountI, len(encryptedMsgs))
 	senderPrivKeys := make([]crypto.PrivKey, len(encryptedMsgs))
 
 	for i := range encryptedMsgs {
@@ -890,8 +890,8 @@ func PrepareSignedTx(t *testing.T,
 	return ctx
 }
 
-func NewTestTx(ctx sdk.Context, msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
-	return NewTestTxMultiple(ctx, []sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
+func NewTestTx(ctx sdk.Context, msg sdk.Msg, creatorAcc sdk.AccountI, privKey crypto.PrivKey) *tx.Tx {
+	return NewTestTxMultiple(ctx, []sdk.Msg{msg}, []sdk.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
 
 //func PrepareMultipleExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
@@ -911,7 +911,7 @@ func NewTestTx(ctx sdk.Context, msg sdk.Msg, creatorAcc authtypes.AccountI, priv
 //		Amount:      funds,
 //	}
 //
-//	tx := NewTestTxMultiple([]sdk.Msg{&executeMsg, &executeMsg, &bankMsg}, []authtypes.AccountI{creatorAcc, creatorAcc, creatorAcc}, []crypto.PrivKey{privKey, privKey, privKey})
+//	tx := NewTestTxMultiple([]sdk.Msg{&executeMsg, &executeMsg, &bankMsg}, []sdk.AccountI{creatorAcc, creatorAcc, creatorAcc}, []crypto.PrivKey{privKey, privKey, privKey})
 //
 //	txBytes, err := tx.Marshal()
 //	require.NoError(t, err)
@@ -920,7 +920,7 @@ func NewTestTx(ctx sdk.Context, msg sdk.Msg, creatorAcc authtypes.AccountI, priv
 //	return ctx.WithTxBytes(txBytes)
 //}
 
-func NewTestTxMultiple(ctx sdk.Context, msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
+func NewTestTxMultiple(ctx sdk.Context, msgs []sdk.Msg, creatorAccs []sdk.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
 		panic("length of `msgs` `creatorAccs` and `privKeys` must be the same")
 	}

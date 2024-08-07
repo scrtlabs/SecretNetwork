@@ -96,11 +96,10 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 		return &types.MsgExecuteContractResponse{
 			Data: nil,
 		}, err
-	} else {
-		return &types.MsgExecuteContractResponse{
-			Data: data.Data,
-		}, err
 	}
+	return &types.MsgExecuteContractResponse{
+		Data: data.Data,
+	}, err
 }
 
 func (m msgServer) MigrateContract(goCtx context.Context, msg *types.MsgMigrateContract) (*types.MsgMigrateContractResponse, error) {

@@ -9,6 +9,8 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+
+	//nolint:staticcheck
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
@@ -39,19 +41,13 @@ type MessageHandlerChain struct {
 
 // SDKMessageHandler can handles messages that can be encoded into sdk.Message types and routed.
 type SDKMessageHandler struct {
-	// router is used to route StargateMsg and any other msg except for MsgExecuteContract & MsgInstantiateContrat.
-	router MessageRouter
-	// legacyRouter is used to route MsgExecuteContract & MsgInstantiateContrat.
-	// the reason is those msgs use the data field internally for reply, which is
-	// truncated if the msg erred
-	// legacyRouter sdk.Router
+	router   MessageRouter
 	encoders MessageEncoders
 }
 
 func NewSDKMessageHandler(router MessageRouter /*legacyRouter sdk.Router,*/, encoders MessageEncoders) SDKMessageHandler {
 	return SDKMessageHandler{
-		router: router,
-		// legacyRouter: legacyRouter,
+		router:   router,
 		encoders: encoders,
 	}
 }
@@ -83,7 +79,6 @@ func NewMessageHandlerChain(first Messenger, others ...Messenger) *MessageHandle
 
 func NewMessageHandler(
 	msgRouter MessageRouter,
-	// legacyMsgRouter sdk.Router,
 	customEncoders *MessageEncoders,
 	channelKeeper channelkeeper.Keeper,
 	ics4Wrapper porttypes.ICS4Wrapper,
@@ -93,7 +88,7 @@ func NewMessageHandler(
 ) Messenger {
 	encoders := DefaultEncoders(portSource, unpacker).Merge(customEncoders)
 	return NewMessageHandlerChain(
-		NewSDKMessageHandler(msgRouter /*legacyMsgRouter,*/, encoders),
+		NewSDKMessageHandler(msgRouter, encoders),
 		NewIBCRawPacketHandler(channelKeeper, ics4Wrapper, capabilityKeeper),
 	)
 }
@@ -463,7 +458,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *v1wasmTypes.StakingMsg) ([]sdk
 }
 
 func EncodeStargateMsg(unpacker codectypes.AnyUnpacker) StargateEncoder {
-	return func(sender sdk.AccAddress, msg *v1wasmTypes.StargateMsg) ([]sdk.Msg, error) {
+	return func(_ sdk.AccAddress, msg *v1wasmTypes.StargateMsg) ([]sdk.Msg, error) {
 		anyObj := codectypes.Any{
 			TypeUrl: msg.TypeURL,
 			Value:   msg.Value,
@@ -558,7 +553,7 @@ func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddr
 		data   [][]byte
 	)
 	for _, sdkMsg := range sdkMsgs {
-		res, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
+		res, err := h.handleSdkMessage(ctx, sdkMsg)
 		if err != nil {
 			if res != nil {
 				data = append(data, res.Data)
@@ -579,45 +574,7 @@ func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddr
 	return events, data, nil
 }
 
-func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, contractAddr sdk.Address, msg sdk.Msg) (*sdk.Result, error) {
-	// TODO: find out if ValidateBasic is needed here
-	// if err := msg.ValidateBasic(); err != nil {
-	// return nil, err
-	// }
-
-	// make sure the contract account is also the "signer" on the message
-	// TODO: find codec
-	// signers, _, err := k.cdc.GetMsgV1Signers(msg)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// for _, acct := range signers {
-	// 	if !bytes.Equal(acct, contractAddr.Bytes()) {
-	// 		return nil, sdkerrors.ErrUnauthorized.Wrap("contract doesn't have permission")
-	// 	}
-	// }
-
-	// TODO: check if it's necessary for new versions of cosmwasm
-	// _, isMsgInitContract := msg.(*types.MsgInstantiateContract)
-	// _, isMsgExecContract := msg.(*types.MsgExecuteContract)
-
-	// if isMsgInitContract || isMsgExecContract {
-	// 	// legacyMsgRouter logic (CosmWasm v0.10)
-	// 	if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
-	// 		msgRoute := legacyMsg.Route()
-	// 		handler := h.legacyRouter.Route(ctx, msgRoute)
-	// 		if handler == nil {
-	// 			return nil, sdkerrors.ErrUnknownRequest.Wrapf("can't route message %+v", msg)
-	// 		}
-	//
-	// 		return handler(ctx, msg)
-	// 	}
-	//
-	// 	return nil, sdkerrors.ErrUnknownRequest.Wrapf("unrecognized legacy message route: %s", sdk.MsgTypeURL(msg))
-	// }
-
-	// msgRouter logic (CosmWasm v1)
-
+func (h SDKMessageHandler) handleSdkMessage(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 	// find the handler and execute it
 	if handler := h.router.Handler(msg); handler != nil {
 		// ADR 031 request type routing

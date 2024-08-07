@@ -27,7 +27,7 @@ type SignModeHandlerOptions struct {
 }
 
 func (s SignModeHandler) Mode() signingv1beta1.SignMode {
-	return signingv1beta1.SignMode_SIGN_MODE_EIP_191
+	return signingv1beta1.SignMode_SIGN_MODE_EIP_191 //nolint:all
 }
 
 func NewSignModeHandler(options SignModeHandlerOptions) *SignModeHandler {

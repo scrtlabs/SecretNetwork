@@ -37,7 +37,6 @@ func (k Keeper) isMasterCertificateDefined(ctx sdk.Context, keyType string) bool
 func (k Keeper) getRegistrationInfo(ctx sdk.Context, publicKey types.NodeID) *types.RegistrationNodeInfo {
 	store := k.storeService.OpenKVStore(ctx)
 	var nodeInfo types.RegistrationNodeInfo
-	// fmt.Println("pubkey", hex.EncodeToString(publicKey))
 	certBz, _ := store.Get(types.RegistrationKeyPrefix(publicKey))
 
 	if certBz == nil {
@@ -73,8 +72,6 @@ func (k Keeper) SetRegistrationInfo(ctx sdk.Context, certificate types.Registrat
 
 func (k Keeper) SetRegistrationInfo_Verified(ctx sdk.Context, certificate types.RegistrationNodeInfo, publicKey []byte) error {
 	store := k.storeService.OpenKVStore(ctx)
-	// fmt.Println("pubkey", hex.EncodeToString(publicKey))
-	// fmt.Println("EncryptedSeed", hex.EncodeToString(certificate.EncryptedSeed))
 	err := store.Set(types.RegistrationKeyPrefix(publicKey), k.cdc.MustMarshal(&certificate))
 	if err != nil {
 		ctx.Logger().Error("set registration info", "store", err.Error())

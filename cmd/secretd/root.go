@@ -13,7 +13,6 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 
-	// "github.com/rs/zerolog"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	eip191 "github.com/scrtlabs/SecretNetwork/eip191"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
@@ -30,8 +29,6 @@ import (
 
 	rosettacmd "github.com/cosmos/rosetta/cmd"
 
-	//"github.com/cometbft/cometbft/libs/cli"
-
 	"cosmossdk.io/store/snapshots"
 	snapshottypes "cosmossdk.io/store/snapshots/types"
 	storetypes "cosmossdk.io/store/types"
@@ -41,7 +38,6 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 
-	// tmcfg "github.com/cometbft/cometbft/config"
 	"cosmossdk.io/log"
 	tmcli "github.com/cometbft/cometbft/libs/cli"
 	dbm "github.com/cosmos/cosmos-db"
@@ -122,8 +118,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		Amino:             tempApp.LegacyAmino(),
 	}
 
-	// cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
-
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Codec).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -131,7 +125,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
-		// WithBroadcastMode(flags.BroadcastBlock).
 		WithHomeDir(app.DefaultNodeHome).
 		WithViper("SECRET")
 
@@ -166,7 +159,8 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 					AminoJsonSignModeHandler: aminoHandler,
 				})
 
-				enabledSignModes := append(authtx.DefaultSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
+				enabledSignModes := authtx.DefaultSignModes
+				enabledSignModes = append(enabledSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
 				txConfigOpts := authtx.ConfigOptions{
 					EnabledSignModes:           enabledSignModes,
 					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
@@ -189,14 +183,9 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 
 			secretAppTemplate, secretAppConfig := initAppConfig()
 
-			// ctx := server.GetServerContextFromCmd(cmd)
-
-			// bindFlags(cmd, ctx.Viper)
-
 			secretCMTConfig := initCometBFTConfig()
 
 			return server.InterceptConfigsPreRunHandler(cmd, secretAppTemplate, secretAppConfig, secretCMTConfig)
-			// return initConfig(&initClientCtx, cmd)
 		},
 		SilenceUsage: true,
 	}
@@ -218,11 +207,7 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basicManager module.BasicManager) {
 	rootCmd.AddCommand(
 		InitCmd(app.ModuleBasics(), app.DefaultNodeHome),
-		// genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, app.ModuleBasics()[genutiltypes.ModuleName].(genutil.AppModuleBasic).GenTxValidator, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
 		secretlegacy.MigrateGenesisCmd(),
-		// genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
-		// genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
-		// AddGenesisAccountCmd(app.DefaultNodeHome, encodingConfig),
 		tmcli.NewCompletionCmd(rootCmd, true),
 		// testnetCmd(app.ModuleBasics, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
@@ -259,13 +244,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig, basi
 
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter
 func genesisCommand(eCfg app.EncodingConfig, basicManager module.BasicManager, cmds ...*cobra.Command) *cobra.Command {
-	// cmd := genutilcli.Commands(txConfig, basicManager, app.DefaultNodeHome)
-
-	// for _, subCmd := range cmds {
-	// 	cmd.AddCommand(subCmd)
-	// }
-	// return cmd
-
 	cmd := &cobra.Command{
 		Use:                        "genesis",
 		Short:                      "SecretNetwork genesis-related subcommands",
@@ -282,7 +260,6 @@ func genesisCommand(eCfg app.EncodingConfig, basicManager module.BasicManager, c
 			banktypes.GenesisBalancesIterator{},
 			app.DefaultNodeHome,
 			eCfg.InterfaceRegistry.SigningContext().ValidatorAddressCodec()),
-		// genutilcli.MigrateGenesisCmd(migrationMap),
 		genutilcli.CollectGenTxsCmd(
 			banktypes.GenesisBalancesIterator{},
 			app.DefaultNodeHome,
@@ -324,7 +301,6 @@ func queryCommand() *cobra.Command {
 		S20GetQueryCmd(),
 	)
 
-	// app.ModuleBasics().AddQueryCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
 
@@ -351,11 +327,9 @@ func txCommand() *cobra.Command {
 		authcmd.GetEncodeCommand(),
 		authcmd.GetDecodeCommand(),
 		flags.LineBreak,
-		// vestingcli.GetTxCmd(),
 		S20GetTxCmd(),
 	)
 
-	// app.ModuleBasics().AddTxCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	cmd.PersistentFlags().String(tmcli.OutputFlag, "text", "Output format (text|json)")
 
@@ -386,8 +360,6 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 
 	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
 
-	// fmt.Printf("bootstrap: %s\n", cast.ToString(bootstrap))
-
 	appGenesis, err := genutiltypes.AppGenesisFromFile(filepath.Join(cast.ToString(appOpts.Get(flags.FlagHome)), "config", "genesis.json"))
 	if err != nil {
 		panic(err)
@@ -417,8 +389,6 @@ func exportAppStateAndTMValidators(
 ) (servertypes.ExportedApp, error) {
 	bootstrap := viper.GetBool("bootstrap")
 
-	// encCfg := app.MakeEncodingConfig()
-	// encCfg.Marshaler = codec.NewProtoCodec(encCfg.InterfaceRegistry)
 	var wasmApp *app.SecretNetworkApp
 	if height != -1 {
 		wasmApp = app.NewSecretNetworkApp(logger, db, traceStore, false, bootstrap, appOpts, compute.DefaultWasmConfig())

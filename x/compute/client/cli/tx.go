@@ -1,8 +1,6 @@
 package cli
 
 import (
-	// "encoding/hex"
-	// "encoding/json"
 	"context"
 	"fmt"
 	"os"

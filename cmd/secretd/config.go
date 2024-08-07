@@ -1,8 +1,8 @@
 package main
 
 import (
-	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	cmtcfg "github.com/cometbft/cometbft/config"
+	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 )
 

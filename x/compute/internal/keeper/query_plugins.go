@@ -675,7 +675,7 @@ func getAccumulatedRewards(ctx sdk.Context, distKeeper distrkeeper.Keeper, deleg
 	}
 	cache, _ := ctx.CacheContext()
 	querier := distrkeeper.NewQuerier(distKeeper)
-	qres, err := querier.DelegationRewards(sdk.WrapSDKContext(cache), &params)
+	qres, err := querier.DelegationRewards(cache, &params)
 	if err != nil {
 		return nil, err
 	}

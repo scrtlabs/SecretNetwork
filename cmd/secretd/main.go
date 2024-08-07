@@ -1,9 +1,10 @@
 package main
 
 import (
+	"os"
+
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 	"github.com/scrtlabs/SecretNetwork/app"
-	"os"
 )
 
 func main() {

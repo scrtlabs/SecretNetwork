@@ -9,15 +9,14 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"
 
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var (
-	_ module.AppModule              = AppModule{}
-	_ module.AppModuleBasic         = AppModuleBasic{}
-	_ module.HasName                = AppModule{}
-	_ module.HasConsensusVersion    = AppModule{}
+	_ module.AppModule           = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.HasName             = AppModule{}
+	_ module.HasConsensusVersion = AppModule{}
 )
 
 // AppModuleBasic defines the basic application module used by the ibc-hooks module.
@@ -63,10 +62,10 @@ func (AppModule) Name() string {
 func (AppModule) ConsensusVersion() uint64 { return 1 }
 
 type AccountKeeper interface {
-	NewAccount(sdk.Context, authtypes.AccountI) authtypes.AccountI
+	NewAccount(sdk.Context, sdk.AccountI) sdk.AccountI
 
-	GetAccount(ctx sdk.Context, addr sdk.AccAddress) authtypes.AccountI
-	SetAccount(ctx sdk.Context, acc authtypes.AccountI)
+	GetAccount(ctx sdk.Context, addr sdk.AccAddress) sdk.AccountI
+	SetAccount(ctx sdk.Context, acc sdk.AccountI)
 }
 
 // IsAppModule implements the appmodule.AppModule interface.

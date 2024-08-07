@@ -141,7 +141,6 @@ func NewKeeper(
 		capabilityKeeper: capabilityKeeper,
 		messenger: NewMessageHandler(
 			msgRouter,
-			// legacyMsgRouter,
 			customEncoders,
 			channelKeeper,
 			ics4Wrapper,
@@ -206,7 +205,11 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 
 	store := k.storeService.OpenKVStore(ctx)
 	key := types.GetCodeKey(codeID)
-	if has, _ := store.Has(key); has {
+	has, err := store.Has(key)
+	if err != nil {
+		return err
+	}
+	if has {
 		return errorsmod.Wrapf(types.ErrDuplicate, "duplicate code: %d", codeID)
 	}
 	// 0x01 | codeID (uint64) -> ContractInfo
@@ -471,7 +474,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	// create contract address
 
 	store := k.storeService.OpenKVStore(ctx)
-	existingAddress, _ := store.Get(types.GetContractLabelPrefix(label))
+	existingAddress, err := store.Get(types.GetContractLabelPrefix(label))
+	if err != nil {
+		return nil, nil, err
+	}
 
 	if existingAddress != nil {
 		return nil, nil, errorsmod.Wrap(types.ErrAccountExists, label)
@@ -500,7 +506,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	}
 
 	// get contact info
-	bz, _ := store.Get(types.GetCodeKey(codeID))
+	bz, err := store.Get(types.GetCodeKey(codeID))
+	if err != nil {
+		return nil, nil, err
+	}
 	if bz == nil {
 		return nil, nil, errorsmod.Wrap(types.ErrNotFound, "code")
 	}
@@ -570,7 +579,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 			CurrentContractKey:      nil,
 			CurrentContractKeyProof: nil,
 		})
-		store.Set(types.GetContractLabelPrefix(label), contractAddress)
+		err := store.Set(types.GetContractLabelPrefix(label), contractAddress)
+		if err != nil {
+			return nil, nil, errorsmod.Wrap(err, "store.set")
+		}
 
 		subMessages, err := V010MsgsToV1SubMsgs(contractAddress.String(), res.Messages)
 		if err != nil {
@@ -620,7 +632,10 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 			CurrentContractKey:      nil,
 			CurrentContractKeyProof: nil,
 		})
-		store.Set(types.GetContractLabelPrefix(label), contractAddress)
+		err = store.Set(types.GetContractLabelPrefix(label), contractAddress)
+		if err != nil {
+			return nil, nil, errorsmod.Wrap(err, "store.set")
+		}
 
 		data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Events, res.Data, initMsg, sigInfo)
 		if err != nil {
@@ -819,14 +834,20 @@ func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []
 func (k Keeper) contractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, prefix.Store, error) {
 	store := k.storeService.OpenKVStore(ctx)
 
-	contractBz, _ := store.Get(types.GetContractAddressKey(contractAddress))
+	contractBz, err := store.Get(types.GetContractAddressKey(contractAddress))
+	if err != nil {
+		return types.ContractInfo{}, types.CodeInfo{}, prefix.Store{}, err
+	}
 	if contractBz == nil {
 		return types.ContractInfo{}, types.CodeInfo{}, prefix.Store{}, errorsmod.Wrap(types.ErrNotFound, "contract")
 	}
 	var contract types.ContractInfo
 	k.cdc.MustUnmarshal(contractBz, &contract)
 
-	contractInfoBz, _ := store.Get(types.GetCodeKey(contract.CodeID))
+	contractInfoBz, err := store.Get(types.GetCodeKey(contract.CodeID))
+	if err != nil {
+		return types.ContractInfo{}, types.CodeInfo{}, prefix.Store{}, err
+	}
 	if contractInfoBz == nil {
 		return types.ContractInfo{}, types.CodeInfo{}, prefix.Store{}, errorsmod.Wrap(types.ErrNotFound, "contract info")
 	}
@@ -841,13 +862,16 @@ func (k Keeper) GetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress) 
 	store := k.storeService.OpenKVStore(ctx)
 
 	var contractKey types.ContractKey
-	contractKeyBz, _ := store.Get(types.GetContractEnclaveKey(contractAddress))
+	contractKeyBz, err := store.Get(types.GetContractEnclaveKey(contractAddress))
+	if err != nil {
+		return types.ContractKey{}, err
+	}
 
 	if contractKeyBz == nil {
 		return types.ContractKey{}, errorsmod.Wrap(types.ErrNotFound, "contract key")
 	}
 
-	err := k.cdc.Unmarshal(contractKeyBz, &contractKey)
+	err = k.cdc.Unmarshal(contractKeyBz, &contractKey)
 	if err != nil {
 		return contractKey, err
 	}
@@ -859,13 +883,20 @@ func (k Keeper) SetContractKey(ctx sdk.Context, contractAddress sdk.AccAddress, 
 	store := k.storeService.OpenKVStore(ctx)
 
 	contractKeyBz := k.cdc.MustMarshal(contractKey)
-	store.Set(types.GetContractEnclaveKey(contractAddress), contractKeyBz)
+	err := store.Set(types.GetContractEnclaveKey(contractAddress), contractKeyBz)
+	if err != nil {
+		ctx.Logger().Error("SetContractKey:", err.Error())
+	}
 }
 
 func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
 	store := k.storeService.OpenKVStore(ctx)
 
-	random, _ := store.Get(types.GetRandomKey(height))
+	random, err := store.Get(types.GetRandomKey(height))
+	if err != nil {
+		ctx.Logger().Error("GetRandomSeed:", err.Error())
+		return nil
+	}
 
 	return random
 }
@@ -875,13 +906,20 @@ func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
 
 	ctx.Logger().Info(fmt.Sprintf("Setting random: %s", hex.EncodeToString(random)))
 
-	store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
+	err := store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
+	if err != nil {
+		ctx.Logger().Error("SetRandomSeed:", err.Error())
+	}
 }
 
 func (k Keeper) GetContractAddress(ctx sdk.Context, label string) sdk.AccAddress {
 	store := k.storeService.OpenKVStore(ctx)
 
-	contractAddress, _ := store.Get(types.GetContractLabelPrefix(label))
+	contractAddress, err := store.Get(types.GetContractLabelPrefix(label))
+	if err != nil {
+		ctx.Logger().Error("GetContractAddress:", err.Error())
+		return nil
+	}
 
 	return contractAddress
 }
@@ -906,7 +944,11 @@ func (k Keeper) GetContractHash(ctx sdk.Context, contractAddress sdk.AccAddress)
 func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {
 	store := k.storeService.OpenKVStore(ctx)
 	var contract types.ContractInfo
-	contractBz, _ := store.Get(types.GetContractAddressKey(contractAddress))
+	contractBz, err := store.Get(types.GetContractAddressKey(contractAddress))
+	if err != nil {
+		ctx.Logger().Error("GetContractInfo:", err.Error())
+		return nil
+	}
 	if contractBz == nil {
 		return nil
 	}
@@ -916,20 +958,30 @@ func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress)
 
 func (k Keeper) containsContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) bool {
 	store := k.storeService.OpenKVStore(ctx)
-	has, _ := store.Has(types.GetContractAddressKey(contractAddress))
+	has, err := store.Has(types.GetContractAddressKey(contractAddress))
+	if err != nil {
+		ctx.Logger().Error("containsContractInfo", err.Error())
+		return false
+	}
 	return has
 }
 
 func (k Keeper) setContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
 	store := k.storeService.OpenKVStore(ctx)
-	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(contract))
+	err := store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(contract))
+	if err != nil {
+		ctx.Logger().Error("setContractInfo:", err.Error())
+	}
 }
 
 func (k Keeper) setContractCustomInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractCustomInfo) {
 	store := k.storeService.OpenKVStore(ctx)
 	k.SetContractKey(ctx, contractAddress, contract.EnclaveKey)
 	// println(fmt.Sprintf("Setting enclave key: %x: %x\n", types.GetContractEnclaveKey(contractAddress), contract.EnclaveKey))
-	store.Set(types.GetContractLabelPrefix(contract.Label), contractAddress)
+	err := store.Set(types.GetContractLabelPrefix(contract.Label), contractAddress)
+	if err != nil {
+		ctx.Logger().Error("setContractCustomInfo:", err.Error())
+	}
 	// println(fmt.Sprintf("Setting label: %x: %x\n", types.GetContractLabelPrefix(contract.Label), contractAddress))
 }
 
@@ -985,7 +1037,10 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 func (k Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) (types.CodeInfo, error) {
 	store := k.storeService.OpenKVStore(ctx)
 	var codeInfo types.CodeInfo
-	codeInfoBz, _ := store.Get(types.GetCodeKey(codeID))
+	codeInfoBz, err := store.Get(types.GetCodeKey(codeID))
+	if err != nil {
+		return types.CodeInfo{}, err
+	}
 	if codeInfoBz == nil {
 		return types.CodeInfo{}, fmt.Errorf("failed to get code info for code id %d", codeID)
 	}
@@ -995,7 +1050,11 @@ func (k Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) (types.CodeInfo, err
 
 func (k Keeper) containsCodeInfo(ctx sdk.Context, codeID uint64) bool {
 	store := k.storeService.OpenKVStore(ctx)
-	has, _ := store.Has(types.GetCodeKey(codeID))
+	has, err := store.Has(types.GetCodeKey(codeID))
+	if err != nil {
+		ctx.Logger().Error("containsCodeInfo:", err.Error())
+		return false
+	}
 	return has
 }
 
@@ -1015,7 +1074,10 @@ func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo
 func (k Keeper) GetWasm(ctx sdk.Context, codeID uint64) ([]byte, error) {
 	store := k.storeService.OpenKVStore(ctx)
 	var codeInfo types.CodeInfo
-	codeInfoBz, _ := store.Get(types.GetCodeKey(codeID))
+	codeInfoBz, err := store.Get(types.GetCodeKey(codeID))
+	if err != nil {
+		return nil, err
+	}
 	if codeInfoBz == nil {
 		return nil, nil
 	}
@@ -1095,7 +1157,11 @@ func contractAddress(codeID, instanceID uint64, creator sdk.AccAddress) sdk.AccA
 
 func (k Keeper) GetNextCodeID(ctx sdk.Context) uint64 {
 	store := k.storeService.OpenKVStore(ctx)
-	bz, _ := store.Get(types.KeyLastCodeID)
+	bz, err := store.Get(types.KeyLastCodeID)
+	if err != nil {
+		ctx.Logger().Error("GetNextCodeID:", err.Error())
+		return 0
+	}
 	id := uint64(1)
 	if bz != nil {
 		id = binary.BigEndian.Uint64(bz)
@@ -1105,14 +1171,22 @@ func (k Keeper) GetNextCodeID(ctx sdk.Context) uint64 {
 
 func (k Keeper) autoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 	store := k.storeService.OpenKVStore(ctx)
-	bz, _ := store.Get(lastIDKey)
+	bz, err := store.Get(lastIDKey)
+	if err != nil {
+		ctx.Logger().Error("autoIncrementID.Get:", err.Error())
+		return 0
+	}
 	id := uint64(1)
 	if bz != nil {
 		id = binary.BigEndian.Uint64(bz)
 	}
 
 	bz = sdk.Uint64ToBigEndian(id + 1)
-	store.Set(lastIDKey, bz)
+	err = store.Set(lastIDKey, bz)
+	if err != nil {
+		ctx.Logger().Error("autoIncrementID.Set:", err.Error())
+		return 0
+	}
 
 	return id
 }
@@ -1120,7 +1194,11 @@ func (k Keeper) autoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 // peekAutoIncrementID reads the current value without incrementing it.
 func (k Keeper) peekAutoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 	store := k.storeService.OpenKVStore(ctx)
-	bz, _ := store.Get(lastIDKey)
+	bz, err := store.Get(lastIDKey)
+	if err != nil {
+		ctx.Logger().Error("peekAutoIncrementID", err.Error())
+		return 0
+	}
 	id := uint64(1)
 	if bz != nil {
 		id = binary.BigEndian.Uint64(bz)
@@ -1130,11 +1208,18 @@ func (k Keeper) peekAutoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 
 func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uint64) error {
 	store := k.storeService.OpenKVStore(ctx)
-	if has, _ := store.Has(lastIDKey); has {
+	has, err := store.Has(lastIDKey)
+	if err != nil {
+		return err
+	}
+	if has {
 		return errorsmod.Wrapf(types.ErrDuplicate, "autoincrement id: %s", string(lastIDKey))
 	}
 	bz := sdk.Uint64ToBigEndian(val)
-	store.Set(lastIDKey, bz)
+	err = store.Set(lastIDKey, bz)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1506,7 +1591,10 @@ func (k Keeper) appendToContractHistory(ctx sdk.Context, contractAddr sdk.AccAdd
 	for _, e := range newEntries {
 		pos++
 		key := types.GetContractCodeHistoryElementKey(contractAddr, pos)
-		store.Set(key, k.cdc.MustMarshal(&e)) //nolint:gosec
+		err := store.Set(key, k.cdc.MustMarshal(&e)) //nolint:gosec
+		if err != nil {
+			ctx.Logger().Error("appendToContractHistory:", err.Error())
+		}
 	}
 }
 
@@ -1527,5 +1615,8 @@ func (k Keeper) GetContractHistory(ctx sdk.Context, contractAddr sdk.AccAddress)
 // addToContractCodeSecondaryIndex adds element to the index for contracts-by-codeid queries
 func (k Keeper) addToContractCodeSecondaryIndex(ctx sdk.Context, contractAddress sdk.AccAddress, entry types.ContractCodeHistoryEntry) {
 	store := k.storeService.OpenKVStore(ctx)
-	store.Set(types.GetContractByCreatedSecondaryIndexKey(contractAddress, entry), []byte{})
+	err := store.Set(types.GetContractByCreatedSecondaryIndexKey(contractAddress, entry), []byte{})
+	if err != nil {
+		ctx.Logger().Error("addToContractCodeSecondaryIndex:", err.Error())
+	}
 }

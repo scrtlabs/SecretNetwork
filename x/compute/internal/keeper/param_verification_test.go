@@ -18,7 +18,6 @@ import (
 	// sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	// authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	// txsigning "cosmossdk.io/x/tx/signing"
 	// signingv1beta1 "cosmossdk.io/api/cosmos/tx/signing/v1beta1"
 	// txv1beta1 "cosmossdk.io/api/cosmos/tx/v1beta1"
@@ -252,7 +251,7 @@ func prepareInitSignedTxMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
 	creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, _ uint64,
 ) sdk.Context {
-	accounts := make([]authtypes.AccountI, len(creators))
+	accounts := make([]sdk.AccountI, len(creators))
 	for i, acc := range creators {
 		account, err := authante.GetSignerAcc(ctx, keeper.accountKeeper, acc)
 		require.NoError(t, err)

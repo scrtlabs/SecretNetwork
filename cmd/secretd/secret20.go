@@ -92,7 +92,7 @@ func S20TransferHistoryCmd() *cobra.Command {
 
 			var page uint64
 			var pageSize uint64 = 10
-			var shouldFilterDecoys bool = false
+			shouldFilterDecoys := false
 
 			if len(args) >= 4 {
 				page, err = strconv.ParseUint(args[3], 10, 32)
@@ -162,7 +162,7 @@ Unlike the transfers query, this query shows all kinds of transactions with the 
 
 			var page uint64
 			var pageSize uint64 = 10
-			var shouldFilterDecoys bool = false
+			shouldFilterDecoys := false
 
 			if len(args) >= 4 {
 				page, err = strconv.ParseUint(args[3], 10, 32)

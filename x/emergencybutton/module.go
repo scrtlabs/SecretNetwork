@@ -20,18 +20,19 @@ import (
 )
 
 var (
-	_ module.AppModuleBasic         = AppModuleBasic{}
-	_ module.HasName                = AppModule{}
-	_ module.HasServices            = AppModule{}
-	_ module.HasGenesis             = AppModule{}
-	_ module.HasConsensusVersion    = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.HasName             = AppModule{}
+	_ module.HasServices         = AppModule{}
+	_ module.HasGenesis          = AppModule{}
+	_ module.HasConsensusVersion = AppModule{}
 )
 
 type AppModuleBasic struct{}
 
 func (AppModuleBasic) Name() string { return types.ModuleName }
 
-func (AppModuleBasic) RegisterLegacyAminoCodec(_ *codec.LegacyAmino) {
+func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
+	types.RegisterLegacyAminoCodec(cdc)
 }
 
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {

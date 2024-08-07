@@ -4,17 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cosmossdk.io/math"
 	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/math"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/keeper"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	//nolint:staticcheck
+	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
-	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 
 	computetypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/ibc-hooks/types"

@@ -53,7 +53,7 @@ the node to the chain. This process, if successful, will output a certificate wh
 blockchain. Writes the certificate in DER format to ~/attestation_cert
 `,
 		Args: cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			sgxSecretsDir := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsDir == "" {
 				sgxSecretsDir = os.ExpandEnv("/opt/secret/.sgx_secrets")
@@ -261,7 +261,7 @@ func DumpBin() *cobra.Command {
 		Long: "Helper to display the contents of a binary file, and extract the public key of the secret node, which is used to" +
 			"register the node, during node initialization",
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			data, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
@@ -281,7 +281,7 @@ func MigrateSealings() *cobra.Command {
 		Short: "Migrate sealed files to the current format",
 		Long:  "Re-create SGX-sealed files according to the current format",
 		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			_, err := api.MigrateSealing()
 			if err != nil {
 				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
@@ -356,7 +356,7 @@ func HealthCheck() *cobra.Command {
 		Short: "Test enclave status",
 		Long:  "Help diagnose issues by performing a basic sanity test that SGX is working properly",
 		Args:  cobra.ExactArgs(0),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			res, err := api.HealthCheck()
 			if err != nil {
 				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
@@ -377,7 +377,7 @@ func ResetEnclave() *cobra.Command {
 		Long: "This will delete all registration and enclave parameters. Use when something goes wrong and you want to start fresh." +
 			"You will have to go through registration again to be able to start the node",
 		Args: cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			homeDir, err := cmd.Flags().GetString(flags.FlagHome)
 			if err != nil {
 				return err
@@ -445,7 +445,7 @@ func AutoRegisterNode() *cobra.Command {
 Please report any issues with this command
 `,
 		Args: cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			sgxSecretsFolder := os.Getenv("SCRT_SGX_STORAGE")
 			if sgxSecretsFolder == "" {
 				sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")

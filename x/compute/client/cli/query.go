@@ -195,7 +195,6 @@ func GetCmdQueryLabel() *cobra.Command {
 			}
 
 			res, err := GetContractAddressByLabel(args[0], clientCtx)
-
 			if err != nil {
 				if err == sdkerrors.ErrUnknownAddress {
 					fmt.Printf("Label is available and not in use\n")

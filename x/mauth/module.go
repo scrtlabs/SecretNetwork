@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	_ module.HasName                = AppModule{}
-	_ module.HasServices            = AppModule{}
-	_ module.AppModuleBasic         = AppModuleBasic{}
-	_ module.AppModule              = AppModule{}
-	_ module.HasConsensusVersion    = AppModule{}
+	_ module.HasName             = AppModule{}
+	_ module.HasServices         = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.AppModule           = AppModule{}
+	_ module.HasConsensusVersion = AppModule{}
 )
 
 // AppModuleBasic implements the AppModuleBasic interface for the capability module.

@@ -14,7 +14,9 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) {
 		keeper.SetMasterKey(ctx, *data.IoMasterKey, types.MasterIoKeyId)
 		keeper.SetMasterKey(ctx, *data.NodeExchMasterKey, types.MasterNodeKeyId)
 		for _, storedRegInfo := range data.Registration {
-			keeper.SetRegistrationInfo(ctx, *storedRegInfo)
+			if err := keeper.SetRegistrationInfo(ctx, *storedRegInfo); err != nil {
+				panic(err)
+			}
 		}
 	} else {
 		panic("Cannot start without MasterKey set")

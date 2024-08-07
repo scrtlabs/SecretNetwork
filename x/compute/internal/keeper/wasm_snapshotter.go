@@ -161,18 +161,18 @@ func (ws *WasmSnapshotter) Restore(
 	}
 }
 
-func (ws *WasmSnapshotter) PruneSnapshotHeight(height int64) {
+func (ws *WasmSnapshotter) PruneSnapshotHeight(_ int64) {
 	panic("not implemented")
 }
 
-func (ws *WasmSnapshotter) SetSnapshotInterval(snapshotInterval uint64) {
+func (ws *WasmSnapshotter) SetSnapshotInterval(_ uint64) {
 	panic("not implemented")
 }
 
-func (ws *WasmSnapshotter) RestoreExtension(height uint64, format uint32, payloadReader snapshottypes.ExtensionPayloadReader) error {
+func (ws *WasmSnapshotter) RestoreExtension(_ uint64, _ uint32, _ snapshottypes.ExtensionPayloadReader) error {
 	panic("not implemented")
 }
 
-func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapshottypes.ExtensionPayloadWriter) error {
+func (ws *WasmSnapshotter) SnapshotExtension(_ uint64, _ snapshottypes.ExtensionPayloadWriter) error {
 	panic("not implemented")
 }
