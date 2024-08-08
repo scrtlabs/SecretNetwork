@@ -587,6 +587,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 	ak.keys = storetypes.NewKVStoreKeys(
 		authtypes.StoreKey,
 		banktypes.StoreKey,
+		consensusparamtypes.StoreKey,
 		stakingtypes.StoreKey,
 		minttypes.StoreKey,
 		distrtypes.StoreKey,
