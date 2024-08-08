@@ -169,9 +169,8 @@ fn sgx_ql_qve_collateral_serialize(
                 x.qe_identity_size as usize,
             );
         }
-
-        return out_size;
-    };
+        out_size
+    }
 }
 
 fn sgx_ql_qve_collateral_deserialize(p_ser: *const u8, n_ser: u32) -> sgx_ql_qve_collateral_t {
@@ -241,7 +240,7 @@ fn sgx_ql_qve_collateral_deserialize(p_ser: *const u8, n_ser: u32) -> sgx_ql_qve
         }
     };
 
-    return res; // unreachable
+    res // unreachable
 }
 
 #[cfg(not(test))]
@@ -253,7 +252,7 @@ pub extern "C" fn ocall_get_quote_ecdsa_collateral(
     n_col: u32,
     p_col_size: *mut u32,
 ) -> sgx_status_t {
-    let mut p_col_my: *mut u8 = 0 as *mut u8;
+    let mut p_col_my: *mut u8 = std::ptr::null_mut::<u8>();
     let mut n_col_my: u32 = 0;
 
     let ret = unsafe { tee_qv_get_collateral(p_quote, n_quote, &mut p_col_my, &mut n_col_my) };
