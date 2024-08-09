@@ -3,16 +3,16 @@ module github.com/scrtlabs/SecretNetwork
 go 1.21
 
 replace (
-	cosmossdk.io/api => github.com/scrtlabs/cosmos-sdk-api v0.0.0-20240731090936-97358c773b67
-	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v0.0.0-20240709111432-a66f64b2f1d4
-	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.0-dev.0.20240729151849-eb53eeaca72d
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240731090454-9394e6edde01
-	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.0.0-alpha.1.0.20240710081403-73fd37d68158
+	cosmossdk.io/api => github.com/scrtlabs/cosmos-sdk-api v0.7.5-secret.1
+	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v1.1.0-secret.1
+	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.9-secret.3
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.8-secret.1
+	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.1.2-secret.1
 )
 
 require (
 	github.com/cometbft/cometbft v0.38.9
-	github.com/cosmos/cosmos-sdk v0.50.4
+	github.com/cosmos/cosmos-sdk v0.50.8
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.5.0
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8 v8.0.1
@@ -190,7 +190,7 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
-	github.com/scrtlabs/tm-secret-enclave v1.11.3 // indirect
+	github.com/scrtlabs/tm-secret-enclave v1.11.8 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect

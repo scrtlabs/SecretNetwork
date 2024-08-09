@@ -149,7 +149,7 @@ dependencies = [
 [[package]]
 name = "bincode2"
 version = "2.0.1"
-source = "git+https://github.com/scrtlabs/bincode2-sgx?rev=bdf9f458eaf41778d64cb812ed8fcad64ffd72a9#bdf9f458eaf41778d64cb812ed8fcad64ffd72a9"
+source = "git+https://github.com/scrtlabs/bincode2-sgx?tag=v2.0.1-secret.1#bdf9f458eaf41778d64cb812ed8fcad64ffd72a9"
 dependencies = [
  "byteorder 1.5.0",
  "serde 1.0.118",
@@ -284,11 +284,11 @@ dependencies = [
 
 [[package]]
 name = "bytes"
-version = "1.6.1"
+version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a12916984aab3fa6e39d655a33e09c0071eb36d6ab3aea5c2d78551f1df6d952"
+checksum = "8318a53db07bb3f8dca91a600466bdb3f2eaadeedfdbcf02e1accbad9271ba50"
 dependencies = [
- "serde 1.0.204",
+ "serde 1.0.205",
 ]
 
 [[package]]
@@ -301,8 +301,8 @@ dependencies = [
  "log",
  "proc-macro2",
  "quote",
- "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde 1.0.205",
+ "serde_json 1.0.122",
  "syn 1.0.109",
  "tempfile",
  "toml",
@@ -310,9 +310,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.1.6"
+version = "1.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2aba8f4e9906c7ce3c73463f62a7f0c65183ada1a2d47e397cc8810827f9694f"
+checksum = "504bdec147f2cc13c8b57ed9401fd8a147cc66b67ad5cb241394244f2c947549"
 
 [[package]]
 name = "cexpr"
@@ -817,7 +817,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "534c5cf6194dfab3db3242765c03bbe257cf92f22b38f6bc0c58d59108a820ba"
 dependencies = [
  "libc",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -989,7 +989,7 @@ version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
 dependencies = [
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1329,9 +1329,12 @@ checksum = "0e4c7666f2019727f9e8e14bf14456e99c707d780922869f1ba473eee101fa49"
 
 [[package]]
 name = "ppv-lite86"
-version = "0.2.17"
+version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
+checksum = "77957b295656769bb8ad2b6a6b09d897d94f05c41b069aede1fcdaa675eaea04"
+dependencies = [
+ "zerocopy",
+]
 
 [[package]]
 name = "proc-macro2"
@@ -1357,7 +1360,7 @@ version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "deb1435c188b76130da55f17a466d252ff7b1418b2ad3e037d127b94e3411f29"
 dependencies = [
- "bytes 1.6.1",
+ "bytes 1.7.1",
  "prost-derive 0.12.6",
 ]
 
@@ -1367,7 +1370,7 @@ version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13db3d3fde688c61e2446b4d843bc27a7e8af269a69440c0308021dc92333cc"
 dependencies = [
- "bytes 1.6.1",
+ "bytes 1.7.1",
  "prost-derive 0.13.1",
 ]
 
@@ -1522,9 +1525,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.10.5"
+version = "1.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b91213439dad192326a0d7c6ee3955910425f441d7038e0d6933b0aec5c4517f"
+checksum = "4219d74c6b67a3654a9fbebc4b419e22126d13d2f3c4a07ee0cb61ff79a79619"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1602,7 +1605,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1731,11 +1734,11 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.204"
+version = "1.0.205"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc76f558e0cbb2a839d37354c575f1dc3fdc6546b5be373ba43d95f231bf7c12"
+checksum = "e33aedb1a7135da52b7c21791455563facbbcc43d0f0f66165b42c21b3dfb150"
 dependencies = [
- "serde_derive 1.0.204",
+ "serde_derive 1.0.205",
 ]
 
 [[package]]
@@ -1744,7 +1747,7 @@ version = "0.11.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "387cc504cb06bb40a96c8e04e951fe01854cf6bc921053c954e4a606d9675c6a"
 dependencies = [
- "serde 1.0.204",
+ "serde 1.0.205",
 ]
 
 [[package]]
@@ -1759,9 +1762,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.204"
+version = "1.0.205"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0cd7e117be63d3c3678776753929474f3b04a43a080c744d6b0ae2a8c28e222"
+checksum = "692d6f5ac90220161d6774db30c662202721e64aed9058d2c394f451261420c1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1781,13 +1784,14 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.120"
+version = "1.0.122"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
+checksum = "784b6203951c57ff748476b126ccb5e8e2959a5c19e5c617ab1956be3dbc68da"
 dependencies = [
  "itoa 1.0.11",
+ "memchr",
  "ryu",
- "serde 1.0.204",
+ "serde 1.0.205",
 ]
 
 [[package]]
@@ -2042,22 +2046,23 @@ dependencies = [
 
 [[package]]
 name = "tempfile"
-version = "3.10.1"
+version = "3.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85b77fafb263dd9d05cbeac119526425676db3784113aa9295c88498cbf8bff1"
+checksum = "04cbcdd0c794ebb0d4cf35e88edd2f7d2c4c3e9a5a6dab322839b321c6a87a64"
 dependencies = [
  "cfg-if 1.0.0",
  "fastrand",
+ "once_cell",
  "rustix",
- "windows-sys",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
 name = "tendermint"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?branch=v0.38.0#2ab96d83b3609c8830f024e73553ae85fb200d5a"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.1#2ab96d83b3609c8830f024e73553ae85fb200d5a"
 dependencies = [
- "bytes 1.6.1",
+ "bytes 1.7.1",
  "digest 0.10.7",
  "ed25519",
  "ed25519-consensus",
@@ -2067,9 +2072,9 @@ dependencies = [
  "once_cell",
  "prost 0.12.6",
  "prost-types 0.12.6",
- "serde 1.0.204",
+ "serde 1.0.205",
  "serde_bytes",
- "serde_json 1.0.120",
+ "serde_json 1.0.122",
  "serde_repr",
  "sha2 0.10.8",
  "signature",
@@ -2083,11 +2088,11 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client-verifier"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?branch=v0.38.0#2ab96d83b3609c8830f024e73553ae85fb200d5a"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.1#2ab96d83b3609c8830f024e73553ae85fb200d5a"
 dependencies = [
  "derive_more",
  "flex-error",
- "serde 1.0.204",
+ "serde 1.0.205",
  "tendermint",
  "time",
 ]
@@ -2095,13 +2100,13 @@ dependencies = [
 [[package]]
 name = "tendermint-proto"
 version = "0.38.0"
-source = "git+https://github.com/scrtlabs/tendermint-rs?branch=v0.38.0#2ab96d83b3609c8830f024e73553ae85fb200d5a"
+source = "git+https://github.com/scrtlabs/tendermint-rs?tag=v0.38.0-secret.1#2ab96d83b3609c8830f024e73553ae85fb200d5a"
 dependencies = [
- "bytes 1.6.1",
+ "bytes 1.7.1",
  "flex-error",
  "prost 0.13.1",
  "prost-types 0.13.1",
- "serde 1.0.204",
+ "serde 1.0.205",
  "serde_bytes",
  "subtle-encoding",
  "time",
@@ -2151,7 +2156,7 @@ version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a561bf4617eebd33bca6434b988f39ed798e527f51a1e797d0ee4f61c0a38376"
 dependencies = [
- "serde 1.0.204",
+ "serde 1.0.205",
  "time-core",
  "time-macros",
 ]
@@ -2177,7 +2182,7 @@ version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
 dependencies = [
- "serde 1.0.204",
+ "serde 1.0.205",
 ]
 
 [[package]]
@@ -2236,14 +2241,14 @@ checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "version_check"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "walrus"
 version = "0.19.0"
-source = "git+https://github.com/scrtlabs/walrus?rev=c5777d4#c5777d43d78b437cef94aaa939d3be115dfeee6a"
+source = "git+https://github.com/scrtlabs/walrus?tag=v0.19.0-secret.1#c5777d43d78b437cef94aaa939d3be115dfeee6a"
 dependencies = [
  "anyhow 1.0.86",
  "id-arena",
@@ -2256,7 +2261,7 @@ dependencies = [
 [[package]]
 name = "walrus-macro"
 version = "0.19.0"
-source = "git+https://github.com/scrtlabs/walrus?rev=c5777d4#c5777d43d78b437cef94aaa939d3be115dfeee6a"
+source = "git+https://github.com/scrtlabs/walrus?tag=v0.19.0-secret.1#c5777d43d78b437cef94aaa939d3be115dfeee6a"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -2273,7 +2278,7 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 [[package]]
 name = "wasm3"
 version = "0.3.1"
-source = "git+https://github.com/scrtlabs/wasm3-rs?rev=ad1c868#ad1c868bb6c5f62161f33d80f90c5b4541190018"
+source = "git+https://github.com/scrtlabs/wasm3-rs?tag=v0.3.1-secret.1#ad1c868bb6c5f62161f33d80f90c5b4541190018"
 dependencies = [
  "cty",
  "impl-trait-for-tuples",
@@ -2284,7 +2289,7 @@ dependencies = [
 [[package]]
 name = "wasm3-sys"
 version = "0.3.1"
-source = "git+https://github.com/scrtlabs/wasm3-rs?rev=ad1c868#ad1c868bb6c5f62161f33d80f90c5b4541190018"
+source = "git+https://github.com/scrtlabs/wasm3-rs?tag=v0.3.1-secret.1#ad1c868bb6c5f62161f33d80f90c5b4541190018"
 dependencies = [
  "bindgen",
  "cc",
@@ -2378,11 +2383,11 @@ checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 
 [[package]]
 name = "winapi-util"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d4cc384e1e73b93bafa6fb4f1df8c41695c8a91cf9c4c64358067d15a7b6c6b"
+checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2396,6 +2401,15 @@ name = "windows-sys"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
+dependencies = [
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.59.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets",
 ]
@@ -2483,6 +2497,27 @@ dependencies = [
  "chrono",
  "num-bigint",
  "sgx_tstd",
+]
+
+[[package]]
+name = "zerocopy"
+version = "0.7.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b9b4fd18abc82b8136838da5d50bae7bdea537c574d8dc1a34ed098d6c166f0"
+dependencies = [
+ "byteorder 1.5.0",
+ "zerocopy-derive",
+]
+
+[[package]]
+name = "zerocopy-derive"
+version = "0.7.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa4f8080344d4671fb4e831a13ad1e68092748387dfc4f55e356242fae12ce3e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.72",
 ]
 
 [[package]]
