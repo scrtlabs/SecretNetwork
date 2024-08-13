@@ -34,7 +34,7 @@ func NewHandler(k Keeper) sdk.Handler {
 	}
 }
 
-// filterMessageEvents returns the same events with all of type == EventTypeMessage removed.
+// filteredMessageEvents returns the same events with all of type == EventTypeMessage removed.
 // this is so only our top-level message event comes through
 func filteredMessageEvents(manager *sdk.EventManager) []abci.Event {
 	events := manager.ABCIEvents()
