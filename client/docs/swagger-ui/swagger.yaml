@@ -63038,60 +63038,6 @@ paths:
                       format: byte
       tags:
         - gRPC Gateway API
-  /mauth/interchain_account/owner/{owner}/connection/{connection_id}:
-    get:
-      summary: >-
-        QueryInterchainAccountFromAddress returns the interchain account for
-        given
-
-        owner address on a given connection pair
-      operationId: InterchainAccountFromAddress
-      responses:
-        '200':
-          description: A successful response.
-          schema:
-            type: object
-            properties:
-              interchain_account_address:
-                type: string
-            title: >-
-              QueryInterchainAccountFromAddressResponse the response type for
-              the
-
-              Query/InterchainAccountAddress RPC
-        default:
-          description: An unexpected error response.
-          schema:
-            type: object
-            properties:
-              error:
-                type: string
-              code:
-                type: integer
-                format: int32
-              message:
-                type: string
-              details:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    type_url:
-                      type: string
-                    value:
-                      type: string
-                      format: byte
-      parameters:
-        - name: owner
-          in: path
-          required: true
-          type: string
-        - name: connection_id
-          in: path
-          required: true
-          type: string
-      tags:
-        - gRPC Gateway API
   /registration/v1beta1/encrypted-seed/{pub_key}:
     get:
       summary: Returns the encrypted seed for a registered node by public key
@@ -111154,14 +111100,6 @@ definitions:
           pauser_address:
             type: string
     description: ParamsResponse is the response type for the Query/Params RPC method.
-  secret.intertx.v1beta1.QueryInterchainAccountFromAddressResponse:
-    type: object
-    properties:
-      interchain_account_address:
-        type: string
-    title: |-
-      QueryInterchainAccountFromAddressResponse the response type for the
-      Query/InterchainAccountAddress RPC
   secret.registration.v1beta1.Key:
     type: object
     properties:

@@ -41,7 +41,6 @@ import (
 	packetforwardrouter "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
-	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
@@ -87,7 +86,6 @@ func customModuleBasics() []module.AppModuleBasic {
 	return []module.AppModuleBasic{
 		compute.AppModuleBasic{},
 		registration.AppModuleBasic{},
-		icaauth.AppModuleBasic{},
 		ibcswitch.AppModuleBasic{},
 	}
 }

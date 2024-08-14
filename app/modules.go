@@ -40,7 +40,6 @@ import (
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
-	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
@@ -89,6 +88,5 @@ func Modules(
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper, app.AppKeepers.GetSubspace(packetforwardtypes.ModuleName)),
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
 		ibcswitch.NewAppModule(app.AppKeepers.IbcSwitchKeeper),
-		icaauth.NewAppModule(appCodec, *app.AppKeepers.ICAAuthKeeper),
 	}
 }

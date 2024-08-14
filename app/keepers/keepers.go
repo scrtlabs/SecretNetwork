@@ -41,7 +41,6 @@ import (
 	ibcpacketforward "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	icacontroller "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller"
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/keeper"
 	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
 	icahost "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host"
@@ -55,9 +54,6 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
-	icaauth "github.com/scrtlabs/SecretNetwork/x/mauth"
-	icaauthkeeper "github.com/scrtlabs/SecretNetwork/x/mauth/keeper"
-	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 
 	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/keeper"
@@ -106,7 +102,6 @@ type SecretAppKeepers struct {
 
 	ICAControllerKeeper *icacontrollerkeeper.Keeper
 	ICAHostKeeper       *icahostkeeper.Keeper
-	ICAAuthKeeper       *icaauthkeeper.Keeper
 
 	// make scoped keepers public for test purposes
 	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
@@ -114,7 +109,6 @@ type SecretAppKeepers struct {
 
 	ScopedICAControllerKeeper capabilitykeeper.ScopedKeeper
 	ScopedICAHostKeeper       capabilitykeeper.ScopedKeeper
-	ScopedICAAuthKeeper       capabilitykeeper.ScopedKeeper
 
 	ScopedComputeKeeper capabilitykeeper.ScopedKeeper
 
@@ -339,7 +333,6 @@ func (ak *SecretAppKeepers) CreateScopedKeepers() {
 	ak.ScopedTransferKeeper = ak.CapabilityKeeper.ScopeToModule(ibctransfertypes.ModuleName)
 	ak.ScopedICAControllerKeeper = ak.CapabilityKeeper.ScopeToModule(icacontrollertypes.SubModuleName)
 	ak.ScopedICAHostKeeper = ak.CapabilityKeeper.ScopeToModule(icahosttypes.SubModuleName)
-	ak.ScopedICAAuthKeeper = ak.CapabilityKeeper.ScopeToModule(icaauthtypes.ModuleName)
 	ak.ScopedComputeKeeper = ak.CapabilityKeeper.ScopeToModule(compute.ModuleName)
 
 	// Applications that wish to enforce statically created ScopedKeepers should call `Seal` after creating
@@ -472,16 +465,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	)
 	ak.ICAHostKeeper = &icaHostKeeper
 
-	icaAuthKeeper := icaauthkeeper.NewKeeper(
-		appCodec,
-		runtime.NewKVStoreService(ak.keys[icaauthtypes.StoreKey]),
-		*ak.ICAControllerKeeper,
-		ak.ScopedICAAuthKeeper,
-	)
-	ak.ICAAuthKeeper = &icaAuthKeeper
-
-	icaAuthIBCModule := icaauth.NewIBCModule(*ak.ICAAuthKeeper)
-
 	icaHostIBCModule := icahost.NewIBCModule(*ak.ICAHostKeeper)
 
 	// Create Transfer Keepers
@@ -521,7 +504,6 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 
 	// initialize ICA module with mock module as the authentication module on the controller side
 	var icaControllerStack porttypes.IBCModule
-	icaControllerStack = icacontroller.NewIBCMiddleware(icaAuthIBCModule, *ak.ICAControllerKeeper)
 	icaControllerStack = ibcfee.NewIBCMiddleware(icaControllerStack, ak.IbcFeeKeeper)
 	icaControllerStack = ibcswitch.NewIBCMiddleware(icaControllerStack, ak.IbcSwitchKeeper)
 

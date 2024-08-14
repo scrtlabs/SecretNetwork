@@ -59,8 +59,6 @@ import (
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
 
-	icaauthtypes "github.com/scrtlabs/SecretNetwork/x/mauth/types"
-
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 
@@ -563,7 +561,6 @@ func SetOrderBeginBlockers(app *SecretNetworkApp) {
 		authz.ModuleName,
 		paramstypes.ModuleName,
 		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
 		packetforwardtypes.ModuleName,
 		ibcfeetypes.ModuleName,
 		// custom modules
@@ -591,7 +588,6 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		ibcswitchtypes.ModuleName,
 
 		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
 
 		authz.ModuleName,
 		minttypes.ModuleName,
@@ -628,7 +624,6 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		ibcexported.ModuleName,
 		ibctransfertypes.ModuleName,
 		icatypes.ModuleName,
-		icaauthtypes.ModuleName,
 		ibcfeetypes.ModuleName,
 		packetforwardtypes.ModuleName,
 		compute.ModuleName,
