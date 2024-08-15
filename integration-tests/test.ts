@@ -83,15 +83,16 @@ beforeAll(async () => {
   for (let i = 0; i < mnemonics.length; i++) {
     const mnemonic = mnemonics[i];
     const walletAmino = new AminoWallet(mnemonic);
+    const walletProto = new Wallet(mnemonic);
     accounts[i] = {
       address: walletAmino.address,
       mnemonic: mnemonic,
       walletAmino,
-      walletProto: new Wallet(mnemonic),
+      walletProto,
       secretjs: new SecretNetworkClient({
         url: "http://localhost:1317",
-        wallet: walletAmino,
-        walletAddress: walletAmino.address,
+        wallet: walletProto,
+        walletAddress: walletProto.address,
         chainId: "secretdev-1",
       }),
     };
@@ -101,15 +102,16 @@ beforeAll(async () => {
   for (let i = 0; i < mnemonics.length; i++) {
     const mnemonic = mnemonics[i];
     const walletAmino = new AminoWallet(mnemonic);
+    const walletProto = new Wallet(mnemonic);
     accounts2[i] = {
       address: walletAmino.address,
       mnemonic: mnemonic,
       walletAmino,
-      walletProto: new Wallet(mnemonic),
+      walletProto,
       secretjs: new SecretNetworkClient({
         url: "http://localhost:2317",
-        wallet: walletAmino,
-        walletAddress: walletAmino.address,
+        wallet: walletProto,
+        walletAddress: walletProto.address,
         chainId: "secretdev-2",
       }),
     };
@@ -129,7 +131,7 @@ beforeAll(async () => {
       secretjs: new SecretNetworkClient({
         url: "http://localhost:1317",
         chainId: "secretdev-1",
-        wallet: wallet,
+        wallet: walletProto,
         walletAddress: address,
       }),
     };
@@ -497,13 +499,14 @@ describe("tx broadcast multi", () => {
   });
 });
 
-describe.skip("GovMsgVote", () => {
+describe("GovMsgVote", () => {
   let proposalId: number;
 
   beforeAll(async () => {
+
     let tx = await accounts[0].secretjs.tx.gov.submitProposal(
       {
-        type: ProposalType.TextProposal,
+        type: ProposalType.Proposal,
         proposer: accounts[0].address,
         // on localsecret min deposit is 10 SCRT
         initial_deposit: stringToCoins("10000000uscrt"),
@@ -511,6 +514,10 @@ describe.skip("GovMsgVote", () => {
           title: "Hi",
           description: "Hello",
         },
+        messages: [],
+        metadata: "some_metadatas",
+        summary: "summary",
+        title: "title"
       },
       {
         broadcastCheckIntervalMs: 100,
@@ -523,7 +530,7 @@ describe.skip("GovMsgVote", () => {
     expect(tx.code).toBe(TxResultCode.Success);
 
     proposalId = Number(
-      tx.jsonLog?.[0].events
+      tx.events
         .find((e) => e.type === "submit_proposal")
         ?.attributes.find((a) => a.key === "proposal_id")?.value
     );
@@ -553,16 +560,20 @@ describe.skip("GovMsgVote", () => {
 
             console.log(JSON.stringify(tx, null, 2));
 
-      const { attributes } = tx.jsonLog[0].events.find(
+      const { attributes } = tx.events.find(
         (x) => x.type === "proposal_vote"
       );
-      expect(attributes).toContainEqual({
+      const proposal_id = attributes.find((x) => x.key === "proposal_id");
+      expect(proposal_id).toStrictEqual({
         key: "proposal_id",
         value: String(proposalId),
+        index: true,
       });
-      expect(attributes).toContainEqual({
+      const option = attributes.find((x) => x.key === "option");
+      expect(option).toStrictEqual({
         key: "option",
-        value: '{"option":1,"weight":"1.000000000000000000"}',
+        value: '[{"option":1,"weight":"1.000000000000000000"}]',
+        index: true,
       });
     });
 
@@ -582,8 +593,8 @@ describe.skip("GovMsgVote", () => {
         { gasLimit: 250_000 }
       );
 
-      expect(tx.code).toBe(2 /* Gov ErrUnknownProposal */);
-      expect(tx.rawLog).toContain(`${proposalId + 1e6}: unknown proposal`);
+      expect(tx.code).toBe(3 /* Gov ErrInvalidSequence */);
+      expect(tx.rawLog).toContain(`${proposalId + 1e6}: inactive proposal`);
     });
   });
 
@@ -608,16 +619,20 @@ describe.skip("GovMsgVote", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-      const { attributes } = tx.jsonLog[0].events.find(
+      const { attributes } = tx.events.find(
         (x) => x.type === "proposal_vote"
       );
-      expect(attributes).toContainEqual({
+      const proposal_id = attributes.find((x) => x.key === "proposal_id");
+      expect(proposal_id).toStrictEqual({
         key: "proposal_id",
+        index: true,
         value: String(proposalId),
       });
-      expect(attributes).toContainEqual({
+      const option = attributes.find((x) => x.key === "option");
+      expect(option).toStrictEqual({
+        index: true,
         key: "option",
-        value: '{"option":1,"weight":"1.000000000000000000"}',
+        value: '[{"option":1,"weight":"1.000000000000000000"}]',
       });
     });
 
@@ -637,8 +652,8 @@ describe.skip("GovMsgVote", () => {
         { gasLimit: 250_000 }
       );
 
-      expect(tx.code).toBe(2 /* Gov ErrUnknownProposal */);
-      expect(tx.rawLog).toContain(`${proposalId + 1e6}: unknown proposal`);
+      expect(tx.code).toBe(3 /* Gov ErrInvalidSequence */);
+      expect(tx.rawLog).toContain(`${proposalId + 1e6}: inactive proposal`);
     });
   });
 });
