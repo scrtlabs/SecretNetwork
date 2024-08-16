@@ -11,8 +11,6 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 
-	// abci "github.com/cometbft/cometbft/abci/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -65,7 +63,7 @@ func initRecurseContract(t *testing.T) (contract sdk.AccAddress, creator sdk.Acc
 	realWasmQuerier = WasmQuerier(&keeper)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-	creator, creatorPriv, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 9876)
+	creator, creatorPriv, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
 
 	// store the code
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
@@ -185,7 +183,6 @@ func TestGasCostOnQuery(t *testing.T) {
 	}
 }
 
-/*
 func TestGasOnExternalQuery(t *testing.T) {
 	const (
 		// todo: tune gas numbers
@@ -254,22 +251,20 @@ func TestGasOnExternalQuery(t *testing.T) {
 			require.NoError(t, err)
 
 			// do the query
-			path := []string{QueryGetContractState, contractAddr.String(), QueryMethodContractStateSmart}
-			req := abci.RequestQuery{Data: msg}
 			if tc.expectPanic {
 				require.Panics(t, func() {
 					// this should run out of gas
-					_, err := NewLegacyQuerier(keeper)(ctx, path, req)
+					_, err := keeper.QuerySmart(ctx, contractAddr, msg, true)
 					t.Logf("%v", err)
 				})
 			} else {
 				// otherwise, make sure we get a good success
-				_, err := NewLegacyQuerier(keeper)(ctx, path, req)
+				_, err := keeper.QuerySmart(ctx, contractAddr, msg, true)
 				require.NoError(t, err)
 			}
 		})
 	}
-}*/
+}
 
 func TestLimitRecursiveQueryGas(t *testing.T) {
 	// The point of this test from https://github.com/CosmWasm/cosmwasm/issues/456

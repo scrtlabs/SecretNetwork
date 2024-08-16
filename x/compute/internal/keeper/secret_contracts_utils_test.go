@@ -131,8 +131,8 @@ func setupBasicTest(t *testing.T, additionalCoinsInWallets sdk.Coins) (sdk.Conte
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
-	walletA, privKeyA, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...), 2021)
-	walletB, privKeyB, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...), 2022)
+	walletA, privKeyA, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 200000)).Add(additionalCoinsInWallets...))
+	walletB, privKeyB, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 5000)).Add(additionalCoinsInWallets...))
 
 	return ctx, keeper, walletA, privKeyA, walletB, privKeyB
 }
@@ -413,32 +413,12 @@ func queryHelperImpl(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-	kvGasConfig := stypes.GasConfig{
-		HasCost:          100,
-		DeleteCost:       100,
-		ReadCostFlat:     100,
-		ReadCostPerByte:  1,
-		WriteCostFlat:    200,
-		WriteCostPerByte: 5,
-		IterNextCostFlat: 5,
-	}
-
-	transientGasConfig := stypes.GasConfig{
-		HasCost:          10,
-		DeleteCost:       10,
-		ReadCostFlat:     10,
-		ReadCostPerByte:  0,
-		WriteCostFlat:    20,
-		WriteCostPerByte: 1,
-		IterNextCostFlat: 1,
-	}
-
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
+	).WithGasMeter(gasMeter)
 
 	resultCipherBz, err := keeper.QuerySmart(ctx, contractAddr, queryBz, false)
 
@@ -612,32 +592,12 @@ func execTxBuilderImpl(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-	kvGasConfig := stypes.GasConfig{
-		HasCost:          100,
-		DeleteCost:       100,
-		ReadCostFlat:     100,
-		ReadCostPerByte:  1,
-		WriteCostFlat:    200,
-		WriteCostPerByte: 5,
-		IterNextCostFlat: 5,
-	}
-
-	transientGasConfig := stypes.GasConfig{
-		HasCost:          10,
-		DeleteCost:       10,
-		ReadCostFlat:     10,
-		ReadCostPerByte:  0,
-		WriteCostFlat:    20,
-		WriteCostPerByte: 1,
-		IterNextCostFlat: 1,
-	}
-
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
+	).WithGasMeter(gasMeter)
 
 	ctx = PrepareExecSignedTxWithMultipleMsgs(t, keeper, ctx, txSender, senderPrivKey, secretMsgsBz, contractAddress, coins)
 
@@ -757,32 +717,12 @@ func initHelperImpl(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-	kvGasConfig := stypes.GasConfig{
-		HasCost:          100,
-		DeleteCost:       100,
-		ReadCostFlat:     100,
-		ReadCostPerByte:  1,
-		WriteCostFlat:    200,
-		WriteCostPerByte: 5,
-		IterNextCostFlat: 5,
-	}
-
-	transientGasConfig := stypes.GasConfig{
-		HasCost:          10,
-		DeleteCost:       10,
-		ReadCostFlat:     10,
-		ReadCostPerByte:  0,
-		WriteCostFlat:    20,
-		WriteCostPerByte: 1,
-		IterNextCostFlat: 1,
-	}
-
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
+	).WithGasMeter(gasMeter)
 
 	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, admin, creatorPrivKey, initMsgBz, codeID, sentFunds)
 	// make the label a random base64 string, because why not?
@@ -885,32 +825,12 @@ func migrateHelper(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-	kvGasConfig := stypes.GasConfig{
-		HasCost:          100,
-		DeleteCost:       100,
-		ReadCostFlat:     100,
-		ReadCostPerByte:  1,
-		WriteCostFlat:    200,
-		WriteCostPerByte: 5,
-		IterNextCostFlat: 5,
-	}
-
-	transientGasConfig := stypes.GasConfig{
-		HasCost:          10,
-		DeleteCost:       10,
-		ReadCostFlat:     10,
-		ReadCostPerByte:  0,
-		WriteCostFlat:    20,
-		WriteCostPerByte: 1,
-		IterNextCostFlat: 1,
-	}
-
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
+	).WithGasMeter(gasMeter)
 
 	ctx = prepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
 
@@ -989,32 +909,12 @@ func updateAdminHelper(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-	kvGasConfig := stypes.GasConfig{
-		HasCost:          100,
-		DeleteCost:       100,
-		ReadCostFlat:     100,
-		ReadCostPerByte:  1,
-		WriteCostFlat:    200,
-		WriteCostPerByte: 5,
-		IterNextCostFlat: 5,
-	}
-
-	transientGasConfig := stypes.GasConfig{
-		HasCost:          10,
-		DeleteCost:       10,
-		ReadCostFlat:     10,
-		ReadCostPerByte:  0,
-		WriteCostFlat:    20,
-		WriteCostPerByte: 1,
-		IterNextCostFlat: 1,
-	}
-
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
+	).WithGasMeter(gasMeter)
 
 	if newAdmin.Empty() {
 		ctx = prepareClearAdminSignedTx(t, keeper, ctx, contractAddress.String(), sender, senderPrivkey)
@@ -1110,31 +1010,12 @@ func fakeUpdateAdminHelper(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-	kvGasConfig := stypes.GasConfig{
-		HasCost:          100,
-		DeleteCost:       100,
-		ReadCostFlat:     100,
-		ReadCostPerByte:  1,
-		WriteCostFlat:    200,
-		WriteCostPerByte: 5,
-		IterNextCostFlat: 5,
-	}
-
-	transientGasConfig := stypes.GasConfig{
-		HasCost:          10,
-		DeleteCost:       10,
-		ReadCostFlat:     10,
-		ReadCostPerByte:  0,
-		WriteCostFlat:    20,
-		WriteCostPerByte: 1,
-		IterNextCostFlat: 1,
-	}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
+	).WithGasMeter(gasMeter)
 
 	if newAdmin.Empty() {
 		ctx = prepareClearAdminSignedTx(t, keeper, ctx, contractAddress.String(), sender, senderPrivkey)
@@ -1316,31 +1197,12 @@ func fakeMigrateHelper(
 	// events from past calls
 	gasMeter := &WasmCounterGasMeter{0, stypes.NewGasMeter(gas)}
 
-	kvGasConfig := stypes.GasConfig{
-		HasCost:          100,
-		DeleteCost:       100,
-		ReadCostFlat:     100,
-		ReadCostPerByte:  1,
-		WriteCostFlat:    200,
-		WriteCostPerByte: 5,
-		IterNextCostFlat: 5,
-	}
-
-	transientGasConfig := stypes.GasConfig{
-		HasCost:          10,
-		DeleteCost:       10,
-		ReadCostFlat:     10,
-		ReadCostPerByte:  0,
-		WriteCostFlat:    20,
-		WriteCostPerByte: 1,
-		IterNextCostFlat: 1,
-	}
 	ctx = sdk.NewContext(
 		ctx.MultiStore(),
 		ctx.BlockHeader(),
 		ctx.IsCheckTx(),
 		log.NewNopLogger(),
-	).WithGasMeter(gasMeter).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
+	).WithGasMeter(gasMeter)
 
 	ctx = prepareMigrateSignedTx(t, keeper, ctx, contractAddress.String(), txSender, senderPrivKey, migrateMsgBz, newCodeId)
 

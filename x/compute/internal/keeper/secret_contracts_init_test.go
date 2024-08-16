@@ -531,7 +531,7 @@ func TestWasmTooHighInitialMemoryStaticFail(t *testing.T) {
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures, &encoders, nil)
 	accKeeper, keeper := keepers.AccountKeeper, keepers.WasmKeeper
 
-	walletA, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)), 3001)
+	walletA, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, sdk.NewCoins(sdk.NewInt64Coin("denom", 1)))
 
 	wasmCode, err := os.ReadFile(TestContractPaths[staticTooHighMemoryContract])
 	require.NoError(t, err)

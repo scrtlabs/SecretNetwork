@@ -52,7 +52,7 @@ func TestGovQueryProposals(t *testing.T) {
 	govKeeper.Params.Set(ctx, v1types.DefaultParams())
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
-	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 1071)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 	//
 
 	// upload staking derivates code
@@ -120,7 +120,7 @@ func TestGovVote(t *testing.T) {
 	deposit2 := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("stake", 5_000_000_000))
 	initFunds := sdk.NewCoins(sdk.NewInt64Coin("stake", 10_000_000_000))
-	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, initFunds, 1070)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, initFunds)
 	//
 
 	// upload staking derivates code

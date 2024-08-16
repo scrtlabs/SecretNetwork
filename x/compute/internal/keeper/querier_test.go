@@ -13,8 +13,6 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
 
-	// abci "github.com/cometbft/cometbft/abci/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkErrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -34,8 +32,8 @@ func TestQueryContractLabel(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, privCreator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 1050)
-	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 1051)
+	creator, privCreator, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -109,7 +107,6 @@ func TestQueryContractLabel(t *testing.T) {
 	}
 }
 
-/*
 func TestQueryContractState(t *testing.T) {
 	t.SkipNow() // cannot interact directly with state
 
@@ -124,8 +121,8 @@ func TestQueryContractState(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...), 10003)
-	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 10002)
+	creator, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)
@@ -164,62 +161,60 @@ func TestQueryContractState(t *testing.T) {
 	keeper.importContractState(ctx, addr, contractModel)
 
 	// this gets us full error, not redacted sdk.Error
-	q := NewLegacyQuerier(keeper)
+	q := NewGrpcQuerier(keeper)
 	specs := map[string]struct {
-		srcPath []string
-		srcReq  abci.RequestQuery
+		srcReq types.QuerySecretContractRequest
 		// smart queries return raw bytes from contract not []types.Model
 		// if this is set, then we just compare - (should be json encoded string)
 		expSmartRes string
 		// if success and expSmartRes is not set, we parse into []types.Model and compare
 		expModelLen      int
 		expModelContains []types.Model
-		expErr           *sdkErrors.Error
+		expErr           *errorsmod.Error
 	}{
 		"query": {
-			srcPath:     []string{QueryGetContractState, addr.String()},
-			srcReq:      abci.RequestQuery{Data: []byte(`{"verifier":{}}`)},
+			srcReq:      types.QuerySecretContractRequest{ContractAddress: addr.String(), Query: []byte(`{"verifier":{}}`)},
 			expSmartRes: fmt.Sprintf(`{"verifier":"%s"}`, anyAddr.String()),
 		},
 		"query invalid request": {
-			srcPath: []string{QueryGetContractState, addr.String()},
-			srcReq:  abci.RequestQuery{Data: []byte(`{"raw":{"key":"config"}}`)},
-			expErr:  types.ErrQueryFailed,
+			srcReq: types.QuerySecretContractRequest{ContractAddress: addr.String(), Query: []byte(`{"raw":{"key":"config"}}`)},
+			expErr: types.ErrQueryFailed,
 		},
-			// "query raw key": {
-			// 	srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-			// 	srcReq:           abci.RequestQuery{Data: []byte("foo")},
-			// 	expModelLen:      1,
-			// 	expModelContains: []types.Model{{Key: []byte("foo"), Value: []byte(`"bar"`)}},
-			// },
-			// "query raw binary key": {
-			// 	srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-			// 	srcReq:           abci.RequestQuery{Data: []byte{0x0, 0x1}},
-			// 	expModelLen:      1,
-			// 	expModelContains: []types.Model{{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)}},
-			// },
+		/*
+			"query raw key": {
+				srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+				srcReq:           abci.RequestQuery{Data: []byte("foo")},
+				expModelLen:      1,
+				expModelContains: []types.Model{{Key: []byte("foo"), Value: []byte(`"bar"`)}},
+			},
+			"query raw binary key": {
+				srcPath:          []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+				srcReq:           abci.RequestQuery{Data: []byte{0x0, 0x1}},
+				expModelLen:      1,
+				expModelContains: []types.Model{{Key: []byte{0x0, 0x1}, Value: []byte(`{"count":8}`)}},
+			},
+		*/
 		"query smart": {
-			srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
-			srcReq:      abci.RequestQuery{Data: []byte(`{"verifier":{}}`)},
+			srcReq:      types.QuerySecretContractRequest{ContractAddress: addr.String(), Query: []byte(`{"verifier":{}}`)},
 			expSmartRes: fmt.Sprintf(`{"verifier":"%s"}`, anyAddr.String()),
 		},
 		"query smart invalid request": {
-			srcPath: []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
-			srcReq:  abci.RequestQuery{Data: []byte(`{"raw":{"key":"config"}}`)},
-			expErr:  types.ErrQueryFailed,
+			srcReq: types.QuerySecretContractRequest{ContractAddress: addr.String(), Query: []byte(`{"raw":{"key":"config"}}`)},
+			expErr: types.ErrQueryFailed,
 		},
 		"query smart with invalid json": {
-			srcPath: []string{QueryGetContractState, addr.String(), QueryMethodContractStateSmart},
-			srcReq:  abci.RequestQuery{Data: []byte(`not a json string`)},
-			expErr:  types.ErrQueryFailed,
+			srcReq: types.QuerySecretContractRequest{ContractAddress: addr.String(), Query: []byte(`not a json string`)},
+			expErr: types.ErrQueryFailed,
 		},
-			// "query unknown raw key": {
-			// 	srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
-			// 	srcReq:      abci.RequestQuery{Data: []byte("unknown")},
-			// 	expModelLen: 0,
-			// },
+		/*
+			"query unknown raw key": {
+				srcPath:     []string{QueryGetContractState, addr.String(), QueryMethodContractStateRaw},
+				srcReq:      abci.RequestQuery{Data: []byte("unknown")},
+				expModelLen: 0,
+			},
+		*/
 		"query with unknown address": {
-			srcPath:     []string{QueryGetContractState, anyAddr.String()},
+			srcReq:      types.QuerySecretContractRequest{ContractAddress: anyAddr.String()},
 			expModelLen: 0,
 			expErr:      types.ErrNotFound,
 		},
@@ -227,20 +222,20 @@ func TestQueryContractState(t *testing.T) {
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			binResult, err := q(ctx, spec.srcPath, spec.srcReq)
+			binResult, err := q.QuerySecretContract(ctx, &spec.srcReq)
 			// require.True(t, spec.expErr.Is(err), "unexpected error")
 			require.True(t, spec.expErr.Is(err), err)
 
 			// if smart query, check custom response
 			if spec.expSmartRes != "" {
-				require.Equal(t, spec.expSmartRes, string(binResult))
+				require.Equal(t, spec.expSmartRes, string(binResult.Data))
 				return
 			}
 
 			// otherwise, check returned models
 			var r []types.Model
 			if spec.expErr == nil {
-				require.NoError(t, json.Unmarshal(binResult, &r))
+				require.NoError(t, json.Unmarshal(binResult.Data, &r))
 				require.NotNil(t, r)
 			}
 			require.Len(t, r, spec.expModelLen)
@@ -251,7 +246,6 @@ func TestQueryContractState(t *testing.T) {
 		})
 	}
 }
-*/
 
 func TestListContractByCodeOrdering(t *testing.T) {
 	encodingConfig := MakeEncodingConfig()
@@ -265,8 +259,8 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 1000000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 500))
-	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 10005)
-	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp, 1054)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
+	anyAddr, _, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, topUp)
 
 	wasmCode, err := os.ReadFile(TestContractPaths[hackAtomContract])
 	require.NoError(t, err)

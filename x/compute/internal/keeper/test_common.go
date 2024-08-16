@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	// "context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
@@ -19,8 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
 
-	// "github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	"github.com/cosmos/gogoproto/proto"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 
 	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -41,18 +40,17 @@ import (
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 
-	// // ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
 	ibchost "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 
 	"github.com/stretchr/testify/require"
 
-	// tmenclave "github.com/scrtlabs/tm-secret-enclave"
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	tmenclave "github.com/scrtlabs/tm-secret-enclave"
 
 	dbm "github.com/cosmos/cosmos-db"
 
@@ -62,7 +60,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 
-	// // simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"cosmossdk.io/store"
 	"cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
@@ -93,7 +90,6 @@ import (
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 
 	"github.com/cosmos/cosmos-sdk/x/distribution"
-	// // distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
@@ -121,7 +117,6 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"cosmossdk.io/x/upgrade"
-	// // upgradeclient "cosmossdk.io/x/upgrade/client"
 
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
@@ -355,31 +350,11 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	require.NoError(t, ms.LoadLatestVersion())
 
-	kvGasConfig := storetypes.GasConfig{
-		HasCost:          100,
-		DeleteCost:       100,
-		ReadCostFlat:     100,
-		ReadCostPerByte:  1,
-		WriteCostFlat:    200,
-		WriteCostPerByte: 5,
-		IterNextCostFlat: 5,
-	}
-
-	transientGasConfig := storetypes.GasConfig{
-		HasCost:          10,
-		DeleteCost:       10,
-		ReadCostFlat:     10,
-		ReadCostPerByte:  0,
-		WriteCostFlat:    20,
-		WriteCostPerByte: 1,
-		IterNextCostFlat: 1,
-	}
-
 	ctx := sdk.NewContext(ms, tmproto.Header{
 		Height:  1234567,
 		Time:    time.Date(2020, time.April, 22, 12, 0, 0, 0, time.UTC),
 		ChainID: TestConfig.ChainID,
-	}, isCheckTx, log.NewNopLogger()).WithKVGasConfig(kvGasConfig).WithTransientKVGasConfig(transientGasConfig)
+	}, isCheckTx, log.NewNopLogger())
 	encodingConfig := MakeEncodingConfig()
 	paramsKeeper := paramskeeper.NewKeeper(
 		encodingConfig.Codec,
@@ -407,7 +382,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:            {authtypes.Burner},
 	}
-	// authSubsp, _ := paramsKeeper.GetSubspace(authtypes.ModuleName)
 	authKeeper := authkeeper.NewAccountKeeper(
 		encodingConfig.Codec,
 		runtime.NewKVStoreService(keys[authtypes.StoreKey]), // target store
@@ -496,13 +470,13 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	bondPool := authtypes.NewEmptyModuleAccount(stakingtypes.BondedPoolName, authtypes.Burner, authtypes.Staking)
 	feeCollectorAcc := authtypes.NewEmptyModuleAccount(authtypes.FeeCollectorName)
 
-	err = distrAcc.SetAccountNumber(10001)
+	err = distrAcc.SetAccountNumber(authKeeper.NextAccountNumber(ctx))
 	require.NoError(t, err)
-	err = bondPool.SetAccountNumber(10002)
+	err = bondPool.SetAccountNumber(authKeeper.NextAccountNumber(ctx))
 	require.NoError(t, err)
-	err = notBondedPool.SetAccountNumber(10003)
+	err = notBondedPool.SetAccountNumber(authKeeper.NextAccountNumber(ctx))
 	require.NoError(t, err)
-	err = feeCollectorAcc.SetAccountNumber(10004)
+	err = feeCollectorAcc.SetAccountNumber(authKeeper.NextAccountNumber(ctx))
 	require.NoError(t, err)
 
 	authKeeper.SetModuleAccount(ctx, distrAcc)
@@ -513,19 +487,9 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	err = bankKeeper.SendCoinsFromModuleToModule(ctx, faucetAccountName, stakingtypes.NotBondedPoolName, totalSupply)
 	require.NoError(t, err)
 
-	// router := baseapp.NewRouter()
-	// bh := bank.NewHandler(bankKeeper)
-	// router.AddRoute(sdk.NewRoute(banktypes.RouterKey, bh))
-	// sh := staking.NewHandler(stakingKeeper)
-	// router.AddRoute(sdk.NewRoute(stakingtypes.RouterKey, sh))
-	// dh := distribution.NewHandler(distKeeper)
-	// router.AddRoute(sdk.NewRoute(distrtypes.RouterKey, dh))
-
 	govRouter := govv1beta1.NewRouter().
 		AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
 		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(paramsKeeper))
-	// AddRoute(distrtypes.RouterKey, distribution.NewCommunityPoolSpendProposalHandler(distKeeper))
-	// AddRoute(wasmtypes.RouterKey, NewWasmProposalHandler(keeper, wasmtypes.EnableAllProposals))
 
 	queryRouter := baseapp.NewGRPCQueryRouter()
 	queryRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
@@ -540,7 +504,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	// bank := bankKeeper.
 	// bk := bank.Keeper(bankKeeper)
 
-	// mintSubsp, _ := paramsKeeper.GetSubspace(minttypes.ModuleName)
 	mintKeeper := mintkeeper.NewKeeper(encodingConfig.Codec, runtime.NewKVStoreService(keys[minttypes.StoreKey]), stakingKeeper, authKeeper, bankKeeper, authtypes.FeeCollectorName, authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	err = mintKeeper.Minter.Set(ctx, minttypes.DefaultInitialMinter())
 	require.NoError(t, err)
@@ -552,8 +515,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	require.NoError(t, err)
 	err = govKeeper.Params.Set(ctx, govv1.DefaultParams())
 	require.NoError(t, err)
-	// gh := gov.NewHandler(govKeeper)
-	// router.AddRoute(sdk.NewRoute(govtypes.RouterKey, gh))
 
 	// Load default wasm config
 	wasmConfig := wasmtypes.DefaultWasmConfig()
@@ -630,7 +591,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		MockIBCTransferKeeper{},
 		ibcKeeper.ChannelKeeper,
 		nil,
-		// router,
 		msgRouter,
 		queryRouter,
 		tempDir,
@@ -642,7 +602,6 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	)
 	// keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
-	// router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
 
 	random := make([]byte, 32)
 	_, _ = rand.Read(random)
@@ -998,11 +957,11 @@ func NewTestTxMultiple(ctx sdk.Context, msgs []sdk.Msg, creatorAccs []sdk.Accoun
 	return newTx.GetProtoTx()
 }
 
-func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins, accountNumber uint64) (sdk.AccAddress, crypto.PrivKey, crypto.PubKey) {
+func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey, crypto.PubKey) {
 	priv, pub, addr := keyPubAddr()
 	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
 	_ = baseAcct.SetPubKey(pub)
-	err := baseAcct.SetAccountNumber(accountNumber)
+	err := baseAcct.SetAccountNumber(am.NextAccountNumber(ctx))
 	if err != nil {
 		ctx.Logger().Error("SetAccountNumber", "account", err.Error())
 	}
@@ -1061,7 +1020,51 @@ type protoTxProvider interface {
 //	return protoProvider.GetProtoTx(), nil
 //}
 
-/*
+func MakeCommit(blockID tmtypes.BlockID, height int64, round int32, valSet *tmtypes.ValidatorSet, privVals []tmtypes.PrivValidator, chainID string, now time.Time) (*tmtypes.Commit, error) {
+	sigs := make([]tmtypes.CommitSig, len(valSet.Validators))
+	for i := 0; i < len(valSet.Validators); i++ {
+		sigs[i] = tmtypes.NewCommitSigAbsent()
+	}
+
+	for _, privVal := range privVals {
+		pk, err := privVal.GetPubKey()
+		if err != nil {
+			return nil, err
+		}
+		addr := pk.Address()
+
+		idx, _ := valSet.GetByAddress(addr)
+		if idx < 0 {
+			return nil, fmt.Errorf("validator with address %s not in validator set", addr)
+		}
+
+		vote := &tmtypes.Vote{
+			ValidatorAddress: addr,
+			ValidatorIndex:   idx,
+			Height:           height,
+			Round:            round,
+			Type:             tmproto.PrecommitType,
+			BlockID:          blockID,
+			Timestamp:        now,
+		}
+
+		v := vote.ToProto()
+
+		if err := privVal.SignVote(chainID, v); err != nil {
+			return nil, err
+		}
+
+		sigs[idx] = tmtypes.CommitSig{
+			BlockIDFlag:      tmtypes.BlockIDFlagCommit,
+			ValidatorAddress: addr,
+			Timestamp:        now,
+			Signature:        v.Signature,
+		}
+	}
+
+	return &tmtypes.Commit{Height: height, Round: round, BlockID: blockID, Signatures: sigs}, nil
+}
+
 func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 	blockData := tmproto.Data{
 		Txs: [][]byte{ctx.TxBytes()},
@@ -1073,8 +1076,8 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 
 	blockId := makeBlockIDRandom()
 
-	voteSet, valSet, vals := randVoteSet(ctx, 0, tmproto.PrecommitType, 1, 1)
-	commit, err := tmtypes.MakeCommit(blockId, blockHeader.Height, 0, voteSet, vals, time.Now())
+	valSet, privValidators := tmtypes.RandValidatorSet(1, 1)
+	commit, err := MakeCommit(blockId, blockHeader.Height, 0, valSet, privValidators, ctx.ChainID(), time.Now())
 	require.NoError(t, err)
 
 	commitBz, err := commit.ToProto().Marshal()
@@ -1107,17 +1110,6 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 
 	_, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
 	require.NoError(t, err)
-}*/
-
-func randVoteSet(
-	ctx sdk.Context,
-	round int32,
-	signedMsgType tmproto.SignedMsgType,
-	numValidators int,
-	votingPower int64,
-) (*tmtypes.VoteSet, *tmtypes.ValidatorSet, []tmtypes.PrivValidator) {
-	valSet, privValidators := tmtypes.RandValidatorSet(numValidators, votingPower)
-	return tmtypes.NewVoteSet(ctx.ChainID(), ctx.BlockHeight(), round, signedMsgType, valSet), valSet, privValidators
 }
 
 func makeBlockIDRandom() tmtypes.BlockID {

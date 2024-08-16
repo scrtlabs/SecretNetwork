@@ -45,7 +45,7 @@ func TestMintQuerier(t *testing.T) {
 	assert.Equal(t, v.GetDelegatorShares(), math.LegacyNewDec(100))
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin(sdk.DefaultBondDenom, 5_000_000_000))
-	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 9000)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 
 	delTokens := sdk.TokensFromConsensusPower(1000, sdk.DefaultPowerReduction)
 	msg2 := stakingtypes.NewMsgDelegate(creator.String(), valAddr.String(),

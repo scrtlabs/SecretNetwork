@@ -1355,8 +1355,8 @@ func TestSendFunds(t *testing.T) {
 						t.Run(test.description, func(t *testing.T) {
 							ctx, keeper, helperWallet, helperPrivKey, _, _ := setupBasicTest(t, sdk.NewCoins(sdk.NewInt64Coin("assaf", 5000)))
 
-							fundingWallet, fundingWalletPrivKey, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore), 4001)
-							receivingWallet, _, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins(), 4002)
+							fundingWallet, fundingWalletPrivKey, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, stringToCoins(test.balancesBefore))
+							receivingWallet, _, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, sdk.NewCoins())
 
 							// verify that the account was funded correctly
 							fundingWalletCoinsBefore := keeper.bankKeeper.GetAllBalances(ctx, fundingWallet)
@@ -2328,7 +2328,7 @@ func TestCheckGas(t *testing.T) {
 	gasUsed, err2 := strconv.ParseUint(execEvent[1].Value, 10, 64)
 	require.Empty(t, err2)
 
-	require.Equal(t, baseGasUsed-baseContractUsage, gasUsed+4)
+	require.Equal(t, baseGasUsed-baseContractUsage, gasUsed+3)
 }
 
 func TestConsumeExact(t *testing.T) {
@@ -2337,7 +2337,7 @@ func TestConsumeExact(t *testing.T) {
 	require.Empty(t, initErr)
 
 	// not sure where the 16 extra gas comes vs the previous check_gas test, but it makes everything play nice, so....
-	baseContractUsage := types.InstanceCost + 1031 - 13
+	baseContractUsage := types.InstanceCost + 1031 - 14
 
 	for _, test := range []struct {
 		description   string

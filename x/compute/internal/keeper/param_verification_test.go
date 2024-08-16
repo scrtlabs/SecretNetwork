@@ -1,110 +1,71 @@
 package keeper
 
 import (
-	// "fmt"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	// "github.com/cosmos/cosmos-proto/anyutil"
-	// "google.golang.org/protobuf/proto"
-	// "google.golang.org/protobuf/types/known/anypb"
 
-	// "github.com/cosmos/cosmos-sdk/client"
-	// "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
-	// multisigkeys "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
+	txsigning "cosmossdk.io/x/tx/signing"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	multisigkeys "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
-	// "github.com/cosmos/cosmos-sdk/crypto/types/multisig"
+	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	// sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	sdksigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	// authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	// txsigning "cosmossdk.io/x/tx/signing"
-	// signingv1beta1 "cosmossdk.io/api/cosmos/tx/signing/v1beta1"
-	// txv1beta1 "cosmossdk.io/api/cosmos/tx/v1beta1"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	// wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-	// v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+	v010types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
-/*
 func getSignBytes(
-	t *testing.T, ctx *sdk.Context, signModeHandlerMap *txsigning.HandlerMap, builder client.TxBuilder, multisigAccount Account, signer Account, sdkMsg sdk.Msg,
+	t *testing.T, ctx sdk.Context, signModeHandler txsigning.HandlerMap, builder client.TxBuilder, multisigAccount Account, signer Account, rootMultisigAccount *Account,
 ) []byte {
-	// sig := sdksigning.SignatureV2{
-		// PubKey:   signer.public,
-		// Sequence: multisigAccount.acct.GetSequence() - 1,
-		// Data: &sdksigning.SingleSignatureData{
-			// SignMode:  sdksigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON,
-			// Signature: nil,
-		// },
-	// }
-	// err := builder.SetSignatures(sig)
-	// require.NoError(t, err)
-	signerData := txsigning.SignerData{
-		ChainID:       TestConfig.ChainID,
-		AccountNumber: signer.acct.GetAccountNumber(),
-		Sequence:      signer.acct.GetSequence() - 1,
+	// workaround for nested multisigs
+	if rootMultisigAccount == nil {
+		rootMultisigAccount = &multisigAccount
 	}
-
-    //////
-
-    anyPk, err := anyutil.New(signer.public)
-	require.NoError(t, err)
-    signerInfo := []*txv1beta1.SignerInfo{
-		{
-			PublicKey: anyPk,
-			ModeInfo: &txv1beta1.ModeInfo{
-				Sum: &txv1beta1.ModeInfo_Single_{
-					Single: &txv1beta1.ModeInfo_Single{
-						Mode: signingv1beta1.SignMode_SIGN_MODE_LEGACY_AMINO_JSON,
-					},
-				},
-			},
-            Sequence: multisigAccount.acct.GetSequence() - 1,
+	sig := sdksigning.SignatureV2{
+		PubKey:   signer.public,
+		Sequence: multisigAccount.acct.GetSequence() - 1,
+		Data: &sdksigning.SingleSignatureData{
+			SignMode:  sdksigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON,
+			Signature: nil,
 		},
 	}
-
-    anyMsg, err := anyutil.New(sdkMsg)
+	err := builder.SetSignatures(sig)
 	require.NoError(t, err)
-
-    txBody := &txv1beta1.TxBody{
-		Messages: []*anypb.Any{anyMsg},
+	signerData := authsigning.SignerData{
+		ChainID:       TestConfig.ChainID,
+		AccountNumber: rootMultisigAccount.acct.GetAccountNumber(),
+		Sequence:      rootMultisigAccount.acct.GetSequence() - 1,
+		Address:       rootMultisigAccount.acct.GetPubKey().String(),
+		PubKey:        signer.acct.GetPubKey(),
 	}
-
-	authInfo := &txv1beta1.AuthInfo{
-		SignerInfos: signerInfo,
-	}
-
-	bodyBz, err := proto.Marshal(txBody)
-	require.NoError(t, err)
-
-	authInfoBz, err := proto.Marshal(authInfo)
-	require.NoError(t, err)
-
-	txData := txsigning.TxData{
-		Body:          txBody,
-		AuthInfo:      authInfo,
-		AuthInfoBytes: authInfoBz,
-		BodyBytes:     bodyBz,
-	}
-
-	bytesToSign, err := signModeHandlerMap.GetSignBytes(ctx, signingv1beta1.SignMode_SIGN_MODE_LEGACY_AMINO_JSON, signerData, txData)
+	bytesToSign, err := authsigning.GetSignBytesAdapter(ctx, &signModeHandler, sdksigning.SignMode_SIGN_MODE_LEGACY_AMINO_JSON, signerData, builder.GetTx())
 	require.NoError(t, err)
 
 	return bytesToSign
 }
 
 func generateSignatures(
-	t *testing.T, ctx *sdk.Context, signModeHandlerMap *txsigning.HandlerMap,
-	builder client.TxBuilder, multisigAccount Account, signers []Account, actualSigners int, sdkMsg sdk.Msg,
+	t *testing.T, ctx sdk.Context, signModeHandler txsigning.HandlerMap,
+	builder client.TxBuilder, multisigAccount Account, signers []Account, actualSigners int,
+	rootMultisigAccount *Account,
 ) *sdksigning.MultiSignatureData {
 	multiSig := multisig.NewMultisig(len(signers))
 
 	for i := 0; i < len(signers); i++ {
-		signBytes := getSignBytes(t, ctx, signModeHandlerMap, builder, multisigAccount, signers[i], sdkMsg)
+		signBytes := getSignBytes(t, ctx, signModeHandler, builder, multisigAccount, signers[i], rootMultisigAccount)
 		var signature []byte
 		if i < actualSigners {
+			fmt.Printf("SIGNBYTES %v", signBytes)
 			signature, _ = signers[i].private.Sign(signBytes)
 		}
 		signatureData := sdksigning.SingleSignatureData{
@@ -122,62 +83,74 @@ func generateSignatures(
 }
 
 func multisigTxCreator(
-	t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg,
-) (*txsigning.HandlerMap, []Account, Account) {
-    fmt.Println("CHECKPOINT 0")
+	t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg, rootMultisigAccount *Account,
+) (txsigning.HandlerMap, []Account, Account) {
+	fmt.Println("CHECKPOINT 6.1")
 	signers, multisigAccount := generateMultisigAccount(*ctx, keeper, n, threshold)
-    fmt.Println("CHECKPOINT 0.5")
-	signModeHandlerMap := multisigTxCreatorForExisting(t, ctx, multisigAccount, signers, actualSigners, sdkMsg)
-    fmt.Println("CHECKPOINT 1")
-	return signModeHandlerMap, signers, multisigAccount
+	fmt.Println("CHECKPOINT 6.2")
+	signModeHandler := multisigTxCreatorForExisting(t, ctx, multisigAccount, signers, actualSigners, sdkMsg, rootMultisigAccount)
+	fmt.Println("CHECKPOINT 6.3")
+	return signModeHandler, signers, multisigAccount
 }
 
 func multisigTxCreatorForExisting(
-	t *testing.T, ctx *sdk.Context, multisigAccount Account, signers []Account, actualSigners int, sdkMsg sdk.Msg,
-) *txsigning.HandlerMap {
-    fmt.Println("CHECKPOINT 10")
+	t *testing.T, ctx *sdk.Context, multisigAccount Account, signers []Account, actualSigners int, sdkMsg sdk.Msg, rootMultisigAccount *Account,
+) txsigning.HandlerMap {
+	fmt.Println("CHECKPOINT 6.2.1")
 	switch msg := sdkMsg.(type) {
 	case *types.MsgInstantiateContract:
 		msg.Sender = multisigAccount.address
+		msg.SenderAddress = multisigAccount.address.String()
 	case *types.MsgExecuteContract:
 		msg.Sender = multisigAccount.address
+		msg.SenderAddress = multisigAccount.address.String()
 	}
-    fmt.Println("CHECKPOINT 11")
+	fmt.Println("CHECKPOINT 6.2.2")
 
 	txConfig := authtx.NewTxConfig(MakeTestCodec(), authtx.DefaultSignModes)
-	signModeHandlerMap := txConfig.SignModeHandler()
+	fmt.Println("CHECKPOINT 6.2.3")
+	signmodeHandler := txConfig.SignModeHandler()
+	fmt.Println("CHECKPOINT 6.2.4")
 	builder := txConfig.NewTxBuilder()
+	fmt.Println("CHECKPOINT 6.2.5")
 	builder.SetFeeAmount(nil)
+	fmt.Println("CHECKPOINT 6.2.6")
 	builder.SetGasLimit(0)
+	fmt.Println("CHECKPOINT 6.2.7")
 	builder.SetTimeoutHeight(0)
+	fmt.Println("CHECKPOINT 6.2.8")
 
-    fmt.Println("CHECKPOINT 12")
 	_ = builder.SetMsgs(sdkMsg)
 
-    fmt.Println("CHECKPOINT 2")
-	multiSignature := generateSignatures(t, ctx, signModeHandlerMap, builder, multisigAccount, signers, actualSigners, sdkMsg)
-    fmt.Println("CHECKPOINT 4")
+	fmt.Println("CHECKPOINT 6.2.9")
+	multiSignature := generateSignatures(t, *ctx, *signmodeHandler, builder, multisigAccount, signers, actualSigners, rootMultisigAccount)
+	fmt.Println("CHECKPOINT 6.2.10")
 	signature := sdksigning.SignatureV2{
 		PubKey:   multisigAccount.public,
 		Sequence: multisigAccount.acct.GetSequence() - 1,
 		Data:     multiSignature,
 	}
+	fmt.Println("CHECKPOINT 6.2.11")
 	err := builder.SetSignatures(signature)
 	require.NoError(t, err)
+	fmt.Println("CHECKPOINT 6.2.12")
 
 	tx := builder.(protoTxProvider)
+	fmt.Println("CHECKPOINT 6.2.13")
 	txBytes, err := tx.GetProtoTx().Marshal()
+	fmt.Println("CHECKPOINT 6.2.14")
 	require.NoError(t, err)
 	*ctx = ctx.WithTxBytes(txBytes)
+	fmt.Println("CHECKPOINT 6.2.15")
 	*ctx = types.WithTXCounter(*ctx, 1)
+	fmt.Println("CHECKPOINT 6.2.16")
 	// updateLightClientHelper(t, *ctx)
 
-    fmt.Println("CHECKPOINT 3")
-	return signModeHandlerMap
+	return *signmodeHandler
 }
 
 type Account struct {
-	acct    authtypes.AccountI
+	acct    sdk.AccountI
 	address sdk.AccAddress
 	public  crypto.PubKey
 	private crypto.PrivKey
@@ -211,13 +184,19 @@ func (accts Accounts) pubKeys() []crypto.PubKey {
 func generateMultisigAccount(ctx sdk.Context, keeper Keeper, n int, threshold int) ([]Account, Account) {
 	accounts := make([]Account, n)
 
+	fmt.Println("CHECKPOINT 6.1.1")
 	for i := 0; i < n; i++ {
 		deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-		_, privKey, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, deposit.Add(deposit...), 9812)
+		fmt.Println("CHECKPOINT 6.1.2")
+		_, privKey, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, deposit.Add(deposit...))
+		fmt.Println("CHECKPOINT 6.1.3")
 		accounts[i] = newAccount(ctx, keeper, privKey)
+		fmt.Println("CHECKPOINT 6.1.4")
 	}
 
+	fmt.Println("CHECKPOINT 6.1.5")
 	multisigAccount := generateMultisigAccountFromPublicKeys(ctx, keeper, Accounts(accounts).pubKeys(), threshold)
+	fmt.Println("CHECKPOINT 6.1.6")
 
 	return accounts, multisigAccount
 }
@@ -228,9 +207,9 @@ func generateMultisigAccountFromPublicKeys(ctx sdk.Context, keeper Keeper, pubKe
 	// Register to keeper
 	addr := multisigPubkey.Address().Bytes()
 	baseAcct := authtypes.NewBaseAccountWithAddress(addr)
+	baseAcct.SetAccountNumber(keeper.accountKeeper.NextAccountNumber(ctx))
 	coins := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	_ = baseAcct.SetPubKey(multisigPubkey)
-    baseAcct.SetAccountNumber(9913)
 	keeper.accountKeeper.SetAccount(ctx, baseAcct)
 
 	if err := keeper.bankKeeper.MintCoins(ctx, faucetAccountName, coins); err != nil {
@@ -245,11 +224,11 @@ func generateMultisigAccountFromPublicKeys(ctx sdk.Context, keeper Keeper, pubKe
 		public:  multisigPubkey,
 		private: nil,
 	}
-}*/
+}
 
 func prepareInitSignedTxMultipleMsgs(
 	t *testing.T, keeper Keeper, ctx sdk.Context,
-	creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, _ uint64,
+	creators []sdk.AccAddress, privKeys []crypto.PrivKey, initMsgs []sdk.Msg, codeID uint64,
 ) sdk.Context {
 	accounts := make([]sdk.AccountI, len(creators))
 	for i, acc := range creators {
@@ -372,19 +351,23 @@ func TestWrongSigner(t *testing.T) {
 	require.Contains(t, err.Error(), "is not found in the tx signer set")
 }
 
-/*
 func TestMultiSig(t *testing.T) {
+	fmt.Println("CHECKPOINT 1")
 	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.Coins{})
+	fmt.Println("CHECKPOINT 2")
 
 	initMsg := `{"nop":{}}`
 	msg := types.NewSecretMsg([]byte(codeHash), []byte(initMsg))
+	fmt.Println("CHECKPOINT 3")
 
 	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
+	fmt.Println("CHECKPOINT 4")
 
 	for i := 0; i < 5; i++ {
 		for j := 0; j <= i; j++ {
+			fmt.Println("CHECKPOINT 5")
 			label := fmt.Sprintf("demo contract %d %d", i, j)
 			sdkMsg := types.MsgInstantiateContract{
 				CodeID:    codeID,
@@ -392,16 +375,21 @@ func TestMultiSig(t *testing.T) {
 				InitMsg:   initMsgBz,
 				InitFunds: nil,
 			}
+			fmt.Println("CHECKPOINT 6")
 
-			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, &sdkMsg)
+			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, &sdkMsg, nil)
 
+			fmt.Println("CHECKPOINT 7")
 			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address, nil, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
+			fmt.Println("CHECKPOINT 8")
 			if err != nil {
 				err = extractInnerError(t, err, nonce, false, false)
 			}
 			require.NoError(t, err)
 
+			fmt.Println("CHECKPOINT 9")
 			wasmEvents := getDecryptedWasmEvents(t, ctx, nonce)
+			fmt.Println("CHECKPOINT 10")
 
 			require.Equal(t,
 				[]ContractEvent{
@@ -412,11 +400,13 @@ func TestMultiSig(t *testing.T) {
 				},
 				wasmEvents,
 			)
+			fmt.Println("CHECKPOINT 11")
 
 			// Reset wasm events
 			ctx, keeper, codeID, codeHash, _, _, _, _ = setupTest(t, "./testdata/contract.wasm", sdk.Coins{})
 		}
 	}
+	fmt.Println("CHECKPOINT 12")
 }
 
 func TestMultiSigThreshold(t *testing.T) {
@@ -444,7 +434,7 @@ func TestMultiSigThreshold(t *testing.T) {
 				InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 			}
 
-			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, j+1, &sdkMsg)
+			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, j+1, &sdkMsg, nil)
 
 			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address, nil, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 			if err != nil {
@@ -492,7 +482,7 @@ func TestMultiSigThresholdNotMet(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 1, &sdkMsg)
+	_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 1, &sdkMsg, nil)
 
 	_, _, err = keeper.Instantiate(ctx, codeID, multisigAddr.address, nil, initMsgBz, "demo contract 1", sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
 	if err != nil {
@@ -533,7 +523,7 @@ func TestMultiSigExecute(t *testing.T) {
 		CallbackSig: nil,
 	}
 
-	_ = multisigTxCreatorForExisting(t, &ctx, multisigAccount, accounts, 4, &sdkMsg)
+	_ = multisigTxCreatorForExisting(t, &ctx, multisigAccount, accounts, 4, &sdkMsg, nil)
 
 	execRes, err := keeper.Execute(ctx, contractAddress, multisigAccount.address, execMsgBz, funds, nil, wasmtypes.HandleTypeExecute)
 	if err != nil {
@@ -592,7 +582,7 @@ func TestMultiSigCallbacks(t *testing.T) {
 		CallbackSig: nil,
 	}
 
-	_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 2, &sdkMsg)
+	_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, 3, 2, 2, &sdkMsg, nil)
 
 	execRes, err := keeper.Execute(ctx, contractAddress, multisigAddr.address, execMsgBz, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil, wasmtypes.HandleTypeExecute)
 	if err != nil {
@@ -629,7 +619,8 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender: multimultisigAccount.address,
+		Sender:        multimultisigAccount.address,
+		SenderAddress: multimultisigAccount.address.String(),
 		// Admin:     nil,
 		CodeID:    codeID,
 		Label:     "demo contract 1",
@@ -637,7 +628,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	txConfig := authtx.NewTxConfig(nil, authtx.DefaultSignModes)
+	txConfig := authtx.NewTxConfig(MakeTestCodec(), authtx.DefaultSignModes)
 	signModeHandler := txConfig.SignModeHandler()
 	builder := txConfig.NewTxBuilder()
 	builder.SetFeeAmount(nil)
@@ -645,11 +636,11 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	builder.SetTimeoutHeight(0)
 
 	_ = builder.SetMsgs(&sdkMsg)
-	multimultiSignBytes := getSignBytes(t, ctx, signModeHandler, builder, multimultisigAccount, multisigAccount)
+	multimultiSignBytes := getSignBytes(t, ctx, *signModeHandler, builder, multimultisigAccount, multisigAccount, &multimultisigAccount)
 	multimultiSig := multisig.NewMultisig(3)
 
 	// Sign by multisig
-	multiSignature := generateSignatures(t, ctx, signModeHandler, builder, multisigAccount, accounts, 3)
+	multiSignature := generateSignatures(t, ctx, *signModeHandler, builder, multisigAccount, accounts, 3, &multimultisigAccount)
 	fmt.Printf("multisig sig: %v\n", multiSignature)
 
 	// Sign by wallet A
@@ -735,7 +726,8 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender: multimultisigAccount.address,
+		Sender:        multimultisigAccount.address,
+		SenderAddress: multimultisigAccount.address.String(),
 		// Admin:     nil,
 		CodeID:    codeID,
 		Label:     "demo contract 1",
@@ -743,7 +735,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	txConfig := authtx.NewTxConfig(nil, authtx.DefaultSignModes)
+	txConfig := authtx.NewTxConfig(MakeTestCodec(), authtx.DefaultSignModes)
 	signModeHandler := txConfig.SignModeHandler()
 	builder := txConfig.NewTxBuilder()
 	builder.SetFeeAmount(nil)
@@ -751,11 +743,11 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	builder.SetTimeoutHeight(0)
 
 	_ = builder.SetMsgs(&sdkMsg)
-	multimultiSignBytes := getSignBytes(t, ctx, signModeHandler, builder, multimultisigAccount, multisigAccount)
+	multimultiSignBytes := getSignBytes(t, ctx, *signModeHandler, builder, multimultisigAccount, multisigAccount, &multimultisigAccount)
 	multimultiSig := multisig.NewMultisig(3)
 
 	// Sign by multisig
-	multiSignature := generateSignatures(t, ctx, signModeHandler, builder, multisigAccount, accounts, 3)
+	multiSignature := generateSignatures(t, ctx, *signModeHandler, builder, multisigAccount, accounts, 3, &multimultisigAccount)
 	fmt.Printf("multisig sig: %v\n", multiSignature)
 
 	// Sign by wallet A
@@ -829,6 +821,7 @@ func TestInvalidKeyType(t *testing.T) {
 	edPub := edKey.PubKey()
 	edAddr := sdk.AccAddress(edPub.Address())
 	baseAcct := authtypes.NewBaseAccountWithAddress(edAddr)
+	baseAcct.SetAccountNumber(keeper.accountKeeper.NextAccountNumber(ctx))
 	coins := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	_ = baseAcct.SetPubKey(edPub)
 
@@ -873,6 +866,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 	edPub := edKey.PubKey()
 	edAddr := sdk.AccAddress(edPub.Address())
 	baseAcct := authtypes.NewBaseAccountWithAddress(edAddr)
+	baseAcct.SetAccountNumber(keeper.accountKeeper.NextAccountNumber(ctx))
 	coins := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	_ = baseAcct.SetPubKey(edPub)
 
@@ -916,7 +910,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 		InitFunds: sdk.NewCoins(sdk.NewInt64Coin("denom", 0)),
 	}
 
-	txConfig := authtx.NewTxConfig(nil, authtx.DefaultSignModes)
+	txConfig := authtx.NewTxConfig(MakeTestCodec(), authtx.DefaultSignModes)
 	signModeHanler := txConfig.SignModeHandler()
 	builder := txConfig.NewTxBuilder()
 	builder.SetFeeAmount(nil)
@@ -925,7 +919,7 @@ func TestInvalidKeyTypeInMultisig(t *testing.T) {
 
 	_ = builder.SetMsgs(&sdkMsg)
 
-	multiSignature := generateSignatures(t, ctx, signModeHanler, builder, multisigPubkey, accounts, 3)
+	multiSignature := generateSignatures(t, ctx, *signModeHanler, builder, multisigPubkey, accounts, 3, nil)
 
 	multisigAcc := keeper.accountKeeper.GetAccount(ctx, multisigPubkey.address.Bytes())
 	signature := sdksigning.SignatureV2{
@@ -1070,4 +1064,4 @@ func TestWrongContractAddress(t *testing.T) {
 	}
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to verify transaction signature")
-}*/
+}

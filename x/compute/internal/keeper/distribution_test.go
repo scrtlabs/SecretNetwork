@@ -48,7 +48,7 @@ func TestDistributionRewards(t *testing.T) {
 
 	depositCoin := sdk.NewInt64Coin(sdk.DefaultBondDenom, 5_000_000_000)
 	deposit := sdk.NewCoins(depositCoin)
-	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit, 8000)
+	creator, creatorPrivKey, _ := CreateFakeFundedAccount(ctx, accKeeper, keeper.bankKeeper, deposit)
 	require.Equal(t, keeper.bankKeeper.GetBalance(ctx, creator, sdk.DefaultBondDenom), depositCoin)
 
 	delTokens := sdk.TokensFromConsensusPower(1000, sdk.DefaultPowerReduction)
