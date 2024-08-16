@@ -50,9 +50,9 @@ if [ $retVal -ne 0 ]; then
 fi
 
 cat ${SECRETD_HOME}/config/genesis.json | jq '
-  .consensus_params.block.time_iota_ms = "10" |
   .app_state.staking.params.unbonding_time = "90s" |
-  .app_state.gov.voting_params.voting_period = "90s" |
+  .app_state.gov.params.voting_period = "90s" |
+  .app_state.gov.params.expedited_voting_period = "15s" |
   .app_state.crisis.constant_fee.denom = "uscrt" |
   .app_state.gov.deposit_params.min_deposit[0].denom = "uscrt" |
   .app_state.gov.params.min_deposit[0].denom = "uscrt" |
