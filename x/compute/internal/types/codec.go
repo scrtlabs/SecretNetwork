@@ -4,6 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/msgservice"
 )
 
 // RegisterCodec registers the account types and interface
@@ -26,6 +27,7 @@ func RegisterInterfaces(registry types.InterfaceRegistry) {
 		&MsgUpdateAdmin{},
 		&MsgClearAdmin{},
 	)
+	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
 }
 
 // ModuleCdc generic sealed codec to be used throughout module
