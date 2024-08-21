@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	DefaultMaxCallDepth        = uint32(500)
 	defaultLRUCacheSize        = uint64(0)
 	defaultEnclaveLRUCacheSize = uint16(100)
 	defaultQueryGasLimit       = uint64(10_000_000)
