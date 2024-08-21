@@ -298,7 +298,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=${SGX_MODE} \
-				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,random,${FEATURES}" \
+				 --build-arg FEATURES="light-client-validation,random,${FEATURES}" \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \
@@ -311,7 +311,7 @@ build-testnet:
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
 				 --build-arg SGX_MODE=${SGX_MODE} \
-				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,random,${FEATURES}" \
+				 --build-arg FEATURES="light-client-validation,random,${FEATURES}" \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
