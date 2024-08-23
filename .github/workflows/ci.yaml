@@ -6,7 +6,7 @@ jobs:
   Enclave-Unit-Tests:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
         name: Pull git submodules
@@ -14,22 +14,22 @@ jobs:
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.20.100.4.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -43,27 +43,17 @@ jobs:
           rustc --version  
           cargo +stable install xargo --version 0.3.25
           xargo --version
-      - name: Download sccache
-        run: |
-          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
-          tar xf ./sccache-*.tar.gz
-          mv ./sccache*/sccache "$HOME/sccache"
       - name: Test enclave
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
-          RUSTC_WRAPPER="$HOME/sccache" make enclave-tests
+          make enclave-tests
           make clean-enclave
 
   Build-Contracts:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - name: Download sccache
-        run: |
-          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
-          tar xf ./sccache-*.tar.gz
-          mv ./sccache*/sccache "$HOME/sccache"
+      - uses: actions/checkout@v4
       - name: Install Requirements
         run: |
           rustup target add wasm32-unknown-unknown
@@ -71,7 +61,7 @@ jobs:
           ./scripts/install-wasm-tools.sh
       - name: Build Contracts
         run: |
-          make build-test-contract
+          make build-test-contracts
           cp x/compute/internal/keeper/testdata/erc20.wasm .
       - uses: actions/upload-artifact@v3
         with:
@@ -81,6 +71,10 @@ jobs:
         with:
           name: contract.wasm
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/contract.wasm
+      - uses: actions/upload-artifact@v3
+        with:
+          name: contract-v2.wasm
+          path: cosmwasm/contracts/v010/compute-tests/test-compute-contract-v2/contract-v2.wasm
       - uses: actions/upload-artifact@v3
         with:
           name: v1-contract.wasm
@@ -106,18 +100,18 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [Build-Contracts, Build-LocalSecret]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
+          go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Install Intel's SGX SDK
         run: |
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
-          SDK_BIN=sgx_linux_x64_sdk_2.17.101.1.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.17.1/distro/ubuntu20.04-server/"$SDK_BIN"
+          SDK_BIN=sgx_linux_x64_sdk_2.20.100.4.bin
+          wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu20.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Download LocalSecret
@@ -131,10 +125,16 @@ jobs:
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/bin/secretd /opt/mount/secretd
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/libgo_cosmwasm.so /opt/mount/libgo_cosmwasm.so
           docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librust_cosmwasm_enclave.signed.so /opt/mount/librust_cosmwasm_enclave.signed.so
-
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/librandom_api.so /opt/mount/librandom_api.so
+          docker run -v $PWD:/opt/mount --rm --entrypoint cp ghcr.io/scrtlabs/localsecret:v0.0.0 /usr/lib/tendermint_enclave.signed.so /opt/mount/tendermint_enclave.signed.so
       - uses: actions/download-artifact@v3
         with:
           name: contract.wasm
+          path: ./x/compute/internal/keeper/testdata/
+      - uses: actions/download-artifact@v3
+        with:
+          name: contract-v2.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
         with:
           name: v1-contract.wasm
@@ -146,22 +146,46 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: contract_with_floats.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
         with:
           name: too-high-initial-memory.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - uses: actions/download-artifact@v3
         with:
           name: static-too-high-initial-memory.wasm
+          path: ./x/compute/internal/keeper/testdata/
       - name: Setup Files
         run: |
           find "$(pwd)" -name \*.wasm
           cp libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
           cp librust_cosmwasm_enclave.signed.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so
-          cp contract.wasm ./x/compute/internal/keeper/testdata/contract.wasm
-          cp too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/too-high-initial-memory.wasm
-          cp contract_with_floats.wasm ./x/compute/internal/keeper/testdata/contract_with_floats.wasm
-          cp static-too-high-initial-memory.wasm ./x/compute/internal/keeper/testdata/static-too-high-initial-memory.wasm
           find "$(pwd)" -name \*.wasm
+      - name: Install Quote library SDK
+        run: |
+          curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+          sudo add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
+          DCAP_VERSION=1.17.100.4-focal1
+          PSW_VERSION=2.20.100.4-focal1
+          sudo apt-get update
+          sudo apt-get install -y \
+              libsgx-aesm-launch-plugin=$PSW_VERSION \
+              libsgx-enclave-common=$PSW_VERSION \
+              libsgx-epid=$PSW_VERSION \
+              libsgx-launch=$PSW_VERSION \
+              libsgx-quote-ex=$PSW_VERSION \
+              libsgx-uae-service=$PSW_VERSION \
+              libsgx-qe3-logic=$DCAP_VERSION \
+              libsgx-pce-logic=$DCAP_VERSION \
+              libsgx-aesm-ecdsa-plugin=$PSW_VERSION \
+              libsgx-aesm-pce-plugin=$PSW_VERSION \
+              libsgx-dcap-ql=$DCAP_VERSION \
+              libsgx-dcap-quote-verify=$DCAP_VERSION \
+              libsgx-dcap-default-qpl=$DCAP_VERSION \
+              libsgx-urts=$PSW_VERSION
+          LIB_PATH=/usr/lib/x86_64-linux-gnu
+          sudo ln -s $LIB_PATH/libsgx_dcap_ql.so.1 $LIB_PATH/libsgx_dcap_ql.so
+          sudo ln -s $LIB_PATH/libsgx_dcap_quoteverify.so.1 $LIB_PATH/libsgx_dcap_quoteverify.so
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
@@ -171,17 +195,18 @@ jobs:
           source "$HOME/.sgxsdk/sgxsdk/environment"
           export SGX_MODE=SW
           cp librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+          # cp tendermint_enclave.signed.so ./x/compute/internal/keeper
           mkdir -p ias_keys/develop
           mkdir -p /opt/secret/.sgx_secrets/
           echo "not_a_key" > ias_keys/develop/spid.txt
           echo "not_a_key" > ias_keys/develop/api_key.txt
           LOG_LEVEL=ERROR go test -v -tags "test" ./x/compute/client/...
-          LOG_LEVEL=ERROR go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
+          LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
 
   Clippy:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Intel's SGX SDK
@@ -193,17 +218,17 @@ jobs:
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache xargo sysroot
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.xargo
           key: ${{ runner.os }}-xargo-sysroot
       - name: Cache build artifacts
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
@@ -220,28 +245,23 @@ jobs:
           rustc --version  
           cargo +stable install xargo --version 0.3.25
           xargo --version
-      - name: Download sccache
-        run: |
-          wget https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
-          tar xf ./sccache-*.tar.gz
-          mv ./sccache*/sccache "$HOME/sccache"
       - name: Clippy
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
           mkdir -p ias_keys/production
-          echo "not_a_key" > ias_keys/production/api_key.txt
+          cp ias_keys/develop/api_key.txt ias_keys/production/api_key.txt
           SGX_MODE=SW make clippy
           SGX_MODE=HW make clippy
 
   MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
+          go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@v0.17.0
@@ -256,11 +276,11 @@ jobs:
         uses: docker/setup-buildx-action@v2
         with:
           driver-opts: network=host
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Build LocalSecret
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -272,11 +292,11 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES=debug-print
+            FEATURES_U=debug-print,random,light-client-validation,go-tests
             SGX_MODE=SW
           target: build-localsecret
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localsecret.tar
       - name: Upload Image
         uses: actions/upload-artifact@v3
@@ -289,9 +309,9 @@ jobs:
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build Hermes Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/ibc/hermes.Dockerfile
           context: deployment/dockerfiles/ibc
@@ -311,7 +331,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [Build-LocalSecret, Build-Hermes]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Download Hermes
@@ -332,19 +352,17 @@ jobs:
         run: |
           cd integration-tests
           yarn
-          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d
-          yarn test
+          perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ../deployment/dockerfiles/ibc/docker-compose.yml
+          docker compose -f ../deployment/dockerfiles/ibc/docker-compose.yml up -d > docker-compose.log 2>&1
+          yarn test || { cat docker-compose.log; exit 1; }
           make kill-localsecret # next step needs the localsecret ports
       - name: Run secret.js tests
         run: |
           git clone --depth 1 --branch master https://github.com/scrtlabs/secret.js
           cd secret.js
           # Use the docker images that we built just a few steps above
-          perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/*
+          perl -i -pe 's/localsecret:.+?"/localsecret:v0.0.0"/' ./test/docker-compose.yml
           yarn
-          yarn test
-          docker rm -f localsecret # next step needs the localsecret ports
-      - name: Install Requirements
-        run: |
-          chmod +x ./scripts/install-wasm-tools.sh
-          ./scripts/install-wasm-tools.sh
+          docker compose -f ./test/docker-compose.yml up -d > docker-compose.log 2>&1
+          yarn test-ci || { cat docker-compose.log; exit 1; }
+          make kill-localsecret

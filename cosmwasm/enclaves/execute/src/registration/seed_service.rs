@@ -36,7 +36,7 @@ fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
         return Err(CryptoError::IPv4LookupError);
     }
 
-    let sock = TcpStream::connect(&addr.unwrap()).map_err(|err| {
+    let sock = TcpStream::connect(addr.unwrap()).map_err(|err| {
         trace!(
             "Error while trying to connect to service with addr: {:?}, err: {:?}",
             addr,
@@ -51,8 +51,12 @@ fn create_socket_to_service(host_name: &str) -> Result<c_int, CryptoError> {
 fn make_client_config() -> rustls::ClientConfig {
     let mut config = rustls::ClientConfig::new();
 
-    pub const SSS_CA: &[u8] = include_bytes!("sss_ca.pem");
-    let mut pem_reader = BufReader::new(SSS_CA);
+    #[cfg(feature = "production")]
+    pub const SERVICE_CA: &[u8] = include_bytes!("sss_ca.pem");
+    #[cfg(not(feature = "production"))]
+    pub const SERVICE_CA: &[u8] = include_bytes!("sssd_ca.pem");
+
+    let mut pem_reader = BufReader::new(SERVICE_CA);
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store
@@ -306,10 +310,6 @@ pub fn get_next_consensus_seed_from_service(
             }
         }
     };
-
-    if let Err(e) = opt_seed {
-        return Err(e);
-    }
 
     let mut seed = opt_seed?;
 

@@ -18,17 +18,23 @@ type GrpcQuerier struct {
 	keeper Keeper
 }
 
+func (q GrpcQuerier) ContractHistory(c context.Context, req *types.QueryContractHistoryRequest) (*types.QueryContractHistoryResponse, error) {
+	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryContractHistoryResponse{
+		Entries: q.keeper.GetContractHistory(sdk.UnwrapSDKContext(c), contractAddress),
+	}, nil
+}
+
 func NewGrpcQuerier(keeper Keeper) GrpcQuerier {
 	return GrpcQuerier{keeper: keeper}
 }
 
 func (q GrpcQuerier) ContractInfo(c context.Context, req *types.QueryByContractAddressRequest) (*types.QueryContractInfoResponse, error) {
 	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	err = sdk.VerifyAddressFormat(contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -68,10 +74,6 @@ func (q GrpcQuerier) ContractsByCodeId(c context.Context, req *types.QueryByCode
 func (q GrpcQuerier) QuerySecretContract(c context.Context, req *types.QuerySecretContractRequest) (*types.QuerySecretContractResponse, error) {
 	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := sdk.VerifyAddressFormat(contractAddress); err != nil {
 		return nil, err
 	}
 
@@ -125,10 +127,6 @@ func (q GrpcQuerier) CodeHashByContractAddress(c context.Context, req *types.Que
 		return nil, err
 	}
 
-	if err := sdk.VerifyAddressFormat(contractAddress); err != nil {
-		return nil, err
-	}
-
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(q.keeper.queryGasLimit))
 
 	codeHashBz, err := queryCodeHashByAddress(ctx, contractAddress, q.keeper)
@@ -163,10 +161,6 @@ func (q GrpcQuerier) CodeHashByCodeId(c context.Context, req *types.QueryByCodeI
 func (q GrpcQuerier) LabelByAddress(c context.Context, req *types.QueryByContractAddressRequest) (*types.QueryContractLabelResponse, error) {
 	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := sdk.VerifyAddressFormat(contractAddress); err != nil {
 		return nil, err
 	}
 
@@ -207,8 +201,7 @@ func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper K
 		return nil, nil
 	}
 
-	// redact the Created field (just used for sorting, not part of public API)
-	info.Created = nil
+	info.AdminProof = nil // for internal usage only
 
 	return &types.ContractInfoWithAddress{
 		ContractAddress: contractAddress.String(),
@@ -220,6 +213,8 @@ func queryContractListByCode(ctx sdk.Context, codeID uint64, keeper Keeper) ([]t
 	var contracts []types.ContractInfoWithAddress
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, info types.ContractInfo, _ types.ContractCustomInfo) bool {
 		if info.CodeID == codeID {
+			info.AdminProof = nil // for internal usage only
+
 			// and add the address
 			infoWithAddress := types.ContractInfoWithAddress{
 				ContractAddress: addr.String(),

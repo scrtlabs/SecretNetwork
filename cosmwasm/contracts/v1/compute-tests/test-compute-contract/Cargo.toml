@@ -1,7 +1,7 @@
 [package]
 name = "v1-sanity-contract"
 version = "0.0.1"
-authors = ["Enigma <info@enigma.co>"]
+authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "A Test contract intended to use in system tests for the Secret Netowrk"
 license = "MIT"
@@ -27,16 +27,16 @@ overflow-checks = true
 
 [features]
 default = []
-backtraces = ["cosmwasm-std/backtraces"]
 with_floats = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", rev = "ed247c8", package = "secret-cosmwasm-std" }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", rev = "ed247c8", package = "secret-cosmwasm-storage" }
 schemars = "0.8.1"
 serde = { version = "1.0.114", default-features = false, features = [
   "derive",
   "alloc"
 ] }
 serde-json-wasm = "0.2.1"
-secp256k1 = "0.20.3"
+secp256k1 = "0.22.2"
+bincode2 = "2.0.1"

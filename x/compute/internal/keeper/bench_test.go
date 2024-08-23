@@ -11,7 +11,7 @@ import (
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	"github.com/gonum/stat"
+	"gonum.org/v1/gonum/stat"
 
 	"github.com/stretchr/testify/require"
 )
@@ -163,7 +163,7 @@ func initBenchContract(t *testing.T) (contract sdk.AccAddress, creator sdk.AccAd
 	codeID, err := keeper.Create(ctx, creator, wasmCode, "", "")
 	require.NoError(t, err)
 
-	_, _, contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, creatorPriv, `{"init": {}}`, true, true, defaultGasForTests)
+	_, _, contractAddr, _, initErr := initHelper(t, keeper, ctx, codeID, creator, nil, creatorPriv, `{"init": {}}`, true, true, defaultGasForTests)
 	require.Empty(t, initErr)
 
 	return contractAddr, creator, creatorPriv, ctx, keeper

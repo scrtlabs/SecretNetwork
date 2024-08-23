@@ -126,7 +126,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 }
 
 func (ws *WasmSnapshotter) Restore(
-	height uint64, format uint32, protoReader protoio.Reader,
+	height uint64, format uint32, protoReader protoio.Reader, //nolint:all
 ) (snapshottypes.SnapshotItem, error) {
 	if format != 1 {
 		return snapshottypes.SnapshotItem{}, snapshottypes.ErrUnknownFormat

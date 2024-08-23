@@ -1,8 +1,11 @@
 [package]
 name = "cw_types_v1"
-version = "1.6.0"
+version = "1.11.0"
 authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
+
+[features]
+random = []
 
 # This annotation is here to trick the IDE into showing us type information about this crate.
 # We always compile to the "sgx" target, so this will always be false.

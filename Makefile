@@ -1,12 +1,13 @@
-PACKAGES=$(shell go list ./... | grep -v '/simulation')
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
+# SPID and API_KEY are used for Intel SGX attestation
 SPID ?= 00000000000000000000000000000000
 API_KEY ?= FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
+# Environment variables and build tags setup
 LEDGER_ENABLED ?= true
 BINDIR ?= $(GOPATH)/bin
 BUILD_PROFILE ?= release
@@ -20,25 +21,25 @@ BRANCH ?= develop
 DEBUG ?= 0
 DOCKER_TAG ?= latest
 
+TM_SGX ?= true
+
+# Paths for contracts and modules
 CW_CONTRACTS_V010_PATH = ./cosmwasm/contracts/v010/
 CW_CONTRACTS_V1_PATH = ./cosmwasm/contracts/v1/
-
 TEST_CONTRACT_V010_PATH = ./cosmwasm/contracts/v010/compute-tests
 TEST_CONTRACT_V1_PATH = ./cosmwasm/contracts/v1/compute-tests
-
 TEST_COMPUTE_MODULE_PATH = ./x/compute/internal/keeper/testdata/
-
 ENCLAVE_PATH = cosmwasm/enclaves/
 EXECUTE_ENCLAVE_PATH = $(ENCLAVE_PATH)/execute/
-QUERY_ENCLAVE_PATH = $(ENCLAVE_PATH)/query/
+
+# Determine if Docker Buildx is available for multi-platform builds
 DOCKER_BUILD_ARGS ?=
-
 DOCKER_BUILDX_CHECK = $(@shell docker build --load test)
-
 ifeq (Building,$(findstring Building,$(DOCKER_BUILDX_CHECK)))
 	DOCKER_BUILD_ARGS += "--load"
 endif
 
+# Check and set the SGX_MODE to either HW or SW, error if not set
 ifeq ($(SGX_MODE), HW)
 	ext := hw
 else ifeq ($(SGX_MODE), SW)
@@ -47,6 +48,7 @@ else
 $(error SGX_MODE must be either HW or SW)
 endif
 
+# Set CGO flags based on the selected database backend (unused - currently only cleveldb is supported)
 ifeq ($(DB_BACKEND), rocksdb)
 	DB_BACKEND = rocksdb
 	DOCKER_CGO_LDFLAGS = "-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy"
@@ -62,6 +64,7 @@ endif
 
 CUR_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+# Build tags setup for various configurations like ledger, database, etc.
 build_tags = netgo
 ifeq ($(LEDGER_ENABLED),true)
   ifeq ($(OS),Windows_NT)
@@ -96,6 +99,11 @@ ifeq ($(SGX_MODE), HW)
   endif
 
   build_tags += hw
+  build_tags += sgx
+else
+  ifeq ($(TM_SGX), true)
+    build_tags += sgx
+  endif
 endif
 
 build_tags += $(IAS_BUILD)
@@ -114,6 +122,7 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
+# Linker flags to embed version information and other metadata into the binaries
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=SecretNetwork \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=secretd \
 	-X github.com/scrtlabs/SecretNetwork/cmd/secretcli/version.ClientName=secretcli \
@@ -145,11 +154,12 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
+# Build the CLI tool
 build_cli:
-	go build -o secretcli -mod=readonly -tags "$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	go build -o secretcli -mod=readonly -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.sum
-	xgo --targets $(XGO_TARGET) -tags="$(GO_TAGS) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
+	xgo --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
@@ -159,12 +169,15 @@ build-secret: build-linux
 
 build-linux: _build-linux build_local_no_rust build_cli
 _build-linux:
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES)" FEATURES_U="$(FEATURES_U) light-client-validation go-tests" $(MAKE) -C go-cosmwasm build-rust
 
-build-linux-with-query: _build-linux-with-query build_local_no_rust build_cli
-_build-linux-with-query:
-	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES=$(FEATURES) FEATURES_U=query-node,$(FEATURES_U) $(MAKE) -C go-cosmwasm build-rust
+build-tm-secret-enclave:
+	git clone https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
+	cd /tmp/tm-secret-enclave && git checkout v1.9.3 && git submodule init && git submodule update --remote
+	rustup component add rust-src
+	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
 
+# Targets for building the cli on various platforms like Windows, macOS, Linux
 build_windows_cli:
 	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
 	sudo mv github.com/scrtlabs/SecretNetwork-windows-* secretcli-windows-amd64.exe
@@ -187,6 +200,7 @@ build_linux_arm64_cli:
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
+# Build Debian package
 deb: build-linux deb-no-compile
 
 deb-no-compile:
@@ -201,7 +215,7 @@ deb-no-compile:
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
-	cp -f ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	cp -f ./go-cosmwasm/tendermint_enclave.signed.so ./go-cosmwasm/librandom_api.so ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
@@ -218,11 +232,12 @@ deb-no-compile:
 	dpkg-deb --build /tmp/SecretNetwork/deb/ .
 	-rm -rf /tmp/SecretNetwork
 
+# Clean up generated files and reset the environment
 clean:
 	-rm -rf /tmp/SecretNetwork
 	-rm -f ./secretcli*
 	-rm -f ./secretd*
-	-find -name '*.so' -delete
+	-find -name '*.so' -not -path './third_party/*' -delete
 	-rm -f ./enigma-blockchain*.deb
 	-rm -f ./SHA256SUMS*
 	-rm -rf ./third_party/vendor/
@@ -234,10 +249,19 @@ clean:
 	$(MAKE) -C go-cosmwasm clean-all
 	$(MAKE) -C cosmwasm/enclaves/test clean
 	$(MAKE) -C check-hw clean
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract clean
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2 clean
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract clean
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2 clean
 
+###############################################################################
+###                         Dockerized Build Targets                        ###
+###############################################################################
+
+# Build localsecret - dockerized local chain for development and testing. In this version SGX is ran in software/simulation mode
 localsecret:
 	DOCKER_BUILDKIT=1 docker build \
-			--build-arg FEATURES="${FEATURES},debug-print" \
+			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation" \
 			--build-arg FEATURES_U=${FEATURES_U} \
 			--secret id=API_KEY,src=.env.local \
 			--secret id=SPID,src=.env.local \
@@ -250,7 +274,7 @@ localsecret:
  			-t ghcr.io/scrtlabs/localsecret:${DOCKER_TAG} .
 
 build-ibc-hermes:
-	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc --load
+	docker build -f deployment/dockerfiles/ibc/hermes.Dockerfile -t hermes:v0.0.0 deployment/dockerfiles/ibc
 
 build-testnet-bootstrap:
 	@mkdir build 2>&3 || true
@@ -258,7 +282,7 @@ build-testnet-bootstrap:
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
-				 --build-arg SGX_MODE=HW \
+				 --build-arg SGX_MODE=${SGX_MODE} \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=BOOTSTRAP \
@@ -273,7 +297,8 @@ build-testnet:
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
-				 --build-arg SGX_MODE=HW \
+				 --build-arg SGX_MODE=${SGX_MODE} \
+				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,random,${FEATURES}" \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
 				 --build-arg SECRET_NODE_TYPE=NODE \
@@ -285,7 +310,8 @@ build-testnet:
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
 				 --build-arg BUILD_VERSION=${VERSION} \
-				 --build-arg SGX_MODE=HW \
+				 --build-arg SGX_MODE=${SGX_MODE} \
+				 --build-arg FEATURES="verify-validator-whitelist,light-client-validation,random,${FEATURES}" \
 				 $(DOCKER_BUILD_ARGS) \
 				 --build-arg CGO_LDFLAGS=${DOCKER_CGO_LDFLAGS} \
 				 --build-arg DB_BACKEND=${DB_BACKEND} \
@@ -295,10 +321,11 @@ build-testnet:
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
+# special targets for building a deb package that compiles a new secretd but takes the enclaves from the latest package - used for upgrades when we don't want to replace the enclave
 build-mainnet-upgrade:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
-                 --build-arg FEATURES_U=${FEATURES_U} \
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
+                 --build-arg FEATURES_U="production, ${FEATURES_U}" \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
                  --secret id=API_KEY,src=api_key.txt \
                  --secret id=SPID,src=spid.txt \
@@ -310,8 +337,8 @@ build-mainnet-upgrade:
                  $(DOCKER_BUILD_ARGS) \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target mainnet-release .
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
-				 --build-arg FEATURES_U=${FEATURES_U} \
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production, ${FEATURES}" \
+				 --build-arg FEATURES_U="production, ${FEATURES_U}" \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
 				 --secret id=SPID,src=spid.txt \
@@ -323,9 +350,10 @@ build-mainnet-upgrade:
 				 --target build-deb-mainnet .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
+# full mainnet build - will end up with a .deb package in the ./build folder
 build-mainnet:
 	@mkdir build 2>&3 || true
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production,random, ${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
                  --secret id=API_KEY,src=api_key.txt \
@@ -339,7 +367,7 @@ build-mainnet:
                  -f deployment/dockerfiles/Dockerfile \
                  -t ghcr.io/scrtlabs/secret-network-node:v$(VERSION) \
                  --target release-image .
-	docker build --build-arg FEATURES="production, ${FEATURES}" \
+	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="verify-validator-whitelist,light-client-validation,production,random, ${FEATURES}" \
 				 --build-arg FEATURES_U=${FEATURES_U} \
 				 --build-arg BUILDKIT_INLINE_CACHE=1 \
 				 --secret id=API_KEY,src=api_key.txt \
@@ -354,12 +382,14 @@ build-mainnet:
 				 --target build-deb .
 	docker run -e VERSION=${VERSION} -v $(CUR_DIR)/build:/build deb_build
 
+# Build the hardware compatability checker - this is a binary that just runs attestation and provides details on the result
 build-check-hw-tool:
 	@mkdir build 2>&3 || true
 	DOCKER_BUILDKIT=1 docker build --build-arg FEATURES="${FEATURES}" \
                  --build-arg FEATURES_U=${FEATURES_U} \
                  --build-arg BUILDKIT_INLINE_CACHE=1 \
-                 --secret id=API_KEY,src=api_key.txt \
+                 --secret id=API_KEY,src=ias_keys/develop/api_key.txt \
+				 --secret id=API_KEY_MAINNET,src=ias_keys/production/api_key.txt \
                  --secret id=SPID,src=spid.txt \
                  --build-arg SECRET_NODE_TYPE=NODE \
                  --build-arg BUILD_VERSION=${VERSION} \
@@ -369,23 +399,22 @@ build-check-hw-tool:
                  -t compile-check-hw-tool \
                  --target compile-check-hw-tool .
 
-# while developing:
+###############################################################################
+###                         Local Build Targets                             ###
+###############################################################################
+
 build-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) enclave
 
-# while developing:
 check-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) check
 
-# while developing:
 clippy-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) clippy
 
-# while developing:
 clean-enclave:
 	$(MAKE) -C $(EXECUTE_ENCLAVE_PATH) clean
 
-# while developing:
 clippy: clippy-enclave
 	$(MAKE) -C check-hw clippy
 
@@ -408,37 +437,74 @@ build-bench-contract:
 	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/bench-contract
 	cp $(TEST_CONTRACT_V1_PATH)/bench-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
 
-build-test-contract:
+build-test-contracts:
 	# echo "" | sudo add-apt-repository ppa:hnakamur/binaryen
 	# sudo apt update
 	# sudo apt install -y binaryen
 	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract
-	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
-	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract
-	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
-	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/ibc-test-contract
-	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/*.wasm $(TEST_COMPUTE_MODULE_PATH)/
+	
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/contract.wasm $(TEST_COMPUTE_MODULE_PATH)/contract.wasm
 
-prep-go-tests: build-test-contract bin-data-sw
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract_with_floats.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/contract_with_floats.wasm $(TEST_COMPUTE_MODULE_PATH)/contract_with_floats.wasm
+
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/static-too-high-initial-memory.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/static-too-high-initial-memory.wasm $(TEST_COMPUTE_MODULE_PATH)/static-too-high-initial-memory.wasm
+
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract/too-high-initial-memory.wasm $(TEST_COMPUTE_MODULE_PATH)/too-high-initial-memory.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2
+	
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/contract-v2.wasm
+	cp $(TEST_CONTRACT_V010_PATH)/test-compute-contract-v2/contract-v2.wasm $(TEST_COMPUTE_MODULE_PATH)/contract-v2.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1-contract.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract/v1-contract.wasm $(TEST_COMPUTE_MODULE_PATH)/v1-contract.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1-contract-v2.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/test-compute-contract-v2/v1-contract-v2.wasm $(TEST_COMPUTE_MODULE_PATH)/v1-contract-v2.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/ibc-test-contract
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/ibc.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/ibc-test-contract/ibc.wasm $(TEST_COMPUTE_MODULE_PATH)/ibc.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v1
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v1.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/migration/contract-v1/migrate_contract_v1.wasm $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v1.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/migration/contract-v2
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/migration/contract-v2/migrate_contract_v2.wasm $(TEST_COMPUTE_MODULE_PATH)/migrate_contract_v2.wasm
+
+	$(MAKE) -C $(TEST_CONTRACT_V1_PATH)/random-test
+	rm -f $(TEST_COMPUTE_MODULE_PATH)/v1_random_test.wasm
+	cp $(TEST_CONTRACT_V1_PATH)/random-test/v1_random_test.wasm $(TEST_COMPUTE_MODULE_PATH)/v1_random_test.wasm
+
+
+prep-go-tests: build-test-contracts bin-data-sw
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
+	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so .
 
-go-tests: build-test-contract bin-data-sw
-	SGX_MODE=SW $(MAKE) build-linux-with-query
+go-tests: build-test-contracts bin-data-sw
+	# SGX_MODE=SW $(MAKE) build-tm-secret-enclave
+	# cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
+	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	#cp ./$(QUERY_ENCLAVE_PATH)/librust_cosmwasm_query_enclave.signed.so ./x/compute/internal/keeper
-	rm -rf ./x/compute/internal/keeper/.sgx_secrets
-	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' go test -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
-go-tests-hw: build-test-contract bin-data
+go-tests-hw: build-test-contracts bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
+	# SGX_MODE=HW $(MAKE) build-tm-secret-enclave
+	# cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=HW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
-	rm -rf ./x/compute/internal/keeper/.sgx_secrets
-	mkdir -p ./x/compute/internal/keeper/.sgx_secrets
-	GOMAXPROCS=8 SGX_MODE=HW go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
+	GOMAXPROCS=8 SGX_MODE=HW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
 
 # When running this more than once, after the first time you'll want to remove the contents of the `ffi-types`
 # rule in the Makefile in `enclaves/execute`. This is to speed up the compilation time of tests and speed up the
@@ -447,7 +513,7 @@ go-tests-hw: build-test-contract bin-data
 enclave-tests:
 	$(MAKE) -C cosmwasm/enclaves/test run
 
-build-all-test-contracts: build-test-contract
+build-all-test-contracts: build-test-contracts
 	cd $(CW_CONTRACTS_V010_PATH)/gov && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os $(CW_CONTRACTS_V010_PATH)/gov/target/wasm32-unknown-unknown/release/gov.wasm -o $(TEST_CONTRACT_PATH)/gov.wasm
 
@@ -473,7 +539,7 @@ build-all-test-contracts: build-test-contract
 	wasm-opt -Os .$(CW_CONTRACTS_V010_PATH)/hackatom/target/wasm32-unknown-unknown/release/hackatom.wasm -o $(TEST_CONTRACT_PATH)/contract.wasm
 	cat $(TEST_CONTRACT_PATH)/contract.wasm | gzip > $(TEST_CONTRACT_PATH)/contract.wasm.gzip
 
-build-erc20-contract: build-test-contract
+build-erc20-contract: build-test-contracts
 	cd .$(CW_CONTRACTS_V010_PATH)/erc20 && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
 	wasm-opt -Os .$(CW_CONTRACTS_V010_PATH)/erc20/target/wasm32-unknown-unknown/release/cw_erc20.wasm -o ./erc20.wasm
 
@@ -492,7 +558,8 @@ bin-data-production:
 # 1. sudo docker login -u ABC -p XYZ
 # 2. sudo docker buildx create --use
 secret-contract-optimizer:
-	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
+	sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/base-images/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
+	sudo docker buildx imagetools create -t enigmampc/secret-contract-optimizer:latest enigmampc/secret-contract-optimizer:${TAG}
 
 aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .

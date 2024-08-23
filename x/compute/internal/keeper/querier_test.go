@@ -63,9 +63,9 @@ func TestQueryContractLabel(t *testing.T) {
 
 	label := "banana"
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, privCreator, initMsgBz, contractID, deposit)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, privCreator, initMsgBz, contractID, deposit)
 
-	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, label, deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, label, deposit, nil)
 	require.NoError(t, err)
 
 	// this gets us full error, not redacted sdk.Error
@@ -165,7 +165,7 @@ func TestQueryContractState(t *testing.T) {
 
 	initMsgBz, err = wasmCtx.Encrypt(msg.Serialize())
 
-	addr, _, err := keeper.Instantiate(ctx, contractID, creator /* nil,*/, initMsgBz, "demo contract to query", deposit, nil)
+	addr, _, err := keeper.Instantiate(ctx, contractID, creator, nil, initMsgBz, "demo contract to query", deposit, nil)
 	require.NoError(t, err)
 
 	contractModel := []types.Model{
@@ -311,11 +311,12 @@ func TestListContractByCodeOrdering(t *testing.T) {
 
 	// manage some realistic block settings
 	var h int64 = 10
-	setBlock := func(ctx sdk.Context, height int64) sdk.Context {
+	setBlock := func(ctx sdk.Context, height int64, wasmKeeper Keeper) sdk.Context {
 		ctx = ctx.WithBlockHeight(height)
 		meter := sdk.NewGasMeter(1000000)
 		ctx = ctx.WithGasMeter(meter)
 		ctx = ctx.WithBlockGasMeter(meter)
+		// StoreRandomOnNewBlock(ctx, wasmKeeper)
 		return ctx
 	}
 
@@ -323,7 +324,7 @@ func TestListContractByCodeOrdering(t *testing.T) {
 	for i := range [10]int{} {
 		// 3 tx per block, so we ensure both comparisons work
 		if i%3 == 0 {
-			ctx = setBlock(ctx, h)
+			ctx = setBlock(ctx, h, keeper)
 			h++
 		}
 		creatorAcc, err := authante.GetSignerAcc(ctx, accKeeper, creator)
@@ -342,8 +343,10 @@ func TestListContractByCodeOrdering(t *testing.T) {
 		require.NoError(t, err)
 
 		ctx = ctx.WithTxBytes(txBytes)
+		ctx = types.WithTXCounter(ctx, 1)
+		// updateLightClientHelper(t, ctx)
 
-		_, _, err = keeper.Instantiate(ctx, codeID, creator /* nil,*/, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
+		_, _, err = keeper.Instantiate(ctx, codeID, creator, nil, initMsgBz, fmt.Sprintf("contract %d", i), topUp, nil)
 		require.NoError(t, err)
 	}
 

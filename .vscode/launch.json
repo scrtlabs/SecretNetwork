@@ -11,9 +11,16 @@
       "mode": "debug",
       "program": "${file}",
       "cwd": "${workspaceFolder}/x/compute/internal/keeper",
-      "env": { "SGX_MODE": "SW", "RUST_BACKTRACE": "1" },
+      "env": {
+        "SGX_MODE": "SW",
+        "RUST_BACKTRACE": "1",
+        "LOG_LEVEL": "TRACE",
+        "SKIP_LIGHT_CLIENT_VALIDATION": "true"
+      },
       "args": [
         "test",
+        "-tags",
+        "sgx",
         "-timeout",
         "1200s",
         "-p",
@@ -30,14 +37,15 @@
       "program": "${workspaceFolder}/cmd/secretd",
       "cwd": "${workspaceFolder}",
       "args": [
-        "q",
-        "compute",
-        "tx",
-        "9FAF715EA6671A17521FBC4D52AD391B72B6AADD102481B071DD80F34C50E79F",
-        "--node",
-        "http://localhost:26657",
-        "--chain-id",
-        "secretdev-1"
+        "rosetta",
+        "--blockchain",
+        "secret",
+        "--network",
+        "secret-4",
+        "--tendermint",
+        "89.149.206.162:26657",
+        "--grpc",
+        "89.149.206.162:9090"
       ]
     }
   ]

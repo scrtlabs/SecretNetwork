@@ -1,7 +1,7 @@
 [package]
 name = "ibc"
 version = "0.0.1"
-authors = ["Enigma <info@enigma.co>"]
+authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 description = "A Test contract intended to use in system tests for the Secret Netowrk"
 license = "MIT"
@@ -33,7 +33,10 @@ stargate = []
 ibc3 = ["stargate"]
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", features=["stargate", "ibc3"] }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", features = [
+  "stargate",
+  "ibc3"
+] }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 schemars = "0.8.1"
 serde = { version = "1.0.114", default-features = false, features = [
@@ -41,4 +44,4 @@ serde = { version = "1.0.114", default-features = false, features = [
   "alloc"
 ] }
 serde-json-wasm = "0.2.1"
-secp256k1 = "0.20.3"
+secp256k1 = "0.22.2"

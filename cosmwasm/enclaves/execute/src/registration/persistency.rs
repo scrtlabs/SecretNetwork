@@ -4,21 +4,11 @@ use enclave_utils::storage::rewrite_on_untrusted;
 use sgx_types::SgxResult;
 
 pub fn write_public_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {
-    if let Err(status) =
-        rewrite_on_untrusted(base64::encode(&kp.get_pubkey()).as_bytes(), save_path)
-    {
-        return Err(status);
-    }
-
-    Ok(())
+    rewrite_on_untrusted(base64::encode(kp.get_pubkey()).as_bytes(), save_path)
 }
 
 pub fn write_seed(seed: &[u8], save_path: &str) -> SgxResult<()> {
-    if let Err(status) = rewrite_on_untrusted(base64::encode(seed).as_bytes(), save_path) {
-        return Err(status);
-    }
-
-    Ok(())
+    rewrite_on_untrusted(base64::encode(seed).as_bytes(), save_path)
 }
 
 pub fn write_master_pub_keys(key_manager: &Keychain) -> SgxResult<()> {

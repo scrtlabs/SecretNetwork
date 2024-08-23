@@ -53,6 +53,23 @@ func (a StdError) Error() string {
 	}
 }
 
+func (a StdError) IsEmpty() bool {
+	switch {
+	case a.GenericErr != nil:
+	case a.InvalidBase64 != nil:
+	case a.InvalidUtf8 != nil:
+	case a.NotFound != nil:
+	case a.ParseErr != nil:
+	case a.SerializeErr != nil:
+	case a.Unauthorized != nil:
+	case a.Underflow != nil:
+		return false
+	default:
+		return true
+	}
+	return true
+}
+
 type GenericErr struct {
 	Msg string `json:"msg,omitempty"`
 }

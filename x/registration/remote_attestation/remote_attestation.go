@@ -4,13 +4,75 @@ import (
 	"bytes"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
+	"unsafe"
 
 	"github.com/pkg/errors"
 )
+
+type CombinedHdr struct {
+	M_CombinedSizes [3]uint32
+}
+
+type DcapQuote struct {
+	M_Opaque1 [48]byte  // sgx_quote_t up to report_body
+	M_Opaque2 [320]byte // sgx_report_body_t up to report_ata
+	M_PubKey  [32]byte
+	M_Opaque3 [32]byte // remaining 32 bytes of report_data
+	M_SigLen  uint32
+}
+
+func VerifyCombinedCert(blob []byte) ([]byte, error) {
+	var hdr CombinedHdr
+
+	if uintptr(len(blob)) < unsafe.Sizeof(hdr) {
+		return nil, errors.New("Combined hdr too small")
+	}
+
+	{
+		buf := bytes.NewReader(blob)
+		err := binary.Read(buf, binary.LittleEndian, &hdr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	idx0 := unsafe.Sizeof(hdr)
+	idx1 := idx0 + uintptr(hdr.M_CombinedSizes[0])
+	idx2 := idx1 + uintptr(hdr.M_CombinedSizes[1])
+	idx3 := idx2 + uintptr(hdr.M_CombinedSizes[2])
+
+	if uintptr(len(blob)) < idx3 {
+		return nil, errors.New("combined hdr invalid")
+	}
+
+	if idx1 > idx0 {
+		ret_pk, ret_err := VerifyRaCert(blob[idx0:idx1])
+		if ret_pk != nil {
+			fmt.Println("EPID quote Extracted pk: ", hex.EncodeToString(ret_pk))
+		}
+		return ret_pk, ret_err
+	}
+
+	if idx2 > idx1 {
+		var quote DcapQuote
+
+		buf := bytes.NewReader(blob[idx1:idx2])
+		err := binary.Read(buf, binary.LittleEndian, &quote)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Println("DCAP quote Extracted pk: ", hex.EncodeToString(quote.M_PubKey[:]))
+		return quote.M_PubKey[:], nil
+	}
+
+	return nil, errors.New("No valid attestatoin found")
+}
 
 /*
 	 Verifies the remote attestation certificate, which is comprised of a the attestation report, intel signature, and enclave signature
@@ -195,13 +257,7 @@ func verifyAttReport(attnReportRaw []byte, pubK []byte) ([]byte, error) {
 	}
 
 	// 1. Check timestamp is within 24H
-	if qr.Timestamp != "" {
-		// timeFixed := qr.Timestamp + "+0000"
-		// timeFixed := qr.Timestamp + "Z"
-		// ts, _ := time.Parse(time.RFC3339, timeFixed)
-		// now := time.Now().Unix()
-		// fmt.Println("Time diff = ", now-ts.Unix())
-	} else {
+	if qr.Timestamp == "" {
 		return nil, errors.New("Failed to fetch timestamp from attestation report")
 	}
 

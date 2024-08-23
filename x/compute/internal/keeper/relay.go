@@ -22,22 +22,31 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	msgBz []byte,
 	callType wasmTypes.HandleType,
 ) (interface{}, error) {
-	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
+	signBytes, signMode, modeInfoBytes, pkBytes, signerSig, err := k.GetTxInfo(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	sigInfo := types.NewSigInfo(ctx.TxBytes(), signBytes, signMode, modeInfoBytes, pkBytes, signerSig, nil)
 
 	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return "", err
 	}
 
-	store := ctx.KVStore(k.storeKey)
+	contractKey, err := k.GetContractKey(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+	random := k.GetRandomSeed(ctx, ctx.BlockHeight())
 
-	contractKey := store.Get(types.GetContractEnclaveKey(contractAddress))
 	env := types.NewEnv(
 		ctx,
 		sdk.AccAddress{}, /* there's no MessageInfo for IBC contract calls */
 		sdk.NewCoins(),   /* there's no MessageInfo for IBC contract calls */
 		contractAddress,
 		contractKey,
+		random,
 	)
 
 	// prepare querier
@@ -47,7 +56,7 @@ func (k Keeper) ibcContractCall(ctx sdk.Context,
 	}
 
 	gas := gasForContract(ctx)
-	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, verificationInfo, callType)
+	res, gasUsed, err := k.wasmer.Execute(codeInfo.CodeHash, env, msgBz, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, sigInfo, callType)
 	consumeGas(ctx, gasUsed)
 
 	return res, err
@@ -191,6 +200,16 @@ func (k Keeper) OnRecvPacket(
 		return nil, sdkerrors.Wrap(err, "ibc-recv-packet")
 	}
 
+	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
+		// We are in the mempool, the light client isn't updated yet so the enclave will fail this call.
+		// We don't want to run the contract in this case,
+		// as it will fail and will not enter the block due to IBC mempool optimization.
+		// Return nil to indicate success and bypass this IBC mempool optimization:
+		// https://github.com/cosmos/ibc-go/blob/v4.3.1/modules/core/ante/ante.go#L35
+		ctx.GasMeter().ConsumeGas(300_000, "add gas to relayer simulation")
+		return []byte{0} /* cannot be empty */, nil
+	}
+
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketReceive)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
@@ -203,7 +222,7 @@ func (k Keeper) OnRecvPacket(
 			if err != nil {
 				return nil, err
 			}
-			verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
+			sigInfo := types.NewSigInfo([]byte{}, []byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
 
 			ogTx := msg.Packet.Data
 
@@ -214,7 +233,7 @@ func (k Keeper) OnRecvPacket(
 			}
 
 			// note submessage reply results can overwrite the `Acknowledgement` data
-			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, ogTx, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+			return k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, resp.Messages, resp.Attributes, resp.Events, resp.Acknowledgement, ogTx, sigInfo)
 		}
 
 		// should never get here as it's already checked in
@@ -246,6 +265,16 @@ func (k Keeper) OnAckPacket(
 		return sdkerrors.Wrap(err, "ibc-ack-packet")
 	}
 
+	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
+		// We are in the mempool, the light client isn't updated yet so the enclave will fail this call.
+		// We don't want to run the contract in this case,
+		// as it will fail and will not enter the block due to IBC mempool optimization.
+		// Return nil to indicate success and bypass this IBC mempool optimization:
+		// https://github.com/cosmos/ibc-go/blob/v4.3.1/modules/core/ante/ante.go#L45
+		ctx.GasMeter().ConsumeGas(300_000, "add gas to relayer simulation")
+		return nil
+	}
+
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketAck)
 	if err != nil {
 		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
@@ -275,6 +304,16 @@ func (k Keeper) OnTimeoutPacket(
 		return sdkerrors.Wrap(err, "ibc-timeout-packet")
 	}
 
+	if ctx.IsCheckTx() || ctx.IsReCheckTx() {
+		// We are in the mempool, the light client isn't updated yet so the enclave will fail this call.
+		// We don't want to run the contract in this case,
+		// as it will fail and will not enter the block due to IBC mempool optimization.
+		// Return nil to indicate success and bypass this IBC mempool optimization:
+		// https://github.com/cosmos/ibc-go/blob/v4.3.1/modules/core/ante/ante.go#L55
+		ctx.GasMeter().ConsumeGas(300_000, "add gas to relayer simulation")
+		return nil
+	}
+
 	res, err := k.ibcContractCall(ctx, contractAddress, msgBz, wasmTypes.HandleTypeIbcPacketTimeout)
 	if err != nil {
 		return sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
@@ -288,8 +327,8 @@ func (k Keeper) OnTimeoutPacket(
 }
 
 func (k Keeper) handleIBCBasicContractResponse(ctx sdk.Context, addr sdk.AccAddress, ibcPortID string, inputMsg []byte, res *v1types.IBCBasicResponse) error {
-	verificationInfo := types.NewVerificationInfo([]byte{}, sdktxsigning.SignMode_SIGN_MODE_UNSPECIFIED, []byte{}, []byte{}, []byte{}, nil)
+	sigInfo := types.NewSigInfo([]byte{}, []byte{}, sdktxsigning.SignMode_SIGN_MODE_DIRECT, []byte{}, []byte{}, []byte{}, nil)
 
-	_, err := k.handleContractResponse(ctx, addr, ibcPortID, res.Messages, res.Attributes, res.Events, nil, inputMsg, verificationInfo, wasmTypes.CosmosMsgVersionV1)
+	_, err := k.handleContractResponse(ctx, addr, ibcPortID, res.Messages, res.Attributes, res.Events, nil, inputMsg, sigInfo)
 	return err
 }

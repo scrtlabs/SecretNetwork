@@ -4,8 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+
+	icacontrollertypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/controller/types"
 
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,7 +17,6 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
-	"github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
 )
 
 const upgradeName = "v1.7"
@@ -22,7 +24,7 @@ const upgradeName = "v1.7"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
 	CreateUpgradeHandler: createUpgradeHandler,
-	StoreUpgrades:        store.StoreUpgrades{},
+	StoreUpgrades:        store.StoreUpgrades{Added: []string{icacontrollertypes.StoreKey}},
 }
 
 func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers, configurator module.Configurator,
@@ -35,7 +37,7 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		ctx.Logger().Info(`| |__| | |    | |__| | | \ \  / ____ \| |__| | |____ `)
 		ctx.Logger().Info(` \____/|_|     \_____|_|  \_\/_/    \_\_____/|______|`)
 
-		ctx.Logger().Info("Running module migrations for v1.7...")
+		ctx.Logger().Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
 
 		seedb64, err := os.ReadFile(reg.SeedPath)
 		if err != nil {
@@ -67,11 +69,7 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 		// Remove the compute dir part
 		homeDir := filepath.Dir(keepers.ComputeKeeper.HomeDir[:len(keepers.ComputeKeeper.HomeDir)-1])
 
-		seedFilePath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedConfig)
-		prevSeedFileBz, err := os.ReadFile(seedFilePath)
-		if err != nil {
-			return nil, err
-		}
+		seedFilePath := filepath.Join(homeDir, reg.SecretNodeCfgFolder, reg.SecretNodeSeedNewConfig)
 
 		err = os.WriteFile(seedFilePath, cfgBytes, 0o600)
 		if err != nil {
@@ -98,24 +96,6 @@ func createUpgradeHandler(mm *module.Manager, keepers *keepers.SecretAppKeepers,
 
 		keepers.RegKeeper.SetMasterKey(ctx, ioMasterKey, reg.MasterIoKeyId)
 		keepers.RegKeeper.SetMasterKey(ctx, masterKey, reg.MasterNodeKeyId)
-
-		var prevSeedCfg reg.LegacySeedConfig
-		err = json.Unmarshal(prevSeedFileBz, &prevSeedCfg)
-		if err != nil {
-			return nil, err
-		}
-
-		cert, err := base64.StdEncoding.DecodeString(prevSeedCfg.MasterCert)
-		if err != nil {
-			return nil, err
-		}
-
-		regInfo := reg.RegistrationNodeInfo{
-			Certificate:   remote_attestation.Certificate(cert),
-			EncryptedSeed: seed,
-		}
-
-		keepers.RegKeeper.SetRegistrationInfo(ctx, regInfo)
 
 		return mm.RunMigrations(ctx, configurator, vm)
 	}

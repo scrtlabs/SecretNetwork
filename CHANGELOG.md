@@ -1,5 +1,113 @@
 # CHANGELOG
 
+# 1.13.0
+
+- Support DCAP attestation
+  - EPID attestation is still supported, until it'll be phased-out by Intel
+- Migrate to SGX 2.20
+- Bump github.com/cosmos/ibc-go/v4 from 4.5.1 to 4.6.0.
+
+# 1.12.0
+
+- Fix the hardcoded admins feature
+- Add hardcoded admins according to proposals [269](https://dev.mintscan.io/secret/proposals/269) (Shillables) & [270](https://dev.mintscan.io/secret/proposals/270) (Sienna).
+- Fix PFM to stop dropping packets of IBC contracts.
+  - This has always been a bug in PFM. It was introduced in v1.9 and was missed because of a bug in our CI system.
+  - Fixed the bug in PFM and updated the dependency.
+  - For more info see https://github.com/cosmos/ibc-apps/pull/105.
+- Add `admin` to `WasmMsg::Instantiate` in cosmwasm-std (Thanks [@luca992](https://github.com/luca992)!).
+  - This allows contracts to specify an admin address when instantiating other contracts.
+  - See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/eedfac881/cosmwasm/contracts/v1/compute-tests/test-compute-contract/src/contract.rs#L245-L259).
+- Update IBC to v4.5.0
+
+# 1.11.0
+
+- Added ibc-hooks middleware by Osmosis.
+  - WASM hooks: allows ICS-20 token transfers to initiate contract calls, serving various use cases.
+    - Example: Sending tokens to Secret and immediately wrapping them as SNIP-20 token. For example, `ATOM on Hub -> ATOM on Secret -> sATOMS on Secret` (2 transactions on 2 chains) now becomes `ATOM on Hub -> sATOM on Secret` (1 transaction).
+    - Example: Cross-chain swaps. Using IBC Hooks, an AMM on Secret can atomically swap tokens that originated on a different chain and are headed to Secret. The AMM can also send those tokens back to the originating chain.
+    - [Axelar GMP](https://docs.axelar.dev/dev/general-message-passing/overview): Using IBC Hooks, a contract on Ethereum can call a contract on Secret and get a response back.
+  - Ack callbacks: allow non-IBC contracts that send an `IbcMsg::Transfer` to listen for the ack/timeout of the token transfer. This allows these contracts to definitively know whether the transfer was successful or not and act accordingly (refund if failed, continue if succeeded). See usage example [here](https://github.com/scrtlabs/secret.js/blob/4293219/test/ibc-hooks-contract/src/contract.rs#L47-L91).
+- Added an optional `memo` field to `IbcMsg::Transfer`, to ease to use of the IBC Hooks ack callbacks feature. See usage example [here](https://github.com/scrtlabs/secret.js/blob/4293219/test/ibc-hooks-contract/src/contract.rs#L60-L63).
+- Added contract upgrade feature.
+  - On init, the creator can specify an admin address.
+  - The admin can migrate the contract to a new code ID.
+  - The admin can update or clear the admin address.
+  - The admins of contracts that were instantiated before v1.10 are hardcoded according to [proposal 262](./docs/proposals/hardcode-admins-on-v1.10.md).
+  - Hardcoded admins can only be updated/cleared with a future gov proposal.
+  - When the new `MsgMigrateContract` is invoked, the `migrate()` function is being called on the new contract code, where the new contract can optionally perform state migrations. See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/139a0eb18/cosmwasm/contracts/v1/compute-tests/migration/contract-v2/src/contract.rs#L37-L43).
+- Fixed a scenario where the enclave's light client might fail a valid node registration transaction.
+- Add support for uploading contracts that were compiled with Rust v1.70+.
+- Update Cosmos SDK to v0.45.16
+- Update Tendermint to CometBFT v0.34.29
+- Update IBC to v4.4.2
+- Update IAVL to v0.19.6
+- Update Packet Forward Middleware to v4.1.0
+- Fix initialization of x/vesting module
+- Add `env.transaction.hash` to support SNIP-52
+  - SNIP-52: https://github.com/SolarRepublic/SNIPs/blob/3cc16b7/SNIP-52.md#notification-data-algorithms
+  - See usage example [here](https://github.com/scrtlabs/SecretNetwork/blob/4f21d5794/cosmwasm/contracts/v1/compute-tests/test-compute-contract-v2/src/contract.rs#L1398-L1400).
+- Flush the enclave's cache in a random order
+
+# 1.10.0
+
+Patch against SGX Downfall vulnerability. See [v1.10 proposal](./docs/proposals/v1.10.md) for more info.
+
+# 1.9.3
+
+- Bump ibc-go from v4.3.0 to v4.3.1 ([Huckleberry](https://forum.cosmos.network/t/ibc-security-advisory-huckleberry/10731/1) security patch)
+
+# 1.9.2
+
+- Fix the v1.9.0 upgrade
+
+# 1.9.1
+
+- An atempt to fix the v1.9.0 upgrade
+
+# 1.9.0
+
+- New Feature: Randomness injection for secret contracts.
+  - Eliminates the need for contracts to bootstrap their own entropy pool.
+  - Unique for every contract call.
+  - Useful in lotteries, gaming, secure authentication protocols, protocols where unpredictable outcomes are essential for fairness and security, and much more.
+    For more infomation on how to use this feature, see the documentation
+- New Feature: FinalizeTx.
+  - Contracts can force the transaction to finalize at a certain point, otherwise revert.
+  - Example: protect against sandwich attacks and potential transaction rollbacks.
+  - Example: protect against cheating in gaming applications, where a malicious player could try to rollback a transaction in which they lost.
+- IBC: Updated ibc-go from v3.4.0 to v4.3.0.
+- New IBC Feature: Added packet-forward-middleware by Strangelove.
+  - Other chains would be able to more easily route SCRT in the interchain. For example, sending SCRT from Osmosis to Hub now becomes a single transaction from `Osmosis -> Secret` rather than a transaction from `Osmosis -> Secret`, then a transaction from `Secret -> Hub`.
+- New IBC Feature: Added IBC fee middleware.
+  - Creates a fee market for relaying IBC packets.
+- New IBC Feature: Added IBC panic button.
+  - Quickly shut down IBC in case of an emergency.
+- New Feature: Evaporate & Check Gas APIs
+  The new Check Gas and Evaporate APIs allow contract developers to create contracts that consume a constant amount of gas, independently of their code path. This helps harden contracts against information leakage from the amount of gas consumed by a contract.
+- Bug Fix: Fixed an issue where nodes would sometimes stop if failing to enter SGX enclave
+- Bug Fix: Fixed a bug where stopping and restarting a node would often cause the node to apphash
+- Bug Fix: Fixed an issue where storing and deleting a key from storage in the same msg would cause it not to be deleted
+
+# 1.8.0
+
+Fixed a critical bug in 1.7.0 that prevented new nodes from joining the network and existing nodes from restarting their secretd process.
+
+# 1.7.0
+
+- Added the ability to rotate consensus seed during a network upgrade
+  - this will be executed during this upgrade
+- Added expedited gov proposals
+  - Initial params (can be amended with a param change proposal):
+    - Minimum deposit: 750 SCRT
+    - Voting time: 24 hours
+    - Voting treshhold: 2/3 yes to pass
+  - If an expedited proposal fails to meet the threshold within the scope of shorter voting duration, the expedited proposal is then converted to a regular proposal and restarts voting under regular voting conditions.
+- Added auto-restaking - an opt-in feature that enables automatic compounding of staking rewards
+- Added light-client validation for blocks
+  - Protects against leaking private data using an offline fork attack
+  - Enables trusted block heights and block time to be relied on by contracts
+
 # 1.6.0
 
 - Fixed issue causing registrations to fail
@@ -13,20 +121,21 @@
 - Bumped to tendermint 0.34.24
 - Bumped to cosmos-sdk 0.45.11
 - Changed base gas prices:
-  * Default instruction cost 1 -> 2
-  * Div instruction cost 16 -> 2
-  * Mul instruction cost 4 -> 2
-  * Mem instruction cost 2 -> 2
-  * Contract Entry cost 100,000 -> 20,000
-  * Read from storage base cost 1,000 -> 10
-  * Write to storage base cost 2,000 -> 20
 
- - SecretJS 1.5 has been released, and uses GRPC-Gateway endpoints. Check it out: https://www.npmjs.com/package/secretjs or https://github.com/scrtlabs/secret.js
- - Add check-hw tool that returns patch-level and compatibility information for hardware
+  - Default instruction cost 1 -> 2
+  - Div instruction cost 16 -> 2
+  - Mul instruction cost 4 -> 2
+  - Mem instruction cost 2 -> 2
+  - Contract Entry cost 100,000 -> 20,000
+  - Read from storage base cost 1,000 -> 10
+  - Write to storage base cost 2,000 -> 20
+
+- SecretJS 1.5 has been released, and uses GRPC-Gateway endpoints. Check it out: https://www.npmjs.com/package/secretjs or https://github.com/scrtlabs/secret.js
+- Add check-hw tool that returns patch-level and compatibility information for hardware
 
 # 1.5.1
 
-29/11/2022 - Startup fix due to TCB recovery - startup validation on 1.5.1 does not account for SW_HARDENING_NEEDED including INTEL-SA-00615 in it's response. Registering using this binary will not work, however restarting your node can be done using the _startup_bypass packages.
+29/11/2022 - Startup fix due to TCB recovery - startup validation on 1.5.1 does not account for SW_HARDENING_NEEDED including INTEL-SA-00615 in it's response. Registering using this binary will not work, however restarting your node can be done using the \_startup_bypass packages.
 
 Fix for GRPC-gateway concurrency. This will greatly improve performance on nodes serving queries to GRPC-gateway requests (REST requests going to v1beta1/blah/blah)
 

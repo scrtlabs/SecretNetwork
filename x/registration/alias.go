@@ -11,25 +11,28 @@ import (
 )
 
 const (
-	ModuleName               = types.ModuleName
-	StoreKey                 = types.StoreKey
-	TStoreKey                = types.TStoreKey
-	QuerierRoute             = types.QuerierRoute
-	RouterKey                = types.RouterKey
-	EnclaveRegistrationKey   = types.EnclaveRegistrationKey
-	QueryEncryptedSeed       = keeper.QueryEncryptedSeed
-	QueryMasterKey           = keeper.QueryMasterKey
-	SecretNodeSeedConfig     = types.SecretNodeSeedConfig
-	SecretNodeCfgFolder      = types.SecretNodeCfgFolder
-	EncryptedKeyLength       = types.EncryptedKeyLength
-	LegacyEncryptedKeyLength = types.LegacyEncryptedKeyLength
-	AttestationCertPath      = types.AttestationCertPath
-	IoExchMasterKeyPath      = types.IoExchMasterKeyPath
-	NodeExchMasterKeyPath    = types.NodeExchMasterKeyPath
-	SeedPath                 = types.SeedPath
-	MasterIoKeyId            = types.MasterIoKeyId
-	MasterNodeKeyId          = types.MasterNodeKeyId
-	SeedConfigVersion        = types.SeedConfigVersion
+	ModuleName                 = types.ModuleName
+	StoreKey                   = types.StoreKey
+	TStoreKey                  = types.TStoreKey
+	QuerierRoute               = types.QuerierRoute
+	RouterKey                  = types.RouterKey
+	EnclaveRegistrationKey     = types.EnclaveRegistrationKey
+	QueryEncryptedSeed         = keeper.QueryEncryptedSeed
+	QueryMasterKey             = keeper.QueryMasterKey
+	SecretNodeSeedLegacyConfig = types.SecretNodeSeedLegacyConfig
+	SecretNodeSeedNewConfig    = types.SecretNodeSeedNewConfig
+	SecretNodeCfgFolder        = types.SecretNodeCfgFolder
+	EncryptedKeyLength         = types.EncryptedKeyLength
+	LegacyEncryptedKeyLength   = types.LegacyEncryptedKeyLength
+	AttestationCertPath        = types.AttestationCertPath
+	AttestationCombinedPath    = types.AttestationCombinedPath
+	IoExchMasterKeyPath        = types.IoExchMasterKeyPath
+	LegacyIoMasterCertificate  = types.LegacyIoMasterCertificate
+	NodeExchMasterKeyPath      = types.NodeExchMasterKeyPath
+	SeedPath                   = types.SeedPath
+	MasterIoKeyId              = types.MasterIoKeyId
+	MasterNodeKeyId            = types.MasterNodeKeyId
+	SeedConfigVersion          = types.SeedConfigVersion
 )
 
 var (
@@ -64,5 +67,5 @@ type (
 	EnclaveApi           = enclave.Api
 	MasterKey            = types.MasterKey
 	Key                  = types.Key
-	RegistrationNodeInfo = types.RegistrationNodeInfo
+	RegistrationNodeInfo = types.RegistrationNodeInfo //nolint:all
 )

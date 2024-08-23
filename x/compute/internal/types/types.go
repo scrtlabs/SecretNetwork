@@ -1,7 +1,8 @@
 package types
 
 import (
-	"encoding/base64"
+	"crypto/sha256"
+	"encoding/hex"
 	fmt "fmt"
 	"strings"
 
@@ -16,13 +17,11 @@ import (
 )
 
 const (
+	DefaultMaxCallDepth        = uint32(500)
 	defaultLRUCacheSize        = uint64(0)
 	defaultEnclaveLRUCacheSize = uint16(100)
 	defaultQueryGasLimit       = uint64(10_000_000)
 )
-
-// base64 of a 64 byte key
-type ContractKey string
 
 func (m Model) ValidateBasic() error {
 	if len(m.Key) == 0 {
@@ -60,12 +59,14 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, source string, builder
 }
 
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(codeID uint64, creator sdk.AccAddress, label string, createdAt *AbsoluteTxPosition) ContractInfo {
+func NewContractInfo(codeID uint64, creator sdk.AccAddress, admin string, adminProof []byte, label string, createdAt *AbsoluteTxPosition) ContractInfo {
 	return ContractInfo{
-		CodeID:  codeID,
-		Creator: creator,
-		Label:   label,
-		Created: createdAt,
+		CodeID:     codeID,
+		Creator:    creator,
+		Label:      label,
+		Created:    createdAt,
+		Admin:      admin,
+		AdminProof: adminProof,
 	}
 }
 
@@ -107,8 +108,22 @@ func NewAbsoluteTxPosition(ctx sdk.Context) *AbsoluteTxPosition {
 	}
 }
 
+// AbsoluteTxPositionLen number of elements in byte representation
+const AbsoluteTxPositionLen = 16
+
+// Bytes encodes the object into a 16 byte representation with big endian block height and tx index.
+func (a *AbsoluteTxPosition) Bytes() []byte {
+	if a == nil {
+		panic("object must not be nil")
+	}
+	r := make([]byte, AbsoluteTxPositionLen)
+	copy(r[0:], sdk.Uint64ToBigEndian(uint64(a.BlockHeight)))
+	copy(r[8:], sdk.Uint64ToBigEndian(a.TxIndex))
+	return r
+}
+
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey []byte) wasmTypes.Env {
+func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contractAddr sdk.AccAddress, contractKey ContractKey, random []byte) wasmTypes.Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -122,6 +137,7 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 			Height:  uint64(ctx.BlockHeight()),
 			Time:    uint64(nano),
 			ChainID: ctx.ChainID(),
+			Random:  random,
 		},
 		Message: wasmTypes.MessageInfo{
 			Sender:    creator.String(),
@@ -130,13 +146,25 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 		Contract: wasmTypes.ContractInfo{
 			Address: contractAddr.String(),
 		},
-		Key:        wasmTypes.ContractKey(base64.StdEncoding.EncodeToString(contractKey)),
 		QueryDepth: 1,
 	}
 
-	if txCounter, ok := TXCounter(ctx); ok {
-		env.Transaction = &wasmTypes.TransactionInfo{Index: txCounter}
+	env.Key = wasmTypes.ContractKey{
+		OgContractKey:           contractKey.OgContractKey,
+		CurrentContractKey:      contractKey.CurrentContractKey,
+		CurrentContractKeyProof: contractKey.CurrentContractKeyProof,
 	}
+
+	if txCounter, ok := TXCounter(ctx); ok {
+		txhashBz := sha256.Sum256(ctx.TxBytes())
+		txhash := hex.EncodeToString(txhashBz[:])
+
+		env.Transaction = &wasmTypes.TransactionInfo{
+			Index: txCounter,
+			Hash:  txhash,
+		}
+	}
+
 	return env
 }
 
@@ -244,11 +272,18 @@ func (m SecretMsg) Serialize() []byte {
 	return append(m.CodeHash, m.Msg...)
 }
 
-func NewVerificationInfo(
-	signBytes []byte, signMode sdktxsigning.SignMode, modeInfo []byte, publicKey []byte, signature []byte, callbackSig []byte,
-) wasmTypes.VerificationInfo {
-	return wasmTypes.VerificationInfo{
-		Bytes:             signBytes,
+func NewSigInfo(
+	txBytes []byte,
+	signBytes []byte,
+	signMode sdktxsigning.SignMode,
+	modeInfo []byte,
+	publicKey []byte,
+	signature []byte,
+	callbackSig []byte,
+) wasmTypes.SigInfo {
+	return wasmTypes.SigInfo{
+		TxBytes:           txBytes,
+		SignBytes:         signBytes,
 		SignMode:          signMode.String(),
 		ModeInfo:          modeInfo,
 		Signature:         signature,
@@ -288,3 +323,40 @@ contract-memory-cache-size = "{{ .WASMConfig.CacheSize }}"
 # The WASM VM memory cache size in number of cached modules. Can safely go up to 15, but not recommended for validators
 contract-memory-enclave-cache-size = "{{ .WASMConfig.EnclaveCacheSize }}"
 `
+
+// ZeroSender is a valid 20 byte canonical address that's used to bypass the x/compute checks
+// and later on is ignored by the enclave, which passes a null sender to the contract
+// This is used in OnAcknowledgementPacketOverride & OnTimeoutPacketOverride
+var ZeroSender = sdk.AccAddress{
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+}
+
+func (c ContractInfo) InitialHistory(initMsg []byte) ContractCodeHistoryEntry {
+	if c.Created == nil {
+		c.Created = &AbsoluteTxPosition{
+			BlockHeight: 0,
+			TxIndex:     0,
+		}
+	}
+
+	return ContractCodeHistoryEntry{
+		Operation: ContractCodeHistoryOperationTypeInit,
+		CodeID:    c.CodeID,
+		Updated:   c.Created,
+		Msg:       initMsg,
+	}
+}
+
+func (c *ContractInfo) AddMigration(ctx sdk.Context, codeID uint64, msg []byte) ContractCodeHistoryEntry {
+	h := ContractCodeHistoryEntry{
+		Operation: ContractCodeHistoryOperationTypeMigrate,
+		CodeID:    codeID,
+		Updated:   NewAbsoluteTxPosition(ctx),
+		Msg:       msg,
+	}
+	c.CodeID = codeID
+	return h
+}

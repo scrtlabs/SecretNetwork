@@ -1,7 +1,7 @@
 <!-- Please refer to User's Guide for the explanation of each field -->
 <EnclaveConfiguration>
   <ProdID>0</ProdID>
-  <ISVSVN>1</ISVSVN>
+  <ISVSVN>3</ISVSVN>
   <StackMaxSize>0x800000</StackMaxSize>
   <HeapMaxSize>0x80000000</HeapMaxSize>
   <TCSNum>8</TCSNum>

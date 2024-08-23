@@ -33,7 +33,7 @@ func TestNewKeeper_Node(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	seedPath := filepath.Join(tempDir, types.SecretNodeCfgFolder, types.SecretNodeSeedConfig)
+	seedPath := filepath.Join(tempDir, types.SecretNodeCfgFolder, types.SecretNodeSeedNewConfig)
 
 	err = os.MkdirAll(filepath.Join(tempDir, types.SecretNodeCfgFolder), 0o700)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestKeeper_RegisterNode(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 	ctx, regKeeper := CreateTestInput(t, false, tempDir, true)
 
-	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw.combined")
 	require.NoError(t, err)
 
 	regInfo := types.RegistrationNodeInfo{

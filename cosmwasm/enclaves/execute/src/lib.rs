@@ -4,6 +4,8 @@
 #[cfg(not(target_env = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate core;
+extern crate sgx_trts;
 extern crate sgx_types;
 
 use ctor::*;
@@ -11,8 +13,13 @@ use enclave_utils::logger::get_log_level;
 
 // Force linking to all the ecalls/ocalls in this package
 pub use enclave_contract_engine;
+mod ecalls;
 pub mod registration;
 mod tests;
+
+#[allow(unused_imports)]
+#[cfg(feature = "SGX_MODE_HW")]
+use crate::registration::check_patch_level::ecall_check_patch_level;
 
 #[cfg(feature = "production")]
 #[ctor]

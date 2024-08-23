@@ -3,11 +3,11 @@ FROM ubuntu:focal as runtime_base
 LABEL maintainer=enigmampc
 
 # SGX version parameters
-ARG SDK_VERSION=2.17.1
-ARG SGX_VERSION=2.17.101.1
-ARG PSW_VERSION=2.17.100.3-focal1
+ARG SDK_VERSION=2.20
+ARG SGX_VERSION=2.20.100.4
+ARG PSW_VERSION=2.20.100.4-focal1
 ARG OS_REVESION=focal1
-
+ARG DCAP_VERSION=1.17.100.4-focal1
 #RUN apt-get update && \
 #    apt-get install -y --no-install-recommends \
 #    #### Base utilities ####
@@ -43,6 +43,13 @@ RUN apt-get update && \
         libsgx-launch=$PSW_VERSION \
         libsgx-quote-ex=$PSW_VERSION \
         libsgx-uae-service=$PSW_VERSION \
+        libsgx-qe3-logic=$DCAP_VERSION \
+        libsgx-pce-logic=$DCAP_VERSION \
+        libsgx-aesm-ecdsa-plugin=$PSW_VERSION \
+        libsgx-aesm-pce-plugin=$PSW_VERSION \
+        libsgx-dcap-ql=$DCAP_VERSION \
+        libsgx-dcap-quote-verify=$DCAP_VERSION \
+        libsgx-dcap-default-qpl=$DCAP_VERSION \
         libsgx-urts=$PSW_VERSION && \
     rm -rf /var/lib/apt/lists/* && \
     rm -rf /var/cache/apt/archives/* && \

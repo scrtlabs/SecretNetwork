@@ -2,8 +2,8 @@
 
 <div align="center">
   
-[![version](https://img.shields.io/badge/version-1.3.1-blue)](https://github.com/scrtlabs/SecretNetwork/releases/tag/v1.3.1)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+[![version](https://img.shields.io/badge/version-1.12.1-blue)](https://github.com/scrtlabs/SecretNetwork/releases/tag/v1.12.1)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 <a href="https://twitter.com/intent/follow?screen_name=SecretNetwork">
 <img src="https://img.shields.io/twitter/follow/SecretNetwork?style=social&logo=twitter"
 alt="Follow"></a>
@@ -37,10 +37,21 @@ Click the button below to start a new development environment:
 
 ## Manual Set up
 
+*You can find everything below in a handy script that you can copy and run from [here](https://github.com/scrtlabs/SecretNetwork/blob/master/scripts/install-everything.sh)*
+
 ### Install prerequisite packages
 
 ```
-apt-get install -y --no-install-recommends g++ libtool autoconf clang
+apt-get install -y --no-install-recommends g++ libtool automake autoconf clang
+```
+
+#### Ubuntu 22+
+
+The build depends on libssl1.1. Install using:
+
+```bash
+wget https://debian.mirror.ac.za/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
+dpkg -i libssl1.1_1.1.1w-0%2Bdeb11u1_amd64.deb
 ```
 
 ### Clone Repo
@@ -94,6 +105,14 @@ We need a very specific version of xargo for everything to compile happily toget
 ```
 cargo install xargo --version 0.3.25
 ```
+# Install submodules
+
+We use `incubator-teaclave-sgx-sdk` as a submodule. To compile the code, you must first sync this submodule
+
+```
+git submodule init
+git submodule update --remote
+```
 
 # Build from Source
 
@@ -101,15 +120,11 @@ Use `make build-linux` to build the entire codebase. This will build both the Ru
 
 To build just the rust code, you can use `make build-linux`, while to build just the Go code, there is the aptly named `make build_local_no_rust`.
 
-
 Tip:
-```text
 For a production build the enclave must be copied from the most recent release. 
-
 This is due to non-reproducible builds, and the fact that enclaves must be signed with a specific key to be accepted on mainnet. 
-
 Still, the non-enclave code can be modified and ran on mainnet as long as there are no consensus-breaking changes
-```
+
 
 # Running Something
 
@@ -135,7 +150,3 @@ For the latest documentation, check out [https://docs.scrt.network](https://docs
 - Twitter: [https://twitter.com/SecretNetwork](https://twitter.com/SecretNetwork)
 - Community Telegram Channel: [https://t.me/SCRTnetwork](https://t.me/SCRTnetwork)
 - Community Secret Nodes Telegram: [https://t.me/secretnodes](https://t.me/secretnodes)
-
-# License
-
-SecretNetwork is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. The GNU Affero General Public License is based on the GNU GPL, but has an additional term to allow users who interact with the licensed software over a network to receive the source for that program.

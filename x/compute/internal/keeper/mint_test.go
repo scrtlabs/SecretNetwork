@@ -37,7 +37,7 @@ func TestMintQuerier(t *testing.T) {
 	accKeeper, stakingKeeper, keeper, distKeeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper, keepers.DistKeeper
 
 	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin(sdk.DefaultBondDenom, 100))
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
 	v, found := stakingKeeper.GetValidator(ctx, valAddr)
 	assert.True(t, found)
@@ -75,8 +75,8 @@ func TestMintQuerier(t *testing.T) {
 	initBz, err = testEncrypt(t, keeper, ctx, nil, govId, initBz)
 	require.NoError(t, err)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, govId, nil)
-	govAddr, _, err := keeper.Instantiate(ctx, govId, creator, initBz, "gidi gov", nil, nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, creatorPrivKey, initBz, govId, nil)
+	govAddr, _, err := keeper.Instantiate(ctx, govId, creator, nil, initBz, "gidi gov", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
 
@@ -94,7 +94,7 @@ func TestMintQuerier(t *testing.T) {
 	govQBz2, err := json.Marshal(&queryReq2)
 	require.NoError(t, err)
 
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
 	// test what happens if there are some rewards
 	_, _, res, _, _, err = execHelper(t, keeper, ctx, govAddr, creator, creatorPrivKey, string(govQBz2), false, false, defaultGasForTests, 0)

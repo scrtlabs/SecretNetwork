@@ -1,31 +1,45 @@
 package keeper
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
+	cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
+
+	v010cosmwasm "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v010"
+
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
-	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	feegrant "github.com/cosmos/cosmos-sdk/x/feegrant"
+	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-
-	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/ibc-go/v4/modules/apps/transfer"
+	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	ibcclient "github.com/cosmos/ibc-go/v4/modules/core/02-client/client"
+	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
 
 	"github.com/stretchr/testify/require"
 
+	tmenclave "github.com/scrtlabs/tm-secret-enclave"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	tmtypes "github.com/tendermint/tendermint/types"
+
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -88,47 +102,94 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 
-	v1types "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types/v1"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
-const (
-	flagLRUCacheSize  = "lru_size"
-	flagQueryGasLimit = "query_gas_limit"
-)
+//const (
+//	flagLRUCacheSize  = "lru_size"
+//	flagQueryGasLimit = "query_gas_limit"
+//)
 
 const (
 	hackAtomContract            = "hackatom.wasm"
 	v010Contract                = "contract.wasm"
+	v010MigratedContract        = "contract-v2.wasm"
 	v1Contract                  = "v1-contract.wasm"
+	v1MigratedContract          = "v1-contract-v2.wasm"
 	plaintextLogsContract       = "plaintext_logs.wasm"
 	ibcContract                 = "ibc.wasm"
 	v010WithFloats              = "contract_with_floats.wasm"
 	tooHighMemoryContract       = "too-high-initial-memory.wasm"
 	staticTooHighMemoryContract = "static-too-high-initial-memory.wasm"
+	evaporateContract           = "evaporate.wasm"
+	randomContract              = "v1_random_test.wasm"
+	benchContract               = "bench_contract.wasm"
+	migrateContractV1           = "migrate_contract_v1.wasm"
+	migrateContractV2           = "migrate_contract_v2.wasm"
 )
-
-const benchContract = "bench_contract.wasm"
 
 const contractPath = "testdata"
 
 var TestContractPaths = map[string]string{
 	hackAtomContract:            filepath.Join(".", contractPath, hackAtomContract),
 	v010Contract:                filepath.Join(".", contractPath, v010Contract),
+	v010MigratedContract:        filepath.Join(".", contractPath, v010MigratedContract),
 	v1Contract:                  filepath.Join(".", contractPath, v1Contract),
+	v1MigratedContract:          filepath.Join(".", contractPath, v1MigratedContract),
 	plaintextLogsContract:       filepath.Join(".", contractPath, plaintextLogsContract),
 	ibcContract:                 filepath.Join(".", contractPath, ibcContract),
 	v010WithFloats:              filepath.Join(".", contractPath, v010WithFloats),
 	tooHighMemoryContract:       filepath.Join(".", contractPath, tooHighMemoryContract),
 	staticTooHighMemoryContract: filepath.Join(".", contractPath, staticTooHighMemoryContract),
 	benchContract:               filepath.Join(".", contractPath, benchContract),
+	evaporateContract:           filepath.Join(".", contractPath, evaporateContract),
+	randomContract:              filepath.Join(".", contractPath, randomContract),
+	migrateContractV1:           filepath.Join(".", contractPath, migrateContractV1),
+	migrateContractV2:           filepath.Join(".", contractPath, migrateContractV2),
 }
 
-var (
-	outOfGasError                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
-	_             wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
-)
+// _                                   = sdkerrors.Wrap(wasmtypes.ErrExecuteFailed, "Out of gas")
+var _ wasmtypes.ICS20TransferPortSource = &MockIBCTransferKeeper{}
+
+type ContractEvent []v010cosmwasm.LogAttribute
+
+type MigrateResult struct {
+	Nonce      []byte
+	Ctx        sdk.Context
+	Data       []byte
+	WasmEvents []ContractEvent
+	GasUsed    uint64
+}
+
+type UpdateAdminResult struct {
+	Ctx     sdk.Context
+	GasUsed uint64
+}
+
+type ExecResult struct {
+	Nonce      []byte
+	Ctx        sdk.Context
+	Data       []byte
+	WasmEvents []ContractEvent
+	GasUsed    uint64
+}
+
+type ErrorResult struct {
+	CosmWasm *cosmwasm.StdError
+	Generic  error
+}
+
+func (a ErrorResult) Error() string {
+	switch {
+	case a.CosmWasm != nil:
+		return a.CosmWasm.Error()
+	case a.Generic != nil:
+		return a.Generic.Error()
+	default:
+		panic("unknown error variant")
+	}
+}
 
 type MockIBCTransferKeeper struct {
 	GetPortFn func(ctx sdk.Context) string
@@ -142,22 +203,31 @@ func (m MockIBCTransferKeeper) GetPort(ctx sdk.Context) string {
 }
 
 var ModuleBasics = module.NewBasicManager(
+	authz.AppModuleBasic{},
 	auth.AppModuleBasic{},
+	genutil.AppModuleBasic{},
 	bank.AppModuleBasic{},
 	capability.AppModuleBasic{},
 	staking.AppModuleBasic{},
 	mint.AppModuleBasic{},
 	distribution.AppModuleBasic{},
 	gov.NewAppModuleBasic(
-		paramsclient.ProposalHandler, distrclient.ProposalHandler, upgradeclient.ProposalHandler,
+		paramsclient.ProposalHandler,
+		distrclient.ProposalHandler,
+		upgradeclient.ProposalHandler,
+		upgradeclient.CancelProposalHandler,
+		ibcclient.UpdateClientProposalHandler,
+		ibcclient.UpgradeProposalHandler,
 	),
 	params.AppModuleBasic{},
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
-	// ibc.AppModuleBasic{},
 	upgrade.AppModuleBasic{},
 	evidence.AppModuleBasic{},
-	// transfer.AppModuleBasic{},
+	transfer.AppModuleBasic{},
+	vesting.AppModuleBasic{},
+	feegrantmodule.AppModuleBasic{},
+
 	registration.AppModuleBasic{},
 )
 
@@ -473,6 +543,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	msgRouter := baseapp.NewMsgServiceRouter()
 	msgRouter.SetInterfaceRegistry(encodingConfig.InterfaceRegistry)
 
+	bappTxMngr := baseapp.LastMsgMarkerContainer{}
+
 	keeper := NewKeeper(
 		encodingConfig.Marshaler,
 		*encodingConfig.Amino,
@@ -488,6 +560,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		ibcKeeper.PortKeeper,
 		MockIBCTransferKeeper{},
 		ibcKeeper.ChannelKeeper,
+		nil,
 		router,
 		msgRouter,
 		queryRouter,
@@ -496,10 +569,15 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		supportedFeatures,
 		encoders,
 		queriers,
+		&bappTxMngr,
 	)
 	// keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)
 	router.AddRoute(sdk.NewRoute(wasmtypes.RouterKey, TestHandler(keeper)))
+
+	random := make([]byte, 32)
+	_, _ = rand.Read(random)
+	keeper.SetRandomSeed(ctx, random)
 
 	am := module.NewManager( // minimal module set that we use for message/ query tests
 		bank.NewAppModule(encodingConfig.Marshaler, bankKeeper, authKeeper),
@@ -542,7 +620,16 @@ func TestHandler(k Keeper) sdk.Handler {
 }
 
 func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateContract) (*sdk.Result, error) {
-	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
+	var admin sdk.AccAddress
+	var err error
+	if msg.Admin != "" {
+		admin, err = sdk.AccAddressFromBech32(msg.Admin)
+		if err != nil {
+			return nil, sdkerrors.Wrap(err, "admin")
+		}
+	}
+
+	contractAddr, data, err := k.Instantiate(ctx, msg.CodeID, msg.Sender, admin, msg.InitMsg, msg.Label, msg.InitFunds, msg.CallbackSig)
 	if err != nil {
 		result := sdk.Result{}
 		result.Data = data
@@ -563,7 +650,7 @@ func handleInstantiate(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgInstantiateC
 }
 
 func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract) (*sdk.Result, error) {
-	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig)
+	res, err := k.Execute(ctx, msg.Contract, msg.Sender, msg.Msg, msg.SentFunds, msg.CallbackSig, cosmwasm.HandleTypeExecute)
 	if err != nil {
 		return res, err
 	}
@@ -572,16 +659,41 @@ func handleExecute(ctx sdk.Context, k Keeper, msg *wasmtypes.MsgExecuteContract)
 	return res, nil
 }
 
-func PrepareIBCOpenAck(t *testing.T, keeper Keeper, ctx sdk.Context, ibcOpenAck v1types.IBCOpenAck, ibcOpenConfirm v1types.IBCOpenConfirm) sdk.Context {
-	channelConnectMsg := v1types.IBCChannelConnectMsg{
-		OpenAck:     &ibcOpenAck,
-		OpenConfirm: &ibcOpenConfirm,
-	}
-
-	txBytes, err := json.Marshal(channelConnectMsg)
+func PrepareExecSignedTxWithMultipleMsgs(
+	t *testing.T, keeper Keeper, ctx sdk.Context,
+	sender sdk.AccAddress, senderPrivKey crypto.PrivKey, secretMsgs [][]byte, contractAddress sdk.AccAddress, coins sdk.Coins,
+) sdk.Context {
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	var encryptedMsgs []sdk.Msg
+	for _, msg := range secretMsgs {
+		executeMsg := wasmtypes.MsgExecuteContract{
+			Sender:    sender,
+			Contract:  contractAddress,
+			Msg:       msg,
+			SentFunds: coins,
+		}
+		encryptedMsgs = append(encryptedMsgs, &executeMsg)
+	}
+
+	creatorAccs := make([]authtypes.AccountI, len(encryptedMsgs))
+	senderPrivKeys := make([]crypto.PrivKey, len(encryptedMsgs))
+
+	for i := range encryptedMsgs {
+		creatorAccs[i] = creatorAcc
+		senderPrivKeys[i] = senderPrivKey
+	}
+
+	preparedTx := NewTestTxMultiple(encryptedMsgs, creatorAccs, senderPrivKeys)
+
+	txBytes, err := preparedTx.Marshal()
+	require.NoError(t, err)
+
+	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
@@ -594,15 +706,18 @@ func PrepareExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sd
 		Msg:       encMsg,
 		SentFunds: funds,
 	}
-	tx := NewTestTx(&executeMsg, creatorAcc, privKey)
+	newTx := NewTestTx(&executeMsg, creatorAcc, privKey)
 
-	txBytes, err := tx.Marshal()
+	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
-func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
+func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator, admin sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64, funds sdk.Coins) sdk.Context {
 	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
 	require.NoError(t, err)
 
@@ -612,18 +727,126 @@ func PrepareInitSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, creator s
 		Label:     "demo contract 1",
 		InitMsg:   encMsg,
 		InitFunds: funds,
+		Admin:     admin.String(),
 	}
-	tx := NewTestTx(&initMsg, creatorAcc, privKey)
+	newTx := NewTestTx(&initMsg, creatorAcc, privKey)
 
-	txBytes, err := tx.Marshal()
+	txBytes, err := newTx.Marshal()
 	require.NoError(t, err)
 
-	return ctx.WithTxBytes(txBytes)
+	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
+	return ctx
+}
+
+func prepareMigrateSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, creator sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, codeID uint64) sdk.Context {
+	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, creator)
+	require.NoError(t, err)
+
+	migrateMsg := wasmtypes.MsgMigrateContract{
+		Sender:   creator.String(),
+		CodeID:   codeID,
+		Contract: contractAddress,
+		Msg:      encMsg,
+	}
+	newTx := NewTestTx(&migrateMsg, creatorAcc, privKey)
+	txBytes, err := newTx.Marshal()
+	require.NoError(t, err)
+
+	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
+	return ctx
+}
+
+func prepareUpdateAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, sender sdk.AccAddress, privKey crypto.PrivKey, newAdmin sdk.AccAddress) sdk.Context {
+	senderAccount, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	sdkMsg := wasmtypes.MsgUpdateAdmin{
+		Sender:   sender.String(),
+		Contract: contractAddress,
+		NewAdmin: newAdmin.String(),
+	}
+	newTx := NewTestTx(&sdkMsg, senderAccount, privKey)
+	txBytes, err := newTx.Marshal()
+	require.NoError(t, err)
+
+	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
+	return ctx
+}
+
+func prepareClearAdminSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, contractAddress string, sender sdk.AccAddress, privKey crypto.PrivKey) sdk.Context {
+	senderAccount, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	sdkMsg := wasmtypes.MsgClearAdmin{
+		Sender:   sender.String(),
+		Contract: contractAddress,
+	}
+	newTx := NewTestTx(&sdkMsg, senderAccount, privKey)
+	txBytes, err := newTx.Marshal()
+	require.NoError(t, err)
+
+	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
+	return ctx
+}
+
+func PrepareSignedTx(t *testing.T,
+	keeper Keeper,
+	ctx sdk.Context,
+	sender sdk.AccAddress,
+	snederPrivkey crypto.PrivKey,
+	msg sdk.Msg,
+) sdk.Context {
+	senderAccount, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+	require.NoError(t, err)
+
+	newTx := NewTestTx(msg, senderAccount, snederPrivkey)
+
+	txBytes, err := newTx.Marshal()
+	require.NoError(t, err)
+
+	ctx = ctx.WithTxBytes(txBytes)
+	ctx = wasmtypes.WithTXCounter(ctx, 1)
+	// updateLightClientHelper(t, ctx)
+	return ctx
 }
 
 func NewTestTx(msg sdk.Msg, creatorAcc authtypes.AccountI, privKey crypto.PrivKey) *tx.Tx {
 	return NewTestTxMultiple([]sdk.Msg{msg}, []authtypes.AccountI{creatorAcc}, []crypto.PrivKey{privKey})
 }
+
+//func PrepareMultipleExecSignedTx(t *testing.T, keeper Keeper, ctx sdk.Context, sender sdk.AccAddress, privKey crypto.PrivKey, encMsg []byte, contract sdk.AccAddress, funds sdk.Coins) sdk.Context {
+//	creatorAcc, err := ante.GetSignerAcc(ctx, keeper.accountKeeper, sender)
+//	require.NoError(t, err)
+//
+//	executeMsg := wasmtypes.MsgExecuteContract{
+//		Sender:    sender,
+//		Contract:  contract,
+//		Msg:       encMsg,
+//		SentFunds: funds,
+//	}
+//
+//	bankMsg := banktypes.MsgSend{
+//		FromAddress: sender.String(),
+//		ToAddress:   sender.String(),
+//		Amount:      funds,
+//	}
+//
+//	tx := NewTestTxMultiple([]sdk.Msg{&executeMsg, &executeMsg, &bankMsg}, []authtypes.AccountI{creatorAcc, creatorAcc, creatorAcc}, []crypto.PrivKey{privKey, privKey, privKey})
+//
+//	txBytes, err := tx.Marshal()
+//	require.NoError(t, err)
+//
+//  ctx = wasmtypes.WithTXCounter(ctx, 1)
+//	return ctx.WithTxBytes(txBytes)
+//}
 
 func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKeys []crypto.PrivKey) *tx.Tx {
 	if len(msgs) != len(creatorAccs) || len(msgs) != len(privKeys) {
@@ -695,11 +918,11 @@ func NewTestTxMultiple(msgs []sdk.Msg, creatorAccs []authtypes.AccountI, privKey
 		panic(err)
 	}
 
-	tx, ok := builder.(protoTxProvider)
+	newTx, ok := builder.(protoTxProvider)
 	if !ok {
 		panic("failed to unwrap tx builder to protobuf tx")
 	}
-	return tx.GetProtoTx()
+	return newTx.GetProtoTx()
 }
 
 func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk bankkeeper.Keeper, coins sdk.Coins) (sdk.AccAddress, crypto.PrivKey) {
@@ -711,6 +934,14 @@ func CreateFakeFundedAccount(ctx sdk.Context, am authkeeper.AccountKeeper, bk ba
 	fundAccounts(ctx, am, bk, addr, coins)
 	return addr, priv
 }
+
+// StoreRandomOnNewBlock is used when height is incremented in tests, the random value for the new block needs to be
+// generated too (to pass as env)
+//func StoreRandomOnNewBlock(ctx sdk.Context, wasmKeeper Keeper) {
+//	random := make([]byte, 32)
+//	rand.Read(random)
+//	wasmKeeper.SetRandomSeed(ctx, random)
+//}
 
 const faucetAccountName = "faucet"
 
@@ -744,11 +975,92 @@ type protoTxProvider interface {
 	GetProtoTx() *tx.Tx
 }
 
-func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) {
-	protoProvider, ok := txBuilder.(protoTxProvider)
-	if !ok {
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expected proto tx builder, got %T", txBuilder)
-	}
+//func txBuilderToProtoTx(txBuilder client.TxBuilder) (*tx.Tx, error) {
+//	protoProvider, ok := txBuilder.(protoTxProvider)
+//	if !ok {
+//		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expected proto tx builder, got %T", txBuilder)
+//	}
+//
+//	return protoProvider.GetProtoTx(), nil
+//}
 
-	return protoProvider.GetProtoTx(), nil
+func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
+	blockData := tmproto.Data{
+		Txs: [][]byte{ctx.TxBytes()},
+	}
+	dataBz, err := blockData.Marshal()
+	require.NoError(t, err)
+
+	blockHeader := ctx.BlockHeader()
+
+	blockId := makeBlockIDRandom()
+
+	voteSet, valSet, vals := randVoteSet(ctx, 0, tmproto.PrecommitType, 1, 1)
+	commit, err := tmtypes.MakeCommit(blockId, blockHeader.Height, 0, voteSet, vals, time.Now())
+	require.NoError(t, err)
+
+	commitBz, err := commit.ToProto().Marshal()
+	require.NoError(t, err)
+
+	blockHeader.ProposerAddress = valSet.Proposer.Address
+
+	blockHeader.DataHash = tmtypes.Txs{ctx.TxBytes()}.Hash()
+	blockHeader.AppHash = make([]byte, sha256.Size) // make it up just to pass the length check
+	blockHeader.ValidatorsHash = valSet.Hash()      // unnecessary really
+
+	headerBz, err := blockHeader.Marshal()
+	require.NoError(t, err)
+
+	valSetProto, err := valSet.ToProto()
+	require.NoError(t, err)
+
+	valSetBytes, err := valSetProto.Marshal()
+	require.NoError(t, err)
+
+	// Note: SubmitValidatorSet must come before GetRandom, as the valSetHash is used
+	// in the random number encryption, and later on in the verification
+	err = tmenclave.SubmitValidatorSet(valSetBytes, uint64(blockHeader.Height))
+	require.NoError(t, err)
+
+	random, proof, err := tmenclave.GetRandom(blockHeader.AppHash, uint64(blockHeader.Height))
+	require.NoError(t, err)
+
+	randomAndProofBz := append(random, proof...) //nolint:all
+
+	_, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
+	require.NoError(t, err)
+}
+
+func randVoteSet(
+	ctx sdk.Context,
+	round int32,
+	signedMsgType tmproto.SignedMsgType,
+	numValidators int,
+	votingPower int64,
+) (*tmtypes.VoteSet, *tmtypes.ValidatorSet, []tmtypes.PrivValidator) {
+	valSet, privValidators := tmtypes.RandValidatorSet(numValidators, votingPower)
+	return tmtypes.NewVoteSet(ctx.ChainID(), ctx.BlockHeight(), round, signedMsgType, valSet), valSet, privValidators
+}
+
+func makeBlockIDRandom() tmtypes.BlockID {
+	var (
+		blockHash   = make([]byte, sha256.Size)
+		partSetHash = make([]byte, sha256.Size)
+	)
+	rand.Read(blockHash)   //nolint: errcheck // ignore errcheck for read
+	rand.Read(partSetHash) //nolint: errcheck // ignore errcheck for read
+	return tmtypes.BlockID{
+		Hash: blockHash,
+		PartSetHeader: tmtypes.PartSetHeader{
+			Total: 123,
+			Hash:  partSetHash,
+		},
+	}
+}
+
+func txhash(t *testing.T, ctx sdk.Context) string {
+	require.NotEmpty(t, ctx.TxBytes())
+	txhashBz := sha256.Sum256(ctx.TxBytes())
+	txhash := hex.EncodeToString(txhashBz[:])
+	return txhash
 }

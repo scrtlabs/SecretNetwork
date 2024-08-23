@@ -1,0 +1,14 @@
+{
+    "title": "Decrease max block size from 21MiB to 1MiB",
+    "description": "SCRT Labs proposes to decrease the max block size from 21MiB to 1MiB.",
+    "changes": [
+        {
+            "subspace": "baseapp",
+            "key": "BlockParams",
+            "value": {
+                "max_bytes": "1048576"
+            }
+        }
+    ],
+    "deposit": "1000000000uscrt"
+}

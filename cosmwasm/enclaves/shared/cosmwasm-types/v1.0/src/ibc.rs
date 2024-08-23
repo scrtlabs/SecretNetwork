@@ -123,19 +123,10 @@ where
     pub events: Vec<Event>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub struct IbcEndpoint {
     pub port_id: String,
     pub channel_id: String,
-}
-
-impl IbcEndpoint {
-    pub fn default() -> Self {
-        IbcEndpoint {
-            port_id: String::default(),
-            channel_id: String::default(),
-        }
-    }
 }
 
 /// IbcOrder defines if a channel is ORDERED or UNORDERED
@@ -173,14 +164,14 @@ pub enum IbcChannelCloseMsg {
 }
 
 /// The message that is passed into `ibc_packet_receive`
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IbcPacketReceiveMsg {
     pub packet: IbcPacket,
     pub relayer: Addr,
 }
 
-impl IbcPacketReceiveMsg {
-    pub fn default() -> Self {
+impl Default for IbcPacketReceiveMsg {
+    fn default() -> Self {
         Self {
             packet: IbcPacket::default(),
             relayer: Addr::unchecked("".to_string()),
@@ -188,7 +179,7 @@ impl IbcPacketReceiveMsg {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub struct IbcPacket {
     /// The raw data sent from the other side in the packet
     pub data: Binary,
@@ -201,50 +192,21 @@ pub struct IbcPacket {
     pub timeout: IbcTimeout,
 }
 
-impl IbcPacket {
-    pub fn default() -> Self {
-        Self {
-            data: vec![].as_slice().into(),
-            src: IbcEndpoint::default(),
-            dest: IbcEndpoint::default(),
-            sequence: 0,
-            timeout: IbcTimeout::default(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[non_exhaustive]
 pub struct IbcAcknowledgement {
     pub data: Binary,
 }
 
-impl IbcAcknowledgement {
-    pub fn default() -> Self {
-        Self {
-            data: vec![].as_slice().into(),
-        }
-    }
-}
-
 /// In IBC each package must set at least one type of timeout:
 /// the timestamp or the block height. Using this rather complex enum instead of
 /// two timeout fields we ensure that at least one timeout is set.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub struct IbcTimeout {
     // use private fields to enforce the use of constructors, which ensure that at least one is set
     block: Option<IbcTimeoutBlock>,
     timestamp: Option<Timestamp>,
-}
-
-impl IbcTimeout {
-    pub fn default() -> Self {
-        Self {
-            block: None,
-            timestamp: None,
-        }
-    }
 }
 
 /// IBCTimeoutHeight Height is a monotonically increasing data type
@@ -269,8 +231,8 @@ pub struct IbcPacketAckMsg {
     pub relayer: Addr,
 }
 
-impl IbcPacketAckMsg {
-    pub fn default() -> Self {
+impl Default for IbcPacketAckMsg {
+    fn default() -> Self {
         Self {
             acknowledgement: IbcAcknowledgement::default(),
             original_packet: IbcPacket::default(),
@@ -287,8 +249,8 @@ pub struct IbcPacketTimeoutMsg {
     pub relayer: Addr,
 }
 
-impl IbcPacketTimeoutMsg {
-    pub fn default() -> Self {
+impl Default for IbcPacketTimeoutMsg {
+    fn default() -> Self {
         Self {
             packet: IbcPacket::default(),
             relayer: Addr::unchecked("".to_string()),

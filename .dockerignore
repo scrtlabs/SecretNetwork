@@ -4,7 +4,7 @@ docs
 *.md
 **/target
 **/*.a
-**/*.so
+
 **/Enclave_t.*
 **/Enclave_u.*
 third_party/vendor

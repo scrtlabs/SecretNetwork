@@ -58,8 +58,9 @@ func (o OutOfGasError) Error() string {
 	return "Out of gas"
 }
 
-type VerificationInfo struct {
-	Bytes             []byte `json:"sign_bytes"`
+type SigInfo struct {
+	TxBytes           []byte `json:"tx_bytes"`
+	SignBytes         []byte `json:"sign_bytes"`
 	SignMode          string `json:"sign_mode"`
 	ModeInfo          []byte `json:"mode_info"`
 	PublicKey         []byte `json:"public_key"`
@@ -78,6 +79,9 @@ const (
 	HandleTypeIbcPacketReceive
 	HandleTypeIbcPacketAck
 	HandleTypeIbcPacketTimeout
+	HandleTypeIbcWasmHooksIncomingTransfer
+	HandleTypeIbcWasmHooksOutgoingTransferAck
+	HandleTypeIbcWasmHooksOutgoingTransferTimeout
 )
 
 type CosmosMsgVersion int

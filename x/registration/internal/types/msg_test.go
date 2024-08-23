@@ -29,7 +29,7 @@ func TestMsgSendValidation(t *testing.T) {
 
 	addr0 := sdk.AccAddress([]byte("qwlnmxj7prpx8rysxm2u"))
 
-	cert, err := os.ReadFile("../../testdata/attestation_cert_sw")
+	cert, err := os.ReadFile("../../testdata/attestation_cert_sw.combined")
 	require.NoError(t, err)
 
 	certBadSig, err := os.ReadFile("../../testdata/attestation_cert_invalid")

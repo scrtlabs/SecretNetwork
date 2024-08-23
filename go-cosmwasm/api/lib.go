@@ -8,6 +8,7 @@ package api
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"syscall"
@@ -45,6 +46,24 @@ func HealthCheck() ([]byte, error) {
 	return receiveVector(res), nil
 }
 
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom []byte /* valSet []byte, nextValSet []byte */) ([]byte, error) {
+	errmsg := C.Buffer{}
+	spidSlice := sendSlice(header)
+	defer freeAfterSend(spidSlice)
+	apiKeySlice := sendSlice(commit)
+	defer freeAfterSend(apiKeySlice)
+	encRandomSlice := sendSlice(encRandom)
+	defer freeAfterSend(encRandomSlice)
+	txsSlice := sendSlice(txs)
+	defer freeAfterSend(txsSlice)
+
+	res, err := C.submit_block_signatures(spidSlice, apiKeySlice, txsSlice, encRandomSlice /* valSetSlice, nextValSetSlice,*/, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), nil
+}
+
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(spid)
@@ -71,6 +90,17 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 	_, err := C.init_node(pkSlice, seedSlice, apiKeySlice, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
+	}
+	return true, nil
+}
+
+func MigrateSealing() (bool, error) {
+	ret, err := C.migrate_sealing()
+	if err != nil {
+		return false, err
+	}
+	if !ret {
+		return false, errors.New("sealing migration failed")
 	}
 	return true, nil
 }
@@ -131,7 +161,7 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveVector(code), nil
 }
 
-func Instantiate(
+func Migrate(
 	cache Cache,
 	code_id []byte,
 	params []byte,
@@ -142,6 +172,8 @@ func Instantiate(
 	querier *Querier,
 	gasLimit uint64,
 	sigInfo []byte,
+	admin []byte,
+	adminProof []byte,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -164,12 +196,121 @@ func Instantiate(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+	adminBuffer := sendSlice(admin)
+	defer freeAfterSend(adminBuffer)
+
+	adminProofBuffer := sendSlice(adminProof)
+	defer freeAfterSend(adminProofBuffer)
+
 	//// This is done in order to ensure that goroutines don't
 	//// swap threads between recursive calls to the enclave.
 	//runtime.LockOSThread()
 	//defer runtime.UnlockOSThread()
 
-	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s)
+	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer, adminProofBuffer)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), uint64(gasUsed), nil
+}
+
+func UpdateAdmin(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	sigInfo []byte,
+	currentAdmin []byte,
+	currentAdminProof []byte,
+	newAdmin []byte,
+) ([]byte, error) {
+	id := sendSlice(code_id)
+	defer freeAfterSend(id)
+	p := sendSlice(params)
+	defer freeAfterSend(p)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+
+	s := sendSlice(sigInfo)
+	defer freeAfterSend(s)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	errmsg := C.Buffer{}
+
+	currentAdminBuffer := sendSlice(currentAdmin)
+	defer freeAfterSend(currentAdminBuffer)
+
+	currentAdminProofBuffer := sendSlice(currentAdminProof)
+	defer freeAfterSend(currentAdminProofBuffer)
+
+	newAdminBuffer := sendSlice(newAdmin)
+	defer freeAfterSend(newAdminBuffer)
+
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
+
+	res, err := C.update_admin(cache.ptr, id, p, db, a, q, u64(gasLimit), &errmsg, s, currentAdminBuffer, currentAdminProofBuffer, newAdminBuffer)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), nil
+}
+
+func Instantiate(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	msg []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	sigInfo []byte,
+	admin []byte,
+) ([]byte, uint64, error) {
+	id := sendSlice(code_id)
+	defer freeAfterSend(id)
+	p := sendSlice(params)
+	defer freeAfterSend(p)
+	m := sendSlice(msg)
+	defer freeAfterSend(m)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+
+	s := sendSlice(sigInfo)
+	defer freeAfterSend(s)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed u64
+	errmsg := C.Buffer{}
+
+	adminBuffer := sendSlice(admin)
+	defer freeAfterSend(adminBuffer)
+
+	//// This is done in order to ensure that goroutines don't
+	//// swap threads between recursive calls to the enclave.
+	//runtime.LockOSThread()
+	//defer runtime.UnlockOSThread()
+
+	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg, s, adminBuffer)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -294,12 +435,20 @@ func KeyGen() ([]byte, error) {
 }
 
 // CreateAttestationReport Send CreateAttestationReport request to enclave
-func CreateAttestationReport(apiKey []byte, dryRun bool) (bool, error) {
+func CreateAttestationReport(apiKey []byte, no_epid bool, no_dcap bool) (bool, error) {
 	errmsg := C.Buffer{}
 	apiKeySlice := sendSlice(apiKey)
 	defer freeAfterSend(apiKeySlice)
 
-	_, err := C.create_attestation_report(apiKeySlice, &errmsg, cbool(dryRun))
+	flags := u32(0)
+	if no_epid {
+		flags |= u32(1)
+	}
+	if no_dcap {
+		flags |= u32(2)
+	}
+
+	_, err := C.create_attestation_report(apiKeySlice, flags, &errmsg)
 	if err != nil {
 		return false, errorWithMessage(err, errmsg)
 	}
@@ -311,6 +460,17 @@ func GetEncryptedSeed(cert []byte) ([]byte, error) {
 	certSlice := sendSlice(cert)
 	defer freeAfterSend(certSlice)
 	res, err := C.get_encrypted_seed(certSlice, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveVector(res), nil
+}
+
+func GetEncryptedGenesisSeed(pk []byte) ([]byte, error) {
+	errmsg := C.Buffer{}
+	pkSlice := sendSlice(pk)
+	defer freeAfterSend(pkSlice)
+	res, err := C.get_encrypted_genesis_seed(pkSlice, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}

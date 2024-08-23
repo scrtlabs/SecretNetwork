@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
@@ -21,12 +23,13 @@ import (
 
 type Messenger interface {
 	// DispatchMsg encodes the wasmVM message and dispatches it.
-	DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg, ogMessageVersion wasmTypes.CosmosMsgVersion) (events []sdk.Event, data [][]byte, err error)
+	DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg v1wasmTypes.CosmosMsg) (events []sdk.Event, data [][]byte, err error)
 }
 
 // Replyer is a subset of keeper that can handle replies to submessages
 type Replyer interface {
-	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo) ([]byte, error)
+	reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply v1wasmTypes.Reply, ogTx []byte, ogSigInfo wasmTypes.SigInfo) ([]byte, error)
+	GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -74,7 +77,7 @@ func sdkEventsToWasmVMEvents(events []sdk.Event) []v1wasmTypes.Event {
 }
 
 // dispatchMsgWithGasLimit sends a message with gas limit applied
-func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msg v1wasmTypes.CosmosMsg, gasLimit uint64, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) (events []sdk.Event, data [][]byte, err error) {
+func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msg v1wasmTypes.CosmosMsg, gasLimit uint64) (events []sdk.Event, data [][]byte, err error) {
 	limitedMeter := sdk.NewGasMeter(gasLimit)
 	subCtx := ctx.WithGasMeter(limitedMeter)
 
@@ -91,7 +94,7 @@ func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr
 			err = sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "SubMsg hit gas limit")
 		}
 	}()
-	events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg, ogCosmosMessageVersion)
+	events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg)
 
 	// make sure we charge the parent what was spent
 	spent := subCtx.GasMeter().GasConsumed()
@@ -141,7 +144,7 @@ func (e UnsupportedRequest) Error() string {
 }
 
 // Reply is encrypted only when it is a contract reply
-func isReplyEncrypted(msg v1wasmTypes.SubMsg, reply v1wasmTypes.Reply) bool {
+func isReplyEncrypted(msg v1wasmTypes.SubMsg) bool {
 	if msg.Msg.Wasm == nil {
 		return false
 	}
@@ -157,6 +160,7 @@ func redactError(err error) (bool, error) {
 		e := strings.ReplaceAll(err.Error(), "encrypted: ", "")
 		e = strings.ReplaceAll(e, ": execute contract failed", "")
 		e = strings.ReplaceAll(e, ": instantiate contract failed", "")
+		e = strings.ReplaceAll(e, ": migrate contract failed", "")
 		return false, fmt.Errorf("%s", e)
 	}
 
@@ -183,9 +187,21 @@ func redactError(err error) (bool, error) {
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
 // that dispatched them, both on success as well as failure
-func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.VerificationInfo, ogCosmosMessageVersion wasmTypes.CosmosMsgVersion) ([]byte, error) {
+func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []v1wasmTypes.SubMsg, ogTx []byte, ogSigInfo wasmTypes.SigInfo) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
+
+		if d.keeper.GetLastMsgMarkerContainer().GetMarker() {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrLastTx, "Cannot send messages or submessages after last tx marker was set")
+		}
+
+		if msg.Msg.FinalizeTx != nil {
+			d.keeper.GetLastMsgMarkerContainer().SetMarker(true)
+
+			// no handler is defined for marker - it's just to get here
+			break
+		}
+
 		// Check replyOn validity
 		switch msg.ReplyOn {
 		case v1wasmTypes.ReplySuccess, v1wasmTypes.ReplyError, v1wasmTypes.ReplyAlways, v1wasmTypes.ReplyNever:
@@ -206,9 +222,9 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		var events []sdk.Event
 		var data [][]byte
 		if limitGas {
-			events, data, err = d.dispatchMsgWithGasLimit(subCtx, contractAddr, ibcPort, msg.Msg, *msg.GasLimit, ogCosmosMessageVersion)
+			events, data, err = d.dispatchMsgWithGasLimit(subCtx, contractAddr, ibcPort, msg.Msg, *msg.GasLimit)
 		} else {
-			events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg.Msg, ogCosmosMessageVersion)
+			events, data, err = d.messenger.DispatchMsg(subCtx, contractAddr, ibcPort, msg.Msg)
 		}
 
 		// if it succeeds, commit state changes from submessage, and pass on events to Event Manager
@@ -284,8 +300,9 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// In order to specify that the reply isn't signed by the enclave we use "SIGN_MODE_UNSPECIFIED"
 		// The SGX will notice that the value is SIGN_MODE_UNSPECIFIED and will treat the message as plaintext.
-		replySigInfo := wasmTypes.VerificationInfo{
-			Bytes:     []byte{},
+		replySigInfo := wasmTypes.SigInfo{
+			TxBytes:   []byte{},
+			SignBytes: []byte{},
 			ModeInfo:  []byte{},
 			PublicKey: []byte{},
 			Signature: []byte{},
@@ -294,11 +311,11 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 
 		// In a case when the reply is encrypted but the sdk failed (Most likely, funds issue)
 		// we return a error
-		if isReplyEncrypted(msg, reply) && isSdkError {
-			return nil, fmt.Errorf("an sdk error occoured while sending a sub-message: %s", redactedErr.Error())
+		if isReplyEncrypted(msg) && isSdkError {
+			return nil, fmt.Errorf("an sdk error occurred while sending a sub-message: %s", redactedErr.Error())
 		}
 
-		if isReplyEncrypted(msg, reply) {
+		if isReplyEncrypted(msg) {
 			var dataWithInternalReplyInfo v1wasmTypes.DataWithInternalReplyInfo
 
 			if reply.Result.Ok != nil {

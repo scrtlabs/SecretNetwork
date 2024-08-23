@@ -74,13 +74,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 RUN bash /tmp/library-scripts/rust-debian.sh "${CARGO_HOME}" "${RUSTUP_HOME}" "${USERNAME}" "true" "true"
 
 # Install Go
-#ADD https://go.dev/dl/go1.18.4.linux-amd64.tar.gz go1.18.4.linux-amd64.tar.gz
-#RUN tar -C /usr/local -xzf go1.18.4.linux-amd64.tar.gz
+#ADD https://go.dev/dl/go1.21.1.linux-amd64.tar.gz go.linux-amd64.tar.gz
+#RUN tar -C /usr/local -xzf go.linux-amd64.tar.gz
 #
 #RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" "$GOPATH/pkg" && chmod -R 777 "$GOPATH"
 #RUN chown ${USERNAME}:${USERNAME} /go -R
 
-RUN bash /tmp/library-scripts/go-debian.sh "1.18.4" "${GOROOT}" "${GOPATH}" "${USERNAME}" "true" "true" && \
+RUN bash /tmp/library-scripts/go-debian.sh "1.21.1" "${GOROOT}" "${GOPATH}" "${USERNAME}" "true" "true" && \
     go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -version
 
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/library-scripts

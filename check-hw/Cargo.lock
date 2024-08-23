@@ -61,8 +61,10 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "check-hw"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "enclave-ffi-types",
  "lazy_static",
+ "log",
  "parking_lot",
  "sgx_types",
  "sgx_urts",
@@ -296,11 +298,11 @@ dependencies = [
 
 [[package]]
 name = "sgx_types"
-version = "1.1.5"
+version = "1.1.6"
 
 [[package]]
 name = "sgx_urts"
-version = "1.1.5"
+version = "1.1.6"
 dependencies = [
  "libc",
  "sgx_types",

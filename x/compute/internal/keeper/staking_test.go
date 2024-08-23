@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/codec/types"
+	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 
 	"github.com/stretchr/testify/assert"
@@ -105,7 +106,7 @@ func TestInitializeStaking(t *testing.T) {
 	accKeeper, stakingKeeper, keeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper
 
 	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin("stake", 1234567))
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 	v, found := stakingKeeper.GetValidator(ctx, valAddr)
 	assert.True(t, found)
 	assert.Equal(t, v.GetDelegatorShares(), sdk.NewDec(1234567))
@@ -134,8 +135,8 @@ func TestInitializeStaking(t *testing.T) {
 	initBz, err = testEncrypt(t, keeper, ctx, nil, stakingID, initBz)
 	require.NoError(t, err)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
-	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, creatorPrivKey, initBz, stakingID, nil)
+	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -155,7 +156,7 @@ func TestInitializeStaking(t *testing.T) {
 	badBz, err := json.Marshal(&badInitMsg)
 	require.NoError(t, err)
 
-	_, _, _, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, creatorPrivKey, string(badBz), true, false, defaultGasForTests)
+	_, _, _, _, initErr := initHelper(t, keeper, ctx, stakingID, creator, nil, creatorPrivKey, string(badBz), true, false, defaultGasForTests)
 	require.Error(t, initErr)
 	require.Error(t, initErr.GenericErr)
 	require.Equal(t, fmt.Sprintf("%s is not in the current validator set", sdk.ValAddress(bob).String()), initErr.GenericErr.Msg)
@@ -191,7 +192,7 @@ func initializeStaking(t *testing.T) initInfo {
 	accKeeper, stakingKeeper, keeper := keepers.AccountKeeper, keepers.StakingKeeper, keepers.WasmKeeper
 
 	valAddr := addValidator(ctx, stakingKeeper, accKeeper, keeper.bankKeeper, sdk.NewInt64Coin(sdk.DefaultBondDenom, 1000000))
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
 	// set some baseline - this seems to be needed
 	keepers.DistKeeper.SetValidatorHistoricalRewards(ctx, valAddr, 0, distributiontypes.ValidatorHistoricalRewards{
@@ -228,8 +229,8 @@ func initializeStaking(t *testing.T) initInfo {
 	initBz, err = testEncrypt(t, keeper, ctx, nil, stakingID, initBz)
 	require.NoError(t, err)
 
-	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, creatorPrivKey, initBz, stakingID, nil)
-	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator /* , nil */, initBz, "staking derivates - DRV", nil, nil)
+	ctx = PrepareInitSignedTx(t, keeper, ctx, creator, nil, creatorPrivKey, initBz, stakingID, nil)
+	stakingAddr, _, err := keeper.Instantiate(ctx, stakingID, creator, nil, initBz, "staking derivates - DRV", nil, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, stakingAddr)
 
@@ -292,7 +293,7 @@ func TestBonding(t *testing.T) {
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -339,11 +340,11 @@ func TestUnbonding(t *testing.T) {
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// update height a bit
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 
 	// now unbond 30k - note that 3k (10%) goes to the owner as a tax, 27k unbonded and available as claims
 	unbond := StakingHandleMsg{
@@ -356,7 +357,7 @@ func TestUnbonding(t *testing.T) {
 	unbondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, unbondBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, unbondBz, contractAddr, nil)
-	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, unbondBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -415,11 +416,11 @@ func TestReinvest(t *testing.T) {
 	bondBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, bondBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, bondBz, contractAddr, funds)
-	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, bondBz, funds, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// update height a bit to solidify the delegation
-	ctx = nextBlock(ctx, stakingKeeper)
+	ctx = nextBlock(ctx, stakingKeeper, keeper)
 	// we get 1/6, our share should be 40k minus 10% commission = 36k
 	setValidatorRewards(ctx, bankKeeper, stakingKeeper, distKeeper, valAddr, sdk.NewInt64Coin(sdk.DefaultBondDenom, 240000))
 
@@ -432,7 +433,7 @@ func TestReinvest(t *testing.T) {
 	reinvestBz, err = testEncrypt(t, keeper, ctx, contractAddr, 0, reinvestBz)
 	require.NoError(t, err)
 	ctx = PrepareExecSignedTx(t, keeper, ctx, bob, privBob, reinvestBz, contractAddr, nil)
-	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil, nil)
+	_, err = keeper.Execute(ctx, contractAddr, bob, reinvestBz, nil, nil, wasmtypes.HandleTypeExecute)
 	require.NoError(t, err)
 
 	// check some account values - the money is on neither account (cuz it is bonded)
@@ -497,10 +498,12 @@ func addValidator(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, accountKe
 
 // this will commit the current set, update the block height and set historic info
 // basically, letting two blocks pass
-func nextBlock(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper) sdk.Context {
+func nextBlock(ctx sdk.Context, stakingKeeper stakingkeeper.Keeper, wasmKeeper Keeper) sdk.Context {
 	staking.EndBlocker(ctx, stakingKeeper)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
 	staking.BeginBlocker(ctx, stakingKeeper)
+	// StoreRandomOnNewBlock(ctx, wasmKeeper)
+
 	return ctx
 }
 

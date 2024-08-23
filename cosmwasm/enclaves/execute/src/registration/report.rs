@@ -22,6 +22,9 @@ use enclave_ffi_types::NodeAuthResult;
 
 use super::cert::{get_ias_auth_config, get_netscape_comment};
 
+#[cfg(feature = "test")]
+use sgx_types::sgx_quote_t;
+
 #[derive(Debug)]
 pub enum Error {
     ReportParseError,
@@ -537,6 +540,7 @@ const WHITELISTED_ADVISORIES: &[&str] = &[
     "INTEL-SA-00219",
     "INTEL-SA-00615",
     "INTEL-SA-00657",
+    "INTEL-SA-00767",
 ];
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
@@ -545,6 +549,7 @@ const WHITELISTED_ADVISORIES: &[&str] = &[
     "INTEL-SA-00219",
     "INTEL-SA-00615",
     "INTEL-SA-00657",
+    "INTEL-SA-00767",
 ];
 
 lazy_static! {
@@ -589,13 +594,14 @@ impl AdvisoryIDs {
 pub struct AttestationReport {
     /// The freshness of the report, i.e., elapsed time after acquiring the
     /// report in seconds.
-    // pub freshness: Duration,
+    pub timestamp: u64,
     /// Quote status
     pub sgx_quote_status: SgxQuoteStatus,
     /// Content of the quote
     pub sgx_quote_body: SgxQuote,
     pub platform_info_blob: Option<Vec<u8>>,
     pub advisory_ids: AdvisoryIDs,
+    pub tcb_eval_data_number: u16,
 }
 
 impl AttestationReport {
@@ -630,7 +636,7 @@ impl AttestationReport {
         let chain: Vec<&[u8]> = vec![&ias_cert];
 
         // set as 04.11.23(dd.mm.yy) - should be valid for the foreseeable future, and not rely on SystemTime
-        let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1_699_088_856);
+        let time_stamp = webpki::Time::from_seconds_since_unix_epoch(1723218496);
 
         // note: there's no way to not validate the time, and we don't want to write this code
         // ourselves. We also can't just ignore the error message, since that means that the rest of
@@ -670,7 +676,7 @@ impl AttestationReport {
             .as_u64()
             .ok_or(Error::ReportParseError)?;
 
-        if version != 4 {
+        if version != 5 {
             warn!("API version incompatible");
             return Err(Error::ReportParseError);
         };
@@ -701,7 +707,7 @@ impl AttestationReport {
                 warn!("Error unpacking enclave quote body");
                 Error::ReportParseError
             })?;
-            let quote_raw = base64::decode(&quote_encoded.as_bytes()).map_err(|_| {
+            let quote_raw = base64::decode(quote_encoded.as_bytes()).map_err(|_| {
                 warn!("Error decoding encoded quote body");
                 Error::ReportParseError
             })?;
@@ -717,15 +723,32 @@ impl AttestationReport {
             vec![]
         };
 
+        let tcb_eval_data_number = attn_report["tcbEvaluationDataNumber"]
+            .as_u64()
+            .ok_or(Error::ReportParseError)? as u16;
+
+        let timestamp_str = attn_report["timestamp"]
+            .as_str()
+            .ok_or(Error::ReportParseError)?;
+
+        let timestamp_rfc = format!("{}Z", timestamp_str);
+        let time = chrono::DateTime::parse_from_rfc3339(&timestamp_rfc).map_err(|e| {
+            warn!("Failed to decode timestamp: {}", e);
+            Error::ReportParseError
+        })?;
+        let timestamp_since_epoch = time.timestamp();
+
         // We don't actually validate the public key, since we use ephemeral certificates,
         // and all we really care about that the report is valid and the key that is saved in the
         // report_data field
 
         Ok(Self {
+            timestamp: timestamp_since_epoch as u64,
             sgx_quote_status,
             sgx_quote_body,
             platform_info_blob,
             advisory_ids: AdvisoryIDs(advisories),
+            tcb_eval_data_number,
         })
     }
 }
@@ -735,6 +758,8 @@ pub mod tests {
     use serde_json::json;
     use std::io::Read;
     use std::untrusted::fs::File;
+
+    use crate::registration::attestation::verify_quote_ecdsa;
 
     use super::*;
 
@@ -911,5 +936,46 @@ pub mod tests {
         }
 
         assert!(report.is_ok());
+    }
+
+    fn load_attestation_dcap() -> (Vec<u8>, Vec<u8>, i64) {
+        let mut vec_quote = vec![];
+        {
+            let mut f =
+                File::open("../execute/src/registration/fixtures/attestation_dcap.quote").unwrap();
+            f.read_to_end(&mut vec_quote).unwrap();
+        }
+
+        let mut vec_coll = vec![];
+        {
+            let mut f = File::open(
+                "../execute/src/registration/fixtures/attestation_dcap.quote.collateral",
+            )
+            .unwrap();
+            f.read_to_end(&mut vec_coll).unwrap();
+        }
+        (vec_quote, vec_coll, 1709649832)
+    }
+
+    pub fn test_attestation_dcap() {
+        let (vec_quote, vec_coll, time_s) = load_attestation_dcap();
+
+        let res = verify_quote_ecdsa(&vec_quote, &vec_coll, time_s);
+        assert!(res.is_ok());
+    }
+
+    pub fn test_attestation_dcap_temper() {
+        let (mut vec_quote, mut vec_coll, time_s) = load_attestation_dcap();
+
+        // tamper with quote
+        let mut my_p_quote = vec_quote.as_mut_ptr() as *mut sgx_quote_t;
+        unsafe {
+            let mut p_report = (*my_p_quote).report_body;
+            let mut p_data = p_report.report_data;
+            p_data.d[6] = p_data.d[6] ^ 4;
+        };
+
+        let res = verify_quote_ecdsa(&vec_quote, &vec_coll, time_s);
+        assert!(!res.is_ok());
     }
 }

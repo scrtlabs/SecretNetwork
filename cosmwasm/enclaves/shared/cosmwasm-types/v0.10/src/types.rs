@@ -20,10 +20,13 @@ use super::encoding::Binary;
 
 use crate::consts::BECH32_PREFIX_ACC_ADDR;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub const CONTRACT_KEY_LENGTH: usize = 64;
+pub const CONTRACT_KEY_PROOF_LENGTH: usize = 32;
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
 pub struct HumanAddr(pub String);
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
 pub struct CanonicalAddr(pub Binary);
 
 impl HumanAddr {
@@ -37,6 +40,10 @@ impl HumanAddr {
         self.0.is_empty()
     }
     pub fn from_canonical(canonical_addr: &CanonicalAddr) -> Result<Self, bech32::Error> {
+        if canonical_addr.is_empty() {
+            return Ok(HumanAddr::from(""));
+        }
+
         let human_addr_str = bech32::encode(
             BECH32_PREFIX_ACC_ADDR,
             canonical_addr.as_slice().to_base32(),
@@ -75,6 +82,10 @@ impl CanonicalAddr {
         self.0.is_empty()
     }
     pub fn from_human(human_addr: &HumanAddr) -> Result<Self, bech32::Error> {
+        if human_addr.is_empty() {
+            return Ok(CanonicalAddr(Binary(vec![])));
+        }
+
         let (decoded_prefix, data) = bech32::decode(human_addr.as_str())?;
         let canonical = Vec::<u8>::from_base32(&data)?;
 
@@ -92,12 +103,22 @@ impl fmt::Display for CanonicalAddr {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub struct ContractKey {
+    #[serde(default)]
+    pub og_contract_key: Option<Binary>,
+    #[serde(default)]
+    pub current_contract_key: Option<Binary>,
+    #[serde(default)]
+    pub current_contract_key_proof: Option<Binary>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Env {
     pub block: BlockInfo,
     pub message: MessageInfo,
     pub contract: ContractInfo,
-    pub contract_key: Option<String>,
+    pub contract_key: Option<ContractKey>,
     #[serde(default)]
     pub contract_code_hash: String,
     #[serde(default)]
@@ -113,14 +134,24 @@ pub struct TransactionInfo {
     /// using the pair (`env.block.height`, `env.transaction.index`).
     ///
     pub index: u32,
+    /// The hash of the current transaction bytes.
+    /// aka txhash or transaction_id
+    /// hash = sha256(tx_bytes)
+    #[serde(default)]
+    pub hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct BlockInfo {
     pub height: u64,
-    /// Absolute time of the block creation in seconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
+    /// Absolute time of the block creation in nanoseconds since the UNIX epoch (00:00:00 on 1970-01-01 UTC).
+    /// Note: when passed down to the enclave from Go this field is in nanoseconds, when passed down to a v0.10 contract this field is in seconds
+    /// For more context: https://github.com/scrtlabs/SecretNetwork/pull/1331#discussion_r1113526524
     pub time: u64,
     pub chain_id: String,
+    #[cfg(feature = "random")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub random: Option<Binary>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -262,6 +293,43 @@ pub enum WasmMsg {
         /// Human-readable label for the contract
         #[serde(default)]
         label: String,
+        /// callback_sig is used only inside the enclave to validate messages
+        /// that are originating from other contracts
+        callback_sig: Option<Vec<u8>>,
+    },
+    /// Migrates a given contracts to use new wasm code. Passes a MigrateMsg to allow us to
+    /// customize behavior.
+    ///
+    /// Only the contract admin (as defined in wasmd), if any, is able to make this call.
+    ///
+    /// This is translated to a [MsgMigrateContract](https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto#L86-L96).
+    /// `sender` is automatically filled with the current contract's address.
+    Migrate {
+        contract_addr: String,
+        /// callback_code_hash is the hex encoded hash of the **new** code. This is used by Secret Network to harden against replaying the contract
+        /// It is used to bind the request to a destination contract in a stronger way than just the contract address which can be faked
+        callback_code_hash: String,
+        /// the code_id of the **new** logic to place in the given contract
+        code_id: u64,
+        /// msg is the json-encoded MigrateMsg struct that will be passed to the new code
+        msg: Binary,
+        /// callback_sig is used only inside the enclave to validate messages
+        /// that are originating from other contracts
+        callback_sig: Option<Vec<u8>>,
+    },
+    /// Sets a new admin (for migrate) on the given contract.
+    /// Fails if this contract is not currently admin of the target contract.
+    UpdateAdmin {
+        contract_addr: String,
+        admin: String,
+        /// callback_sig is used only inside the enclave to validate messages
+        /// that are originating from other contracts
+        callback_sig: Option<Vec<u8>>,
+    },
+    /// Clears the admin on the given contract, so no more migration possible.
+    /// Fails if this contract is not currently admin of the target contract.
+    ClearAdmin {
+        contract_addr: String,
         /// callback_sig is used only inside the enclave to validate messages
         /// that are originating from other contracts
         callback_sig: Option<Vec<u8>>,

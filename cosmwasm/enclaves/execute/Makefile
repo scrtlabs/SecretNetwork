@@ -1,7 +1,7 @@
 ######## SGX SDK Settings ########
 
 FEATURES ?=
-SGX_SDK ?= $(HOME)/.sgxsdk/sgxsdk
+SGX_SDK ?= /opt/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
 BUILD_PROFILE ?= release
@@ -21,9 +21,13 @@ endif
 ifeq ($(SGX_ARCH), x86)
 	SGX_COMMON_CFLAGS := -m32
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
+	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
+	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
 else
 	SGX_COMMON_CFLAGS := -m64
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
+	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
+	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 endif
 
 ifeq ($(SGX_DEBUG), 1)
@@ -87,8 +91,8 @@ RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) $(ENCLAVE_CFLAGS) $(RustEnclave_Include_Paths)
 RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
-	-Wl,--version-script=Enclave.lds \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_dcap_tvl -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
+	-Wl,--version-script=Enclave.lds -lsgx_pthread \
 	$(ENCLAVE_LDFLAGS)
 
 
@@ -119,13 +123,13 @@ build-protobuf:
 	cd ../shared/cosmos-proto && cargo check --features='build-protobuf'
 
 librust_cosmwasm_enclave.signed.so: librust_cosmwasm_enclave.so $(ENCLAVE_CONFIG)
-	sgx_sign sign -key Enclave_private.pem -enclave $< -out $@ -config $(ENCLAVE_CONFIG)
+	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave_private.pem -enclave $< -out $@ -config $(ENCLAVE_CONFIG)
 
 librust_cosmwasm_enclave.so: $(CUSTOM_LIBRARY_PATH)/libenclave.a Enclave_t.o
 	$(CXX) Enclave_t.o -o $@ $(RustEnclave_Link_Flags)
 
 $(CUSTOM_LIBRARY_PATH)/libenclave.a: $(CUSTOM_LIBRARY_PATH) $(Rust_Crate_Source)
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo build --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE) --locked
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo build --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -Z unstable-options --profile $(BUILD_PROFILE)
 	cp ../target/x86_64-unknown-linux-sgx/$(BUILD_PROFILE)/libsecret_enclave.a $(CUSTOM_LIBRARY_PATH)/libenclave.a
 
 $(CUSTOM_LIBRARY_PATH):
@@ -135,13 +139,13 @@ Enclave_t.o: $(Enclave_EDL_Products)
 	$(CC) $(RustEnclave_Compile_Flags) -c Enclave_t.c -o $@
 
 $(Enclave_EDL_Products): Enclave.edl
-	sgx_edger8r --trusted $^ --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir ./
+	$(SGX_EDGER8R) --trusted $^ --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir ./
 
 check:
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo check --features "$(FEATURES)" --target x86_64-unknown-linux-sgx
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo check --features "$(FEATURES),light-client-validation" --target x86_64-unknown-linux-sgx
 
 clippy:
-	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clippy --features "$(FEATURES)" --target x86_64-unknown-linux-sgx -- -D warnings
+	RUST_TARGET_PATH=$(Rust_Target_Path) RUSTFLAGS=$(Rust_Flags) xargo clippy --features "$(FEATURES),light-client-validation" --target x86_64-unknown-linux-sgx -- -D warnings
 
 clean:
 	rm -rf $(CUSTOM_LIBRARY_PATH) $(Enclave_EDL_Products) *.o *.so *.h

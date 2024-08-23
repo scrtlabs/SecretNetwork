@@ -4,21 +4,29 @@
 ///
 use log::*;
 use sgx_types::sgx_status_t;
+use std::panic;
 use std::slice;
 
+use std::fs::File;
+use std::io::prelude::*;
+
 use enclave_crypto::consts::{
-    ATTESTATION_CERT_PATH, CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE,
-    SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
+    CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
+    GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH, PUBKEY_PATH,
+    REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
-
 use enclave_utils::pointers::validate_mut_slice;
+use enclave_utils::storage::migrate_file_from_2_17_safe;
+use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
+use enclave_utils::validator_set::VALIDATOR_SET_SEALING_PATH;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 
-use super::attestation::create_attestation_certificate;
+use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
 
 use super::seed_service::get_next_consensus_seed_from_service;
 
@@ -214,16 +222,19 @@ pub unsafe extern "C" fn ecall_init_node(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    // this validates the cert and handles the "what if it fails" inside as well
-    let res = create_attestation_certificate(
-        temp_key_result.as_ref().unwrap(),
-        SIGNATURE_TYPE,
-        api_key_slice,
-        None,
-    );
-    if res.is_err() {
-        error!("Error starting node, might not be updated",);
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+    {
+        // this validates the cert and handles the "what if it fails" inside as well
+        let res = crate::registration::attestation::validate_enclave_version(
+            temp_key_result.as_ref().unwrap(),
+            SIGNATURE_TYPE,
+            api_key_slice,
+            None,
+        );
+        if res.is_err() {
+            error!("Error starting node, might not be updated",);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
     }
 
     // public keys in certificates don't have 0x04, so we'll copy it here
@@ -315,8 +326,8 @@ pub unsafe extern "C" fn ecall_init_node(
             debug!("New consensus seed already exists, no need to get it from service");
         }
 
-        let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis).unwrap();
-        let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current).unwrap();
+        let mut res: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Genesis, false).unwrap();
+        let res_current: Vec<u8> = encrypt_seed(my_pub_key, SeedType::Current, false).unwrap();
         res.extend(&res_current);
 
         trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
@@ -338,6 +349,58 @@ pub unsafe extern "C" fn ecall_init_node(
     sgx_status_t::SGX_SUCCESS
 }
 
+unsafe fn get_attestation_report_epid(
+    api_key: *const u8,
+    api_key_len: u32,
+    kp: &KeyPair,
+) -> Result<Vec<u8>, sgx_status_t> {
+    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
+    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
+
+    validate_const_ptr!(
+        api_key,
+        api_key_len as usize,
+        Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+    );
+    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
+
+    let (_private_key_der, cert) =
+        match create_attestation_certificate(kp, SIGNATURE_TYPE, api_key_slice, None) {
+            Err(e) => {
+                warn!("Error in create_attestation_certificate: {:?}", e);
+                return Err(e);
+            }
+            Ok(res) => res,
+        };
+
+    write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str())?;
+
+    #[cfg(feature = "SGX_MODE_HW")]
+    {
+        crate::registration::print_report::print_local_report_info(cert.as_slice());
+    }
+
+    Ok(cert)
+}
+
+pub unsafe fn get_attestation_report_dcap(
+    kp: &KeyPair,
+) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+    let (vec_quote, vec_coll) = match get_quote_ecdsa(&kp.get_pubkey()) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Error creating attestation report");
+            return Err(e);
+        }
+    };
+
+    write_to_untrusted(&vec_quote, ATTESTATION_DCAP_PATH.as_str())?;
+
+    write_to_untrusted(&vec_coll, COLLATERAL_DCAP_PATH.as_str())?;
+
+    Ok((vec_quote, vec_coll))
+}
+
 #[no_mangle]
 /**
  * `ecall_get_attestation_report`
@@ -352,60 +415,77 @@ pub unsafe extern "C" fn ecall_init_node(
  * other creative usages.
  * # Safety
  * Something should go here
- */
+*/
 pub unsafe extern "C" fn ecall_get_attestation_report(
     api_key: *const u8,
     api_key_len: u32,
-    dry_run: u8,
+    flags: u32,
 ) -> sgx_status_t {
-    // validate_const_ptr!(spid, spid_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
-    // let spid_slice = slice::from_raw_parts(spid, spid_len as usize);
-
-    validate_const_ptr!(
-        api_key,
-        api_key_len as usize,
-        sgx_status_t::SGX_ERROR_UNEXPECTED,
-    );
-    let api_key_slice = slice::from_raw_parts(api_key, api_key_len as usize);
-    let dry_run = dry_run != 0; // u8 => bool
-
-    let kp: KeyPair = if dry_run {
-        match KeyPair::new() {
-            Ok(new_kp) => new_kp,
-            Err(e) => {
-                error!(
-                    "Failed to generate temporary key for attestation: {}",
-                    e.to_string()
-                );
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
-        }
-    } else {
-        KEY_MANAGER.get_registration_key().unwrap()
-    };
+    let kp = KEY_MANAGER.get_registration_key().unwrap();
     trace!(
         "ecall_get_attestation_report key pk: {:?}",
         &kp.get_pubkey().to_vec()
     );
-    let (_private_key_der, cert) =
-        match create_attestation_certificate(&kp, SIGNATURE_TYPE, api_key_slice, None) {
+
+    {
+        let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
+            Ok(f) => f,
             Err(e) => {
-                warn!("Error in create_attestation_certificate: {:?}", e);
-                return e;
+                error!("failed to create file {}", e);
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
             }
-            Ok(res) => res,
         };
 
-    //let path_prefix = ATTESTATION_CERT_PATH.to_owned();
-    if !dry_run {
-        if let Err(status) = write_to_untrusted(cert.as_slice(), ATTESTATION_CERT_PATH.as_str()) {
-            return status;
-        }
+        f_out.write_all(kp.get_pubkey().as_ref()).unwrap();
     }
 
-    #[cfg(feature = "SGX_MODE_HW")]
-    {
-        crate::registration::print_report::print_local_report_info(cert.as_slice());
+    let mut size_epid: u32 = 0;
+    let mut size_dcap_q: u32 = 0;
+    let mut size_dcap_c: u32 = 0;
+
+    let res_epid = match 1 & flags {
+        0 => get_attestation_report_epid(api_key, api_key_len, &kp),
+        _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
+    };
+    if let Ok(ref vec_cert) = res_epid {
+        size_epid = vec_cert.len() as u32;
+    }
+
+    let res_dcap = match 2 & flags {
+        0 => get_attestation_report_dcap(&kp),
+        _ => Err(sgx_status_t::SGX_ERROR_FEATURE_NOT_SUPPORTED),
+    };
+    if let Ok((ref vec_quote, ref vec_coll)) = res_dcap {
+        size_dcap_q = vec_quote.len() as u32;
+        size_dcap_c = vec_coll.len() as u32;
+    }
+
+    let mut f_out = match File::create(CERT_COMBINED_PATH.as_str()) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("failed to create file {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    f_out.write_all(&size_epid.to_le_bytes()).unwrap();
+    f_out.write_all(&size_dcap_q.to_le_bytes()).unwrap();
+    f_out.write_all(&size_dcap_c.to_le_bytes()).unwrap();
+
+    if let Ok(ref vec_cert) = res_epid {
+        f_out.write_all(vec_cert.as_slice()).unwrap();
+    }
+
+    if let Ok((vec_quote, vec_coll)) = res_dcap {
+        f_out.write_all(vec_quote.as_slice()).unwrap();
+        f_out.write_all(vec_coll.as_slice()).unwrap();
+    }
+
+    if (size_epid == 0) && (size_dcap_q == 0) {
+        if let Err(status) = res_epid {
+            return status;
+        }
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
     sgx_status_t::SGX_SUCCESS
@@ -439,5 +519,100 @@ pub unsafe extern "C" fn ecall_key_gen(
     let pubkey = reg_key.unwrap().get_pubkey();
     public_key.clone_from_slice(&pubkey);
     trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
+    sgx_status_t::SGX_SUCCESS
+}
+
+///
+/// `ecall_get_genesis_seed
+///
+/// This call is used to help new nodes that want to full sync to have the previous "genesis" seed
+/// A node that is regestering or being upgraded to version 1.9 will call this function.
+///
+/// The seed is encrypted with a key derived from the secret master key of the chain, and the public
+/// key of the requesting chain
+///
+/// This function happens off-chain
+///
+#[no_mangle]
+pub unsafe extern "C" fn ecall_get_genesis_seed(
+    pk: *const u8,
+    pk_len: u32,
+    seed: &mut [u8; SINGLE_ENCRYPTED_SEED_SIZE],
+) -> sgx_types::sgx_status_t {
+    validate_mut_ptr!(
+        seed.as_mut_ptr(),
+        seed.len(),
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    );
+
+    let pk_slice = std::slice::from_raw_parts(pk, pk_len as usize);
+
+    let result = panic::catch_unwind(|| -> Result<Vec<u8>, sgx_types::sgx_status_t> {
+        // just make sure the length isn't wrong for some reason (certificate may be malformed)
+        if pk_slice.len() != PUBLIC_KEY_SIZE {
+            warn!(
+                "Got public key from certificate with the wrong size: {:?}",
+                pk_slice.len()
+            );
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+
+        let mut target_public_key: [u8; 32] = [0u8; 32];
+        target_public_key.copy_from_slice(pk_slice);
+        trace!(
+            "ecall_get_encrypted_genesis_seed target_public_key key pk: {:?}",
+            &target_public_key.to_vec()
+        );
+
+        let res: Vec<u8> = encrypt_seed(target_public_key, SeedType::Genesis, true)
+            .map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+
+        Ok(res)
+    });
+
+    if let Ok(res) = result {
+        match res {
+            Ok(res) => {
+                trace!("Done encrypting seed, got {:?}, {:?}", res.len(), res);
+
+                seed.copy_from_slice(&res);
+                trace!("returning with seed: {:?}, {:?}", seed.len(), seed);
+                sgx_status_t::SGX_SUCCESS
+            }
+            Err(e) => {
+                trace!("error encrypting seed {:?}", e);
+                e
+            }
+        }
+    } else {
+        warn!("Enclave call ecall_get_genesis_seed panic!");
+        sgx_status_t::SGX_ERROR_UNEXPECTED
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
+    if let Err(e) = migrate_file_from_2_17_safe(&REGISTRATION_KEY_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&GENESIS_CONSENSUS_SEED_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&CURRENT_CONSENSUS_SEED_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&REK_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&IRS_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&VALIDATOR_SET_SEALING_PATH, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&TX_BYTES_SEALING_PATH, true) {
+        return e;
+    }
+
     sgx_status_t::SGX_SUCCESS
 }

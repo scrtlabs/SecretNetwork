@@ -32,17 +32,10 @@ const (
 	QueryContractAddress          = keeper.QueryContractAddress
 	QueryMethodContractStateSmart = keeper.QueryMethodContractStateSmart
 	DefaultConfigTemplate         = types.DefaultConfigTemplate
-
-	/*
-		QueryMethodContractStateAll   = keeper.QueryMethodContractStateAll
-		QueryMethodContractStateRaw   = keeper.QueryMethodContractStateRaw
-	*/
 )
 
 var (
 	// functions aliases
-	// ConvertToProposals        = types.ConvertToProposals
-	// DefaultParams             = types.DefaultParams
 	RegisterCodec             = types.RegisterLegacyAminoCodec
 	RegisterInterfaces        = types.RegisterInterfaces
 	ValidateGenesis           = types.ValidateGenesis
@@ -83,6 +76,7 @@ var (
 	NewWasmSnapshotter        = keeper.NewWasmSnapshotter
 	ContractFromPortID        = keeper.ContractFromPortID
 	NewCountTXDecorator       = keeper.NewCountTXDecorator
+	NewMsgServerImpl          = keeper.NewMsgServerImpl
 
 	// variable aliases
 	ModuleCdc            = types.ModuleCdc
@@ -101,34 +95,37 @@ var (
 	CodeKeyPrefix        = types.CodeKeyPrefix
 	ContractKeyPrefix    = types.ContractKeyPrefix
 	ContractStorePrefix  = types.ContractStorePrefix
-	// EnableAllProposals   = types.EnableAllProposals
-	// DisableAllProposals  = types.DisableAllProposals
+	ZeroSender           = types.ZeroSender
 )
 
 type (
 	// ProposalType            = types.ProposalType
-	GenesisState            = types.GenesisState
-	Code                    = types.Code
-	Contract                = types.Contract
-	MsgStoreCode            = types.MsgStoreCode
-	MsgInstantiateContract  = types.MsgInstantiateContract
-	MsgExecuteContract      = types.MsgExecuteContract
-	Model                   = types.Model
-	CodeInfo                = types.CodeInfo
-	ContractInfo            = types.ContractInfo
-	CreatedAt               = types.AbsoluteTxPosition
-	WasmConfig              = types.WasmConfig
-	CodeInfoResponse        = types.CodeInfoResponse
-	MessageHandler          = keeper.SDKMessageHandler
-	BankEncoder             = keeper.BankEncoder
-	CustomEncoder           = keeper.CustomEncoder
-	StakingEncoder          = keeper.StakingEncoder
-	WasmEncoder             = keeper.WasmEncoder
-	GovEncoder              = keeper.GovEncoder
-	MessageEncoders         = keeper.MessageEncoders
-	Keeper                  = keeper.Keeper
-	ContractInfoWithAddress = types.ContractInfoWithAddress
-	QueryHandler            = keeper.QueryHandler
-	CustomQuerier           = keeper.CustomQuerier
-	QueryPlugins            = keeper.QueryPlugins
+	GenesisState               = types.GenesisState
+	Code                       = types.Code
+	Contract                   = types.Contract
+	MsgStoreCode               = types.MsgStoreCode
+	MsgInstantiateContract     = types.MsgInstantiateContract
+	MsgExecuteContract         = types.MsgExecuteContract
+	MsgExecuteContractResponse = types.MsgExecuteContractResponse
+	MsgMigrateContract         = types.MsgMigrateContract
+	MsgUpdateAdmin             = types.MsgUpdateAdmin
+	MsgClearAdmin              = types.MsgClearAdmin
+	Model                      = types.Model
+	CodeInfo                   = types.CodeInfo
+	ContractInfo               = types.ContractInfo
+	CreatedAt                  = types.AbsoluteTxPosition
+	WasmConfig                 = types.WasmConfig
+	CodeInfoResponse           = types.CodeInfoResponse
+	MessageHandler             = keeper.SDKMessageHandler
+	BankEncoder                = keeper.BankEncoder
+	CustomEncoder              = keeper.CustomEncoder
+	StakingEncoder             = keeper.StakingEncoder
+	WasmEncoder                = keeper.WasmEncoder
+	GovEncoder                 = keeper.GovEncoder
+	MessageEncoders            = keeper.MessageEncoders
+	Keeper                     = keeper.Keeper
+	ContractInfoWithAddress    = types.ContractInfoWithAddress
+	QueryHandler               = keeper.QueryHandler
+	CustomQuerier              = keeper.CustomQuerier
+	QueryPlugins               = keeper.QueryPlugins
 )

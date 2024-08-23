@@ -2,7 +2,6 @@
 members = [
   "ffi-types",
   "execute",
-  "query",
   "shared/contract-engine",
   "shared/cosmos-proto",
   "shared/cosmos-types",
@@ -10,7 +9,8 @@ members = [
   "shared/utils",
   "shared/cosmwasm-types/v1.0",
   "shared/cosmwasm-types/v0.10",
-  "shared/cosmwasm-types/generic"
+  "shared/cosmwasm-types/generic",
+  "shared/block-verifier"
 ]
 exclude = ["test"]
 
@@ -26,37 +26,35 @@ codegen-units = 16
 rpath = false
 
 [patch.crates-io]
-rand_core = { git = "https://github.com/mesalock-linux/rand-sgx", default-features = false, features = [
-  "mesalock_sgx"
-] }
-# zeroize = { rev = "2fdfbde87bd085c2f771c9e034fff136cc53fe31", git = "https://github.com/scrtlabs/zeroize" }
+rand_core = { git = "https://github.com/mesalock-linux/rand-sgx" }
 
+# zeroize = { rev = "2fdfbde87bd085c2f771c9e034fff136cc53fe31", git = "https://github.com/scrtlabs/zeroize" }
 [patch.'https://github.com/apache/teaclave-sgx-sdk.git']
-sgx_align_struct_attribute = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_align_struct_attribute" }
+# sgx_align_struct_attribute = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_align_struct_attribute" }
 sgx_alloc = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_alloc" }
-sgx_backtrace = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace" }
+# sgx_backtrace = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace" }
 sgx_backtrace_sys = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_backtrace_sys" }
 sgx_build_helper = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_build_helper" }
-sgx_cov = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_cov" }
-sgx_crypto_helper = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_crypto_helper" }
+# sgx_cov = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_cov" }
+# sgx_crypto_helper = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_crypto_helper" }
 sgx_demangle = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_demangle" }
 sgx_libc = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_libc" }
-sgx_no_tstd = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_no_tstd" }
+# sgx_no_tstd = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_no_tstd" }
 sgx_rand = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_rand" }
-sgx_rand_derive = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_rand_derive" }
-sgx_serialize = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize" }
-sgx_serialize_derive = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize_derive" }
-sgx_serialize_derive_internals = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize_derive_internals" }
+# sgx_rand_derive = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_rand_derive" }
+# sgx_serialize = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize" }
+# sgx_serialize_derive = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize_derive" }
+# sgx_serialize_derive_internals = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_serialize_derive_internals" }
 sgx_tcrypto = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto" }
-sgx_tcrypto_helper = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto_helper" }
-sgx_tdh = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tdh" }
-sgx_tkey_exchange = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tkey_exchange" }
+# sgx_tcrypto_helper = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tcrypto_helper" }
+# sgx_tdh = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tdh" }
+# sgx_tkey_exchange = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tkey_exchange" }
 sgx_tprotected_fs = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tprotected_fs" }
 sgx_trts = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_trts" }
 sgx_tse = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tse" }
-sgx_tseal = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tseal" }
+# sgx_tseal = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tseal" }
 sgx_tstd = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tstd" }
-sgx_tunittest = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tunittest" }
+# sgx_tunittest = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_tunittest" }
 sgx_types = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_types" }
 #sgx_ucrypto = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_ucrypto" }
 sgx_unwind = { path = "../../third_party/incubator-teaclave-sgx-sdk/sgx_unwind" }

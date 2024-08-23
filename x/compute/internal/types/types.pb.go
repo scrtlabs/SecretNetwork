@@ -53,6 +53,42 @@ func (AccessType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_8ba7f40a6d1951b3, []int{0}
 }
 
+// ContractCodeHistoryOperationType actions that caused a code change
+type ContractCodeHistoryOperationType int32
+
+const (
+	// ContractCodeHistoryOperationTypeUnspecified placeholder for empty value
+	ContractCodeHistoryOperationTypeUnspecified ContractCodeHistoryOperationType = 0
+	// ContractCodeHistoryOperationTypeInit on chain contract instantiation
+	ContractCodeHistoryOperationTypeInit ContractCodeHistoryOperationType = 1
+	// ContractCodeHistoryOperationTypeMigrate code migration
+	ContractCodeHistoryOperationTypeMigrate ContractCodeHistoryOperationType = 2
+	// ContractCodeHistoryOperationTypeGenesis based on genesis data
+	ContractCodeHistoryOperationTypeGenesis ContractCodeHistoryOperationType = 3
+)
+
+var ContractCodeHistoryOperationType_name = map[int32]string{
+	0: "CONTRACT_CODE_HISTORY_OPERATION_TYPE_UNSPECIFIED",
+	1: "CONTRACT_CODE_HISTORY_OPERATION_TYPE_INIT",
+	2: "CONTRACT_CODE_HISTORY_OPERATION_TYPE_MIGRATE",
+	3: "CONTRACT_CODE_HISTORY_OPERATION_TYPE_GENESIS",
+}
+
+var ContractCodeHistoryOperationType_value = map[string]int32{
+	"CONTRACT_CODE_HISTORY_OPERATION_TYPE_UNSPECIFIED": 0,
+	"CONTRACT_CODE_HISTORY_OPERATION_TYPE_INIT":        1,
+	"CONTRACT_CODE_HISTORY_OPERATION_TYPE_MIGRATE":     2,
+	"CONTRACT_CODE_HISTORY_OPERATION_TYPE_GENESIS":     3,
+}
+
+func (x ContractCodeHistoryOperationType) String() string {
+	return proto.EnumName(ContractCodeHistoryOperationType_name, int32(x))
+}
+
+func (ContractCodeHistoryOperationType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_8ba7f40a6d1951b3, []int{1}
+}
+
 type AccessTypeParam struct {
 	Value AccessType `protobuf:"varint,1,opt,name=value,proto3,enum=secret.compute.v1beta1.AccessType" json:"value,omitempty" yaml:"value"`
 }
@@ -131,16 +167,55 @@ func (m *CodeInfo) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_CodeInfo proto.InternalMessageInfo
 
+type ContractKey struct {
+	OgContractKey           []byte `protobuf:"bytes,1,opt,name=og_contract_key,json=ogContractKey,proto3" json:"og_contract_key,omitempty"`
+	CurrentContractKey      []byte `protobuf:"bytes,2,opt,name=current_contract_key,json=currentContractKey,proto3" json:"current_contract_key,omitempty"`
+	CurrentContractKeyProof []byte `protobuf:"bytes,3,opt,name=current_contract_key_proof,json=currentContractKeyProof,proto3" json:"current_contract_key_proof,omitempty"`
+}
+
+func (m *ContractKey) Reset()         { *m = ContractKey{} }
+func (m *ContractKey) String() string { return proto.CompactTextString(m) }
+func (*ContractKey) ProtoMessage()    {}
+func (*ContractKey) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8ba7f40a6d1951b3, []int{2}
+}
+func (m *ContractKey) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ContractKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ContractKey.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ContractKey) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ContractKey.Merge(m, src)
+}
+func (m *ContractKey) XXX_Size() int {
+	return m.Size()
+}
+func (m *ContractKey) XXX_DiscardUnknown() {
+	xxx_messageInfo_ContractKey.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ContractKey proto.InternalMessageInfo
+
 type ContractCustomInfo struct {
-	EnclaveKey []byte `protobuf:"bytes,1,opt,name=enclave_key,json=enclaveKey,proto3" json:"enclave_key,omitempty"`
-	Label      string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	EnclaveKey *ContractKey `protobuf:"bytes,1,opt,name=enclave_key,json=enclaveKey,proto3" json:"enclave_key,omitempty"`
+	Label      string       `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
 }
 
 func (m *ContractCustomInfo) Reset()         { *m = ContractCustomInfo{} }
 func (m *ContractCustomInfo) String() string { return proto.CompactTextString(m) }
 func (*ContractCustomInfo) ProtoMessage()    {}
 func (*ContractCustomInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8ba7f40a6d1951b3, []int{2}
+	return fileDescriptor_8ba7f40a6d1951b3, []int{3}
 }
 func (m *ContractCustomInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -171,20 +246,26 @@ var xxx_messageInfo_ContractCustomInfo proto.InternalMessageInfo
 
 // ContractInfo stores a WASM contract instance
 type ContractInfo struct {
-	CodeID  uint64                                        `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
+	// CodeID is the reference to the stored Wasm code
+	CodeID uint64 `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
+	// Creator address who initially instantiated the contract
 	Creator github_com_cosmos_cosmos_sdk_types.AccAddress `protobuf:"bytes,2,opt,name=creator,proto3,casttype=github.com/cosmos/cosmos-sdk/types.AccAddress" json:"creator,omitempty"`
-	Label   string                                        `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
-	// never show this in query results, just use for sorting
-	// (Note: when using json tag "-" amino refused to serialize it...)
+	// Label is mandatory metadata to be stored with a contract instance.
+	Label string `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	// Created Tx position when the contract was instantiated.
 	Created   *AbsoluteTxPosition `protobuf:"bytes,5,opt,name=created,proto3" json:"created,omitempty"`
 	IBCPortID string              `protobuf:"bytes,6,opt,name=ibc_port_id,json=ibcPortId,proto3" json:"ibc_port_id,omitempty"`
+	// Admin is an optional address that can execute migrations
+	Admin string `protobuf:"bytes,7,opt,name=admin,proto3" json:"admin,omitempty"`
+	// Proof that enclave executed the instantiate command
+	AdminProof []byte `protobuf:"bytes,8,opt,name=admin_proof,json=adminProof,proto3" json:"admin_proof,omitempty"`
 }
 
 func (m *ContractInfo) Reset()         { *m = ContractInfo{} }
 func (m *ContractInfo) String() string { return proto.CompactTextString(m) }
 func (*ContractInfo) ProtoMessage()    {}
 func (*ContractInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8ba7f40a6d1951b3, []int{3}
+	return fileDescriptor_8ba7f40a6d1951b3, []int{4}
 }
 func (m *ContractInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -225,7 +306,7 @@ func (m *AbsoluteTxPosition) Reset()         { *m = AbsoluteTxPosition{} }
 func (m *AbsoluteTxPosition) String() string { return proto.CompactTextString(m) }
 func (*AbsoluteTxPosition) ProtoMessage()    {}
 func (*AbsoluteTxPosition) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8ba7f40a6d1951b3, []int{4}
+	return fileDescriptor_8ba7f40a6d1951b3, []int{5}
 }
 func (m *AbsoluteTxPosition) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -266,7 +347,7 @@ func (m *Model) Reset()         { *m = Model{} }
 func (m *Model) String() string { return proto.CompactTextString(m) }
 func (*Model) ProtoMessage()    {}
 func (*Model) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8ba7f40a6d1951b3, []int{5}
+	return fileDescriptor_8ba7f40a6d1951b3, []int{6}
 }
 func (m *Model) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -295,14 +376,60 @@ func (m *Model) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Model proto.InternalMessageInfo
 
+// ContractCodeHistoryEntry metadata to a contract.
+type ContractCodeHistoryEntry struct {
+	Operation ContractCodeHistoryOperationType `protobuf:"varint,1,opt,name=operation,proto3,enum=secret.compute.v1beta1.ContractCodeHistoryOperationType" json:"operation,omitempty"`
+	// CodeID is the reference to the stored WASM code
+	CodeID uint64 `protobuf:"varint,2,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
+	// Updated Tx position when the operation was executed.
+	Updated *AbsoluteTxPosition `protobuf:"bytes,3,opt,name=updated,proto3" json:"updated,omitempty"`
+	Msg     []byte              `protobuf:"bytes,4,opt,name=msg,proto3" json:"msg,omitempty"`
+}
+
+func (m *ContractCodeHistoryEntry) Reset()         { *m = ContractCodeHistoryEntry{} }
+func (m *ContractCodeHistoryEntry) String() string { return proto.CompactTextString(m) }
+func (*ContractCodeHistoryEntry) ProtoMessage()    {}
+func (*ContractCodeHistoryEntry) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8ba7f40a6d1951b3, []int{7}
+}
+func (m *ContractCodeHistoryEntry) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ContractCodeHistoryEntry) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ContractCodeHistoryEntry.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ContractCodeHistoryEntry) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ContractCodeHistoryEntry.Merge(m, src)
+}
+func (m *ContractCodeHistoryEntry) XXX_Size() int {
+	return m.Size()
+}
+func (m *ContractCodeHistoryEntry) XXX_DiscardUnknown() {
+	xxx_messageInfo_ContractCodeHistoryEntry.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ContractCodeHistoryEntry proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("secret.compute.v1beta1.AccessType", AccessType_name, AccessType_value)
+	proto.RegisterEnum("secret.compute.v1beta1.ContractCodeHistoryOperationType", ContractCodeHistoryOperationType_name, ContractCodeHistoryOperationType_value)
 	proto.RegisterType((*AccessTypeParam)(nil), "secret.compute.v1beta1.AccessTypeParam")
 	proto.RegisterType((*CodeInfo)(nil), "secret.compute.v1beta1.CodeInfo")
+	proto.RegisterType((*ContractKey)(nil), "secret.compute.v1beta1.ContractKey")
 	proto.RegisterType((*ContractCustomInfo)(nil), "secret.compute.v1beta1.ContractCustomInfo")
 	proto.RegisterType((*ContractInfo)(nil), "secret.compute.v1beta1.ContractInfo")
 	proto.RegisterType((*AbsoluteTxPosition)(nil), "secret.compute.v1beta1.AbsoluteTxPosition")
 	proto.RegisterType((*Model)(nil), "secret.compute.v1beta1.Model")
+	proto.RegisterType((*ContractCodeHistoryEntry)(nil), "secret.compute.v1beta1.ContractCodeHistoryEntry")
 }
 
 func init() {
@@ -310,54 +437,73 @@ func init() {
 }
 
 var fileDescriptor_8ba7f40a6d1951b3 = []byte{
-	// 745 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x54, 0x4f, 0x6f, 0xe3, 0x44,
-	0x14, 0x8f, 0x9b, 0x34, 0x6d, 0xa6, 0x61, 0x89, 0x86, 0xb2, 0x64, 0x83, 0xe4, 0x04, 0x23, 0xa1,
-	0x6a, 0x51, 0x63, 0x75, 0xe1, 0x80, 0x7a, 0xab, 0xe3, 0xa0, 0x66, 0x0b, 0x49, 0x35, 0xdd, 0x5d,
-	0xa9, 0x80, 0x14, 0xd9, 0x33, 0x6f, 0x13, 0x2b, 0x8e, 0x27, 0x9a, 0x99, 0x84, 0xf8, 0x1b, 0xa0,
-	0x72, 0xe1, 0xc8, 0xa5, 0x12, 0x12, 0x08, 0xed, 0x17, 0xe0, 0x3b, 0xec, 0x71, 0x8f, 0x9c, 0x22,
-	0x48, 0xbf, 0x01, 0xc7, 0x3d, 0x21, 0x8f, 0x9d, 0x3f, 0xe2, 0xcf, 0x6d, 0x4f, 0x7e, 0x7f, 0x7e,
-	0xf3, 0x7b, 0xef, 0xfd, 0x9e, 0x67, 0x90, 0x25, 0x81, 0x0a, 0x50, 0x36, 0xe5, 0xe3, 0xc9, 0x54,
-	0x81, 0x3d, 0x3b, 0xf1, 0x41, 0x79, 0x27, 0xb6, 0x8a, 0x27, 0x20, 0x9b, 0x13, 0xc1, 0x15, 0xc7,
-	0xf7, 0x53, 0x4c, 0x33, 0xc3, 0x34, 0x33, 0x4c, 0xed, 0x70, 0xc0, 0x07, 0x5c, 0x43, 0xec, 0xc4,
-	0x4a, 0xd1, 0x16, 0x45, 0x6f, 0x9f, 0x51, 0x0a, 0x52, 0x3e, 0x89, 0x27, 0x70, 0xe9, 0x09, 0x6f,
-	0x8c, 0x1f, 0xa3, 0xdd, 0x99, 0x17, 0x4e, 0xa1, 0x6a, 0x34, 0x8c, 0xa3, 0x7b, 0x8f, 0xac, 0xe6,
-	0x7f, 0x13, 0x36, 0x37, 0xe7, 0x9c, 0xca, 0x5f, 0x8b, 0x7a, 0x39, 0xf6, 0xc6, 0xe1, 0xa9, 0xa5,
-	0x8f, 0x5a, 0x24, 0xa5, 0x38, 0x2d, 0xfc, 0xf8, 0x53, 0xdd, 0xb0, 0x7e, 0x35, 0xd0, 0x7e, 0x8b,
-	0x33, 0xe8, 0x44, 0xcf, 0x39, 0x7e, 0x1f, 0x95, 0x28, 0x67, 0xd0, 0x1f, 0x7a, 0x72, 0xa8, 0x4b,
-	0x94, 0xc9, 0x7e, 0x12, 0x38, 0xf7, 0xe4, 0x10, 0x5f, 0xa0, 0x3d, 0x2a, 0xc0, 0x53, 0x5c, 0x54,
-	0x77, 0x92, 0x94, 0x73, 0xf2, 0x7a, 0x51, 0x3f, 0x1e, 0x04, 0x6a, 0x38, 0xf5, 0x93, 0x06, 0x6c,
-	0xca, 0xe5, 0x98, 0xcb, 0xec, 0x73, 0x2c, 0xd9, 0x28, 0x9b, 0xfd, 0x8c, 0xd2, 0x33, 0xc6, 0x04,
-	0x48, 0x49, 0x56, 0x0c, 0xf8, 0x3e, 0x2a, 0x4a, 0x3e, 0x15, 0x14, 0xaa, 0xf9, 0x86, 0x71, 0x54,
-	0x22, 0x99, 0x87, 0xab, 0x68, 0xcf, 0x9f, 0x06, 0x21, 0x03, 0x51, 0x2d, 0xe8, 0xc4, 0xca, 0xb5,
-	0xbe, 0x46, 0xb8, 0xc5, 0x23, 0x25, 0x3c, 0xaa, 0x5a, 0x53, 0xa9, 0xf8, 0x58, 0x77, 0x6c, 0xa3,
-	0x03, 0x88, 0x68, 0xe8, 0xcd, 0xa0, 0x3f, 0x82, 0x38, 0xed, 0xd9, 0xb9, 0xb7, 0x5c, 0xd4, 0x51,
-	0x3b, 0x0d, 0x5f, 0x40, 0x4c, 0x10, 0xac, 0x6d, 0x7c, 0x88, 0x76, 0x43, 0xcf, 0x87, 0x50, 0xcf,
-	0x50, 0x22, 0xa9, 0x63, 0x7d, 0xbf, 0x83, 0xca, 0x2b, 0x76, 0xcd, 0xfb, 0x21, 0xda, 0xd3, 0x4a,
-	0x04, 0x4c, 0x73, 0x16, 0x1c, 0xb4, 0x5c, 0xd4, 0x8b, 0x5a, 0x28, 0x97, 0x14, 0x93, 0x54, 0x87,
-	0xbd, 0x59, 0x45, 0xd6, 0x8d, 0x15, 0xb6, 0x1a, 0xc3, 0x6e, 0x56, 0x02, 0x58, 0x75, 0xb7, 0x61,
-	0x1c, 0x1d, 0x3c, 0x7a, 0xf8, 0xbf, 0x2b, 0xf7, 0x25, 0x0f, 0xa7, 0x0a, 0x9e, 0xcc, 0x2f, 0xb9,
-	0x0c, 0x54, 0xc0, 0x23, 0xb2, 0x3a, 0x8a, 0x8f, 0xd1, 0x41, 0xe0, 0xd3, 0xfe, 0x84, 0x0b, 0x95,
-	0x4c, 0x54, 0x4c, 0x2a, 0x38, 0x6f, 0x2d, 0x17, 0xf5, 0x52, 0xc7, 0x69, 0x5d, 0x72, 0xa1, 0x3a,
-	0x2e, 0x29, 0x05, 0x3e, 0xd5, 0x26, 0xb3, 0x08, 0xc2, 0xff, 0x66, 0xc3, 0x1f, 0xa0, 0xb2, 0x1f,
-	0x72, 0x3a, 0xea, 0x0f, 0x21, 0x18, 0x0c, 0x95, 0xd6, 0x25, 0x4f, 0x0e, 0x74, 0xec, 0x5c, 0x87,
-	0xf0, 0x03, 0xb4, 0xaf, 0xe6, 0xfd, 0x20, 0x62, 0x30, 0xd7, 0x8a, 0x14, 0xc8, 0x9e, 0x9a, 0x77,
-	0x12, 0xd7, 0x0a, 0xd0, 0xee, 0x97, 0x9c, 0x41, 0x88, 0x1f, 0xa3, 0xfc, 0xc5, 0x7a, 0x53, 0x9f,
-	0xbd, 0x5e, 0xd4, 0x3f, 0xdd, 0x12, 0x4c, 0x41, 0xc4, 0x40, 0x8c, 0x83, 0x48, 0x6d, 0x9b, 0x61,
-	0xe0, 0x4b, 0xdb, 0x8f, 0x15, 0xc8, 0xe6, 0x39, 0xcc, 0x9d, 0xc4, 0x20, 0xf9, 0x6c, 0x99, 0xcf,
-	0xf4, 0x75, 0xd0, 0xf2, 0x93, 0xd4, 0x79, 0xf8, 0x9b, 0x81, 0xd0, 0xe6, 0x02, 0xe0, 0x8f, 0x50,
-	0xe9, 0x69, 0xd7, 0x6d, 0x7f, 0xde, 0xe9, 0xb6, 0xdd, 0x4a, 0xae, 0xf6, 0xde, 0xcd, 0x6d, 0xe3,
-	0x9d, 0x4d, 0xfa, 0x69, 0xc4, 0xe0, 0x79, 0x10, 0x01, 0xc3, 0x0d, 0x54, 0xec, 0xf6, 0x9c, 0x9e,
-	0x7b, 0x5d, 0x31, 0x6a, 0x87, 0x37, 0xb7, 0x8d, 0xca, 0x06, 0xd4, 0xe5, 0x3e, 0x67, 0x31, 0xfe,
-	0x18, 0x95, 0x7b, 0xdd, 0x2f, 0xae, 0xfb, 0x67, 0xae, 0x4b, 0xda, 0x57, 0x57, 0x95, 0x9d, 0xda,
-	0x83, 0x9b, 0xdb, 0xc6, 0xbb, 0x1b, 0x5c, 0x2f, 0x0a, 0xe3, 0x6c, 0xb1, 0x49, 0xd9, 0xf6, 0xb3,
-	0x36, 0xb9, 0xd6, 0x8c, 0xf9, 0x7f, 0x96, 0x6d, 0xcf, 0x40, 0xc4, 0x09, 0x69, 0x6d, 0xff, 0xbb,
-	0x9f, 0xcd, 0xdc, 0x8b, 0x5f, 0xcc, 0x9c, 0xf3, 0xcd, 0xcb, 0x3f, 0xcd, 0xdc, 0x8b, 0xa5, 0x69,
-	0xbc, 0x5c, 0x9a, 0xc6, 0xab, 0xa5, 0x69, 0xfc, 0xb1, 0x34, 0x8d, 0x1f, 0xee, 0xcc, 0xdc, 0xab,
-	0x3b, 0x33, 0xf7, 0xfb, 0x9d, 0x99, 0xfb, 0xea, 0x74, 0x4b, 0x2a, 0x49, 0x85, 0x0a, 0x3d, 0x5f,
-	0xda, 0x57, 0xfa, 0x7f, 0xe8, 0x82, 0xfa, 0x96, 0x8b, 0x91, 0x3d, 0x5f, 0x3f, 0x40, 0x41, 0xa4,
-	0x40, 0x44, 0x5e, 0x98, 0xfe, 0x73, 0x7e, 0x51, 0x3f, 0x2a, 0x9f, 0xfc, 0x1d, 0x00, 0x00, 0xff,
-	0xff, 0x96, 0xd4, 0xb5, 0xc7, 0xa8, 0x04, 0x00, 0x00,
+	// 1053 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x56, 0x4d, 0x6f, 0x1a, 0x47,
+	0x1f, 0x67, 0x0d, 0x06, 0x33, 0x90, 0x04, 0xcd, 0xe3, 0x27, 0x21, 0x54, 0x02, 0xba, 0xa9, 0x52,
+	0xd7, 0xae, 0x21, 0x4e, 0x7b, 0x88, 0xdc, 0x13, 0x2f, 0x1b, 0x7b, 0xe3, 0x7a, 0x41, 0x03, 0x76,
+	0xe5, 0xaa, 0xd5, 0x6a, 0x5f, 0xc6, 0xb0, 0xf2, 0xb2, 0x83, 0x66, 0x06, 0x97, 0xbd, 0xf5, 0x58,
+	0x71, 0xea, 0xb1, 0x17, 0xa4, 0x4a, 0x8d, 0xa2, 0x7c, 0x81, 0x7e, 0x81, 0x9e, 0x72, 0xcc, 0xb1,
+	0x27, 0xd4, 0xe2, 0x0f, 0x50, 0xa9, 0xc7, 0x9c, 0xaa, 0x1d, 0x16, 0x43, 0x9b, 0x58, 0x76, 0xa5,
+	0x9e, 0xfc, 0x7f, 0xfd, 0xfd, 0xdf, 0x7e, 0x3b, 0x06, 0xc8, 0x0c, 0x5b, 0x14, 0xf3, 0xb2, 0x45,
+	0x7a, 0xfd, 0x01, 0xc7, 0xe5, 0xf3, 0x1d, 0x13, 0x73, 0x63, 0xa7, 0xcc, 0xfd, 0x3e, 0x66, 0xa5,
+	0x3e, 0x25, 0x9c, 0xc0, 0xbb, 0xb3, 0x98, 0x52, 0x18, 0x53, 0x0a, 0x63, 0x72, 0xeb, 0x1d, 0xd2,
+	0x21, 0x22, 0xa4, 0x1c, 0x48, 0xb3, 0x68, 0xd9, 0x02, 0x77, 0x2a, 0x96, 0x85, 0x19, 0x6b, 0xfb,
+	0x7d, 0xdc, 0x34, 0xa8, 0xd1, 0x83, 0xcf, 0xc0, 0xea, 0xb9, 0xe1, 0x0e, 0x70, 0x56, 0x2a, 0x4a,
+	0x1b, 0xb7, 0x1f, 0xcb, 0xa5, 0x77, 0x03, 0x96, 0x16, 0x79, 0xd5, 0xcc, 0x9f, 0x93, 0x42, 0xda,
+	0x37, 0x7a, 0xee, 0xae, 0x2c, 0x52, 0x65, 0x34, 0x83, 0xd8, 0x8d, 0xfd, 0xf0, 0x63, 0x41, 0x92,
+	0x5f, 0x48, 0x60, 0xad, 0x46, 0x6c, 0xac, 0x7a, 0xa7, 0x04, 0xbe, 0x07, 0x92, 0x16, 0xb1, 0xb1,
+	0xde, 0x35, 0x58, 0x57, 0x94, 0x48, 0xa3, 0xb5, 0xc0, 0xb0, 0x6f, 0xb0, 0x2e, 0x3c, 0x00, 0x09,
+	0x8b, 0x62, 0x83, 0x13, 0x9a, 0x5d, 0x09, 0x5c, 0xd5, 0x9d, 0x37, 0x93, 0xc2, 0x76, 0xc7, 0xe1,
+	0xdd, 0x81, 0x19, 0x34, 0x50, 0xb6, 0x08, 0xeb, 0x11, 0x16, 0xfe, 0xd9, 0x66, 0xf6, 0x59, 0x38,
+	0x7b, 0xc5, 0xb2, 0x2a, 0xb6, 0x4d, 0x31, 0x63, 0x68, 0x8e, 0x00, 0xef, 0x82, 0x38, 0x23, 0x03,
+	0x6a, 0xe1, 0x6c, 0xb4, 0x28, 0x6d, 0x24, 0x51, 0xa8, 0xc1, 0x2c, 0x48, 0x98, 0x03, 0xc7, 0xb5,
+	0x31, 0xcd, 0xc6, 0x84, 0x63, 0xae, 0xca, 0xcf, 0x25, 0x90, 0xaa, 0x11, 0x8f, 0x53, 0xc3, 0xe2,
+	0x07, 0xd8, 0x87, 0x0f, 0xc1, 0x1d, 0xd2, 0xd1, 0xad, 0xd0, 0xa2, 0x9f, 0x61, 0x3f, 0xec, 0xf8,
+	0x16, 0xe9, 0x2c, 0xc7, 0x3d, 0x02, 0xeb, 0xd6, 0x80, 0x52, 0xec, 0xf1, 0xbf, 0x07, 0x8b, 0x19,
+	0x10, 0x0c, 0x7d, 0xcb, 0x19, 0x9f, 0x81, 0xdc, 0xbb, 0x32, 0xf4, 0x3e, 0x25, 0xe4, 0x54, 0xf4,
+	0x9b, 0x46, 0xf7, 0xde, 0xce, 0x6b, 0x06, 0x6e, 0xf9, 0x5b, 0x09, 0xc0, 0xb9, 0xb1, 0x36, 0x60,
+	0x9c, 0xf4, 0xc4, 0x66, 0xdb, 0x20, 0x85, 0x3d, 0xcb, 0x35, 0xce, 0xf1, 0x65, 0xa7, 0xa9, 0xc7,
+	0x0f, 0xae, 0x3a, 0xdf, 0x12, 0x6a, 0xf5, 0xf6, 0x74, 0x52, 0x00, 0xca, 0x2c, 0xf7, 0x00, 0xfb,
+	0x08, 0xe0, 0x4b, 0x19, 0xae, 0x83, 0x55, 0xd7, 0x30, 0xb1, 0x2b, 0x86, 0x49, 0xa2, 0x99, 0x22,
+	0xff, 0xb2, 0x02, 0xd2, 0x73, 0x04, 0x51, 0xfc, 0x01, 0x48, 0x88, 0xb3, 0x3a, 0xb6, 0x28, 0x1c,
+	0xab, 0x82, 0xe9, 0xa4, 0x10, 0x17, 0x57, 0xaf, 0xa3, 0x78, 0xe0, 0x52, 0xed, 0xff, 0xf6, 0xbc,
+	0x97, 0x8d, 0xc5, 0x96, 0x1a, 0x83, 0xf5, 0xb0, 0x04, 0xb6, 0xb3, 0xab, 0x62, 0x01, 0x9b, 0x57,
+	0xf2, 0xd7, 0x64, 0xc4, 0x1d, 0x70, 0xdc, 0x1e, 0x36, 0x09, 0x73, 0xb8, 0x43, 0x3c, 0x34, 0x4f,
+	0x85, 0xdb, 0x20, 0xe5, 0x98, 0x96, 0xde, 0x27, 0x94, 0x07, 0x13, 0xc5, 0x83, 0x0a, 0xd5, 0x5b,
+	0xd3, 0x49, 0x21, 0xa9, 0x56, 0x6b, 0x4d, 0x42, 0xb9, 0x5a, 0x47, 0x49, 0xc7, 0xb4, 0x84, 0x68,
+	0x07, 0xad, 0x18, 0x76, 0xcf, 0xf1, 0xb2, 0x89, 0x59, 0x2b, 0x42, 0x81, 0x05, 0x90, 0x12, 0x42,
+	0x78, 0xd4, 0x35, 0x71, 0x54, 0x20, 0x4c, 0xb3, 0x3b, 0x22, 0x00, 0xdf, 0x6e, 0x02, 0xbe, 0x0f,
+	0xd2, 0xa6, 0x4b, 0xac, 0x33, 0xbd, 0x8b, 0x9d, 0x4e, 0x97, 0x8b, 0x75, 0x46, 0x51, 0x4a, 0xd8,
+	0xf6, 0x85, 0x09, 0xde, 0x07, 0x6b, 0x7c, 0xa8, 0x3b, 0x9e, 0x8d, 0x87, 0x62, 0x91, 0x31, 0x94,
+	0xe0, 0x43, 0x35, 0x50, 0x65, 0x07, 0xac, 0x1e, 0x12, 0x1b, 0xbb, 0xf0, 0x19, 0x88, 0x1e, 0xcc,
+	0xf9, 0x5a, 0x7d, 0xf2, 0x66, 0x52, 0xf8, 0x74, 0x69, 0xcf, 0x1c, 0x7b, 0x36, 0xa6, 0x3d, 0xc7,
+	0xe3, 0xcb, 0xa2, 0xeb, 0x98, 0xac, 0x6c, 0xfa, 0x1c, 0xb3, 0xd2, 0x3e, 0x1e, 0x56, 0x03, 0x01,
+	0x45, 0x43, 0x0e, 0x1c, 0x8b, 0x27, 0x61, 0x46, 0xe8, 0x99, 0x22, 0xff, 0x21, 0x81, 0xec, 0x25,
+	0x0d, 0x83, 0x2f, 0xd8, 0x61, 0x9c, 0x50, 0x5f, 0xf1, 0x38, 0xf5, 0xe1, 0x31, 0x48, 0x92, 0x3e,
+	0xa6, 0x46, 0x30, 0x52, 0xf8, 0x92, 0x3c, 0xb9, 0x8e, 0x8a, 0x4b, 0x20, 0x8d, 0x79, 0x6e, 0xf0,
+	0xbe, 0xa0, 0x05, 0xd4, 0x32, 0xcf, 0x56, 0xae, 0xe4, 0x59, 0x1d, 0x24, 0x06, 0x7d, 0x5b, 0x90,
+	0x20, 0xfa, 0xef, 0x49, 0x10, 0xa6, 0xc2, 0x0c, 0x88, 0xf6, 0x58, 0x47, 0xd0, 0x2b, 0x8d, 0x02,
+	0x71, 0xf3, 0x67, 0x09, 0x80, 0xc5, 0xb3, 0x07, 0x1f, 0x82, 0xe4, 0x91, 0x56, 0x57, 0x9e, 0xaa,
+	0x9a, 0x52, 0xcf, 0x44, 0x72, 0xf7, 0x46, 0xe3, 0xe2, 0xff, 0x16, 0xee, 0x23, 0xcf, 0xc6, 0xa7,
+	0x8e, 0x87, 0x6d, 0x58, 0x04, 0x71, 0xad, 0x51, 0x6d, 0xd4, 0x4f, 0x32, 0x52, 0x6e, 0x7d, 0x34,
+	0x2e, 0x66, 0x16, 0x41, 0x1a, 0x31, 0x89, 0xed, 0xc3, 0x2d, 0x90, 0x6e, 0x68, 0x9f, 0x9f, 0xe8,
+	0x95, 0x7a, 0x1d, 0x29, 0xad, 0x56, 0x66, 0x25, 0x77, 0x7f, 0x34, 0x2e, 0xfe, 0x7f, 0x11, 0xd7,
+	0xf0, 0x5c, 0x3f, 0xfc, 0x02, 0x82, 0xb2, 0xca, 0xb1, 0x82, 0x4e, 0x04, 0x62, 0xf4, 0x9f, 0x65,
+	0x95, 0x73, 0x4c, 0xfd, 0x00, 0x34, 0xb7, 0xf6, 0xdd, 0x4f, 0xf9, 0xc8, 0xcb, 0xe7, 0xf9, 0xc8,
+	0xe6, 0x8b, 0x28, 0x28, 0x5e, 0xb7, 0x64, 0x88, 0xc1, 0xa3, 0x5a, 0x43, 0x6b, 0xa3, 0x4a, 0xad,
+	0xad, 0xd7, 0x1a, 0x75, 0x45, 0xdf, 0x57, 0x5b, 0xed, 0x06, 0x3a, 0xd1, 0x1b, 0x4d, 0x05, 0x55,
+	0xda, 0x6a, 0x43, 0xd3, 0xdb, 0x27, 0x4d, 0x45, 0x3f, 0xd2, 0x5a, 0x4d, 0xa5, 0xa6, 0x3e, 0x55,
+	0xc5, 0xd0, 0xe5, 0xd1, 0xb8, 0xb8, 0x75, 0x1d, 0xf6, 0x91, 0xc7, 0xfa, 0xd8, 0x72, 0x4e, 0x1d,
+	0x6c, 0xc3, 0x2f, 0xc0, 0x47, 0x37, 0x2a, 0xa3, 0x6a, 0x6a, 0x3b, 0x23, 0xe5, 0x36, 0x46, 0xe3,
+	0xe2, 0x07, 0xd7, 0xe1, 0xab, 0x9e, 0xc3, 0xe1, 0xd7, 0xe0, 0xe3, 0x1b, 0x01, 0x1f, 0xaa, 0x7b,
+	0xa8, 0xd2, 0x56, 0x32, 0x2b, 0xb9, 0xad, 0xd1, 0xb8, 0xf8, 0xe1, 0x75, 0xd8, 0x87, 0x4e, 0x87,
+	0x1a, 0x1c, 0xdf, 0x18, 0x7e, 0x4f, 0xd1, 0x94, 0x96, 0xda, 0xca, 0x44, 0x6f, 0x06, 0xbf, 0x87,
+	0x3d, 0xcc, 0x1c, 0x96, 0x8b, 0x05, 0xc7, 0xaa, 0x7e, 0xf5, 0xea, 0xf7, 0x7c, 0xe4, 0xe5, 0x34,
+	0x2f, 0xbd, 0x9a, 0xe6, 0xa5, 0xd7, 0xd3, 0xbc, 0xf4, 0xdb, 0x34, 0x2f, 0x7d, 0x7f, 0x91, 0x8f,
+	0xbc, 0xbe, 0xc8, 0x47, 0x7e, 0xbd, 0xc8, 0x47, 0xbe, 0xdc, 0x5d, 0xfa, 0x8a, 0x99, 0x45, 0xb9,
+	0x6b, 0x98, 0xac, 0xdc, 0x12, 0xe4, 0xd6, 0x30, 0xff, 0x86, 0xd0, 0xb3, 0xf2, 0xf0, 0xf2, 0xf7,
+	0x81, 0xe3, 0x71, 0x4c, 0x3d, 0xc3, 0x9d, 0xbd, 0xa2, 0x66, 0x5c, 0xfc, 0xcf, 0xff, 0xe4, 0xaf,
+	0x00, 0x00, 0x00, 0xff, 0xff, 0xa3, 0x45, 0x65, 0xf6, 0x47, 0x08, 0x00, 0x00,
 }
 
 func (this *AccessTypeParam) Equal(that interface{}) bool {
@@ -417,6 +563,36 @@ func (this *CodeInfo) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *ContractKey) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*ContractKey)
+	if !ok {
+		that2, ok := that.(ContractKey)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !bytes.Equal(this.OgContractKey, that1.OgContractKey) {
+		return false
+	}
+	if !bytes.Equal(this.CurrentContractKey, that1.CurrentContractKey) {
+		return false
+	}
+	if !bytes.Equal(this.CurrentContractKeyProof, that1.CurrentContractKeyProof) {
+		return false
+	}
+	return true
+}
 func (this *ContractCustomInfo) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -436,7 +612,7 @@ func (this *ContractCustomInfo) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.EnclaveKey, that1.EnclaveKey) {
+	if !this.EnclaveKey.Equal(that1.EnclaveKey) {
 		return false
 	}
 	if this.Label != that1.Label {
@@ -476,6 +652,12 @@ func (this *ContractInfo) Equal(that interface{}) bool {
 		return false
 	}
 	if this.IBCPortID != that1.IBCPortID {
+		return false
+	}
+	if this.Admin != that1.Admin {
+		return false
+	}
+	if !bytes.Equal(this.AdminProof, that1.AdminProof) {
 		return false
 	}
 	return true
@@ -530,6 +712,39 @@ func (this *Model) Equal(that interface{}) bool {
 		return false
 	}
 	if !bytes.Equal(this.Value, that1.Value) {
+		return false
+	}
+	return true
+}
+func (this *ContractCodeHistoryEntry) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*ContractCodeHistoryEntry)
+	if !ok {
+		that2, ok := that.(ContractCodeHistoryEntry)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Operation != that1.Operation {
+		return false
+	}
+	if this.CodeID != that1.CodeID {
+		return false
+	}
+	if !this.Updated.Equal(that1.Updated) {
+		return false
+	}
+	if !bytes.Equal(this.Msg, that1.Msg) {
 		return false
 	}
 	return true
@@ -613,6 +828,50 @@ func (m *CodeInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *ContractKey) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ContractKey) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ContractKey) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.CurrentContractKeyProof) > 0 {
+		i -= len(m.CurrentContractKeyProof)
+		copy(dAtA[i:], m.CurrentContractKeyProof)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.CurrentContractKeyProof)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.CurrentContractKey) > 0 {
+		i -= len(m.CurrentContractKey)
+		copy(dAtA[i:], m.CurrentContractKey)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.CurrentContractKey)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.OgContractKey) > 0 {
+		i -= len(m.OgContractKey)
+		copy(dAtA[i:], m.OgContractKey)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.OgContractKey)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *ContractCustomInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -640,10 +899,15 @@ func (m *ContractCustomInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.EnclaveKey) > 0 {
-		i -= len(m.EnclaveKey)
-		copy(dAtA[i:], m.EnclaveKey)
-		i = encodeVarintTypes(dAtA, i, uint64(len(m.EnclaveKey)))
+	if m.EnclaveKey != nil {
+		{
+			size, err := m.EnclaveKey.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintTypes(dAtA, i, uint64(size))
+		}
 		i--
 		dAtA[i] = 0xa
 	}
@@ -670,6 +934,20 @@ func (m *ContractInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.AdminProof) > 0 {
+		i -= len(m.AdminProof)
+		copy(dAtA[i:], m.AdminProof)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.AdminProof)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Admin) > 0 {
+		i -= len(m.Admin)
+		copy(dAtA[i:], m.Admin)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.Admin)))
+		i--
+		dAtA[i] = 0x3a
+	}
 	if len(m.IBCPortID) > 0 {
 		i -= len(m.IBCPortID)
 		copy(dAtA[i:], m.IBCPortID)
@@ -781,6 +1059,58 @@ func (m *Model) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *ContractCodeHistoryEntry) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ContractCodeHistoryEntry) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ContractCodeHistoryEntry) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Msg) > 0 {
+		i -= len(m.Msg)
+		copy(dAtA[i:], m.Msg)
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.Msg)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.Updated != nil {
+		{
+			size, err := m.Updated.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintTypes(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.CodeID != 0 {
+		i = encodeVarintTypes(dAtA, i, uint64(m.CodeID))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Operation != 0 {
+		i = encodeVarintTypes(dAtA, i, uint64(m.Operation))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintTypes(dAtA []byte, offset int, v uint64) int {
 	offset -= sovTypes(v)
 	base := offset
@@ -829,14 +1159,35 @@ func (m *CodeInfo) Size() (n int) {
 	return n
 }
 
+func (m *ContractKey) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OgContractKey)
+	if l > 0 {
+		n += 1 + l + sovTypes(uint64(l))
+	}
+	l = len(m.CurrentContractKey)
+	if l > 0 {
+		n += 1 + l + sovTypes(uint64(l))
+	}
+	l = len(m.CurrentContractKeyProof)
+	if l > 0 {
+		n += 1 + l + sovTypes(uint64(l))
+	}
+	return n
+}
+
 func (m *ContractCustomInfo) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.EnclaveKey)
-	if l > 0 {
+	if m.EnclaveKey != nil {
+		l = m.EnclaveKey.Size()
 		n += 1 + l + sovTypes(uint64(l))
 	}
 	l = len(m.Label)
@@ -871,6 +1222,14 @@ func (m *ContractInfo) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovTypes(uint64(l))
 	}
+	l = len(m.Admin)
+	if l > 0 {
+		n += 1 + l + sovTypes(uint64(l))
+	}
+	l = len(m.AdminProof)
+	if l > 0 {
+		n += 1 + l + sovTypes(uint64(l))
+	}
 	return n
 }
 
@@ -900,6 +1259,29 @@ func (m *Model) Size() (n int) {
 		n += 1 + l + sovTypes(uint64(l))
 	}
 	l = len(m.Value)
+	if l > 0 {
+		n += 1 + l + sovTypes(uint64(l))
+	}
+	return n
+}
+
+func (m *ContractCodeHistoryEntry) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Operation != 0 {
+		n += 1 + sovTypes(uint64(m.Operation))
+	}
+	if m.CodeID != 0 {
+		n += 1 + sovTypes(uint64(m.CodeID))
+	}
+	if m.Updated != nil {
+		l = m.Updated.Size()
+		n += 1 + l + sovTypes(uint64(l))
+	}
+	l = len(m.Msg)
 	if l > 0 {
 		n += 1 + l + sovTypes(uint64(l))
 	}
@@ -1163,6 +1545,158 @@ func (m *CodeInfo) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *ContractKey) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTypes
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ContractKey: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ContractKey: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OgContractKey", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OgContractKey = append(m.OgContractKey[:0], dAtA[iNdEx:postIndex]...)
+			if m.OgContractKey == nil {
+				m.OgContractKey = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentContractKey", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.CurrentContractKey = append(m.CurrentContractKey[:0], dAtA[iNdEx:postIndex]...)
+			if m.CurrentContractKey == nil {
+				m.CurrentContractKey = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentContractKeyProof", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.CurrentContractKeyProof = append(m.CurrentContractKeyProof[:0], dAtA[iNdEx:postIndex]...)
+			if m.CurrentContractKeyProof == nil {
+				m.CurrentContractKeyProof = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTypes(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *ContractCustomInfo) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -1196,7 +1730,7 @@ func (m *ContractCustomInfo) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field EnclaveKey", wireType)
 			}
-			var byteLen int
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowTypes
@@ -1206,24 +1740,26 @@ func (m *ContractCustomInfo) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthTypes
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthTypes
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.EnclaveKey = append(m.EnclaveKey[:0], dAtA[iNdEx:postIndex]...)
 			if m.EnclaveKey == nil {
-				m.EnclaveKey = []byte{}
+				m.EnclaveKey = &ContractKey{}
+			}
+			if err := m.EnclaveKey.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
 			iNdEx = postIndex
 		case 2:
@@ -1461,6 +1997,72 @@ func (m *ContractInfo) Unmarshal(dAtA []byte) error {
 			}
 			m.IBCPortID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Admin", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Admin = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AdminProof", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AdminProof = append(m.AdminProof[:0], dAtA[iNdEx:postIndex]...)
+			if m.AdminProof == nil {
+				m.AdminProof = []byte{}
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTypes(dAtA[iNdEx:])
@@ -1665,6 +2267,164 @@ func (m *Model) Unmarshal(dAtA []byte) error {
 			m.Value = append(m.Value[:0], dAtA[iNdEx:postIndex]...)
 			if m.Value == nil {
 				m.Value = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTypes(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ContractCodeHistoryEntry) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTypes
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ContractCodeHistoryEntry: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ContractCodeHistoryEntry: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Operation", wireType)
+			}
+			m.Operation = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Operation |= ContractCodeHistoryOperationType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeID", wireType)
+			}
+			m.CodeID = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CodeID |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Updated", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Updated == nil {
+				m.Updated = &AbsoluteTxPosition{}
+			}
+			if err := m.Updated.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Msg", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Msg = append(m.Msg[:0], dAtA[iNdEx:postIndex]...)
+			if m.Msg == nil {
+				m.Msg = []byte{}
 			}
 			iNdEx = postIndex
 		default:

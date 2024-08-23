@@ -72,6 +72,40 @@ pub fn call_query<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(
 }
 */
 
+/// Calls Wasm export "migrate" and returns raw data from the contract.
+/// The result is length limited to prevent abuse but otherwise unchecked.
+pub fn call_migrate_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(
+    instance: &mut Instance<S, A, Q>,
+    env: &[u8],
+    msg: &[u8],
+    sig_info: &[u8],
+    admin: &[u8],
+    admin_proof: &[u8],
+) -> VmResult<Vec<u8>> {
+    instance.set_storage_readonly(false);
+    /*
+    call_raw(instance, "init", &[env, msg], MAX_LENGTH_INIT)
+    */
+    instance.call_migrate(env, msg, sig_info, admin, admin_proof)
+}
+
+/// Calls Wasm export "update_admin" and returns raw data from the contract.
+/// The result is length limited to prevent abuse but otherwise unchecked.
+pub fn call_update_admin_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(
+    instance: &mut Instance<S, A, Q>,
+    env: &[u8],
+    sig_info: &[u8],
+    current_admin: &[u8],
+    current_admin_proof: &[u8],
+    new_admin: &[u8],
+) -> VmResult<Vec<u8>> {
+    instance.set_storage_readonly(false);
+    /*
+    call_raw(instance, "init", &[env, msg], MAX_LENGTH_INIT)
+    */
+    instance.call_update_admin(env, sig_info, current_admin, current_admin_proof, new_admin)
+}
+
 /// Calls Wasm export "init" and returns raw data from the contract.
 /// The result is length limited to prevent abuse but otherwise unchecked.
 pub fn call_init_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'static>(
@@ -79,12 +113,13 @@ pub fn call_init_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'stati
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
+    admin: &[u8],
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(false);
     /*
     call_raw(instance, "init", &[env, msg], MAX_LENGTH_INIT)
     */
-    instance.call_init(env, msg, sig_info)
+    instance.call_init(env, msg, sig_info, admin)
 }
 
 /// Calls Wasm export "handle" and returns raw data from the contract.
@@ -94,7 +129,7 @@ pub fn call_handle_raw<S: Storage + 'static, A: Api + 'static, Q: Querier + 'sta
     env: &[u8],
     msg: &[u8],
     sig_info: &[u8],
-    handle_type: u8
+    handle_type: u8,
 ) -> VmResult<Vec<u8>> {
     instance.set_storage_readonly(false);
     /*

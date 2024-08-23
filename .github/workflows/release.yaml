@@ -15,13 +15,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [rocksdb, goleveldb]
+        db_backend: [goleveldb]
     runs-on: ubuntu-20.04
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Declare Commit Variables
@@ -31,19 +31,15 @@ jobs:
           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - name: Cache build artifacts
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/sccache
           key: ${{ runner.os }}-sccache
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-      - name: Sets env vars for rocksdb
-        if: ${{ matrix.db_backend == 'rocksdb' }}
-        run: |
-          echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
       - name: Build .deb Package Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -58,6 +54,7 @@ jobs:
             CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
+            FEATURES="verify-validator-whitelist,light-client-validation,random"
           target: build-deb
       - name: Run .deb Package Image
         run: |
@@ -73,14 +70,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db_backend: [goleveldb, rocksdb]
+        db_backend: [goleveldb]
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_MAINNET }}
       API_KEY: ${{ secrets.API_KEY_MAINNET }}
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Get the version
@@ -95,7 +92,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and Push Node Image
         if: ${{ matrix.db_backend == 'goleveldb' }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -105,7 +102,7 @@ jobs:
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
-            FEATURES=production
+            FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
@@ -118,7 +115,7 @@ jobs:
           echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
 
       - name: Build .deb Package Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -128,7 +125,7 @@ jobs:
             API_KEY=${{ secrets.API_KEY_MAINNET }}
             SPID=${{ secrets.SPID_MAINNET }}
           build-args: |
-            FEATURES=production
+            FEATURES=verify-validator-whitelist,light-client-validation,random,production
             FEATURES_U=production
             SECRET_NODE_TYPE=NODE
             DB_BACKEND=${{ matrix.db_backend }}
@@ -151,10 +148,10 @@ jobs:
       matrix:
         os: [ubuntu-20.04, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
+          go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Build CLI
         shell: bash
         run: |
@@ -168,10 +165,10 @@ jobs:
   MacOS-ARM64-CLI:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.19 # The Go version to download (if necessary) and use.
+          go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@v0.17.0
@@ -191,15 +188,16 @@ jobs:
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
+      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
       - name: Build check-hw-tool image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -208,6 +206,7 @@ jobs:
           secrets: |
             API_KEY=${{ secrets.API_KEY_TESTNET }}
             SPID=${{ secrets.SPID_TESTNET }}
+            API_KEY_MAINNET=${{ secrets.API_KEY_MAINNET }}
           build-args: |
             BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
             SGX_MODE=HW
@@ -216,6 +215,7 @@ jobs:
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
           cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+
       - uses: actions/upload-artifact@v3
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
@@ -230,7 +230,7 @@ jobs:
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Get the version
@@ -243,7 +243,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build LocalSecret
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: deployment/dockerfiles/Dockerfile
           context: .
@@ -255,22 +255,37 @@ jobs:
           build-args: |
             SECRET_NODE_TYPE=BOOTSTRAP
             CHAIN_ID=secretdev-1
-            FEATURES=debug-print
+            FEATURES=debug-print,random,light-client-validation
             SGX_MODE=SW
           target: build-localsecret
 
+  Lib-Checks:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/check-objdump
+        name: Check Mitigation flags in Cosmwasm Enclave
+        with:
+          version: "v1.9.0"
+      - uses: ./.github/actions/check-objdump
+        name: Check Mitigation flags in TM Enclave
+        with:
+          filename: "tendermint_enclave.signed.so"
+          min-fence: "1000"
+          version: "v1.9.0"
+
   Release:
-    needs:
-      [
+    needs: [
         native-build-cli,
         build-deb-testnet,
         build-deb-mainnet,
         MacOS-ARM64-CLI,
         check-hw-tool,
+        # check-hw-tool-mainnet
       ]
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
@@ -291,27 +306,24 @@ jobs:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
       - uses: actions/download-artifact@v3
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
-      - uses: actions/download-artifact@v3
-        with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
       - uses: actions/download-artifact@v3
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
-      - uses: actions/download-artifact@v3
-        with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+      #      - uses: actions/download-artifact@v3
+      #        with:
+      #          name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
           files: |
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_rocksdb_amd64.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_rocksdb_amd64.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
             secretcli-MacOS-arm64
             check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+
+#            check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz

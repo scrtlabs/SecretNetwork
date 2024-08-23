@@ -2,7 +2,7 @@ use std::env;
 
 fn main() {
     let is_sim = env::var("SGX_MODE").unwrap_or_else(|_| "HW".to_string());
-    let sdk_dir = env::var("SGX_SDK").unwrap_or_else(|_| "/opt/intel/sgxsdk".to_string());
+    let sdk_dir = env::var("SGX_SDK").unwrap_or_else(|_| "/opt/sgxsdk".to_string());
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
     cbindgen::generate(crate_dir)
@@ -11,8 +11,6 @@ fn main() {
 
     println!("cargo:rustc-link-search=native=./lib");
     println!("cargo:rustc-link-lib=static=Enclave_u");
-    // #[cfg(feature = "query-node")]
-    // println!("cargo:rustc-link-lib=static=QueryEnclave_u");
 
     // println!("cargo:rustc-link-lib=dylib=sgx_uae_service");
 
@@ -20,15 +18,19 @@ fn main() {
     println!("cargo:rustc-link-lib=static=sgx_uprotected_fs");
     println!("cargo:rustc-link-lib=static=sgx_ukey_exchange");
 
+    println!("cargo:rustc-link-lib=dylib=sgx_dcap_ql");
+    println!("cargo:rustc-link-lib=dylib=sgx_dcap_tvl");
+    println!("cargo:rustc-link-lib=dylib=sgx_dcap_quoteverify");
+
     match is_sim.as_ref() {
         "SW" => {
             println!("cargo:rustc-link-lib=dylib=sgx_urts_sim");
-            println!("cargo:rustc-link-lib=dylib=sgx_uae_service_sim");
+            println!("cargo:rustc-link-lib=dylib=sgx_epid_sim");
         }
         // Treat undefined as HW
         _ => {
             println!("cargo:rustc-link-lib=dylib=sgx_urts");
-            println!("cargo:rustc-link-lib=dylib=sgx_uae_service");
+            println!("cargo:rustc-link-lib=dylib=sgx_epid");
         }
     }
 }

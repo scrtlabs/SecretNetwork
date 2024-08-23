@@ -49,17 +49,17 @@ then
 
   secretd init-enclave
 
-  PUBLIC_KEY=$(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )
+  PUBLIC_KEY=$(secretd dump /opt/secret/.sgx_secrets/pubkey.bin 2> /dev/null)
 
-  echo "Public key: $(secretd parse /opt/secret/.sgx_secrets/attestation_cert.der 2> /dev/null | cut -c 3- )"
+  echo "Public key: $(secretd parse /opt/secret/.sgx_secrets/pubkey.bin 2> /dev/null)"
 
   curl http://"$FAUCET_URL"/faucet?address=$(secretd keys show -a a)
   # cp /opt/secret/.sgx_secrets/attestation_cert.der ./
   sleep 10
   # openssl base64 -A -in attestation_cert.der -out b64_cert
-  # secretd tx register auth attestation_cert.der --from a --gas-prices 0.25uscrt -y
+  # secretd tx register auth attestation_combined.bin --from a --gas-prices 0.25uscrt --gas 5000000 -y
 
-  secretd tx register auth /opt/secret/.sgx_secrets/attestation_cert.der -y --from a --gas-prices 0.25uscrt
+  secretd tx register auth /opt/secret/.sgx_secrets/attestation_combined.bin -y --from a --gas-prices 0.25uscrt --gas 5000000
 
   sleep 10
 
@@ -77,14 +77,12 @@ then
   secretd validate-genesis
 
   # this is here to make sure that the node doesn't resync
-  cp /opt/secret/.sgx_secrets/attestation_cert.der /root/.secretd/config/
+  cp /opt/secret/.sgx_secrets/* /root/.secretd/config/
 
   if [ "$VALIDATOR" == "true" ]
   then
     echo "Setting this node up as a validator"
-    balance=$(secretd q bank balances $(secretd keys show -a a) --output json | jq ".balances[0].amount" -r)
-    fee=5000
-    staking_amount="$((balance-fee))"uscrt
+    staking_amount=1000000uscrt
 
     echo "Staking amount: $staking_amount"
 

@@ -33,8 +33,12 @@ mod test {
 
         count_failures!(failures, {
             enclave_contract_engine::tests::run_tests();
+            enclave_contract_engine::wasm3::tests::run_tests();
             enclave_cosmos_types::tests::run_tests();
             crate::registration::tests::run_tests();
+            block_verifier::tests::run_tests();
+
+            enclave_crypto::tests::run_tests();
 
             // example failing tests:
             // panic!("AAAAA");

@@ -109,7 +109,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 				return err
 			}
 			initClientCtx, err = clientconfig.ReadFromClientConfig(initClientCtx)
-
 			if err != nil {
 				return err
 			}
@@ -179,6 +178,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		InitAttestation(),
 		InitBootstrapCmd(),
 		ParseCert(),
+		DumpBin(),
+		MigrateSealings(),
 		ConfigureSecret(),
 		HealthCheck(),
 		ResetEnclave(),
@@ -286,7 +287,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 
 	bootstrap := cast.ToBool(appOpts.Get("bootstrap"))
 
-	// fmt.Printf("bootstrap: %s", cast.ToString(bootstrap))
+	// fmt.Printf("bootstrap: %s\n", cast.ToString(bootstrap))
 
 	return app.NewSecretNetworkApp(logger, db, traceStore, true, skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
@@ -306,7 +307,7 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 		baseapp.SetSnapshotInterval(cast.ToUint64(appOpts.Get(server.FlagStateSyncSnapshotInterval))),
 		baseapp.SetSnapshotKeepRecent(cast.ToUint32(appOpts.Get(server.FlagStateSyncSnapshotKeepRecent))),
 		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(server.FlagIAVLCacheSize))),
-		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(server.FlagIAVLFastNode))),
+		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(server.FlagDisableIAVLFastNode))),
 	)
 }
 
@@ -348,11 +349,8 @@ func updateTmParamsAndInit(mbm module.BasicManager, defaultNodeHome string) *cob
 
 		serverconfig.WriteConfigFile(appConfigFilePath, appConf)
 
-		if err := originalFunc(cmd, args); err != nil {
-			return err
-		}
-
-		return nil
+		err := originalFunc(cmd, args)
+		return err
 	}
 
 	cmd.RunE = wrappedFunc

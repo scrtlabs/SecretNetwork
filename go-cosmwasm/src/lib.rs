@@ -21,11 +21,13 @@ use crate::error::{clear_error, handle_c_error, handle_c_error_default, set_erro
 
 use cosmwasm_sgx_vm::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{
-    call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
+    call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, call_update_admin_raw,
+    features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_get_encrypted_seed, untrusted_health_check,
-    untrusted_init_node, untrusted_key_gen,
+    create_attestation_report_u, untrusted_get_encrypted_genesis_seed,
+    untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
+    untrusted_migrate_sealing,
 };
 
 use ctor::ctor;
@@ -86,6 +88,30 @@ pub extern "C" fn get_encrypted_seed(cert: Buffer, err: Option<&mut Buffer>) -> 
             Buffer::default()
         }
         Ok(Ok(seed)) => {
+            clear_error();
+            Buffer::from_vec(seed.to_vec())
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_encrypted_genesis_seed(pk: Buffer, err: Option<&mut Buffer>) -> Buffer {
+    trace!("Called get_encrypted_genesis_seed");
+    let pk_slice = match unsafe { pk.read() } {
+        None => {
+            set_error(Error::empty_arg("public_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+    trace!("Hello from right before untrusted_get_encrypted_genesis_seed");
+    match untrusted_get_encrypted_genesis_seed(pk_slice) {
+        Err(e) => {
+            // An error happened in the SGX sdk.
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(seed) => {
             clear_error();
             Buffer::from_vec(seed.to_vec())
         }
@@ -172,8 +198,8 @@ pub extern "C" fn init_node(
 #[no_mangle]
 pub extern "C" fn create_attestation_report(
     api_key: Buffer,
+    flags: u32,
     err: Option<&mut Buffer>,
-    dry_run: bool,
 ) -> bool {
     let api_key_slice = match unsafe { api_key.read() } {
         None => {
@@ -183,7 +209,7 @@ pub extern "C" fn create_attestation_report(
         Some(r) => r,
     };
 
-    if let Err(status) = create_attestation_report_u(api_key_slice, dry_run) {
+    if let Err(status) = create_attestation_report_u(api_key_slice, flags) {
         set_error(Error::enclave_err(status.to_string()), err);
         return false;
     }
@@ -221,6 +247,84 @@ pub extern "C" fn init_cache(
     }
 }
 
+#[no_mangle]
+pub extern "C" fn submit_block_signatures(
+    header: Buffer,
+    commit: Buffer,
+    txs: Buffer,
+    random: Buffer,
+    // val_set: Buffer,
+    // next_val_set: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    trace!("Hello from right before init_bootstrap");
+
+    let header_slice = match unsafe { header.read() } {
+        None => {
+            set_error(Error::empty_arg("header"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let commit_slice = match unsafe { commit.read() } {
+        None => {
+            set_error(Error::empty_arg("api_key"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let txs_slice = match unsafe { txs.read() } {
+        None => {
+            set_error(Error::empty_arg("txs"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+
+    let random_slice = match unsafe { random.read() } {
+        None => {
+            set_error(Error::empty_arg("random"), err);
+            return Buffer::default();
+        }
+        Some(r) => r,
+    };
+    // let val_set_slice = match unsafe { val_set.read() } {
+    //     None => {
+    //         set_error(Error::empty_arg("api_key"), err);
+    //         return Buffer::default();
+    //     }
+    //     Some(r) => r,
+    // };
+    //
+    // let next_val_set_slice = match unsafe { next_val_set.read() } {
+    //     None => {
+    //         set_error(Error::empty_arg("api_key"), err);
+    //         return Buffer::default();
+    //     }
+    //     Some(r) => r,
+    // };
+
+    match cosmwasm_sgx_vm::untrusted_submit_block_signatures(
+        header_slice,
+        commit_slice,
+        txs_slice,
+        random_slice,
+        // val_set_slice,
+        // next_val_set_slice,
+    ) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), err);
+            Buffer::default()
+        }
+        Ok(r) => {
+            clear_error();
+            Buffer::from_vec(r.to_vec())
+        }
+    }
+}
+
 // store some common string for argument names
 static DATA_DIR_ARG: &str = "data_dir";
 static FEATURES_ARG: &str = "supported_features";
@@ -231,6 +335,8 @@ static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
 static SIG_INFO_ARG: &str = "sig_info";
+static CURRENT_ADMIN_ARG: &str = "current_admin";
+static CURRENT_ADMIN_PROOF_ARG: &str = "current_admin_proof";
 
 fn do_init_cache(
     data_dir: Buffer,
@@ -339,6 +445,7 @@ pub extern "C" fn instantiate(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
     sig_info: Buffer,
+    admin: Buffer,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -353,6 +460,7 @@ pub extern "C" fn instantiate(
                 gas_limit,
                 gas_used,
                 sig_info,
+                admin,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -374,6 +482,7 @@ fn do_init(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     sig_info: Buffer,
+    admin: Buffer,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
@@ -382,12 +491,166 @@ fn do_init(
     let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
     let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
+    let admin = unsafe { admin.read() }.unwrap_or_default();
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_init_raw(&mut instance, params, msg, sig_info);
+    let res = call_init_raw(&mut instance, params, msg, sig_info, admin);
     *gas_used = instance.create_gas_report().used_internally;
+    instance.recycle();
+    Ok(res?)
+}
+
+#[no_mangle]
+pub extern "C" fn migrate(
+    cache: *mut cache_t,
+    contract_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
+    err: Option<&mut Buffer>,
+    sig_info: Buffer,
+    admin: Buffer,
+    admin_proof: Buffer,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_migrate(
+                c,
+                contract_id,
+                params,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                gas_used,
+                sig_info,
+                admin,
+                admin_proof,
+            )
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn do_migrate(
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
+    code_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
+    sig_info: Buffer,
+    admin: Buffer,
+    admin_proof: Buffer,
+) -> Result<Vec<u8>, Error> {
+    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .try_into()?;
+    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+    let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
+    let admin = unsafe { admin.read() }.ok_or_else(|| Error::empty_arg(CURRENT_ADMIN_ARG))?;
+    let admin_proof =
+        unsafe { admin_proof.read() }.ok_or_else(|| Error::empty_arg(CURRENT_ADMIN_PROOF_ARG))?;
+
+    let deps = to_extern(db, api, querier);
+    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_migrate_raw(&mut instance, params, msg, sig_info, admin, admin_proof);
+    *gas_used = instance.create_gas_report().used_internally;
+    instance.recycle();
+    Ok(res?)
+}
+
+#[no_mangle]
+pub extern "C" fn update_admin(
+    cache: *mut cache_t,
+    contract_id: Buffer,
+    params: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    err: Option<&mut Buffer>,
+    sig_info: Buffer,
+    current_admin: Buffer,
+    current_admin_proof: Buffer,
+    new_admin: Buffer,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_update_admin(
+                c,
+                contract_id,
+                params,
+                db,
+                api,
+                querier,
+                gas_limit,
+                sig_info,
+                current_admin,
+                current_admin_proof,
+                new_admin,
+            )
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn do_update_admin(
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
+    code_id: Buffer,
+    params: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    sig_info: Buffer,
+    current_admin: Buffer,
+    current_admin_proof: Buffer,
+    new_admin: Buffer,
+) -> Result<Vec<u8>, Error> {
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .try_into()?;
+    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
+    let sig_info = unsafe { sig_info.read() }.ok_or_else(|| Error::empty_arg(SIG_INFO_ARG))?;
+    let current_admin =
+        unsafe { current_admin.read() }.ok_or_else(|| Error::empty_arg(CURRENT_ADMIN_ARG))?;
+    let current_admin_proof = unsafe { current_admin_proof.read() }
+        .ok_or_else(|| Error::empty_arg(CURRENT_ADMIN_PROOF_ARG))?;
+    let new_admin = unsafe { new_admin.read() }.unwrap_or(&[]);
+
+    let deps = to_extern(db, api, querier);
+    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_update_admin_raw(
+        &mut instance,
+        params,
+        sig_info,
+        current_admin,
+        current_admin_proof,
+        new_admin,
+    );
     instance.recycle();
     Ok(res?)
 }
@@ -578,4 +841,15 @@ pub extern "C" fn key_gen(err: Option<&mut Buffer>) -> Buffer {
             Buffer::from_vec(r.to_vec())
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn migrate_sealing() -> bool {
+    if let Err(e) = untrusted_migrate_sealing() {
+        error!("migrate_sealing error: {}", e);
+        return false;
+    }
+
+    clear_error();
+    true
 }

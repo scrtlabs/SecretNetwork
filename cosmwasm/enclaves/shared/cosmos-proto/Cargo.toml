@@ -1,6 +1,6 @@
 [package]
 name = "cosmos_proto"
-version = "1.6.0"
+version = "1.11.0"
 authors = ["SCRT Labs <info@scrtlabs.com>"]
 edition = "2018"
 

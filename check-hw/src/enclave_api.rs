@@ -3,23 +3,26 @@ use std::{
     os::unix::prelude::IntoRawFd,
 };
 
-use enclave_ffi_types::{Ctx, EnclaveBuffer, OcallReturn, UntrustedVmError, UserSpaceBuffer};
+use enclave_ffi_types::{
+    Ctx, EnclaveBuffer, NodeAuthResult, OcallReturn, UntrustedVmError, UserSpaceBuffer,
+};
 use sgx_types::{
     c_int, sgx_calc_quote_size, sgx_enclave_id_t, sgx_epid_group_id_t, sgx_get_quote,
-    sgx_init_quote, sgx_platform_info_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_quote_t,
-    sgx_report_attestation_status, sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t,
-    sgx_update_info_bit_t,
+    sgx_init_quote, sgx_platform_info_t, sgx_ql_qe_report_info_t, sgx_ql_qv_result_t,
+    sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_quote_t, sgx_report_attestation_status,
+    sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t,
 };
+
+include!("../../cosmwasm/packages/sgx-vm/src/attestation_dcap.rs");
 
 // ecalls
 
 extern "C" {
-    pub fn ecall_get_attestation_report(
+    pub fn ecall_check_patch_level(
         eid: sgx_enclave_id_t,
-        retval: *mut sgx_status_t,
+        retval: *mut NodeAuthResult,
         api_key: *const u8,
         api_key_len: u32,
-        dry_run: u8,
     ) -> sgx_status_t;
 }
 
@@ -90,7 +93,7 @@ pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
     let port = 443;
     let hostname = "api.trustedservices.intel.com";
     let addr = lookup_ipv4(hostname, port);
-    let sock = TcpStream::connect(&addr).expect("[-] Connect tls server failed!");
+    let sock = TcpStream::connect(addr).expect("[-] Connect tls server failed!");
 
     unsafe {
         *ret_fd = sock.into_raw_fd();
