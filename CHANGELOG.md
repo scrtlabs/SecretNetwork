@@ -1,5 +1,10 @@
 # CHANGELOG
 
+# 1.14.0
+
+- Fix CWA-2024-005
+- Bump ledger-cosmos-go from v0.12.2 to v0.12.4
+
 # 1.13.0
 
 - Support DCAP attestation
