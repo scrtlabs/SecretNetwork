@@ -1,0 +1,5 @@
+[net]
+git-fetch-with-cli = true
+
+[build]
+rustflags = ["-C", "target-feature=+aes,+ssse3"]

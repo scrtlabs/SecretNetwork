@@ -1,0 +1,276 @@
+syntax = "proto3";
+
+package ffi.ffi;
+
+option go_package = "github.com/SigmaGmbH/librustgo/types";
+
+// General request
+
+message AccessListItem {
+  repeated bytes storageSlot = 1;
+  bytes address = 2;
+}
+
+message TransactionData {
+  bytes from = 1;
+  bytes to = 2;
+  bytes data = 3;
+  uint64 gasLimit = 4;
+  bytes value = 5;
+  repeated AccessListItem accessList = 6;
+}
+
+message TransactionContext {
+  uint64 chain_id = 1;
+  bytes gas_price = 2;
+  uint64 timestamp = 3;
+  uint64 block_gas_limit = 4;
+  bytes block_base_fee_per_gas = 5;
+  bytes block_coinbase = 6;
+  uint64 block_number = 7;
+}
+
+message HandleTransactionRequest {
+  TransactionData tx_data = 1;
+  TransactionContext tx_context = 2;
+}
+
+message HandleTransactionResponse {
+  // logs contains the transaction hash and the proto-compatible ethereum
+  // logs.
+  repeated Log logs = 2;
+  // returned data from evm function (result or data supplied with revert
+  // opcode)
+  bytes ret = 3;
+  // vm error is the error returned by vm execution
+  string vm_error = 4;
+  // gas consumed by the transaction
+  uint64 gas_used = 5;
+}
+
+// Topic represents 32-byte words that is used to describe what’s going on in an
+// event
+message Topic { bytes inner = 1; }
+
+// Log represents an protobuf compatible Ethereum Log that defines a contract
+// log event.
+// Copied from `devnet/proto``
+message Log {
+  // address of the contract that generated the event
+  bytes address = 1;
+  // list of topics provided by the contract.
+  repeated Topic topics = 2;
+  // supplied by the contract, usually ABI-encoded
+  bytes data = 3;
+}
+
+// Request for account code (smart contract deployed behind provided address)
+message QueryGetAccount {
+  // 20 bytes of account address
+  bytes address = 1;
+}
+
+// Response for account code
+message QueryGetAccountResponse {
+  // Since both fields are 256-bit unsigned integer, we encode them as
+  // big-endian bytes
+  bytes balance = 1;
+  uint64 nonce = 2;
+}
+
+// Request to insert account data such as balance and nonce
+message QueryInsertAccount {
+  bytes address = 1;
+  bytes balance = 2;
+  uint64 nonce = 3;
+}
+
+// Response for account insertion
+message QueryInsertAccountResponse {}
+
+message QueryContainsKey { bytes key = 1; }
+
+message QueryContainsKeyResponse { bool contains = 1; }
+
+message QueryGetAccountStorageCell {
+  bytes address = 1;
+  bytes index = 2;
+}
+
+message QueryGetAccountStorageCellResponse { bytes value = 1; }
+
+message QueryGetAccountCode { bytes address = 1; }
+
+message QueryGetAccountCodeResponse { bytes code = 1; }
+
+message QueryInsertAccountCode {
+  bytes address = 1;
+  bytes code = 2;
+}
+
+message QueryInsertAccountCodeResponse {}
+
+message QueryInsertStorageCell {
+  bytes address = 1;
+  bytes index = 2;
+  bytes value = 3;
+}
+
+message QueryInsertStorageCellResponse {}
+
+message QueryRemove { bytes address = 1; }
+
+message QueryRemoveResponse {}
+
+message QueryRemoveStorageCell {
+  bytes address = 1;
+  bytes index = 2;
+}
+
+message QueryRemoveStorageCellResponse {}
+
+message QueryRemoveStorage { bytes address = 1; }
+
+message QueryRemoveStorageResponse {}
+
+message QueryBlockHash { bytes number = 1; }
+message QueryBlockHashResponse { bytes hash = 1; }
+
+message QueryAddVerificationDetails {
+  bytes userAddress = 1;
+  bytes issuerAddress = 2;
+  string originChain = 3;
+  uint32 verificationType = 4;
+  uint32 issuanceTimestamp = 5;
+  uint32 expirationTimestamp = 6;
+  bytes proofData = 7;
+  string schema = 8;
+  string issuerVerificationId = 9;
+  uint32 version = 10;
+}
+message QueryAddVerificationDetailsResponse {
+  bytes verificationId = 1;
+}
+
+message QueryHasVerification {
+  bytes userAddress = 1;
+  uint32 verificationType = 2;
+  uint32 expirationTimestamp = 3;
+  repeated bytes allowedIssuers = 4;
+}
+message QueryHasVerificationResponse {
+  bool hasVerification = 1;
+}
+
+message QueryGetVerificationData {
+  bytes userAddress = 1;
+  bytes issuerAddress = 2;
+}
+// VerificationDetails must have same members with VerificationDetails in "sgxvm/proto/ffi.proto"
+// including verification type and verification id as key.
+// But the member types can be different, such as string(address) to bytes
+message VerificationDetails {
+  // Verification type
+  uint32 verificationType = 1;
+  // Verification Id
+  bytes verificationID = 2;
+  // Verification issuer address
+  bytes issuerAddress = 3;
+  // From which chain proof was transferred
+  string originChain = 4;
+  // Original issuance timestamp
+  uint32 issuanceTimestamp = 5;
+  // Original expiration timestamp
+  uint32 expirationTimestamp = 6;
+  // Original proof data (ZK-proof)
+  bytes originalData = 7;
+  // ZK-proof original schema
+  string schema = 8;
+  // Verification id for checking(KYC/KYB/AML etc) from issuer side
+  string issuerVerificationId = 9;
+  // Version
+  uint32 version = 10;
+}
+message QueryGetVerificationDataResponse {
+  repeated VerificationDetails data = 1;
+}
+
+message CosmosRequest {
+  oneof req {
+    QueryGetAccount getAccount = 1;
+    QueryInsertAccount insertAccount = 2;
+    QueryContainsKey containsKey = 3;
+    QueryGetAccountCode accountCode = 4;
+    QueryGetAccountStorageCell storageCell = 5;
+    QueryInsertAccountCode insertAccountCode = 6;
+    QueryInsertStorageCell insertStorageCell = 7;
+    QueryRemove remove = 8;
+    QueryRemoveStorageCell removeStorageCell = 9;
+    QueryRemoveStorage removeStorage = 10;
+    QueryBlockHash blockHash = 11;
+    QueryAddVerificationDetails addVerificationDetails = 12;
+    QueryHasVerification hasVerification = 13;
+    QueryGetVerificationData getVerificationData = 14;
+  }
+}
+
+// Message with data required to execute `call` operation
+message SGXVMCallParams {
+  bytes from = 1;
+  bytes to = 2;
+  bytes data = 3;
+  uint64 gasLimit = 4;
+  bytes value = 5;
+  repeated AccessListItem accessList = 6;
+  bool commit = 7;
+  uint64 nonce = 8;
+  bool unencrypted = 9;
+}
+
+// Message with data required to execute `create` operation
+message SGXVMCreateParams {
+  bytes from = 1;
+  bytes data = 2;
+  uint64 gasLimit = 3;
+  bytes value = 4;
+  repeated AccessListItem accessList = 5;
+  bool commit = 6;
+  uint64 nonce = 7;
+}
+
+// Request to execute `call` operation
+message SGXVMCallRequest {
+  SGXVMCallParams params = 1;
+  TransactionContext context = 2;
+}
+
+// Request to execute `create` operation
+message SGXVMCreateRequest {
+  SGXVMCreateParams params = 1;
+  TransactionContext context = 2;
+}
+
+// Request to obtain node public key
+message NodePublicKeyRequest {
+  uint64 blockNumber = 1;
+}
+
+// Response with node public key
+message NodePublicKeyResponse { bytes publicKey = 1; }
+
+message EpochData {
+  uint32 epochNumber = 1;
+  uint64 startingBlock = 2;
+  bytes nodePublicKey = 3;
+}
+message ListEpochsResponse {
+  repeated EpochData epochs = 1;
+}
+
+message FFIRequest {
+  oneof req {
+    SGXVMCallRequest callRequest = 1;
+    SGXVMCreateRequest createRequest = 2;
+    NodePublicKeyRequest publicKeyRequest = 3;
+  }
+}

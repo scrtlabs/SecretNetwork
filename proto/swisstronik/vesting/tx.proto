@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package swisstronik.vesting;
+
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/msg/v1/msg.proto";
+
+option go_package = "swisstronik/x/vesting/types";
+
+// Msg defines the Msg service.
+service Msg {
+  // CreateMonthlyVestingAccount defines a method that enables creating a
+  // monthly vesting account with cliff feature.
+  rpc HandleCreateMonthlyVestingAccount(MsgCreateMonthlyVestingAccount)
+      returns (MsgCreateMonthlyVestingAccountResponse);
+}
+
+// MsgCreateMonthlyVestingAccount defines a message that enables creating a
+// monthly vesting account with cliff feature.
+message MsgCreateMonthlyVestingAccount {
+  option (cosmos.msg.v1.signer) = "from_address";
+
+  // from_address is a signer address that funds tokens
+  string from_address = 1;
+  // to_address defines vesting address that receives funds
+  string to_address = 2;
+  // cliff_days defines the days relative to start time
+  int64 cliff_days = 3;
+  // months defines number of months for linear vesting
+  int64 months = 4;
+  repeated cosmos.base.v1beta1.Coin amount = 5 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+  ];
+}
+// MsgCreateMonthlyVestingAccountResponse defines MsgCreateMonthlyVestingAccount
+// response type.
+message MsgCreateMonthlyVestingAccountResponse {}

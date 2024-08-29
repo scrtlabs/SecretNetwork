@@ -1,0 +1,25 @@
+[package]
+name = "sgxvm_wrapper"
+description = "Wrapper around EVM inside SGX Enclave"
+version = "1.0.0"
+build = "build.rs"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+errno = "0.2.8"
+serde_json = "1.0.86"
+lazy_static = "1.4.0"
+parking_lot = { version = "0.11" }
+thiserror = "1.0.37"
+hex = "0.4.3"
+protobuf = "=2.8.1"
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "3c903bda" }
+sgx_urts = { git = "https://github.com/apache/teaclave-sgx-sdk.git", rev = "3c903bda" }
+
+[features]
+attestation_server = []
+
+[build-dependencies]
+cbindgen = "0.24.3"

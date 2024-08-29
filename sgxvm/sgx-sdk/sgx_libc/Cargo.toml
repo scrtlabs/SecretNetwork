@@ -1,0 +1,20 @@
+[package]
+name = "sgx_libc"
+version = "1.1.6"
+authors = ["The Teaclave Authors"]
+repository = "https://github.com/apache/teaclave-sgx-sdk"
+license-file = "LICENSE"
+documentation = "https://teaclave.apache.org/sgx-sdk-docs/"
+description = "Rust SGX SDK provides the ability to write Intel SGX applications in Rust Programming Language."
+edition = "2021"
+
+[lib]
+name = "sgx_libc"
+crate-type = ["rlib"]
+
+[features]
+default = ["align"]
+align = []
+
+[target.'cfg(all(not(target_env = "sgx"), target_os = "linux", target_arch = "x86_64"))'.dependencies]
+sgx_types = { path = "../sgx_types" }

@@ -1,0 +1,155 @@
+enclave {
+    from "sgx_backtrace.edl" import *;
+    from "sgx_tstd.edl" import *;
+    from "sgx_stdio.edl" import *;
+    from "sgx_fs.edl" import *;
+    from "sgx_env.edl" import *;
+    from "sgx_sys.edl" import *;
+    from "sgx_net.edl" import *;
+    from "sgx_time.edl" import *;
+    from "sgx_tstdc.edl" import *;
+    from "sgx_tprotected_fs.edl" import *;
+	from "sgx_dcap_tvl.edl" import *;
+
+	include "sgx_quote.h"
+	include "sgx_report.h"
+	include "sgx_ql_quote.h"
+	include "sgx_qve_header.h"
+
+    struct ResultWithAllocation {
+        uint8_t* ptr;
+        size_t len;
+        sgx_status_t status;
+    };
+
+    struct Allocation {
+        uint8_t* ptr;
+        size_t len;
+    };
+
+    trusted {
+        public sgx_status_t ecall_initialize_enclave(int reset);
+
+        public int ecall_is_initialized();
+
+        public sgx_status_t ecall_attest_peer_epid(int fd);
+
+        public sgx_status_t ecall_attest_peer_dcap(
+            int fd,
+            [in] const sgx_target_info_t* qe_target_info,
+			uint32_t quote_size
+        );
+
+        public sgx_status_t ecall_request_epoch_keys_epid(
+            [in, size=len] const uint8_t* hostname,
+            size_t len,
+            int fd
+        );
+
+        public sgx_status_t ecall_request_epoch_keys_dcap(
+            [in, size=len] const uint8_t* hostname,
+            size_t len,
+            int fd,
+            [in] const sgx_target_info_t* qe_target_info,
+			uint32_t quote_size
+        );
+
+        public ResultWithAllocation handle_request(
+            [user_check] void* querier,
+            [in, size=len] const uint8_t* request,
+            size_t len
+        );
+
+        public Allocation ecall_allocate(
+            [in, size=len] const uint8_t* data,
+            size_t len
+        );
+
+        public sgx_status_t ecall_status();
+
+        public ResultWithAllocation ecall_dump_dcap_quote(
+            [in] const sgx_target_info_t* qe_target_info,
+			uint32_t quote_size
+        );
+
+        public sgx_status_t ecall_verify_dcap_quote(
+            [in, size=quote_len] const uint8_t* quote_ptr,
+			uint32_t quote_len
+        );
+
+        public sgx_status_t ecall_add_epoch(
+            uint64_t starting_block    
+        );
+
+        public sgx_status_t ecall_remove_latest_epoch();
+
+        public ResultWithAllocation ecall_list_epochs();
+    };
+
+    untrusted {
+        ResultWithAllocation ocall_query_raw(
+            [user_check] void* querier,
+            [in, size=request_len] const uint8_t* request,
+            size_t request_len
+        ) allow(ecall_allocate);
+
+        Allocation ocall_allocate(
+            [in, size=len] const uint8_t* data,
+            size_t len
+        );
+
+        sgx_status_t ocall_sgx_init_quote([out] sgx_target_info_t *ret_ti, [out] sgx_epid_group_id_t *ret_gid);
+
+        sgx_status_t ocall_get_ias_socket([out] int *ret_fd);
+
+        sgx_status_t ocall_get_quote(
+            [in, size = sigrl_len] uint8_t *p_sigrl,
+            uint32_t sigrl_len,
+            [in] sgx_report_t *report,
+            sgx_quote_sign_type_t quote_type,
+            [in] sgx_spid_t *p_spid,
+            [in] sgx_quote_nonce_t *p_nonce,
+            [out] sgx_report_t *p_qe_report,
+            [out, size = maxlen] sgx_quote_t *p_quote,
+            uint32_t maxlen,
+            [out] uint32_t* p_quote_len
+        );
+
+	    sgx_status_t ocall_get_update_info(
+            [in] sgx_platform_info_t * platformBlob,
+			int32_t enclaveTrusted,
+			[out] sgx_update_info_bit_t * update_info
+        );
+
+        sgx_status_t ocall_get_ecdsa_quote(
+			[in] sgx_report_t *p_report,
+			[out, size = quote_size] sgx_quote_t *p_quote, 
+            uint32_t quote_size
+		);
+
+        sgx_status_t ocall_get_qve_report(
+			[in, size = quote_size] const uint8_t *quote, 
+            uint32_t quote_size,
+			time_t timestamp,
+			[out] uint32_t *collateral_expiration_status,
+			[out] sgx_ql_qv_result_t *quote_verification_result,
+			[in, out] sgx_ql_qe_report_info_t *qve_report_info,
+			[out, size=supplemental_data_size] uint8_t *p_supplemental_data,
+			uint32_t supplemental_data_size,
+            [in, size=collateral_len] const uint8_t* p_collateral,
+            uint32_t collateral_len
+		);
+
+        sgx_status_t ocall_get_supplemental_data_size(
+            [out] uint32_t *data_size
+        );
+
+        sgx_status_t ocall_get_quote_ecdsa_collateral(
+            [in, size=n_quote] const uint8_t* p_quote,
+            uint32_t n_quote,
+            [out, size=n_col] uint8_t* p_col,
+            uint32_t n_col,
+            [out] uint32_t* p_col_out
+        );
+    };
+};

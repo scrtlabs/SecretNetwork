@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package node.node;
+
+option go_package = "github.com/SigmaGmbH/librustgo/types";
+
+message InitializeEnclaveRequest { bool shouldReset = 1; }
+message InitializeEnclaveResponse {}
+
+// Attestation server messages
+message PeerAttestationRequest {
+  int32 fd = 1;
+  bool isDCAP = 2;
+}
+message PeerAttestationResponse {}
+
+message AddNewEpochRequest {
+  uint64 startingBlock = 1;
+}
+message AddNewEpochResponse {}
+
+message RemoveLatestEpochRequest {}
+message RemoveLatestEpochResponse {}
+
+// Remote Attestation Request
+message RemoteAttestationRequest {
+  int32 fd = 1;
+  string hostname = 2;
+  bool isDCAP = 3;
+}
+message RemoteAttestationResponse {}
+
+message IsInitializedRequest {}
+message IsInitializedResponse { bool isInitialized = 1; }
+
+message NodeStatusRequest {}
+message NodeStatusResponse {}
+
+message DumpQuoteRequest {
+  string filepath = 1;
+}
+message DumpQuoteResponse {}
+
+message VerifyQuoteRequest {
+  string filepath = 1;
+}
+message VerifyQuoteResponse {}
+
+message ListEpochsRequest{}
+
+message SetupRequest {
+  oneof req {
+    InitializeEnclaveRequest initializeEnclave = 1;
+    PeerAttestationRequest peerAttestationRequest = 2;
+    RemoteAttestationRequest remoteAttestationRequest = 3;
+    IsInitializedRequest isInitialized = 4;
+    NodeStatusRequest nodeStatus = 5;
+    DumpQuoteRequest dumpQuote = 6;
+    VerifyQuoteRequest verifyQuote = 7;
+    AddNewEpochRequest addEpoch = 8;
+    ListEpochsRequest listEpochs = 9;
+    RemoveLatestEpochRequest removeEpoch = 10;
+  }
+}

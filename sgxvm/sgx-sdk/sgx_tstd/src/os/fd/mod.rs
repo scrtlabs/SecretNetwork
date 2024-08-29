@@ -1,0 +1,38 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License..
+
+//! Owned and borrowed Unix-like file descriptors.
+//!
+//! This module is supported on Unix platforms and WASI, which both use a
+//! similar file descriptor system for referencing OS resources.
+
+#![deny(unsafe_op_in_unsafe_fn)]
+
+// `RawFd`, `AsRawFd`, etc.
+mod raw;
+
+// `OwnedFd`, `AsFd`, etc.
+mod owned;
+
+// Implementations for `AsRawFd` etc. for network types.
+#[cfg(feature = "net")]
+mod net;
+
+
+// Export the types and traits for the public API.
+pub use owned::*;
+pub use raw::*;

@@ -1,0 +1,43 @@
+Swisstronik Non-Commercial License
+
+Version 1.0 dated March 1st, 2024
+
+This license contains the Terms and Conditions upon which Sigma Assets GmbH ("Company") provides its software. Your use of this software is subject to These Terms and Conditions.
+
+Company grants you ("Licensee") the right to use, modify and redistribute Software, but only (a) for non-commercial use or (b) for commercial use only To Specified blockchains.
+
+If Licensee provides a third party with a copy of the Software, then The Software is subject only to the terms and conditions of this License, and Licensee must Provide such third party with a copy of this License. all restrictions and The terms of this License apply to the Software or any part or modification thereof Software created under this license.
+
+Licensee must ensure that any third party who gets a copy of any part of the Software from Licensee also gets a copy of the terms of this license or the respective license URL, as well as copies of any plain-text lines beginning with Required Notice that the licensor provided with the software.
+For example: "Required Notice: Copyright Sigma Assets GmbH (https://github.com/SigmaGmbH)".
+
+These terms do not allow Licensee to sublicense or transfer any of Licensee’s rights to anyone else. These terms do not imply any other licenses not expressly granted in this license.
+
+Licensee must ensure that when any third party receives a copy of any part thereof Licensee's Software this party will also receive a copy of this License or the terms and conditions of this License, The respective license URL and a copy of all opening plain text lines, Required notices provided by Licensor with the Software.
+For example: "Required statement: Copyright Sigma Assets GmbH (https://github.com/SigmaGmbH)".
+
+These Terms do not allow Licensee to sublicense or transfer any Licensee Content Rights of Others. These Terms do not imply any license other than that expressly stated granted in this License.
+If Licensee breaches any of these terms or uses the Software in a way not permitted under this license, the license granted to Licensee will terminate immediately. If Licensee makes, or authorizes any other person to make, any written claim that the Software, or any other Swisstronik Product (see below), infringes or contributes to the infringement of any patent, all rights granted to Licensee under this license will terminate immediately.
+
+To the extent permitted by law, the Software is provided AS IS, without any warranty of any kind or condition, and Company shall not be liable to the Licensee for any damages arising therefrom out of these terms or the use or nature of the Software, under any kind of legal Claim.
+
+In this License, terms are used as follows:
+
+"Software" means the blockchain software developed by the Company, which is an implementation of the Swisstronik blockchain, available at "https://github.com/SigmaGmbH/swisstronik-chain", as updated from time to time.
+
+"Specified blockchain" refers to a version of the digital blockchain ledger that is recognized as canonical at a specific point in time based on blockchain consensus. The blockchain originally envisioned was the Swisstronik blockchain, identified by the Ethereum Improvement Proposal 155 (EIP-155) chain identifiers 1291-1 (testnet or "testnet") and 1291 (mainnet or "mainnet").
+
+"Swisstronik Product" means any product or service provided by Company or its affiliates.
+
+"Non-commercial use" means academic, scientific or research & development use or evaluation of the Software (e.g. through auditing), but does not include the creation of publicly accessible blockchains, precompiled smart contracts or other distributed ledger technology systems, making any transaction of economic value possible.
+
+"Commercial use" means any use that does not constitute a non-commercial use.
+
+"Use" means any use, modification, distribution or other exploitation of the Software or portions thereof.
+
+
+
+
+-----------------------------------------------------------------------------
+
+For additional info, please refer to the official SWTR-NCL-1.0 FAQ (FAQ_LICENSE.md)

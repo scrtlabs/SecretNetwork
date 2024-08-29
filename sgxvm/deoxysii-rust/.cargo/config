@@ -1,0 +1,7 @@
+[build]
+rustflags = ["-C", "target-feature=+aes,+ssse3"]
+rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
+
+[test]
+rustflags = ["-C", "target-feature=+aes,+ssse3"]
+rustdocflags = ["-C", "target-feature=+aes,+ssse3"]

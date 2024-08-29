@@ -1,0 +1,95 @@
+[dependencies]
+alloc = {}
+
+[dependencies.sgx_types]
+path = "../rust-sgx-sdk/sgx_types"
+stage = 1
+
+[dependencies.sgx_alloc]
+path = "../rust-sgx-sdk/sgx_alloc"
+stage = 1
+
+[dependencies.sgx_unwind]
+path = "../rust-sgx-sdk/sgx_unwind"
+stage = 1
+
+[dependencies.sgx_demangle]
+path = "../rust-sgx-sdk/sgx_demangle"
+stage = 1
+
+[dependencies.panic_abort]
+path = "../rust-sgx-sdk/sgx_panic_abort"
+stage = 1
+
+[dependencies.sgx_libc]
+path = "../rust-sgx-sdk/sgx_libc"
+stage = 2
+
+[dependencies.sgx_tkey_exchange]
+path = "../rust-sgx-sdk/sgx_tkey_exchange"
+stage = 2
+
+[dependencies.sgx_tse]
+path = "../rust-sgx-sdk/sgx_tse"
+stage = 2
+
+[dependencies.sgx_tcrypto]
+path = "../rust-sgx-sdk/sgx_tcrypto"
+stage = 2
+
+[dependencies.sgx_trts]
+path = "../rust-sgx-sdk/sgx_trts"
+stage = 3
+
+[dependencies.sgx_backtrace_sys]
+path = "../rust-sgx-sdk/sgx_backtrace_sys"
+stage = 3
+
+[dependencies.panic_unwind]
+path = "../rust-sgx-sdk/sgx_panic_unwind"
+stage = 3
+
+[dependencies.sgx_tdh]
+path = "../rust-sgx-sdk/sgx_tdh"
+stage = 4
+
+[dependencies.sgx_tseal]
+path = "../rust-sgx-sdk/sgx_tseal"
+stage = 4
+
+[dependencies.sgx_tprotected_fs]
+path = "../rust-sgx-sdk/sgx_tprotected_fs"
+stage = 4
+
+[dependencies.std]
+path = "../rust-sgx-sdk/xargo/sgx_tstd"
+stage = 5
+features = ["backtrace"]
+
+[dependencies.sgx_no_tstd]
+path = "../rust-sgx-sdk/sgx_no_tstd"
+stage = 5
+
+[dependencies.sgx_rand]
+path = "../rust-sgx-sdk/sgx_rand"
+stage = 6
+
+[dependencies.sgx_serialize]
+path = "../rust-sgx-sdk/sgx_serialize"
+stage = 6
+
+[dependencies.sgx_tunittest]
+path = "../rust-sgx-sdk/sgx_tunittest"
+stage = 6
+
+[dependencies.sgx_backtrace]
+path = "../rust-sgx-sdk/sgx_backtrace"
+stage = 7
+
+[dependencies.sgx_cov]
+path = "../rust-sgx-sdk/sgx_cov"
+stage = 7
+
+[dependencies.sgx_signal]
+path = "../rust-sgx-sdk/sgx_signal"
+stage = 7

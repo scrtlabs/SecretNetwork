@@ -1,0 +1,8 @@
+# Build results
+target/
+sgx-artifacts/
+
+# Other
+Enclave_t*
+Enclave_u*
+enclave.unsigned.so

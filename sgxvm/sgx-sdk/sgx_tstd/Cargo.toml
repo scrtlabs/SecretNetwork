@@ -1,0 +1,39 @@
+[package]
+name = "sgx_tstd"
+version = "1.1.6"
+authors = ["The Teaclave Authors"]
+repository = "https://github.com/apache/teaclave-sgx-sdk"
+license-file = "LICENSE"
+documentation = "https://teaclave.apache.org/sgx-sdk-docs/"
+description = "Rust SGX SDK provides the ability to write Intel SGX applications in Rust Programming Language."
+edition = "2021"
+
+[lib]
+name = "sgx_tstd"
+crate-type = ["rlib"]
+
+[features]
+default = ["stdio"]
+backtrace = ["stdio"]
+stdio = []
+net = []
+pipe = []
+thread = []
+untrusted_fs = []
+untrusted_time = []
+
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_types = { path = "../sgx_types" }
+sgx_libc = { path = "../sgx_libc" }
+sgx_trts = { path = "../sgx_trts" }
+sgx_alloc = { path = "../sgx_alloc" }
+sgx_tprotected_fs = { path = "../sgx_tprotected_fs" }
+sgx_backtrace_sys = { path = "../sgx_backtrace_sys" }
+sgx_demangle = { path = "../sgx_demangle" }
+sgx_unwind = { path = "../sgx_unwind" }
+
+[dependencies.hashbrown]
+package = "hashbrown_tstd"
+path = "./hashbrown"
+default-features = false
+features = ['rustc-dep-of-std']

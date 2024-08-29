@@ -1,0 +1,100 @@
+syntax = "proto3";
+package swisstronik.compliance;
+
+import "gogoproto/gogo.proto";
+import "swisstronik/compliance/params.proto";
+
+option go_package = "swisstronik/x/compliance/types";
+
+enum VerificationType {
+  // VT_UNSPECIFIED defines an invalid/undefined verification type.
+  VT_UNSPECIFIED = 0;
+  VT_KYC = 1;      // Know Your Custom
+  VT_KYB = 2;      // Know Your Business
+  VT_KYW = 3;      // Know Your Wallet
+  VT_HUMANITY = 4; // Check humanity
+  VT_AML = 5;      // Anti Money Laundering (check transactions)
+  VT_ADDRESS = 6;
+  VT_CUSTOM = 7;
+  VT_CREDIT_SCORE = 8;
+}
+
+/// V1 ///
+
+enum OperatorType {
+  // OT_UNSPECIFIED defines an invalid/undefined operator type.
+  OT_UNSPECIFIED = 0;
+  // Initial Operator, can't be removed from the list of operators.
+  // Both initial (constant) and regular operators can add or remove regular
+  // operators.
+  OT_INITIAL = 1;
+  OT_REGULAR = 2;
+}
+
+message OperatorDetails {
+  // Operator address, who can add / update / remove issuers
+  string operator = 1;
+  // Operator type
+  OperatorType operator_type = 2;
+}
+
+message IssuerDetails {
+  // Allows to easily understand
+  // what entity can be associated with issuer address.
+  // Issuer name
+  string name = 1;
+  // Basic issuer description
+  string description = 2;
+  // URL to issuer website
+  string url = 3;
+  // URL to issuer logo
+  string logo = 4;
+  // Legal entity name
+  string legalEntity = 5;
+  // Issuer creator who created current issuer
+  string creator = 6;
+}
+
+message AddressDetails {
+  // Marks if contract deployed under this address is verified
+  // by community. Only verified contracts will be allowed to write
+  // to x/compliance module.
+  bool is_verified = 1;
+  // Marks if verification for this address was revoked.
+  bool is_revoked = 2;
+  // Verifications passed by this address
+  repeated Verification verifications = 3;
+}
+
+message Verification {
+  // Contains information about verification type (KYC, proof-of-humanity, etc).
+  VerificationType type = 1;
+  // Contains ID of details of passed verification in storage.
+  bytes verification_id = 2;
+  // Issuer of verification
+  string issuer_address = 3;
+}
+
+// VerificationDetails must have same members with VerificationDetails in
+// "proto/swisstronik/compliance/entities.proto" But the member types can be
+// different, such as string(address) to bytes
+message VerificationDetails {
+  // Verification type
+  VerificationType type = 1;
+  // Verification issuer address
+  string issuer_address = 2;
+  // From which chain proof was transferred
+  string origin_chain = 3;
+  // Original issuance timestamp
+  uint32 issuance_timestamp = 4;
+  // Original expiration timestamp
+  uint32 expiration_timestamp = 5;
+  // Original proof data (ZK-proof)
+  bytes original_data = 6;
+  // ZK-proof original schema
+  string schema = 7;
+  // Verification id for checking(KYC/KYB/AML etc) from issuer side
+  string issuer_verification_id = 8;
+  // Version
+  uint32 version = 9;
+}

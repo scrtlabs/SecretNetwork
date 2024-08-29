@@ -1,0 +1,20 @@
+**/*.rs.bk
+*.iml
+.idea
+.vscode
+
+# no static libraries (35MB+)
+lib*.a
+
+# artifacts from compile tests
+/demo
+tmp
+a.out
+
+# build artifacts
+target/
+
+# other stuff
+.DS_Store
+*.swtr_seed
+*.keymanager
