@@ -86,6 +86,7 @@ type Keeper struct {
 	messenger        Messenger
 	// queryGasLimit is the max wasm gas that can be spent on executing a query with a contract
 	queryGasLimit uint64
+	maxCallDepth  uint32
 	HomeDir       string
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
@@ -149,9 +150,13 @@ func NewKeeper(
 			cdc,
 		),
 		queryGasLimit:  wasmConfig.SmartQueryGasLimit,
+		maxCallDepth:   types.DefaultMaxCallDepth,
 		HomeDir:        homeDir,
 		LastMsgManager: lastMsgManager,
 	}
+	// always wrap the messenger, even if it was replaced by an option
+	keeper.messenger = callDepthMessageHandler{keeper.messenger, keeper.maxCallDepth}
+
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
@@ -810,6 +815,24 @@ func (k Keeper) querySmartImpl(ctx sdk.Context, contractAddress sdk.AccAddress, 
 		return nil, errorsmod.Wrap(types.ErrQueryFailed, qErr.Error())
 	}
 	return queryResult, nil
+}
+
+func checkAndIncreaseCallDepth(ctx sdk.Context, maxCallDepth uint32) (sdk.Context, error) {
+	var callDepth uint32
+	if size, ok := types.CallDepth(ctx); ok {
+		callDepth = size
+	}
+
+	// increase
+	callDepth++
+
+	// did we go too far?
+	if callDepth > maxCallDepth {
+		return sdk.Context{}, types.ErrExceedMaxCallDepth
+	}
+
+	// set updated stack size
+	return types.WithCallDepth(ctx, callDepth), nil
 }
 
 // We don't use this function since we have an encrypted state. It's here for upstream compatibility

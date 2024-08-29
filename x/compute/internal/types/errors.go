@@ -72,6 +72,9 @@ var (
 
 	// ErrMaxIBCChannels error for maximum number of ibc channels reached
 	ErrMaxIBCChannels = errors.Register(DefaultCodespace, 22, "max transfer channels")
+
+	// ErrExceedMaxCallDepth error if max message stack size is exceeded
+	ErrExceedMaxCallDepth = errors.Register(DefaultCodespace, 30, "max call depth exceeded")
 )
 
 func IsEncryptedErrorCode(code uint32) bool {
