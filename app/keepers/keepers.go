@@ -39,6 +39,8 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ibcpacketforward "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
+	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/keeper"
+	ibcpacketforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/keeper"
@@ -53,11 +55,14 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
+	compliancekeeper "github.com/scrtlabs/SecretNetwork/x/compliance/keeper"
+	compliancetypes "github.com/scrtlabs/SecretNetwork/x/compliance/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
+	evmkeeper "github.com/scrtlabs/SecretNetwork/x/evm/keeper"
+	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
+	feemarketkeeper "github.com/scrtlabs/SecretNetwork/x/feemarket/keeper"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
-
-	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/keeper"
-	ibcpacketforwardtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/types"
 
 	ibcfeekeeper "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/keeper"
 	ibcfeetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
@@ -113,6 +118,10 @@ type SecretAppKeepers struct {
 	ScopedComputeKeeper capabilitykeeper.ScopedKeeper
 
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
+
+	EvmKeeper        *evmkeeper.Keeper
+	ComplianceKeeper *compliancekeeper.Keeper
+	FeeMarketKeeper  *feemarketkeeper.Keeper
 
 	// keys to access the substores
 	keys    map[string]*storetypes.KVStoreKey
@@ -563,6 +572,28 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	// Setting Router will finalize all routes by sealing router
 	// No more routes can be added
 	ak.IbcKeeper.SetRouter(ibcRouter)
+
+	feeMarketKeeper := feemarketkeeper.NewKeeper(
+		appCodec, authtypes.NewModuleAddress(govtypes.ModuleName),
+		ak.keys[feemarkettypes.StoreKey], ak.tKeys[feemarkettypes.TransientKey], ak.GetSubspace(feemarkettypes.ModuleName),
+	)
+	ak.FeeMarketKeeper = &feeMarketKeeper
+
+	complianceKeeper := compliancekeeper.NewKeeper(
+		ak.keys[compliancetypes.StoreKey],
+		ak.keys[compliancetypes.MemStoreKey],
+		ak.GetSubspace(compliancetypes.ModuleName),
+	)
+	ak.ComplianceKeeper = complianceKeeper
+
+	evmKeeper := evmkeeper.NewKeeper(
+		appCodec, ak.keys[evmtypes.StoreKey], ak.tKeys[evmtypes.TransientKey], authtypes.NewModuleAddress(govtypes.ModuleName),
+		*ak.AccountKeeper,
+		*ak.BankKeeper,
+		*ak.StakingKeeper,
+		*ak.FeeMarketKeeper, *ak.ComplianceKeeper, ak.GetSubspace(evmtypes.ModuleName),
+	)
+	ak.EvmKeeper = evmKeeper
 }
 
 func (ak *SecretAppKeepers) InitKeys() {
@@ -592,6 +623,9 @@ func (ak *SecretAppKeepers) InitKeys() {
 		ibcswitch.StoreKey,
 		ibchookstypes.StoreKey,
 		crisistypes.StoreKey,
+		evmtypes.StoreKey,
+		feemarkettypes.StoreKey,
+		compliancetypes.StoreKey,
 	)
 
 	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -617,6 +651,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(reg.ModuleName)
 	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
+	paramsKeeper.Subspace(evmtypes.ModuleName).WithKeyTable(evmtypes.ParamKeyTable()) //nolint:staticcheck
+	paramsKeeper.Subspace(feemarkettypes.ModuleName).WithKeyTable(feemarkettypes.ParamKeyTable())
+	paramsKeeper.Subspace(compliancetypes.ModuleName)
 
 	return paramsKeeper
 }

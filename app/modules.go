@@ -38,8 +38,13 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	"github.com/scrtlabs/SecretNetwork/x/compliance"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
+	"github.com/scrtlabs/SecretNetwork/x/evm"
+	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
+	"github.com/scrtlabs/SecretNetwork/x/feemarket"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
@@ -78,6 +83,9 @@ func Modules(
 		upgrade.NewAppModule(app.AppKeepers.UpgradeKeeper, app.AppKeepers.AccountKeeper.AddressCodec()),
 		evidence.NewAppModule(*app.AppKeepers.EvidenceKeeper),
 		compute.NewAppModule(*app.AppKeepers.ComputeKeeper),
+		evm.NewAppModule(app.AppKeepers.EvmKeeper, *app.AppKeepers.AccountKeeper, app.AppKeepers.GetSubspace(evmtypes.ModuleName)),
+		compliance.NewAppModule(appCodec, *app.AppKeepers.ComplianceKeeper),
+		feemarket.NewAppModule(*app.AppKeepers.FeeMarketKeeper, app.AppKeepers.GetSubspace(feemarkettypes.ModuleName)),
 		params.NewAppModule(*app.AppKeepers.ParamsKeeper),
 		authzmodule.NewAppModule(appCodec, *app.AppKeepers.AuthzKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, app.GetInterfaceRegistry()),
 		reg.NewAppModule(*app.AppKeepers.RegKeeper),

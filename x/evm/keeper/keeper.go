@@ -18,14 +18,15 @@ package keeper
 import (
 	"fmt"
 	"math/big"
+	"os"
 
 	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/SigmaGmbH/librustgo"
 	rustgotypes "github.com/SigmaGmbH/librustgo/types"
-	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -125,7 +126,7 @@ func NewKeeper(
 
 // Logger returns a module-specific logger.
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", types.ModuleName)
+	return log.NewLogger(os.Stderr).With("module", types.ModuleName)
 }
 
 // WithChainID sets the chain id to the local variable in the keeper
@@ -349,11 +350,11 @@ func (k Keeper) getBaseFee(ctx sdk.Context, london bool) *big.Int {
 }
 
 // GetMinGasMultiplier returns the MinGasMultiplier param from the fee market module
-func (k Keeper) GetMinGasMultiplier(ctx sdk.Context) sdk.Dec {
+func (k Keeper) GetMinGasMultiplier(ctx sdk.Context) sdkmath.LegacyDec {
 	fmkParmas := k.feeMarketKeeper.GetParams(ctx)
 	if fmkParmas.MinGasMultiplier.IsNil() {
 		// in case we are executing eth_call on a legacy block, returns a zero value.
-		return sdk.ZeroDec()
+		return sdkmath.LegacyZeroDec()
 	}
 	return fmkParmas.MinGasMultiplier
 }
@@ -422,10 +423,8 @@ func (k *Keeper) GetCode(ctx sdk.Context, codeHash common.Hash) []byte {
 
 // ForEachStorage iterate contract storage, callback return false to break early
 func (k *Keeper) ForEachStorage(ctx sdk.Context, addr common.Address, cb func(key common.Hash, value []byte) bool) {
-	store := ctx.KVStore(k.storeKey)
-	prefix := types.AddressStoragePrefix(addr)
+	iterator := prefix.NewStore(ctx.KVStore(k.storeKey), types.AddressStoragePrefix(addr)).Iterator(nil, nil)
 
-	iterator := sdk.KVStorePrefixIterator(store, prefix)
 	defer iterator.Close()
 
 	for ; iterator.Valid(); iterator.Next() {

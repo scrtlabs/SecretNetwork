@@ -1,7 +1,7 @@
 package types
 
 import (
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"cosmossdk.io/errors"
 )
 
 const (
@@ -18,14 +18,14 @@ const (
 )
 
 var (
-	ErrBadRequest                 = sdkerrors.Register(ModuleName, codeErrBadRequest, "bad request")
-	ErrInvalidSignature           = sdkerrors.Register(ModuleName, codeErrInvalidSignature, "invalid signature detected")
-	ErrSignatureNotFound          = sdkerrors.Register(ModuleName, codeErrSignatureNotFound, "signature is required but not found")
-	ErrBasicValidation            = sdkerrors.Register(ModuleName, codeErrBasicValidation, "basic validation failed")
-	ErrInvalidParam               = sdkerrors.Register(ModuleName, codeErrInvalidParam, "invalid param provided")
-	ErrNotAuthorized              = sdkerrors.Register(ModuleName, codeErrNotAuthorized, "not authorized")
-	ErrInvalidOperator            = sdkerrors.Register(ModuleName, codeErrInvalidOperator, "invalid operator")
-	ErrNotOperatorOrIssuerCreator = sdkerrors.Register(ModuleName, codeErrNotOperatorOrIssuer, "signer is not operator or issuer creator")
-	ErrNotOperator                = sdkerrors.Register(ModuleName, codeErrNotOperator, "signer is not operator")
-	ErrInvalidIssuer              = sdkerrors.Register(ModuleName, codeErrInvalidIssuer, "invalid issuer")
+	ErrBadRequest                 = errors.Register(ModuleName, codeErrBadRequest, "bad request")
+	ErrInvalidSignature           = errors.Register(ModuleName, codeErrInvalidSignature, "invalid signature detected")
+	ErrSignatureNotFound          = errors.Register(ModuleName, codeErrSignatureNotFound, "signature is required but not found")
+	ErrBasicValidation            = errors.Register(ModuleName, codeErrBasicValidation, "basic validation failed")
+	ErrInvalidParam               = errors.Register(ModuleName, codeErrInvalidParam, "invalid param provided")
+	ErrNotAuthorized              = errors.Register(ModuleName, codeErrNotAuthorized, "not authorized")
+	ErrInvalidOperator            = errors.Register(ModuleName, codeErrInvalidOperator, "invalid operator")
+	ErrNotOperatorOrIssuerCreator = errors.Register(ModuleName, codeErrNotOperatorOrIssuer, "signer is not operator or issuer creator")
+	ErrNotOperator                = errors.Register(ModuleName, codeErrNotOperator, "signer is not operator")
+	ErrInvalidIssuer              = errors.Register(ModuleName, codeErrInvalidIssuer, "invalid issuer")
 )

@@ -40,7 +40,10 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	packetforwardrouter "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
+	"github.com/scrtlabs/SecretNetwork/x/compliance"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
+	"github.com/scrtlabs/SecretNetwork/x/evm"
+	"github.com/scrtlabs/SecretNetwork/x/feemarket"
 	"github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
@@ -87,6 +90,9 @@ func customModuleBasics() []module.AppModuleBasic {
 		compute.AppModuleBasic{},
 		registration.AppModuleBasic{},
 		ibcswitch.AppModuleBasic{},
+		evm.AppModuleBasic{},
+		feemarket.AppModuleBasic{},
+		compliance.AppModuleBasic{},
 	}
 }
 

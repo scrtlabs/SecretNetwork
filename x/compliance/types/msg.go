@@ -20,12 +20,12 @@ func (msg *MsgAddOperator) GetSignBytes() []byte {
 func (msg *MsgAddOperator) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Signer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid signer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid signer address (%s)", err)
 	}
 
 	_, err = sdk.AccAddressFromBech32(msg.Operator)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid operator address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid operator address (%s)", err)
 	}
 
 	return nil
@@ -54,12 +54,12 @@ func (msg *MsgRemoveOperator) GetSignBytes() []byte {
 func (msg *MsgRemoveOperator) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Signer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid signer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid signer address (%s)", err)
 	}
 
 	_, err = sdk.AccAddressFromBech32(msg.Operator)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid operator address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid operator address (%s)", err)
 	}
 
 	return nil
@@ -89,12 +89,12 @@ func (msg *MsgSetVerificationStatus) GetSignBytes() []byte {
 func (msg *MsgSetVerificationStatus) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Signer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid signer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid signer address (%s)", err)
 	}
 
 	_, err = sdk.AccAddressFromBech32(msg.IssuerAddress)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid issuer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid issuer address (%s)", err)
 	}
 
 	return nil
@@ -131,12 +131,12 @@ func (msg *MsgCreateIssuer) GetSignBytes() []byte {
 func (msg *MsgCreateIssuer) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Signer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid signer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid signer address (%s)", err)
 	}
 
 	_, err = sdk.AccAddressFromBech32(msg.Issuer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid issuer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid issuer address (%s)", err)
 	}
 
 	return nil
@@ -174,12 +174,12 @@ func (msg *MsgUpdateIssuerDetails) GetSignBytes() []byte {
 func (msg *MsgUpdateIssuerDetails) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Signer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid signer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid signer address (%s)", err)
 	}
 
 	_, err = sdk.AccAddressFromBech32(msg.Issuer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid issuer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid issuer address (%s)", err)
 	}
 
 	return nil
@@ -208,12 +208,12 @@ func (msg *MsgRemoveIssuer) GetSignBytes() []byte {
 func (msg *MsgRemoveIssuer) ValidateBasic() error {
 	_, err := sdk.AccAddressFromBech32(msg.Signer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid signer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid signer address (%s)", err)
 	}
 
 	_, err = sdk.AccAddressFromBech32(msg.Issuer)
 	if err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid issuer address (%s)", err)
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid issuer address (%s)", err)
 	}
 
 	return nil

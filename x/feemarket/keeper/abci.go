@@ -18,7 +18,6 @@ package keeper
 import (
 	"fmt"
 
-	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 
 	sdkmath "cosmossdk.io/math"
@@ -27,7 +26,7 @@ import (
 )
 
 // BeginBlock updates base fee
-func (k *Keeper) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
+func (k *Keeper) BeginBlock(ctx sdk.Context) {
 	baseFee := k.CalculateBaseFee(ctx)
 
 	// return immediately if base fee is nil
@@ -53,7 +52,7 @@ func (k *Keeper) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
 // EndBlock update block gas wanted.
 // The EVM end block logic doesn't update the validator set, thus it returns
 // an empty slice.
-func (k *Keeper) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) {
+func (k *Keeper) EndBlock(ctx sdk.Context) {
 	if ctx.BlockGasMeter() == nil {
 		k.Logger(ctx).Error("block gas meter is nil when setting block gas wanted")
 		return
@@ -76,8 +75,8 @@ func (k *Keeper) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) {
 	// this will be keep BaseFee protected from un-penalized manipulation
 	// more info here https://github.com/evmos/ethermint/pull/1105#discussion_r888798925
 	minGasMultiplier := k.GetParams(ctx).MinGasMultiplier
-	limitedGasWanted := sdk.NewDec(gasWanted.Int64()).Mul(minGasMultiplier)
-	updatedGasWanted := sdk.MaxDec(limitedGasWanted, sdk.NewDec(gasUsed.Int64())).TruncateInt().Uint64()
+	limitedGasWanted := sdkmath.LegacyNewDec(gasWanted.Int64()).Mul(minGasMultiplier)
+	updatedGasWanted := sdkmath.LegacyMaxDec(limitedGasWanted, sdkmath.LegacyNewDec(gasUsed.Int64())).TruncateInt().Uint64()
 	k.SetBlockGasWanted(ctx, updatedGasWanted)
 
 	defer func() {

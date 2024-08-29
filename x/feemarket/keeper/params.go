@@ -20,6 +20,7 @@ import (
 
 	"github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -81,7 +82,7 @@ func (k Keeper) SetBaseFee(ctx sdk.Context, baseFee *big.Int) {
 	params := k.GetParams(ctx)
 
 	ctx.Logger().Info("FeeMarket: baseFee was changed", "oldBaseFee", params.BaseFee.String(), "newBaseFee", baseFee.String())
-	params.BaseFee = sdk.NewIntFromBigInt(baseFee)
+	params.BaseFee = sdkmath.NewIntFromBigInt(baseFee)
 	err := k.SetParams(ctx, params)
 	if err != nil {
 		return

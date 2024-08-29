@@ -67,7 +67,7 @@ endef
 
 define compile_protobuf
 	@echo "Compiling SGXVM protobuf files"
-    protoc --rust_out src/protobuf_generated/ proto/ffi.proto
+	protoc --rust_opt=experimental-codegen=enabled,kernel=cpp --rust_out=./src/protobuf_generated proto/ffi.proto
     sed -i -e 's/use protobuf::Message as/\n\nuse std::prelude::v1::*;\nuse protobuf::Message as/g' src/protobuf_generated/ffi.rs
 endef
 

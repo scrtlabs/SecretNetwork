@@ -5,9 +5,9 @@ import (
 	"slices"
 
 	"cosmossdk.io/errors"
+	"cosmossdk.io/log"
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
-	"github.com/cometbft/cometbft/libs/log"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/cosmos/gogoproto/proto"
@@ -474,7 +474,7 @@ func (k Keeper) OperatorExists(ctx sdk.Context, operator sdk.AccAddress) (bool, 
 }
 
 func (k Keeper) IterateOperatorDetails(ctx sdk.Context, callback func(address sdk.AccAddress) (continue_ bool)) {
-	latestVersionIterator := sdk.KVStorePrefixIterator(ctx.KVStore(k.storeKey), types.KeyPrefixOperatorDetails)
+	latestVersionIterator := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixOperatorDetails).Iterator(nil, nil)
 	defer closeIteratorOrPanic(latestVersionIterator)
 
 	for ; latestVersionIterator.Valid(); latestVersionIterator.Next() {
@@ -487,7 +487,7 @@ func (k Keeper) IterateOperatorDetails(ctx sdk.Context, callback func(address sd
 }
 
 func (k Keeper) IterateVerificationDetails(ctx sdk.Context, callback func(id []byte) (continue_ bool)) {
-	latestVersionIterator := sdk.KVStorePrefixIterator(ctx.KVStore(k.storeKey), types.KeyPrefixVerificationDetails)
+	latestVersionIterator := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixVerificationDetails).Iterator(nil, nil)
 	defer closeIteratorOrPanic(latestVersionIterator)
 
 	for ; latestVersionIterator.Valid(); latestVersionIterator.Next() {
@@ -500,7 +500,7 @@ func (k Keeper) IterateVerificationDetails(ctx sdk.Context, callback func(id []b
 }
 
 func (k Keeper) IterateAddressDetails(ctx sdk.Context, callback func(address sdk.AccAddress) (continue_ bool)) {
-	latestVersionIterator := sdk.KVStorePrefixIterator(ctx.KVStore(k.storeKey), types.KeyPrefixAddressDetails)
+	latestVersionIterator := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixAddressDetails).Iterator(nil, nil)
 	defer closeIteratorOrPanic(latestVersionIterator)
 
 	for ; latestVersionIterator.Valid(); latestVersionIterator.Next() {
@@ -513,7 +513,7 @@ func (k Keeper) IterateAddressDetails(ctx sdk.Context, callback func(address sdk
 }
 
 func (k Keeper) IterateIssuerDetails(ctx sdk.Context, callback func(address sdk.AccAddress) (continue_ bool)) {
-	latestVersionIterator := sdk.KVStorePrefixIterator(ctx.KVStore(k.storeKey), types.KeyPrefixIssuerDetails)
+	latestVersionIterator := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixIssuerDetails).Iterator(nil, nil)
 	defer closeIteratorOrPanic(latestVersionIterator)
 
 	for ; latestVersionIterator.Valid(); latestVersionIterator.Next() {
@@ -616,7 +616,7 @@ func (k Keeper) ExportIssuerDetails(ctx sdk.Context) ([]*types.GenesisIssuerDeta
 	return issuerDetails, nil
 }
 
-func closeIteratorOrPanic(iterator sdk.Iterator) {
+func closeIteratorOrPanic(iterator storetypes.Iterator) {
 	err := iterator.Close()
 	if err != nil {
 		panic(err.Error())

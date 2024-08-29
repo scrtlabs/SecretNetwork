@@ -18,9 +18,9 @@ package types
 import (
 	"math/big"
 
+	"cosmossdk.io/errors"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -91,7 +91,7 @@ func (m MsgUpdateParams) GetSigners() []sdk.AccAddress {
 // ValidateBasic does a sanity check of the provided data
 func (m *MsgUpdateParams) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(m.Authority); err != nil {
-		return errortypes.Wrap(err, "invalid authority address")
+		return errors.Wrap(err, "invalid authority address")
 	}
 
 	return m.Params.Validate()

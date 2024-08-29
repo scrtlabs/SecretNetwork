@@ -2,7 +2,7 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	govcdc "github.com/cosmos/cosmos-sdk/x/gov/codec"
+	// govcdc "github.com/cosmos/cosmos-sdk/x/gov/codec"
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 )
 
@@ -17,7 +17,7 @@ var (
 
 func init() {
 	v1beta1.RegisterProposalType(ProposalTypeVerifyIssuer)
-	govcdc.ModuleCdc.Amino.RegisterConcrete(&VerifyIssuerProposal{}, "compliance/VerifyIssuerProposal", nil)
+	// govcdc.ModuleCdc.Amino.RegisterConcrete(&VerifyIssuerProposal{}, "compliance/VerifyIssuerProposal", nil)
 }
 
 // NewVerifyIssuerProposal returns new instance of VerifyIssuerProposal

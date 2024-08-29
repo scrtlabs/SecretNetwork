@@ -36,7 +36,7 @@ func GetQueryCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		GetBlockGasCmd(),
-		GetBaseFeeCmd(),
+		// GetBaseFeeCmd(),
 		GetParamsCmd(),
 	)
 	return cmd
@@ -101,6 +101,7 @@ func GetParamsCmd() *cobra.Command {
 }
 
 // GetBaseFeeCmd queries the base fee at a given height
+/*
 func GetBaseFeeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "base-fee",
@@ -128,4 +129,4 @@ If the height is not provided, it will use the latest height from context.`,
 
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
-}
+}*/
