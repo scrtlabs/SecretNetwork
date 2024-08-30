@@ -5,10 +5,10 @@ TARGET_DIR = target/release/
 DEFAULT = help
 CC=clang
 CXX=clang++
-SGX_MODE ?= HW
+SGX_MODE ?= SW
 ENCLAVE_HOME ?= $(HOME)/.swisstronik-enclave
 PRODUCTION_MODE ?= false
-AS_MODE ?= false 
+AS_MODE ?= false
 VERSION := v1.0.3
 Wrapper_build_feature := ""
 
