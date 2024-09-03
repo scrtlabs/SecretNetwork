@@ -61,7 +61,7 @@ func GetRandomKey(height int64) []byte {
 	return append(RandomPrefix, b...)
 }
 
-// GetContractAddressKey returns the key for the WASM contract instance
+// GetContractEnclaveKey returns the key for the WASM contract instance
 func GetContractEnclaveKey(addr sdk.AccAddress) []byte {
 	return append(ContractEnclaveIdPrefix, addr...)
 }
