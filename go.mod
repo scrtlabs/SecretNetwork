@@ -8,6 +8,7 @@ replace (
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.9-secret.3
 	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.8-secret.1
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.1.2-secret.1
+	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
 
 require (
@@ -63,6 +64,7 @@ require (
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/rosetta v0.50.4
 	github.com/gogo/protobuf v1.3.2
+	github.com/scrtlabs/tm-secret-enclave v1.11.8
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
 )
 
@@ -189,7 +191,6 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
-	github.com/scrtlabs/tm-secret-enclave v1.11.8 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
