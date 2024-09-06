@@ -30,6 +30,8 @@ pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed"
 pub const NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE: &str = "consensus_seed.sealed";
 pub const NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE: &str = "consensus_seed_current.sealed";
 
+pub const MIGRATION_APPROVAL_SAVE_PATH: &str = "migration_trg.sealed";
+
 #[cfg(feature = "random")]
 pub const REK_SEALED_FILE_NAME: &str = "rek.sealed";
 #[cfg(feature = "random")]
@@ -123,6 +125,13 @@ lazy_static! {
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(MIGRATION_CERT_SAVE_PATH)
+    .to_str()
+    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
+    .to_string();
+    pub static ref MIGRATION_APPROVAL_PATH: String = path::Path::new(
+        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
+    )
+    .join(MIGRATION_APPROVAL_SAVE_PATH)
     .to_str()
     .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
