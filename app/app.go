@@ -382,6 +382,7 @@ func NewSecretNetworkApp(
 	// The initChainer handles translating the genesis.json file into initial state for the network
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
+	app.SetPreBlocker(app.PreBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 
 	if manager := app.BaseApp.SnapshotManager(); manager != nil {
@@ -422,6 +423,10 @@ func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }
 // BeginBlocker application updates every begin block
 func (app *SecretNetworkApp) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
 	return app.mm.BeginBlock(ctx)
+}
+
+func (app *SecretNetworkApp) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
+	return app.mm.PreBlock(ctx)
 }
 
 // EndBlocker application updates every end block
