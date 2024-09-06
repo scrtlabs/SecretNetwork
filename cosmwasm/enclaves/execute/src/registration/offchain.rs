@@ -1,12 +1,15 @@
 //!
 use core::convert::TryInto;
+use core::mem;
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
 use log::*;
+use sgx_types::sgx_measurement_t;
 use sgx_types::sgx_report_body_t;
 use sgx_types::sgx_status_t;
 use std::panic;
+use std::sgxfs::SgxFile;
 use std::slice;
 
 use std::fs::File;
@@ -15,8 +18,9 @@ use std::io::prelude::*;
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
     CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
-    GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH, MIGRATION_CERT_PATH,
-    PUBKEY_PATH, REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH,
+    MIGRATION_APPROVAL_PATH, MIGRATION_CERT_PATH, PUBKEY_PATH, REGISTRATION_KEY_SEALING_PATH,
+    REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -688,9 +692,57 @@ pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-fn is_export_approved(_report: &sgx_report_body_t) -> bool {
-    // TODO
-    false
+#[repr(packed)]
+pub struct MigrationApprovalData {
+    pub mr_enclave: sgx_measurement_t,
+    pub mr_signer: sgx_measurement_t,
+}
+
+fn approve_migration_target(data: &MigrationApprovalData) {
+    unsafe {
+        let d = std::slice::from_raw_parts(
+            (data as *const MigrationApprovalData) as *const u8,
+            mem::size_of::<MigrationApprovalData>(),
+        );
+
+        let mut f_out = SgxFile::create(MIGRATION_APPROVAL_PATH.as_str()).unwrap();
+        f_out.write_all(d).unwrap();
+
+        info!(
+            "Migration target approved. mr_encalve={:?}",
+            data.mr_enclave.m
+        );
+    }
+}
+
+fn is_export_approved(report: &sgx_report_body_t) -> bool {
+    let mut res = false;
+
+    match SgxFile::open(MIGRATION_APPROVAL_PATH.as_str()) {
+        Ok(mut f_in) => {
+            let mut data = vec![];
+            f_in.read_to_end(&mut data).unwrap();
+
+            if data.len() != mem::size_of::<MigrationApprovalData>() {
+                panic!("wrong file size");
+            }
+
+            unsafe {
+                let p_data = data.as_ptr() as *const MigrationApprovalData;
+                if (*p_data).mr_enclave.m != report.mr_enclave.m {
+                    info!("mrenclave mismatch");
+                } else {
+                    res = true;
+                }
+            }
+        }
+        Err(err) => {
+            info!("Can't open migration approval file: {}", err);
+        }
+    }
+
+    res
+
 }
 
 #[no_mangle]
