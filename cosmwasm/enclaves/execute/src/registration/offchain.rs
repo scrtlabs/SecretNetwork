@@ -19,8 +19,8 @@ use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
     CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
     GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH,
-    MIGRATION_APPROVAL_PATH, MIGRATION_CERT_PATH, PUBKEY_PATH, REGISTRATION_KEY_SEALING_PATH,
-    REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    MIGRATION_APPROVAL_PATH, MIGRATION_CERT_PATH, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH,
+    REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -695,7 +695,18 @@ pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
 #[repr(packed)]
 pub struct MigrationApprovalData {
     pub mr_enclave: sgx_measurement_t,
-    pub mr_signer: sgx_measurement_t,
+    //    pub mr_signer: sgx_measurement_t,
+}
+
+impl MigrationApprovalData {
+    fn is_export_approved(&self, report: &sgx_report_body_t) -> bool {
+        if self.mr_enclave.m != report.mr_enclave.m {
+            info!("mrenclave mismatch");
+            return false;
+        }
+
+        true
+    }
 }
 
 fn approve_migration_target(data: &MigrationApprovalData) {
@@ -727,13 +738,9 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
                 panic!("wrong file size");
             }
 
-            unsafe {
+            res = unsafe {
                 let p_data = data.as_ptr() as *const MigrationApprovalData;
-                if (*p_data).mr_enclave.m != report.mr_enclave.m {
-                    info!("mrenclave mismatch");
-                } else {
-                    res = true;
-                }
+                (*p_data).is_export_approved(report)
             }
         }
         Err(err) => {
@@ -744,6 +751,27 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
     res
 
 }
+
+fn approve_migration_offchain() -> bool {
+    let mut file = match File::open(MIGRATION_APPROVAL_PATH.as_str()) {
+        Ok(f) => f,
+        Err(e) => {
+            warn!("Failed to open file: {}", e);
+            return false;
+        }
+    };
+
+    let mut f_data = Vec::new();
+
+    if let Err(e) = file.read_to_end(&mut f_data) {
+        warn!("Failed to read file: {}", e);
+        return false;
+    }
+
+    // TODO
+    false
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
