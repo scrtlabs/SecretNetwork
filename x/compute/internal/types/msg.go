@@ -215,3 +215,33 @@ func (msg MsgClearAdmin) GetSigners() []sdk.AccAddress {
 	}
 	return []sdk.AccAddress{senderAddr}
 }
+
+func (msg MsgUpgradeProposalPassed) Route() string {
+	return RouterKey
+}
+
+func (msg MsgUpgradeProposalPassed) Type() string {
+	return "upgrade-proposal-passed"
+}
+
+func (msg MsgUpgradeProposalPassed) ValidateBasic() error {
+	if err := sdk.VerifyAddressFormat([]byte(msg.SenderAddress)); err != nil {
+		return err
+	}
+	if len(msg.MrEnclaveHash) != 64 {
+		return sdkerrors.ErrInvalidRequest.Wrap("MREnclave hash length is not equal 64!")
+	}
+	return nil
+}
+
+func (msg MsgUpgradeProposalPassed) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgUpgradeProposalPassed) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.SenderAddress)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
+}
