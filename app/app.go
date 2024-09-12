@@ -374,6 +374,7 @@ func NewSecretNetworkApp(
 			SignModeHandler: app.txConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
+		appCodec:              app.appCodec,
 		govkeeper:             *app.AppKeepers.GovKeeper,
 		IBCKeeper:             app.AppKeepers.IbcKeeper,
 		WasmConfig:            computeConfig,

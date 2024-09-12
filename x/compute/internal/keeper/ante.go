@@ -3,28 +3,33 @@ package keeper
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"regexp"
 
 	"cosmossdk.io/core/store"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"github.com/cosmos/cosmos-sdk/codec"
+	types1 "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
-
-	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 )
 
 // CountTXDecorator ante handler to count the tx position in a block.
 type CountTXDecorator struct {
-	storeService store.KVStoreService
+	appcodec     codec.Codec
 	govkeeper    govkeeper.Keeper // we need the govkeeper to access stored proposals
+	storeService store.KVStoreService
 }
 
 // NewCountTXDecorator constructor
-func NewCountTXDecorator(storeService store.KVStoreService, govkeeper govkeeper.Keeper) *CountTXDecorator {
+func NewCountTXDecorator(appcodec codec.Codec, govkeeper govkeeper.Keeper, storeService store.KVStoreService) *CountTXDecorator {
 	return &CountTXDecorator{
-		storeService: storeService,
+		appcodec:     appcodec,
 		govkeeper:    govkeeper,
+		storeService: storeService,
 	}
 }
 
@@ -76,43 +81,72 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 		// Check if this is a MsgUpgradeProposalPassed
 		msgUpgrade, ok := msg.(*types.MsgUpgradeProposalPassed)
 		if ok {
-			iterator, err := a.govkeeper.Proposals.Iterate(ctx, nil)
+			err = a.verifyUpgradeProposal(ctx, msgUpgrade)
 			if err != nil {
-				ctx.Logger().Error("Failed to get the iterator of proposals!", err.Error())
-			}
-
-			defer iterator.Close() // Ensure the iterator is closed after use
-
-			var latestProposal *v1.Proposal
-			var latestMREnclaveHash string
-
-			// Iterate through the proposals
-			for ; iterator.Valid(); iterator.Next() {
-				// Get the proposal value
-				proposal, err := iterator.Value()
-				if err != nil {
-					ctx.Logger().Error("Failed to get the proposal from iterator!", err.Error())
-				}
-
-				mrenclaveHash, err := findMREnclaveHash(proposal.Metadata)
-				// Apply filter: Check if the proposal has "passed"
-				if err == nil && proposal.Status == v1.ProposalStatus_PROPOSAL_STATUS_PASSED {
-					// Check if this is the latest passed proposal by id
-					if latestProposal == nil || proposal.Id > latestProposal.Id {
-						latestProposal = &proposal
-						latestMREnclaveHash = mrenclaveHash
-					}
-				}
-			}
-
-			// Retrieve the stored mrenclave hash from the keeper
-			if latestMREnclaveHash != string(msgUpgrade.MrEnclaveHash) {
-				return ctx, sdkerrors.ErrUnauthorized.Wrap("mrenclave hash mismatch")
+				return ctx, err
 			}
 		}
 	}
 
 	return next(types.WithTXCounter(ctx, txCounter), tx, simulate)
+}
+
+// extractInfoFromProposalMessages extracts the "info" field from the proposal message.
+// This "info" contains the MREnclaveHash.
+func extractInfoFromProposalMessages(message *types1.Any, cdc codec.Codec) (string, error) {
+	var softwareUpgradeMsg *upgradetypes.MsgSoftwareUpgrade
+	err := cdc.UnpackAny(message, &softwareUpgradeMsg)
+	if err != nil {
+		return "", fmt.Errorf("failed to unpack message: %w", err)
+	}
+
+	return softwareUpgradeMsg.Plan.Info, nil
+}
+
+// verifyUpgradeProposal verifies the latest passed upgrade proposal to ensure the MREnclave hash matches.
+func (a *CountTXDecorator) verifyUpgradeProposal(ctx sdk.Context, msgUpgrade *types.MsgUpgradeProposalPassed) error {
+	iterator, err := a.govkeeper.Proposals.Iterate(ctx, nil)
+	if err != nil {
+		ctx.Logger().Error("Failed to get the iterator of proposals!", err.Error())
+	}
+	defer iterator.Close() // Ensure the iterator is closed after use
+
+	var latestProposal *v1.Proposal = nil
+	var latestMREnclaveHash string
+
+	// Iterate through the proposals
+	for ; iterator.Valid(); iterator.Next() {
+		// Get the proposal value
+		proposal, err := iterator.Value()
+		if err != nil {
+			ctx.Logger().Error("Failed to get the proposal from iterator!", err.Error())
+			return errors.New("Failed to get the proposal from iterator!")
+		}
+		// Check if the proposal has passed and is of type MsgSoftwareUpgrade
+		if proposal.Status == v1.ProposalStatus_PROPOSAL_STATUS_PASSED {
+			if len(proposal.GetMessages()) > 0 && proposal.Messages[0].GetTypeUrl() == "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade" {
+				// Update latestProposal if this proposal is newer (has a higher ID)
+				if latestProposal == nil || proposal.Id > latestProposal.Id {
+					latestProposal = &proposal
+				}
+			}
+		}
+	}
+
+	// If we found the MsgSoftwareUpgrade latest passed proposal, extract the MREnclaveHash from it
+	if latestProposal != nil {
+		info, err := extractInfoFromProposalMessages(latestProposal.Messages[0], a.appcodec)
+		if err != nil {
+			return fmt.Errorf("Failed to extract info with MREnclave hash from Proposal, error: %w", err)
+		}
+		latestMREnclaveHash, _ = findMREnclaveHash(info)
+	}
+
+	// Check if the MREnclave hash matches the one in the MsgUpgradeProposalPassed message
+	if latestMREnclaveHash != string(msgUpgrade.MrEnclaveHash) {
+		return sdkerrors.ErrUnauthorized.Wrap("software upgrade proposal: mrenclave hash mismatch")
+	}
+	return nil
 }
 
 func encodeHeightCounter(height int64, counter uint32) []byte {

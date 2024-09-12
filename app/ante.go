@@ -2,6 +2,7 @@ package app
 
 import (
 	"cosmossdk.io/core/store"
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -16,6 +17,7 @@ import (
 type HandlerOptions struct {
 	ante.HandlerOptions
 
+	appCodec              codec.Codec
 	govkeeper             govkeeper.Keeper // You'll need the keeper to access stored mrenclave hash
 	IBCKeeper             *keeper.Keeper
 	WasmConfig            *compute.WasmConfig
@@ -41,7 +43,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 	}
 
 	anteDecorators := []sdk.AnteDecorator{
-		compute.NewCountTXDecorator(options.TXCounterStoreService, options.govkeeper),
+		compute.NewCountTXDecorator(options.appCodec, options.govkeeper, options.TXCounterStoreService),
 		ante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
 		ante.NewExtensionOptionsDecorator(nil),
 		ante.NewValidateBasicDecorator(),
