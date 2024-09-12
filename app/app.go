@@ -87,6 +87,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	stakingkeeper "github.com/cosmos/ibc-go/v8/testing/types"
+
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
@@ -539,6 +540,7 @@ func (app *SecretNetworkApp) setupUpgradeStoreLoaders() {
 
 	for i := range Upgrades {
 		if upgradeInfo.Name == Upgrades[i].UpgradeName {
+			app.Logger().Info(fmt.Sprintf("Upgrade store loader for %s at height %d", upgradeInfo.Name, upgradeInfo.Height))
 			app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &Upgrades[i].StoreUpgrades))
 		}
 	}

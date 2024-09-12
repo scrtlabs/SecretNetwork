@@ -1,3 +1,4 @@
+docs/upgrades/1.15/bin/
 .env
 sgx_sk.pem
 *.a

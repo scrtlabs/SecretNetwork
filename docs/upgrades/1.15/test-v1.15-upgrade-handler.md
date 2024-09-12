@@ -140,7 +140,7 @@ docker exec secret-0.50.x:/usr/lib/tendermint_enclave.signed.so ./bin
 ```
 
 ```bash
-# Copy binaries from host to current v1.8 chain
+# Copy binaries from host to current v1.14 chain
 
 docker exec bootstrap bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
 docker exec node bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'

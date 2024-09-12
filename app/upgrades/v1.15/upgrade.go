@@ -33,7 +33,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 )
 
-const upgradeName = "v1.14.0 -> v1.15.0"
+const upgradeName = "v1.15"
 
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
@@ -108,6 +108,12 @@ func createUpgradeHandler(mm *module.Manager, appKeepers *keepers.SecretAppKeepe
 		}
 		logger.Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
 
-		return mm.RunMigrations(ctx, configurator, vm)
+		m, e := mm.RunMigrations(ctx, configurator, vm)
+		if e != nil {
+			logger.Error(fmt.Sprintf("[x] Run migration error: %s", e))
+		} else {
+			logger.Info(fmt.Sprintf("[v] Successful migration run for %s", upgradeName))
+		}
+		return m, e
 	}
 }
