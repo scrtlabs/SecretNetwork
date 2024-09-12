@@ -33,7 +33,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
 )
 
-const upgradeName = "v1.15"
+const upgradeName = "v1.14.0 -> v1.15.0"
 
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          upgradeName,
@@ -99,8 +99,13 @@ func createUpgradeHandler(mm *module.Manager, appKeepers *keepers.SecretAppKeepe
 		}
 
 		baseAppLegacySS := appKeepers.ParamsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramstypes.ConsensusParamsKeyTable())
-		baseapp.MigrateParams(sdk.UnwrapSDKContext(ctx), baseAppLegacySS, appKeepers.ConsensusParamsKeeper.ParamsStore)
-
+		if err := baseapp.MigrateParams(
+			sdk.UnwrapSDKContext(ctx),
+			baseAppLegacySS,
+			appKeepers.ConsensusParamsKeeper.ParamsStore); err != nil {
+			logger.Error(fmt.Sprintf("ERROR: %s %s", upgradeName, err))
+			return module.VersionMap{}, nil
+		}
 		logger.Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
 
 		return mm.RunMigrations(ctx, configurator, vm)
