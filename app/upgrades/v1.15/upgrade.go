@@ -107,7 +107,7 @@ func createUpgradeHandler(mm *module.Manager, appKeepers *keepers.SecretAppKeepe
 			return module.VersionMap{}, nil
 		}
 		logger.Info(fmt.Sprintf("Running module migrations for %s...", upgradeName))
-
+		logger.Debug(fmt.Sprintf("Version map: %v", vm))
 		m, e := mm.RunMigrations(ctx, configurator, vm)
 		if e != nil {
 			logger.Error(fmt.Sprintf("[x] Run migration error: %s", e))

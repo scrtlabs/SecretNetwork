@@ -78,28 +78,8 @@ Expected result should be:
 
 Propose a software upgrade on the v1.14 chain:
 We request an upgrade to take place at +30blocks (@10block/min)
-
-Let's capture the block height:
 ```bash
-UPGRADE_BLOCK="$(docker exec node bash -c 'secretd status | jq "(.SyncInfo.latest_block_height | tonumber) + 30"')"
-```
-
-Let's create a proposal and capture its ID:
-```bash
-# Propose upgrade
-PROPOSAL_ID="$(docker exec node bash -c "secretd tx gov submit-proposal software-upgrade v1.15 --upgrade-height $UPGRADE_BLOCK --title blabla --description yolo --deposit 100000000uscrt --from a -y -b block | jq '.logs[0].events[] | select(.type == \"submit_proposal\") | .attributes[] | select(.key == \"proposal_id\") | .value | tonumber'")"
-```
-
-Let's vote for the proposal
-```bash
-# Vote yes (voting period is 90 seconds)
-docker exec node bash -c "secretd tx gov vote ${PROPOSAL_ID} yes --from a -y -b block"
-```
-
-Optionally, you can check the proposal ID and the upgrade block height:
-```bash
-echo "PROPOSAL_ID   = ${PROPOSAL_ID}"
-echo "UPGRADE_BLOCK = ${UPGRADE_BLOCK}"
+./init_proposal.sh
 ```
 
 ## Step 4
@@ -129,44 +109,9 @@ You will need the following binaries:
 * tendermint_enclave.signed.so
 
 If you chose option B, you can access the binaries in the container and copy them to a host dir,
-e.g. SecretNetwork/docs/upgrades/1.15/bin by running commands:
+e.g. SecretNetwork/docs/upgrades/1.15/bin by running update_binaries.sh:
 ```bash
-docker exec secret-0.50.x:/usr/bin/secretd ./bin
-docker exec secret-0.50.x:/usr/lib/librust_cosmwasm_enclave.signed.so ./bin
-docker exec secret-0.50.x:/usr/lib/libgo_cosmwasm.so ./bin
-docker exec secret-0.50.x:/usr/lib/librandom_api.so ./bin
-docker exec secret-0.50.x:/usr/lib/tendermint_enclave.signed.so ./bin
-
-```
-
-```bash
-# Copy binaries from host to current v1.14 chain
-
-docker exec bootstrap bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
-docker exec node bash -c 'rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin'
-# update bootstrap
-docker cp ./bin/secretd                               bootstrap:/tmp/upgrade-bin
-docker cp ./bin/librust_cosmwasm_enclave.signed.so    bootstrap:/tmp/upgrade-bin
-docker cp ./bin/libgo_cosmwasm.so                     bootstrap:/tmp/upgrade-bin
-# update node
-docker cp ./bin/secretd                               node:/tmp/upgrade-bin
-docker cp ./bin/librust_cosmwasm_enclave.signed.so    node:/tmp/upgrade-bin
-docker cp ./bin/libgo_cosmwasm.so                     node:/tmp/upgrade-bin
-docker cp ./bin/librandom_api.so                      node:/tmp/upgrade-bin
-docker cp ./bin/tendermint_enclave.signed.so          node:/tmp/upgrade-bin
-# stop node's secretd
-docker exec node bash -c 'pkill -9 secretd'
-# copy over updated binaries
-docker exec bootstrap bash -c 'cp /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so /usr/lib/'
-docker exec bootstrap bash -c 'cp /tmp/upgrade-bin/libgo_cosmwasm.so /usr/lib/'
-docker exec node bash -c 'cp /tmp/upgrade-bin/secretd /usr/bin/'
-docker exec node bash -c 'cp /tmp/upgrade-bin/librust_cosmwasm_enclave.signed.so /usr/lib/'
-docker exec node bash -c 'cp /tmp/upgrade-bin/libgo_cosmwasm.so /usr/lib/'
-
-# prepare a tmp dir to store validator's private key
-rm -rf /tmp/upgrade-bin && mkdir -p /tmp/upgrade-bin
-docker cp bootstrap:/root/.secretd/config/priv_validator_key.json /tmp/upgrade-bin/.
-docker cp /tmp/upgrade-bin/priv_validator_key.json node:/root/.secretd/config/priv_validator_key.json
+./update_binaries.sh
 ```
 
 Restart node:
