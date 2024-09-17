@@ -6,7 +6,7 @@ replace (
 	cosmossdk.io/api => github.com/scrtlabs/cosmos-sdk-api v0.7.5-secret.1
 	cosmossdk.io/store => github.com/scrtlabs/cosmos-sdk-store v1.1.0-secret.1
 	github.com/cometbft/cometbft => github.com/scrtlabs/tendermint v0.38.9-secret.3
-	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.50.8-scrt.2
+	github.com/cosmos/cosmos-sdk => github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240917201403-3c75382e4a9d
 	github.com/cosmos/iavl => github.com/scrtlabs/iavl v1.1.2-secret.1
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
