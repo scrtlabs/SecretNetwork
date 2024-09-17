@@ -2,10 +2,11 @@ package keeper
 
 import (
 	"cosmossdk.io/errors"
+	codec "github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	//nolint:staticcheck
+	storetypes "cosmossdk.io/store/types"
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
@@ -13,8 +14,10 @@ import (
 )
 
 type Keeper struct {
-	channel    porttypes.ICS4Wrapper
-	paramSpace paramtypes.Subspace
+	cdc       codec.BinaryCodec
+	channel   porttypes.ICS4Wrapper
+	storeKey  storetypes.StoreKey
+	authority string
 }
 
 func (i *Keeper) GetAppVersion(ctx sdk.Context, portID, channelID string) (string, bool) {
@@ -23,15 +26,15 @@ func (i *Keeper) GetAppVersion(ctx sdk.Context, portID, channelID string) (strin
 
 func NewKeeper(
 	channel porttypes.ICS4Wrapper,
-	paramSpace paramtypes.Subspace,
+	cdc codec.BinaryCodec,
+	key storetypes.StoreKey,
+	authority string,
 ) Keeper {
-	if !paramSpace.HasKeyTable() {
-		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
-	}
-
 	return Keeper{
-		channel:    channel,
-		paramSpace: paramSpace,
+		channel:   channel,
+		authority: authority,
+		cdc:       cdc,
+		storeKey:  key,
 	}
 }
 
@@ -55,4 +58,9 @@ func (i *Keeper) WriteAcknowledgement(ctx sdk.Context, chanCap *capabilitytypes.
 
 func (i *Keeper) IsHalted(ctx sdk.Context) bool {
 	return i.GetSwitchStatus(ctx) == types.IbcSwitchStatusOff
+}
+
+// GetAuthority returns the x/emergencybutton module's authority.
+func (k Keeper) GetAuthority() string {
+	return k.authority
 }

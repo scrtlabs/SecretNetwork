@@ -9,7 +9,10 @@ const (
 
 // RouterKey is the message route. Can only contain
 // alphanumeric characters.
-var RouterKey = QuerierRoute
+var (
+	RouterKey = QuerierRoute
+	ParamsKey = []byte{0x01}
+)
 
 const (
 	// IbcSwitchStatusOff - IBC messages halted

@@ -11,6 +11,7 @@ import (
 // LegacyAmino codec. These types are used for Amino JSON serialization.
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgToggleIbcSwitch{}, "emergencybutton/MsgToggleIbcSwitch", nil)
+	cdc.RegisterConcrete(&MsgUpdateParams{}, "emergencybutton/MsgUpdateParams", nil)
 }
 
 // RegisterInterfaces registers interfaces and implementations of the incentives module.
@@ -18,6 +19,7 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations(
 		(*sdk.Msg)(nil),
 		&MsgToggleIbcSwitch{},
+		&MsgUpdateParams{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)

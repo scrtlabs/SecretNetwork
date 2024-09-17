@@ -87,6 +87,6 @@ func Modules(
 		ica.NewAppModule(app.AppKeepers.ICAControllerKeeper, app.AppKeepers.ICAHostKeeper),
 		packetforward.NewAppModule(app.AppKeepers.PacketForwardKeeper, app.AppKeepers.GetSubspace(packetforwardtypes.ModuleName)),
 		ibcfee.NewAppModule(app.AppKeepers.IbcFeeKeeper),
-		ibcswitch.NewAppModule(app.AppKeepers.IbcSwitchKeeper),
+		ibcswitch.NewAppModule(app.AppKeepers.IbcSwitchKeeper, app.AppKeepers.GetSubspace(ibcswitch.ModuleName)),
 	}
 }

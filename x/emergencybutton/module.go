@@ -15,7 +15,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	ibcswitchclient "github.com/scrtlabs/SecretNetwork/x/emergencybutton/client"
-
+	"github.com/scrtlabs/SecretNetwork/x/emergencybutton/exported"
+	"github.com/scrtlabs/SecretNetwork/x/emergencybutton/keeper"
 	"github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 )
 
@@ -69,12 +70,15 @@ type AppModule struct {
 	AppModuleBasic
 
 	keeper *Keeper
+
+	legacySubspace exported.Subspace
 }
 
-func NewAppModule(keeper *Keeper) AppModule {
+func NewAppModule(keeper *Keeper, ss exported.Subspace) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		keeper:         keeper,
+		legacySubspace: ss,
 	}
 }
 
@@ -88,6 +92,12 @@ func (am AppModule) Name() string {
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), NewMsgServerImpl(*am.keeper))
 	types.RegisterQueryServer(cfg.QueryServer(), grpc.Querier{Q: ibcswitchclient.Querier{K: *am.keeper}})
+
+	m := keeper.NewMigrator(*am.keeper, am.legacySubspace)
+
+	if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
+		panic(fmt.Sprintf("failed to migrate x/%s from version 1 to 2: %v", types.ModuleName, err))
+	}
 }
 
 // InitGenesis performs the txfees module's genesis initialization It returns
@@ -106,7 +116,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 }
 
 // ConsensusVersion implements AppModule/ConsensusVersion.
-func (AppModule) ConsensusVersion() uint64 { return 1 }
+func (AppModule) ConsensusVersion() uint64 { return 2 }
 
 // IsAppModule implements the appmodule.AppModule interface.
 func (AppModule) IsAppModule() {}

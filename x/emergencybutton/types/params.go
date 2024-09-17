@@ -4,20 +4,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 )
-
-var (
-	KeySwitchStatus  = []byte("switchstatus")
-	KeyPauserAddress = []byte("pauseraddress")
-)
-
-// Parameter store keys.
-var _ paramtypes.ParamSet = &Params{}
-
-func ParamKeyTable() paramtypes.KeyTable {
-	return paramtypes.NewKeyTable().RegisterParamSet(&Params{})
-}
 
 func NewParams(switchStatus string, pauserAddress string) Params {
 	return Params{
@@ -34,14 +21,6 @@ func DefaultParams() Params {
 // validate params.
 func (p Params) Validate() error {
 	return validatePauserAddress(p.PauserAddress)
-}
-
-// Implements params.ParamSet.
-func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
-	return paramtypes.ParamSetPairs{
-		paramtypes.NewParamSetPair(KeySwitchStatus, &p.SwitchStatus, validateSwitchStatus),
-		paramtypes.NewParamSetPair(KeyPauserAddress, &p.PauserAddress, validatePauserAddress),
-	}
 }
 
 func validatePauserAddress(i interface{}) error {

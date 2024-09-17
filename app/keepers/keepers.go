@@ -434,7 +434,9 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 
 	ibcSwitchKeeper := ibcswitch.NewKeeper(
 		ak.IbcFeeKeeper,
-		ak.GetSubspace(ibcswitch.ModuleName),
+		appCodec,
+		ak.keys[ibcswitchtypes.StoreKey],
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	ak.IbcSwitchKeeper = &ibcSwitchKeeper
 

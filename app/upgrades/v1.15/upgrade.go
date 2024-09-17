@@ -28,6 +28,7 @@ import (
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcconntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
 
 	"github.com/scrtlabs/SecretNetwork/app/keepers"
 	"github.com/scrtlabs/SecretNetwork/app/upgrades"
@@ -78,6 +79,8 @@ func createUpgradeHandler(mm *module.Manager, appKeepers *keepers.SecretAppKeepe
 				keyTable = slashingtypes.ParamKeyTable() //nolint:staticcheck
 			case govtypes.ModuleName:
 				keyTable = govv1.ParamKeyTable() //nolint:staticcheck
+			case ibcswitchtypes.ModuleName:
+				keyTable = ibcswitchtypes.ParamKeyTable() //nolint:staticcheck
 			case crisistypes.ModuleName:
 				keyTable = crisistypes.ParamKeyTable() //nolint:staticcheck
 			case ibcexported.ModuleName:
