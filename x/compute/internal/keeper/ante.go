@@ -13,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -23,6 +24,8 @@ type CountTXDecorator struct {
 	govkeeper    govkeeper.Keeper // we need the govkeeper to access stored proposals
 	storeService store.KVStoreService
 }
+
+const msgSoftwareUpgradeTypeURL = "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade"
 
 // NewCountTXDecorator constructor
 func NewCountTXDecorator(appcodec codec.Codec, govkeeper govkeeper.Keeper, storeService store.KVStoreService) *CountTXDecorator {
@@ -105,29 +108,27 @@ func extractInfoFromProposalMessages(message *types1.Any, cdc codec.Codec) (stri
 
 // verifyUpgradeProposal verifies the latest passed upgrade proposal to ensure the MREnclave hash matches.
 func (a *CountTXDecorator) verifyUpgradeProposal(ctx sdk.Context, msgUpgrade *types.MsgUpgradeProposalPassed) error {
-	iterator, err := a.govkeeper.Proposals.Iterate(ctx, nil)
+	var proposals govtypes.Proposals
+	err := a.govkeeper.Proposals.Walk(ctx, nil, func(_ uint64, value govtypes.Proposal) (stop bool, err error) {
+		proposals = append(proposals, &value)
+		return false, nil
+	})
 	if err != nil {
-		ctx.Logger().Error("Failed to get the iterator of proposals!", err.Error())
+		ctx.Logger().Error("gov keeper", "proposal", err.Error())
+		return err
 	}
-	defer iterator.Close() // Ensure the iterator is closed after use
 
 	var latestProposal *v1.Proposal = nil
 	var latestMREnclaveHash string
 
 	// Iterate through the proposals
-	for ; iterator.Valid(); iterator.Next() {
-		// Get the proposal value
-		proposal, err := iterator.Value()
-		if err != nil {
-			ctx.Logger().Error("Failed to get the proposal from iterator!", err.Error())
-			return errors.New("Failed to get the proposal from iterator!")
-		}
+	for _, proposal := range proposals {
 		// Check if the proposal has passed and is of type MsgSoftwareUpgrade
 		if proposal.Status == v1.ProposalStatus_PROPOSAL_STATUS_PASSED {
-			if len(proposal.GetMessages()) > 0 && proposal.Messages[0].GetTypeUrl() == "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade" {
+			if len(proposal.GetMessages()) > 0 && proposal.Messages[0].GetTypeUrl() == msgSoftwareUpgradeTypeURL {
 				// Update latestProposal if this proposal is newer (has a higher ID)
 				if latestProposal == nil || proposal.Id > latestProposal.Id {
-					latestProposal = &proposal
+					latestProposal = proposal
 				}
 			}
 		}
