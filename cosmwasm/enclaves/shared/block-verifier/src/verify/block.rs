@@ -12,11 +12,11 @@ lazy_static! {
 }
 
 pub fn verify_block(untrusted_block: &UntrustedBlockState) -> bool {
-    #[cfg(feature = "verify-validator-whitelist")]
-    if !validator_whitelist::whitelisted_validators_in_block(untrusted_block) {
-        debug!("Error verifying validators in block");
-        return false;
-    }
+    // #[cfg(feature = "verify-validator-whitelist")]
+    // if !validator_whitelist::whitelisted_validators_in_block(untrusted_block) {
+        // debug!("Error verifying validators in block");
+        // return false;
+    // }
 
     match VERIFIER.verify_commit(untrusted_block) {
         Verdict::Success => true,
