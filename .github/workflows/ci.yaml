@@ -254,7 +254,7 @@ jobs:
           SGX_MODE=HW make clippy
 
   MacOS-ARM64-CLI:
-    runs-on: macos-13-xlarge
+    runs-on: macos-13-large
     strategy:
       fail-fast: false
     timeout-minutes: 90
@@ -268,10 +268,7 @@ jobs:
       - name: Setup docker (missing on MacOS)
         if: runner.os == 'macos'
         run: |
-          brew reinstall -f --force-bottle qemu
           brew install docker
-          brew install colima
-          brew install --cask calibre
           colima delete -f
           colima start
       - name: Install xgo
