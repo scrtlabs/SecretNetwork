@@ -157,11 +157,15 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
+go.tidy: go.mod
+	@echo "--> Download required modules"
+	go mod tidy
+
 # Build the CLI tool
 build_cli:
 	go build -o secretcli -mod=readonly $(GCFLAGS) -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
-xgo_build_secretcli: go.sum
+xgo_build_secretcli: go.tidy
 	xgo --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
