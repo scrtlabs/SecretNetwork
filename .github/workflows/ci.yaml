@@ -254,7 +254,7 @@ jobs:
           SGX_MODE=HW make clippy
 
   MacOS-ARM64-CLI:
-    runs-on: macos-12-large
+    runs-on: macos-13-large
     steps:
       - uses: actions/checkout@v4
         with:
@@ -266,9 +266,8 @@ jobs:
         if: runner.os == 'macos'
         run: |
           brew install docker
-          brew install colima
           brew install --cask calibre
-          colima start
+          colima start --arch arm64 --verbose
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@latest
