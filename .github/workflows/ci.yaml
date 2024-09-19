@@ -255,6 +255,8 @@ jobs:
 
   MacOS-ARM64-CLI:
     runs-on: macos-13-large
+    strategy:
+      fail-fast: false
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -270,8 +272,8 @@ jobs:
           brew install docker
           brew install colima
           brew install --cask calibre
-          colima delete
-          colima start
+          colima delete -y
+          colima start --arch arm64
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@latest
