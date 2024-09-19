@@ -163,7 +163,7 @@ jobs:
           path: secretcli-${{runner.os}}
 
   MacOS-ARM64-CLI:
-    runs-on: ubuntu-20.04
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -171,7 +171,7 @@ jobs:
           go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Install xgo
         run: |
-          go install github.com/crazy-max/xgo@v0.17.0
+          go install github.com/crazy-max/xgo@latest
           xgo || true # check installation
       - name: Build MacOS CLI
         shell: bash
