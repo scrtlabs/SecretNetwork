@@ -166,7 +166,7 @@ build_cli:
 	go build -o secretcli -mod=readonly $(GCFLAGS) -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 xgo_build_secretcli: go.tidy
-	xgo --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
+	xgo -x -v --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
