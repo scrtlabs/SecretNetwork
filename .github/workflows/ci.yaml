@@ -266,7 +266,8 @@ jobs:
         if: runner.os == 'macos'
         run: |
           brew install docker
-          brew install calima
+          brew install colima
+          brew install --cask calibre
           colima start
       - name: Install xgo
         run: |
