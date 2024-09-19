@@ -255,9 +255,7 @@ jobs:
 
   MacOS-ARM64-CLI:
     runs-on: macos-13-large
-    strategy:
-      fail-fast: false
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
