@@ -272,7 +272,7 @@ jobs:
           brew install docker
           brew install colima
           brew install --cask calibre
-          colima delete -y
+          colima delete -f
           colima start --arch arm64
       - name: Install xgo
         run: |
