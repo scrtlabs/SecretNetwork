@@ -254,10 +254,10 @@ jobs:
           SGX_MODE=HW make clippy
 
   MacOS-ARM64-CLI:
-    runs-on: macos-13-large
+    runs-on: macos-13-xlarge
     strategy:
       fail-fast: false
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -273,7 +273,7 @@ jobs:
           brew install colima
           brew install --cask calibre
           colima delete -f
-          colima start --arch arm64
+          colima start
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@latest
