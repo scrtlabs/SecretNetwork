@@ -159,7 +159,7 @@ go.sum: go.mod
 
 go.tidy: go.mod
 	@echo "--> Download required modules"
-	go mod tidy
+	go mod tidy -e -v
 
 # Build the CLI tool
 build_cli:
