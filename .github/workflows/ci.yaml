@@ -265,23 +265,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: 1.23 # The Go version to download (if necessary) and use.
-      - name: Setup docker (missing on MacOS)
-        if: runner.os == 'macos'
-        run: |
-          brew install docker
-          brew install colima
-          colima delete -f
-          colima start
-      - name: Install xgo
-        run: |
-          go install github.com/crazy-max/xgo@latest
-          xgo || true # check installation
-      - name: Build MacOS CLI
-        run: make build_macos_arm64_cli
+      - name: Build macos darwin/arm64
+        run: make build_cli
       - uses: actions/upload-artifact@v3
         with:
           name: secretcli-macos-arm64
-          path: secretcli-macos-arm64
+          path: secretcli
           
   Build-LocalSecret:
     runs-on: ubuntu-20.04
