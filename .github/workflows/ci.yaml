@@ -265,10 +265,12 @@ jobs:
       - name: Setup docker (missing on MacOS)
         if: runner.os == 'macos'
         run: |
+          brew reinstall -f --force-bottle qemu
           brew install docker
           brew install colima
           brew install --cask calibre
-          colima start --arch arm64 --verbose
+          colima delete
+          colima start
       - name: Install xgo
         run: |
           go install github.com/crazy-max/xgo@latest
