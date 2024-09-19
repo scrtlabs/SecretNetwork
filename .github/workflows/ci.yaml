@@ -269,6 +269,7 @@ jobs:
         if: runner.os == 'macos'
         run: |
           brew install docker
+          brew install colima
           colima delete -f
           colima start
       - name: Install xgo
