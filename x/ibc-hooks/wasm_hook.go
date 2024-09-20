@@ -250,14 +250,7 @@ func (h WasmHooks) SendPacketOverride(i ICS4Middleware, ctx sdk.Context, chanCap
 		return i.channel.SendPacket(ctx, chanCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, data) // continue
 	}
 
-	// Originally, Osmosis removed the callback metadata from the memo as it had already fulfilled its purpose for them. We cannot do this on Secret, as later on the enclave needs to verify the contract address, and the only way to do this is to parse the memo of the original packet (which is signed by the relayer along with the ack/timeout) and compare it to the contract address that was given to the enclave.
-
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return 0, errorsmod.Wrap(err, "Send packet with callback error")
-	}
-
-	seq, err := i.channel.SendPacket(ctx, chanCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, dataBytes)
+	seq, err := i.channel.SendPacket(ctx, chanCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, data)
 	if err != nil {
 		return 0, err
 	}
