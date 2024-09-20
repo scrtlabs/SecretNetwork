@@ -254,16 +254,18 @@ jobs:
           SGX_MODE=HW make clippy
 
   MacOS-ARM64-CLI:
-    runs-on: macos-13-large
+    runs-on: macos-12-large
     strategy:
       fail-fast: false
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
+          name: checkout
           submodules: recursive
       - uses: actions/setup-go@v5
         with:
+          name: set up go
           go-version: 1.23 # The Go version to download (if necessary) and use.
       - name: Build macos darwin/arm64
         run: make build_cli
