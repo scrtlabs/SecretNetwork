@@ -31,6 +31,11 @@ pub fn validate_block_header(
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     })?;
 
+    println!(
+        "proposed block height={}",
+        signed_header.header.height.value()
+    );
+
     // validate that we have the validator set for the current height
     if signed_header.header.height.value() != height {
         error!("Validator set height does not match stored validator set");
