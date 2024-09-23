@@ -27,4 +27,4 @@ derive_more = "0.99"
 bech32 = "0.7.2"
 base64 = { rev = "dc7389e10817b078f289386b3b6a852ab6c4c021", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
 thiserror = "1.0"
-uint = "=0.9.1"
+uint = "=0.9.5"
