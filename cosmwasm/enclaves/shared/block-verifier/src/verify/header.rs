@@ -15,6 +15,12 @@ pub fn validate_block_header(
     height: u64,
     commit: Commit,
 ) -> Result<SignedHeader, sgx_status_t> {
+    println!(
+        "my validator set h={}, validators={}",
+        height,
+        validator_set.validators().len()
+    );
+    
     let header = <Header as Protobuf<RawHeader>>::decode(block_header_slice).map_err(|e| {
         error!("Error parsing header from proto: {:?}", e);
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
