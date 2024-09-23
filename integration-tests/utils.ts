@@ -14,19 +14,18 @@ import { State as ConnectionState } from "secretjs/dist/grpc_gateway/ibc/core/co
 export function getValueFromEvents(
   events: any[] | undefined,
   key: string,
-  counter = 1,
+  counter = 1
 ): string {
   if (!events) {
     return "";
   }
 
- let cnt = 0;
+  let cnt = 0;
   for (const e of events) {
     for (const a of e.attributes) {
       if (`${e.type}.${a.key}` === key) {
-        ++cnt;    
-        if (cnt === counter)
-            return String(a.value);
+        ++cnt;
+        if (cnt === counter) return String(a.value);
       }
     }
   }

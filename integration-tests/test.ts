@@ -166,7 +166,9 @@ beforeAll(async () => {
 
   if (t.code !== 0) {
     console.error(`failed to multisend coins`);
-    throw new Error(`Failed to multisend coins to initial accounts: ${t.code}: ${t.rawLog}`);
+    throw new Error(
+      `Failed to multisend coins to initial accounts: ${t.code}: ${t.rawLog}`
+    );
   }
 
   readonly = new SecretNetworkClient({
@@ -196,8 +198,12 @@ beforeAll(async () => {
     v010Wasm,
   ]);
 
-  contracts["secretdev-1"].v1.codeId = Number(getValueFromEvents(tx.events, "message.code_id", 1));
-  contracts["secretdev-1"].v010.codeId = Number(getValueFromEvents(tx.events, "message.code_id", 2));
+  contracts["secretdev-1"].v1.codeId = Number(
+    getValueFromEvents(tx.events, "message.code_id", 1)
+  );
+  contracts["secretdev-1"].v010.codeId = Number(
+    getValueFromEvents(tx.events, "message.code_id", 2)
+  );
 
   console.log("Instantiating contracts on secretdev-1...");
   tx = await instantiateContracts(accounts[0].secretjs, [
@@ -205,11 +211,18 @@ beforeAll(async () => {
     contracts["secretdev-1"].v010,
   ]);
 
-  contracts["secretdev-1"].v1.address = getValueFromEvents(tx.events, "message.contract_address");
+  contracts["secretdev-1"].v1.address = getValueFromEvents(
+    tx.events,
+    "message.contract_address"
+  );
   contracts["secretdev-1"].v1.ibcPortId =
     "wasm." + contracts["secretdev-1"].v1.address;
 
-  contracts["secretdev-1"].v010.address = getValueFromEvents(tx.events, "message.contract_address", 2);
+  contracts["secretdev-1"].v010.address = getValueFromEvents(
+    tx.events,
+    "message.contract_address",
+    2
+  );
 
   // create a second validator for MsgRedelegate tests
   const { validators } = await readonly.query.staking.validators({});
@@ -270,15 +283,31 @@ describe("BankMsg", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-      expect(getValueFromEvents(tx.events, "coin_spent.spender", 2)).toStrictEqual(accounts[0].address);
-      expect(getValueFromEvents(tx.events, "coin_spent.amount", 2)).toStrictEqual("1uscrt");
-      expect(getValueFromEvents(tx.events, "coin_spent.spender", 3)).toStrictEqual(contracts["secretdev-1"].v1.address);
-      expect(getValueFromEvents(tx.events, "coin_spent.amount", 3)).toStrictEqual("1uscrt");
+      expect(
+        getValueFromEvents(tx.events, "coin_spent.spender", 2)
+      ).toStrictEqual(accounts[0].address);
+      expect(
+        getValueFromEvents(tx.events, "coin_spent.amount", 2)
+      ).toStrictEqual("1uscrt");
+      expect(
+        getValueFromEvents(tx.events, "coin_spent.spender", 3)
+      ).toStrictEqual(contracts["secretdev-1"].v1.address);
+      expect(
+        getValueFromEvents(tx.events, "coin_spent.amount", 3)
+      ).toStrictEqual("1uscrt");
 
-      expect(getValueFromEvents(tx.events, "coin_received.receiver", 2)).toStrictEqual(contracts["secretdev-1"].v1.address);
-      expect(getValueFromEvents(tx.events, "coin_received.amount", 2)).toStrictEqual("1uscrt");
-      expect(getValueFromEvents(tx.events, "coin_received.receiver", 3)).toStrictEqual(accounts[1].address);
-      expect(getValueFromEvents(tx.events, "coin_received.amount", 3)).toStrictEqual("1uscrt");
+      expect(
+        getValueFromEvents(tx.events, "coin_received.receiver", 2)
+      ).toStrictEqual(contracts["secretdev-1"].v1.address);
+      expect(
+        getValueFromEvents(tx.events, "coin_received.amount", 2)
+      ).toStrictEqual("1uscrt");
+      expect(
+        getValueFromEvents(tx.events, "coin_received.receiver", 3)
+      ).toStrictEqual(accounts[1].address);
+      expect(
+        getValueFromEvents(tx.events, "coin_received.amount", 3)
+      ).toStrictEqual("1uscrt");
     });
 
     describe("v0.10", () => {
@@ -302,15 +331,31 @@ describe("BankMsg", () => {
           console.error(tx.rawLog);
         }
         expect(tx.code).toBe(TxResultCode.Success);
-      expect(getValueFromEvents(tx.events, "coin_spent.spender", 2)).toStrictEqual(accounts[0].address);
-      expect(getValueFromEvents(tx.events, "coin_spent.amount", 2)).toStrictEqual("1uscrt");
-      expect(getValueFromEvents(tx.events, "coin_spent.spender", 3)).toStrictEqual(contracts["secretdev-1"].v010.address);
-      expect(getValueFromEvents(tx.events, "coin_spent.amount", 3)).toStrictEqual("1uscrt");
+        expect(
+          getValueFromEvents(tx.events, "coin_spent.spender", 2)
+        ).toStrictEqual(accounts[0].address);
+        expect(
+          getValueFromEvents(tx.events, "coin_spent.amount", 2)
+        ).toStrictEqual("1uscrt");
+        expect(
+          getValueFromEvents(tx.events, "coin_spent.spender", 3)
+        ).toStrictEqual(contracts["secretdev-1"].v010.address);
+        expect(
+          getValueFromEvents(tx.events, "coin_spent.amount", 3)
+        ).toStrictEqual("1uscrt");
 
-      expect(getValueFromEvents(tx.events, "coin_received.receiver", 2)).toStrictEqual(contracts["secretdev-1"].v010.address);
-      expect(getValueFromEvents(tx.events, "coin_received.amount", 2)).toStrictEqual("1uscrt");
-      expect(getValueFromEvents(tx.events, "coin_received.receiver", 3)).toStrictEqual(accounts[1].address);
-      expect(getValueFromEvents(tx.events, "coin_received.amount", 3)).toStrictEqual("1uscrt");
+        expect(
+          getValueFromEvents(tx.events, "coin_received.receiver", 2)
+        ).toStrictEqual(contracts["secretdev-1"].v010.address);
+        expect(
+          getValueFromEvents(tx.events, "coin_received.amount", 2)
+        ).toStrictEqual("1uscrt");
+        expect(
+          getValueFromEvents(tx.events, "coin_received.receiver", 3)
+        ).toStrictEqual(accounts[1].address);
+        expect(
+          getValueFromEvents(tx.events, "coin_received.amount", 3)
+        ).toStrictEqual("1uscrt");
       });
 
       test("error", async () => {
@@ -400,8 +445,14 @@ describe("Env", () => {
 
             expect(txs[i].code).toBe(TxResultCode.Success);
 
-            count_vals[i] = getValueFromEvents(txs[i].events, "wasm-count.count-val");
-            expect(getValueFromEvents(txs[i].events, "wasm-count.count-val", 2).length).toBe(0);
+            count_vals[i] = getValueFromEvents(
+              txs[i].events,
+              "wasm-count.count-val"
+            );
+            expect(
+              getValueFromEvents(txs[i].events, "wasm-count.count-val", 2)
+                .length
+            ).toBe(0);
           }
           if (Number(count_vals[0]) > Number(count_vals[1])) {
             [count_vals[0], count_vals[1]] = [count_vals[1], count_vals[0]];
@@ -503,21 +554,16 @@ describe("GovMsgVote", () => {
   let proposalId: number;
 
   beforeAll(async () => {
-
     let tx = await accounts[0].secretjs.tx.gov.submitProposal(
       {
-        type: ProposalType.Proposal,
         proposer: accounts[0].address,
-        // on localsecret min deposit is 10 SCRT
-        initial_deposit: stringToCoins("10000000uscrt"),
-        content: {
-          title: "Hi",
-          description: "Hello",
-        },
+        // on localsecret min deposit is 1000 SCRT
+        initial_deposit: stringToCoins("1000000000uscrt"),
         messages: [],
         metadata: "some_metadatas",
         summary: "summary",
-        title: "title"
+        title: "title",
+        expedited: false,
       },
       {
         broadcastCheckIntervalMs: 100,
@@ -558,11 +604,9 @@ describe("GovMsgVote", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-            console.log(JSON.stringify(tx, null, 2));
+      console.log(JSON.stringify(tx, null, 2));
 
-      const { attributes } = tx.events.find(
-        (x) => x.type === "proposal_vote"
-      );
+      const { attributes } = tx.events.find((x) => x.type === "proposal_vote");
       const proposal_id = attributes.find((x) => x.key === "proposal_id");
       expect(proposal_id).toStrictEqual({
         key: "proposal_id",
@@ -619,9 +663,7 @@ describe("GovMsgVote", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-      const { attributes } = tx.events.find(
-        (x) => x.type === "proposal_vote"
-      );
+      const { attributes } = tx.events.find((x) => x.type === "proposal_vote");
       const proposal_id = attributes.find((x) => x.key === "proposal_id");
       expect(proposal_id).toStrictEqual({
         key: "proposal_id",
@@ -685,8 +727,12 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(contracts["secretdev-1"].v1.address);
-        expect(getValueFromEvents(tx.events, "wasm.contract_address", 2).length).toBeGreaterThan(0);
+        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(
+          contracts["secretdev-1"].v1.address
+        );
+        expect(
+          getValueFromEvents(tx.events, "wasm.contract_address", 2).length
+        ).toBeGreaterThan(0);
       });
 
       test("error", async () => {
@@ -742,8 +788,12 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(contracts["secretdev-1"].v010.address);
-        expect(getValueFromEvents(tx.events, "wasm.contract_address", 2).length).toBeGreaterThan(0);
+        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(
+          contracts["secretdev-1"].v010.address
+        );
+        expect(
+          getValueFromEvents(tx.events, "wasm.contract_address", 2).length
+        ).toBeGreaterThan(0);
       });
 
       test("error", async () => {
@@ -800,9 +850,15 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(contracts["secretdev-1"].v1.address);
-        expect(getValueFromEvents(tx.events, "wasm.contract_address", 2)).toBe(contracts["secretdev-1"].v1.address);
-        expect(getValueFromEvents(tx.events, "wasm.contract_address", 3).length).toBe(0);
+        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(
+          contracts["secretdev-1"].v1.address
+        );
+        expect(getValueFromEvents(tx.events, "wasm.contract_address", 2)).toBe(
+          contracts["secretdev-1"].v1.address
+        );
+        expect(
+          getValueFromEvents(tx.events, "wasm.contract_address", 3).length
+        ).toBe(0);
       });
 
       test("error", async () => {
@@ -856,9 +912,15 @@ describe("Wasm", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(contracts["secretdev-1"].v010.address);
-        expect(getValueFromEvents(tx.events, "wasm.contract_address", 2)).toBe(contracts["secretdev-1"].v010.address);
-        expect(getValueFromEvents(tx.events, "wasm.contract_address", 3).length).toBe(0);
+        expect(getValueFromEvents(tx.events, "wasm.contract_address")).toBe(
+          contracts["secretdev-1"].v010.address
+        );
+        expect(getValueFromEvents(tx.events, "wasm.contract_address", 2)).toBe(
+          contracts["secretdev-1"].v010.address
+        );
+        expect(
+          getValueFromEvents(tx.events, "wasm.contract_address", 3).length
+        ).toBe(0);
       });
 
       test("error", async () => {
@@ -901,7 +963,9 @@ describe("StakingMsg", () => {
         expect(delegationStatus).toBeTruthy();
 
         expect(getValueFromEvents(tx.events, "delegate.amount")).toBe("1uscrt");
-        expect(getValueFromEvents(tx.events, "delegate.validator")).toBe(validator);
+        expect(getValueFromEvents(tx.events, "delegate.validator")).toBe(
+          validator
+        );
       });
 
       test("error", async () => {
@@ -939,7 +1003,9 @@ describe("StakingMsg", () => {
         );
         expect(delegationStatus).toBeTruthy();
         expect(getValueFromEvents(tx.events, "delegate.amount")).toBe("1uscrt");
-        expect(getValueFromEvents(tx.events, "delegate.validator")).toBe(validator);
+        expect(getValueFromEvents(tx.events, "delegate.validator")).toBe(
+          validator
+        );
       });
 
       test("error", async () => {
@@ -1009,8 +1075,8 @@ describe("StakingMsg", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-        expect(getValueFromEvents(tx.events, "unbond.amount")).toBe("1uscrt");
-        expect(getValueFromEvents(tx.events, "unbond.validator")).toBe(validator);
+      expect(getValueFromEvents(tx.events, "unbond.amount")).toBe("1uscrt");
+      expect(getValueFromEvents(tx.events, "unbond.validator")).toBe(validator);
     });
 
     test("error", async () => {
@@ -1077,7 +1143,9 @@ describe("StakingMsg", () => {
         expect(tx.code).toBe(TxResultCode.Success);
 
         expect(getValueFromEvents(tx.events, "unbond.amount")).toBe("1uscrt");
-        expect(getValueFromEvents(tx.events, "unbond.validator")).toBe(validator);
+        expect(getValueFromEvents(tx.events, "unbond.validator")).toBe(
+          validator
+        );
       });
 
       test("error", async () => {
@@ -1150,9 +1218,15 @@ describe("StakingMsg", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        expect(getValueFromEvents(tx.events, "redelegate.amount")).toBe("1uscrt");
-        expect(getValueFromEvents(tx.events, "redelegate.source_validator")).toBe(validatorA);
-        expect(getValueFromEvents(tx.events, "redelegate.destination_validator")).toBe(validatorB);
+        expect(getValueFromEvents(tx.events, "redelegate.amount")).toBe(
+          "1uscrt"
+        );
+        expect(
+          getValueFromEvents(tx.events, "redelegate.source_validator")
+        ).toBe(validatorA);
+        expect(
+          getValueFromEvents(tx.events, "redelegate.destination_validator")
+        ).toBe(validatorB);
       });
 
       test("error", async () => {
@@ -1224,9 +1298,15 @@ describe("StakingMsg", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        expect(getValueFromEvents(tx.events, "redelegate.amount")).toBe("1uscrt");
-        expect(getValueFromEvents(tx.events, "redelegate.source_validator")).toBe(validatorA);
-        expect(getValueFromEvents(tx.events, "redelegate.destination_validator")).toBe(validatorB);
+        expect(getValueFromEvents(tx.events, "redelegate.amount")).toBe(
+          "1uscrt"
+        );
+        expect(
+          getValueFromEvents(tx.events, "redelegate.source_validator")
+        ).toBe(validatorA);
+        expect(
+          getValueFromEvents(tx.events, "redelegate.destination_validator")
+        ).toBe(validatorB);
       });
 
       test("error", async () => {
@@ -1297,7 +1377,9 @@ describe("StakingMsg", () => {
         }
         expect(tx.code).toBe(TxResultCode.Success);
 
-        expect(getValueFromEvents(tx.events, "withdraw_rewards.validator")).toBe(validator);
+        expect(
+          getValueFromEvents(tx.events, "withdraw_rewards.validator")
+        ).toBe(validator);
       });
 
       test("set_withdraw_address", async () => {
@@ -1336,7 +1418,9 @@ describe("StakingMsg", () => {
           console.error(tx.rawLog);
         }
         expect(tx.code).toBe(TxResultCode.Success);
-        expect(getValueFromEvents(tx.events, "set_withdraw_address.withdraw_address")).toBe(accounts[1].address);
+        expect(
+          getValueFromEvents(tx.events, "set_withdraw_address.withdraw_address")
+        ).toBe(accounts[1].address);
       });
 
       test("error", async () => {
@@ -1401,7 +1485,9 @@ describe("StakingMsg", () => {
           console.error(tx.rawLog);
         }
         expect(tx.code).toBe(TxResultCode.Success);
-        expect(getValueFromEvents(tx.events, "withdraw_rewards.validator")).toBe(validator);
+        expect(
+          getValueFromEvents(tx.events, "withdraw_rewards.validator")
+        ).toBe(validator);
       });
 
       test("error", async () => {
@@ -1461,15 +1547,31 @@ describe("StargateMsg", () => {
     }
     expect(tx.code).toBe(TxResultCode.Success);
 
-  expect(getValueFromEvents(tx.events, "coin_spent.spender", 2)).toStrictEqual(accounts[0].address);
-  expect(getValueFromEvents(tx.events, "coin_spent.amount", 2)).toStrictEqual("1uscrt");
-  expect(getValueFromEvents(tx.events, "coin_spent.spender", 3)).toStrictEqual(contracts["secretdev-1"].v1.address);
-  expect(getValueFromEvents(tx.events, "coin_spent.amount", 3)).toStrictEqual("1uscrt");
+    expect(
+      getValueFromEvents(tx.events, "coin_spent.spender", 2)
+    ).toStrictEqual(accounts[0].address);
+    expect(getValueFromEvents(tx.events, "coin_spent.amount", 2)).toStrictEqual(
+      "1uscrt"
+    );
+    expect(
+      getValueFromEvents(tx.events, "coin_spent.spender", 3)
+    ).toStrictEqual(contracts["secretdev-1"].v1.address);
+    expect(getValueFromEvents(tx.events, "coin_spent.amount", 3)).toStrictEqual(
+      "1uscrt"
+    );
 
-  expect(getValueFromEvents(tx.events, "coin_received.receiver", 2)).toStrictEqual(contracts["secretdev-1"].v1.address);
-  expect(getValueFromEvents(tx.events, "coin_received.amount", 2)).toStrictEqual("1uscrt");
-  expect(getValueFromEvents(tx.events, "coin_received.receiver", 3)).toStrictEqual(accounts[1].address);
-  expect(getValueFromEvents(tx.events, "coin_received.amount", 3)).toStrictEqual("1uscrt");
+    expect(
+      getValueFromEvents(tx.events, "coin_received.receiver", 2)
+    ).toStrictEqual(contracts["secretdev-1"].v1.address);
+    expect(
+      getValueFromEvents(tx.events, "coin_received.amount", 2)
+    ).toStrictEqual("1uscrt");
+    expect(
+      getValueFromEvents(tx.events, "coin_received.receiver", 3)
+    ).toStrictEqual(accounts[1].address);
+    expect(
+      getValueFromEvents(tx.events, "coin_received.amount", 3)
+    ).toStrictEqual("1uscrt");
   });
 });
 
@@ -1786,7 +1888,7 @@ describe("WasmQuery", () => {
   });
 });
 
-describe.skip("IBC", () => {
+describe("IBC", () => {
   beforeAll(async () => {
     console.log("Storing contracts on secretdev-2...");
 
@@ -1799,8 +1901,12 @@ describe.skip("IBC", () => {
     }
     expect(tx.code).toBe(TxResultCode.Success);
 
-  contracts["secretdev-2"].v1.codeId = Number(getValueFromEvents(tx.events, "message.code_id", 1));
-  contracts["secretdev-2"].v010.codeId = Number(getValueFromEvents(tx.events, "message.code_id", 2));
+    contracts["secretdev-2"].v1.codeId = Number(
+      getValueFromEvents(tx.events, "message.code_id", 1)
+    );
+    contracts["secretdev-2"].v010.codeId = Number(
+      getValueFromEvents(tx.events, "message.code_id", 2)
+    );
     contracts["secretdev-2"].v1.codeHash = contracts["secretdev-1"].v1.codeHash;
     contracts["secretdev-2"].v010.codeHash =
       contracts["secretdev-1"].v010.codeHash;
@@ -1816,11 +1922,18 @@ describe.skip("IBC", () => {
     }
     expect(tx.code).toBe(TxResultCode.Success);
 
-  contracts["secretdev-2"].v1.address = getValueFromEvents(tx.events, "message.contract_address");
+    contracts["secretdev-2"].v1.address = getValueFromEvents(
+      tx.events,
+      "message.contract_address"
+    );
     contracts["secretdev-2"].v1.ibcPortId =
       "wasm." + contracts["secretdev-2"].v1.address;
 
-  contracts["secretdev-2"].v010.address = getValueFromEvents(tx.events, "message.contract_address", 2);
+    contracts["secretdev-2"].v010.address = getValueFromEvents(
+      tx.events,
+      "message.contract_address",
+      2
+    );
 
     console.log("Waiting for IBC to set up...");
     await waitForIBCConnection("secretdev-1", "http://localhost:1317");
@@ -1861,6 +1974,7 @@ describe.skip("IBC", () => {
       source_port: "transfer",
       token: stringToCoin("1uscrt"),
       timeout_timestamp: String(Math.floor(Date.now() / 1000 + 30)),
+      memo: "hi",
     });
     if (result.code !== TxResultCode.Success) {
       console.error(result.rawLog);
