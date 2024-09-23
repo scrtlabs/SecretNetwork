@@ -185,7 +185,7 @@ export async function storeContracts(
         builder: "",
       }),
     ],
-    { gasLimit: 5_000_000 }
+    { gasLimit: 10_000_000 }
   );
 
   if (tx.code !== TxResultCode.Success) {
