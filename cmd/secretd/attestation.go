@@ -549,15 +549,15 @@ Please report any issues with this command
 				errDetails := ErrorResponse{}
 				err := json.Unmarshal(body, &errDetails)
 				if err != nil {
-					return fmt.Errorf(fmt.Sprintf("Registration TX was not successful - %s", err))
+					return fmt.Errorf("registration TX was not successful - %s", err)
 				}
-				return fmt.Errorf(fmt.Sprintf("Registration TX was not successful - %s", errDetails.Details))
+				return fmt.Errorf("registration TX was not successful - %s", errDetails.Details)
 			}
 
 			details := OkayResponse{}
 			err = json.Unmarshal(body, &details)
 			if err != nil {
-				return fmt.Errorf(fmt.Sprintf("Error getting seed from registration service - %s", err))
+				return fmt.Errorf("error getting seed from registration service - %s", err)
 			}
 
 			seed := details.Details.Value

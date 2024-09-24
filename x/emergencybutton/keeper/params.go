@@ -27,7 +27,7 @@ func (i *Keeper) GetSwitchStatus(ctx sdk.Context) (status string) {
 func (i *Keeper) SetSwitchStatus(ctx sdk.Context, value string) {
 	params := i.GetParams(ctx)
 	params.SwitchStatus = value
-	i.SetParams(ctx, params)
+	i.SetParams(ctx, params) //nolint:errcheck
 }
 
 // SetParams sets the x/emergencybutton module parameters.

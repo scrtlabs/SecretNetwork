@@ -25,7 +25,7 @@ import (
 	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" //nolint:staticcheck
 	ibcconntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibcswitchtypes "github.com/scrtlabs/SecretNetwork/x/emergencybutton/types"
@@ -80,18 +80,18 @@ func createUpgradeHandler(mm *module.Manager, appKeepers *keepers.SecretAppKeepe
 			case govtypes.ModuleName:
 				keyTable = govv1.ParamKeyTable() //nolint:staticcheck
 			case ibcswitchtypes.ModuleName:
-				keyTable = ibcswitchtypes.ParamKeyTable() //nolint:staticcheck
+				keyTable = ibcswitchtypes.ParamKeyTable()
 			case crisistypes.ModuleName:
 				keyTable = crisistypes.ParamKeyTable() //nolint:staticcheck
 			case ibcexported.ModuleName:
-				keyTable = ibcclienttypes.ParamKeyTable() //nolint:staticcheck
+				keyTable = ibcclienttypes.ParamKeyTable()
 				keyTable.RegisterParamSet(&ibcconntypes.Params{})
 			case ibctransfertypes.ModuleName:
-				keyTable = ibctransfertypes.ParamKeyTable() //nolint:staticcheck
+				keyTable = ibctransfertypes.ParamKeyTable()
 			case icacontrollertypes.SubModuleName:
-				keyTable = icacontrollertypes.ParamKeyTable() //nolint:staticcheck
+				keyTable = icacontrollertypes.ParamKeyTable()
 			case icahosttypes.SubModuleName:
-				keyTable = icahosttypes.ParamKeyTable() //nolint:staticcheck
+				keyTable = icahosttypes.ParamKeyTable()
 			default:
 				continue
 			}

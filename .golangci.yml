@@ -46,3 +46,6 @@ issues:
     - text: "// nolint` should be written without leading space as `//nolint"
       linters:
         - nolintlint
+    - text: "G115:"
+      linters:
+        - gosec

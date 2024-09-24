@@ -17,7 +17,7 @@ import (
 	portkeeper "github.com/cosmos/ibc-go/v8/modules/core/05-port/keeper"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
-	"golang.org/x/crypto/ripemd160" //nolint:staticcheck
+	"golang.org/x/crypto/ripemd160" //nolint
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 
@@ -1173,8 +1173,8 @@ func contractAddress(codeID, instanceID uint64, creator sdk.AccAddress) sdk.AccA
 	hashSourceBytes = append(hashSourceBytes, creator...)
 
 	sha := sha256.Sum256(hashSourceBytes)
-	hasherRIPEMD160 := ripemd160.New()
-	hasherRIPEMD160.Write(sha[:]) // does not error
+	hasherRIPEMD160 := ripemd160.New() //nolint
+	hasherRIPEMD160.Write(sha[:])      // does not error
 	return sdk.AccAddress(hasherRIPEMD160.Sum(nil))
 }
 

@@ -12,9 +12,7 @@ const (
 	ModuleName = "emergencybutton"
 )
 
-var (
-	ParamsKey = []byte{0x01}
-)
+var ParamsKey = []byte{0x01}
 
 // Migrate migrates the x/emergencybutton module state from the consensus version 1 to
 // version 2. Specifically, it takes the parameters that are currently stored
