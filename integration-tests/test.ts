@@ -604,8 +604,6 @@ describe("GovMsgVote", () => {
       }
       expect(tx.code).toBe(TxResultCode.Success);
 
-      console.log(JSON.stringify(tx, null, 2));
-
       const { attributes } = tx.events.find((x) => x.type === "proposal_vote");
       const proposal_id = attributes.find((x) => x.key === "proposal_id");
       expect(proposal_id).toStrictEqual({
