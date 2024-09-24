@@ -38,9 +38,9 @@ pub fn validate_block_header(
 
     // validate that we have the validator set for the current height
     if signed_header.header.height.value() != height {
-        error!("Validator set height does not match stored validator set");
+        error!("Validator set height does not match stored validator set. Ignoring");
         // we use this error code to signal that the validator set is not synced with the current block
-        return Err(sgx_status_t::SGX_ERROR_FILE_RECOVERY_NEEDED);
+        //return Err(sgx_status_t::SGX_ERROR_FILE_RECOVERY_NEEDED);
     }
 
     let untrusted_block = UntrustedBlockState {
