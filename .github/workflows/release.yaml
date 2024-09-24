@@ -163,25 +163,25 @@ jobs:
           path: secretcli-${{runner.os}}
 
   MacOS-ARM64-CLI:
-    runs-on: macos-latest
+    runs-on: macos-12-large
+    strategy:
+      fail-fast: false
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          name: checkout
+          submodules: recursive
       - uses: actions/setup-go@v5
         with:
+          name: set up go
           go-version: 1.23 # The Go version to download (if necessary) and use.
-      - name: Install xgo
-        run: |
-          go install github.com/crazy-max/xgo@latest
-          xgo || true # check installation
-      - name: Build MacOS CLI
-        shell: bash
-        run: |
-          make build_macos_arm64_cli
-          cp "secretcli-macos-arm64" "secretcli-MacOS-arm64"
+      - name: Build macos darwin/arm64
+        run: make build_cli
       - uses: actions/upload-artifact@v3
         with:
-          name: secretcli-MacOS-arm64
-          path: secretcli-MacOS-arm64
+          name: secretcli-macos-arm64
+          path: secretcli
 
   check-hw-tool:
     runs-on: ubuntu-20.04
