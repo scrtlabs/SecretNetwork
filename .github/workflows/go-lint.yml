@@ -23,7 +23,7 @@ jobs:
           go install github.com/jteeuwen/go-bindata/go-bindata@latest
           make bin-data-sw
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6.0.1
+        uses: golangci/golangci-lint-action@v3
         with:
           version: v1.61
           skip-cache: true
