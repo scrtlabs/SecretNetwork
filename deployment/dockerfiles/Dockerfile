@@ -127,6 +127,7 @@ COPY Makefile .
 RUN true
 COPY client client
 COPY cosmos-sdk-store cosmos-sdk-store
+COPY iavl iavl
 
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblz4.so /usr/local/lib/liblz4.so  && ln -s /usr/lib/x86_64-linux-gnu/libzstd.so /usr/local/lib/libzstd.so
 

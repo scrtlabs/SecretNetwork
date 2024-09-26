@@ -521,6 +521,7 @@ func (rs *Store) WorkingHash() []byte {
 		if store.GetStoreType() != types.StoreTypeIAVL {
 			continue
 		}
+		fmt.Printf(">>>>>>> STORE OF %s <<<<<<<\n", key.Name())
 
 		if !rs.removalMap[key] {
 			si := types.StoreInfo{
@@ -531,6 +532,7 @@ func (rs *Store) WorkingHash() []byte {
 			}
 			storeInfos = append(storeInfos, si)
 		}
+		fmt.Printf("<<<<<<< END OF STORE OF %s >>>>>>>\n", key.Name())
 	}
 
 	sort.SliceStable(storeInfos, func(i, j int) bool {
