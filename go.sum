@@ -958,8 +958,6 @@ github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240917201403-3c75382e4a9d h1:IW
 github.com/scrtlabs/cosmos-sdk v0.46.0-beta2.0.20240917201403-3c75382e4a9d/go.mod h1:9oxg/QW7VVnOzIip9DRJNAmSnzjSFwX3b350xv94D1I=
 github.com/scrtlabs/cosmos-sdk-api v0.7.5-secret.1 h1:4GLC5nv9pkCEUD4HpSpsnuDMYPT5Bly+IKPi/7H/ylk=
 github.com/scrtlabs/cosmos-sdk-api v0.7.5-secret.1/go.mod h1:IcxpYS5fMemZGqyYtErK7OqvdM0C8kdW3dq8Q/XIG38=
-github.com/scrtlabs/cosmos-sdk-store v1.1.0-secret.1 h1:ZpCTh28SXGD2V6rjkU8Qz4Dol/tMQOYUvAMoN2d5Jic=
-github.com/scrtlabs/cosmos-sdk-store v1.1.0-secret.1/go.mod h1:oZfW/4Fc/zYqu3JmQcQdUJ3fqu5vnYTn3LZFFy8P8ng=
 github.com/scrtlabs/iavl v1.1.2-secret.1 h1:JX5h2U5Q/GxfVhUAm3rDgbaY2Rko7meCbVT2aJDigxw=
 github.com/scrtlabs/iavl v1.1.2-secret.1/go.mod h1:jLeUvm6bGT1YutCaL2fIar/8vGUE8cPZvh/gXEWDaDM=
 github.com/scrtlabs/tendermint v0.38.10-0.20240924173150-b47eda4ca72b h1:vBdj5WibgXocSZLOST1NAr7V+c20ZHURJbdjuj47q/s=
