@@ -22,7 +22,7 @@ func main() {
 		panic(err)
 	}
 
-	wasmer, err := wasm.NewWasmer("tmp", "staking,stargate,ibc3", 0, 15)
+	wasmer, err := wasm.NewWasmer("tmp", "staking,stargate,ibc3", 0, 15, true)
 	if err != nil {
 		panic(err)
 	}

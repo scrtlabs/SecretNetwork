@@ -245,6 +245,9 @@ type WasmConfig struct {
 	SmartQueryGasLimit uint64
 	CacheSize          uint64
 	EnclaveCacheSize   uint16
+	// It must always be true except the case when we create temporary app to
+	// extract autoCLIOpts from it
+	InitEnclave bool
 }
 
 // DefaultWasmConfig returns the default settings for WasmConfig
@@ -253,6 +256,7 @@ func DefaultWasmConfig() *WasmConfig {
 		SmartQueryGasLimit: defaultQueryGasLimit,
 		CacheSize:          defaultLRUCacheSize,
 		EnclaveCacheSize:   defaultEnclaveLRUCacheSize,
+		InitEnclave:        true,
 	}
 }
 

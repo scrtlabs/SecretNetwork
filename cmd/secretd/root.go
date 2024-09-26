@@ -109,7 +109,9 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 		return dir
 	}
 
-	tempApp := app.NewSecretNetworkApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), compute.DefaultWasmConfig())
+	wasmConfig := compute.DefaultWasmConfig()
+	wasmConfig.InitEnclave = false
+	tempApp := app.NewSecretNetworkApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, true, simtestutil.NewAppOptionsWithFlagHome(tempDir()), wasmConfig)
 
 	encodingConfig := app.EncodingConfig{
 		InterfaceRegistry: tempApp.GetInterfaceRegistry(),

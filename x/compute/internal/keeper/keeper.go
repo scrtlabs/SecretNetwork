@@ -126,7 +126,7 @@ func NewKeeper(
 	customPlugins *QueryPlugins,
 	lastMsgManager *baseapp.LastMsgMarkerContainer,
 ) Keeper {
-	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize)
+	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize, wasmConfig.InitEnclave)
 	if err != nil {
 		panic(err)
 	}
