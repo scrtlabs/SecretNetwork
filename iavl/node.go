@@ -136,7 +136,10 @@ func MakeNode(nk, buf []byte) (*Node, error) {
 		// ensure take the hash for the leaf node
 		node._hash(node.nodeKey.version)
 	} else { // Read children.
+		fmt.Printf("MAKENODE BUF: %+v\n, ", buf)
+		fmt.Printf("MAKENODE HASH WAS: %+v, ", node.hash)
 		node.hash, n, err = encoding.DecodeBytes(buf)
+		fmt.Printf("BECOME: %+v\n", node.hash)
 		if err != nil {
 			return nil, fmt.Errorf("decoding node.hash, %w", err)
 		}
@@ -426,6 +429,7 @@ func (node *Node) getByIndex(t *ImmutableTree, index int64) (key []byte, value [
 // called on nodes which have descendant node hashes already computed.
 func (node *Node) _hash(version int64) []byte {
 	if node.hash != nil {
+		fmt.Printf("_HASH IS NOT NIL: %+v\n", node.hash)
 		return node.hash
 	}
 
@@ -434,6 +438,7 @@ func (node *Node) _hash(version int64) []byte {
 		return nil
 	}
 	node.hash = h.Sum(nil)
+	fmt.Printf("FINAL _HASH IS: %+v\n", node.hash)
 
 	return node.hash
 }
