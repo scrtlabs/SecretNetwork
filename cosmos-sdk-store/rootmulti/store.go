@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"sync"
@@ -245,7 +246,9 @@ func (rs *Store) loadVersion(ver int64, upgrades *types.StoreUpgrades) error {
 		rs.logger.Debug("loadVersion commitID", "key", key, "ver", ver, "hash", fmt.Sprintf("%x", commitID.Hash))
 
 		// If it has been added, set the initial version
+		fmt.Printf("STORE OF %s WAS ADDED\n", key.Name())
 		if upgrades.IsAdded(key.Name()) || upgrades.RenamedFrom(key.Name()) != "" {
+			fmt.Printf("STORE: %s INITITAL VERSION: %d\n", key.Name(), int64(ver)+1)
 			storeParams.initialVersion = uint64(ver) + 1
 		} else if commitID.Version != ver && storeParams.typ == types.StoreTypeIAVL {
 			return fmt.Errorf("version of store %s mismatch root store's version; expected %d got %d; new stores should be added using StoreUpgrades", key.Name(), ver, commitID.Version)
@@ -461,6 +464,11 @@ func (rs *Store) LastCommitID() types.CommitID {
 
 // Commit implements Committer/CommitStore.
 func (rs *Store) Commit() types.CommitID {
+	fmt.Println("COMMIT")
+	fmt.Printf("STORE: %#v\n", rs)
+	fmt.Printf("LASTCOMMITINFOVERSION: %d\n", rs.lastCommitInfo.GetVersion())
+	fmt.Printf("INITIALVERSION: %d\n", rs.initialVersion)
+	debug.PrintStack()
 	var previousHeight, version int64
 	if rs.lastCommitInfo.GetVersion() == 0 && rs.initialVersion > 1 {
 		// This case means that no commit has been made in the store, we
@@ -1016,6 +1024,7 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID
 		db = dbm.NewPrefixDB(rs.db, []byte(prefix))
 	}
 
+	fmt.Printf("STORE PARAMS: %+v\n", params)
 	switch params.typ {
 	case types.StoreTypeMulti:
 		panic("recursive MultiStores not yet supported")
@@ -1024,9 +1033,12 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID
 		var store types.CommitKVStore
 		var err error
 
+		fmt.Println("DISABLE FAST NODE", rs.iavlDisableFastNode)
 		if params.initialVersion == 0 {
+			fmt.Println("INITVERSION Is 0")
 			store, err = iavl.LoadStore(db, rs.logger, key, id, rs.iavlCacheSize, rs.iavlDisableFastNode, rs.metrics)
 		} else {
+			fmt.Println("INITVERSION Is NOT 0")
 			store, err = iavl.LoadStoreWithInitialVersion(db, rs.logger, key, id, params.initialVersion, rs.iavlCacheSize, rs.iavlDisableFastNode, rs.metrics)
 		}
 
@@ -1191,12 +1203,15 @@ func GetLatestVersion(db dbm.DB) int64 {
 
 // Commits each store and returns a new commitInfo.
 func commitStores(version int64, storeMap map[types.StoreKey]types.CommitKVStore, removalMap map[types.StoreKey]bool) *types.CommitInfo {
+	fmt.Println("COMMIT STORES")
+	debug.PrintStack()
 	storeInfos := make([]types.StoreInfo, 0, len(storeMap))
 	storeKeys := keysFromStoreKeyMap(storeMap)
 
 	for _, key := range storeKeys {
 		store := storeMap[key]
 		last := store.LastCommitID()
+		fmt.Println("COMMIT STORES: KEY: %#v, LAST: %#v, VERSION: %d\n", key, last, version)
 
 		// If a commit event execution is interrupted, a new iavl store's version
 		// will be larger than the RMS's metadata, when the block is replayed, we

@@ -51,6 +51,7 @@ func NewMutableTree(db dbm.DB, cacheSize int, skipFastStorageUpgrade bool, lg lo
 	for _, opt := range options {
 		opt(&opts)
 	}
+	fmt.Printf("NEW MUTABLE TREE OPTS: %+v\n", opts)
 
 	ndb := newNodeDB(db, cacheSize, opts, lg)
 	head := &ImmutableTree{ndb: ndb, skipFastStorageUpgrade: skipFastStorageUpgrade}
@@ -435,10 +436,12 @@ func (tree *MutableTree) Load() (int64, error) {
 
 // Returns the version number of the specific version found
 func (tree *MutableTree) LoadVersion(targetVersion int64) (int64, error) {
+	fmt.Printf("TARGET VERSION: %d\n", targetVersion)
 	firstVersion, err := tree.ndb.getFirstVersion()
 	if err != nil {
 		return 0, err
 	}
+	fmt.Printf("FIRST VERSION: %d\n", firstVersion)
 
 	if firstVersion > 0 && firstVersion < int64(tree.ndb.opts.InitialVersion) {
 		return firstVersion, fmt.Errorf("initial version set to %v, but found earlier version %v",
@@ -450,6 +453,7 @@ func (tree *MutableTree) LoadVersion(targetVersion int64) (int64, error) {
 		return 0, err
 	}
 
+	fmt.Printf("LATEST VERSION: %d\n", latestVersion)
 	if firstVersion > 0 && firstVersion < int64(tree.ndb.opts.InitialVersion) {
 		return latestVersion, fmt.Errorf("initial version set to %v, but found earlier version %v",
 			tree.ndb.opts.InitialVersion, firstVersion)

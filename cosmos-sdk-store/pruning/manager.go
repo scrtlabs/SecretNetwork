@@ -143,6 +143,7 @@ func (m *Manager) LoadSnapshotHeights(db dbm.DB) error {
 	}
 
 	loadedPruneSnapshotHeights, err := loadPruningSnapshotHeights(db)
+	fmt.Printf("LOADED PRUNE SNAPSHOT HEIGHTS: %+v\n", loadedPruneSnapshotHeights)
 	if err != nil {
 		return err
 	}
