@@ -52,3 +52,6 @@ git = "https://github.com/mesalock-linux/rustls"
 rev = "95b5e79dc24b02f3ce424437eb9698509d0baf58"
 default-features = false
 features = ["dangerous_configuration", "mesalock_sgx"]
+
+[net]
+git-fetch-with-cli = true
