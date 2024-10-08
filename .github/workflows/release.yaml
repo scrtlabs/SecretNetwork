@@ -180,7 +180,7 @@ jobs:
         run: make build_cli
       - uses: actions/upload-artifact@v3
         with:
-          name: secretcli-macos-arm64
+          name: secretcli-MacOS-arm64
           path: secretcli
 
   check-hw-tool:
