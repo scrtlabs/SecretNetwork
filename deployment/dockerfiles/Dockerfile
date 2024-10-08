@@ -27,7 +27,7 @@ WORKDIR /go/src/github.com/enigmampc/SecretNetwork/
 # ***************** COMPILE ENCLAVE ************** #
 FROM prepare-compile-enclave AS compile-enclave
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.14.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
@@ -58,7 +58,7 @@ RUN . /opt/sgxsdk/environment && env \
 
 FROM prepare-compile-enclave AS compile-tendermint-enclave
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.14.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
@@ -97,7 +97,7 @@ RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -v
 # Set working directory for the build
 WORKDIR /go/src/github.com/enigmampc/SecretNetwork
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.14.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
@@ -236,7 +236,7 @@ ENTRYPOINT ["/bin/bash", "startup.sh"]
 
 FROM release-image as mainnet-release
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.14.0"
 ENV VERSION=${BUILD_VERSION}
 
 RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
@@ -300,7 +300,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 
 FROM compile-enclave as compile-check-hw-tool
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.14.0"
 ARG FEATURES
 ARG FEATURES_U
 
