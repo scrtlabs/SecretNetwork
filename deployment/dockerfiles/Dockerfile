@@ -7,8 +7,8 @@
 #   `--target build-deb-mainnet` - the image used to generate deb package for mainnet (will pull precompiled enclave)
 #   `--target compile-secretd` - image with compiled enclave and secretd
 
-ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2004-1.1.6
-ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:20.04-2.20-dcap
+ARG SCRT_BASE_IMAGE_ENCLAVE=ghcr.io/scrtlabs/sgx-rust:2204-1.1.6
+ARG SCRT_RELEASE_BASE_IMAGE=ghcr.io/scrtlabs/release-base:22.04-2.20-dcap
 
 # ***************** PREPARE COMPILE ENCLAVE ************** #
 
@@ -16,7 +16,7 @@ FROM $SCRT_BASE_IMAGE_ENCLAVE AS prepare-compile-enclave
 
 RUN apt-get update &&  \
     apt-get install -y --no-install-recommends \
-    clang-10 && \
+    clang-12 && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/root/.cargo/bin:$PATH"
@@ -27,7 +27,7 @@ WORKDIR /go/src/github.com/scrtlabs/SecretNetwork/
 # ***************** COMPILE ENCLAVE ************** #
 FROM prepare-compile-enclave AS compile-enclave
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.15.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
@@ -58,7 +58,7 @@ RUN . /opt/sgxsdk/environment && env \
 
 FROM prepare-compile-enclave AS compile-tendermint-enclave
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.15.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
@@ -97,7 +97,7 @@ RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -v
 # Set working directory for the build
 WORKDIR /go/src/github.com/scrtlabs/SecretNetwork
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.15.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
@@ -155,7 +155,7 @@ RUN . /opt/sgxsdk/environment && env && VERSION=${VERSION} FEATURES=${FEATURES} 
 FROM $SCRT_RELEASE_BASE_IMAGE as release-image
 
 # wasmi-sgx-test script requirements
-RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
+RUN add-apt-repository -r "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     #### Base utilities ####
@@ -239,7 +239,7 @@ ENTRYPOINT ["/bin/bash", "startup.sh"]
 
 FROM release-image as mainnet-release
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.15.0"
 ENV VERSION=${BUILD_VERSION}
 
 RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
@@ -303,7 +303,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 
 FROM compile-enclave as compile-check-hw-tool
 
-ARG BUILD_VERSION="v0.0.0"
+ARG BUILD_VERSION="v1.15.0"
 ARG FEATURES
 ARG FEATURES_U
 

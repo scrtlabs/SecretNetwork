@@ -15,12 +15,6 @@ pub fn validate_block_header(
     height: u64,
     commit: Commit,
 ) -> Result<SignedHeader, sgx_status_t> {
-    println!(
-        "my validator set h={}, validators={}",
-        height,
-        validator_set.validators().len()
-    );
-    
     let header = <Header as Protobuf<RawHeader>>::decode(block_header_slice).map_err(|e| {
         error!("Error parsing header from proto: {:?}", e);
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
@@ -31,14 +25,9 @@ pub fn validate_block_header(
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     })?;
 
-    println!(
-        "proposed block height={}",
-        signed_header.header.height.value()
-    );
-
     // validate that we have the validator set for the current height
     if signed_header.header.height.value() != height {
-        error!("Validator set height does not match stored validator set");
+        error!("Validator set height does not match stored validator set. Ignoring");
         // we use this error code to signal that the validator set is not synced with the current block
         return Err(sgx_status_t::SGX_ERROR_FILE_RECOVERY_NEEDED);
     }
