@@ -16,7 +16,7 @@ DEB_LIB_DIR ?= /usr/lib
 
 DB_BACKEND ?= goleveldb
 
-SGX_MODE ?= SW
+SGX_MODE ?= HW
 BRANCH ?= develop
 DEBUG ?= 0
 DOCKER_TAG ?= secret-0.50.x
@@ -140,7 +140,7 @@ ifeq ($(DB_BACKEND),rocksdb)
   ldflags += -extldflags "-lrocksdb -llz4"
 endif
 
-#ldflags += -s -w
+ldflags += -s -w
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
@@ -148,25 +148,15 @@ GO_TAGS := $(build_tags)
 # -ldflags
 LD_FLAGS := $(ldflags)
 
-# Turn 
-GCFLAGS := -gcflags="-N -l"
-
 all: build_all
 
 go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
-go.tidy: go.mod
-	@echo "--> Download required modules"
-	go mod tidy -e -v
-
 # Build the CLI tool
 build_cli:
 	go build -o secretcli -mod=readonly $(GCFLAGS) -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
-
-xgo_build_secretcli: go.tidy
-	xgo -x -v --targets $(XGO_TARGET) -tags="$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' --pkg cmd/secretd .
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
@@ -183,27 +173,6 @@ build-tm-secret-enclave:
 	cd /tmp/tm-secret-enclave && git checkout main && git submodule init && git submodule update --remote
 	rustup component add rust-src
 	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
-
-# Targets for building the cli on various platforms like Windows, macOS, Linux
-build_windows_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=windows/amd64
-	sudo mv github.com/scrtlabs/SecretNetwork-windows-* secretcli-windows-amd64.exe
-
-build_macos_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/amd64
-	sudo mv github.com/scrtlabs/SecretNetwork-darwin-amd64 secretcli-macos-amd64
-
-build_macos_arm64_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=darwin/arm64
-	sudo mv github.com/scrtlabs/SecretNetwork-darwin-arm64 secretcli-macos-arm64
-
-build_linux_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/amd64
-	sudo mv github.com/scrtlabs/SecretNetwork-linux-amd64 secretcli-linux-amd64
-
-build_linux_arm64_cli:
-	$(MAKE) xgo_build_secretcli XGO_TARGET=linux/arm64
-	sudo mv github.com/scrtlabs/SecretNetwork-linux-arm64 secretcli-linux-arm64
 
 build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
 
@@ -265,13 +234,8 @@ clean:
 ###                         Dockerized Build Targets                        ###
 ###############################################################################
 
-check_get_go:
-	@echo "Checking if go installer is present locally"
-	@[ ! -f ./go1.22.3.linux-amd64.tar.gz ] && echo "go1.22.3 installer not found locally" && wget https://go.dev/dl/go1.22.3.linux-amd64.tar.gz || true
-	
 # Build localsecret - dockerized local chain for development and testing. In this version SGX is ran in software/simulation mode
-localsecret: check_get_go
-	
+localsecret:
 	DOCKER_BUILDKIT=1 docker build \
 			--build-arg FEATURES="${FEATURES},debug-print,random,light-client-validation" \
 			--build-arg FEATURES_U=${FEATURES_U} \
