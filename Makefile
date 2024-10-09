@@ -148,6 +148,12 @@ GO_TAGS := $(build_tags)
 # -ldflags
 LD_FLAGS := $(ldflags)
 
+ifeq ($(SGX_MODE), HW)
+  CGO_LDFLAGS += -lsgx_epid
+else
+  CGO_LDFLAGS += -lsgx_epid_sim
+endif
+
 all: build_all
 
 go.sum: go.mod
@@ -156,11 +162,11 @@ go.sum: go.mod
 
 # Build the CLI tool
 build_cli:
-	go build -o secretcli -mod=readonly $(GCFLAGS) -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	CGO_LDFLAGS=$(CGO_LDFLAGS) go build -o secretcli -mod=readonly $(GCFLAGS) -tags "$(filter-out sgx, $(GO_TAGS)) secretcli" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build_local_no_rust: bin-data-$(IAS_BUILD)
 	cp go-cosmwasm/target/$(BUILD_PROFILE)/libgo_cosmwasm.so go-cosmwasm/api
-	go build -mod=readonly $(GCFLAGS) -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
+	CGO_LDFLAGS=$(CGO_LDFLAGS) go build -mod=readonly $(GCFLAGS) -tags "$(GO_TAGS)" -ldflags '$(LD_FLAGS)' ./cmd/secretd
 
 build-secret: build-linux
 
