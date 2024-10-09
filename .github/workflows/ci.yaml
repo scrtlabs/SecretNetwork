@@ -186,6 +186,7 @@ jobs:
           LIB_PATH=/usr/lib/x86_64-linux-gnu
           sudo ln -s $LIB_PATH/libsgx_dcap_ql.so.1 $LIB_PATH/libsgx_dcap_ql.so
           sudo ln -s $LIB_PATH/libsgx_dcap_quoteverify.so.1 $LIB_PATH/libsgx_dcap_quoteverify.so
+          sudo ln -s $LIB_PATH/libsgx_epid.so.1 $LIB_PATH/libsgx_epid.so
       - name: Test x/registration
         run: |
           source "$HOME/.sgxsdk/sgxsdk/environment"
