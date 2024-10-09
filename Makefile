@@ -174,7 +174,7 @@ build-tm-secret-enclave:
 	rustup component add rust-src
 	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
 
-build_all: build-linux build_windows_cli build_macos_cli build_linux_arm64_cli
+build_all: build-linux
 
 # Build Debian package
 deb: build-linux deb-no-compile
