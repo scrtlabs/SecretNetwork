@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   Enclave-Unit-Tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -15,7 +15,7 @@ jobs:
           mkdir -p "$HOME/.sgxsdk"
           cd "$HOME/.sgxsdk"
           SDK_BIN=sgx_linux_x64_sdk_2.20.100.4.bin
-          wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu20.04-server/"$SDK_BIN"
+          wget https://download.01.org/intel-sgx/sgx-linux/2.20/distro/ubuntu22.04-server/"$SDK_BIN"
           chmod +x "$SDK_BIN"
           echo yes | ./"$SDK_BIN"
       - name: Cache cargo registry
@@ -97,7 +97,7 @@ jobs:
           path: cosmwasm/contracts/v010/compute-tests/test-compute-contract/static-too-high-initial-memory.wasm
 
   Go-Tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [Build-Contracts, Build-LocalSecret]
     steps:
       - uses: actions/checkout@v4
@@ -164,9 +164,9 @@ jobs:
       - name: Install Quote library SDK
         run: |
           curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
-          sudo add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
-          DCAP_VERSION=1.17.100.4-focal1
-          PSW_VERSION=2.20.100.4-focal1
+          sudo add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main"
+          DCAP_VERSION=1.17.100.4-jammy1
+          PSW_VERSION=2.20.100.4-jammy1
           sudo apt-get update
           sudo apt-get install -y \
               libsgx-aesm-launch-plugin=$PSW_VERSION \
@@ -204,7 +204,7 @@ jobs:
           LOG_LEVEL=ERROR SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -p 1 -timeout 90m -v -tags "test" ./x/compute/internal/...
 
   Clippy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -275,7 +275,7 @@ jobs:
           path: secretcli
           
   Build-LocalSecret:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -310,7 +310,7 @@ jobs:
           path: /tmp/localsecret.tar
 
   Build-Hermes:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -333,7 +333,7 @@ jobs:
           path: /tmp/hermes.tar
 
   Integration-Tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [Build-LocalSecret, Build-Hermes]
     steps:
       - uses: actions/checkout@v4
