@@ -171,8 +171,7 @@ fn sgx_ql_qve_collateral_serialize(
         }
 
         out_size
-    };
-    0 // unreachable
+    }
 }
 
 fn sgx_ql_qve_collateral_deserialize(p_ser: *const u8, n_ser: u32) -> sgx_ql_qve_collateral_t {
