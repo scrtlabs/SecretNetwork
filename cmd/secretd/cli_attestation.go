@@ -108,6 +108,21 @@ func ExportSealings() *cobra.Command {
 	return cmd
 }
 
+func EmergencyApproveUpgrade() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "emergency_approve_upgrade",
+		Short: "Emergency enclave upgade approval",
+		Long:  "Approve enclave upgrade in an offline mode. Need to reach consensus amoung network validators",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			println("This is a secretd only function, yo")
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func ConfigureSecret() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "configure-secret [master-key] [seed]",

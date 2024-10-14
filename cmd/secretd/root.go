@@ -181,6 +181,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 		DumpBin(),
 		MigrateSealings(),
 		ExportSealings(),
+		EmergencyApproveUpgrade(),
 		ConfigureSecret(),
 		HealthCheck(),
 		ResetEnclave(),

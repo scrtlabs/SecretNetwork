@@ -20,6 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	"github.com/scrtlabs/SecretNetwork/app"
 	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 	ra "github.com/scrtlabs/SecretNetwork/x/registration/remote_attestation"
@@ -308,6 +309,26 @@ func ExportSealings() *cobra.Command {
 			}
 
 			fmt.Printf("Export succeeded\n")
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func EmergencyApproveUpgrade() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "emergency_approve_upgrade",
+		Short: "Emergency enclave upgade approval",
+		Long:  "Approve enclave upgrade in an offline mode. Need to reach consensus amoung network validators",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, err := api.EmergencyApproveUpgrade(app.DefaultNodeHome)
+			if err != nil {
+				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
+			}
+
+			fmt.Printf("Approve succeeded\n")
 			return nil
 		},
 	}
