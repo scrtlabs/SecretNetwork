@@ -74,6 +74,8 @@ use super::ocalls::{
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
 
+use ::hex as orig_hex;
+
 #[cfg(feature = "SGX_MODE_HW")]
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -409,9 +411,15 @@ pub fn verify_quote_ecdsa(
     let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
     let report_body = unsafe { (*my_p_quote).report_body };
 
-    trace!("body.mr_signer = {:?}", report_body.mr_signer.m);
-    trace!("body.mr_enclave = {:?}", report_body.mr_enclave.m);
-    trace!("body.report_data = {:?}", report_body.report_data.d);
+//    trace!(
+//        "body.mr_signer = {}",
+//        orig_hex::encode(&report_body.mr_signer.m)
+//    );
+//    trace!(
+//        "body.mr_enclave = {}",
+//        orig_hex::encode(&report_body.mr_enclave.m)
+//    );
+//    trace!("body.report_data = {}", orig_hex::encode(&report_body.report_data.d));
 
     Ok((report_body, qv_result))
 }
@@ -526,6 +534,19 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_
             return Err(e);
         }
     }
+
+    println!(
+        "mr_signer = {}",
+        orig_hex::encode(&my_report.body.mr_signer.m)
+    );
+    println!(
+        "mr_enclave = {}",
+        orig_hex::encode(&my_report.body.mr_enclave.m)
+    );
+    println!(
+        "report_data = {}",
+        orig_hex::encode(&my_report.body.report_data.d)
+    );
 
     Ok((vec_quote, vec_coll))
 }
