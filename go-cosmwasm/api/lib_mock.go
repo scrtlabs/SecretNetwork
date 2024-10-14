@@ -57,6 +57,10 @@ func ExportSealing() (bool, error) {
 	return false, nil
 }
 
+func EmergencyApproveUpgrade(nodeDir string) (bool, error) {
+	return false, nil
+}
+
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cache, error) {
 	//dir := sendSlice([]byte(dataDir))
 	//defer freeAfterSend(dir)

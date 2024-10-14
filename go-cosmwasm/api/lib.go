@@ -116,6 +116,21 @@ func ExportSealing() (bool, error) {
 	return true, nil
 }
 
+func EmergencyApproveUpgrade(nodeDir string) (bool, error) {
+
+	dir := sendSlice([]byte(nodeDir))
+	defer freeAfterSend(dir)
+
+	ret, err := C.emergency_approve_upgrade(dir)
+	if err != nil {
+		return false, err
+	}
+	if !ret {
+		return false, errors.New("emergency approve upgrade failed")
+	}
+	return true, nil
+}
+
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint64) (Cache, error) {

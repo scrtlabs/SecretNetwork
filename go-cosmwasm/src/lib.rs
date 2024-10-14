@@ -864,3 +864,13 @@ pub extern "C" fn export_sealing() -> bool {
     clear_error();
     true
 }
+#[no_mangle]
+pub extern "C" fn emergency_approve_upgrade(data_dir: Buffer) -> bool {
+    let dir = unsafe { data_dir.read() }.unwrap();
+    let dir_str = from_utf8(dir).unwrap();
+    let full_path = dir_str.to_owned() + "/config/priv_validator_key.json";
+
+    println!("Data dir: {}", full_path);
+    clear_error();
+    true
+}
