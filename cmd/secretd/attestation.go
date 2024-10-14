@@ -33,6 +33,7 @@ const (
 	flagCustomRegistrationService = "registration-service"
 	flag_no_epid                  = "no-epid"
 	flag_no_dcap                  = "no-dcap"
+	flag_is_migration_report      = "migration"
 )
 
 const (
@@ -100,8 +101,9 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 
 			no_epid, _ := cmd.Flags().GetBool(flag_no_epid)
 			no_dcap, _ := cmd.Flags().GetBool(flag_no_dcap)
+			is_migration_report, _ := cmd.Flags().GetBool(flag_is_migration_report)
 
-			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap)
+			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap, is_migration_report)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
@@ -111,6 +113,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 	cmd.Flags().Bool(flagReset, false, "Optional flag to regenerate the enclave registration key")
 	cmd.Flags().Bool(flag_no_epid, false, "Optional flag to disable EPID attestation")
 	cmd.Flags().Bool(flag_no_dcap, false, "Optional flag to disable DCAP attestation")
+	cmd.Flags().Bool(flag_is_migration_report, false, "Create migration report rather then attestation")
 
 	return cmd
 }
@@ -526,7 +529,7 @@ Please report any issues with this command
 			no_epid, _ := cmd.Flags().GetBool(flag_no_epid)
 			no_dcap, _ := cmd.Flags().GetBool(flag_no_dcap)
 
-			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap)
+			_, err = api.CreateAttestationReport(apiKeyFile, no_epid, no_dcap, false)
 			if err != nil {
 				return fmt.Errorf("failed to create attestation report: %w", err)
 			}
