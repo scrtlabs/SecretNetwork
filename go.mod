@@ -1,6 +1,6 @@
 module github.com/scrtlabs/SecretNetwork
 
-go 1.21
+go 1.23
 
 replace (
 	cosmossdk.io/api => github.com/scrtlabs/cosmos-sdk-api v0.7.5-secret.1
