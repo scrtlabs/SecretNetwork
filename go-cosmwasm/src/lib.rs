@@ -912,7 +912,7 @@ pub extern "C" fn emergency_approve_upgrade(data_dir: Buffer, msg: Buffer) -> bo
         }
 
         let bytes = res.unwrap();
-        if bytes.len() != 16 {
+        if bytes.len() != 32 {
             error!("invalid msg (must be mr_enclave): {}", msg_str);
             return false;
         }
@@ -936,7 +936,7 @@ pub extern "C" fn emergency_approve_upgrade(data_dir: Buffer, msg: Buffer) -> bo
         priv_validator_key.address,
         (
             priv_validator_key.pub_key.value,
-            base64::encode(signature.to_string()),
+            base64::encode(signature.to_bytes()),
         ),
     );
 
