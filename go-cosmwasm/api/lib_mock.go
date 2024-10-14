@@ -57,7 +57,7 @@ func ExportSealing() (bool, error) {
 	return false, nil
 }
 
-func EmergencyApproveUpgrade(nodeDir string) (bool, error) {
+func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
 	return false, nil
 }
 

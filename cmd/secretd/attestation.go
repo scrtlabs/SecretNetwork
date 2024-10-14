@@ -285,7 +285,7 @@ func MigrateSealings() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			_, err := api.MigrateSealing()
 			if err != nil {
-				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
+				return fmt.Errorf("failed to migrate sealings. Enclave returned: %s", err)
 			}
 
 			fmt.Printf("Migration succeeded\n")
@@ -318,17 +318,15 @@ func ExportSealings() *cobra.Command {
 
 func EmergencyApproveUpgrade() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "emergency_approve_upgrade",
+		Use:   "emergency_approve_upgrade [mr_enclave]",
 		Short: "Emergency enclave upgade approval",
 		Long:  "Approve enclave upgrade in an offline mode. Need to reach consensus amoung network validators",
-		Args:  cobra.ExactArgs(0),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := api.EmergencyApproveUpgrade(app.DefaultNodeHome)
+			_, err := api.EmergencyApproveUpgrade(app.DefaultNodeHome, args[0])
 			if err != nil {
-				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
+				return fmt.Errorf("failed to approve emergency upgrade: %s", err)
 			}
-
-			fmt.Printf("Approve succeeded\n")
 			return nil
 		},
 	}
