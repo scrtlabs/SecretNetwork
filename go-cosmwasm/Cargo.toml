@@ -46,12 +46,16 @@ cosmwasm-sgx-vm = { path = "../cosmwasm/packages/sgx-vm", features = [
 ] }
 errno = "0.2"
 snafu = "0.6.3"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ctor = "0.1.13"
 simple_logger = { version = "2.3.0", default-features = false, features = [
     "stderr"
 ] }
 log = "0.4.17"
+base64 = "0.21"
+ed25519-dalek = "1.0"
+hex = "0.4"
 
 [dev-dependencies]
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

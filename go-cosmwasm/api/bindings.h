@@ -153,7 +153,7 @@ Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
 bool create_attestation_report(Buffer api_key, uint32_t flags, Buffer *err);
 
-bool emergency_approve_upgrade(Buffer data_dir);
+bool emergency_approve_upgrade(Buffer data_dir, Buffer msg);
 
 bool export_sealing(void);
 

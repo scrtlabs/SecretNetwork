@@ -7,18 +7,9 @@ mod logger;
 mod memory;
 mod querier;
 
-pub use api::GoApi;
-pub use db::{db_t, DB};
-use logger::get_log_level;
-pub use memory::{free_rust, Buffer};
-pub use querier::GoQuerier;
-
-use std::convert::TryInto;
-use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::str::from_utf8;
-
 use crate::error::{clear_error, handle_c_error, handle_c_error_default, set_error, Error};
-
+pub use api::GoApi;
+use base64;
 use cosmwasm_sgx_vm::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, call_update_admin_raw,
@@ -29,9 +20,21 @@ use cosmwasm_sgx_vm::{
     untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
     untrusted_migrate_sealing,
 };
-
 use ctor::ctor;
+pub use db::{db_t, DB};
+use ed25519_dalek::{Keypair, Signature, Signer};
+use hex;
 use log::*;
+use logger::get_log_level;
+pub use memory::{free_rust, Buffer};
+pub use querier::GoQuerier;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::convert::TryInto;
+use std::fs::File;
+use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::path::Path;
+use std::str::from_utf8;
 
 #[ctor]
 fn init_logger() {
@@ -864,13 +867,83 @@ pub extern "C" fn export_sealing() -> bool {
     clear_error();
     true
 }
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct PrivKey {
+    #[serde(rename = "type")]
+    key_type: String,
+    value: String,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct PubKey {
+    #[serde(rename = "type")]
+    key_type: String,
+    value: String,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct PrivValidatorKey {
+    priv_key: PrivKey,
+    pub_key: PubKey,
+    address: String,
+}
+
 #[no_mangle]
-pub extern "C" fn emergency_approve_upgrade(data_dir: Buffer) -> bool {
-    let dir = unsafe { data_dir.read() }.unwrap();
-    let dir_str = from_utf8(dir).unwrap();
+#[allow(deprecated)]
+pub extern "C" fn emergency_approve_upgrade(data_dir: Buffer, msg: Buffer) -> bool {
+    let dir_str = from_utf8(unsafe { data_dir.read() }.unwrap()).unwrap();
     let full_path = dir_str.to_owned() + "/config/priv_validator_key.json";
 
-    println!("Data dir: {}", full_path);
+    if !Path::new(full_path.as_str()).exists() {
+        error!("File doesn't exist: {}", full_path);
+        return false;
+    }
+
+    let msg_bytes = {
+        let msg_str = from_utf8(unsafe { msg.read() }.unwrap()).unwrap();
+        let res = hex::decode(msg_str);
+        if res.is_err() {
+            error!("Couldn't base-64 decode msg: {}", msg_str);
+            return false;
+        }
+
+        let bytes = res.unwrap();
+        if bytes.len() != 16 {
+            error!("invalid msg (must be mr_enclave): {}", msg_str);
+            return false;
+        }
+
+        bytes
+    };
+
+    // Open the file
+    let file = File::open(full_path).unwrap();
+    let reader = std::io::BufReader::new(file);
+
+    let priv_validator_key: PrivValidatorKey = serde_json::from_reader(reader).unwrap();
+
+    let priv_key_bytes = base64::decode(priv_validator_key.priv_key.value).unwrap();
+    let keypair = Keypair::from_bytes(&priv_key_bytes).unwrap();
+
+    let signature: Signature = keypair.sign(msg_bytes.as_slice());
+
+    let mut signatures: HashMap<String, (String, String)> = HashMap::new();
+    signatures.insert(
+        priv_validator_key.address,
+        (
+            priv_validator_key.pub_key.value,
+            base64::encode(signature.to_string()),
+        ),
+    );
+
+    let seril = serde_json::to_string(&signatures).unwrap();
+
+    println!("Signature: {}", seril);
+
     clear_error();
     true
 }

@@ -116,12 +116,15 @@ func ExportSealing() (bool, error) {
 	return true, nil
 }
 
-func EmergencyApproveUpgrade(nodeDir string) (bool, error) {
+func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
 
-	dir := sendSlice([]byte(nodeDir))
-	defer freeAfterSend(dir)
+	nodeDirBuf := sendSlice([]byte(nodeDir))
+	defer freeAfterSend(nodeDirBuf)
 
-	ret, err := C.emergency_approve_upgrade(dir)
+	msgBuf := sendSlice([]byte(msg))
+	defer freeAfterSend(msgBuf)
+
+	ret, err := C.emergency_approve_upgrade(nodeDirBuf, msgBuf)
 	if err != nil {
 		return false, err
 	}
