@@ -89,6 +89,8 @@ simple_logger = { version = "2.3.0", default-features = false, features = [
 ] }
 block-verifier = { path = "../shared/block-verifier", optional = true }
 time = "=0.3.17"
+ed25519-dalek = { version = "1.0", default-features = false }
+sha2 = "0.10"
 
 [dependencies.webpki]
 git = "https://github.com/mesalock-linux/webpki"

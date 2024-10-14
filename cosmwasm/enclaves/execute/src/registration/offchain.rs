@@ -1,20 +1,7 @@
 //!
 use core::convert::TryInto;
 use core::mem;
-/// These functions run off chain, and so are not limited by deterministic limitations. Feel free
-/// to go crazy with random generation entropy, time requirements, or whatever else
-///
-use log::*;
-use sgx_types::sgx_measurement_t;
-use sgx_types::sgx_report_body_t;
-use sgx_types::sgx_status_t;
-use std::panic;
-use std::sgxfs::SgxFile;
-use std::slice;
-
-use std::fs::File;
-use std::io::prelude::*;
-
+use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
     CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
@@ -22,7 +9,6 @@ use enclave_crypto::consts::{
     MIGRATION_APPROVAL_PATH, MIGRATION_CERT_PATH, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH,
     REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
-
 use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::pointers::validate_mut_slice;
@@ -32,6 +18,21 @@ use enclave_utils::storage::SEALING_KDK;
 use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
 use enclave_utils::validator_set::VALIDATOR_SET_SEALING_PATH;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
+/// These functions run off chain, and so are not limited by deterministic limitations. Feel free
+/// to go crazy with random generation entropy, time requirements, or whatever else
+///
+use log::*;
+use sgx_types::sgx_measurement_t;
+use sgx_types::sgx_report_body_t;
+use sgx_types::sgx_status_t;
+use sha2::{Digest, Sha256};
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::prelude::*;
+use std::panic;
+use std::sgxfs::SgxFile;
+use std::slice;
 
 use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
 use super::seed_service::get_next_consensus_seed_from_service;
@@ -726,52 +727,84 @@ fn approve_migration_target(data: &MigrationApprovalData) {
     }
 }
 
-fn is_export_approved(report: &sgx_report_body_t) -> bool {
-    let mut res = false;
+fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bool {
+    let mut json_data = String::new();
+    f_in.read_to_string(&mut json_data).unwrap();
 
-    match SgxFile::open(MIGRATION_APPROVAL_PATH.as_str()) {
-        Ok(mut f_in) => {
-            let mut data = vec![];
-            f_in.read_to_end(&mut data).unwrap();
+    // Deserialize the JSON string into a HashMap<String, String>
+    let signatures: HashMap<String, (String, String)> =
+        serde_json::from_str(&json_data).expect("Failed to deserialize JSON");
 
-            if data.len() != mem::size_of::<MigrationApprovalData>() {
-                panic!("wrong file size");
-            }
+    // verify all the signatures, and build the set of addresses
+    let mut signers_set: BTreeSet<[u8; 20]> = BTreeSet::new();
 
-            res = unsafe {
-                let p_data = data.as_ptr() as *const MigrationApprovalData;
-                (*p_data).is_export_approved(report)
-            }
+    for (addr_str, (pubkey_str, sig_str)) in &signatures {
+        let pubkey_bytes = base64::decode(pubkey_str).unwrap();
+
+        // calculate the address
+        let mut addr = [0u8; 20];
+        {
+            let mut hasher = Sha256::new();
+            hasher.update(&pubkey_bytes);
+            let res = hasher.finalize();
+            addr.copy_from_slice(&res[..20]);
         }
-        Err(err) => {
-            info!("Can't open migration approval file: {}", err);
+
+        // make sure pubkey matches the address
+        let res = hex::decode(addr_str).unwrap();
+        if res != addr {
+            panic!(
+                "address doesn't match pubkey. Expected={}, actual={}",
+                hex::encode(addr),
+                addr_str
+            );
         }
+
+        // verify signature
+
+        let pubkey_obj = PublicKey::from_bytes(&pubkey_bytes).unwrap();
+        let sig_bytes = base64::decode(sig_str).unwrap();
+        let sig_obj = Signature::from_bytes(&sig_bytes).unwrap();
+
+        if let Err(_) = pubkey_obj.verify_strict(&report.mr_enclave.m, &sig_obj) {
+            panic!("Incorrect signature for address: {}", addr_str);
+        }
+
+        signers_set.insert(addr);
     }
 
-    res
-
-}
-
-fn approve_migration_offchain() -> bool {
-    let mut file = match File::open(MIGRATION_APPROVAL_PATH.as_str()) {
-        Ok(f) => f,
-        Err(e) => {
-            warn!("Failed to open file: {}", e);
-            return false;
-        }
-    };
-
-    let mut f_data = Vec::new();
-
-    if let Err(e) = file.read_to_end(&mut f_data) {
-        warn!("Failed to read file: {}", e);
-        return false;
-    }
-
-    // TODO
     false
 }
 
+fn is_export_approved(report: &sgx_report_body_t) -> bool {
+    if let Ok(mut f_in) = SgxFile::open(MIGRATION_APPROVAL_PATH.as_str()) {
+        let mut data = vec![];
+        f_in.read_to_end(&mut data).unwrap();
+
+        if data.len() != mem::size_of::<MigrationApprovalData>() {
+            panic!("wrong file size");
+        }
+
+        let res = unsafe {
+            let p_data = data.as_ptr() as *const MigrationApprovalData;
+            (*p_data).is_export_approved(report)
+        };
+
+        if res {
+            println!("Migration is authorized by on-chain consensus");
+            return true;
+        }
+    }
+
+    if let Ok(f_in) = File::open(MIGRATION_CONSENSUS_PATH.as_str()) {
+        if is_export_approved_offchain(f_in, report) {
+            println!("Migration is authorized by off-chain (emergency) consensus");
+            return true;
+        }
+    }
+
+    false
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
@@ -779,7 +812,7 @@ pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
     let mut next_report = get_report_body(MIGRATION_CERT_PATH.as_str());
 
     if !is_export_approved(&next_report) {
-        trace!("Export sealing not authorized");
+        error!("Export sealing not authorized");
         return sgx_status_t::SGX_ERROR_NO_PRIVILEGE;
     }
 
