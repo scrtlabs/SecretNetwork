@@ -31,7 +31,7 @@ pub const NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE: &str = "consensus_seed.sealed";
 pub const NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE: &str = "consensus_seed_current.sealed";
 
 pub const MIGRATION_APPROVAL_SAVE_PATH: &str = "migration_trg.sealed";
-pub const MIGRATION_CONSENSUS_SAVE_PATH: &str = "migration_consensus.bin";
+pub const MIGRATION_CONSENSUS_SAVE_PATH: &str = "migration_consensus.json";
 
 #[cfg(feature = "random")]
 pub const REK_SEALED_FILE_NAME: &str = "rek.sealed";
