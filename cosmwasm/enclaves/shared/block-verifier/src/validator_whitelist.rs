@@ -7,13 +7,13 @@ const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist.
 const WHITELIST_FROM_FILE: &str = include_str!("../fixtures/validator_whitelist_prod.txt");
 
 #[cfg(not(feature = "production"))]
-const VALIDATOR_THRESHOLD: usize = 1;
+pub const VALIDATOR_THRESHOLD: usize = 1;
 
 #[cfg(feature = "production")]
-const VALIDATOR_THRESHOLD: usize = 5;
+pub const VALIDATOR_THRESHOLD: usize = 5;
 
 lazy_static::lazy_static! {
-    static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str(WHITELIST_FROM_FILE);
+    pub static ref VALIDATOR_WHITELIST: ValidatorList = ValidatorList::from_str(WHITELIST_FROM_FILE);
 }
 
 #[derive(Debug, Clone)]
@@ -27,11 +27,11 @@ impl ValidatorList {
 
     // use for tests
     #[allow(dead_code)]
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    fn contains(&self, input: &String) -> bool {
+    pub fn contains(&self, input: &String) -> bool {
         self.0.contains(input)
     }
 }
