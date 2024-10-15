@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use tendermint_light_client_verifier::types::UntrustedBlockState;
 
 #[cfg(not(feature = "production"))]
@@ -16,11 +17,11 @@ lazy_static::lazy_static! {
 }
 
 #[derive(Debug, Clone)]
-struct ValidatorList(pub Vec<String>);
+pub struct ValidatorList(pub HashSet<String>);
 
 impl ValidatorList {
     fn from_str(list: &str) -> Self {
-        let addresses: Vec<String> = list.split(',').map(|s| s.to_string()).collect();
+        let addresses: HashSet<String> = list.split(',').map(|s| s.to_string()).collect();
         Self(addresses)
     }
 
