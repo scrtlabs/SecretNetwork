@@ -87,7 +87,7 @@ log = "0.4.17"
 simple_logger = { version = "2.3.0", default-features = false, features = [
   "stderr"
 ] }
-block-verifier = { path = "../shared/block-verifier", optional = true }
+block-verifier = { path = "../shared/block-verifier", optional = true, features = ["verify-validator-whitelist"] }
 time = "=0.3.17"
 ed25519-dalek = { version = "1.0", default-features = false }
 sha2 = "0.10"

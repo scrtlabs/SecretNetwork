@@ -39,6 +39,9 @@ use super::seed_service::get_next_consensus_seed_from_service;
 use crate::registration::attestation::verify_quote_ecdsa;
 use crate::registration::onchain::split_combined_cert;
 
+use block_verifier::validator_whitelist;
+use validator_whitelist::ValidatorList;
+
 use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
 use enclave_utils::storage::write_to_untrusted;
@@ -738,6 +741,9 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
     // verify all the signatures, and build the set of addresses
     let mut signers_set: BTreeSet<[u8; 20]> = BTreeSet::new();
 
+    let mut whitelisted_signers: usize = 0;
+    let white_list: &ValidatorList = &validator_whitelist::VALIDATOR_WHITELIST;
+
     for (addr_str, (pubkey_str, sig_str)) in &signatures {
         let pubkey_bytes = base64::decode(pubkey_str).unwrap();
 
@@ -770,10 +776,22 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
             panic!("Incorrect signature for address: {}", addr_str);
         }
 
-        signers_set.insert(addr);
+        if !signers_set.contains(&addr) {
+            signers_set.insert(addr);
+
+            let is_whitelisted = white_list.contains(addr_str);
+            if is_whitelisted {
+                whitelisted_signers += 1;
+            }
+
+            println!(
+                "  Approved by {}, whitelisted = {}",
+                addr_str, is_whitelisted
+            );
+        }
     }
 
-    false
+    whitelisted_signers >= validator_whitelist::VALIDATOR_THRESHOLD
 }
 
 fn is_export_approved(report: &sgx_report_body_t) -> bool {
