@@ -155,7 +155,7 @@ jobs:
       - name: Build CLI
         shell: bash
         run: |
-          make build_cli
+          SGX_MODE=SW make build_cli
           cp "secretcli" "secretcli-$RUNNER_OS"
       - uses: actions/upload-artifact@v3
         with:
@@ -177,7 +177,7 @@ jobs:
           name: set up go
           go-version: 1.21 # The Go version to download (if necessary) and use.
       - name: Build macos darwin/arm64
-        run: make build_cli
+        run: SGX_MODE=SW make build_cli
       - uses: actions/upload-artifact@v3
         with:
           name: secretcli-MacOS-arm64
