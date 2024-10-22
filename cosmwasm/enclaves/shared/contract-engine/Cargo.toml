@@ -63,6 +63,9 @@ rand_core = "0.5.0"
 rand_chacha = { version = "0.2.1", default-features = false }
 bincode2 = { git = "https://github.com/scrtlabs/bincode2-sgx", tag = "v2.0.1-secret.1" }
 block-verifier = { path = "../block-verifier", optional = true }
+evm = { version = "0.41.1", default-features = false }
+ethereum-types = { version = "0.14", default-features = false }
+primitive-types = { version = "0.12.2", default-features = false }
 
 [dependencies.wasmi]
 git = "https://github.com/paritytech/wasmi"
