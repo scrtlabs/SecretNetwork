@@ -60,6 +60,7 @@ import (
 	v1_6 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.6"
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
+	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
 
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -554,6 +555,7 @@ func (app *SecretNetworkApp) LegacyAmino() *codec.LegacyAmino {
 func SetOrderBeginBlockers(app *SecretNetworkApp) {
 	app.mm.SetOrderBeginBlockers(
 		upgradetypes.ModuleName,
+		evmtypes.ModuleName,
 		capabilitytypes.ModuleName,
 		minttypes.ModuleName,
 		distrtypes.ModuleName,
@@ -604,6 +606,7 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
 		ibcexported.ModuleName,
+		evmtypes.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		ibctransfertypes.ModuleName,
@@ -621,6 +624,7 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		authz.ModuleName,
 		feegrant.ModuleName,
 		stakingtypes.ModuleName,
+		evmtypes.ModuleName,
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		vestingtypes.ModuleName,

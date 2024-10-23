@@ -33,6 +33,7 @@ import (
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
+	"github.com/scrtlabs/SecretNetwork/x/evm"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -85,6 +86,7 @@ var mbasics = module.NewBasicManager(
 func customModuleBasics() []module.AppModuleBasic {
 	return []module.AppModuleBasic{
 		compute.AppModuleBasic{},
+		evm.AppModuleBasic{},
 		registration.AppModuleBasic{},
 		ibcswitch.AppModuleBasic{},
 	}
