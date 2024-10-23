@@ -19,11 +19,11 @@ import (
 	"math/big"
 
 	errorsmod "cosmossdk.io/errors"
-	"github.com/scrtlabs/SecretNetwork/x/evm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/scrtlabs/SecretNetwork/x/evm/types"
 )
 
 // EVMConfig creates the EVMConfig based on current state
@@ -60,9 +60,10 @@ func (k *Keeper) TxConfig(ctx sdk.Context, txHash common.Hash) types.TxConfig {
 // module parameters. The config generated uses the default JumpTable from the EVM.
 func (k Keeper) VMConfig(ctx sdk.Context, msg core.Message, cfg *types.EVMConfig, tracer vm.EVMLogger) vm.Config {
 	noBaseFee := true
-	if types.IsLondon(cfg.ChainConfig, ctx.BlockHeight()) {
-		noBaseFee = k.feeMarketKeeper.GetParams(ctx).NoBaseFee
-	}
+	// TODO: FEEMARKET
+	// if types.IsLondon(cfg.ChainConfig, ctx.BlockHeight()) {
+	// noBaseFee = k.feeMarketKeeper.GetParams(ctx).NoBaseFee
+	// }
 
 	var debug bool
 	if _, ok := tracer.(types.NoOpTracer); !ok {

@@ -53,7 +53,10 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
+	evmcommontypes "github.com/scrtlabs/SecretNetwork/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
+	evmkeeper "github.com/scrtlabs/SecretNetwork/x/evm/keeper"
+	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 
 	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/keeper"
@@ -91,6 +94,7 @@ type SecretAppKeepers struct {
 	EvidenceKeeper   *evidencekeeper.Keeper
 	FeegrantKeeper   *feegrantkeeper.Keeper
 	ComputeKeeper    *compute.Keeper
+	EvmKeeper        *evmkeeper.Keeper
 	RegKeeper        *reg.Keeper
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   ibctransferkeeper.Keeper
@@ -169,7 +173,7 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	accountKeeper := authkeeper.NewAccountKeeper(
 		appCodec,
 		runtime.NewKVStoreService(ak.keys[authtypes.StoreKey]),
-		authtypes.ProtoBaseAccount,
+		evmcommontypes.ProtoAccount,
 		maccPerms,
 		authcodec.NewBech32Codec(scrt.Bech32PrefixAccAddr),
 		scrt.Bech32PrefixAccAddr,
@@ -273,6 +277,17 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		ak.memKeys[capabilitytypes.MemStoreKey],
 	)
 	ak.CreateScopedKeepers()
+
+	evmSs := ak.GetSubspace(evmtypes.ModuleName)
+	ak.EvmKeeper = evmkeeper.NewKeeper(
+		appCodec,
+		ak.keys[evmtypes.StoreKey],
+		ak.tKeys[evmtypes.TransientKey],
+		authtypes.NewModuleAddress(govtypes.ModuleName),
+		*ak.AccountKeeper,
+		*ak.BankKeeper,
+		*ak.StakingKeeper,
+		evmSs)
 
 	// Create IBC Keeper
 	ak.IbcKeeper = ibckeeper.NewKeeper(
@@ -584,6 +599,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		ibctransfertypes.StoreKey,
 		capabilitytypes.StoreKey,
 		compute.StoreKey,
+		evmtypes.StoreKey,
 		reg.StoreKey,
 		feegrant.StoreKey,
 		authzkeeper.StoreKey,
@@ -596,7 +612,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		crisistypes.StoreKey,
 	)
 
-	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
+	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, evmtypes.TransientKey)
 	ak.memKeys = storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
 }
 
@@ -617,6 +633,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
+	paramsKeeper.Subspace(evmtypes.ModuleName).WithKeyTable(evmtypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
 

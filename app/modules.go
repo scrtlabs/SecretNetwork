@@ -40,6 +40,8 @@ import (
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
+	"github.com/scrtlabs/SecretNetwork/x/evm"
+	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
@@ -55,6 +57,7 @@ var ModuleAccountPermissions = map[string][]string{
 	ibcfeetypes.ModuleName:         nil,
 	ibcswitch.ModuleName:           nil,
 	compute.ModuleName:             {authtypes.Burner},
+	evmtypes.ModuleName:            {authtypes.Minter, authtypes.Burner},
 }
 
 func Modules(
@@ -78,6 +81,7 @@ func Modules(
 		upgrade.NewAppModule(app.AppKeepers.UpgradeKeeper, app.AppKeepers.AccountKeeper.AddressCodec()),
 		evidence.NewAppModule(*app.AppKeepers.EvidenceKeeper),
 		compute.NewAppModule(*app.AppKeepers.ComputeKeeper),
+		evm.NewAppModule(app.AppKeepers.EvmKeeper, app.AppKeepers.AccountKeeper, app.AppKeepers.GetSubspace(evmtypes.ModuleName)),
 		params.NewAppModule(*app.AppKeepers.ParamsKeeper),
 		authzmodule.NewAppModule(appCodec, *app.AppKeepers.AuthzKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, app.GetInterfaceRegistry()),
 		reg.NewAppModule(*app.AppKeepers.RegKeeper),
