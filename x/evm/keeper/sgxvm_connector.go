@@ -9,7 +9,7 @@ import (
 	// "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
 	// "google.golang.org/protobuf/proto"
-	// compliancetypes "swisstronik/x/compliance/types"
+	// compliancetypes "github.com/scrtlabs/SecretNetwork/x/compliance/types"
 )
 
 // TODO: connect our version of librustgo
