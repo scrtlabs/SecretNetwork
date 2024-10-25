@@ -2,7 +2,6 @@
 
 # 1.15.0
 - Update build OS to Ubuntu 22.04
-- Update go to v1.23
 - Update cosmos-sdk to v0.50.10. All the related changes can be found [here](https://github.com/cosmos/cosmos-sdk/blob/main/CHANGELOG.md)
 - Update ibc-go to v8.1.0. Full changelog can be found [here](https://github.com/cosmos/ibc-go/blob/main/CHANGELOG.md)
 - Update cometbft to v0.38.12. Full changelog can be found [here](https://github.com/cometbft/cometbft/blob/v0.38.12/CHANGELOG.md)
