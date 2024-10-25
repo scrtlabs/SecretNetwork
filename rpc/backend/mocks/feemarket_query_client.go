@@ -9,7 +9,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
-	// TODO
+    // TODO: FEEMARKET
 	// types "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 )
 

@@ -31,7 +31,7 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
-	// TODO
+	// TODO: FEEMARKET
 	// feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 
 	"github.com/ethereum/go-ethereum/common"

@@ -26,7 +26,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
-	// TODO:
+	// TODO: FEEMARKET
 	// feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 )
 

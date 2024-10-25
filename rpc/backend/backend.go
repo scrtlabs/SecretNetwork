@@ -35,6 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 
 	rpctypes "github.com/scrtlabs/SecretNetwork/rpc/types"
+	// TODO: SERVER
 	// "github.com/scrtlabs/SecretNetwork/server/config"
 	ethermint "github.com/scrtlabs/SecretNetwork/types"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"

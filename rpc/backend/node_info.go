@@ -38,6 +38,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/crypto/ethsecp256k1"
 
 	rpctypes "github.com/scrtlabs/SecretNetwork/rpc/types"
+	// TODO: SERVER
 	// "github.com/scrtlabs/SecretNetwork/server/config"
 	ethermint "github.com/scrtlabs/SecretNetwork/types"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"

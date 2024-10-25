@@ -22,7 +22,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 
-	// "github.com/cosmos/cosmos-sdk/server"
 	"github.com/scrtlabs/SecretNetwork/rpc/backend"
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/ethereum/debug"
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/ethereum/eth"
@@ -33,7 +32,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/ethereum/txpool"
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/ethereum/web3"
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/utils"
-	// TODO
+	// TODO: SERVER
 	// "github.com/cosmos/cosmos-sdk/server"
 )
 

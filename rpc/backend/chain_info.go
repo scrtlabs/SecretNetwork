@@ -32,7 +32,7 @@ import (
 	rpctypes "github.com/scrtlabs/SecretNetwork/rpc/types"
 	ethermint "github.com/scrtlabs/SecretNetwork/types"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
-	// TODO
+	// TODO: FEEMARKET
 	// feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 )
 

@@ -30,7 +30,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
-	"honnef.co/go/tools/config"
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -46,6 +45,7 @@ import (
 	rpcfilters "github.com/scrtlabs/SecretNetwork/rpc/namespaces/ethereum/eth/filters"
 	"github.com/scrtlabs/SecretNetwork/rpc/types"
 
+	// TODO: SERVER
 	// "github.com/scrtlabs/SecretNetwork/server/config"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
 )
