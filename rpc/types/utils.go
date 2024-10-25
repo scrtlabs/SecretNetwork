@@ -236,22 +236,25 @@ func NewRPCTransaction(
 
 // BaseFeeFromEvents parses the feemarket basefee from cosmos events
 func BaseFeeFromEvents(events []abci.Event) *big.Int {
-	for _, event := range events {
-		if event.Type != feemarkettypes.EventTypeFeeMarket {
-			continue
-		}
+	// TODO: FEEMARKET
+	/*
+		for _, event := range events {
+			if event.Type != feemarkettypes.EventTypeFeeMarket {
+				continue
+			}
 
-		for _, attr := range event.Attributes {
-			if attr.Key == feemarkettypes.AttributeKeyBaseFee {
-				result, success := new(big.Int).SetString(string(attr.Value), 10)
-				if success {
-					return result
+			for _, attr := range event.Attributes {
+				if attr.Key == feemarkettypes.AttributeKeyBaseFee {
+					result, success := new(big.Int).SetString(string(attr.Value), 10)
+					if success {
+						return result
+					}
+
+					return nil
 				}
-
-				return nil
 			}
 		}
-	}
+	*/
 	return nil
 }
 

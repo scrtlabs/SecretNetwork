@@ -20,7 +20,10 @@ import (
 
 	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
+	// TODO: SERVER
 	"github.com/cosmos/cosmos-sdk/server"
+
+	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/scrtlabs/SecretNetwork/rpc/backend"
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/ethereum/debug"
@@ -32,8 +35,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/ethereum/txpool"
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/ethereum/web3"
 	"github.com/scrtlabs/SecretNetwork/rpc/namespaces/utils"
-	// TODO: SERVER
-	// "github.com/cosmos/cosmos-sdk/server"
+	ethermint "github.com/scrtlabs/SecretNetwork/types"
 )
 
 // RPC namespaces and API version

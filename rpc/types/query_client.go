@@ -37,7 +37,8 @@ import (
 type QueryClient struct {
 	tx.ServiceClient
 	evmtypes.QueryClient
-	FeeMarket feemarkettypes.QueryClient
+	// TODO: FEEMARKET
+	// FeeMarket feemarkettypes.QueryClient
 }
 
 // NewQueryClient creates a new gRPC query client
@@ -45,7 +46,8 @@ func NewQueryClient(clientCtx client.Context) *QueryClient {
 	return &QueryClient{
 		ServiceClient: tx.NewServiceClient(clientCtx),
 		QueryClient:   evmtypes.NewQueryClient(clientCtx),
-		FeeMarket:     feemarkettypes.NewQueryClient(clientCtx),
+		// TODO: FEEMARKET
+		// FeeMarket:     feemarkettypes.NewQueryClient(clientCtx),
 	}
 }
 

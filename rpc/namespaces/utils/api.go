@@ -6,7 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/scrtlabs/SecretNetwork/app"
+	"github.com/scrtlabs/SecretNetwork/types"
 )
 
 type API struct{}
@@ -24,7 +24,7 @@ func (a *API) ConvertAddress(address string) (string, error) {
 		addrBytes := common.HexToAddress(address).Bytes()
 		convertedAddr := sdk.AccAddress(addrBytes)
 		return convertedAddr.String(), nil
-	case strings.HasPrefix(address, app.AccountAddressPrefix):
+	case strings.HasPrefix(address, types.Bech32PrefixAccAddr):
 		addrBytes, _ := sdk.AccAddressFromBech32(address)
 		convertedAddr := common.BytesToAddress(addrBytes)
 		return convertedAddr.String(), nil

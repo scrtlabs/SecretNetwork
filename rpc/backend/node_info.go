@@ -102,11 +102,6 @@ func (b *Backend) SetEtherbase(etherbase common.Address) bool {
 	withdrawAddr := sdk.AccAddress(etherbase.Bytes())
 	msg := distributiontypes.NewMsgSetWithdrawAddress(delAddr, withdrawAddr)
 
-	if err := msg.ValidateBasic(); err != nil {
-		b.logger.Debug("tx failed basic validation", "error", err.Error())
-		return false
-	}
-
 	// Assemble transaction from fields
 	builder, ok := b.clientCtx.TxConfig.NewTxBuilder().(authtx.ExtensionOptionsTxBuilder)
 	if !ok {
@@ -163,7 +158,7 @@ func (b *Backend) SetEtherbase(etherbase common.Address) bool {
 		return false
 	}
 
-	if err := tx.Sign(txFactory, keyInfo.Name, builder, false); err != nil {
+	if err := tx.Sign(b.ctx, txFactory, keyInfo.Name, builder, false); err != nil {
 		b.logger.Debug("failed to sign tx", "error", err.Error())
 		return false
 	}
@@ -289,7 +284,7 @@ func (b *Backend) SetGasPrice(gasPrice hexutil.Big) bool {
 		unit = minGasPrices[0].Denom
 	}
 
-	c := sdk.NewDecCoin(unit, sdk.NewIntFromBigInt(gasPrice.ToInt()))
+	c := sdk.NewDecCoin(unit, sdkmath.NewIntFromBigInt(gasPrice.ToInt()))
 
 	appConf.SetMinGasPrices(sdk.DecCoins{c})
 	if b.clientCtx.Viper.ConfigFileUsed() == "" {
@@ -309,37 +304,51 @@ func (b Backend) UnprotectedAllowed() bool {
 
 // RPCGasCap is the global gas cap for eth-call variants.
 func (b *Backend) RPCGasCap() uint64 {
-	return b.cfg.JSONRPC.GasCap
+	// TODO: SERVER
+	// return b.cfg.JSONRPC.GasCap
+	return 0
 }
 
 // RPCEVMTimeout is the global evm timeout for eth-call variants.
 func (b *Backend) RPCEVMTimeout() time.Duration {
-	return b.cfg.JSONRPC.EVMTimeout
+	// TODO: SERVER
+	// return b.cfg.JSONRPC.EVMTimeout
+	return 0
 }
 
 // RPCGasCap is the global gas cap for eth-call variants.
 func (b *Backend) RPCTxFeeCap() float64 {
-	return b.cfg.JSONRPC.TxFeeCap
+	// TODO: SERVER
+	// return b.cfg.JSONRPC.TxFeeCap
+	return 0
 }
 
 // RPCFilterCap is the limit for total number of filters that can be created
 func (b *Backend) RPCFilterCap() int32 {
-	return b.cfg.JSONRPC.FilterCap
+	// TODO: SERVER
+	// return b.cfg.JSONRPC.FilterCap
+	return 0
 }
 
 // RPCFeeHistoryCap is the limit for total number of blocks that can be fetched
 func (b *Backend) RPCFeeHistoryCap() int32 {
-	return b.cfg.JSONRPC.FeeHistoryCap
+	// TODO: SERVER
+	// return b.cfg.JSONRPC.FeeHistoryCap
+	return 0
 }
 
 // RPCLogsCap defines the max number of results can be returned from single `eth_getLogs` query.
 func (b *Backend) RPCLogsCap() int32 {
-	return b.cfg.JSONRPC.LogsCap
+	// TODO: SERVER
+	// return b.cfg.JSONRPC.LogsCap
+	return 0
 }
 
 // RPCBlockRangeCap defines the max block range allowed for `eth_getLogs` query.
 func (b *Backend) RPCBlockRangeCap() int32 {
-	return b.cfg.JSONRPC.BlockRangeCap
+	// TODO: SERVER
+	// return b.cfg.JSONRPC.BlockRangeCap
+	return 0
 }
 
 // RPCMinGasPrice returns the minimum gas price for a transaction obtained from

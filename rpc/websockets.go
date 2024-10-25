@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"net"
+	// "net"
 	"net/http"
 	"sync"
 
@@ -46,7 +46,7 @@ import (
 	"github.com/scrtlabs/SecretNetwork/rpc/types"
 
 	// TODO: SERVER
-	// "github.com/scrtlabs/SecretNetwork/server/config"
+	"github.com/cosmos/cosmos-sdk/server/config"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
 )
 
@@ -92,23 +92,27 @@ type websocketsServer struct {
 }
 
 func NewWebsocketsServer(clientCtx client.Context, logger log.Logger, tmWSClient *rpcclient.WSClient, cfg *config.Config, allowUnencryptedTxs bool) WebsocketsServer {
-	logger = logger.With("api", "websocket-server")
+	// TODO: SERVER
+	/*
+		logger = logger.With("api", "websocket-server")
 
-	_, port, _ := net.SplitHostPort(cfg.JSONRPC.Address)
-	wsAddr := cfg.JSONRPC.WsAddress
-	if allowUnencryptedTxs {
-		_, port, _ = net.SplitHostPort(cfg.JSONRPC.UnencryptedAddress)
-		wsAddr = cfg.JSONRPC.UnencryptedWsAddress
-	}
+		_, port, _ := net.SplitHostPort(cfg.JSONRPC.Address)
+		wsAddr := cfg.JSONRPC.WsAddress
+		if allowUnencryptedTxs {
+			_, port, _ = net.SplitHostPort(cfg.JSONRPC.UnencryptedAddress)
+			wsAddr = cfg.JSONRPC.UnencryptedWsAddress
+		}
 
-	return &websocketsServer{
-		rpcAddr:  "localhost:" + port, // FIXME: this shouldn't be hardcoded to localhost
-		wsAddr:   wsAddr,
-		certFile: cfg.TLS.CertificatePath,
-		keyFile:  cfg.TLS.KeyPath,
-		api:      newPubSubAPI(clientCtx, logger, tmWSClient),
-		logger:   logger,
-	}
+		return &websocketsServer{
+			rpcAddr:  "localhost:" + port, // FIXME: this shouldn't be hardcoded to localhost
+			wsAddr:   wsAddr,
+			certFile: cfg.TLS.CertificatePath,
+			keyFile:  cfg.TLS.KeyPath,
+			api:      newPubSubAPI(clientCtx, logger, tmWSClient),
+			logger:   logger,
+		}
+	*/
+	return nil
 }
 
 func (s *websocketsServer) Start() {

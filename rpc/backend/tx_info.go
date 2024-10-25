@@ -143,9 +143,10 @@ func (b *Backend) GetGasUsed(res *ethermint.TxResult, price *big.Int, gas uint64
 	// patch gasUsed if tx is reverted and happened before height on which fixed was introduced
 	// to return real gas charged
 	// more info at https://github.com/evmos/ethermint/pull/1557
-	if res.Failed && res.Height < b.cfg.JSONRPC.FixRevertGasRefundHeight {
-		return new(big.Int).Mul(price, new(big.Int).SetUint64(gas)).Uint64()
-	}
+	// TODO: SERVER
+	// if res.Failed && res.Height < b.cfg.JSONRPC.FixRevertGasRefundHeight {
+	// return new(big.Int).Mul(price, new(big.Int).SetUint64(gas)).Uint64()
+	// }
 	return res.GasUsed
 }
 
