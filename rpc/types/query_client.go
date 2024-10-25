@@ -26,8 +26,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
-	// TODO: FEEMARKET
-	// feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 )
 
 // QueryClient defines a gRPC Client used for:
@@ -37,8 +36,7 @@ import (
 type QueryClient struct {
 	tx.ServiceClient
 	evmtypes.QueryClient
-	// TODO: FEEMARKET
-	// FeeMarket feemarkettypes.QueryClient
+	FeeMarket feemarkettypes.QueryClient
 }
 
 // NewQueryClient creates a new gRPC query client
@@ -46,8 +44,7 @@ func NewQueryClient(clientCtx client.Context) *QueryClient {
 	return &QueryClient{
 		ServiceClient: tx.NewServiceClient(clientCtx),
 		QueryClient:   evmtypes.NewQueryClient(clientCtx),
-		// TODO: FEEMARKET
-		// FeeMarket:     feemarkettypes.NewQueryClient(clientCtx),
+		FeeMarket:     feemarkettypes.NewQueryClient(clientCtx),
 	}
 }
 

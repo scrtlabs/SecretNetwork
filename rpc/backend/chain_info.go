@@ -18,7 +18,7 @@ package backend
 import (
 	"fmt"
 	"math/big"
-	// "strconv"
+	"strconv"
 
 	"cosmossdk.io/math"
 	tmrpcclient "github.com/cometbft/cometbft/rpc/client"
@@ -33,8 +33,7 @@ import (
 	rpctypes "github.com/scrtlabs/SecretNetwork/rpc/types"
 	ethermint "github.com/scrtlabs/SecretNetwork/types"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
-	// TODO: FEEMARKET
-	// feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 )
 
 // ChainID is the EIP-155 replay-protection chain id for the current ethereum chain config.
@@ -69,15 +68,11 @@ func (b *Backend) ChainConfig() *params.ChainConfig {
 
 // GlobalMinGasPrice returns MinGasPrice param from FeeMarket
 func (b *Backend) GlobalMinGasPrice() (math.LegacyDec, error) {
-	// TODO: FEEMARKET
-	/*
-		res, err := b.queryClient.FeeMarket.Params(b.ctx, &feemarkettypes.QueryParamsRequest{})
-		if err != nil {
-			return math.LegacyZeroDec(), err
-		}
-		return res.Params.MinGasPrice, nil
-	*/
-	return math.LegacyZeroDec(), errors.New("secret: not implemented")
+	res, err := b.queryClient.FeeMarket.Params(b.ctx, &feemarkettypes.QueryParamsRequest{})
+	if err != nil {
+		return math.LegacyZeroDec(), err
+	}
+	return res.Params.MinGasPrice, nil
 }
 
 // BaseFee returns the base fee tracked by the Fee Market module.
@@ -85,34 +80,30 @@ func (b *Backend) GlobalMinGasPrice() (math.LegacyDec, error) {
 // If the London hard fork is not activated at the current height, the query will
 // return nil.
 func (b *Backend) BaseFee(blockRes *tmrpctypes.ResultBlockResults) (*big.Int, error) {
-	// TODO: FEEMARKET
-	/*
-		// return BaseFee if London hard fork is activated and feemarket is enabled
-		res, err := b.queryClient.BaseFee(rpctypes.ContextWithHeight(blockRes.Height), &evmtypes.QueryBaseFeeRequest{})
-		if err != nil || res.BaseFee == nil {
-			// we can't tell if it's london HF not enabled or the state is pruned,
-			// in either case, we'll fallback to parsing from begin blocker event,
-			// faster to iterate reversely
-			for i := len(blockRes.FinalizeBlockEvents) - 1; i >= 0; i-- {
-				evt := blockRes.FinalizeBlockEvents[i]
-				if evt.Type == feemarkettypes.EventTypeFeeMarket && len(evt.Attributes) > 0 {
-					baseFee, err := strconv.ParseInt(string(evt.Attributes[0].Value), 10, 64)
-					if err == nil {
-						return big.NewInt(baseFee), nil
-					}
-					break
+	// return BaseFee if London hard fork is activated and feemarket is enabled
+	res, err := b.queryClient.BaseFee(rpctypes.ContextWithHeight(blockRes.Height), &evmtypes.QueryBaseFeeRequest{})
+	if err != nil || res.BaseFee == nil {
+		// we can't tell if it's london HF not enabled or the state is pruned,
+		// in either case, we'll fallback to parsing from begin blocker event,
+		// faster to iterate reversely
+		for i := len(blockRes.FinalizeBlockEvents) - 1; i >= 0; i-- {
+			evt := blockRes.FinalizeBlockEvents[i]
+			if evt.Type == feemarkettypes.EventTypeFeeMarket && len(evt.Attributes) > 0 {
+				baseFee, err := strconv.ParseInt(string(evt.Attributes[0].Value), 10, 64)
+				if err == nil {
+					return big.NewInt(baseFee), nil
 				}
+				break
 			}
-			return nil, err
 		}
+		return nil, err
+	}
 
-		if res.BaseFee == nil {
-			return nil, nil
-		}
+	if res.BaseFee == nil {
+		return nil, nil
+	}
 
-		return res.BaseFee.BigInt(), nil
-	*/
-	return nil, errors.New("secret: not implemented")
+	return res.BaseFee.BigInt(), nil
 }
 
 // CurrentHeader returns the latest block header
@@ -273,33 +264,29 @@ func (b *Backend) FeeHistory(
 // Although we don't support tx prioritization yet, but we return a positive value to help client to
 // mitigate the base fee changes.
 func (b *Backend) SuggestGasTipCap(baseFee *big.Int) (*big.Int, error) {
-	// TODO: FEEMARKET
-	/*
-		if baseFee == nil {
-			// london hardfork not enabled or feemarket not enabled
-			return big.NewInt(0), nil
-		}
+	if baseFee == nil {
+		// london hardfork not enabled or feemarket not enabled
+		return big.NewInt(0), nil
+	}
 
-		params, err := b.queryClient.FeeMarket.Params(b.ctx, &feemarkettypes.QueryParamsRequest{})
-		if err != nil {
-			return nil, err
-		}
-		// calculate the maximum base fee delta in current block, assuming all block gas limit is consumed
-		// ```
-		// GasTarget = GasLimit / ElasticityMultiplier
-		// Delta = BaseFee * (GasUsed - GasTarget) / GasTarget / Denominator
-		// ```
-		// The delta is at maximum when `GasUsed` is equal to `GasLimit`, which is:
-		// ```
-		// MaxDelta = BaseFee * (GasLimit - GasLimit / ElasticityMultiplier) / (GasLimit / ElasticityMultiplier) / Denominator
-		//          = BaseFee * (ElasticityMultiplier - 1) / Denominator
-		// ```
-		maxDelta := baseFee.Int64() * (int64(params.Params.ElasticityMultiplier) - 1) / int64(params.Params.BaseFeeChangeDenominator)
-		if maxDelta < 0 {
-			// impossible if the parameter validation passed.
-			maxDelta = 0
-		}
-		return big.NewInt(maxDelta), nil
-	*/
-	return nil, errors.New("secret: not implemented")
+	params, err := b.queryClient.FeeMarket.Params(b.ctx, &feemarkettypes.QueryParamsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	// calculate the maximum base fee delta in current block, assuming all block gas limit is consumed
+	// ```
+	// GasTarget = GasLimit / ElasticityMultiplier
+	// Delta = BaseFee * (GasUsed - GasTarget) / GasTarget / Denominator
+	// ```
+	// The delta is at maximum when `GasUsed` is equal to `GasLimit`, which is:
+	// ```
+	// MaxDelta = BaseFee * (GasLimit - GasLimit / ElasticityMultiplier) / (GasLimit / ElasticityMultiplier) / Denominator
+	//          = BaseFee * (ElasticityMultiplier - 1) / Denominator
+	// ```
+	maxDelta := baseFee.Int64() * (int64(params.Params.ElasticityMultiplier) - 1) / int64(params.Params.BaseFeeChangeDenominator)
+	if maxDelta < 0 {
+		// impossible if the parameter validation passed.
+		maxDelta = 0
+	}
+	return big.NewInt(maxDelta), nil
 }

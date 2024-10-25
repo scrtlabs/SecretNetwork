@@ -31,8 +31,7 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
-	// TODO: FEEMARKET
-	// feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -236,25 +235,22 @@ func NewRPCTransaction(
 
 // BaseFeeFromEvents parses the feemarket basefee from cosmos events
 func BaseFeeFromEvents(events []abci.Event) *big.Int {
-	// TODO: FEEMARKET
-	/*
-		for _, event := range events {
-			if event.Type != feemarkettypes.EventTypeFeeMarket {
-				continue
-			}
+	for _, event := range events {
+		if event.Type != feemarkettypes.EventTypeFeeMarket {
+			continue
+		}
 
-			for _, attr := range event.Attributes {
-				if attr.Key == feemarkettypes.AttributeKeyBaseFee {
-					result, success := new(big.Int).SetString(string(attr.Value), 10)
-					if success {
-						return result
-					}
-
-					return nil
+		for _, attr := range event.Attributes {
+			if attr.Key == feemarkettypes.AttributeKeyBaseFee {
+				result, success := new(big.Int).SetString(string(attr.Value), 10)
+				if success {
+					return result
 				}
+
+				return nil
 			}
 		}
-	*/
+	}
 	return nil
 }
 

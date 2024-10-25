@@ -64,8 +64,7 @@ type Keeper struct {
 	// access historical headers for EVM state transition execution
 	stakingKeeper types.StakingKeeper
 	// fetch EIP1559 base fee and parameters
-	// TODO: FEEMARKET
-	// feeMarketKeeper types.FeeMarketKeeper
+	feeMarketKeeper types.FeeMarketKeeper
 	// access to x/compliance module
 	// TODO: REMOVE
 	// ComplianceKeeper types.ComplianceKeeper
@@ -91,8 +90,7 @@ func NewKeeper(
 	ak types.AccountKeeper,
 	bankKeeper types.BankKeeper,
 	sk types.StakingKeeper,
-	// TODO: FEEMARKET
-	// fmk types.FeeMarketKeeper,
+	fmk types.FeeMarketKeeper,
 	// TODO: REMOVE
 	// ck types.ComplianceKeeper,
 	ss paramstypes.Subspace,
@@ -345,33 +343,25 @@ func (k Keeper) GetBaseFee(ctx sdk.Context, ethCfg *params.ChainConfig) *big.Int
 }
 
 func (k Keeper) getBaseFee(ctx sdk.Context, london bool) *big.Int {
-	// TODO: FEEMARKET
-	/*
-		if !london {
-			return nil
-		}
-		baseFee := k.feeMarketKeeper.GetBaseFee(ctx)
-		if baseFee == nil {
-			// return 0 if feemarket not enabled.
-			baseFee = big.NewInt(0)
-		}
-		return baseFee
-	*/
-	return nil
+	if !london {
+		return nil
+	}
+	baseFee := k.feeMarketKeeper.GetBaseFee(ctx)
+	if baseFee == nil {
+		// return 0 if feemarket not enabled.
+		baseFee = big.NewInt(0)
+	}
+	return baseFee
 }
 
 // GetMinGasMultiplier returns the MinGasMultiplier param from the fee market module
 func (k Keeper) GetMinGasMultiplier(ctx sdk.Context) math.LegacyDec {
-	// TODO: FEEMARKET
-	/*
-		fmkParmas := k.feeMarketKeeper.GetParams(ctx)
-		if fmkParmas.MinGasMultiplier.IsNil() {
-			// in case we are executing eth_call on a legacy block, returns a zero value.
-			return math.LegacyZeroDec()
-		}
-		return fmkParmas.MinGasMultiplier
-	*/
-	return math.LegacyNewDec(0)
+	fmkParmas := k.feeMarketKeeper.GetParams(ctx)
+	if fmkParmas.MinGasMultiplier.IsNil() {
+		// in case we are executing eth_call on a legacy block, returns a zero value.
+		return math.LegacyZeroDec()
+	}
+	return fmkParmas.MinGasMultiplier
 }
 
 // ResetTransientGasUsed reset gas used to prepare for execution of current cosmos tx, called in ante handler.

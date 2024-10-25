@@ -17,7 +17,7 @@ package types
 
 import (
 	"context"
-	// "math/big"
+	"math/big"
 
 	"cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -28,8 +28,7 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	// TODO: REMOVE
 	// compliancetypes "swisstronik/x/compliance/types"
-	// TODO: FEEMARKET
-	// feemarkettypes "swisstronik/x/feemarket/types"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 )
 
 // AccountKeeper defines the expected account keeper interface
@@ -63,14 +62,11 @@ type StakingKeeper interface {
 }
 
 // FeeMarketKeeper
-// TODO: FEEMARKET
-/*
 type FeeMarketKeeper interface {
 	GetBaseFee(ctx sdk.Context) *big.Int
 	GetParams(ctx sdk.Context) feemarkettypes.Params
 	AddTransientGasWanted(ctx sdk.Context, gasWanted uint64) (uint64, error)
 }
-*/
 
 // ComplianceKeeper
 // TODO: REMOVE
