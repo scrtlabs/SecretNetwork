@@ -57,6 +57,8 @@ import (
 	"github.com/scrtlabs/SecretNetwork/x/compute"
 	evmkeeper "github.com/scrtlabs/SecretNetwork/x/evm/keeper"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
+	feemarketkeeper "github.com/scrtlabs/SecretNetwork/x/feemarket/keeper"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 
 	ibcpacketforwardkeeper "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8/packetforward/keeper"
@@ -95,6 +97,7 @@ type SecretAppKeepers struct {
 	FeegrantKeeper   *feegrantkeeper.Keeper
 	ComputeKeeper    *compute.Keeper
 	EvmKeeper        *evmkeeper.Keeper
+	FeeMarketKeeper  *feemarketkeeper.Keeper
 	RegKeeper        *reg.Keeper
 	IbcKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	TransferKeeper   ibctransferkeeper.Keeper
@@ -278,6 +281,16 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 	)
 	ak.CreateScopedKeepers()
 
+	feeMarketSs := ak.GetSubspace(feemarkettypes.ModuleName)
+	feeMarketKeeper := feemarketkeeper.NewKeeper(
+		appCodec,
+		authtypes.NewModuleAddress(govtypes.ModuleName),
+		ak.keys[feemarkettypes.StoreKey],
+		ak.tKeys[feemarkettypes.TransientKey],
+		feeMarketSs,
+	)
+	ak.FeeMarketKeeper = &feeMarketKeeper
+
 	evmSs := ak.GetSubspace(evmtypes.ModuleName)
 	ak.EvmKeeper = evmkeeper.NewKeeper(
 		appCodec,
@@ -287,6 +300,7 @@ func (ak *SecretAppKeepers) InitSdkKeepers(
 		*ak.AccountKeeper,
 		*ak.BankKeeper,
 		*ak.StakingKeeper,
+		*ak.FeeMarketKeeper,
 		evmSs)
 
 	// Create IBC Keeper
@@ -600,6 +614,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		capabilitytypes.StoreKey,
 		compute.StoreKey,
 		evmtypes.StoreKey,
+		feemarkettypes.StoreKey,
 		reg.StoreKey,
 		feegrant.StoreKey,
 		authzkeeper.StoreKey,
@@ -612,7 +627,7 @@ func (ak *SecretAppKeepers) InitKeys() {
 		crisistypes.StoreKey,
 	)
 
-	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, evmtypes.TransientKey)
+	ak.tKeys = storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, evmtypes.TransientKey, feemarkettypes.TransientKey)
 	ak.memKeys = storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
 }
 
@@ -634,6 +649,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(compute.ModuleName)
 	paramsKeeper.Subspace(reg.ModuleName)
 	paramsKeeper.Subspace(evmtypes.ModuleName).WithKeyTable(evmtypes.ParamKeyTable())
+	paramsKeeper.Subspace(feemarkettypes.ModuleName).WithKeyTable(feemarkettypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcpacketforwardtypes.ModuleName).WithKeyTable(ibcpacketforwardtypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcswitch.ModuleName).WithKeyTable(ibcswitchtypes.ParamKeyTable())
 

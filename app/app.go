@@ -61,6 +61,7 @@ import (
 	v1_7 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.7"
 	v1_8 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.8"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -555,6 +556,7 @@ func (app *SecretNetworkApp) LegacyAmino() *codec.LegacyAmino {
 func SetOrderBeginBlockers(app *SecretNetworkApp) {
 	app.mm.SetOrderBeginBlockers(
 		upgradetypes.ModuleName,
+		feemarkettypes.ModuleName,
 		evmtypes.ModuleName,
 		capabilitytypes.ModuleName,
 		minttypes.ModuleName,
@@ -607,6 +609,9 @@ func SetOrderInitGenesis(app *SecretNetworkApp) {
 		crisistypes.ModuleName,
 		ibcexported.ModuleName,
 		evmtypes.ModuleName,
+		feemarkettypes.ModuleName,
+		// NOTE: feemarket need to be initialized before genutil module:
+		// gentx transactions use MinGasPriceDecorator.AnteHandle
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		ibctransfertypes.ModuleName,
@@ -625,6 +630,7 @@ func SetOrderEndBlockers(app *SecretNetworkApp) {
 		feegrant.ModuleName,
 		stakingtypes.ModuleName,
 		evmtypes.ModuleName,
+		feemarkettypes.ModuleName,
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		vestingtypes.ModuleName,

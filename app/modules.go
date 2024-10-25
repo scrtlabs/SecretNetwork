@@ -42,6 +42,8 @@ import (
 	ibcswitch "github.com/scrtlabs/SecretNetwork/x/emergencybutton"
 	"github.com/scrtlabs/SecretNetwork/x/evm"
 	evmtypes "github.com/scrtlabs/SecretNetwork/x/evm/types"
+	"github.com/scrtlabs/SecretNetwork/x/feemarket"
+	feemarkettypes "github.com/scrtlabs/SecretNetwork/x/feemarket/types"
 	reg "github.com/scrtlabs/SecretNetwork/x/registration"
 )
 
@@ -82,6 +84,7 @@ func Modules(
 		evidence.NewAppModule(*app.AppKeepers.EvidenceKeeper),
 		compute.NewAppModule(*app.AppKeepers.ComputeKeeper),
 		evm.NewAppModule(app.AppKeepers.EvmKeeper, app.AppKeepers.AccountKeeper, app.AppKeepers.GetSubspace(evmtypes.ModuleName)),
+		feemarket.NewAppModule(*app.AppKeepers.FeeMarketKeeper, app.AppKeepers.GetSubspace(feemarkettypes.ModuleName)),
 		params.NewAppModule(*app.AppKeepers.ParamsKeeper),
 		authzmodule.NewAppModule(appCodec, *app.AppKeepers.AuthzKeeper, app.AppKeepers.AccountKeeper, *app.AppKeepers.BankKeeper, app.GetInterfaceRegistry()),
 		reg.NewAppModule(*app.AppKeepers.RegKeeper),
