@@ -1,7 +1,12 @@
 //!
+use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
+use super::seed_service::get_next_consensus_seed_from_service;
+use crate::registration::attestation::verify_quote_ecdsa;
+use crate::registration::onchain::split_combined_cert;
 use core::convert::TryInto;
 use core::mem;
 use ed25519_dalek::{PublicKey, Signature};
+use enclave_crypto::consts::MRSIGNER;
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
     CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
@@ -33,11 +38,6 @@ use std::io::prelude::*;
 use std::panic;
 use std::sgxfs::SgxFile;
 use std::slice;
-
-use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
-use super::seed_service::get_next_consensus_seed_from_service;
-use crate::registration::attestation::verify_quote_ecdsa;
-use crate::registration::onchain::split_combined_cert;
 
 use block_verifier::validator_whitelist;
 use validator_whitelist::ValidatorList;
@@ -795,6 +795,13 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
 }
 
 fn is_export_approved(report: &sgx_report_body_t) -> bool {
+    // Current policy: we demand the same mr_signer
+
+    if report.mr_signer.m != MRSIGNER {
+        println!("Migration target uses different signer");
+        return false;
+    }
+
     if let Ok(mut f_in) = SgxFile::open(MIGRATION_APPROVAL_PATH.as_str()) {
         let mut data = vec![];
         f_in.read_to_end(&mut data).unwrap();
