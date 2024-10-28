@@ -192,3 +192,19 @@ func (m msgServer) ClearAdmin(goCtx context.Context, msg *types.MsgClearAdmin) (
 
 	return &types.MsgClearAdminResponse{}, nil
 }
+
+func (m msgServer) UpgradeProposalPassed(goCtx context.Context, msg *types.MsgUpgradeProposalPassed) (*types.MsgUpgradeProposalPassedResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeExecute,
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.SenderAddress),
+		sdk.NewAttribute("mrenclave", string(msg.MrEnclaveHash)),
+	))
+
+	return &types.MsgUpgradeProposalPassedResponse{}, nil
+}

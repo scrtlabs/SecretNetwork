@@ -42,6 +42,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	"github.com/cosmos/gogoproto/proto"
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
@@ -173,6 +174,10 @@ func (app *SecretNetworkApp) GetStakingKeeper() stakingkeeper.StakingKeeper {
 
 func (app *SecretNetworkApp) GetIBCKeeper() *ibckeeper.Keeper {
 	return app.AppKeepers.IbcKeeper
+}
+
+func (app *SecretNetworkApp) GetGovKeeper() *govkeeper.Keeper {
+	return app.AppKeepers.GovKeeper
 }
 
 func (app *SecretNetworkApp) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper {
@@ -370,6 +375,8 @@ func NewSecretNetworkApp(
 			SignModeHandler: app.txConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
+		appCodec:              app.appCodec,
+		govkeeper:             *app.AppKeepers.GovKeeper,
 		IBCKeeper:             app.AppKeepers.IbcKeeper,
 		WasmConfig:            computeConfig,
 		TXCounterStoreService: app.AppKeepers.ComputeKeeper.GetStoreService(),

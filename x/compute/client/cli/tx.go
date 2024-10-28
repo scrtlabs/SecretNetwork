@@ -50,6 +50,7 @@ func GetTxCmd() *cobra.Command {
 		MigrateContractCmd(),
 		UpdateContractAdminCmd(),
 		ClearContractAdminCmd(),
+		UpgradeProposalPassedCmd(),
 	)
 	return txCmd
 }
@@ -566,5 +567,39 @@ func ClearContractAdminCmd() *cobra.Command {
 		SilenceUsage: true,
 	}
 	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// UpgradeProposalPassedCmd
+func UpgradeProposalPassedCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "upgrade-proposal-passed [mrenclave-hash]",
+		Short: "Upgrade MREnclave with a new SHA256 hash",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			mrEnclaveHash := args[0]
+
+			// Create the message for upgrading the MREnclave
+			msg := types.MsgUpgradeProposalPassed{
+				SenderAddress: clientCtx.GetFromAddress().String(),
+				MrEnclaveHash: []byte(mrEnclaveHash),
+			}
+
+			// Validate the message
+			if err = msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			// Generate or broadcast the transaction
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
+		},
+	}
+	flags.AddTxFlagsToCmd(cmd)
+
 	return cmd
 }
