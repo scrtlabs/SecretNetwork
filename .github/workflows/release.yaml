@@ -183,7 +183,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: secretcli-MacOS-arm64
-          path: secretcli
+          path: secretcli-MacOS-arm64
 
   check-hw-tool:
     runs-on: ubuntu-22.04
