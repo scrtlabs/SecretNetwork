@@ -148,9 +148,9 @@ GO_TAGS := $(build_tags)
 # -ldflags
 LD_FLAGS := $(ldflags)
 
-ifeq ($(SGX_MODE), HW)
-  CGO_LDFLAGS += -lsgx_epid
-endif
+# ifeq ($(SGX_MODE), HW)
+  # CGO_LDFLAGS += -lsgx_epid
+# endif
 
 all: build_all
 
