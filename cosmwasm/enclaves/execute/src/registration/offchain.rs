@@ -44,8 +44,8 @@ use validator_whitelist::ValidatorList;
 
 use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
+use block_verifier::VERIFIED_BLOCK_MESSAGES;
 use enclave_utils::storage::write_to_untrusted;
-
 ///
 /// `ecall_init_bootstrap`
 ///
@@ -713,21 +713,46 @@ impl MigrationApprovalData {
     }
 }
 
-fn approve_migration_target(data: &MigrationApprovalData) {
-    unsafe {
-        let d = std::slice::from_raw_parts(
-            (data as *const MigrationApprovalData) as *const u8,
-            mem::size_of::<MigrationApprovalData>(),
-        );
+fn is_msg_mrenclave(msg_in_block: &[u8], mrenclave: &[u8]) -> bool {
+    trace!("*** block msg: {:?}", hex::encode(&msg_in_block));
 
-        let mut f_out = SgxFile::create(MIGRATION_APPROVAL_PATH.as_str()).unwrap();
-        f_out.write_all(d).unwrap();
+    // we expect a message of the form:
+    // 0a 2d (addr, len=45 bytes) 12 20 (mrenclave 32 bytes)
 
-        info!(
-            "Migration target approved. mr_encalve={:?}",
-            data.mr_enclave.m
-        );
+    if msg_in_block.len() != 81 {
+        trace!("len mismatch: {}", msg_in_block.len());
+        return false;
     }
+
+    if &msg_in_block[0..2] != [0x0a as u8, 0x2d as u8].as_slice() {
+        trace!("wrong sub1");
+        return false;
+    }
+
+    if &msg_in_block[47..49] != [0x12 as u8, 0x20 as u8].as_slice() {
+        trace!("wrong sub2");
+        return false;
+    }
+
+    if &msg_in_block[49..81] != mrenclave {
+        trace!("wrong mrenclave");
+        return false;
+    }
+
+    true
+}
+
+fn check_mrenclave_in_block(msg_slice: &[u8]) -> bool {
+    let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+
+    while verified_msgs.remaining() > 0 {
+        if let Some(verified_msg) = verified_msgs.get_next() {
+            if is_msg_mrenclave(&verified_msg, msg_slice) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 #[no_mangle]
@@ -738,10 +763,36 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
     validate_const_ptr!(msg, msg_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
     let msg_slice = slice::from_raw_parts(msg, msg_len as usize);
 
-    println!(
+    trace!(
         "ecall_onchain_approve_upgrade mrenclave: {:?}",
         hex::encode(msg_slice)
     );
+
+    if !check_mrenclave_in_block(msg_slice) {
+        error!("migration target not approved");
+        return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    let data = MigrationApprovalData {
+        mr_enclave: sgx_measurement_t {
+            m: msg_slice.try_into().unwrap(),
+        },
+    };
+
+    unsafe {
+        let d = std::slice::from_raw_parts(
+            (&data as *const MigrationApprovalData) as *const u8,
+            mem::size_of::<MigrationApprovalData>(),
+        );
+
+        let mut f_out = SgxFile::create(MIGRATION_APPROVAL_PATH.as_str()).unwrap();
+        f_out.write_all(d).unwrap();
+
+        info!(
+            "Migration target approved. mr_encalve={}",
+            hex::encode(data.mr_enclave.m)
+        );
+    }
 
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
