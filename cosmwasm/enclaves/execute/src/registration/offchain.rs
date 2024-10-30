@@ -730,6 +730,22 @@ fn approve_migration_target(data: &MigrationApprovalData) {
     }
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
+    msg: *const u8,
+    msg_len: u32,
+) -> sgx_types::sgx_status_t {
+    validate_const_ptr!(msg, msg_len as usize, sgx_status_t::SGX_ERROR_UNEXPECTED);
+    let msg_slice = slice::from_raw_parts(msg, msg_len as usize);
+
+    println!(
+        "ecall_onchain_approve_upgrade mrenclave: {:?}",
+        hex::encode(msg_slice)
+    );
+
+    sgx_types::sgx_status_t::SGX_SUCCESS
+}
+
 fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bool {
     let mut json_data = String::new();
     f_in.read_to_string(&mut json_data).unwrap();

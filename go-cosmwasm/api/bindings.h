@@ -217,6 +217,8 @@ Buffer migrate(cache_t *cache,
 
 bool migrate_sealing(void);
 
+bool onchain_approve_upgrade(Buffer msg);
+
 Buffer query(cache_t *cache,
              Buffer code_id,
              Buffer params,

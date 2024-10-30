@@ -16,9 +16,9 @@ use cosmwasm_sgx_vm::{
     features_from_csv, Checksum, CosmCache, Extern,
 };
 use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_export_sealing, untrusted_get_encrypted_genesis_seed,
-    untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
-    untrusted_migrate_sealing,
+    create_attestation_report_u, untrusted_approve_upgrade, untrusted_export_sealing,
+    untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed, untrusted_health_check,
+    untrusted_init_node, untrusted_key_gen, untrusted_migrate_sealing,
 };
 use ctor::ctor;
 pub use db::{db_t, DB};
@@ -946,4 +946,26 @@ pub extern "C" fn emergency_approve_upgrade(data_dir: Buffer, msg: Buffer) -> bo
 
     clear_error();
     true
+}
+
+#[no_mangle]
+#[allow(deprecated)]
+pub extern "C" fn onchain_approve_upgrade(msg: Buffer) -> bool {
+    let msg_slice = match unsafe { msg.read() } {
+        None => {
+            return false;
+        }
+        Some(r) => r,
+    };
+
+    match untrusted_approve_upgrade(&msg_slice) {
+        Err(e) => {
+            set_error(Error::enclave_err(e.to_string()), None);
+            false
+        }
+        Ok(_) => {
+            clear_error();
+            true
+        }
+    }
 }

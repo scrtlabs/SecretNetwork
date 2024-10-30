@@ -117,7 +117,6 @@ func ExportSealing() (bool, error) {
 }
 
 func EmergencyApproveUpgrade(nodeDir string, msg string) (bool, error) {
-
 	nodeDirBuf := sendSlice([]byte(nodeDir))
 	defer freeAfterSend(nodeDirBuf)
 
@@ -165,6 +164,21 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 		err = errorWithMessage(err, errmsg)
 		return err
 	}
+	return nil
+}
+
+func OnUpgradeProposalPassed(MrEnclaveHash []byte) error {
+	msgBuf := sendSlice([]byte(MrEnclaveHash))
+	defer freeAfterSend(msgBuf)
+
+	ret, err := C.onchain_approve_upgrade(msgBuf)
+	if err != nil {
+		return err
+	}
+	if !ret {
+		return errors.New("onchain_approve_upgrade failed")
+	}
+
 	return nil
 }
 

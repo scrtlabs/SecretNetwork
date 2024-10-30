@@ -7,6 +7,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	wasmtypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
@@ -205,6 +206,10 @@ func (m msgServer) UpgradeProposalPassed(goCtx context.Context, msg *types.MsgUp
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.SenderAddress),
 		sdk.NewAttribute("mrenclave", string(msg.MrEnclaveHash)),
 	))
+
+	if err := api.OnUpgradeProposalPassed(msg.MrEnclaveHash); err != nil {
+		return nil, err
+	}
 
 	return &types.MsgUpgradeProposalPassedResponse{}, nil
 }

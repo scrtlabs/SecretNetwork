@@ -303,3 +303,7 @@ func GetEncryptedGenesisSeed(cert []byte) ([]byte, error) {
 //	//return fmt.Errorf("%s", string(msg))
 //	return fmt.Errorf("heelo")
 //}
+
+func OnUpgradeProposalPassed(MrEnclaveHash []byte) error {
+	return nil
+}
