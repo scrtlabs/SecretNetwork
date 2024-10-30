@@ -1,13 +1,13 @@
-FROM ubuntu:jammy as runtime_base
+FROM ubuntu:focal as runtime_base
 
 LABEL maintainer=enigmampc
 
 # SGX version parameters
 ARG SDK_VERSION=2.20
 ARG SGX_VERSION=2.20.100.4
-ARG PSW_VERSION=2.20.100.4-jammy1
-ARG OS_REVESION=jammy1
-ARG DCAP_VERSION=1.17.100.4-jammy1
+ARG PSW_VERSION=2.20.100.4-focal1
+ARG OS_REVESION=focal1
+ARG DCAP_VERSION=1.17.100.4-focal1
 #RUN apt-get update && \
 #    apt-get install -y --no-install-recommends \
 #    #### Base utilities ####
@@ -34,7 +34,7 @@ RUN mkdir /etc/init && \
 RUN apt-get update && \
     apt-get install -y gnupg2 apt-transport-https ca-certificates curl software-properties-common make g++ libcurl4 libssl3 && \
     curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add - && \
-    add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" && \
+    add-apt-repository "deb https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" && \
     apt-get update && \
     apt-get install -y \
         libsgx-aesm-launch-plugin=$PSW_VERSION \
@@ -82,7 +82,7 @@ RUN apt-get update && \
 
 #RUN apt-get install libsgx-epid libsgx-quote-ex libsgx-dcap-ql
 #
-ADD https://download.01.org/intel-sgx/sgx-linux/${SDK_VERSION}/distro/ubuntu22.04-server/sgx_linux_x64_sdk_${SGX_VERSION}.bin ./sgx/
+ADD https://download.01.org/intel-sgx/sgx-linux/${SDK_VERSION}/distro/ubuntu20.04-server/sgx_linux_x64_sdk_${SGX_VERSION}.bin ./sgx/
 # ADD https://download.01.org/intel-sgx/sgx-linux/${SDK_VERSION}/distro/ubuntu20.04-server/sgx_linux_x64_sdk_${SGX_VERSION}.bin ./sgx/
 ## ADD https://download.01.org/intel-sgx/sgx-linux/2.9.1/distro/ubuntu18.04-server/sgx_linux_x64_driver_2.6.0_95eaa6f.bin ./sgx/
 ##
