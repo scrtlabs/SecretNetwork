@@ -228,8 +228,8 @@ func (msg MsgUpgradeProposalPassed) ValidateBasic() error {
 	if err := sdk.VerifyAddressFormat([]byte(msg.SenderAddress)); err != nil {
 		return err
 	}
-	if len(msg.MrEnclaveHash) != 64 {
-		return sdkerrors.ErrInvalidRequest.Wrap("MREnclave hash length is not equal 64!")
+	if len(msg.MrEnclaveHash) != 32 {
+		return sdkerrors.ErrInvalidRequest.Wrap("MREnclave hash length is not equal 32!")
 	}
 	return nil
 }

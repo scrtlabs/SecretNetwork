@@ -1,7 +1,9 @@
 package keeper
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
@@ -37,7 +39,7 @@ func NewCountTXDecorator(appcodec codec.Codec, govkeeper govkeeper.Keeper, store
 }
 
 // Function to find and return the MREnclaveHash string from input
-func findMREnclaveHash(input string) (string, error) {
+func findMREnclaveHash(input string) ([]byte, error) {
 	// Define the regular expression pattern with a capture group for the SHA256 hash
 	pattern := `^MREnclaveHash:([a-fA-F0-9]{64})$`
 
@@ -47,11 +49,16 @@ func findMREnclaveHash(input string) (string, error) {
 
 	// If no match is found, return an error
 	if len(matches) < 2 {
-		return "", errors.New("MREnclaveHash not found or invalid in the input string")
+		return nil, errors.New("MREnclaveHash not found or invalid in the input string")
+	}
+
+	mrEnclaveHash, err := hex.DecodeString(matches[1])
+	if err != nil {
+		return nil, err
 	}
 
 	// The SHA256 hash is captured in the first capturing group, which is matches[1]
-	return matches[1], nil
+	return mrEnclaveHash, nil
 }
 
 // AnteHandle handler stores a tx counter with current height encoded in the store to let the app handle
@@ -119,7 +126,7 @@ func (a *CountTXDecorator) verifyUpgradeProposal(ctx sdk.Context, msgUpgrade *ty
 	}
 
 	var latestProposal *v1.Proposal = nil
-	var latestMREnclaveHash string
+	var latestMREnclaveHash []byte
 
 	// Iterate through the proposals
 	for _, proposal := range proposals {
@@ -144,7 +151,7 @@ func (a *CountTXDecorator) verifyUpgradeProposal(ctx sdk.Context, msgUpgrade *ty
 	}
 
 	// Check if the MREnclave hash matches the one in the MsgUpgradeProposalPassed message
-	if latestMREnclaveHash != string(msgUpgrade.MrEnclaveHash) {
+	if (latestMREnclaveHash != nil) && bytes.Equal(latestMREnclaveHash, msgUpgrade.MrEnclaveHash) {
 		return sdkerrors.ErrUnauthorized.Wrap("software upgrade proposal: mrenclave hash mismatch")
 	}
 	return nil

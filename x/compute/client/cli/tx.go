@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -582,12 +583,15 @@ func UpgradeProposalPassedCmd() *cobra.Command {
 				return err
 			}
 
-			mrEnclaveHash := args[0]
+			mrEnclaveHash, err := hex.DecodeString(args[0])
+			if err != nil {
+				return err
+			}
 
 			// Create the message for upgrading the MREnclave
 			msg := types.MsgUpgradeProposalPassed{
 				SenderAddress: clientCtx.GetFromAddress().String(),
-				MrEnclaveHash: []byte(mrEnclaveHash),
+				MrEnclaveHash: mrEnclaveHash,
 			}
 
 			// Validate the message
