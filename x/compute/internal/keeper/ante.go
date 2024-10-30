@@ -93,6 +93,7 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 		if ok {
 			err = a.verifyUpgradeProposal(ctx, msgUpgrade)
 			if err != nil {
+				fmt.Println("*** upgrade proposal pass rejected: ", err)
 				return ctx, err
 			}
 		}
@@ -141,17 +142,22 @@ func (a *CountTXDecorator) verifyUpgradeProposal(ctx sdk.Context, msgUpgrade *ty
 		}
 	}
 
+	if latestProposal == nil {
+		return fmt.Errorf("no latest upgrade proposal")
+	}
+
 	// If we found the MsgSoftwareUpgrade latest passed proposal, extract the MREnclaveHash from it
-	if latestProposal != nil {
-		info, err := extractInfoFromProposalMessages(latestProposal.Messages[0], a.appcodec)
-		if err != nil {
-			return fmt.Errorf("Failed to extract info with MREnclave hash from Proposal, error: %w", err)
-		}
-		latestMREnclaveHash, _ = findMREnclaveHash(info)
+	info, err := extractInfoFromProposalMessages(latestProposal.Messages[0], a.appcodec)
+	if err != nil {
+		return fmt.Errorf("Failed to extract info with MREnclave hash from Proposal, error: %w", err)
+	}
+	latestMREnclaveHash, _ = findMREnclaveHash(info)
+	if latestMREnclaveHash == nil {
+		return fmt.Errorf("no mrenclave in the latest upgrade proposal")
 	}
 
 	// Check if the MREnclave hash matches the one in the MsgUpgradeProposalPassed message
-	if (latestMREnclaveHash != nil) && bytes.Equal(latestMREnclaveHash, msgUpgrade.MrEnclaveHash) {
+	if !bytes.Equal(latestMREnclaveHash, msgUpgrade.MrEnclaveHash) {
 		return sdkerrors.ErrUnauthorized.Wrap("software upgrade proposal: mrenclave hash mismatch")
 	}
 	return nil
