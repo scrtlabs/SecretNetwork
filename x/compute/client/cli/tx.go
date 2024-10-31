@@ -456,7 +456,7 @@ func MigrateContractCmd() *cobra.Command {
 		Aliases: []string{"update", "mig", "m"},
 		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx, err := client.GetClientQueryContext(cmd)
+			cliCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
