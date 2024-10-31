@@ -16,7 +16,8 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [goleveldb]
-    runs-on: ubuntu-22.04
+        os: [ubuntu-22.04, ubuntu-20.04]
+    runs-on: ${{matrix.os}}
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
@@ -59,11 +60,11 @@ jobs:
       - name: Run .deb Package Image
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
-          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_${{ matrix.os }}.deb
       - uses: actions/upload-artifact@v3
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
-          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_${{ matrix.os }}.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_${{ matrix.os }}.deb
 
   build-deb-mainnet:
     runs-on: ubuntu-22.04
