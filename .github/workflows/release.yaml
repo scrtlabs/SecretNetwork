@@ -65,7 +65,7 @@ jobs:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
 
-  build-deb-testnet-20.04:
+  build-deb-testnet-2004:
     strategy:
       fail-fast: false
       matrix:
