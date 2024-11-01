@@ -16,8 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         db_backend: [goleveldb]
-        os: [ubuntu-22.04, ubuntu-20.04]
-    runs-on: ${{matrix.os}}
+    runs-on: ubuntu-22.04
     env: # Or as an environment variable
       SPID: ${{ secrets.SPID_TESTNET }}
       API_KEY: ${{ secrets.API_KEY_TESTNET }}
@@ -60,11 +59,65 @@ jobs:
       - name: Run .deb Package Image
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
-          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_${{ matrix.os }}.deb
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
       - uses: actions/upload-artifact@v3
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_${{ matrix.os }}.deb
-          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_${{ matrix.os }}.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
+
+  build-deb-testnet-20.04:
+    strategy:
+      fail-fast: false
+      matrix:
+        db_backend: [goleveldb]
+    runs-on: ubuntu-20.04
+    env: # Or as an environment variable
+      SPID: ${{ secrets.SPID_TESTNET }}
+      API_KEY: ${{ secrets.API_KEY_TESTNET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Declare Commit Variables
+        id: vars
+        shell: bash
+        run: |
+          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - name: Build .deb Package Image
+        uses: docker/build-push-action@v4
+        with:
+          file: deployment/dockerfiles/Dockerfile.2004
+          context: .
+          load: true
+          tags: deb_build
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_TESTNET }}
+            SPID=${{ secrets.SPID_TESTNET }}
+          build-args: |
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${{ matrix.db_backend }}
+            CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+            FEATURES="verify-validator-whitelist,light-client-validation,random"
+          target: build-deb
+      - name: Run .deb Package Image
+        run: |
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
+      - uses: actions/upload-artifact@v3
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
 
   build-deb-mainnet:
     runs-on: ubuntu-22.04
@@ -147,7 +200,7 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-13]
+        os: [ubuntu-22.04, windows-latest, macos-13, ubuntu-20.04]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -281,6 +334,7 @@ jobs:
     needs: [
         native-build-cli,
         build-deb-testnet,
+        build-deb-testnet-20.04,
         # build-deb-mainnet,
         MacOS-ARM64-CLI,
         # check-hw-tool,
@@ -309,7 +363,10 @@ jobs:
           # name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
       - uses: actions/download-artifact@v3
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-20.04.deb
+      - uses: actions/download-artifact@v3
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-22.04.deb
       # - uses: actions/download-artifact@v3
         # with:
           # name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
@@ -321,7 +378,8 @@ jobs:
         with:
           prerelease: true
           files: |
-            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64.deb
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-20.04.deb
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-22.04.deb
             secretcli-macOS
             secretcli-Windows
             secretcli-Linux
