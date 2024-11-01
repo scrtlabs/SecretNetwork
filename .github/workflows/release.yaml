@@ -200,7 +200,7 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-13, ubuntu-20.04]
+        os: [ubuntu-22.04, windows-latest, macos-13]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -215,6 +215,23 @@ jobs:
         with:
           name: secretcli-${{runner.os}}
           path: secretcli-${{runner.os}}
+
+  Ubuntu-2004-CLI:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.21 # The Go version to download (if necessary) and use.
+      - name: Build CLI
+        shell: bash
+        run: |
+          SGX_MODE=SW make build_cli
+          cp "secretcli" "secretcli-Ubuntu-20.04"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: secretcli-Ubuntu-20.04
+          path: secretcli-Ubuntu-20.04
 
   MacOS-ARM64-CLI:
     runs-on: macos-latest
@@ -337,6 +354,7 @@ jobs:
         build-deb-testnet-2004,
         # build-deb-mainnet,
         MacOS-ARM64-CLI,
+        Ubuntu-2004-CLI,
         # check-hw-tool,
         # check-hw-tool-mainnet
       ]
@@ -358,6 +376,9 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: secretcli-MacOS-arm64
+      - uses: actions/download-artifact@v3
+        with:
+          name: secretcli-Ubuntu-20.04
       # - uses: actions/download-artifact@v3
         # with:
           # name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
@@ -384,6 +405,7 @@ jobs:
             secretcli-Windows
             secretcli-Linux
             secretcli-MacOS-arm64
+            secretcli-Ubuntu-20.04
 
           # secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
             # check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz

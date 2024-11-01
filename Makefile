@@ -149,7 +149,7 @@ GO_TAGS := $(build_tags)
 LD_FLAGS := $(ldflags)
 
 ifeq ($(SGX_MODE), HW)
-  CGO_LDFLAGS += -lsgx_epid
+  CGO_LDFLAGS += -L/opt/sgxsdk/lib64 -lsgx_epid
 endif
 
 all: build_all
