@@ -334,7 +334,7 @@ jobs:
     needs: [
         native-build-cli,
         build-deb-testnet,
-        build-deb-testnet-20.04,
+        build-deb-testnet-2004,
         # build-deb-mainnet,
         MacOS-ARM64-CLI,
         # check-hw-tool,
