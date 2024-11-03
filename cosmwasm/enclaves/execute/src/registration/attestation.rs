@@ -538,15 +538,15 @@ pub fn get_quote_ecdsa_untested(pub_k: &[u8]) -> Result<(Vec<u8>, Vec<u8>), sgx_
 
     println!(
         "mr_signer = {}",
-        orig_hex::encode(&my_report.body.mr_signer.m)
+        orig_hex::encode(my_report.body.mr_signer.m)
     );
     println!(
         "mr_enclave = {}",
-        orig_hex::encode(&my_report.body.mr_enclave.m)
+        orig_hex::encode(my_report.body.mr_enclave.m)
     );
     println!(
         "report_data = {}",
-        orig_hex::encode(&my_report.body.report_data.d)
+        orig_hex::encode(my_report.body.report_data.d)
     );
 
     Ok((vec_quote, vec_coll))
