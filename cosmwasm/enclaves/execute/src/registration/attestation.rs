@@ -74,6 +74,7 @@ use super::ocalls::{
 #[cfg(feature = "SGX_MODE_HW")]
 use super::{hex, report::EndorsedAttestationReport};
 
+#[cfg(feature = "SGX_MODE_HW")]
 use ::hex as orig_hex;
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -411,15 +412,15 @@ pub fn verify_quote_ecdsa(
     let my_p_quote = vec_quote.as_ptr() as *const sgx_quote_t;
     let report_body = unsafe { (*my_p_quote).report_body };
 
-//    trace!(
-//        "body.mr_signer = {}",
-//        orig_hex::encode(&report_body.mr_signer.m)
-//    );
-//    trace!(
-//        "body.mr_enclave = {}",
-//        orig_hex::encode(&report_body.mr_enclave.m)
-//    );
-//    trace!("body.report_data = {}", orig_hex::encode(&report_body.report_data.d));
+    //    trace!(
+    //        "body.mr_signer = {}",
+    //        orig_hex::encode(&report_body.mr_signer.m)
+    //    );
+    //    trace!(
+    //        "body.mr_enclave = {}",
+    //        orig_hex::encode(&report_body.mr_enclave.m)
+    //    );
+    //    trace!("body.report_data = {}", orig_hex::encode(&report_body.report_data.d));
 
     Ok((report_body, qv_result))
 }

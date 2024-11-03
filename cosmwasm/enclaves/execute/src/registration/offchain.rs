@@ -47,7 +47,10 @@ use validator_whitelist::ValidatorList;
 
 use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
+
+#[cfg(feature = "light-client-validation")]
 use block_verifier::VERIFIED_BLOCK_MESSAGES;
+
 use enclave_utils::storage::write_to_untrusted;
 ///
 /// `ecall_init_bootstrap`
@@ -717,7 +720,7 @@ impl MigrationApprovalData {
 }
 
 fn is_msg_mrenclave(msg_in_block: &[u8], mrenclave: &[u8]) -> bool {
-    trace!("*** block msg: {:?}", hex::encode(&msg_in_block));
+    trace!("*** block msg: {:?}", hex::encode(msg_in_block));
 
     // we expect a message of the form:
     // 0a 2d (addr, len=45 bytes) 12 20 (mrenclave 32 bytes)
@@ -727,12 +730,12 @@ fn is_msg_mrenclave(msg_in_block: &[u8], mrenclave: &[u8]) -> bool {
         return false;
     }
 
-    if &msg_in_block[0..2] != [0x0a as u8, 0x2d as u8].as_slice() {
+    if &msg_in_block[0..2] != [0x0a, 0x2d].as_slice() {
         trace!("wrong sub1");
         return false;
     }
 
-    if &msg_in_block[47..49] != [0x12 as u8, 0x20 as u8].as_slice() {
+    if &msg_in_block[47..49] != [0x12, 0x20].as_slice() {
         trace!("wrong sub2");
         return false;
     }
@@ -745,6 +748,7 @@ fn is_msg_mrenclave(msg_in_block: &[u8], mrenclave: &[u8]) -> bool {
     true
 }
 
+#[cfg(feature = "light-client-validation")]
 fn check_mrenclave_in_block(msg_slice: &[u8]) -> bool {
     let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
@@ -756,6 +760,11 @@ fn check_mrenclave_in_block(msg_slice: &[u8]) -> bool {
         }
     }
     false
+}
+
+#[cfg(not(feature = "light-client-validation"))]
+fn check_mrenclave_in_block(_msg_slice: &[u8]) -> bool {
+    true
 }
 
 #[no_mangle]
@@ -863,7 +872,10 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
         let sig_bytes = base64::decode(sig_str).unwrap();
         let sig_obj = Signature::from_bytes(&sig_bytes).unwrap();
 
-        if let Err(_) = pubkey_obj.verify_strict(&report.mr_enclave.m, &sig_obj) {
+        if pubkey_obj
+            .verify_strict(&report.mr_enclave.m, &sig_obj)
+            .is_err()
+        {
             panic!("Incorrect signature for address: {}", addr_str);
         }
 
