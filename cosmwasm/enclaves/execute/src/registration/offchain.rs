@@ -21,7 +21,7 @@ use enclave_utils::storage::export_file_to_kdk_safe;
 use enclave_utils::storage::migrate_file_from_2_17_safe;
 use enclave_utils::storage::SEALING_KDK;
 use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
-use enclave_utils::validator_set::VALIDATOR_SET_SEALING_PATH;
+use enclave_utils::validator_set::{ValidatorSetForHeight, VALIDATOR_SET_SEALING_PATH};
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
@@ -31,15 +31,18 @@ use sgx_types::sgx_measurement_t;
 use sgx_types::sgx_report_body_t;
 use sgx_types::sgx_status_t;
 use sha2::{Digest, Sha256};
-use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::panic;
 use std::sgxfs::SgxFile;
 use std::slice;
+use tendermint::validator::Set;
+use tendermint_proto::Protobuf;
 
+#[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
+#[cfg(feature = "verify-validator-whitelist")]
 use validator_whitelist::ValidatorList;
 
 use super::persistency::{write_master_pub_keys, write_seed};
@@ -805,11 +808,32 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
     let signatures: HashMap<String, (String, String)> =
         serde_json::from_str(&json_data).expect("Failed to deserialize JSON");
 
-    // verify all the signatures, and build the set of addresses
-    let mut signers_set: BTreeSet<[u8; 20]> = BTreeSet::new();
+    // Build the not-yet-voted validators map
+    let mut not_yet_voted_validators: HashMap<[u8; 20], u64> = HashMap::new();
+    let mut total_voting_power: u64 = 0;
 
-    let mut whitelisted_signers: usize = 0;
-    let white_list: &ValidatorList = &validator_whitelist::VALIDATOR_WHITELIST;
+    {
+        let validator_set_vec = ValidatorSetForHeight::unseal().unwrap().validator_set;
+        let validator_set =
+            <Set as Protobuf<tendermint_proto::v0_38::types::ValidatorSet>>::decode(
+                validator_set_vec.as_slice(),
+            )
+            .unwrap();
+
+        for validator in validator_set.validators() {
+            //println!("Address: {}", validator.address);
+            //println!("Voting Power: {}", validator.power);
+            let power: u64 = validator.power.value();
+            if power > 0 {
+                total_voting_power += power;
+                let addr: [u8; 20] = validator.address.as_bytes().try_into().unwrap();
+                not_yet_voted_validators.insert(addr, power);
+            }
+        }
+    };
+
+    let mut approved_power: u64 = 0;
+    let mut approved_whitelisted: usize = 0;
 
     for (addr_str, (pubkey_str, sig_str)) in &signatures {
         let pubkey_bytes = base64::decode(pubkey_str).unwrap();
@@ -843,22 +867,49 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
             panic!("Incorrect signature for address: {}", addr_str);
         }
 
-        if !signers_set.contains(&addr) {
-            signers_set.insert(addr);
+        let (voter_power, is_whitelisted) =
+            if let Some((_, power)) = not_yet_voted_validators.remove_entry(&addr) {
+                //not_yet_voted_validators.remove(&addr);
 
-            let is_whitelisted = white_list.contains(addr_str);
-            if is_whitelisted {
-                whitelisted_signers += 1;
-            }
+                #[cfg(feature = "verify-validator-whitelist")]
+                let is_whitelisted = validator_whitelist::VALIDATOR_WHITELIST.contains(addr_str);
 
-            println!(
-                "  Approved by {}, whitelisted = {}",
-                addr_str, is_whitelisted
-            );
-        }
+                #[cfg(not(feature = "verify-validator-whitelist"))]
+                let is_whitelisted = false;
+
+                approved_power += power;
+                if is_whitelisted {
+                    approved_whitelisted += 1;
+                }
+
+                (power, is_whitelisted)
+            } else {
+                (0, false)
+            };
+
+        println!(
+            "  Approved by {}, power = {}, whitelisted = {}",
+            addr_str, voter_power, is_whitelisted
+        );
     }
 
-    whitelisted_signers >= validator_whitelist::VALIDATOR_THRESHOLD
+    println!(
+        "Total Power = {}, Approved Power = {}, Total whitelisted = {}",
+        total_voting_power, approved_power, approved_whitelisted
+    );
+
+    #[cfg(feature = "verify-validator-whitelist")]
+    if (approved_whitelisted < validator_whitelist::VALIDATOR_THRESHOLD) {
+        return false;
+        error!("not enogh whitelisted validators");
+    }
+
+    if approved_power * 3 < total_voting_power * 2 {
+        error!("not enogh voting power");
+        return false;
+    }
+
+    true
 }
 
 fn is_export_approved(report: &sgx_report_body_t) -> bool {
