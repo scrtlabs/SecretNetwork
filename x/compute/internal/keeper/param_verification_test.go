@@ -85,63 +85,44 @@ func generateSignatures(
 func multisigTxCreator(
 	t *testing.T, ctx *sdk.Context, keeper Keeper, n int, threshold int, actualSigners int, sdkMsg sdk.Msg, rootMultisigAccount *Account,
 ) (txsigning.HandlerMap, []Account, Account) {
-	fmt.Println("CHECKPOINT 6.1")
 	signers, multisigAccount := generateMultisigAccount(*ctx, keeper, n, threshold)
-	fmt.Println("CHECKPOINT 6.2")
 	signModeHandler := multisigTxCreatorForExisting(t, ctx, multisigAccount, signers, actualSigners, sdkMsg, rootMultisigAccount)
-	fmt.Println("CHECKPOINT 6.3")
 	return signModeHandler, signers, multisigAccount
 }
 
 func multisigTxCreatorForExisting(
 	t *testing.T, ctx *sdk.Context, multisigAccount Account, signers []Account, actualSigners int, sdkMsg sdk.Msg, rootMultisigAccount *Account,
 ) txsigning.HandlerMap {
-	fmt.Println("CHECKPOINT 6.2.1")
 	switch msg := sdkMsg.(type) {
 	case *types.MsgInstantiateContract:
 		msg.Sender = multisigAccount.address
 	case *types.MsgExecuteContract:
 		msg.Sender = multisigAccount.address
 	}
-	fmt.Println("CHECKPOINT 6.2.2")
 
 	txConfig := authtx.NewTxConfig(MakeTestCodec(), authtx.DefaultSignModes)
-	fmt.Println("CHECKPOINT 6.2.3")
 	signmodeHandler := txConfig.SignModeHandler()
-	fmt.Println("CHECKPOINT 6.2.4")
 	builder := txConfig.NewTxBuilder()
-	fmt.Println("CHECKPOINT 6.2.5")
 	builder.SetFeeAmount(nil)
-	fmt.Println("CHECKPOINT 6.2.6")
 	builder.SetGasLimit(0)
-	fmt.Println("CHECKPOINT 6.2.7")
 	builder.SetTimeoutHeight(0)
-	fmt.Println("CHECKPOINT 6.2.8")
 
 	_ = builder.SetMsgs(sdkMsg)
 
-	fmt.Println("CHECKPOINT 6.2.9")
 	multiSignature := generateSignatures(t, *ctx, *signmodeHandler, builder, multisigAccount, signers, actualSigners, rootMultisigAccount)
-	fmt.Println("CHECKPOINT 6.2.10")
 	signature := sdksigning.SignatureV2{
 		PubKey:   multisigAccount.public,
 		Sequence: multisigAccount.acct.GetSequence() - 1,
 		Data:     multiSignature,
 	}
-	fmt.Println("CHECKPOINT 6.2.11")
 	err := builder.SetSignatures(signature)
 	require.NoError(t, err)
-	fmt.Println("CHECKPOINT 6.2.12")
 
 	tx := builder.(protoTxProvider)
-	fmt.Println("CHECKPOINT 6.2.13")
 	txBytes, err := tx.GetProtoTx().Marshal()
-	fmt.Println("CHECKPOINT 6.2.14")
 	require.NoError(t, err)
 	*ctx = ctx.WithTxBytes(txBytes)
-	fmt.Println("CHECKPOINT 6.2.15")
 	*ctx = types.WithTXCounter(*ctx, 1)
-	fmt.Println("CHECKPOINT 6.2.16")
 	// updateLightClientHelper(t, *ctx)
 
 	return *signmodeHandler
@@ -182,19 +163,13 @@ func (accts Accounts) pubKeys() []crypto.PubKey {
 func generateMultisigAccount(ctx sdk.Context, keeper Keeper, n int, threshold int) ([]Account, Account) {
 	accounts := make([]Account, n)
 
-	fmt.Println("CHECKPOINT 6.1.1")
 	for i := 0; i < n; i++ {
 		deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
-		fmt.Println("CHECKPOINT 6.1.2")
 		_, privKey, _ := CreateFakeFundedAccount(ctx, keeper.accountKeeper, keeper.bankKeeper, deposit.Add(deposit...))
-		fmt.Println("CHECKPOINT 6.1.3")
 		accounts[i] = newAccount(ctx, keeper, privKey)
-		fmt.Println("CHECKPOINT 6.1.4")
 	}
 
-	fmt.Println("CHECKPOINT 6.1.5")
 	multisigAccount := generateMultisigAccountFromPublicKeys(ctx, keeper, Accounts(accounts).pubKeys(), threshold)
-	fmt.Println("CHECKPOINT 6.1.6")
 
 	return accounts, multisigAccount
 }
@@ -350,22 +325,17 @@ func TestWrongSigner(t *testing.T) {
 }
 
 func TestMultiSig(t *testing.T) {
-	fmt.Println("CHECKPOINT 1")
 	ctx, keeper, codeID, codeHash, _, _, _, _ := setupTest(t, "./testdata/contract.wasm", sdk.Coins{})
-	fmt.Println("CHECKPOINT 2")
 
 	initMsg := `{"nop":{}}`
 	msg := types.NewSecretMsg([]byte(codeHash), []byte(initMsg))
-	fmt.Println("CHECKPOINT 3")
 
 	initMsgBz, err := wasmCtx.Encrypt(msg.Serialize())
 	require.NoError(t, err)
 	nonce := initMsgBz[0:32]
-	fmt.Println("CHECKPOINT 4")
 
 	for i := 0; i < 5; i++ {
 		for j := 0; j <= i; j++ {
-			fmt.Println("CHECKPOINT 5")
 			label := fmt.Sprintf("demo contract %d %d", i, j)
 			sdkMsg := types.MsgInstantiateContract{
 				CodeID:    codeID,
@@ -373,21 +343,16 @@ func TestMultiSig(t *testing.T) {
 				InitMsg:   initMsgBz,
 				InitFunds: nil,
 			}
-			fmt.Println("CHECKPOINT 6")
 
 			_, _, multisigAddr := multisigTxCreator(t, &ctx, keeper, i+1, j+1, i+1, &sdkMsg, nil)
 
-			fmt.Println("CHECKPOINT 7")
 			contractAddressA, _, err := keeper.Instantiate(ctx, codeID, multisigAddr.address, nil, initMsgBz, label, sdk.NewCoins(sdk.NewInt64Coin("denom", 0)), nil)
-			fmt.Println("CHECKPOINT 8")
 			if err != nil {
 				err = extractInnerError(t, err, nonce, false, false)
 			}
 			require.NoError(t, err)
 
-			fmt.Println("CHECKPOINT 9")
 			wasmEvents := getDecryptedWasmEvents(t, ctx, nonce)
-			fmt.Println("CHECKPOINT 10")
 
 			require.Equal(t,
 				[]ContractEvent{
@@ -398,13 +363,11 @@ func TestMultiSig(t *testing.T) {
 				},
 				wasmEvents,
 			)
-			fmt.Println("CHECKPOINT 11")
 
 			// Reset wasm events
 			ctx, keeper, codeID, codeHash, _, _, _, _ = setupTest(t, "./testdata/contract.wasm", sdk.Coins{})
 		}
 	}
-	fmt.Println("CHECKPOINT 12")
 }
 
 func TestMultiSigThreshold(t *testing.T) {
