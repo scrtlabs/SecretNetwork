@@ -306,15 +306,15 @@ impl TxBody {
 pub enum AminoSdkMsg {
     #[serde(alias = "wasm/MsgExecuteContract")]
     Execute {
-        sender_address: HumanAddr,
-        contract: HumanAddr,
+        sender: CanonicalAddr,
+        contract: CanonicalAddr,
         /// msg is the json-encoded HandleMsg struct (as raw Binary)
         msg: String,
         sent_funds: Vec<Coin>,
     },
     #[serde(alias = "wasm/MsgInstantiateContract")]
     Instantiate {
-        sender_address: HumanAddr,
+        sender: CanonicalAddr,
         code_id: String,
         init_msg: String,
         init_funds: Vec<Coin>,
@@ -388,15 +388,11 @@ impl AminoSdkMsg {
                 })
             }
             Self::Execute {
-                sender_address,
+                sender,
                 contract,
                 msg,
                 sent_funds,
             } => {
-                let sender = CanonicalAddr::from_human(&sender_address).map_err(|err| {
-                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
-                    EnclaveError::FailedToDeserialize
-                })?;
                 let msg = Binary::from_base64(&msg).map_err(|err| {
                     warn!(
                         "failed to parse base64 msg when parsing DirectSdkMsg: {:?}",
@@ -405,12 +401,9 @@ impl AminoSdkMsg {
                     EnclaveError::FailedToDeserialize
                 })?;
                 let msg = msg.0;
-                let contract_canonical = CanonicalAddr(Binary::from_base64(contract.as_str()).map_err(|err| {
-                    warn!("failed to turn contract address from base64 when parsing DirectSdkMsg: {:?}", err);
-                    EnclaveError::FailedToDeserialize
-                })?);
-                let contract = HumanAddr::from_canonical(&contract_canonical).map_err(|err| {
-                    warn!("failed to turn canonical addr to human addr when parsing DirectSdkMsg: {:?}", err);
+
+                let contract = HumanAddr::from_canonical(&contract).map_err(|err| {
+                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
                     EnclaveError::FailedToDeserialize
                 })?;
 
@@ -422,17 +415,13 @@ impl AminoSdkMsg {
                 })
             }
             Self::Instantiate {
-                sender_address,
+                sender,
                 init_msg,
                 init_funds,
                 label,
                 code_id,
                 admin,
             } => {
-                let sender = CanonicalAddr::from_human(&sender_address).map_err(|err| {
-                    warn!("failed to turn human addr to canonical addr when parsing DirectSdkMsg: {:?}", err);
-                    EnclaveError::FailedToDeserialize
-                })?;
                 let init_msg = Binary::from_base64(&init_msg).map_err(|err| {
                     warn!(
                         "failed to parse base64 init_msg when parsing DirectSdkMsg: {:?}",

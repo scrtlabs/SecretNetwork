@@ -18,11 +18,7 @@ func (msg RaAuthenticate) Type() string {
 }
 
 func (msg RaAuthenticate) ValidateBasic() error {
-	if err := sdk.VerifyAddressFormat([]byte(msg.Sender)); err != nil {
-		return err
-	}
-
-	if err := sdk.VerifyAddressFormat(msg.SenderAddr); err != nil {
+	if err := sdk.VerifyAddressFormat(msg.Sender); err != nil {
 		return err
 	}
 
@@ -37,8 +33,8 @@ func (msg RaAuthenticate) GetSignBytes() []byte {
 	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
-func (msg RaAuthenticate) GetSigners() []string {
-	return []string{msg.Sender}
+func (msg RaAuthenticate) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.Sender}
 }
 
 func validateCertificate(cert ra.Certificate) error {

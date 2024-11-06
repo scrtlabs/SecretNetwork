@@ -100,10 +100,8 @@ func multisigTxCreatorForExisting(
 	switch msg := sdkMsg.(type) {
 	case *types.MsgInstantiateContract:
 		msg.Sender = multisigAccount.address
-		msg.SenderAddress = multisigAccount.address.String()
 	case *types.MsgExecuteContract:
 		msg.Sender = multisigAccount.address
-		msg.SenderAddress = multisigAccount.address.String()
 	}
 	fmt.Println("CHECKPOINT 6.2.2")
 
@@ -619,8 +617,7 @@ func TestMultiSigInMultiSig(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender:        multimultisigAccount.address,
-		SenderAddress: multimultisigAccount.address.String(),
+		Sender: multimultisigAccount.address,
 		// Admin:     nil,
 		CodeID:    codeID,
 		Label:     "demo contract 1",
@@ -726,8 +723,7 @@ func TestMultiSigInMultiSigDifferentOrder(t *testing.T) {
 	nonce := initMsgBz[0:32]
 
 	sdkMsg := types.MsgInstantiateContract{
-		Sender:        multimultisigAccount.address,
-		SenderAddress: multimultisigAccount.address.String(),
+		Sender: multimultisigAccount.address,
 		// Admin:     nil,
 		CodeID:    codeID,
 		Label:     "demo contract 1",

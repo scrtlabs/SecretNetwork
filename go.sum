@@ -204,8 +204,6 @@ cosmossdk.io/x/evidence v0.1.0 h1:J6OEyDl1rbykksdGynzPKG5R/zm6TacwW2fbLTW4nCk=
 cosmossdk.io/x/evidence v0.1.0/go.mod h1:hTaiiXsoiJ3InMz1uptgF0BnGqROllAN8mwisOMMsfw=
 cosmossdk.io/x/feegrant v0.1.0 h1:c7s3oAq/8/UO0EiN1H5BIjwVntujVTkYs35YPvvrdQk=
 cosmossdk.io/x/feegrant v0.1.0/go.mod h1:4r+FsViJRpcZif/yhTn+E0E6OFfg4n0Lx+6cCtnZElU=
-cosmossdk.io/x/tx v0.13.5 h1:FdnU+MdmFWn1pTsbfU0OCf2u6mJ8cqc1H4OMG418MLw=
-cosmossdk.io/x/tx v0.13.5/go.mod h1:V6DImnwJMTq5qFjeGWpXNiT/fjgE4HtmclRmTqRVM3w=
 cosmossdk.io/x/upgrade v0.1.1 h1:aoPe2gNvH+Gwt/Pgq3dOxxQVU3j5P6Xf+DaUJTDZATc=
 cosmossdk.io/x/upgrade v0.1.1/go.mod h1:MNLptLPcIFK9CWt7Ra//8WUZAxweyRDNcbs5nkOcQy0=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
@@ -958,6 +956,8 @@ github.com/scrtlabs/cosmos-sdk-api v0.7.5-secret.1 h1:4GLC5nv9pkCEUD4HpSpsnuDMYP
 github.com/scrtlabs/cosmos-sdk-api v0.7.5-secret.1/go.mod h1:IcxpYS5fMemZGqyYtErK7OqvdM0C8kdW3dq8Q/XIG38=
 github.com/scrtlabs/cosmos-sdk-store v1.1.1-secret.1 h1:TELtwBkSg0xBrs2ObFE0pVVWF6E31fPCDX2tk8OiJPo=
 github.com/scrtlabs/cosmos-sdk-store v1.1.1-secret.1/go.mod h1:8DwVTz83/2PSI366FERGbWSH7hL6sB7HbYp8bqksNwM=
+github.com/scrtlabs/cosmos-sdk-x-tx v0.13.5-secret.1 h1:cxevF0oGD1y6KLpQYza1m0vtvogD1mksY9Dly4tDN70=
+github.com/scrtlabs/cosmos-sdk-x-tx v0.13.5-secret.1/go.mod h1:V6DImnwJMTq5qFjeGWpXNiT/fjgE4HtmclRmTqRVM3w=
 github.com/scrtlabs/iavl v1.2.0-secret.1 h1:HVBDVrD/bMwbat+8W6DUkt2BhaCBRb0bZBXgCS6nXPQ=
 github.com/scrtlabs/iavl v1.2.0-secret.1/go.mod h1:HidWWLVAtODJqFD6Hbne2Y0q3SdxByJepHUOeoH4LiI=
 github.com/scrtlabs/tendermint v0.38.12-secret.1 h1:3Cr1PBYjq7Pv5e29wJOe8m3yRbsLdJhodxF3Ie9tgtc=

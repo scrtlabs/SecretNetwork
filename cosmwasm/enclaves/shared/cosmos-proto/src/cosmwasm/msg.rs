@@ -26,7 +26,7 @@
 #[derive(PartialEq,Clone,Default)]
 pub struct MsgStoreCode {
     // message fields
-    pub sender: ::std::string::String,
+    pub sender: ::std::vec::Vec<u8>,
     pub wasm_byte_code: ::std::vec::Vec<u8>,
     pub source: ::std::string::String,
     pub builder: ::std::string::String,
@@ -46,10 +46,10 @@ impl MsgStoreCode {
         ::std::default::Default::default()
     }
 
-    // string sender = 1;
+    // bytes sender = 1;
 
 
-    pub fn get_sender(&self) -> &str {
+    pub fn get_sender(&self) -> &[u8] {
         &self.sender
     }
     pub fn clear_sender(&mut self) {
@@ -57,19 +57,19 @@ impl MsgStoreCode {
     }
 
     // Param is passed by value, moved
-    pub fn set_sender(&mut self, v: ::std::string::String) {
+    pub fn set_sender(&mut self, v: ::std::vec::Vec<u8>) {
         self.sender = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_sender(&mut self) -> &mut ::std::string::String {
+    pub fn mut_sender(&mut self) -> &mut ::std::vec::Vec<u8> {
         &mut self.sender
     }
 
     // Take field
-    pub fn take_sender(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.sender, ::std::string::String::new())
+    pub fn take_sender(&mut self) -> ::std::vec::Vec<u8> {
+        ::std::mem::replace(&mut self.sender, ::std::vec::Vec::new())
     }
 
     // bytes wasm_byte_code = 2;
@@ -161,7 +161,7 @@ impl ::protobuf::Message for MsgStoreCode {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.sender)?;
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.sender)?;
                 },
                 2 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.wasm_byte_code)?;
@@ -185,7 +185,7 @@ impl ::protobuf::Message for MsgStoreCode {
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
         if !self.sender.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.sender);
+            my_size += ::protobuf::rt::bytes_size(1, &self.sender);
         }
         if !self.wasm_byte_code.is_empty() {
             my_size += ::protobuf::rt::bytes_size(2, &self.wasm_byte_code);
@@ -203,7 +203,7 @@ impl ::protobuf::Message for MsgStoreCode {
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
         if !self.sender.is_empty() {
-            os.write_string(1, &self.sender)?;
+            os.write_bytes(1, &self.sender)?;
         }
         if !self.wasm_byte_code.is_empty() {
             os.write_bytes(2, &self.wasm_byte_code)?;
@@ -252,7 +252,7 @@ impl ::protobuf::Message for MsgStoreCode {
         static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
         descriptor.get(|| {
             let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                 "sender",
                 |m: &MsgStoreCode| { &m.sender },
                 |m: &mut MsgStoreCode| { &mut m.sender },
@@ -471,7 +471,6 @@ pub struct MsgInstantiateContract {
     pub init_funds: ::protobuf::RepeatedField<super::coin::Coin>,
     pub callback_sig: ::std::vec::Vec<u8>,
     pub admin: ::std::string::String,
-    pub sender_address: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -683,32 +682,6 @@ impl MsgInstantiateContract {
     pub fn take_admin(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.admin, ::std::string::String::new())
     }
-
-    // string sender_address = 9;
-
-
-    pub fn get_sender_address(&self) -> &str {
-        &self.sender_address
-    }
-    pub fn clear_sender_address(&mut self) {
-        self.sender_address.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_sender_address(&mut self, v: ::std::string::String) {
-        self.sender_address = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_sender_address(&mut self) -> &mut ::std::string::String {
-        &mut self.sender_address
-    }
-
-    // Take field
-    pub fn take_sender_address(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.sender_address, ::std::string::String::new())
-    }
 }
 
 impl ::protobuf::Message for MsgInstantiateContract {
@@ -753,9 +726,6 @@ impl ::protobuf::Message for MsgInstantiateContract {
                 8 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.admin)?;
                 },
-                9 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.sender_address)?;
-                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -793,9 +763,6 @@ impl ::protobuf::Message for MsgInstantiateContract {
         if !self.admin.is_empty() {
             my_size += ::protobuf::rt::string_size(8, &self.admin);
         }
-        if !self.sender_address.is_empty() {
-            my_size += ::protobuf::rt::string_size(9, &self.sender_address);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -827,9 +794,6 @@ impl ::protobuf::Message for MsgInstantiateContract {
         }
         if !self.admin.is_empty() {
             os.write_string(8, &self.admin)?;
-        }
-        if !self.sender_address.is_empty() {
-            os.write_string(9, &self.sender_address)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -909,11 +873,6 @@ impl ::protobuf::Message for MsgInstantiateContract {
                 |m: &MsgInstantiateContract| { &m.admin },
                 |m: &mut MsgInstantiateContract| { &mut m.admin },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "sender_address",
-                |m: &MsgInstantiateContract| { &m.sender_address },
-                |m: &mut MsgInstantiateContract| { &mut m.sender_address },
-            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgInstantiateContract>(
                 "MsgInstantiateContract",
                 fields,
@@ -938,7 +897,6 @@ impl ::protobuf::Clear for MsgInstantiateContract {
         self.init_funds.clear();
         self.callback_sig.clear();
         self.admin.clear();
-        self.sender_address.clear();
         self.unknown_fields.clear();
     }
 }
@@ -1165,7 +1123,6 @@ pub struct MsgExecuteContract {
     pub callback_code_hash: ::std::string::String,
     pub sent_funds: ::protobuf::RepeatedField<super::coin::Coin>,
     pub callback_sig: ::std::vec::Vec<u8>,
-    pub sender_address: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1336,32 +1293,6 @@ impl MsgExecuteContract {
     pub fn take_callback_sig(&mut self) -> ::std::vec::Vec<u8> {
         ::std::mem::replace(&mut self.callback_sig, ::std::vec::Vec::new())
     }
-
-    // string sender_address = 7;
-
-
-    pub fn get_sender_address(&self) -> &str {
-        &self.sender_address
-    }
-    pub fn clear_sender_address(&mut self) {
-        self.sender_address.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_sender_address(&mut self, v: ::std::string::String) {
-        self.sender_address = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_sender_address(&mut self) -> &mut ::std::string::String {
-        &mut self.sender_address
-    }
-
-    // Take field
-    pub fn take_sender_address(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.sender_address, ::std::string::String::new())
-    }
 }
 
 impl ::protobuf::Message for MsgExecuteContract {
@@ -1396,9 +1327,6 @@ impl ::protobuf::Message for MsgExecuteContract {
                 6 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.callback_sig)?;
                 },
-                7 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.sender_address)?;
-                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -1430,9 +1358,6 @@ impl ::protobuf::Message for MsgExecuteContract {
         if !self.callback_sig.is_empty() {
             my_size += ::protobuf::rt::bytes_size(6, &self.callback_sig);
         }
-        if !self.sender_address.is_empty() {
-            my_size += ::protobuf::rt::string_size(7, &self.sender_address);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1458,9 +1383,6 @@ impl ::protobuf::Message for MsgExecuteContract {
         };
         if !self.callback_sig.is_empty() {
             os.write_bytes(6, &self.callback_sig)?;
-        }
-        if !self.sender_address.is_empty() {
-            os.write_string(7, &self.sender_address)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1530,11 +1452,6 @@ impl ::protobuf::Message for MsgExecuteContract {
                 |m: &MsgExecuteContract| { &m.callback_sig },
                 |m: &mut MsgExecuteContract| { &mut m.callback_sig },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "sender_address",
-                |m: &MsgExecuteContract| { &m.sender_address },
-                |m: &mut MsgExecuteContract| { &mut m.sender_address },
-            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<MsgExecuteContract>(
                 "MsgExecuteContract",
                 fields,
@@ -1557,7 +1474,6 @@ impl ::protobuf::Clear for MsgExecuteContract {
         self.callback_code_hash.clear();
         self.sent_funds.clear();
         self.callback_sig.clear();
-        self.sender_address.clear();
         self.unknown_fields.clear();
     }
 }
@@ -3016,72 +2932,70 @@ impl ::protobuf::reflect::ProtobufValue for MsgClearAdminResponse {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x20secret/compute/v1beta1/msg.proto\x12\x16secret.compute.v1beta1\x1a\
-    \x14gogoproto/gogo.proto\x1a\x19cosmos_proto/cosmos.proto\x1a\x17cosmos/\
-    msg/v1/msg.proto\x1a\x1ecosmos/base/v1beta1/coin.proto\x1a\x11amino/amin\
-    o.proto\"\xd1\x01\n\x0cMsgStoreCode\x120\n\x06sender\x18\x01\x20\x01(\tR\
-    \x06senderB\x18\xd2\xb4-\x14cosmos.AddressString\x126\n\x0ewasm_byte_cod\
-    e\x18\x02\x20\x01(\x0cR\x0cwasmByteCodeB\x10\xe2\xde\x1f\x0cWASMByteCode\
-    \x12\x16\n\x06source\x18\x03\x20\x01(\tR\x06source\x12\x18\n\x07builder\
-    \x18\x04\x20\x01(\tR\x07builder:%\x88\xa0\x1f\0\x8a\xe7\xb0*\x11wasm/Msg\
-    StoreCode\x82\xe7\xb0*\x06sender\";\n\x14MsgStoreCodeResponse\x12#\n\x07\
-    code_id\x18\x01\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\x06CodeID\"\xaa\
-    \x04\n\x16MsgInstantiateContract\x12I\n\x06sender\x18\x01\x20\x01(\x0cR\
-    \x06senderB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\
-    \x12,\n\x12callback_code_hash\x18\x02\x20\x01(\tR\x10callbackCodeHash\
-    \x12#\n\x07code_id\x18\x03\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\x06Cod\
-    eID\x12\x14\n\x05label\x18\x04\x20\x01(\tR\x05label\x12\x19\n\x08init_ms\
-    g\x18\x05\x20\x01(\x0cR\x07initMsg\x12\x80\x01\n\ninit_funds\x18\x06\x20\
-    \x03(\x0b2\x19.cosmos.base.v1beta1.CoinR\tinitFundsBF\xc8\xde\x1f\0\xa8\
-    \xe7\xb0*\x01\x9a\xe7\xb0*\x0clegacy_coins\xaa\xdf\x1f(github.com/cosmos\
-    /cosmos-sdk/types.Coins\x122\n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\x0b\
-    callbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig\x12\x14\n\x05admin\x18\x08\
-    \x20\x01(\tR\x05admin\x12?\n\x0esender_address\x18\t\x20\x01(\tR\rsender\
-    AddressB\x18\xd2\xb4-\x14cosmos.AddressString:3\x8a\xe7\xb0*\x1bwasm/Msg\
-    InstantiateContract\x82\xe7\xb0*\x0esender_address\"N\n\x1eMsgInstantiat\
-    eContractResponse\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\
-    \x12\x12\n\x04data\x18\x02\x20\x01(\x0cR\x04data\"\xea\x03\n\x12MsgExecu\
-    teContract\x12I\n\x06sender\x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\
-    \x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x12M\n\x08contract\
-    \x18\x02\x20\x01(\x0cR\x08contractB1\xfa\xde\x1f-github.com/cosmos/cosmo\
-    s-sdk/types.AccAddress\x12\x10\n\x03msg\x18\x03\x20\x01(\x0cR\x03msg\x12\
-    ,\n\x12callback_code_hash\x18\x04\x20\x01(\tR\x10callbackCodeHash\x12j\n\
-    \nsent_funds\x18\x05\x20\x03(\x0b2\x19.cosmos.base.v1beta1.CoinR\tsentFu\
-    ndsB0\xaa\xdf\x1f(github.com/cosmos/cosmos-sdk/types.Coins\xc8\xde\x1f\0\
-    \x122\n\x0ccallback_sig\x18\x06\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\
-    \xde\x1f\x0bCallbackSig\x12%\n\x0esender_address\x18\x07\x20\x01(\tR\rse\
-    nderAddress:3\x88\xa0\x1f\0\x8a\xe7\xb0*\x17wasm/MsgExecuteContract\x82\
-    \xe7\xb0*\x0esender_address\"0\n\x1aMsgExecuteContractResponse\x12\x12\n\
-    \x04data\x18\x01\x20\x01(\x0cR\x04data\"\x8a\x02\n\x12MsgMigrateContract\
-    \x12\x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\x1a\n\x08contract\
-    \x18\x02\x20\x01(\tR\x08contract\x12#\n\x07code_id\x18\x03\x20\x01(\x04R\
-    \x06codeIdB\n\xe2\xde\x1f\x06CodeID\x12\x10\n\x03msg\x18\x04\x20\x01(\
-    \x0cR\x03msg\x122\n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\x0bcallbackSig\
-    B\x0f\xe2\xde\x1f\x0bCallbackSig\x12,\n\x12callback_code_hash\x18\x08\
-    \x20\x01(\tR\x10callbackCodeHash:'\x8a\xe7\xb0*\x17wasm/MsgMigrateContra\
-    ct\x82\xe7\xb0*\x06sender\"0\n\x1aMsgMigrateContractResponse\x12\x12\n\
-    \x04data\x18\x01\x20\x01(\x0cR\x04data\"\xba\x01\n\x0eMsgUpdateAdmin\x12\
-    \x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\x1b\n\tnew_admin\x18\
-    \x02\x20\x01(\tR\x08newAdmin\x12\x1a\n\x08contract\x18\x03\x20\x01(\tR\
-    \x08contract\x122\n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\x0bcallbackSig\
-    B\x0f\xe2\xde\x1f\x0bCallbackSig:#\x8a\xe7\xb0*\x13wasm/MsgUpdateAdmin\
-    \x82\xe7\xb0*\x06sender\"\x18\n\x16MsgUpdateAdminResponse\"\x9b\x01\n\rM\
-    sgClearAdmin\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\x06sender\x12\x1a\n\
-    \x08contract\x18\x03\x20\x01(\tR\x08contract\x122\n\x0ccallback_sig\x18\
-    \x07\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig:\"\x8a\
-    \xe7\xb0*\x12wasm/MsgClearAdmin\x82\xe7\xb0*\x06sender\"\x17\n\x15MsgCle\
-    arAdminResponse2\x9d\x05\n\x03Msg\x12_\n\tStoreCode\x12$.secret.compute.\
-    v1beta1.MsgStoreCode\x1a,.secret.compute.v1beta1.MsgStoreCodeResponse\
-    \x12}\n\x13InstantiateContract\x12..secret.compute.v1beta1.MsgInstantiat\
-    eContract\x1a6.secret.compute.v1beta1.MsgInstantiateContractResponse\x12\
-    q\n\x0fExecuteContract\x12*.secret.compute.v1beta1.MsgExecuteContract\
-    \x1a2.secret.compute.v1beta1.MsgExecuteContractResponse\x12q\n\x0fMigrat\
-    eContract\x12*.secret.compute.v1beta1.MsgMigrateContract\x1a2.secret.com\
-    pute.v1beta1.MsgMigrateContractResponse\x12e\n\x0bUpdateAdmin\x12&.secre\
-    t.compute.v1beta1.MsgUpdateAdmin\x1a..secret.compute.v1beta1.MsgUpdateAd\
-    minResponse\x12b\n\nClearAdmin\x12%.secret.compute.v1beta1.MsgClearAdmin\
-    \x1a-.secret.compute.v1beta1.MsgClearAdminResponse\x1a\x05\x80\xe7\xb0*\
-    \x01B<Z:github.com/scrtlabs/SecretNetwork/x/compute/internal/typesb\x06p\
-    roto3\
+    \x14gogoproto/gogo.proto\x1a\x17cosmos/msg/v1/msg.proto\x1a\x1ecosmos/ba\
+    se/v1beta1/coin.proto\x1a\x11amino/amino.proto\"\xea\x01\n\x0cMsgStoreCo\
+    de\x12I\n\x06sender\x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-github\
+    .com/cosmos/cosmos-sdk/types.AccAddress\x126\n\x0ewasm_byte_code\x18\x02\
+    \x20\x01(\x0cR\x0cwasmByteCodeB\x10\xe2\xde\x1f\x0cWASMByteCode\x12\x16\
+    \n\x06source\x18\x03\x20\x01(\tR\x06source\x12\x18\n\x07builder\x18\x04\
+    \x20\x01(\tR\x07builder:%\x88\xa0\x1f\0\x8a\xe7\xb0*\x11wasm/MsgStoreCod\
+    e\x82\xe7\xb0*\x06sender\";\n\x14MsgStoreCodeResponse\x12#\n\x07code_id\
+    \x18\x01\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\x06CodeID\"\xe5\x03\n\
+    \x16MsgInstantiateContract\x12I\n\x06sender\x18\x01\x20\x01(\x0cR\x06sen\
+    derB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x12,\n\
+    \x12callback_code_hash\x18\x02\x20\x01(\tR\x10callbackCodeHash\x12#\n\
+    \x07code_id\x18\x03\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\x06CodeID\x12\
+    \x14\n\x05label\x18\x04\x20\x01(\tR\x05label\x12\x19\n\x08init_msg\x18\
+    \x05\x20\x01(\x0cR\x07initMsg\x12\x80\x01\n\ninit_funds\x18\x06\x20\x03(\
+    \x0b2\x19.cosmos.base.v1beta1.CoinR\tinitFundsBF\xc8\xde\x1f\0\xa8\xe7\
+    \xb0*\x01\x9a\xe7\xb0*\x0clegacy_coins\xaa\xdf\x1f(github.com/cosmos/cos\
+    mos-sdk/types.Coins\x122\n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\x0bcall\
+    backSigB\x0f\xe2\xde\x1f\x0bCallbackSig\x12\x14\n\x05admin\x18\x08\x20\
+    \x01(\tR\x05admin:/\x88\xa0\x1f\0\x8a\xe7\xb0*\x1bwasm/MsgInstantiateCon\
+    tract\x82\xe7\xb0*\x06sender\"N\n\x1eMsgInstantiateContractResponse\x12\
+    \x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04data\x18\
+    \x02\x20\x01(\x0cR\x04data\"\xd2\x03\n\x12MsgExecuteContract\x12I\n\x06s\
+    ender\x18\x01\x20\x01(\x0cR\x06senderB1\xfa\xde\x1f-github.com/cosmos/co\
+    smos-sdk/types.AccAddress\x12M\n\x08contract\x18\x02\x20\x01(\x0cR\x08co\
+    ntractB1\xfa\xde\x1f-github.com/cosmos/cosmos-sdk/types.AccAddress\x12\
+    \x10\n\x03msg\x18\x03\x20\x01(\x0cR\x03msg\x12,\n\x12callback_code_hash\
+    \x18\x04\x20\x01(\tR\x10callbackCodeHash\x12\x80\x01\n\nsent_funds\x18\
+    \x05\x20\x03(\x0b2\x19.cosmos.base.v1beta1.CoinR\tsentFundsBF\xc8\xde\
+    \x1f\0\xa8\xe7\xb0*\x01\x9a\xe7\xb0*\x0clegacy_coins\xaa\xdf\x1f(github.\
+    com/cosmos/cosmos-sdk/types.Coins\x122\n\x0ccallback_sig\x18\x06\x20\x01\
+    (\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig:+\x88\xa0\x1f\0\
+    \x8a\xe7\xb0*\x17wasm/MsgExecuteContract\x82\xe7\xb0*\x06sender\"0\n\x1a\
+    MsgExecuteContractResponse\x12\x12\n\x04data\x18\x01\x20\x01(\x0cR\x04da\
+    ta\"\x8a\x02\n\x12MsgMigrateContract\x12\x16\n\x06sender\x18\x01\x20\x01\
+    (\tR\x06sender\x12\x1a\n\x08contract\x18\x02\x20\x01(\tR\x08contract\x12\
+    #\n\x07code_id\x18\x03\x20\x01(\x04R\x06codeIdB\n\xe2\xde\x1f\x06CodeID\
+    \x12\x10\n\x03msg\x18\x04\x20\x01(\x0cR\x03msg\x122\n\x0ccallback_sig\
+    \x18\x07\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig\
+    \x12,\n\x12callback_code_hash\x18\x08\x20\x01(\tR\x10callbackCodeHash:'\
+    \x8a\xe7\xb0*\x17wasm/MsgMigrateContract\x82\xe7\xb0*\x06sender\"0\n\x1a\
+    MsgMigrateContractResponse\x12\x12\n\x04data\x18\x01\x20\x01(\x0cR\x04da\
+    ta\"\xba\x01\n\x0eMsgUpdateAdmin\x12\x16\n\x06sender\x18\x01\x20\x01(\tR\
+    \x06sender\x12\x1b\n\tnew_admin\x18\x02\x20\x01(\tR\x08newAdmin\x12\x1a\
+    \n\x08contract\x18\x03\x20\x01(\tR\x08contract\x122\n\x0ccallback_sig\
+    \x18\x07\x20\x01(\x0cR\x0bcallbackSigB\x0f\xe2\xde\x1f\x0bCallbackSig:#\
+    \x8a\xe7\xb0*\x13wasm/MsgUpdateAdmin\x82\xe7\xb0*\x06sender\"\x18\n\x16M\
+    sgUpdateAdminResponse\"\x9b\x01\n\rMsgClearAdmin\x12\x16\n\x06sender\x18\
+    \x01\x20\x01(\tR\x06sender\x12\x1a\n\x08contract\x18\x03\x20\x01(\tR\x08\
+    contract\x122\n\x0ccallback_sig\x18\x07\x20\x01(\x0cR\x0bcallbackSigB\
+    \x0f\xe2\xde\x1f\x0bCallbackSig:\"\x8a\xe7\xb0*\x12wasm/MsgClearAdmin\
+    \x82\xe7\xb0*\x06sender\"\x17\n\x15MsgClearAdminResponse2\x9d\x05\n\x03M\
+    sg\x12_\n\tStoreCode\x12$.secret.compute.v1beta1.MsgStoreCode\x1a,.secre\
+    t.compute.v1beta1.MsgStoreCodeResponse\x12}\n\x13InstantiateContract\x12\
+    ..secret.compute.v1beta1.MsgInstantiateContract\x1a6.secret.compute.v1be\
+    ta1.MsgInstantiateContractResponse\x12q\n\x0fExecuteContract\x12*.secret\
+    .compute.v1beta1.MsgExecuteContract\x1a2.secret.compute.v1beta1.MsgExecu\
+    teContractResponse\x12q\n\x0fMigrateContract\x12*.secret.compute.v1beta1\
+    .MsgMigrateContract\x1a2.secret.compute.v1beta1.MsgMigrateContractRespon\
+    se\x12e\n\x0bUpdateAdmin\x12&.secret.compute.v1beta1.MsgUpdateAdmin\x1a.\
+    .secret.compute.v1beta1.MsgUpdateAdminResponse\x12b\n\nClearAdmin\x12%.s\
+    ecret.compute.v1beta1.MsgClearAdmin\x1a-.secret.compute.v1beta1.MsgClear\
+    AdminResponse\x1a\x05\x80\xe7\xb0*\x01B<Z:github.com/scrtlabs/SecretNetw\
+    ork/x/compute/internal/typesb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;
