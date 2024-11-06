@@ -63,11 +63,7 @@ build: build-rust build-go
 
 .PHONY: build-rust
 build-rust: build-enclave
-	if [[ $(SGX_MODE) == HW ]]; then \
-		sed -i 's/sgx_epid_sim/sgx_epid/' ./api/link_std.go; \
-	else \
-		sed -i 's/sgx_epid$$/sgx_epid_sim/' ./api/link_std.go; \
-	fi;
+	@if [ $(SGX_MODE) = SW ]; then sed -i 's/-lsgx_epid$$//' ./api/link_std.go; fi
 	cargo build -Z unstable-options --profile $(BUILD_PROFILE) --features "$(FEATURES_U)"
 	cp target/$(BUILD_PROFILE)/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
