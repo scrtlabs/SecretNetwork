@@ -159,6 +159,28 @@ enclave {
 
         public uint32_t ecall_run_tests();
 
+        public int64_t ecall_generate_random(
+              [in, count=block_hash_len] const uint8_t* block_hash,
+              uint32_t block_hash_len,
+              uint64_t height,
+              [out, count=48] uint8_t* random,
+              [out, count=32] uint8_t* proof
+        );
+        public sgx_status_t ecall_submit_validator_set(
+            [in, count=val_set_len] const uint8_t* val_set,
+            uint32_t val_set_len,
+            uint64_t height
+        );
+        public sgx_status_t ecall_validate_random(
+            [in, count=random_len] const uint8_t* random,
+            uint32_t random_len,
+            [in, count=proof_len] const uint8_t* proof,
+            uint32_t proof_len,
+            [in, count=block_hash_len] const uint8_t* block_hash,
+            uint32_t block_hash_len,
+            uint64_t height
+        );
+
         public sgx_status_t ecall_submit_block_signatures(
             [in, count=in_header_len] const uint8_t* in_header,
             uintptr_t in_header_len,

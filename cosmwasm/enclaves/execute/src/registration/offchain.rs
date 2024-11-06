@@ -3,6 +3,8 @@ use super::attestation::{create_attestation_certificate, get_quote_ecdsa};
 use super::seed_service::get_next_consensus_seed_from_service;
 use crate::registration::attestation::verify_quote_ecdsa;
 use crate::registration::onchain::split_combined_cert;
+#[cfg(feature = "verify-validator-whitelist")]
+use block_verifier::validator_whitelist;
 use core::convert::TryInto;
 use core::mem;
 use ed25519_dalek::{PublicKey, Signature};
@@ -14,7 +16,7 @@ use enclave_crypto::consts::{
     MIGRATION_APPROVAL_PATH, MIGRATION_CERT_PATH, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH,
     REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
-use enclave_crypto::{KeyPair, Keychain, KEY_MANAGER, PUBLIC_KEY_SIZE};
+use enclave_crypto::{sha_256, KeyPair, Keychain, SIVEncryptable, KEY_MANAGER, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::export_file_to_kdk_safe;
@@ -23,13 +25,16 @@ use enclave_utils::storage::SEALING_KDK;
 use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
 use enclave_utils::validator_set::{ValidatorSetForHeight, VALIDATOR_SET_SEALING_PATH};
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
+use lazy_static::lazy_static;
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
 use log::*;
+use sgx_trts::trts::rsgx_read_rand;
 use sgx_types::sgx_measurement_t;
 use sgx_types::sgx_report_body_t;
 use sgx_types::sgx_status_t;
+use sgx_types::SgxResult;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs::File;
@@ -38,12 +43,13 @@ use std::panic;
 use std::sgxfs::SgxFile;
 use std::slice;
 use tendermint::validator::Set;
+use tendermint::Hash::Sha256 as tm_Sha256;
 use tendermint_proto::Protobuf;
 
 #[cfg(feature = "verify-validator-whitelist")]
-use block_verifier::validator_whitelist;
-#[cfg(feature = "verify-validator-whitelist")]
 use validator_whitelist::ValidatorList;
+
+use enclave_crypto::{AESKey, SealedKey};
 
 use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
@@ -1003,4 +1009,220 @@ pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
     //trace!("*** Sealing kdk: {:?}", kdk);
 
     sgx_status_t::SGX_SUCCESS
+}
+
+const MAX_VARIABLE_LENGTH: u32 = 100_000;
+const ENCRYPTED_RANDOM_LENGTH: u32 = 48;
+const PROOF_LENGTH: u32 = 32;
+const BLOCK_HASH_LENGTH: u32 = 32;
+
+macro_rules! validate_input_length {
+    ($input:expr, $var_name:expr, $constant:expr) => {
+        if $input > $constant {
+            error!(
+                "Error: {} ({}) is larger than the constant value ({})",
+                $var_name, $input, $constant
+            );
+            return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
+        }
+    };
+}
+
+lazy_static! {
+    /// This variable indicates if the enclave configuration has already been set
+    pub static ref REK: AESKey = AESKey::unseal(&REK_PATH).unwrap();
+    pub static ref IRS: AESKey = AESKey::unseal(&IRS_PATH).unwrap();
+}
+
+pub fn get_validator_set_hash() -> SgxResult<tendermint::Hash> {
+    let res = ValidatorSetForHeight::unseal()?;
+
+    let hash = match <tendermint::validator::Set as Protobuf<
+        tendermint_proto::v0_38::types::ValidatorSet,
+    >>::decode(&*(res.validator_set))
+    {
+        Ok(vs) => {
+            debug!("decoded validator set hash: {:?}", vs.hash());
+            vs.hash()
+        }
+        Err(e) => {
+            error!("error decoding validator set: {:?}", e);
+            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        }
+    };
+
+    Ok(hash)
+}
+
+/// # Safety
+/// make sure to check that block_hash is a valid pointer and that it's exactly 32 bytes long
+#[no_mangle]
+pub unsafe extern "C" fn ecall_generate_random(
+    block_hash: *const u8,
+    block_hash_len: u32,
+    height: u64,
+    random: &mut [u8; ENCRYPTED_RANDOM_LENGTH as usize],
+    proof: &mut [u8; PROOF_LENGTH as usize],
+) -> sgx_status_t {
+    validate_const_ptr!(
+        block_hash,
+        block_hash_len as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+
+    if block_hash_len != BLOCK_HASH_LENGTH {
+        error!("block hash bad length");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+    let block_hash_slice = slice::from_raw_parts(block_hash, block_hash_len as usize);
+
+    let mut rand_buf: [u8; 32] = [0; 32];
+
+    if let Err(_e) = rsgx_read_rand(&mut rand_buf) {
+        error!("Error generating random value");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
+
+    let validator_set_hash = match get_validator_set_hash().unwrap_or_default() {
+        tm_Sha256(hash) => hash,
+        tendermint::Hash::None => {
+            error!("Got invalid validator set");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    // todo: add entropy detection
+
+    let encrypted: Vec<u8> = if let Ok(res) = REK.encrypt_siv(
+        &rand_buf,
+        Some(vec![validator_set_hash.as_slice()].as_slice()),
+    ) {
+        res
+    } else {
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    };
+
+    random.copy_from_slice(encrypted.as_slice());
+
+    // proof is an encrypted value that allows enclaves to validate that the encrypted value was created for
+    // this specific height & block. This allows for replay protection.
+    // optional improvement: Add public key signatures to be able to validate this outside the enclave
+    #[cfg(feature = "random")]
+    {
+        let proof_computed = enclave_utils::random::create_random_proof(
+            &IRS,
+            height,
+            encrypted.as_slice(),
+            block_hash_slice,
+        );
+        proof.copy_from_slice(proof_computed.as_slice());
+    }
+
+    // debug!("Calculated proof: {:?}", proof_computed);
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+/// # Safety
+/// Validator set can be of variable length, but it shouldn't be too long (and obv a valid pointer)
+#[no_mangle]
+pub unsafe extern "C" fn ecall_submit_validator_set(
+    val_set: *const u8,
+    val_set_len: u32,
+    height: u64,
+) -> sgx_status_t {
+    validate_input_length!(val_set_len, "validator set length", MAX_VARIABLE_LENGTH);
+    validate_const_ptr!(
+        val_set,
+        val_set_len as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+
+    let val_set_slice = slice::from_raw_parts(val_set, val_set_len as usize);
+
+    let val_set = ValidatorSetForHeight {
+        height,
+        validator_set: val_set_slice.to_vec(),
+    };
+
+    let res = val_set.seal();
+    if res.is_err() {
+        return sgx_status_t::SGX_ERROR_ENCLAVE_FILE_ACCESS;
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+/// # Safety
+/// Random will be 48 bytes
+/// Proof will be 32 bytes
+#[no_mangle]
+pub unsafe extern "C" fn ecall_validate_random(
+    random: *const u8,
+    random_len: u32,
+    proof: *const u8,
+    proof_len: u32,
+    block_hash: *const u8,
+    block_hash_len: u32,
+    height: u64,
+) -> sgx_status_t {
+    validate_input_length!(random_len, "encrypted_random", ENCRYPTED_RANDOM_LENGTH);
+    validate_input_length!(proof_len, "proof", PROOF_LENGTH);
+    if block_hash_len != BLOCK_HASH_LENGTH {
+        error!("block hash bad length");
+        return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    }
+
+    validate_const_ptr!(
+        random,
+        random_len as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+    validate_const_ptr!(
+        proof,
+        proof_len as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+    validate_const_ptr!(
+        block_hash,
+        block_hash_len as usize,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+
+    let random_slice = slice::from_raw_parts(random, random_len as usize);
+    let proof_slice = slice::from_raw_parts(proof, proof_len as usize);
+    let block_hash_slice = slice::from_raw_parts(block_hash, block_hash_len as usize);
+
+    #[cfg(feature = "random")]
+    {
+        let calculated_proof = enclave_utils::random::create_random_proof(
+            &IRS,
+            height,
+            random_slice,
+            block_hash_slice,
+        );
+
+        // debug!("Calculated proof: {:?}", calculated_proof);
+        // debug!("Got proof: {:?}", proof_slice);
+
+        if calculated_proof != proof_slice {
+            // otherwise on an upgrade this will break horribly - next patch we can remove this
+            let legacy_proof = create_legacy_proof(height, random_slice, block_hash_slice);
+            if legacy_proof != calculated_proof {
+                return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
+            }
+        }
+    }
+
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn create_legacy_proof(height: u64, random: &[u8], block_hash: &[u8]) -> [u8; 32] {
+    let mut data = vec![];
+    data.extend_from_slice(&height.to_be_bytes());
+    data.extend_from_slice(random);
+    data.extend_from_slice(block_hash);
+    data.extend_from_slice(IRS.get());
+
+    sha_256(data.as_slice())
 }
