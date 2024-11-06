@@ -159,7 +159,7 @@ enclave {
 
         public uint32_t ecall_run_tests();
 
-        public int64_t ecall_generate_random(
+        public sgx_status_t ecall_generate_random(
               [in, count=block_hash_len] const uint8_t* block_hash,
               uint32_t block_hash_len,
               uint64_t height,
