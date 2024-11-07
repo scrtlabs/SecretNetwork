@@ -13,7 +13,6 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	eip191 "github.com/scrtlabs/SecretNetwork/eip191"
 	scrt "github.com/scrtlabs/SecretNetwork/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute"
@@ -195,8 +194,6 @@ func NewRootCmd() (*cobra.Command, app.EncodingConfig) {
 	initRootCmd(rootCmd, encodingConfig, app.ModuleBasics())
 
 	autoCliOpts := tempApp.AutoCliOpts()
-	initClientCtx, _ = clientconfig.ReadFromClientConfig(initClientCtx)
-	autoCliOpts.Keyring, _ = keyring.NewAutoCLIKeyring(initClientCtx.Keyring)
 	autoCliOpts.ClientCtx = initClientCtx
 
 	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
