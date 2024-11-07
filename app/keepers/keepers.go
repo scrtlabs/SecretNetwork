@@ -466,6 +466,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	ak.ICAHostKeeper = &icaHostKeeper
+	ak.ICAHostKeeper.WithQueryRouter(app.GRPCQueryRouter())
 
 	icaHostIBCModule := icahost.NewIBCModule(*ak.ICAHostKeeper)
 
