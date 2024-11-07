@@ -10,20 +10,18 @@ use core::mem;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
-    GENESIS_CONSENSUS_SEED_SEALING_PATH, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH,
-    MIGRATION_APPROVAL_PATH, MIGRATION_CERT_PATH, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH,
-    REGISTRATION_KEY_SEALING_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH, MIGRATION_APPROVAL_PATH,
+    MIGRATION_CERT_PATH, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH,
+    SIGNATURE_TYPE,
 };
 use enclave_crypto::{sha_256, KeyPair, Keychain, SIVEncryptable, KEY_MANAGER, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::export_file_to_kdk_safe;
-use enclave_utils::storage::migrate_file_from_2_17_safe;
+use enclave_utils::storage::export_all_to_kdk_safe;
+use enclave_utils::storage::migrate_all_from_2_17;
 use enclave_utils::storage::SEALING_KDK;
 use enclave_utils::storage::SELF_REPORT_BODY;
-use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
-use enclave_utils::validator_set::{ValidatorSetForHeight, VALIDATOR_SET_SEALING_PATH};
+use enclave_utils::validator_set::ValidatorSetForHeight;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
 use lazy_static::lazy_static;
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
@@ -683,29 +681,7 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
 
 #[no_mangle]
 pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
-    if let Err(e) = migrate_file_from_2_17_safe(&REGISTRATION_KEY_SEALING_PATH, true) {
-        return e;
-    }
-    if let Err(e) = migrate_file_from_2_17_safe(&GENESIS_CONSENSUS_SEED_SEALING_PATH, true) {
-        return e;
-    }
-    if let Err(e) = migrate_file_from_2_17_safe(&CURRENT_CONSENSUS_SEED_SEALING_PATH, true) {
-        return e;
-    }
-    if let Err(e) = migrate_file_from_2_17_safe(&REK_PATH, true) {
-        return e;
-    }
-    if let Err(e) = migrate_file_from_2_17_safe(&IRS_PATH, true) {
-        return e;
-    }
-    if let Err(e) = migrate_file_from_2_17_safe(&VALIDATOR_SET_SEALING_PATH, true) {
-        return e;
-    }
-    if let Err(e) = migrate_file_from_2_17_safe(&TX_BYTES_SEALING_PATH, true) {
-        return e;
-    }
-
-    sgx_status_t::SGX_SUCCESS
+    migrate_all_from_2_17()
 }
 
 #[repr(packed)]
@@ -983,32 +959,9 @@ pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
     let kp = KEY_MANAGER.get_registration_key().unwrap();
 
     dh_xor(&kp, pub_k, kdk);
-
-    if let Err(e) = export_file_to_kdk_safe(&REGISTRATION_KEY_SEALING_PATH, kdk) {
-        return e;
-    }
-    if let Err(e) = export_file_to_kdk_safe(&GENESIS_CONSENSUS_SEED_SEALING_PATH, kdk) {
-        return e;
-    }
-    if let Err(e) = export_file_to_kdk_safe(&CURRENT_CONSENSUS_SEED_SEALING_PATH, kdk) {
-        return e;
-    }
-    if let Err(e) = export_file_to_kdk_safe(&REK_PATH, kdk) {
-        return e;
-    }
-    if let Err(e) = export_file_to_kdk_safe(&IRS_PATH, kdk) {
-        return e;
-    }
-    if let Err(e) = export_file_to_kdk_safe(&VALIDATOR_SET_SEALING_PATH, kdk) {
-        return e;
-    }
-    if let Err(e) = export_file_to_kdk_safe(&TX_BYTES_SEALING_PATH, kdk) {
-        return e;
-    }
-
     //trace!("*** Sealing kdk: {:?}", kdk);
 
-    sgx_status_t::SGX_SUCCESS
+    export_all_to_kdk_safe(kdk)
 }
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;

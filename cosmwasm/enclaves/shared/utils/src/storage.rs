@@ -4,19 +4,46 @@ use core::mem;
 use core::ptr::null;
 use log::*;
 use log::{error, info};
+use sgx_types::*;
+use std::env;
 use std::io::{Read, Write};
-use std::path::Path;
-use std::untrusted::path::PathEx;
+use std::os::unix::ffi::OsStrExt;
+use std::path;
 use std::ptr;
 use std::sgxfs::SgxFile;
 use std::slice;
-
-use sgx_types::*;
 use std::untrusted::fs;
 use std::untrusted::fs::File;
+use std::untrusted::path::PathEx;
 
 pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
 pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
+
+lazy_static! {
+    pub static ref RESOLVED_SGX_SECRET_PATH: String = {
+        if let Ok(env_var) = env::var(SCRT_SGX_STORAGE_ENV_VAR) {
+            env_var
+        } else {
+            DEFAULT_SGX_SECRET_PATH.to_string()
+        }
+    };
+}
+
+fn make_sgx_secret_path(file_name: &str) -> String {
+    let sgx_path: &String = &RESOLVED_SGX_SECRET_PATH;
+    path::Path::new(sgx_path)
+        .join(file_name)
+        .to_string_lossy()
+        .into_owned()
+}
+
+pub const SEALED_FILE_EXCHANGE_KEY: &str = "new_node_seed_exchange_keypair.sealed";
+pub const SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS: &str = "consensus_seed.sealed";
+pub const SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT: &str = "consensus_seed_current.sealed";
+pub const SEALED_FILE_REK: &str = "rek.sealed";
+pub const SEALED_FILE_IRS: &str = "irs.sealed";
+pub const SEALED_FILE_TX_BYTES: &str = "tx_bytes.sealed";
+pub const SEALED_FILE_VALIDATOR_SET: &str = "validator_set.sealed";
 
 fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
     let mut key_request = sgx_types::sgx_key_request_t {
@@ -432,11 +459,14 @@ pub fn unseal_file_from_2_17(
     Ok(mctx.m_res)
 }
 
-pub fn migrate_file_from_2_17_safe(
-    s_path: &str,
+fn migrate_file_from_2_17_safe(
+    file_name: &str,
     should_check_fname: bool,
 ) -> Result<(), sgx_status_t> {
-    if Path::new(s_path).exists() {
+    let str_path = make_sgx_secret_path(file_name);
+    let s_path = str_path.as_str();
+
+    if path::Path::new(s_path).exists() {
         if SgxFile::open(s_path).is_ok() {
             info!("File {} is already converted", s_path);
         } else {
@@ -468,8 +498,39 @@ pub fn migrate_file_from_2_17_safe(
     Ok(())
 }
 
-pub fn export_file_to_kdk_safe(s_path: &str, kdk: &sgx_key_128bit_t) -> Result<(), sgx_status_t> {
-    if Path::new(s_path).exists() {
+pub fn migrate_all_from_2_17() -> sgx_types::sgx_status_t {
+    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_EXCHANGE_KEY, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_REK, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_IRS, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_VALIDATOR_SET, true) {
+        return e;
+    }
+    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_TX_BYTES, true) {
+        return e;
+    }
+    sgx_status_t::SGX_SUCCESS
+}
+
+pub fn export_file_to_kdk_safe(
+    file_name: &str,
+    kdk: &sgx_key_128bit_t,
+) -> Result<(), sgx_status_t> {
+    let str_path = make_sgx_secret_path(file_name);
+    let s_path = str_path.as_str();
+
+    if path::Path::new(s_path).exists() {
         let mut f_in = match SgxFile::open(s_path) {
             Err(err) => {
                 info!("Can't open input File {}, {}", s_path, err);
@@ -501,6 +562,32 @@ pub fn export_file_to_kdk_safe(s_path: &str, kdk: &sgx_key_128bit_t) -> Result<(
     }
 
     Ok(())
+}
+
+pub fn export_all_to_kdk_safe(kdk: &sgx_key_128bit_t) -> sgx_types::sgx_status_t {
+    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_EXCHANGE_KEY, kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS, kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT, kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_REK, kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_IRS, kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_VALIDATOR_SET, kdk) {
+        return e;
+    }
+    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_TX_BYTES, kdk) {
+        return e;
+    }
+
+    sgx_status_t::SGX_SUCCESS
 }
 
 /*
