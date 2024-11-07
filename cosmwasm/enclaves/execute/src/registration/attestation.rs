@@ -14,7 +14,7 @@ use itertools::Itertools;
 use sgx_rand::{os, Rng};
 
 #[cfg(feature = "SGX_MODE_HW")]
-use sgx_tse::{rsgx_create_report, rsgx_self_report, rsgx_verify_report};
+use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 
 #[cfg(feature = "SGX_MODE_HW")]
 use sgx_tcrypto::rsgx_sha256_slice;
@@ -270,17 +270,6 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
 pub fn in_grace_period(timestamp: u64) -> bool {
     // Friday, August 21, 2023 2:00:00 PM UTC
     timestamp < 1692626400_u64
-}
-
-#[cfg(not(feature = "SGX_MODE_HW"))]
-pub fn get_mr_enclave() -> [u8; 32] {
-    let ret: [u8; 32] = [0; 32];
-    ret
-}
-
-#[cfg(feature = "SGX_MODE_HW")]
-pub fn get_mr_enclave() -> [u8; 32] {
-    rsgx_self_report().body.mr_enclave.m
 }
 
 #[cfg(not(feature = "SGX_MODE_HW"))]

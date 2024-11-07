@@ -8,7 +8,6 @@ use block_verifier::validator_whitelist;
 use core::convert::TryInto;
 use core::mem;
 use ed25519_dalek::{PublicKey, Signature};
-use enclave_crypto::consts::MRSIGNER;
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
     CONSENSUS_SEED_VERSION, CURRENT_CONSENSUS_SEED_SEALING_PATH,
@@ -22,6 +21,7 @@ use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::export_file_to_kdk_safe;
 use enclave_utils::storage::migrate_file_from_2_17_safe;
 use enclave_utils::storage::SEALING_KDK;
+use enclave_utils::storage::SELF_REPORT_BODY;
 use enclave_utils::tx_bytes::TX_BYTES_SEALING_PATH;
 use enclave_utils::validator_set::{ValidatorSetForHeight, VALIDATOR_SET_SEALING_PATH};
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
@@ -933,7 +933,7 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
 fn is_export_approved(report: &sgx_report_body_t) -> bool {
     // Current policy: we demand the same mr_signer
 
-    if report.mr_signer.m != MRSIGNER {
+    if report.mr_signer.m != SELF_REPORT_BODY.mr_signer.m {
         println!("Migration target uses different signer");
         return false;
     }

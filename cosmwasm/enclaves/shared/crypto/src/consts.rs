@@ -39,18 +39,6 @@ pub const REK_SEALED_FILE_NAME: &str = "rek.sealed";
 pub const IRS_SEALED_FILE_NAME: &str = "irs.sealed";
 
 #[cfg(feature = "production")]
-pub const MRSIGNER: [u8; 32] = [
-    132, 92, 243, 72, 20, 244, 85, 149, 199, 32, 248, 31, 116, 121, 77, 120, 89, 49, 72, 79, 68, 5,
-    214, 229, 3, 110, 248, 135, 19, 255, 63, 166,
-];
-
-#[cfg(not(feature = "production"))]
-pub const MRSIGNER: [u8; 32] = [
-    131, 215, 25, 231, 125, 234, 202, 20, 112, 246, 186, 246, 42, 77, 119, 67, 3, 200, 153, 219,
-    105, 2, 15, 156, 112, 238, 29, 252, 8, 199, 206, 158,
-];
-
-#[cfg(feature = "production")]
 pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_LINKABLE_SIGNATURE;
 
 #[cfg(not(feature = "production"))]

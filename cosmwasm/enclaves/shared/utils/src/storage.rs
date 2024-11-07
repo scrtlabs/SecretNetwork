@@ -48,6 +48,19 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
+    pub static ref SELF_REPORT_BODY: sgx_report_body_t = {
+        let report_body = unsafe {
+            let p_report = sgx_self_report();
+            (*p_report).body
+        };
+        trace!(
+            "self mr_enclave = {}",
+            hex::encode(report_body.mr_enclave.m)
+        );
+        trace!("self mr_signer  = {}", hex::encode(report_body.mr_signer.m));
+
+        report_body
+    };
 }
 
 pub fn write_to_untrusted(bytes: &[u8], filepath: &str) -> SgxResult<()> {

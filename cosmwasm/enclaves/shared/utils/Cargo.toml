@@ -24,6 +24,7 @@ sgx_trts = { path = "../../../../third_party/incubator-teaclave-sgx-sdk/sgx_trts
 [dependencies]
 enclave-ffi-types = { path = "../../ffi-types" }
 log = "0.4.17"
+hex = "0.4.2"
 lazy_static = "1.4"
 serde = { git = "https://github.com/mesalock-linux/serde-sgx", features = [
   "derive"
