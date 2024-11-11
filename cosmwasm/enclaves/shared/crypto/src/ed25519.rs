@@ -51,14 +51,17 @@ impl KeyPair {
         *pk.as_bytes()
     }
 
+    pub fn from_sk(sk: Ed25519PrivateKey) -> Self {
+        Self {
+            secret_key: sk,
+            public_key: Self::sk_to_pk(&sk),
+        }
+    }
+
     pub fn new() -> Result<Self, CryptoError> {
         let mut secret_key = Ed25519PrivateKey::default();
         rand_slice(secret_key.get_mut())?;
-
-        Ok(Self {
-            secret_key,
-            public_key: Self::sk_to_pk(&secret_key),
-        })
+        Ok(Self::from_sk(secret_key))
     }
 
     pub fn diffie_hellman(&self, your_public: &[u8; SECRET_KEY_SIZE]) -> DhKey {
@@ -88,9 +91,6 @@ impl<T: AlignedMemory + ExportECKey> From<T> for KeyPair {
         let mut secret_key = Ed25519PrivateKey::default();
         secret_key.get_mut().copy_from_slice(value.key_ref());
 
-        Self {
-            secret_key,
-            public_key: Self::sk_to_pk(&secret_key),
-        }
+        Self::from_sk(secret_key)
     }
 }
