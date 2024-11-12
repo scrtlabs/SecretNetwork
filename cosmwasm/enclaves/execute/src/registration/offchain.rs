@@ -122,13 +122,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
             }
         };
 
-        if key_manager
-            .set_consensus_seed(genesis_seed, new_consensus_seed)
-            .is_err()
-        {
-            error!("failed to set new consensus seed");
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
+        key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
     }
 
     if let Err(_e) = key_manager.generate_consensus_master_keys() {
@@ -278,12 +272,7 @@ pub unsafe extern "C" fn ecall_init_node(
 
     let mut key_manager = Keychain::new();
 
-    let delete_res = key_manager.delete_consensus_seed();
-    if delete_res {
-        debug!("Successfully removed consensus seed");
-    } else {
-        debug!("Failed to remove consensus seed. Didn't exist?");
-    }
+    key_manager.delete_consensus_seed();
 
     // Skip the first byte which is the length of the seed
     let mut single_seed_bytes = [0u8; SINGLE_ENCRYPTED_SEED_SIZE];
@@ -311,9 +300,7 @@ pub unsafe extern "C" fn ecall_init_node(
             Err(status) => return status,
         };
 
-        if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
+        key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
     } else {
         let reg_key = key_manager.get_registration_key().unwrap();
         let my_pub_key = reg_key.get_pubkey();
@@ -335,9 +322,7 @@ pub unsafe extern "C" fn ecall_init_node(
                 }
             };
 
-            if let Err(_e) = key_manager.set_consensus_seed(genesis_seed, new_consensus_seed) {
-                return sgx_status_t::SGX_ERROR_UNEXPECTED;
-            }
+            key_manager.set_consensus_seed(genesis_seed, new_consensus_seed);
         } else {
             debug!("New consensus seed already exists, no need to get it from service");
         }

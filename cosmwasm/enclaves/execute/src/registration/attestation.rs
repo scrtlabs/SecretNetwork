@@ -57,9 +57,8 @@ use enclave_crypto::consts::SigningMethod;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use enclave_crypto::consts::{
-    CURRENT_CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH,
-    GENESIS_CONSENSUS_SEED_SEALING_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
-    NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE,
+    DEFAULT_SGX_SECRET_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
+    NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, SEALED_DATA_FILE_NAME,
 };
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
@@ -181,21 +180,17 @@ pub fn validate_enclave_version(
 }
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
+fn remove_secret_file(file_name: &str) {
+    use enclave_crypto::consts::make_sgx_secret_path;
+    let _ = SgxFsRemove(make_sgx_secret_path(file_name));
+}
+
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 fn remove_all_keys() {
-    info!("Error validating created certificate");
-    let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
-    let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
-    let _ = SgxFsRemove(SEALED_DATA_PATH.as_str());
-    let _ = SgxFsRemove(
-        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-            .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
-            .as_path(),
-    );
-    let _ = SgxFsRemove(
-        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-            .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
-            .as_path(),
-    );
+    remove_secret_file(SEALED_DATA_FILE_NAME);
+    remove_secret_file(NODE_EXCHANGE_KEY_FILE);
+    remove_secret_file(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE);
+    remove_secret_file(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE);
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
@@ -239,19 +234,7 @@ pub fn create_attestation_certificate(
 pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
     let _ = verify_ra_cert(cert, None, true).map_err(|e| {
         info!("Error validating created certificate: {:?}", e);
-        let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
-        let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
-        let _ = SgxFsRemove(SEALED_DATA_PATH.as_str());
-        let _ = SgxFsRemove(
-            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-                .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
-                .as_path(),
-        );
-        let _ = SgxFsRemove(
-            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-                .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
-                .as_path(),
-        );
+        remove_all_keys();
     });
 }
 

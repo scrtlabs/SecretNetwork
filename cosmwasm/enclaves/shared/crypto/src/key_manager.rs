@@ -51,13 +51,21 @@ pub struct SeedsHolder<T> {
 }
 
 lazy_static! {
-    pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path("data.sealed");
+    pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(SEALED_DATA_FILE_NAME);
     pub static ref KEY_MANAGER: Keychain = Keychain::new();
 }
 
 #[allow(clippy::new_without_default)]
 impl Keychain {
     fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
+        if let Some(seeds) = self.consensus_seed {
+            writer.write_all(&[1 as u8])?;
+            writer.write_all(seeds.genesis.as_slice())?;
+            writer.write_all(seeds.current.as_slice())?;
+        } else {
+            writer.write_all(&[0 as u8])?;
+        }
+
         if let Some(kp) = self.registration_key {
             writer.write_all(&[1 as u8])?;
             writer.write_all(kp.get_privkey())?;
@@ -69,8 +77,20 @@ impl Keychain {
 
     fn deserialize(&mut self, reader: &mut dyn Read) -> std::io::Result<()> {
         let mut flag_bytes = [0u8; 1];
-        reader.read_exact(&mut flag_bytes)?;
 
+        reader.read_exact(&mut flag_bytes)?;
+        if flag_bytes[0] != 0 {
+            let mut buf = Ed25519PrivateKey::default();
+            reader.read_exact(buf.get_mut())?;
+            let genesis = Seed::from(buf);
+
+            reader.read_exact(buf.get_mut())?;
+            let current = Seed::from(buf);
+
+            self.consensus_seed = Some(SeedsHolder { genesis, current });
+        }
+
+        reader.read_exact(&mut flag_bytes)?;
         if flag_bytes[0] != 0 {
             let mut sk = Ed25519PrivateKey::default();
             reader.read_exact(sk.get_mut())?;
@@ -98,10 +118,34 @@ impl Keychain {
         }
     }
 
-    pub fn new() -> Self {
-        let consensus_seed: Option<SeedsHolder<Seed>> = match (
-            Seed::unseal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()),
-            Seed::unseal(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()),
+    fn new_empty() -> Self {
+        Keychain {
+            consensus_seed_id: CONSENSUS_SEED_VERSION,
+            consensus_seed: None,
+            registration_key: None,
+            consensus_state_ikm: None,
+            consensus_seed_exchange_keypair: None,
+            consensus_io_exchange_keypair: None,
+            consensus_callback_secret: None,
+            #[cfg(feature = "random")]
+            initial_randomness_seed: None,
+            #[cfg(feature = "random")]
+            random_encryption_key: None,
+            admin_proof_secret: None,
+            contract_key_proof_secret: None,
+        }
+    }
+
+    fn load_legacy_keys(&mut self) {
+        self.registration_key = match KeyPair::unseal(&make_sgx_secret_path(NODE_EXCHANGE_KEY_FILE))
+        {
+            Ok(k) => Some(k),
+            _ => None,
+        };
+
+        self.consensus_seed = match (
+            Seed::unseal(&make_sgx_secret_path(NODE_EXCHANGE_KEY_FILE)),
+            Seed::unseal(&make_sgx_secret_path(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)),
         ) {
             (Ok(genesis), Ok(current)) => {
                 trace!(
@@ -120,50 +164,19 @@ impl Keychain {
                 None
             }
         };
-
-        let mut x = Keychain {
-            consensus_seed_id: CONSENSUS_SEED_VERSION,
-            consensus_seed,
-            registration_key: None,
-            consensus_state_ikm: None,
-            consensus_seed_exchange_keypair: None,
-            consensus_io_exchange_keypair: None,
-            consensus_callback_secret: None,
-            #[cfg(feature = "random")]
-            initial_randomness_seed: None,
-            #[cfg(feature = "random")]
-            random_encryption_key: None,
-            admin_proof_secret: None,
-            contract_key_proof_secret: None,
-        };
-
-        x.load();
-
-        let _ = x.generate_consensus_master_keys();
-
-        x
     }
 
-    pub fn unseal_only_genesis(&mut self) -> Result<(), CryptoError> {
-        match Seed::unseal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            Ok(genesis) => {
-                let current = Seed::new()?;
-                self.consensus_seed = Some(SeedsHolder { genesis, current });
-                Ok(())
-            }
-            Err(e) => {
-                trace!("Failed to unseal consensus seed {}", e);
-                Err(CryptoError::KeyError)
-            }
-        }
+    pub fn new() -> Self {
+        let mut x = Self::new_empty();
+        x.load();
+        let _ = x.generate_consensus_master_keys();
+        x
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
         match (Seed::new(), Seed::new()) {
             (Ok(genesis), Ok(current)) => {
-                if let Err(_e) = self.set_consensus_seed(genesis, current) {
-                    return Err(CryptoError::KeyError);
-                }
+                self.set_consensus_seed(genesis, current);
             }
             (Err(err), _) => return Err(err),
             (_, Err(err)) => return Err(err),
@@ -268,57 +281,19 @@ impl Keychain {
         self.consensus_callback_secret = Some(SeedsHolder { genesis, current });
     }
 
-    /// used to remove the consensus seed - usually we don't care whether deletion was successful or not,
-    /// since we want to try and delete it either way
-    pub fn delete_consensus_seed(&mut self) -> bool {
-        debug!(
-            "Removing genesis consensus seed in {}",
-            *GENESIS_CONSENSUS_SEED_SEALING_PATH
-        );
-        if let Err(_e) = std::sgxfs::remove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            debug!("Error removing genesis consensus_seed");
-            return false;
-        }
-
-        debug!(
-            "Removing current consensus seed in {}",
-            *CURRENT_CONSENSUS_SEED_SEALING_PATH
-        );
-        if let Err(_e) = std::sgxfs::remove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            debug!("Error removing genesis consensus_seed");
-            return false;
-        }
+    pub fn delete_consensus_seed(&mut self) {
         self.consensus_seed = None;
-        true
+        self.save();
     }
 
-    pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) -> Result<(), EnclaveError> {
+    pub fn set_consensus_seed(&mut self, genesis: Seed, current: Seed) {
         trace!(
             "Consensus seeds were set to be the following {:?}, {:?}",
             genesis.as_slice(),
             current.as_slice()
         );
-
-        debug!(
-            "Sealing genesis consensus seed in {}",
-            *GENESIS_CONSENSUS_SEED_SEALING_PATH
-        );
-        if let Err(e) = genesis.seal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            error!("Error sealing genesis consensus_seed - error code 0xC14");
-            return Err(e);
-        }
-
-        debug!(
-            "Sealing current consensus seed in {}",
-            *CURRENT_CONSENSUS_SEED_SEALING_PATH
-        );
-        if let Err(e) = current.seal(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str()) {
-            error!("Error sealing current consensus_seed - error code 0xC14");
-            return Err(e);
-        }
-
         self.consensus_seed = Some(SeedsHolder { genesis, current });
-        Ok(())
+        self.save();
     }
 
     pub fn generate_consensus_master_keys(&mut self) -> Result<(), EnclaveError> {
@@ -508,8 +483,7 @@ impl Keychain {
 pub mod tests {
 
     use super::{
-        Keychain, CURRENT_CONSENSUS_SEED_SEALING_PATH,
-        GENESIS_CONSENSUS_SEED_SEALING_PATH,
+        Keychain, SEALED_DATA_PATH,
         /*KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,*/
     };
     // use crate::crypto::CryptoError;
@@ -518,10 +492,7 @@ pub mod tests {
     // todo: fix test vectors to actually work
     fn _test_initial_keychain_state() {
         // clear previous data (if any)
-        let _ = std::sgxfs::remove(&*GENESIS_CONSENSUS_SEED_SEALING_PATH);
-        let _ = std::sgxfs::remove(&*CURRENT_CONSENSUS_SEED_SEALING_PATH);
-        //let _ = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
-
+        let _ = std::sgxfs::remove(&*SEALED_DATA_PATH);
         let _keys = Keychain::new();
 
         // todo: replace with actual checks

@@ -53,6 +53,9 @@ pub const NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE: &str = "consensus_seed_current.s
 pub const MIGRATION_APPROVAL_SAVE_PATH: &str = "migration_trg.sealed";
 pub const MIGRATION_CONSENSUS_SAVE_PATH: &str = "migration_consensus.json";
 
+pub const SEALED_DATA_FILE_NAME: &str = "data.sealed";
+pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed";
+
 #[cfg(feature = "random")]
 pub const REK_SEALED_FILE_NAME: &str = "rek.sealed";
 #[cfg(feature = "random")]
@@ -74,20 +77,6 @@ pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 pub const SIGNING_METHOD: SigningMethod = SigningMethod::MRSIGNER;
 
 lazy_static! {
-    pub static ref GENESIS_CONSENSUS_SEED_SEALING_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref CURRENT_CONSENSUS_SEED_SEALING_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
     pub static ref ATTESTATION_CERT_PATH: String = path::Path::new(
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
