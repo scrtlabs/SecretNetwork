@@ -18,8 +18,6 @@ use std::untrusted::fs;
 use std::untrusted::fs::File;
 use std::untrusted::path::PathEx;
 
-pub const SEALED_FILE_REK: &str = "rek.sealed";
-pub const SEALED_FILE_IRS: &str = "irs.sealed";
 pub const SEALED_FILE_TX_BYTES: &str = "tx_bytes.sealed";
 pub const SEALED_FILE_VALIDATOR_SET: &str = "validator_set.sealed";
 

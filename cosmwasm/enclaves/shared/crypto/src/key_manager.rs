@@ -440,8 +440,6 @@ impl Keychain {
 
             trace!("initial_randomness_seed: {:?}", hex::encode(irs.get()));
             trace!("random_encryption_key: {:?}", hex::encode(rek.get()));
-
-            self.write_randomness_keys();
         }
 
         let admin_proof_secret = self
@@ -471,15 +469,6 @@ impl Keychain {
         );
 
         Ok(())
-    }
-
-    #[cfg(feature = "random")]
-    pub fn write_randomness_keys(&self) {
-        self.random_encryption_key.unwrap().seal(&REK_PATH).unwrap();
-        self.initial_randomness_seed
-            .unwrap()
-            .seal(&IRS_PATH)
-            .unwrap();
     }
 }
 

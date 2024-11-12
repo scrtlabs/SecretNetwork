@@ -56,10 +56,8 @@ pub const MIGRATION_CONSENSUS_SAVE_PATH: &str = "migration_consensus.json";
 pub const SEALED_FILE_UNITED: &str = "data.sealed";
 pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.sealed";
 
-#[cfg(feature = "random")]
-pub const REK_SEALED_FILE_NAME: &str = "rek.sealed";
-#[cfg(feature = "random")]
-pub const IRS_SEALED_FILE_NAME: &str = "irs.sealed";
+pub const SEALED_FILE_REK: &str = "rek.sealed";
+pub const SEALED_FILE_IRS: &str = "irs.sealed";
 
 #[cfg(feature = "production")]
 pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_LINKABLE_SIGNATURE;
@@ -130,24 +128,6 @@ lazy_static! {
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(MIGRATION_CONSENSUS_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-}
-
-#[cfg(feature = "random")]
-lazy_static! {
-    pub static ref REK_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(REK_SEALED_FILE_NAME)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref IRS_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(IRS_SEALED_FILE_NAME)
     .to_str()
     .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();

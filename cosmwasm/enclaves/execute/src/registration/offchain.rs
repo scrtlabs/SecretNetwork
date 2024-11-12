@@ -10,8 +10,8 @@ use core::mem;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, IRS_PATH, MIGRATION_APPROVAL_PATH,
-    MIGRATION_CERT_PATH, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, REK_PATH, SEED_UPDATE_SAVE_PATH,
+    CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_APPROVAL_PATH,
+    MIGRATION_CERT_PATH, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
     SIGNATURE_TYPE,
 };
 use enclave_crypto::{sha_256, KeyPair, Keychain, SIVEncryptable, KEY_MANAGER, PUBLIC_KEY_SIZE};
@@ -23,7 +23,6 @@ use enclave_utils::storage::SEALING_KDK;
 use enclave_utils::storage::SELF_REPORT_BODY;
 use enclave_utils::validator_set::ValidatorSetForHeight;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr};
-use lazy_static::lazy_static;
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
 ///
@@ -46,8 +45,6 @@ use tendermint_proto::Protobuf;
 
 #[cfg(feature = "verify-validator-whitelist")]
 use validator_whitelist::ValidatorList;
-
-use enclave_crypto::{AESKey, SealedKey};
 
 use super::persistency::{write_master_pub_keys, write_seed};
 use super::seed_exchange::{decrypt_seed, encrypt_seed, SeedType};
@@ -963,12 +960,6 @@ macro_rules! validate_input_length {
     };
 }
 
-lazy_static! {
-    /// This variable indicates if the enclave configuration has already been set
-    pub static ref REK: AESKey = AESKey::unseal(&REK_PATH).unwrap();
-    pub static ref IRS: AESKey = AESKey::unseal(&IRS_PATH).unwrap();
-}
-
 pub fn get_validator_set_hash() -> SgxResult<tendermint::Hash> {
     let res = ValidatorSetForHeight::unseal()?;
 
@@ -1028,10 +1019,11 @@ pub unsafe extern "C" fn ecall_generate_random(
 
     // todo: add entropy detection
 
-    let encrypted: Vec<u8> = if let Ok(res) = REK.encrypt_siv(
-        &rand_buf,
-        Some(vec![validator_set_hash.as_slice()].as_slice()),
-    ) {
+    let encrypted: Vec<u8> = if let Ok(res) =
+        KEY_MANAGER.random_encryption_key.unwrap().encrypt_siv(
+            &rand_buf,
+            Some(vec![validator_set_hash.as_slice()].as_slice()),
+        ) {
         res
     } else {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -1045,7 +1037,7 @@ pub unsafe extern "C" fn ecall_generate_random(
     #[cfg(feature = "random")]
     {
         let proof_computed = enclave_utils::random::create_random_proof(
-            &IRS,
+            &KEY_MANAGER.initial_randomness_seed.unwrap(),
             height,
             encrypted.as_slice(),
             block_hash_slice,
@@ -1131,7 +1123,7 @@ pub unsafe extern "C" fn ecall_validate_random(
     #[cfg(feature = "random")]
     {
         let calculated_proof = enclave_utils::random::create_random_proof(
-            &IRS,
+            &KEY_MANAGER.initial_randomness_seed.unwrap(),
             height,
             random_slice,
             block_hash_slice,
@@ -1157,7 +1149,7 @@ fn create_legacy_proof(height: u64, random: &[u8], block_hash: &[u8]) -> [u8; 32
     data.extend_from_slice(&height.to_be_bytes());
     data.extend_from_slice(random);
     data.extend_from_slice(block_hash);
-    data.extend_from_slice(IRS.get());
+    data.extend_from_slice(KEY_MANAGER.initial_randomness_seed.unwrap().get());
 
     sha_256(data.as_slice())
 }
