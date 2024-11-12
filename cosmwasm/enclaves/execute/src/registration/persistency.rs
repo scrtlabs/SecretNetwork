@@ -1,6 +1,7 @@
 use enclave_crypto::consts::{IO_KEY_SAVE_PATH, SEED_EXCH_KEY_SAVE_PATH};
-use enclave_crypto::{KeyPair, Keychain};
+use enclave_crypto::KeyPair;
 use enclave_utils::storage::rewrite_on_untrusted;
+use enclave_utils::Keychain;
 use sgx_types::SgxResult;
 
 pub fn write_public_key(kp: &KeyPair, save_path: &str) -> SgxResult<()> {

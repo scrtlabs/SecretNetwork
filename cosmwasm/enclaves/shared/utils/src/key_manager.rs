@@ -1,8 +1,8 @@
-use crate::consts::*;
-use crate::ed25519::Ed25519PrivateKey;
-use crate::traits::{Kdf, SealedKey};
-use crate::CryptoError;
-use crate::{AESKey, KeyPair, Seed};
+use enclave_crypto::consts::*;
+use enclave_crypto::ed25519::Ed25519PrivateKey;
+use enclave_crypto::traits::{Kdf, SealedKey};
+use enclave_crypto::CryptoError;
+use enclave_crypto::{AESKey, KeyPair, Seed};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
@@ -42,6 +42,7 @@ pub struct Keychain {
     registration_key: Option<KeyPair>,
     admin_proof_secret: Option<AESKey>,
     contract_key_proof_secret: Option<AESKey>,
+    //validator_set: Option<ValidatorSetForHeight>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -118,7 +119,7 @@ impl Keychain {
         }
     }
 
-    fn new_empty() -> Self {
+    pub fn new_empty() -> Self {
         Keychain {
             consensus_seed_id: CONSENSUS_SEED_VERSION,
             consensus_seed: None,
@@ -133,6 +134,7 @@ impl Keychain {
             random_encryption_key: None,
             admin_proof_secret: None,
             contract_key_proof_secret: None,
+            //validator_set: None,
         }
     }
 
