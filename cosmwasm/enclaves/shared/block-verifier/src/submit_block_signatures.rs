@@ -4,7 +4,7 @@ use tendermint_proto::Protobuf;
 
 use sgx_types::sgx_status_t;
 
-use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr};
+use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr, Keychain};
 use log::error;
 
 use log::debug;
@@ -24,8 +24,6 @@ macro_rules! unwrap_or_return {
 
 use crate::txs::tx_from_bytes;
 use crate::wasm_messages::VERIFIED_BLOCK_MESSAGES;
-
-use crate::verify::validator_set::get_validator_set_for_height;
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;
 const MAX_BLOCK_DATA_LENGTH: u32 = 22_020_096; // 21 MiB = max block size
@@ -70,7 +68,7 @@ pub unsafe fn submit_block_signatures_impl(
         &[]
     };
 
-    let validator_set_for_height = unwrap_or_return!(get_validator_set_for_height());
+    let validator_set_for_height = Keychain::get_validator_set_for_height();
 
     let validator_set = unwrap_or_return!(<Set as Protobuf::<RawValidatorSet>>::decode(
         validator_set_for_height.validator_set.as_slice()

@@ -568,7 +568,7 @@ pub unsafe extern "C" fn ecall_key_gen(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    let mut key_manager = Keychain::new();
+    let mut key_manager = Keychain::new_empty();
     if let Err(_e) = key_manager.create_registration_key() {
         error!("Failed to create registration key");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -783,7 +783,7 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
     let mut total_voting_power: u64 = 0;
 
     {
-        let validator_set_vec = ValidatorSetForHeight::unseal().unwrap().validator_set;
+        let validator_set_vec = Keychain::get_validator_set_for_height().validator_set;
         let validator_set =
             <Set as Protobuf<tendermint_proto::v0_38::types::ValidatorSet>>::decode(
                 validator_set_vec.as_slice(),
@@ -961,11 +961,9 @@ macro_rules! validate_input_length {
 }
 
 pub fn get_validator_set_hash() -> SgxResult<tendermint::Hash> {
-    let res = ValidatorSetForHeight::unseal()?;
-
     let hash = match <tendermint::validator::Set as Protobuf<
         tendermint_proto::v0_38::types::ValidatorSet,
-    >>::decode(&*(res.validator_set))
+    >>::decode(&*(Keychain::get_validator_set_for_height().validator_set))
     {
         Ok(vs) => {
             debug!("decoded validator set hash: {:?}", vs.hash());
@@ -1065,17 +1063,12 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     );
 
-    let val_set_slice = slice::from_raw_parts(val_set, val_set_len as usize);
-
-    let val_set = ValidatorSetForHeight {
+    let val_set_for_height = ValidatorSetForHeight {
         height,
-        validator_set: val_set_slice.to_vec(),
+        validator_set: slice::from_raw_parts(val_set, val_set_len as usize).to_vec(),
     };
 
-    let res = val_set.seal();
-    if res.is_err() {
-        return sgx_status_t::SGX_ERROR_ENCLAVE_FILE_ACCESS;
-    }
+    Keychain::set_validator_set_for_height(val_set_for_height);
 
     sgx_status_t::SGX_SUCCESS
 }

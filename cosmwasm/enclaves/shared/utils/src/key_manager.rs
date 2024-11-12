@@ -1,3 +1,5 @@
+use crate::validator_set::ValidatorSetForHeight;
+use core::default::{self, default};
 use enclave_crypto::consts::*;
 use enclave_crypto::ed25519::Ed25519PrivateKey;
 use enclave_crypto::traits::{Kdf, SealedKey};
@@ -42,7 +44,7 @@ pub struct Keychain {
     registration_key: Option<KeyPair>,
     admin_proof_secret: Option<AESKey>,
     contract_key_proof_secret: Option<AESKey>,
-    //validator_set: Option<ValidatorSetForHeight>,
+    validator_set_for_height: ValidatorSetForHeight,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -73,6 +75,12 @@ impl Keychain {
         } else {
             writer.write_all(&[0 as u8])?;
         }
+
+        writer.write_all(&self.validator_set_for_height.height.to_le_bytes())?;
+        let val_size = self.validator_set_for_height.validator_set.len() as u64;
+        writer.write_all(&val_size.to_le_bytes())?;
+        writer.write_all(&self.validator_set_for_height.validator_set)?;
+
         Ok(())
     }
 
@@ -98,6 +106,16 @@ impl Keychain {
 
             self.registration_key = Some(KeyPair::from_sk(sk));
         }
+
+        let mut buf_u64 = [0u8; 8];
+        reader.read_exact(&mut buf_u64)?;
+        self.validator_set_for_height.height = u64::from_le_bytes(buf_u64);
+
+        reader.read_exact(&mut buf_u64)?;
+        let val_size = u64::from_le_bytes(buf_u64);
+
+        self.validator_set_for_height.validator_set = vec![0u8; val_size as usize];
+        reader.read_exact(&mut self.validator_set_for_height.validator_set)?;
 
         Ok(())
     }
@@ -134,7 +152,10 @@ impl Keychain {
             random_encryption_key: None,
             admin_proof_secret: None,
             contract_key_proof_secret: None,
-            //validator_set: None,
+            validator_set_for_height: ValidatorSetForHeight {
+                height: 0,
+                validator_set: Vec::new(),
+            },
         }
     }
 
@@ -170,6 +191,12 @@ impl Keychain {
                 None
             }
         };
+
+        if let Ok(res) =
+            ValidatorSetForHeight::unseal_from(&make_sgx_secret_path(SEALED_FILE_VALIDATOR_SET))
+        {
+            self.validator_set_for_height = res;
+        }
     }
 
     pub fn new() -> Self {
@@ -177,6 +204,18 @@ impl Keychain {
         x.load();
         let _ = x.generate_consensus_master_keys();
         x
+    }
+
+    pub fn get_validator_set_for_height() -> ValidatorSetForHeight {
+        // always re-read it
+        Keychain::new().validator_set_for_height
+    }
+
+    pub fn set_validator_set_for_height(new_set: ValidatorSetForHeight) {
+        // TODO: don't re-read it, use data from KEY_MANAGER
+        let mut key_manager = Keychain::new();
+        key_manager.validator_set_for_height = new_set;
+        key_manager.save();
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {
