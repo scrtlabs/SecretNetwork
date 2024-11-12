@@ -2,6 +2,8 @@ use crate::results::UnwrapOrSgxErrorUnexpected;
 
 use core::mem;
 use core::ptr::null;
+use enclave_crypto::consts::*;
+use lazy_static::lazy_static;
 use log::*;
 use log::{error, info};
 use sgx_types::*;
@@ -16,9 +18,6 @@ use std::untrusted::fs;
 use std::untrusted::fs::File;
 use std::untrusted::path::PathEx;
 
-pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.sealed";
-pub const SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS: &str = "consensus_seed.sealed";
-pub const SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT: &str = "consensus_seed_current.sealed";
 pub const SEALED_FILE_REK: &str = "rek.sealed";
 pub const SEALED_FILE_IRS: &str = "irs.sealed";
 pub const SEALED_FILE_TX_BYTES: &str = "tx_bytes.sealed";

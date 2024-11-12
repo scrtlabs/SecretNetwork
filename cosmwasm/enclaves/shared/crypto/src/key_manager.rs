@@ -51,7 +51,7 @@ pub struct SeedsHolder<T> {
 }
 
 lazy_static! {
-    pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(SEALED_DATA_FILE_NAME);
+    pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(SEALED_FILE_UNITED);
     pub static ref KEY_MANAGER: Keychain = Keychain::new();
 }
 
@@ -137,15 +137,19 @@ impl Keychain {
     }
 
     fn load_legacy_keys(&mut self) {
-        self.registration_key = match KeyPair::unseal(&make_sgx_secret_path(NODE_EXCHANGE_KEY_FILE))
-        {
-            Ok(k) => Some(k),
-            _ => None,
-        };
+        self.registration_key =
+            match KeyPair::unseal(&make_sgx_secret_path(SEALED_FILE_REGISTRATION_KEY)) {
+                Ok(k) => Some(k),
+                _ => None,
+            };
 
         self.consensus_seed = match (
-            Seed::unseal(&make_sgx_secret_path(NODE_EXCHANGE_KEY_FILE)),
-            Seed::unseal(&make_sgx_secret_path(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)),
+            Seed::unseal(&make_sgx_secret_path(
+                SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS,
+            )),
+            Seed::unseal(&make_sgx_secret_path(
+                SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT,
+            )),
         ) {
             (Ok(genesis), Ok(current)) => {
                 trace!(

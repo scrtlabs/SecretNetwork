@@ -47,14 +47,14 @@ pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
 pub const IO_KEY_SAVE_PATH: &str = "io-master-key.txt";
 pub const SEED_UPDATE_SAVE_PATH: &str = "seed.txt";
 
-pub const NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE: &str = "consensus_seed.sealed";
-pub const NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE: &str = "consensus_seed_current.sealed";
+pub const SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS: &str = "consensus_seed.sealed";
+pub const SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT: &str = "consensus_seed_current.sealed";
 
 pub const MIGRATION_APPROVAL_SAVE_PATH: &str = "migration_trg.sealed";
 pub const MIGRATION_CONSENSUS_SAVE_PATH: &str = "migration_consensus.json";
 
-pub const SEALED_DATA_FILE_NAME: &str = "data.sealed";
-pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed";
+pub const SEALED_FILE_UNITED: &str = "data.sealed";
+pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.sealed";
 
 #[cfg(feature = "random")]
 pub const REK_SEALED_FILE_NAME: &str = "rek.sealed";

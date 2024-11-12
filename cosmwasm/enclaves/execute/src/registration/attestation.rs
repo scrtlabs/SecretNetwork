@@ -57,8 +57,8 @@ use enclave_crypto::consts::SigningMethod;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use enclave_crypto::consts::{
-    DEFAULT_SGX_SECRET_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
-    NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, SEALED_DATA_FILE_NAME,
+    SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT, SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS,
+    SEALED_FILE_REGISTRATION_KEY, SEALED_FILE_UNITED,
 };
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
@@ -187,10 +187,10 @@ fn remove_secret_file(file_name: &str) {
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 fn remove_all_keys() {
-    remove_secret_file(SEALED_DATA_FILE_NAME);
-    remove_secret_file(NODE_EXCHANGE_KEY_FILE);
-    remove_secret_file(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE);
-    remove_secret_file(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE);
+    remove_secret_file(SEALED_FILE_UNITED);
+    remove_secret_file(SEALED_FILE_REGISTRATION_KEY);
+    remove_secret_file(SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS);
+    remove_secret_file(SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT);
 }
 
 #[cfg(feature = "SGX_MODE_HW")]
