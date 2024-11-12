@@ -15,6 +15,27 @@ pub enum SigningMethod {
     NONE,
 }
 
+pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
+pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
+
+lazy_static! {
+    pub static ref RESOLVED_SGX_SECRET_PATH: String = {
+        if let Ok(env_var) = env::var(SCRT_SGX_STORAGE_ENV_VAR) {
+            env_var
+        } else {
+            DEFAULT_SGX_SECRET_PATH.to_string()
+        }
+    };
+}
+
+pub fn make_sgx_secret_path(file_name: &str) -> String {
+    let sgx_path: &String = &RESOLVED_SGX_SECRET_PATH;
+    path::Path::new(sgx_path)
+        .join(file_name)
+        .to_string_lossy()
+        .into_owned()
+}
+
 pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
 pub const ATTESTATION_DCAP_SAVE_PATH: &str = "attestation_dcap.quote";
 pub const COLLATERAL_DCAP_SAVE_PATH: &str = "attestation_dcap.collateral";
@@ -26,7 +47,6 @@ pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
 pub const IO_KEY_SAVE_PATH: &str = "io-master-key.txt";
 pub const SEED_UPDATE_SAVE_PATH: &str = "seed.txt";
 
-pub const NODE_EXCHANGE_KEY_FILE: &str = "new_node_seed_exchange_keypair.sealed";
 pub const NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE: &str = "consensus_seed.sealed";
 pub const NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE: &str = "consensus_seed_current.sealed";
 
@@ -65,13 +85,6 @@ lazy_static! {
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref REGISTRATION_KEY_SEALING_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(NODE_EXCHANGE_KEY_FILE)
     .to_str()
     .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
@@ -164,7 +177,3 @@ pub const ENCRYPTED_KEY_MAGIC_BYTES: &[u8; 6] = b"secret";
 pub const CONSENSUS_SEED_VERSION: u16 = 2;
 /// STATE_ENCRYPTION_VERSION is bumped every time we change anything in the state encryption protocol
 pub const STATE_ENCRYPTION_VERSION: u32 = 3;
-
-pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
-
-pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";

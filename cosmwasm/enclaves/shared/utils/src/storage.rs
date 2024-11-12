@@ -16,28 +16,7 @@ use std::untrusted::fs;
 use std::untrusted::fs::File;
 use std::untrusted::path::PathEx;
 
-pub const SCRT_SGX_STORAGE_ENV_VAR: &str = "SCRT_SGX_STORAGE";
-pub const DEFAULT_SGX_SECRET_PATH: &str = "/opt/secret/.sgx_secrets/";
-
-lazy_static! {
-    pub static ref RESOLVED_SGX_SECRET_PATH: String = {
-        if let Ok(env_var) = env::var(SCRT_SGX_STORAGE_ENV_VAR) {
-            env_var
-        } else {
-            DEFAULT_SGX_SECRET_PATH.to_string()
-        }
-    };
-}
-
-fn make_sgx_secret_path(file_name: &str) -> String {
-    let sgx_path: &String = &RESOLVED_SGX_SECRET_PATH;
-    path::Path::new(sgx_path)
-        .join(file_name)
-        .to_string_lossy()
-        .into_owned()
-}
-
-pub const SEALED_FILE_EXCHANGE_KEY: &str = "new_node_seed_exchange_keypair.sealed";
+pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.sealed";
 pub const SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS: &str = "consensus_seed.sealed";
 pub const SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT: &str = "consensus_seed_current.sealed";
 pub const SEALED_FILE_REK: &str = "rek.sealed";
@@ -70,8 +49,6 @@ fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
 
     key
 }
-
-use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
@@ -499,7 +476,7 @@ fn migrate_file_from_2_17_safe(
 }
 
 pub fn migrate_all_from_2_17() -> sgx_types::sgx_status_t {
-    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_EXCHANGE_KEY, true) {
+    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_REGISTRATION_KEY, true) {
         return e;
     }
     if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS, true) {
@@ -565,7 +542,7 @@ pub fn export_file_to_kdk_safe(
 }
 
 pub fn export_all_to_kdk_safe(kdk: &sgx_key_128bit_t) -> sgx_types::sgx_status_t {
-    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_EXCHANGE_KEY, kdk) {
+    if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_REGISTRATION_KEY, kdk) {
         return e;
     }
     if let Err(e) = export_file_to_kdk_safe(&SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS, kdk) {
