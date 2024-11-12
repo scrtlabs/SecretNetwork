@@ -59,7 +59,7 @@ use enclave_crypto::consts::SigningMethod;
 use enclave_crypto::consts::{
     CURRENT_CONSENSUS_SEED_SEALING_PATH, DEFAULT_SGX_SECRET_PATH,
     GENESIS_CONSENSUS_SEED_SEALING_PATH, NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE,
-    NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE, NODE_EXCHANGE_KEY_FILE, REGISTRATION_KEY_SEALING_PATH,
+    NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE,
 };
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
@@ -185,7 +185,7 @@ fn remove_all_keys() {
     info!("Error validating created certificate");
     let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
     let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
-    let _ = SgxFsRemove(REGISTRATION_KEY_SEALING_PATH.as_str());
+    let _ = SgxFsRemove(SEALED_DATA_PATH.as_str());
     let _ = SgxFsRemove(
         std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
             .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
@@ -194,11 +194,6 @@ fn remove_all_keys() {
     let _ = SgxFsRemove(
         std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
             .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
-            .as_path(),
-    );
-    let _ = SgxFsRemove(
-        std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-            .join(NODE_EXCHANGE_KEY_FILE)
             .as_path(),
     );
 }
@@ -246,7 +241,7 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
         info!("Error validating created certificate: {:?}", e);
         let _ = SgxFsRemove(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str());
         let _ = SgxFsRemove(CURRENT_CONSENSUS_SEED_SEALING_PATH.as_str());
-        let _ = SgxFsRemove(REGISTRATION_KEY_SEALING_PATH.as_str());
+        let _ = SgxFsRemove(SEALED_DATA_PATH.as_str());
         let _ = SgxFsRemove(
             std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
                 .join(NODE_ENCRYPTED_SEED_KEY_GENESIS_FILE)
@@ -255,11 +250,6 @@ pub fn validate_report(cert: &[u8], _override_verify: Option<SigningMethod>) {
         let _ = SgxFsRemove(
             std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
                 .join(NODE_ENCRYPTED_SEED_KEY_CURRENT_FILE)
-                .as_path(),
-        );
-        let _ = SgxFsRemove(
-            std::path::Path::new(DEFAULT_SGX_SECRET_PATH)
-                .join(NODE_EXCHANGE_KEY_FILE)
                 .as_path(),
         );
     });

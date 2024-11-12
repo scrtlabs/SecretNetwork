@@ -278,12 +278,6 @@ pub unsafe extern "C" fn ecall_init_node(
 
     let mut key_manager = Keychain::new();
 
-    // even though key is overwritten later we still want to explicitly remove it in case we increase the security version
-    // to make sure that it is resealed using the new svn
-    if let Err(_e) = key_manager.reseal_registration_key() {
-        return sgx_status_t::SGX_ERROR_UNEXPECTED;
-    };
-
     let delete_res = key_manager.delete_consensus_seed();
     if delete_res {
         debug!("Successfully removed consensus seed");
@@ -547,7 +541,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
             let kp = KEY_MANAGER.get_registration_key().unwrap();
             trace!(
                 "ecall_get_attestation_report key pk: {:?}",
-                &kp.get_pubkey().to_vec()
+                hex::encode(&kp.get_pubkey().to_vec())
             );
 
             let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
@@ -607,7 +601,10 @@ pub unsafe extern "C" fn ecall_key_gen(
 
     let pubkey = reg_key.unwrap().get_pubkey();
     public_key.clone_from_slice(&pubkey);
-    trace!("ecall_key_gen key pk: {:?}", public_key.to_vec());
+    trace!(
+        "ecall_key_gen key pk: {:?}",
+        hex::encode(public_key.to_vec())
+    );
     sgx_status_t::SGX_SUCCESS
 }
 

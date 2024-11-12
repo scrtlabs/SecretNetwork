@@ -1,11 +1,13 @@
 use crate::consts::*;
+use crate::ed25519::Ed25519PrivateKey;
 use crate::traits::{Kdf, SealedKey};
 use crate::CryptoError;
 use crate::{AESKey, KeyPair, Seed};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
-
+use std::io::{Read, Write};
+use std::sgxfs::SgxFile;
 // For phase 1 of the seed rotation, all consensus secrets come in two parts:
 // 1. The genesis seed generated on 15 September 2020
 // 2. The current seed
@@ -49,11 +51,53 @@ pub struct SeedsHolder<T> {
 }
 
 lazy_static! {
+    pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path("data.sealed");
     pub static ref KEY_MANAGER: Keychain = Keychain::new();
 }
 
 #[allow(clippy::new_without_default)]
 impl Keychain {
+    fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
+        if let Some(kp) = self.registration_key {
+            writer.write_all(&[1 as u8])?;
+            writer.write_all(kp.get_privkey())?;
+        } else {
+            writer.write_all(&[0 as u8])?;
+        }
+        Ok(())
+    }
+
+    fn deserialize(&mut self, reader: &mut dyn Read) -> std::io::Result<()> {
+        let mut flag_bytes = [0u8; 1];
+        reader.read_exact(&mut flag_bytes)?;
+
+        if flag_bytes[0] != 0 {
+            let mut sk = Ed25519PrivateKey::default();
+            reader.read_exact(sk.get_mut())?;
+
+            self.registration_key = Some(KeyPair::from_sk(sk));
+        }
+
+        Ok(())
+    }
+
+    pub fn save(&self) {
+        let path: &str = &SEALED_DATA_PATH;
+        let mut file = SgxFile::create(path).unwrap();
+
+        self.serialize(&mut file).unwrap();
+    }
+
+    fn load(&mut self) {
+        let path: &str = &SEALED_DATA_PATH;
+        if let Ok(mut file) = SgxFile::open(path) {
+            println!("Seailed data file found.");
+            self.deserialize(&mut file).unwrap();
+        } else {
+            println!("Seailed data file NOT found.");
+        }
+    }
+
     pub fn new() -> Self {
         let consensus_seed: Option<SeedsHolder<Seed>> = match (
             Seed::unseal(GENESIS_CONSENSUS_SEED_SEALING_PATH.as_str()),
@@ -62,8 +106,8 @@ impl Keychain {
             (Ok(genesis), Ok(current)) => {
                 trace!(
                     "New keychain created with the following seeds {:?}, {:?}",
-                    genesis.as_slice(),
-                    current.as_slice()
+                    hex::encode(genesis.as_slice()),
+                    hex::encode(current.as_slice())
                 );
                 Some(SeedsHolder { genesis, current })
             }
@@ -77,12 +121,10 @@ impl Keychain {
             }
         };
 
-        let registration_key = Self::unseal_registration_key();
-
         let mut x = Keychain {
             consensus_seed_id: CONSENSUS_SEED_VERSION,
             consensus_seed,
-            registration_key,
+            registration_key: None,
             consensus_state_ikm: None,
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
@@ -95,16 +137,11 @@ impl Keychain {
             contract_key_proof_secret: None,
         };
 
+        x.load();
+
         let _ = x.generate_consensus_master_keys();
 
         x
-    }
-
-    fn unseal_registration_key() -> Option<KeyPair> {
-        match KeyPair::unseal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
-            Ok(k) => Some(k),
-            _ => None,
-        }
     }
 
     pub fn unseal_only_genesis(&mut self) -> Result<(), CryptoError> {
@@ -136,11 +173,7 @@ impl Keychain {
 
     pub fn create_registration_key(&mut self) -> Result<(), CryptoError> {
         match KeyPair::new() {
-            Ok(key) => {
-                if let Err(_e) = self.set_registration_key(key) {
-                    return Err(CryptoError::KeyError);
-                }
-            }
+            Ok(key) => self.set_registration_key(key),
             Err(err) => return Err(err),
         };
         Ok(())
@@ -214,30 +247,9 @@ impl Keychain {
         })
     }
 
-    pub fn reseal_registration_key(&mut self) -> Result<(), EnclaveError> {
-        match Self::unseal_registration_key() {
-            Some(kp) => {
-                if let Err(_e) = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH) {
-                    error!("Failed to reseal registration key - error code 0xC11");
-                    return Err(EnclaveError::FailedSeal);
-                };
-                if let Err(_e) = kp.seal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
-                    error!("Failed to reseal registration key - error code 0xC12");
-                    return Err(EnclaveError::FailedSeal);
-                }
-                Ok(())
-            }
-            None => Ok(()),
-        }
-    }
-
-    pub fn set_registration_key(&mut self, kp: KeyPair) -> Result<(), EnclaveError> {
-        if let Err(e) = kp.seal(REGISTRATION_KEY_SEALING_PATH.as_str()) {
-            error!("Error sealing registration key - error code 0xC13");
-            return Err(e);
-        }
+    pub fn set_registration_key(&mut self, kp: KeyPair) {
         self.registration_key = Some(kp);
-        Ok(())
+        self.save();
     }
 
     pub fn set_consensus_seed_exchange_keypair(&mut self, genesis: KeyPair, current: KeyPair) {
@@ -496,8 +508,9 @@ impl Keychain {
 pub mod tests {
 
     use super::{
-        Keychain, CURRENT_CONSENSUS_SEED_SEALING_PATH, GENESIS_CONSENSUS_SEED_SEALING_PATH,
-        /*KEY_MANAGER,*/ REGISTRATION_KEY_SEALING_PATH,
+        Keychain, CURRENT_CONSENSUS_SEED_SEALING_PATH,
+        GENESIS_CONSENSUS_SEED_SEALING_PATH,
+        /*KEY_MANAGER, REGISTRATION_KEY_SEALING_PATH,*/
     };
     // use crate::crypto::CryptoError;
     // use crate::crypto::{KeyPair, Seed};
@@ -507,7 +520,7 @@ pub mod tests {
         // clear previous data (if any)
         let _ = std::sgxfs::remove(&*GENESIS_CONSENSUS_SEED_SEALING_PATH);
         let _ = std::sgxfs::remove(&*CURRENT_CONSENSUS_SEED_SEALING_PATH);
-        let _ = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
+        //let _ = std::sgxfs::remove(&*REGISTRATION_KEY_SEALING_PATH);
 
         let _keys = Keychain::new();
 
