@@ -49,15 +49,15 @@ pub const SEED_UPDATE_SAVE_PATH: &str = "seed.txt";
 
 pub const SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS: &str = "consensus_seed.sealed";
 pub const SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT: &str = "consensus_seed_current.sealed";
+pub const SEALED_FILE_TX_BYTES: &str = "tx_bytes.sealed";
+pub const SEALED_FILE_UNITED: &str = "data.sealed";
+pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.sealed";
+pub const SEALED_FILE_REK: &str = "rek.sealed";
+pub const SEALED_FILE_IRS: &str = "irs.sealed";
+pub const SEALED_FILE_VALIDATOR_SET: &str = "validator_set.sealed";
 
 pub const MIGRATION_APPROVAL_SAVE_PATH: &str = "migration_trg.sealed";
 pub const MIGRATION_CONSENSUS_SAVE_PATH: &str = "migration_consensus.json";
-
-pub const SEALED_FILE_UNITED: &str = "data.sealed";
-pub const SEALED_FILE_REGISTRATION_KEY: &str = "new_node_seed_exchange_keypair.sealed";
-
-pub const SEALED_FILE_REK: &str = "rek.sealed";
-pub const SEALED_FILE_IRS: &str = "irs.sealed";
 
 #[cfg(feature = "production")]
 pub const SIGNATURE_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_LINKABLE_SIGNATURE;

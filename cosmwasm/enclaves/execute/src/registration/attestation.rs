@@ -49,17 +49,7 @@ use crate::registration::cert::verify_ra_cert;
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::offchain::get_attestation_report_dcap;
 
-#[cfg(feature = "SGX_MODE_HW")]
-use enclave_crypto::consts::SIGNING_METHOD;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use enclave_crypto::consts::SigningMethod;
-
-#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
-use enclave_crypto::consts::{
-    SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT, SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS,
-    SEALED_FILE_REGISTRATION_KEY, SEALED_FILE_UNITED,
-};
+use enclave_crypto::consts::*;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use std::sgxfs::remove as SgxFsRemove;
@@ -181,7 +171,6 @@ pub fn validate_enclave_version(
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 fn remove_secret_file(file_name: &str) {
-    use enclave_crypto::consts::make_sgx_secret_path;
     let _ = SgxFsRemove(make_sgx_secret_path(file_name));
 }
 
@@ -191,6 +180,9 @@ fn remove_all_keys() {
     remove_secret_file(SEALED_FILE_REGISTRATION_KEY);
     remove_secret_file(SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS);
     remove_secret_file(SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT);
+    remove_secret_file(SEALED_FILE_IRS);
+    remove_secret_file(SEALED_FILE_REK);
+    remove_secret_file(SEALED_FILE_TX_BYTES);
 }
 
 #[cfg(feature = "SGX_MODE_HW")]

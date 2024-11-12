@@ -4,8 +4,6 @@ extern crate sgx_tstd as std;
 extern crate alloc;
 extern crate sgx_types;
 
-pub mod r#const;
-
 pub mod wasm_messages;
 
 pub use wasm_messages::VERIFIED_BLOCK_MESSAGES;

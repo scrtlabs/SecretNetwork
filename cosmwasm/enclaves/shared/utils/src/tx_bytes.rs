@@ -1,12 +1,12 @@
 use crate::storage::{seal, unseal};
-use enclave_crypto::consts::make_sgx_secret_path;
+use enclave_crypto::consts::{make_sgx_secret_path, SEALED_FILE_TX_BYTES};
 use log::error;
 use serde::{Deserialize, Serialize};
 use sgx_types::{sgx_status_t, SgxResult};
 use std::{env, path};
 
 lazy_static::lazy_static! {
-    pub static ref TX_BYTES_SEALING_PATH: String = make_sgx_secret_path("tx_bytes.sealed");
+    pub static ref TX_BYTES_SEALING_PATH: String = make_sgx_secret_path(SEALED_FILE_TX_BYTES);
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

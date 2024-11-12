@@ -18,9 +18,6 @@ use std::untrusted::fs;
 use std::untrusted::fs::File;
 use std::untrusted::path::PathEx;
 
-pub const SEALED_FILE_TX_BYTES: &str = "tx_bytes.sealed";
-pub const SEALED_FILE_VALIDATOR_SET: &str = "validator_set.sealed";
-
 fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
     let mut key_request = sgx_types::sgx_key_request_t {
         key_name: sgx_types::SGX_KEYSELECT_SEAL,
