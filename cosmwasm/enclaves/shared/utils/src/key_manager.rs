@@ -242,6 +242,28 @@ impl Keychain {
         x
     }
 
+    pub fn new_from_legacy() -> Option<Self> {
+        let mut x = Self::new_empty();
+        x.load_legacy_keys();
+
+        if x.registration_key.is_some() || x.consensus_seed.is_some() {
+            let _ = x.generate_consensus_master_keys();
+            Some(x)
+        } else {
+            None
+        }
+    }
+
+    pub fn new_from_prev(key: &sgx_key_128bit_t) -> Option<Self> {
+        let mut x = Self::new_empty();
+        if x.load_ex(key) {
+            let _ = x.generate_consensus_master_keys();
+            Some(x)
+        } else {
+            None
+        }
+    }
+
     pub fn get_validator_set_for_height() -> ValidatorSetForHeight {
         // always re-read it
         Keychain::new().validator_set_for_height

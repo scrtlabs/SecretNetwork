@@ -6,19 +6,19 @@ use crate::registration::onchain::split_combined_cert;
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
 use core::convert::TryInto;
+use core::ptr::null;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     make_sgx_secret_path, ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT, INPUT_ENCRYPTED_SEED_SIZE,
-    MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
+    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT, FILE_MIGRATION_KDK,
+    INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
+    SIGNATURE_TYPE,
 };
-use enclave_crypto::{sha_256, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
+use enclave_crypto::{sha_256, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::key_manager::SEALING_KDK;
 use enclave_utils::pointers::validate_mut_slice;
-use enclave_utils::storage::export_all_to_kdk_safe;
-use enclave_utils::storage::migrate_all_from_2_17;
-use enclave_utils::storage::SELF_REPORT_BODY;
+use enclave_utils::storage::{migrate_all_from_2_17, SELF_REPORT_BODY};
 use enclave_utils::validator_set::ValidatorSetForHeight;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER};
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
@@ -454,13 +454,6 @@ pub fn save_attestation_combined(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn dh_xor(my_k: &KeyPair, other_k: &[u8; 32], data: &mut [u8; 16]) {
-    let dhk = my_k.diffie_hellman(other_k);
-    for i in 0..16 {
-        data[i] ^= dhk[i] ^ dhk[i + 16];
-    }
-}
-
 fn get_report_body(path: &str) -> sgx_report_body_t {
     let (_, vec_quote, vec_coll) = {
         let mut f_in = File::open(path).unwrap();
@@ -645,7 +638,26 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
 #[no_mangle]
 pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_status_t {
     match opcode {
-        0 => migrate_all_from_2_17(),
+        0 => {
+            println!("Convert legacy SGX files");
+            migrate_all_from_2_17()
+        }
+        1 => {
+            println!("Create self migration report");
+            ecall_get_attestation_report(null(), 0, 0x11) // migration, no-epid
+        }
+        2 => {
+            println!("Export encrypted self sealing key to the next aurhorized enclave");
+            export_sealing_kdk()
+        }
+        3 => {
+            println!("Import sealed data from the previous enclave");
+            import_sealing_kdk()
+        }
+        4 => {
+            println!("Import sealed data from the legacy enclave");
+            import_sealing_legacy()
+        }
         _ => sgx_status_t::SGX_ERROR_UNEXPECTED,
     }
 }
@@ -871,25 +883,85 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
     false
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
-    // migration report
-    let mut next_report = get_report_body(&make_sgx_secret_path(FILE_MIGRATION_CERT));
-
+fn export_sealing_kdk() -> sgx_status_t {
+    let next_report = get_report_body(&make_sgx_secret_path(FILE_MIGRATION_CERT));
     if !is_export_approved(&next_report) {
         error!("Export sealing not authorized");
         return sgx_status_t::SGX_ERROR_NO_PRIVILEGE;
     }
 
-    let pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
-    let kdk: &mut [u8; 16] = (&mut next_report.report_data.d[32..48]).try_into().unwrap();
+    let kp = Keychain::get_migration_keys();
+    let other_pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
+    let aes_key = AESKey::new_from_slice(&kp.diffie_hellman(other_pub_k));
+    let sealing_kdk_encrypted = aes_key
+        .encrypt_siv(&SEALING_KDK as &sgx_types::sgx_key_128bit_t, None)
+        .unwrap();
 
-    let kp = KEY_MANAGER.get_registration_key().unwrap();
+    let mut f_out = match File::create(&make_sgx_secret_path(FILE_MIGRATION_KDK)) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("failed to create file {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
 
-    dh_xor(&kp, pub_k, kdk);
-    //trace!("*** Sealing kdk: {:?}", kdk);
+    f_out.write_all(&kp.get_pubkey()).unwrap();
+    f_out.write_all(&sealing_kdk_encrypted).unwrap();
 
-    export_all_to_kdk_safe(kdk)
+    println!("Sealing key successfully exported");
+    sgx_status_t::SGX_SUCCESS
+}
+
+fn import_sealing_kdk() -> sgx_status_t {
+    let mut f_in = match File::open(&make_sgx_secret_path(FILE_MIGRATION_KDK)) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("failed to open file {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let mut other_pub_k: Ed25519PublicKey = Ed25519PublicKey::default();
+    f_in.read_exact(&mut other_pub_k).unwrap();
+
+    let mut sealing_kdk_encrypted = [0u8; 32];
+    f_in.read_exact(&mut sealing_kdk_encrypted).unwrap();
+
+    let kp = Keychain::get_migration_keys();
+    let aes_key = AESKey::new_from_slice(&kp.diffie_hellman(&other_pub_k));
+    let sealing_kdk = match aes_key.decrypt_siv(&sealing_kdk_encrypted, None) {
+        Ok(res) => res,
+        Err(err) => {
+            error!("Can't decrypt sealing key: {}", err);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    match Keychain::new_from_prev(sealing_kdk.as_slice().try_into().unwrap()) {
+        Some(key_manager) => {
+            key_manager.save();
+            info!("Sealing data successfully imported");
+            sgx_status_t::SGX_SUCCESS
+        }
+        None => {
+            info!("Sealing data not found");
+            sgx_status_t::SGX_ERROR_UNEXPECTED
+        }
+    }
+}
+
+fn import_sealing_legacy() -> sgx_status_t {
+    match Keychain::new_from_legacy() {
+        Some(key_manager) => {
+            key_manager.save();
+            info!("Legacy data successfully imported");
+            sgx_status_t::SGX_SUCCESS
+        }
+        None => {
+            info!("Legacy data not found");
+            sgx_status_t::SGX_ERROR_UNEXPECTED
+        }
+    }
 }
 
 const MAX_VARIABLE_LENGTH: u32 = 100_000;

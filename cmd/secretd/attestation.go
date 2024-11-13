@@ -297,7 +297,7 @@ func MigrationOp() *cobra.Command {
 				return fmt.Errorf("failed to migrate sealings. Enclave returned: %s", err)
 			}
 
-			fmt.Printf("Migration succeeded\n")
+			fmt.Printf("Migration op succeeded\n")
 			return nil
 		},
 	}

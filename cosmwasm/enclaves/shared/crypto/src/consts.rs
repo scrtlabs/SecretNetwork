@@ -41,6 +41,7 @@ pub const ATTESTATION_DCAP_SAVE_PATH: &str = "attestation_dcap.quote";
 pub const COLLATERAL_DCAP_SAVE_PATH: &str = "attestation_dcap.collateral";
 pub const FILE_CERT_COMBINED: &str = "attestation_combined.bin";
 pub const FILE_MIGRATION_CERT: &str = "migration_report.bin";
+pub const FILE_MIGRATION_KDK: &str = "migration_kdk.bin";
 pub const PUBKEY_SAVE_PATH: &str = "pubkey.bin";
 
 pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
