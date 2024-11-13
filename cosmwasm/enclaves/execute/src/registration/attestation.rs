@@ -49,6 +49,7 @@ use crate::registration::cert::verify_ra_cert;
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use crate::registration::offchain::get_attestation_report_dcap;
 
+#[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
 use enclave_crypto::consts::*;
 
 #[cfg(all(feature = "SGX_MODE_HW", feature = "production"))]
