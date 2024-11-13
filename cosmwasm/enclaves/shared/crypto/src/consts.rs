@@ -39,8 +39,8 @@ pub fn make_sgx_secret_path(file_name: &str) -> String {
 pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
 pub const ATTESTATION_DCAP_SAVE_PATH: &str = "attestation_dcap.quote";
 pub const COLLATERAL_DCAP_SAVE_PATH: &str = "attestation_dcap.collateral";
-pub const CERT_COMBINED_SAVE_PATH: &str = "attestation_combined.bin";
-pub const MIGRATION_CERT_SAVE_PATH: &str = "migration_report.bin";
+pub const FILE_CERT_COMBINED: &str = "attestation_combined.bin";
+pub const FILE_MIGRATION_CERT: &str = "migration_report.bin";
 pub const PUBKEY_SAVE_PATH: &str = "pubkey.bin";
 
 pub const SEED_EXCH_KEY_SAVE_PATH: &str = "node-master-key.txt";
@@ -95,24 +95,10 @@ lazy_static! {
     .to_str()
     .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
-    pub static ref CERT_COMBINED_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(CERT_COMBINED_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
     pub static ref PUBKEY_PATH: String = path::Path::new(
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(PUBKEY_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref MIGRATION_CERT_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(MIGRATION_CERT_SAVE_PATH)
     .to_str()
     .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();

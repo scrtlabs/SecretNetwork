@@ -1,3 +1,4 @@
+use crate::storage::get_key_from_seed;
 use crate::validator_set::ValidatorSetForHeight;
 use core::default::{self, default};
 use enclave_crypto::consts::*;
@@ -8,6 +9,7 @@ use enclave_crypto::{AESKey, KeyPair, Seed};
 use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
+use sgx_types::{sgx_key_128bit_t, sgx_measurement_t};
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 // For phase 1 of the seed rotation, all consensus secrets come in two parts:
@@ -45,7 +47,7 @@ pub struct Keychain {
     admin_proof_secret: Option<AESKey>,
     contract_key_proof_secret: Option<AESKey>,
     validator_set_for_height: ValidatorSetForHeight,
-    pub next_mr_enclave: Option<sgx_types::sgx_measurement_t>,
+    pub next_mr_enclave: Option<sgx_measurement_t>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -56,6 +58,7 @@ pub struct SeedsHolder<T> {
 
 lazy_static! {
     pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(SEALED_FILE_UNITED);
+    pub static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
     pub static ref KEY_MANAGER: Keychain = Keychain::new();
 }
 
@@ -127,7 +130,7 @@ impl Keychain {
 
         reader.read_exact(&mut flag_bytes)?;
         if flag_bytes[0] != 0 {
-            let mut val = sgx_types::sgx_measurement_t::default();
+            let mut val = sgx_measurement_t::default();
             reader.read_exact(&mut val.m)?;
             self.next_mr_enclave = Some(val);
         }
@@ -137,19 +140,36 @@ impl Keychain {
 
     pub fn save(&self) {
         let path: &str = &SEALED_DATA_PATH;
-        let mut file = SgxFile::create(path).unwrap();
+        let mut file = SgxFile::create_ex(path, &SEALING_KDK).unwrap();
 
         self.serialize(&mut file).unwrap();
     }
 
-    fn load(&mut self) {
+    fn load_ex(&mut self, key: &sgx_key_128bit_t) -> bool {
         let path: &str = &SEALED_DATA_PATH;
-        if let Ok(mut file) = SgxFile::open(path) {
-            println!("Seailed data file found.");
-            self.deserialize(&mut file).unwrap();
-        } else {
-            println!("Seailed data file NOT found.");
+        match SgxFile::open_ex(path, &key) {
+            Ok(mut file) => {
+                println!("Sealed data opened");
+                self.deserialize(&mut file).unwrap();
+                true
+            }
+            Err(err) => {
+                println!("Seailed data can't be opened: {}", err);
+                false
+            }
         }
+    }
+
+    fn load(&mut self) {
+        self.load_ex(&SEALING_KDK);
+    }
+
+    pub fn get_migration_keys() -> KeyPair {
+        let mut sk = Ed25519PrivateKey::default();
+        sk.get_mut()[..16].copy_from_slice(&get_key_from_seed("migrate.0.kdk".as_bytes()));
+        sk.get_mut()[16..].copy_from_slice(&get_key_from_seed("migrate.1.kdk".as_bytes()));
+
+        KeyPair::from_sk(sk)
     }
 
     pub fn new_empty() -> Self {

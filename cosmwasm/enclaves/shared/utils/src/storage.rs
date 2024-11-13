@@ -18,7 +18,7 @@ use std::untrusted::fs;
 use std::untrusted::fs::File;
 use std::untrusted::path::PathEx;
 
-fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
+pub fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
     let mut key_request = sgx_types::sgx_key_request_t {
         key_name: sgx_types::SGX_KEYSELECT_SEAL,
         key_policy: sgx_types::SGX_KEYPOLICY_MRENCLAVE | sgx_types::SGX_KEYPOLICY_MRSIGNER,
@@ -45,7 +45,6 @@ fn get_key_from_seed(seed: &[u8]) -> sgx_key_128bit_t {
 }
 
 lazy_static! {
-    pub static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
     pub static ref SELF_REPORT_BODY: sgx_report_body_t = {
         let report_body = unsafe {
             let p_report = sgx_self_report();

@@ -8,16 +8,16 @@ use block_verifier::validator_whitelist;
 use core::convert::TryInto;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
-    ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_CERT_PATH,
+    make_sgx_secret_path, ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH,
+    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT, INPUT_ENCRYPTED_SEED_SIZE,
     MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 use enclave_crypto::{sha_256, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
+use enclave_utils::key_manager::SEALING_KDK;
 use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::export_all_to_kdk_safe;
 use enclave_utils::storage::migrate_all_from_2_17;
-use enclave_utils::storage::SEALING_KDK;
 use enclave_utils::storage::SELF_REPORT_BODY;
 use enclave_utils::validator_set::ValidatorSetForHeight;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER};
@@ -417,11 +417,11 @@ pub fn save_attestation_combined(
         }
     }
 
-    let out_path: &String = if is_migration_report {
-        &MIGRATION_CERT_PATH
+    let out_path = make_sgx_secret_path(if is_migration_report {
+        &FILE_MIGRATION_CERT
     } else {
-        &CERT_COMBINED_PATH
-    };
+        &FILE_CERT_COMBINED
+    });
 
     let mut f_out = match File::create(out_path.as_str()) {
         Ok(f) => f,
@@ -500,20 +500,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
     let (kp, is_migration_report) = match 0x10 & flags {
         0x10 => {
             // migration report
-            let prev_report = get_report_body(CERT_COMBINED_PATH.as_str());
-
-            let nnc = KeyPair::new().unwrap();
-            let pub_k = &prev_report.report_data.d[0..32].try_into().unwrap();
-
-            let kdk: &[u8; 16] = &SEALING_KDK;
-            //trace!("*** Sealing kdk: {:?}", kdk);
-
-            let dst: &mut [u8; 16] = (&mut report_data[32..48]).try_into().unwrap();
-            dst.copy_from_slice(kdk);
-
-            dh_xor(&nnc, pub_k, dst);
-
-            (nnc, true)
+            (Keychain::get_migration_keys(), true)
         }
         _ => {
             // standard network registration report
@@ -884,7 +871,7 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
 #[no_mangle]
 pub unsafe extern "C" fn ecall_export_sealing() -> sgx_types::sgx_status_t {
     // migration report
-    let mut next_report = get_report_body(MIGRATION_CERT_PATH.as_str());
+    let mut next_report = get_report_body(&make_sgx_secret_path(FILE_MIGRATION_CERT));
 
     if !is_export_approved(&next_report) {
         error!("Export sealing not authorized");
