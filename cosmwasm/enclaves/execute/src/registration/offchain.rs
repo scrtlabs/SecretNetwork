@@ -418,9 +418,9 @@ pub fn save_attestation_combined(
     }
 
     let out_path = make_sgx_secret_path(if is_migration_report {
-        &FILE_MIGRATION_CERT
+        FILE_MIGRATION_CERT
     } else {
-        &FILE_CERT_COMBINED
+        FILE_CERT_COMBINED
     });
 
     let mut f_out = match File::create(out_path.as_str()) {
@@ -500,7 +500,7 @@ pub unsafe extern "C" fn ecall_get_attestation_report(
             let kp = KEY_MANAGER.get_registration_key().unwrap();
             trace!(
                 "ecall_get_attestation_report key pk: {:?}",
-                hex::encode(&kp.get_pubkey().to_vec())
+                hex::encode(kp.get_pubkey())
             );
 
             let mut f_out = match File::create(PUBKEY_PATH.as_str()) {
@@ -560,10 +560,7 @@ pub unsafe extern "C" fn ecall_key_gen(
 
     let pubkey = reg_key.unwrap().get_pubkey();
     public_key.clone_from_slice(&pubkey);
-    trace!(
-        "ecall_key_gen key pk: {:?}",
-        hex::encode(public_key.to_vec())
-    );
+    trace!("ecall_key_gen key pk: {:?}", hex::encode(&public_key));
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -897,7 +894,7 @@ fn export_sealing_kdk() -> sgx_status_t {
         .encrypt_siv(&SEALING_KDK as &sgx_types::sgx_key_128bit_t, None)
         .unwrap();
 
-    let mut f_out = match File::create(&make_sgx_secret_path(FILE_MIGRATION_KDK)) {
+    let mut f_out = match File::create(make_sgx_secret_path(FILE_MIGRATION_KDK)) {
         Ok(f) => f,
         Err(e) => {
             error!("failed to create file {}", e);
@@ -913,7 +910,7 @@ fn export_sealing_kdk() -> sgx_status_t {
 }
 
 fn import_sealing_kdk() -> sgx_status_t {
-    let mut f_in = match File::open(&make_sgx_secret_path(FILE_MIGRATION_KDK)) {
+    let mut f_in = match File::open(make_sgx_secret_path(FILE_MIGRATION_KDK)) {
         Ok(f) => f,
         Err(e) => {
             error!("failed to open file {}", e);

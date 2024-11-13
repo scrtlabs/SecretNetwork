@@ -66,18 +66,18 @@ lazy_static! {
 impl Keychain {
     fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
         if let Some(seeds) = self.consensus_seed {
-            writer.write_all(&[1 as u8])?;
+            writer.write_all(&[1_u8])?;
             writer.write_all(seeds.genesis.as_slice())?;
             writer.write_all(seeds.current.as_slice())?;
         } else {
-            writer.write_all(&[0 as u8])?;
+            writer.write_all(&[0_u8])?;
         }
 
         if let Some(kp) = self.registration_key {
-            writer.write_all(&[1 as u8])?;
+            writer.write_all(&[1_u8])?;
             writer.write_all(kp.get_privkey())?;
         } else {
-            writer.write_all(&[0 as u8])?;
+            writer.write_all(&[0_u8])?;
         }
 
         writer.write_all(&self.validator_set_for_height.height.to_le_bytes())?;
@@ -86,10 +86,10 @@ impl Keychain {
         writer.write_all(&self.validator_set_for_height.validator_set)?;
 
         if let Some(val) = self.next_mr_enclave {
-            writer.write_all(&[1 as u8])?;
+            writer.write_all(&[1_u8])?;
             writer.write_all(&val.m)?;
         } else {
-            writer.write_all(&[0 as u8])?;
+            writer.write_all(&[0_u8])?;
         }
 
         Ok(())
@@ -147,7 +147,7 @@ impl Keychain {
 
     fn load_ex(&mut self, key: &sgx_key_128bit_t) -> bool {
         let path: &str = &SEALED_DATA_PATH;
-        match SgxFile::open_ex(path, &key) {
+        match SgxFile::open_ex(path, key) {
             Ok(mut file) => {
                 println!("Sealed data opened");
                 self.deserialize(&mut file).unwrap();

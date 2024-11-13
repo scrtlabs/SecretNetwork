@@ -469,25 +469,25 @@ fn migrate_file_from_2_17_safe(
 }
 
 pub fn migrate_all_from_2_17() -> sgx_types::sgx_status_t {
-    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_REGISTRATION_KEY, true) {
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_REGISTRATION_KEY, true) {
         return e;
     }
-    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS, true) {
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_ENCRYPTED_SEED_KEY_GENESIS, true) {
         return e;
     }
-    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT, true) {
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_ENCRYPTED_SEED_KEY_CURRENT, true) {
         return e;
     }
-    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_REK, true) {
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_REK, true) {
         return e;
     }
-    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_IRS, true) {
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_IRS, true) {
         return e;
     }
-    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_VALIDATOR_SET, true) {
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_VALIDATOR_SET, true) {
         return e;
     }
-    if let Err(e) = migrate_file_from_2_17_safe(&SEALED_FILE_TX_BYTES, true) {
+    if let Err(e) = migrate_file_from_2_17_safe(SEALED_FILE_TX_BYTES, true) {
         return e;
     }
     sgx_status_t::SGX_SUCCESS
