@@ -6,13 +6,11 @@ use crate::registration::onchain::split_combined_cert;
 #[cfg(feature = "verify-validator-whitelist")]
 use block_verifier::validator_whitelist;
 use core::convert::TryInto;
-use core::mem;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, CERT_COMBINED_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_APPROVAL_PATH,
-    MIGRATION_CERT_PATH, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
-    SIGNATURE_TYPE,
+    CONSENSUS_SEED_VERSION, INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_CERT_PATH,
+    MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH, SIGNATURE_TYPE,
 };
 use enclave_crypto::{sha_256, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
@@ -37,7 +35,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::panic;
-use std::sgxfs::SgxFile;
 use std::slice;
 use tendermint::validator::Set;
 use tendermint::Hash::Sha256 as tm_Sha256;
@@ -85,7 +82,7 @@ pub unsafe extern "C" fn ecall_init_bootstrap(
         sgx_status_t::SGX_ERROR_UNEXPECTED,
     );
 
-    let mut key_manager = Keychain::new();
+    let mut key_manager = Keychain::new_empty();
 
     if let Err(_e) = key_manager.create_consensus_seed() {
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
@@ -663,23 +660,6 @@ pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
     migrate_all_from_2_17()
 }
 
-#[repr(packed)]
-pub struct MigrationApprovalData {
-    pub mr_enclave: sgx_measurement_t,
-    //    pub mr_signer: sgx_measurement_t,
-}
-
-impl MigrationApprovalData {
-    fn is_export_approved(&self, report: &sgx_report_body_t) -> bool {
-        if self.mr_enclave.m != report.mr_enclave.m {
-            info!("mrenclave mismatch");
-            return false;
-        }
-
-        true
-    }
-}
-
 fn is_msg_mrenclave(msg_in_block: &[u8], mrenclave: &[u8]) -> bool {
     trace!("*** block msg: {:?}", hex::encode(msg_in_block));
 
@@ -746,26 +726,17 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
         return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    let data = MigrationApprovalData {
-        mr_enclave: sgx_measurement_t {
-            m: msg_slice.try_into().unwrap(),
-        },
-    };
+    let mut key_chain = Keychain::new();
+    key_chain.next_mr_enclave = Some(sgx_measurement_t {
+        m: msg_slice.try_into().unwrap(),
+    });
 
-    unsafe {
-        let d = std::slice::from_raw_parts(
-            (&data as *const MigrationApprovalData) as *const u8,
-            mem::size_of::<MigrationApprovalData>(),
-        );
+    key_chain.save();
 
-        let mut f_out = SgxFile::create(MIGRATION_APPROVAL_PATH.as_str()).unwrap();
-        f_out.write_all(d).unwrap();
-
-        info!(
-            "Migration target approved. mr_encalve={}",
-            hex::encode(data.mr_enclave.m)
-        );
-    }
+    info!(
+        "Migration target approved. mr_encalve={}",
+        hex::encode(msg_slice)
+    );
 
     sgx_types::sgx_status_t::SGX_SUCCESS
 }
@@ -893,20 +864,8 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
         return false;
     }
 
-    if let Ok(mut f_in) = SgxFile::open(MIGRATION_APPROVAL_PATH.as_str()) {
-        let mut data = vec![];
-        f_in.read_to_end(&mut data).unwrap();
-
-        if data.len() != mem::size_of::<MigrationApprovalData>() {
-            panic!("wrong file size");
-        }
-
-        let res = unsafe {
-            let p_data = data.as_ptr() as *const MigrationApprovalData;
-            (*p_data).is_export_approved(report)
-        };
-
-        if res {
+    if let Some(val) = KEY_MANAGER.next_mr_enclave {
+        if val.m == report.mr_enclave.m {
             println!("Migration is authorized by on-chain consensus");
             return true;
         }

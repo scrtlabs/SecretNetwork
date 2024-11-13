@@ -45,6 +45,7 @@ pub struct Keychain {
     admin_proof_secret: Option<AESKey>,
     contract_key_proof_secret: Option<AESKey>,
     validator_set_for_height: ValidatorSetForHeight,
+    pub next_mr_enclave: Option<sgx_types::sgx_measurement_t>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -156,6 +157,7 @@ impl Keychain {
                 height: 0,
                 validator_set: Vec::new(),
             },
+            next_mr_enclave: None,
         }
     }
 

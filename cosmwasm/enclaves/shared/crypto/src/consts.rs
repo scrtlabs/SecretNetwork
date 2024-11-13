@@ -56,7 +56,6 @@ pub const SEALED_FILE_REK: &str = "rek.sealed";
 pub const SEALED_FILE_IRS: &str = "irs.sealed";
 pub const SEALED_FILE_VALIDATOR_SET: &str = "validator_set.sealed";
 
-pub const MIGRATION_APPROVAL_SAVE_PATH: &str = "migration_trg.sealed";
 pub const MIGRATION_CONSENSUS_SAVE_PATH: &str = "migration_consensus.json";
 
 #[cfg(feature = "production")]
@@ -114,13 +113,6 @@ lazy_static! {
         &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
     )
     .join(MIGRATION_CERT_SAVE_PATH)
-    .to_str()
-    .unwrap_or(DEFAULT_SGX_SECRET_PATH)
-    .to_string();
-    pub static ref MIGRATION_APPROVAL_PATH: String = path::Path::new(
-        &env::var(SCRT_SGX_STORAGE_ENV_VAR).unwrap_or_else(|_| DEFAULT_SGX_SECRET_PATH.to_string())
-    )
-    .join(MIGRATION_APPROVAL_SAVE_PATH)
     .to_str()
     .unwrap_or(DEFAULT_SGX_SECRET_PATH)
     .to_string();
