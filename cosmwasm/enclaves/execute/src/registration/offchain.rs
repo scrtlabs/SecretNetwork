@@ -643,8 +643,11 @@ pub unsafe extern "C" fn ecall_get_genesis_seed(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ecall_migrate_sealing() -> sgx_types::sgx_status_t {
-    migrate_all_from_2_17()
+pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_status_t {
+    match opcode {
+        0 => migrate_all_from_2_17(),
+        _ => sgx_status_t::SGX_ERROR_UNEXPECTED,
+    }
 }
 
 fn is_msg_mrenclave(msg_in_block: &[u8], mrenclave: &[u8]) -> bool {

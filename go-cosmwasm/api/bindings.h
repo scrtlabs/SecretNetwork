@@ -155,8 +155,6 @@ bool create_attestation_report(Buffer api_key, uint32_t flags, Buffer *err);
 
 bool emergency_approve_upgrade(Buffer data_dir, Buffer msg);
 
-bool export_sealing(void);
-
 void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
@@ -215,7 +213,7 @@ Buffer migrate(cache_t *cache,
                Buffer admin,
                Buffer admin_proof);
 
-bool migrate_sealing(void);
+bool migration_op(uint32_t opcode);
 
 bool onchain_approve_upgrade(Buffer msg);
 

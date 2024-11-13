@@ -34,10 +34,13 @@ enclave {
             [out, count=32] uint8_t* public_key
         );
 
-        public sgx_status_t ecall_migrate_sealing(
-        );
-
-        public sgx_status_t ecall_export_sealing(
+        // migration opcodes:
+        //  0 - convert sealed files from 2.17
+        //  1 - create migration report
+        //  2 - export sealing kdk for the next enclave
+        //  3 - migrate the sealed unified file from the previous enclave
+        public sgx_status_t ecall_migration_op(
+            uint32_t opcode
         );
 
         public sgx_status_t ecall_onchain_approve_upgrade(

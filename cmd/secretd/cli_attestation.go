@@ -78,27 +78,12 @@ func DumpBin() *cobra.Command {
 	return cmd
 }
 
-func MigrateSealings() *cobra.Command {
+func MigrationOp() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "migrate_sealing",
-		Short: "Migrate sealed files to the current format",
-		Long:  "Re-create SGX-sealed files according to the current format",
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			println("This is a secretd only function, yo")
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func ExportSealings() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "export_sealing",
-		Short: "Export sealed files for the next enclave",
-		Long:  "Export sealed files for the next enclave, that has been approved for migration",
-		Args:  cobra.ExactArgs(0),
+		Use:   "migrate_op [opcode]",
+		Short: "Migration operation",
+		Long:  "0: migrate from SGX 2.17 format, 1: create migration report, 2: export sealing key for the new enclave, 3: import sealing data",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			println("This is a secretd only function, yo")
 			return nil

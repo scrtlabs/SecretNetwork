@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -279,39 +280,24 @@ func DumpBin() *cobra.Command {
 	return cmd
 }
 
-func MigrateSealings() *cobra.Command {
+func MigrationOp() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "migrate_sealing",
-		Short: "Migrate sealed files to the current format",
-		Long:  "Re-create SGX-sealed files according to the current format",
-		Args:  cobra.ExactArgs(0),
-		RunE: func(_ *cobra.Command, _ []string) error {
-			_, err := api.MigrateSealing()
+		Use:   "migrate_op [opcode]",
+		Short: "Migration operation",
+		Long:  "0: migrate from SGX 2.17 format, 1: create migration report, 2: export sealing key for the new enclave, 3: import sealing data",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			op_num, err := strconv.ParseUint(args[0], 10, 32)
+			if err != nil {
+				return fmt.Errorf("opcode should be a number: %s", err)
+			}
+
+			_, err = api.MigrationOp(uint32(op_num))
 			if err != nil {
 				return fmt.Errorf("failed to migrate sealings. Enclave returned: %s", err)
 			}
 
 			fmt.Printf("Migration succeeded\n")
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func ExportSealings() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "export_sealing",
-		Short: "Export sealed files for the next enclave",
-		Long:  "Export sealed files for the next enclave, that has been approved for migration",
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := api.ExportSealing()
-			if err != nil {
-				return fmt.Errorf("failed to start enclave. Enclave returned: %s", err)
-			}
-
-			fmt.Printf("Export succeeded\n")
 			return nil
 		},
 	}

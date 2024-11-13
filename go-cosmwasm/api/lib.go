@@ -94,24 +94,13 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 	return true, nil
 }
 
-func MigrateSealing() (bool, error) {
-	ret, err := C.migrate_sealing()
+func MigrationOp(op uint32) (bool, error) {
+	ret, err := C.migration_op(u32(op))
 	if err != nil {
 		return false, err
 	}
 	if !ret {
 		return false, errors.New("sealing migration failed")
-	}
-	return true, nil
-}
-
-func ExportSealing() (bool, error) {
-	ret, err := C.export_sealing()
-	if err != nil {
-		return false, err
-	}
-	if !ret {
-		return false, errors.New("sealing export failed")
 	}
 	return true, nil
 }

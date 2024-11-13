@@ -49,11 +49,7 @@ func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, erro
 
 type Querier = types.Querier
 
-func MigrateSealing() (bool, error) {
-	return false, nil
-}
-
-func ExportSealing() (bool, error) {
+func MigrationOp(op uint32) (bool, error) {
 	return false, nil
 }
 
