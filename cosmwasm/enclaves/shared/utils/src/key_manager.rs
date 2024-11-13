@@ -82,6 +82,13 @@ impl Keychain {
         writer.write_all(&val_size.to_le_bytes())?;
         writer.write_all(&self.validator_set_for_height.validator_set)?;
 
+        if let Some(val) = self.next_mr_enclave {
+            writer.write_all(&[1 as u8])?;
+            writer.write_all(&val.m)?;
+        } else {
+            writer.write_all(&[0 as u8])?;
+        }
+
         Ok(())
     }
 
@@ -117,6 +124,13 @@ impl Keychain {
 
         self.validator_set_for_height.validator_set = vec![0u8; val_size as usize];
         reader.read_exact(&mut self.validator_set_for_height.validator_set)?;
+
+        reader.read_exact(&mut flag_bytes)?;
+        if flag_bytes[0] != 0 {
+            let mut val = sgx_types::sgx_measurement_t::default();
+            reader.read_exact(&mut val.m)?;
+            self.next_mr_enclave = Some(val);
+        }
 
         Ok(())
     }
