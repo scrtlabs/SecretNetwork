@@ -69,7 +69,7 @@ blockchain. Writes the certificate in DER format to ~/attestation_cert
 				}
 			}
 
-			sgxSecretsPath := sgxSecretsDir + string(os.PathSeparator) + reg.EnclaveRegistrationKey
+			sgxSecretsPath := sgxSecretsDir + string(os.PathSeparator) + reg.EnclaveSealedData
 
 			resetFlag, err := cmd.Flags().GetBool(flagReset)
 			if err != nil {
@@ -493,7 +493,7 @@ Please report any issues with this command
 				sgxSecretsFolder = os.ExpandEnv("/opt/secret/.sgx_secrets")
 			}
 
-			sgxEnclaveKeyPath := filepath.Join(sgxSecretsFolder, reg.EnclaveRegistrationKey)
+			sgxSecretPath := filepath.Join(sgxSecretsFolder, reg.EnclaveSealedData)
 			sgxAttestationCombined := filepath.Join(sgxSecretsFolder, reg.AttestationCombinedPath)
 
 			resetFlag, err := cmd.Flags().GetBool(flagReset)
@@ -502,7 +502,7 @@ Please report any issues with this command
 			}
 
 			if !resetFlag {
-				if _, err := os.Stat(sgxEnclaveKeyPath); os.IsNotExist(err) {
+				if _, err := os.Stat(sgxSecretPath); os.IsNotExist(err) {
 					fmt.Println("Creating new enclave registration key")
 					_, err := api.KeyGen()
 					if err != nil {

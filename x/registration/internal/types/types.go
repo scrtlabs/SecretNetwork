@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	EnclaveRegistrationKey     = "new_node_seed_exchange_keypair.sealed"
+	EnclaveSealedData          = "data.sealed"
 	PublicKeyLength            = 64  // encoded length
 	EncryptedKeyLength         = 192 // hex encoded length
 	LegacyEncryptedKeyLength   = 96  // hex encoded length
