@@ -10,13 +10,12 @@ use core::ptr::null;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     make_sgx_secret_path, ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT, FILE_MIGRATION_KDK,
+    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT, FILE_MIGRATION_DATA,
     INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
     SIGNATURE_TYPE,
 };
 use enclave_crypto::{sha_256, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
-use enclave_utils::key_manager::SEALING_KDK;
 use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::{migrate_all_from_2_17, SELF_REPORT_BODY};
 use enclave_utils::validator_set::ValidatorSetForHeight;
@@ -645,11 +644,11 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
         }
         2 => {
             println!("Export encrypted self sealing key to the next aurhorized enclave");
-            export_sealing_kdk()
+            export_sealed_data()
         }
         3 => {
             println!("Import sealed data from the previous enclave");
-            import_sealing_kdk()
+            import_sealed_data()
         }
         4 => {
             println!("Import sealed data from the legacy enclave");
@@ -880,7 +879,7 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
     false
 }
 
-fn export_sealing_kdk() -> sgx_status_t {
+fn export_sealed_data() -> sgx_status_t {
     let next_report = get_report_body(&make_sgx_secret_path(FILE_MIGRATION_CERT));
     if !is_export_approved(&next_report) {
         error!("Export sealing not authorized");
@@ -890,11 +889,15 @@ fn export_sealing_kdk() -> sgx_status_t {
     let kp = Keychain::get_migration_keys();
     let other_pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
     let aes_key = AESKey::new_from_slice(&kp.diffie_hellman(other_pub_k));
-    let sealing_kdk_encrypted = aes_key
-        .encrypt_siv(&SEALING_KDK as &sgx_types::sgx_key_128bit_t, None)
+
+    let mut data_plain = Vec::new();
+    KEY_MANAGER.serialize(&mut data_plain).unwrap();
+
+    let data_encrypted = aes_key
+        .encrypt_siv(&data_plain, None)
         .unwrap();
 
-    let mut f_out = match File::create(make_sgx_secret_path(FILE_MIGRATION_KDK)) {
+    let mut f_out = match File::create(make_sgx_secret_path(FILE_MIGRATION_DATA)) {
         Ok(f) => f,
         Err(e) => {
             error!("failed to create file {}", e);
@@ -903,14 +906,14 @@ fn export_sealing_kdk() -> sgx_status_t {
     };
 
     f_out.write_all(&kp.get_pubkey()).unwrap();
-    f_out.write_all(&sealing_kdk_encrypted).unwrap();
+    f_out.write_all(&data_encrypted).unwrap();
 
-    println!("Sealing key successfully exported");
+    println!("Sealed data successfully exported");
     sgx_status_t::SGX_SUCCESS
 }
 
-fn import_sealing_kdk() -> sgx_status_t {
-    let mut f_in = match File::open(make_sgx_secret_path(FILE_MIGRATION_KDK)) {
+fn import_sealed_data() -> sgx_status_t {
+    let mut f_in = match File::open(make_sgx_secret_path(FILE_MIGRATION_DATA)) {
         Ok(f) => f,
         Err(e) => {
             error!("failed to open file {}", e);
@@ -921,12 +924,13 @@ fn import_sealing_kdk() -> sgx_status_t {
     let mut other_pub_k: Ed25519PublicKey = Ed25519PublicKey::default();
     f_in.read_exact(&mut other_pub_k).unwrap();
 
-    let mut sealing_kdk_encrypted = [0u8; 32];
-    f_in.read_exact(&mut sealing_kdk_encrypted).unwrap();
+    let mut data_encrypted = Vec::new();
+    f_in.read_to_end(&mut data_encrypted).unwrap();
 
     let kp = Keychain::get_migration_keys();
     let aes_key = AESKey::new_from_slice(&kp.diffie_hellman(&other_pub_k));
-    let sealing_kdk = match aes_key.decrypt_siv(&sealing_kdk_encrypted, None) {
+
+    let data_plain = match aes_key.decrypt_siv(&data_encrypted, None) {
         Ok(res) => res,
         Err(err) => {
             error!("Can't decrypt sealing key: {}", err);
@@ -934,14 +938,16 @@ fn import_sealing_kdk() -> sgx_status_t {
         }
     };
 
-    match Keychain::new_from_prev(sealing_kdk.as_slice().try_into().unwrap()) {
-        Some(key_manager) => {
+    let mut key_manager = Keychain::new_empty();
+
+    match key_manager.deserialize(&mut std::io::Cursor::new(data_plain)) {
+        Ok(_) => {
             key_manager.save();
             info!("Sealing data successfully imported");
             sgx_status_t::SGX_SUCCESS
-        }
-        None => {
-            info!("Sealing data not found");
+        },
+        Err(err) => {
+            info!("Failed to read sealed data: {}", err);
             sgx_status_t::SGX_ERROR_UNEXPECTED
         }
     }

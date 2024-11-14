@@ -57,14 +57,18 @@ pub struct SeedsHolder<T> {
 }
 
 lazy_static! {
+    static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
     pub static ref SEALED_DATA_PATH: String = make_sgx_secret_path(SEALED_FILE_UNITED);
-    pub static ref SEALING_KDK: sgx_key_128bit_t = get_key_from_seed("seal.kdk".as_bytes());
     pub static ref KEY_MANAGER: Keychain = Keychain::new();
 }
 
+const KEYCHAIN_DATA_VER: u32 = 1;
+
 #[allow(clippy::new_without_default)]
 impl Keychain {
-    fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
+    pub fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
+        writer.write_all(&KEYCHAIN_DATA_VER.to_le_bytes())?;
+
         if let Some(seeds) = self.consensus_seed {
             writer.write_all(&[1_u8])?;
             writer.write_all(seeds.genesis.as_slice())?;
@@ -95,7 +99,27 @@ impl Keychain {
         Ok(())
     }
 
-    fn deserialize(&mut self, reader: &mut dyn Read) -> std::io::Result<()> {
+    fn read_u32(reader: &mut dyn Read) -> std::io::Result<u32> {
+        let mut buf = [0u8; 4];
+        reader.read_exact(&mut buf)?;
+        Ok(u32::from_le_bytes(buf))
+    }
+
+    fn read_u64(reader: &mut dyn Read) -> std::io::Result<u64> {
+        let mut buf = [0u8; 8];
+        reader.read_exact(&mut buf)?;
+        Ok(u64::from_le_bytes(buf))
+    }
+
+    pub fn deserialize(&mut self, reader: &mut dyn Read) -> std::io::Result<()> {
+        let ver = Self::read_u32(reader)?;
+        if KEYCHAIN_DATA_VER != ver {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "unsupported ver",
+            ));
+        }
+
         let mut flag_bytes = [0u8; 1];
 
         reader.read_exact(&mut flag_bytes)?;
@@ -118,12 +142,9 @@ impl Keychain {
             self.registration_key = Some(KeyPair::from_sk(sk));
         }
 
-        let mut buf_u64 = [0u8; 8];
-        reader.read_exact(&mut buf_u64)?;
-        self.validator_set_for_height.height = u64::from_le_bytes(buf_u64);
+        self.validator_set_for_height.height = Self::read_u64(reader)?;
 
-        reader.read_exact(&mut buf_u64)?;
-        let val_size = u64::from_le_bytes(buf_u64);
+        let val_size = Self::read_u64(reader)?;
 
         self.validator_set_for_height.validator_set = vec![0u8; val_size as usize];
         reader.read_exact(&mut self.validator_set_for_height.validator_set)?;
@@ -145,9 +166,9 @@ impl Keychain {
         self.serialize(&mut file).unwrap();
     }
 
-    fn load_ex(&mut self, key: &sgx_key_128bit_t) -> bool {
+    fn load(&mut self) -> bool {
         let path: &str = &SEALED_DATA_PATH;
-        match SgxFile::open_ex(path, key) {
+        match SgxFile::open_ex(path, &SEALING_KDK) {
             Ok(mut file) => {
                 println!("Sealed data opened");
                 self.deserialize(&mut file).unwrap();
@@ -158,10 +179,6 @@ impl Keychain {
                 false
             }
         }
-    }
-
-    fn load(&mut self) {
-        self.load_ex(&SEALING_KDK);
     }
 
     pub fn get_migration_keys() -> KeyPair {
@@ -247,16 +264,6 @@ impl Keychain {
         x.load_legacy_keys();
 
         if x.registration_key.is_some() || x.consensus_seed.is_some() {
-            let _ = x.generate_consensus_master_keys();
-            Some(x)
-        } else {
-            None
-        }
-    }
-
-    pub fn new_from_prev(key: &sgx_key_128bit_t) -> Option<Self> {
-        let mut x = Self::new_empty();
-        if x.load_ex(key) {
             let _ = x.generate_consensus_master_keys();
             Some(x)
         } else {
