@@ -39,9 +39,9 @@ pub struct Keychain {
     consensus_seed_exchange_keypair: Option<SeedsHolder<KeyPair>>,
     consensus_io_exchange_keypair: Option<SeedsHolder<KeyPair>>,
     consensus_callback_secret: Option<SeedsHolder<AESKey>>,
-    #[cfg(feature = "random")]
+    //#[cfg(feature = "random")]
     pub random_encryption_key: Option<AESKey>,
-    #[cfg(feature = "random")]
+    //#[cfg(feature = "random")]
     pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
     admin_proof_secret: Option<AESKey>,
@@ -198,9 +198,9 @@ impl Keychain {
             consensus_seed_exchange_keypair: None,
             consensus_io_exchange_keypair: None,
             consensus_callback_secret: None,
-            #[cfg(feature = "random")]
+            //#[cfg(feature = "random")]
             initial_randomness_seed: None,
-            #[cfg(feature = "random")]
+            //#[cfg(feature = "random")]
             random_encryption_key: None,
             admin_proof_secret: None,
             contract_key_proof_secret: None,
@@ -529,7 +529,7 @@ impl Keychain {
             consensus_callback_secret_current,
         );
 
-        #[cfg(feature = "random")]
+        //#[cfg(feature = "random")]
         {
             let rek =
                 self.consensus_seed.unwrap().current.derive_key_from_this(
