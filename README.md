@@ -33,7 +33,7 @@ Click the button below to start a new development environment:
 
 1. From Docker Desktop, create a new Dev Environment from the prebuilt image - `ghcr.io/scrtlabs/secretnetwork-dev:latest`
 2. Connect with VSCode, or use the container directly
-3. Make sure the code is updated by using `get fetch` and `git pull`
+3. Make sure the code is updated by using `git fetch` and `git pull`
 
 ## Manual Set up
 
