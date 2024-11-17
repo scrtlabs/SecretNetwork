@@ -14,7 +14,9 @@ use enclave_crypto::consts::{
     INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
     SIGNATURE_TYPE,
 };
-use enclave_crypto::{sha_256, AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
+#[cfg(feature = "random")]
+use enclave_crypto::sha_256;
+use enclave_crypto::{AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
 use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::{migrate_all_from_2_17, SELF_REPORT_BODY};
@@ -893,9 +895,7 @@ fn export_sealed_data() -> sgx_status_t {
     let mut data_plain = Vec::new();
     KEY_MANAGER.serialize(&mut data_plain).unwrap();
 
-    let data_encrypted = aes_key
-        .encrypt_siv(&data_plain, None)
-        .unwrap();
+    let data_encrypted = aes_key.encrypt_siv(&data_plain, None).unwrap();
 
     let mut f_out = match File::create(make_sgx_secret_path(FILE_MIGRATION_DATA)) {
         Ok(f) => f,
@@ -945,7 +945,7 @@ fn import_sealed_data() -> sgx_status_t {
             key_manager.save();
             info!("Sealing data successfully imported");
             sgx_status_t::SGX_SUCCESS
-        },
+        }
         Err(err) => {
             info!("Failed to read sealed data: {}", err);
             sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -1008,9 +1008,9 @@ pub fn get_validator_set_hash() -> SgxResult<tendermint::Hash> {
 pub unsafe extern "C" fn ecall_generate_random(
     block_hash: *const u8,
     block_hash_len: u32,
-    height: u64,
+    _height: u64,
     random: &mut [u8; ENCRYPTED_RANDOM_LENGTH as usize],
-    proof: &mut [u8; PROOF_LENGTH as usize],
+    _proof: &mut [u8; PROOF_LENGTH as usize],
 ) -> sgx_status_t {
     validate_const_ptr!(
         block_hash,
@@ -1022,7 +1022,6 @@ pub unsafe extern "C" fn ecall_generate_random(
         error!("block hash bad length");
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
-    let block_hash_slice = slice::from_raw_parts(block_hash, block_hash_len as usize);
 
     let mut rand_buf: [u8; 32] = [0; 32];
 
@@ -1058,13 +1057,15 @@ pub unsafe extern "C" fn ecall_generate_random(
     // optional improvement: Add public key signatures to be able to validate this outside the enclave
     #[cfg(feature = "random")]
     {
+        let block_hash_slice = slice::from_raw_parts(block_hash, block_hash_len as usize);
+
         let proof_computed = enclave_utils::random::create_random_proof(
             &KEY_MANAGER.initial_randomness_seed.unwrap(),
-            height,
+            _height,
             encrypted.as_slice(),
             block_hash_slice,
         );
-        proof.copy_from_slice(proof_computed.as_slice());
+        _proof.copy_from_slice(proof_computed.as_slice());
     }
 
     // debug!("Calculated proof: {:?}", proof_computed);
@@ -1108,7 +1109,7 @@ pub unsafe extern "C" fn ecall_validate_random(
     proof_len: u32,
     block_hash: *const u8,
     block_hash_len: u32,
-    height: u64,
+    _height: u64,
 ) -> sgx_status_t {
     validate_input_length!(random_len, "encrypted_random", ENCRYPTED_RANDOM_LENGTH);
     validate_input_length!(proof_len, "proof", PROOF_LENGTH);
@@ -1133,15 +1134,15 @@ pub unsafe extern "C" fn ecall_validate_random(
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     );
 
-    let random_slice = slice::from_raw_parts(random, random_len as usize);
-    let proof_slice = slice::from_raw_parts(proof, proof_len as usize);
-    let block_hash_slice = slice::from_raw_parts(block_hash, block_hash_len as usize);
-
     #[cfg(feature = "random")]
     {
+        let random_slice = slice::from_raw_parts(random, random_len as usize);
+        let proof_slice = slice::from_raw_parts(proof, proof_len as usize);
+        let block_hash_slice = slice::from_raw_parts(block_hash, block_hash_len as usize);
+
         let calculated_proof = enclave_utils::random::create_random_proof(
             &KEY_MANAGER.initial_randomness_seed.unwrap(),
-            height,
+            _height,
             random_slice,
             block_hash_slice,
         );
@@ -1151,7 +1152,7 @@ pub unsafe extern "C" fn ecall_validate_random(
 
         if calculated_proof != proof_slice {
             // otherwise on an upgrade this will break horribly - next patch we can remove this
-            let legacy_proof = create_legacy_proof(height, random_slice, block_hash_slice);
+            let legacy_proof = create_legacy_proof(_height, random_slice, block_hash_slice);
             if legacy_proof != calculated_proof {
                 return sgx_status_t::SGX_ERROR_INVALID_SIGNATURE;
             }
@@ -1161,6 +1162,7 @@ pub unsafe extern "C" fn ecall_validate_random(
     sgx_status_t::SGX_SUCCESS
 }
 
+#[cfg(feature = "random")]
 fn create_legacy_proof(height: u64, random: &[u8], block_hash: &[u8]) -> [u8; 32] {
     let mut data = vec![];
     data.extend_from_slice(&height.to_be_bytes());
