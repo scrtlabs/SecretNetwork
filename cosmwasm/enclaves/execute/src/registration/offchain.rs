@@ -10,7 +10,8 @@ use core::ptr::null;
 use ed25519_dalek::{PublicKey, Signature};
 use enclave_crypto::consts::{
     make_sgx_secret_path, ATTESTATION_CERT_PATH, ATTESTATION_DCAP_PATH, COLLATERAL_DCAP_PATH,
-    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT, FILE_MIGRATION_DATA,
+    CONSENSUS_SEED_VERSION, FILE_CERT_COMBINED, FILE_MIGRATION_CERT_LOCAL,
+    FILE_MIGRATION_CERT_REMOTE, FILE_MIGRATION_DATA, FILE_MIGRATION_TARGET_INFO,
     INPUT_ENCRYPTED_SEED_SIZE, MIGRATION_CONSENSUS_PATH, PUBKEY_PATH, SEED_UPDATE_SAVE_PATH,
     SIGNATURE_TYPE,
 };
@@ -27,10 +28,9 @@ use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER}
 ///
 use log::*;
 use sgx_trts::trts::rsgx_read_rand;
-use sgx_types::sgx_measurement_t;
-use sgx_types::sgx_report_body_t;
-use sgx_types::sgx_status_t;
-use sgx_types::SgxResult;
+use sgx_types::{
+    sgx_measurement_t, sgx_report_body_t, sgx_report_t, sgx_status_t, sgx_target_info_t, SgxResult,
+};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs::File;
@@ -40,6 +40,9 @@ use std::slice;
 use tendermint::validator::Set;
 use tendermint::Hash::Sha256 as tm_Sha256;
 use tendermint_proto::Protobuf;
+
+#[cfg(feature = "SGX_MODE_HW")]
+use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 
 #[cfg(feature = "verify-validator-whitelist")]
 use validator_whitelist::ValidatorList;
@@ -419,7 +422,7 @@ pub fn save_attestation_combined(
     }
 
     let out_path = make_sgx_secret_path(if is_migration_report {
-        FILE_MIGRATION_CERT
+        FILE_MIGRATION_CERT_REMOTE
     } else {
         FILE_CERT_COMBINED
     });
@@ -455,18 +458,45 @@ pub fn save_attestation_combined(
     sgx_status_t::SGX_SUCCESS
 }
 
-fn get_report_body(path: &str) -> sgx_report_body_t {
-    let (_, vec_quote, vec_coll) = {
-        let mut f_in = File::open(path).unwrap();
+fn get_verified_migration_report_body() -> SgxResult<sgx_report_body_t> {
+    if let Ok(mut f_in) = File::open(&make_sgx_secret_path(FILE_MIGRATION_CERT_LOCAL)) {
+        let mut buffer = vec![0u8; std::mem::size_of::<sgx_report_t>()];
+        if f_in.read_exact(&mut buffer).is_ok() {
+            println!("Found local migration report");
+            let report: sgx_report_t =
+                unsafe { std::ptr::read(buffer.as_ptr() as *const sgx_report_t) };
+
+            match rsgx_verify_report(&report) {
+                Ok(()) => {
+                    return Ok(report.body);
+                }
+                Err(e) => {
+                    error!("Can't verify local report: {}", e);
+                }
+            }
+        }
+    }
+
+    if let Ok(mut f_in) = File::open(&make_sgx_secret_path(FILE_MIGRATION_CERT_REMOTE)) {
+        println!("Found remote migration report");
+
         let mut cert = vec![];
         f_in.read_to_end(&mut cert).unwrap();
 
-        split_combined_cert(cert.as_ptr(), cert.len() as u32)
-    };
+        let (_, vec_quote, vec_coll) = split_combined_cert(cert.as_ptr(), cert.len() as u32);
 
-    verify_quote_ecdsa(vec_quote.as_slice(), vec_coll.as_slice(), 0)
-        .unwrap()
-        .0
+        match verify_quote_ecdsa(vec_quote.as_slice(), vec_coll.as_slice(), 0) {
+            Ok((body, _)) => {
+                return Ok(body);
+            }
+            Err(e) => {
+                error!("Can't verify remote quote: {}", e);
+            }
+        }
+    }
+
+    Err(sgx_status_t::SGX_ERROR_NO_PRIVILEGE)
+
 }
 
 #[no_mangle]
@@ -642,6 +672,10 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
         }
         1 => {
             println!("Create self migration report");
+
+            #[cfg(feature = "SGX_MODE_HW")]
+            export_local_migration_report();
+
             ecall_get_attestation_report(null(), 0, 0x11) // migration, no-epid
         }
         2 => {
@@ -655,6 +689,10 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
         4 => {
             println!("Import sealed data from the legacy enclave");
             import_sealing_legacy()
+        }
+        5 => {
+            println!("Export self target info");
+            export_self_target_info()
         }
         _ => sgx_status_t::SGX_ERROR_UNEXPECTED,
     }
@@ -881,8 +919,82 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
     false
 }
 
+fn export_self_target_info() -> sgx_status_t {
+    let mut target_info = sgx_target_info_t::default();
+    unsafe { sgx_types::sgx_self_target(&mut target_info) };
+
+    let mut f_out = match File::create(make_sgx_secret_path(FILE_MIGRATION_TARGET_INFO)) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("failed to create file {}", e);
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let info_ptr = &target_info as *const sgx_target_info_t as *const u8;
+    let info_size = std::mem::size_of::<sgx_target_info_t>();
+
+    // Convert the report to a byte slice
+    let report_bytes: &[u8] = unsafe { slice::from_raw_parts(info_ptr, info_size) };
+
+    // Write the byte slice to the file
+    f_out.write_all(report_bytes).unwrap();
+
+    println!("Local migration self target saved");
+    sgx_status_t::SGX_SUCCESS
+}
+
+#[cfg(feature = "SGX_MODE_HW")]
+fn export_local_migration_report() -> sgx_status_t {
+    if let Ok(mut f_in) = File::open(&make_sgx_secret_path(FILE_MIGRATION_TARGET_INFO)) {
+        let mut buffer = vec![0u8; std::mem::size_of::<sgx_target_info_t>()];
+        if f_in.read_exact(&mut buffer).is_ok() {
+            println!("Found local migration target info");
+            let target_info: sgx_target_info_t =
+                unsafe { std::ptr::read(buffer.as_ptr() as *const sgx_target_info_t) };
+
+            let mut report_data = sgx_types::sgx_report_data_t::default();
+            report_data.d[..32].copy_from_slice(&Keychain::get_migration_keys().get_pubkey());
+
+            let my_report = match rsgx_create_report(&target_info, &report_data) {
+                Ok(report) => report,
+                Err(e) => {
+                    return e;
+                }
+            };
+
+            let mut f_out = match File::create(make_sgx_secret_path(FILE_MIGRATION_CERT_LOCAL)) {
+                Ok(f) => f,
+                Err(e) => {
+                    error!("failed to create file {}", e);
+                    return sgx_status_t::SGX_ERROR_UNEXPECTED;
+                }
+            };
+
+            let report_ptr = &my_report as *const sgx_report_t as *const u8;
+            let report_size = std::mem::size_of::<sgx_report_t>();
+
+            // Convert the report to a byte slice
+            let report_bytes: &[u8] = unsafe { slice::from_raw_parts(report_ptr, report_size) };
+
+            // Write the byte slice to the file
+            f_out.write_all(report_bytes).unwrap();
+
+            println!("Local migration report successfully saved");
+        }
+    }
+    sgx_status_t::SGX_SUCCESS
+}
+
 fn export_sealed_data() -> sgx_status_t {
-    let next_report = get_report_body(&make_sgx_secret_path(FILE_MIGRATION_CERT));
+    let next_report = match get_verified_migration_report_body() {
+        Ok(report) => report,
+        Err(e) => {
+            error!("No next migration report: {}", e);
+            return e;
+        }
+    };
+
     if !is_export_approved(&next_report) {
         error!("Export sealing not authorized");
         return sgx_status_t::SGX_ERROR_NO_PRIVILEGE;

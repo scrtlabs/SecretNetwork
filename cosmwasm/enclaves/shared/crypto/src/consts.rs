@@ -40,7 +40,9 @@ pub const ATTESTATION_CERTIFICATE_SAVE_PATH: &str = "attestation_cert.der";
 pub const ATTESTATION_DCAP_SAVE_PATH: &str = "attestation_dcap.quote";
 pub const COLLATERAL_DCAP_SAVE_PATH: &str = "attestation_dcap.collateral";
 pub const FILE_CERT_COMBINED: &str = "attestation_combined.bin";
-pub const FILE_MIGRATION_CERT: &str = "migration_report.bin";
+pub const FILE_MIGRATION_CERT_LOCAL: &str = "migration_report_local.bin";
+pub const FILE_MIGRATION_CERT_REMOTE: &str = "migration_report_remote.bin";
+pub const FILE_MIGRATION_TARGET_INFO: &str = "migration_target_info.bin";
 pub const FILE_MIGRATION_DATA: &str = "migration_data.bin";
 pub const PUBKEY_SAVE_PATH: &str = "pubkey.bin";
 
