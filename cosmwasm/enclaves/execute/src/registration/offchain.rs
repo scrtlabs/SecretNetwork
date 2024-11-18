@@ -459,7 +459,7 @@ pub fn save_attestation_combined(
 }
 
 fn get_verified_migration_report_body() -> SgxResult<sgx_report_body_t> {
-    if let Ok(mut f_in) = File::open(&make_sgx_secret_path(FILE_MIGRATION_CERT_LOCAL)) {
+    if let Ok(mut f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_CERT_LOCAL)) {
         let mut buffer = vec![0u8; std::mem::size_of::<sgx_report_t>()];
         if f_in.read_exact(&mut buffer).is_ok() {
             println!("Found local migration report");
@@ -477,7 +477,7 @@ fn get_verified_migration_report_body() -> SgxResult<sgx_report_body_t> {
         }
     }
 
-    if let Ok(mut f_in) = File::open(&make_sgx_secret_path(FILE_MIGRATION_CERT_REMOTE)) {
+    if let Ok(mut f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_CERT_REMOTE)) {
         println!("Found remote migration report");
 
         let mut cert = vec![];
@@ -946,7 +946,7 @@ fn export_self_target_info() -> sgx_status_t {
 
 #[cfg(feature = "SGX_MODE_HW")]
 fn export_local_migration_report() -> sgx_status_t {
-    if let Ok(mut f_in) = File::open(&make_sgx_secret_path(FILE_MIGRATION_TARGET_INFO)) {
+    if let Ok(mut f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_TARGET_INFO)) {
         let mut buffer = vec![0u8; std::mem::size_of::<sgx_target_info_t>()];
         if f_in.read_exact(&mut buffer).is_ok() {
             println!("Found local migration target info");
