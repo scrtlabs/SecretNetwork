@@ -28,6 +28,7 @@ use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER}
 ///
 use log::*;
 use sgx_trts::trts::rsgx_read_rand;
+use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 use sgx_types::{
     sgx_measurement_t, sgx_report_body_t, sgx_report_t, sgx_status_t, sgx_target_info_t, SgxResult,
 };
@@ -40,9 +41,6 @@ use std::slice;
 use tendermint::validator::Set;
 use tendermint::Hash::Sha256 as tm_Sha256;
 use tendermint_proto::Protobuf;
-
-#[cfg(feature = "SGX_MODE_HW")]
-use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 
 #[cfg(feature = "verify-validator-whitelist")]
 use validator_whitelist::ValidatorList;
@@ -496,7 +494,6 @@ fn get_verified_migration_report_body() -> SgxResult<sgx_report_body_t> {
     }
 
     Err(sgx_status_t::SGX_ERROR_NO_PRIVILEGE)
-
 }
 
 #[no_mangle]
@@ -673,9 +670,7 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
         1 => {
             println!("Create self migration report");
 
-            #[cfg(feature = "SGX_MODE_HW")]
             export_local_migration_report();
-
             ecall_get_attestation_report(null(), 0, 0x11) // migration, no-epid
         }
         2 => {
@@ -944,7 +939,6 @@ fn export_self_target_info() -> sgx_status_t {
     sgx_status_t::SGX_SUCCESS
 }
 
-#[cfg(feature = "SGX_MODE_HW")]
 fn export_local_migration_report() -> sgx_status_t {
     if let Ok(mut f_in) = File::open(make_sgx_secret_path(FILE_MIGRATION_TARGET_INFO)) {
         let mut buffer = vec![0u8; std::mem::size_of::<sgx_target_info_t>()];
