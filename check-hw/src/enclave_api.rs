@@ -24,6 +24,8 @@ extern "C" {
         api_key: *const u8,
         api_key_len: u32,
     ) -> sgx_status_t;
+
+    pub fn ecall_migration_op(opcode: u32) -> sgx_status_t;
 }
 
 // ocalls
