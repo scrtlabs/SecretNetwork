@@ -156,8 +156,8 @@ func InitEnclaveRuntime(moduleCacheSize uint16) error {
 	return nil
 }
 
-func OnUpgradeProposalPassed(MrEnclaveHash []byte) error {
-	msgBuf := sendSlice([]byte(MrEnclaveHash))
+func OnUpgradeProposalPassed(mrEnclaveHash []byte) error {
+	msgBuf := sendSlice(mrEnclaveHash)
 	defer freeAfterSend(msgBuf)
 
 	ret, err := C.onchain_approve_upgrade(msgBuf)

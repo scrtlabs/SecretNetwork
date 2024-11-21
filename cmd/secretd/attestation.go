@@ -309,7 +309,7 @@ func EmergencyApproveUpgrade() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "emergency_approve_upgrade [mr_enclave]",
 		Short: "Emergency enclave upgade approval",
-		Long:  "Approve enclave upgrade in an offline mode. Need to reach consensus amoung network validators",
+		Long:  "Approve enclave upgrade in an offline mode. Need to reach consensus among network validators",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, err := api.EmergencyApproveUpgrade(app.DefaultNodeHome, args[0])

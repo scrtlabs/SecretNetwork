@@ -16,7 +16,6 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
@@ -126,13 +125,13 @@ func (a *CountTXDecorator) verifyUpgradeProposal(ctx sdk.Context, msgUpgrade *ty
 		return err
 	}
 
-	var latestProposal *v1.Proposal = nil
+	var latestProposal *govtypes.Proposal = nil
 	var latestMREnclaveHash []byte
 
 	// Iterate through the proposals
 	for _, proposal := range proposals {
 		// Check if the proposal has passed and is of type MsgSoftwareUpgrade
-		if proposal.Status == v1.ProposalStatus_PROPOSAL_STATUS_PASSED {
+		if proposal.Status == govtypes.ProposalStatus_PROPOSAL_STATUS_PASSED {
 			if len(proposal.GetMessages()) > 0 && proposal.Messages[0].GetTypeUrl() == msgSoftwareUpgradeTypeURL {
 				// Update latestProposal if this proposal is newer (has a higher ID)
 				if latestProposal == nil || proposal.Id > latestProposal.Id {
@@ -149,7 +148,7 @@ func (a *CountTXDecorator) verifyUpgradeProposal(ctx sdk.Context, msgUpgrade *ty
 	// If we found the MsgSoftwareUpgrade latest passed proposal, extract the MREnclaveHash from it
 	info, err := extractInfoFromProposalMessages(latestProposal.Messages[0], a.appcodec)
 	if err != nil {
-		return fmt.Errorf("Failed to extract info with MREnclave hash from Proposal, error: %w", err)
+		return fmt.Errorf("failed to extract info with MREnclave hash from proposal, error: %w", err)
 	}
 	latestMREnclaveHash, _ = findMREnclaveHash(info)
 	if latestMREnclaveHash == nil {
