@@ -179,7 +179,7 @@ _build-linux:
 	BUILD_PROFILE=$(BUILD_PROFILE) FEATURES="$(FEATURES)" FEATURES_U="$(FEATURES_U)  light-client-validation go-tests" SGX_MODE="$(SGX_MODE)" $(MAKE) -C go-cosmwasm build-rust
 
 build-tm-secret-enclave:
-	git clone https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
+	git clone --branch mrenclave1 https://github.com/scrtlabs/tm-secret-enclave.git /tmp/tm-secret-enclave || true
 	cd /tmp/tm-secret-enclave && git checkout main && git submodule init && git submodule update --remote
 	rustup component add rust-src
 	SGX_MODE=$(SGX_MODE) $(MAKE) -C /tmp/tm-secret-enclave build
