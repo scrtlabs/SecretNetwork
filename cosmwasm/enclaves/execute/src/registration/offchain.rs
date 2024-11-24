@@ -674,7 +674,7 @@ pub unsafe extern "C" fn ecall_migration_op(opcode: u32) -> sgx_types::sgx_statu
             ecall_get_attestation_report(null(), 0, 0x11) // migration, no-epid
         }
         2 => {
-            println!("Export encrypted self sealing key to the next aurhorized enclave");
+            println!("Export encrypted data to the next aurhorized enclave");
             export_sealed_data()
         }
         3 => {
@@ -994,7 +994,7 @@ fn export_sealed_data() -> sgx_status_t {
         return sgx_status_t::SGX_ERROR_NO_PRIVILEGE;
     }
 
-    let kp = Keychain::get_migration_keys();
+    let kp = KeyPair::new().unwrap();
     let other_pub_k = &next_report.report_data.d[0..32].try_into().unwrap();
     let aes_key = AESKey::new_from_slice(&kp.diffie_hellman(other_pub_k));
 
