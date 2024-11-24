@@ -125,7 +125,7 @@ func (a *CountTXDecorator) verifyUpgradeProposal(ctx sdk.Context, msgUpgrade *ty
 		return err
 	}
 
-	var latestProposal *govtypes.Proposal = nil
+	var latestProposal *govtypes.Proposal
 	var latestMREnclaveHash []byte
 
 	// Iterate through the proposals
