@@ -202,7 +202,7 @@ Before you run your dev node, you need to point to the shared libraries needed b
 ```
 export SCRT_ENCLAVE_DIR=~/SecretNetwork/go-cosmwasm
 ```
-In order to run __secretd__ you need to have built _librust_cosmwasm_enclave.signed.so_ and _tendermint_enclave.so_.
+In order to run __secretd__ you need to have built _librust_cosmwasm_enclave.signed.so_.
 The latter can be built by cloning:
 ```
 git clone git@github.com:scrtlabs/tm-secret-enclave.git ~/tm-secret-enclave
@@ -212,12 +212,8 @@ This repo also uses submodules:
 cd tm-secret-enclave
 git submodule init
 git submodule update --remote
-```
-and build _tendermint_enclave.so_:
-```
 make build-rust
 ```
-You may want to copy _tendermint_enclave.so_ to ~/SecretNetwork/go-cosmwasm
 
 Run `./scripts/start-node.sh`
 

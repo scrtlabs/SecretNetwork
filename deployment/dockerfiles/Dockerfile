@@ -192,7 +192,6 @@ WORKDIR /root
 COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so /usr/lib/
 COPY --from=compile-secretd /go/src/github.com/scrtlabs/SecretNetwork/secretd /usr/bin/secretd
-COPY --from=compile-tendermint-enclave /go/src/github.com/scrtlabs/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so /usr/lib/tendermint_enclave.signed.so
 COPY --from=compile-tendermint-enclave /go/src/github.com/scrtlabs/SecretNetwork/tm-secret-enclave/api/librandom_api.so /usr/lib/librandom_api.so
 
 
@@ -248,8 +247,6 @@ RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/libgo_cosmwasm.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/libgo_cosmwasm.so
 RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
     && wget -O /usr/lib/librandom_api.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/librandom_api.so
-RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
-    && wget -O /usr/lib/tendermint_enclave.signed.so https://engfilestorage.blob.core.windows.net/v$STORAGE_PATH/tendermint_enclave.signed.so
 
 COPY deployment/docker/mainnet/mainnet_node.sh .
 RUN chmod +x mainnet_node.sh
@@ -277,7 +274,6 @@ COPY Makefile .
 # Copy over binaries from the build-env
 RUN cp /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/
 RUN cp /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
-COPY --from=compile-tendermint-enclave /go/src/github.com/scrtlabs/SecretNetwork/tm-secret-enclave/tendermint_enclave.signed.so ./go-cosmwasm/tendermint_enclave.signed.so
 COPY --from=compile-tendermint-enclave /go/src/github.com/scrtlabs/SecretNetwork/tm-secret-enclave/api/librandom_api.so ./go-cosmwasm/librandom_api.so
 RUN cp /go/src/github.com/scrtlabs/SecretNetwork/secretd secretd
 RUN cp /go/src/github.com/scrtlabs/SecretNetwork/secretcli secretcli
@@ -295,7 +291,6 @@ CMD ["/bin/bash", "build_deb.sh"]
 FROM build-deb as build-deb-mainnet
 
 COPY --from=mainnet-release /usr/lib/librust_cosmwasm_enclave.signed.so ./go-cosmwasm/
-COPY --from=mainnet-release /usr/lib/tendermint_enclave.signed.so ./go-cosmwasm/
 
 CMD ["/bin/bash", "build_deb.sh"]
 

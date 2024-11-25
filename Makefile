@@ -222,7 +222,7 @@ deb-no-compile:
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretd /tmp/SecretNetwork/deb/$(DEB_BIN_DIR)/secretcli
 
 	mkdir -p /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)
-	cp -f ./go-cosmwasm/tendermint_enclave.signed.so ./go-cosmwasm/librandom_api.so ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
+	cp -f ./go-cosmwasm/librandom_api.so ./go-cosmwasm/api/libgo_cosmwasm.so ./go-cosmwasm/librust_cosmwasm_enclave.signed.so /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/
 	chmod +x /tmp/SecretNetwork/deb/$(DEB_LIB_DIR)/lib*.so
 
 	mkdir -p /tmp/SecretNetwork/deb/DEBIAN
@@ -505,7 +505,6 @@ prep-go-tests: build-test-contracts bin-data-sw
 
 go-tests: build-test-contracts bin-data-sw
 	# SGX_MODE=SW $(MAKE) build-tm-secret-enclave
-	# cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=SW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	GOMAXPROCS=8 SGX_MODE=SW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -count 1 -failfast -timeout 90m -v ./x/compute/internal/... $(GO_TEST_ARGS)
@@ -513,7 +512,6 @@ go-tests: build-test-contracts bin-data-sw
 go-tests-hw: build-test-contracts bin-data
 	# empty BUILD_PROFILE means debug mode which compiles faster
 	# SGX_MODE=HW $(MAKE) build-tm-secret-enclave
-	# cp /tmp/tm-secret-enclave/tendermint_enclave.signed.so ./x/compute/internal/keeper
 	SGX_MODE=HW $(MAKE) build-linux
 	cp ./$(EXECUTE_ENCLAVE_PATH)/librust_cosmwasm_enclave.signed.so ./x/compute/internal/keeper
 	GOMAXPROCS=8 SGX_MODE=HW SCRT_SGX_STORAGE='./' SKIP_LIGHT_CLIENT_VALIDATION=TRUE go test -v ./x/compute/internal/... $(GO_TEST_ARGS)
