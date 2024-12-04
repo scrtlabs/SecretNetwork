@@ -209,6 +209,13 @@ func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryByLabelRe
 	}, nil
 }
 
+func (q GrpcQuerier) Params(c context.Context, req *types.ParamsRequest) (*types.ParamsResponse, error) {
+	params := q.keeper.GetParams(sdk.UnwrapSDKContext(c))
+	return &types.ParamsResponse{
+		Params: params,
+	}, nil
+}
+
 func queryContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, keeper Keeper) (*types.ContractInfoWithAddress, error) {
 	info := keeper.GetContractInfo(ctx, contractAddress)
 	if info == nil {

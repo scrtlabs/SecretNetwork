@@ -40,6 +40,7 @@ func GetQueryCmd() *cobra.Command {
 		SilenceUsage:               true,
 	}
 	queryCmd.AddCommand(
+		GetCmdParams(),
 		GetCmdListCode(),
 		GetCmdListContractByCode(),
 		GetCmdQueryCode(),
@@ -53,6 +54,33 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdGetContractHistory(),
 	)
 	return queryCmd
+}
+
+// GetCmdParams lists all parameters of the compute module
+func GetCmdParams() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "params",
+		Short: "List all parameters of the compute module",
+		Long:  "List all parameters of the compute module",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(clientCtx)
+			res, err := queryClient.Params(cmd.Context(), &types.ParamsRequest{})
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(&res.Params)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }
 
 // GetCmdGetContractHistory prints the code history for a given contract

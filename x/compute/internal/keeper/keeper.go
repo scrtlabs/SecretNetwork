@@ -91,6 +91,7 @@ type Keeper struct {
 	// authZPolicy   AuthorizationPolicy
 	// paramSpace    subspace.Subspace
 	LastMsgManager *baseapp.LastMsgMarkerContainer
+	authority      string
 }
 
 func moduleLogger(ctx sdk.Context) log.Logger {
@@ -125,6 +126,7 @@ func NewKeeper(
 	customEncoders *MessageEncoders,
 	customPlugins *QueryPlugins,
 	lastMsgManager *baseapp.LastMsgMarkerContainer,
+	authority string,
 ) Keeper {
 	wasmer, err := wasm.NewWasmer(filepath.Join(homeDir, "wasm"), supportedFeatures, wasmConfig.CacheSize, wasmConfig.EnclaveCacheSize, wasmConfig.InitEnclave)
 	if err != nil {
@@ -153,6 +155,7 @@ func NewKeeper(
 		maxCallDepth:   types.DefaultMaxCallDepth,
 		HomeDir:        homeDir,
 		LastMsgManager: lastMsgManager,
+		authority:      authority,
 	}
 	// always wrap the messenger, even if it was replaced by an option
 	keeper.messenger = callDepthMessageHandler{keeper.messenger, keeper.maxCallDepth}
@@ -172,7 +175,11 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	if err != nil {
 		return 0, errorsmod.Wrap(types.ErrCreateFailed, err.Error())
 	}
-	ctx.GasMeter().ConsumeGas(types.CompileCost*uint64(len(wasmCode)), "Compiling WASM Bytecode")
+	params := k.GetParams(ctx)
+	if uint64(len(wasmCode)) > params.MaxContractSize {
+		return 0, types.ErrExceedMaxContractSize
+	}
+	ctx.GasMeter().ConsumeGas(uint64(params.CompileCost.MulInt64(int64(len(wasmCode))).RoundInt64()), "Compiling WASM Bytecode")
 
 	codeHash, err := k.wasmer.Create(wasmCode)
 	if err != nil {
@@ -1642,4 +1649,9 @@ func (k Keeper) addToContractCodeSecondaryIndex(ctx sdk.Context, contractAddress
 	if err != nil {
 		ctx.Logger().Error("addToContractCodeSecondaryIndex:", err.Error())
 	}
+}
+
+// GetAuthority returns the x/emergencybutton module's authority.
+func (k Keeper) GetAuthority() string {
+	return k.authority
 }

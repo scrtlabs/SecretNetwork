@@ -599,6 +599,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 		encoders,
 		queriers,
 		&bappTxMngr,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	// keeper.setParams(ctx, wasmtypes.DefaultParams())
 	// add wasm handler so we can loop-back (contracts calling contracts)

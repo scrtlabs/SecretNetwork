@@ -5,7 +5,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 	// authexported "github.com/cosmos/cosmos-sdk/x/auth/exported"
-	// "github.com/scrtlabs/SecretNetwork/x/compute/internal/types"
 )
 
 // InitGenesis sets supply information for genesis.
@@ -47,7 +46,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) error 
 	if keeper.peekAutoIncrementID(ctx, types.KeyLastInstanceID) <= uint64(maxContractID) {
 		return errorsmod.Wrapf(types.ErrInvalid, "seq %s must be greater %d ", string(types.KeyLastInstanceID), maxContractID)
 	}
-	// keeper.setParams(ctx, data.Params)
+	keeper.SetParams(ctx, data.Params)
 
 	return nil
 }
@@ -56,7 +55,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) error 
 func ExportGenesis(ctx sdk.Context, keeper Keeper) *types.GenesisState {
 	var genState types.GenesisState
 
-	// genState.Params = keeper.GetParams(ctx)
+	genState.Params = keeper.GetParams(ctx)
 
 	keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
 		bytecode, err := keeper.GetWasm(ctx, codeID)

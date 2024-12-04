@@ -538,6 +538,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 		nil,
 		nil,
 		&app.LastTxManager,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	ak.ComputeKeeper = &computeKeeper
 	wasmHooks.ContractKeeper = ak.ComputeKeeper

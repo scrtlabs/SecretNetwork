@@ -49,7 +49,7 @@ func (AppModuleBasic) Name() string {
 // module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(&GenesisState{
-		// Params: DefaultParams(),
+		Params: types.DefaultParams(),
 	})
 }
 

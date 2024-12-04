@@ -75,6 +75,9 @@ var (
 
 	// ErrExceedMaxCallDepth error if max message stack size is exceeded
 	ErrExceedMaxCallDepth = errors.Register(DefaultCodespace, 30, "max call depth exceeded")
+
+	// ErrExceedMaxContractSize error if max contract size is exceeded
+	ErrExceedMaxContractSize = errors.Register(DefaultCodespace, 31, "max contract size exceeded")
 )
 
 func IsEncryptedErrorCode(code uint32) bool {
