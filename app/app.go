@@ -55,6 +55,7 @@ import (
 	v1_13 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.13"
 	v1_14 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.14"
 	v1_15 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.15"
+	v1_15_testnet_compute_parameters "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.15-testnet-compute-parameters"
 	v1_15_testnet_revert_proto_changes "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.15-testnet-revert-proto-changes"
 	v1_4 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.4"
 	v1_5 "github.com/scrtlabs/SecretNetwork/app/upgrades/v1.5"
@@ -127,6 +128,7 @@ var (
 		v1_14.Upgrade,
 		v1_15.Upgrade,
 		v1_15_testnet_revert_proto_changes.Upgrade,
+		v1_15_testnet_compute_parameters.Upgrade,
 	}
 )
 
