@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Secret Network
   description: A REST interface for queries and transactions
-  version: v1.12
+  version: v1.14
 paths:
   /cosmos/auth/v1beta1/accounts:
     get:

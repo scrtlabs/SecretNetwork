@@ -159,7 +159,6 @@ func NewKeeper(
 	}
 	// always wrap the messenger, even if it was replaced by an option
 	keeper.messenger = callDepthMessageHandler{keeper.messenger, keeper.maxCallDepth}
-
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper

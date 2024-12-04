@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1133,6 +1134,6 @@ func makeBlockIDRandom() tmtypes.BlockID {
 func txhash(t *testing.T, ctx sdk.Context) string {
 	require.NotEmpty(t, ctx.TxBytes())
 	txhashBz := sha256.Sum256(ctx.TxBytes())
-	txhash := hex.EncodeToString(txhashBz[:])
+	txhash := strings.ToUpper(hex.EncodeToString(txhashBz[:]))
 	return txhash
 }

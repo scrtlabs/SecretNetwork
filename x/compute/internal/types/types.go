@@ -157,7 +157,7 @@ func NewEnv(ctx sdk.Context, creator sdk.AccAddress, deposit sdk.Coins, contract
 
 	if txCounter, ok := TXCounter(ctx); ok {
 		txhashBz := sha256.Sum256(ctx.TxBytes())
-		txhash := hex.EncodeToString(txhashBz[:])
+		txhash := strings.ToUpper(hex.EncodeToString(txhashBz[:]))
 
 		env.Transaction = &wasmTypes.TransactionInfo{
 			Index: txCounter,
