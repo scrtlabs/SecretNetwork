@@ -135,6 +135,18 @@ func (m Migrator) Migrate4to5(ctx sdk.Context) error {
 	return nil
 }
 
+func (m Migrator) Migrate5to6(ctx sdk.Context) error {
+	store := m.keeper.storeService.OpenKVStore(ctx)
+	defaultParams := types.DefaultParams()
+	bz, err := m.keeper.cdc.Marshal(&defaultParams)
+	if err != nil {
+		return err
+	}
+	store.Set(types.ParamsKey, bz)
+
+	return nil
+}
+
 const progressPartSize = 1000
 
 func logMigrationProgress(ctx sdk.Context, formatter *message.Printer, migratedContracts uint64, totalContracts uint64, previousTime int64) {
