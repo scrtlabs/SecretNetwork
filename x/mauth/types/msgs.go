@@ -44,7 +44,7 @@ func (msg MsgRegisterAccount) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{accAddr}
 }
 
-// NewMsgSend creates a new MsgSend instance
+// NewMsgSubmitTx creates a new MsgSubmitTx instance
 func NewMsgSubmitTx(owner sdk.AccAddress, sdkMsg sdk.Msg, connectionID, _ string) (*MsgSubmitTx, error) {
 	anyObj, err := PackTxMsgAny(sdkMsg)
 	if err != nil {
