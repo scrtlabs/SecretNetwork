@@ -73,7 +73,7 @@ if [ ! -e "$file" ]; then
   secretd genesis add-genesis-account c ${ico}uscrt
   secretd genesis add-genesis-account d ${ico}uscrt
   
-  secretd genesis gentx validator ${ico}uscrt --chain-id "$chain_id"
+  secretd genesis gentx validator ${ico::-1}uscrt --chain-id "$chain_id"
 
   secretd genesis collect-gentxs
   secretd genesis validate-genesis
