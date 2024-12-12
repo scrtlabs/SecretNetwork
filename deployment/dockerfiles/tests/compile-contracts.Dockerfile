@@ -1,6 +1,6 @@
-FROM ghcr.io/scrtlabs/release-base:20.04-2.20
+FROM ghcr.io/scrtlabs/release-base:22.04-2.20-dcap
 
-ARG NODE_VERSION=16
+ARG NODE_VERSION=18
 
 RUN mkdir -p /opt/secret/.sgx_secrets
 
