@@ -26,6 +26,7 @@ COPY cmd cmd
 RUN true
 COPY client client
 COPY ias_keys ias_keys
+COPY eip191 eip191
 
 COPY spid.txt ias_keys/develop/spid.txt
 COPY spid.txt ias_keys/sw_dummy/spid.txt
