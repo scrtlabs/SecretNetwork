@@ -10,6 +10,7 @@ use enclave_ffi_types::EnclaveError;
 use lazy_static::lazy_static;
 use log::*;
 use sgx_types::{sgx_key_128bit_t, sgx_measurement_t};
+use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
 // For phase 1 of the seed rotation, all consensus secrets come in two parts:
@@ -179,6 +180,16 @@ impl Keychain {
                 false
             }
         }
+    }
+
+    pub fn encrypt_hash(&self, hv: [u8; 32]) -> [u8; 32] {
+        let mut hasher = Sha256::new();
+        hasher.update(self.consensus_seed.unwrap().current.as_slice());
+        hasher.update(hv);
+
+        let mut ret: [u8; 32] = [0_u8; 32];
+        ret.copy_from_slice(&hasher.finalize());
+        ret
     }
 
     pub fn get_migration_keys() -> KeyPair {
