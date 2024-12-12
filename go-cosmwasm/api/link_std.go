@@ -3,5 +3,5 @@
 
 package api
 
-// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lgo_cosmwasm -lsgx_dcap_ql -lsgx_dcap_quoteverify 
+// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lgo_cosmwasm -lsgx_dcap_ql -lsgx_dcap_quoteverify -lsgx_epid
 import "C"

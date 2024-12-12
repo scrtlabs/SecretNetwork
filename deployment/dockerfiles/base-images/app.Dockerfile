@@ -1,13 +1,13 @@
-FROM ubuntu:jammy as runtime_base
+FROM ubuntu:jammy AS runtime_base
 
 LABEL maintainer=enigmampc
 
 # SGX version parameters
-ARG SDK_VERSION=2.20
-ARG SGX_VERSION=2.20.100.4
-ARG PSW_VERSION=2.20.100.4-jammy1
+ARG SDK_VERSION=2.25
+ARG SGX_VERSION=2.25.100.3
+ARG PSW_VERSION=2.25.100.3-jammy1
 ARG OS_REVESION=jammy1
-ARG DCAP_VERSION=1.17.100.4-jammy1
+ARG DCAP_VERSION=1.22.100.3-jammy1
 #RUN apt-get update && \
 #    apt-get install -y --no-install-recommends \
 #    #### Base utilities ####

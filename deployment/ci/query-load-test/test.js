@@ -12,6 +12,22 @@ const CHAIN_ID = "secretdev-1";
 const c_mnemonic =
     "chair love bleak wonder skirt permit say assist aunt credit roast size obtain minute throw sand usual age smart exact enough room shadow charge";
 
+const getValueFromEvents = (events, key) => {
+  if (!events) {
+    return "";
+  }
+
+  for (const e of events) {
+    for (const a of e.attributes) {
+      if (`${e.type}.${a.key}` === key) {
+        return String(a.value);
+      }
+    }
+  }
+
+  return "";
+}
+
 // Returns a client with which we can interact with secret network
 const initializeClient = async (endpoint, chainId) => {
     const wallet = new Wallet(c_mnemonic);
@@ -163,13 +179,9 @@ const uploadContract = async (
         throw new Error(`Failed to upload contract`);
     }
 
-    const codeIdKv = uploadReceipt.jsonLog[0].events[0].attributes.find(
-        (a) => {
-            return a.key === "code_id";
-        }
-    );
+    const codeIdKv = getValueFromEvents(uploadReceipt.events, "message.code_id");
 
-    const codeId = Number(codeIdKv.value);
+    const codeId = Number(codeIdKv);
     console.log(`${contractName} contract codeId: ${codeId}`);
 
     const codeHash = (await client.query.compute.codeHashByCodeId({code_id: String(codeId)})).code_hash;
@@ -215,7 +227,6 @@ const initializeContract = async (
             gasLimit: 4000000,
         }
     );
-
     console.log(`decrypt: ${JSON.stringify(contract)}`)
 
     if (contract.code !== 0) {
