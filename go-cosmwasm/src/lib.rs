@@ -26,6 +26,7 @@ use ed25519_dalek::{Keypair, Signature, Signer};
 use hex;
 use log::*;
 use logger::get_log_level;
+use memory::TwoBuffers;
 pub use memory::{free_rust, Buffer};
 pub use querier::GoQuerier;
 use serde::Deserialize;
@@ -259,13 +260,13 @@ pub extern "C" fn submit_block_signatures(
     // val_set: Buffer,
     // next_val_set: Buffer,
     err: Option<&mut Buffer>,
-) -> Buffer {
+) -> TwoBuffers {
     trace!("Hello from right before init_bootstrap");
 
     let header_slice = match unsafe { header.read() } {
         None => {
             set_error(Error::empty_arg("header"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
@@ -273,7 +274,7 @@ pub extern "C" fn submit_block_signatures(
     let commit_slice = match unsafe { commit.read() } {
         None => {
             set_error(Error::empty_arg("api_key"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
@@ -281,7 +282,7 @@ pub extern "C" fn submit_block_signatures(
     let txs_slice = match unsafe { txs.read() } {
         None => {
             set_error(Error::empty_arg("txs"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
@@ -289,14 +290,14 @@ pub extern "C" fn submit_block_signatures(
     let random_slice = match unsafe { random.read() } {
         None => {
             set_error(Error::empty_arg("random"), err);
-            return Buffer::default();
+            return TwoBuffers::default();
         }
         Some(r) => r,
     };
     // let val_set_slice = match unsafe { val_set.read() } {
     //     None => {
     //         set_error(Error::empty_arg("api_key"), err);
-    //         return Buffer::default();
+    //         return TwoBuffers::default();
     //     }
     //     Some(r) => r,
     // };
@@ -304,7 +305,7 @@ pub extern "C" fn submit_block_signatures(
     // let next_val_set_slice = match unsafe { next_val_set.read() } {
     //     None => {
     //         set_error(Error::empty_arg("api_key"), err);
-    //         return Buffer::default();
+    //         return TwoBuffers::default();
     //     }
     //     Some(r) => r,
     // };
@@ -319,11 +320,14 @@ pub extern "C" fn submit_block_signatures(
     ) {
         Err(e) => {
             set_error(Error::enclave_err(e.to_string()), err);
-            Buffer::default()
+            return TwoBuffers::default();
         }
-        Ok(r) => {
+        Ok((r1, r2)) => {
             clear_error();
-            Buffer::from_vec(r.to_vec())
+            TwoBuffers {
+                buf1: Buffer::from_vec(r1.to_vec()),
+                buf2: Buffer::from_vec(r2.to_vec()),
+            }
         }
     }
 }

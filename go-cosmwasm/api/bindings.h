@@ -143,6 +143,11 @@ typedef struct GoQuerier {
   Querier_vtable vtable;
 } GoQuerier;
 
+typedef struct TwoBuffers {
+  Buffer buf1;
+  Buffer buf2;
+} TwoBuffers;
+
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *error_msg);
@@ -238,11 +243,11 @@ Buffer query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
-Buffer submit_block_signatures(Buffer header,
-                               Buffer commit,
-                               Buffer txs,
-                               Buffer random,
-                               Buffer *err);
+TwoBuffers submit_block_signatures(Buffer header,
+                                   Buffer commit,
+                                   Buffer txs,
+                                   Buffer random,
+                                   Buffer *err);
 
 Buffer update_admin(cache_t *cache,
                     Buffer contract_id,

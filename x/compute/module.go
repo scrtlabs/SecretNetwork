@@ -164,13 +164,13 @@ func (am AppModule) BeginBlock(c context.Context) error {
 	}
 	if block_header.EncryptedRandom != nil {
 		randomAndProof := append(block_header.EncryptedRandom.Random, block_header.EncryptedRandom.Proof...) //nolint:all
-		random, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
+		random, validator_set_evidence, err := api.SubmitBlockSignatures(header, b_commit, data, randomAndProof)
 		if err != nil {
 			ctx.Logger().Error("Failed to submit block signatures")
 			return err
 		}
 
-		am.keeper.SetRandomSeed(ctx, random)
+		am.keeper.SetRandomSeed(ctx, random, validator_set_evidence)
 	} else {
 		ctx.Logger().Debug("Non-encrypted block", "Block_hash", block_header.LastBlockId.Hash, "Height", ctx.BlockHeight(), "Txs", len(x2_data))
 	}

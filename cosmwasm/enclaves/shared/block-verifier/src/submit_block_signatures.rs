@@ -4,7 +4,7 @@ use tendermint_proto::Protobuf;
 
 use sgx_types::sgx_status_t;
 
-use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr, Keychain};
+use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr, Keychain, KEY_MANAGER};
 use log::error;
 
 use log::debug;
@@ -43,6 +43,7 @@ pub unsafe fn submit_block_signatures_impl(
     in_encrypted_random: *const u8,
     in_encrypted_random_len: u32,
     decrypted_random: &mut [u8; 32],
+    next_validator_set_evidence: &mut [u8; 32],
 ) -> sgx_status_t {
     if let Err(e) = validate_inputs(
         in_header,
@@ -127,6 +128,19 @@ pub unsafe fn submit_block_signatures_impl(
         decrypted_random.copy_from_slice(&decrypted);
     }
 
+    // store this in the storage: header.header.next_validators_hash
+    if let tendermint::Hash::Sha256(val) = header.header.next_validators_hash {
+        let validator_set_evidence = KEY_MANAGER.encrypt_hash(val);
+
+        println!(
+            "next validator set evidence: {:?}",
+            hex::encode(validator_set_evidence)
+        );
+
+        next_validator_set_evidence.copy_from_slice(validator_set_evidence.as_slice());
+    
+    }
+    
     debug!(
         "Done verifying block height: {:?}",
         header.header.height.value()

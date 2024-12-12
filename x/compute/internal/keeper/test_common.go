@@ -605,7 +605,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 
 	random := make([]byte, 32)
 	_, _ = rand.Read(random)
-	keeper.SetRandomSeed(ctx, random)
+	keeper.SetRandomSeed(ctx, random, random)
 
 	govSubSp, _ := paramsKeeper.GetSubspace(govtypes.ModuleName)
 
@@ -1108,7 +1108,7 @@ func updateLightClientHelper(t *testing.T, ctx sdk.Context) {
 
 	randomAndProofBz := append(random, proof...) //nolint:all
 
-	_, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
+	_, _, err = api.SubmitBlockSignatures(headerBz, commitBz, dataBz, randomAndProofBz)
 	require.NoError(t, err)
 }
 

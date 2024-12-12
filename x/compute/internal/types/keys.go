@@ -34,6 +34,7 @@ var (
 	ContractCodeHistoryElementPrefix               = []byte{0x09}
 	ContractByCodeIDAndCreatedSecondaryIndexPrefix = []byte{0x0A}
 	RandomPrefix                                   = []byte{0xFF}
+	ValidatorSetEvidencePrefix                     = []byte{0xFE}
 
 	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)

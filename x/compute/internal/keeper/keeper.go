@@ -924,12 +924,17 @@ func (k Keeper) GetRandomSeed(ctx sdk.Context, height int64) []byte {
 	return random
 }
 
-func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte) {
+func (k Keeper) SetRandomSeed(ctx sdk.Context, random []byte, validator_set_evidence []byte) {
 	store := k.storeService.OpenKVStore(ctx)
 
 	ctx.Logger().Info(fmt.Sprintf("Setting random: %s", hex.EncodeToString(random)))
 
 	err := store.Set(types.GetRandomKey(ctx.BlockHeight()), random)
+	if err != nil {
+		ctx.Logger().Error("SetRandomSeed:", err.Error())
+	}
+
+	err = store.Set(types.ValidatorSetEvidencePrefix, validator_set_evidence)
 	if err != nil {
 		ctx.Logger().Error("SetRandomSeed:", err.Error())
 	}

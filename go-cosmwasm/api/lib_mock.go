@@ -39,8 +39,8 @@ func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []byte /* valSet []byte, nextValSet []byte*/) ([]byte, error) {
-	return nil, nil
+func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []byte /* valSet []byte, nextValSet []byte*/) ([]byte, []byte, error) {
+	return nil, nil, nil
 }
 
 func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
