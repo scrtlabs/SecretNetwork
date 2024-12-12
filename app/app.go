@@ -85,6 +85,7 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	stakingkeeper "github.com/cosmos/ibc-go/v8/testing/types"
@@ -424,6 +425,17 @@ func NewSecretNetworkApp(
 
 	return app
 }
+
+func (app *SecretNetworkApp) Initialize() {
+
+	ms := app.BaseApp.CommitMultiStore() // cms is the CommitMultiStore in Cosmos SDK apps
+
+	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
+
+	app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
+
+}
+
 
 // Name returns the name of the App
 func (app *SecretNetworkApp) Name() string { return app.BaseApp.Name() }

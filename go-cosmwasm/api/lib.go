@@ -64,6 +64,10 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 	return receiveVector(res.buf1), receiveVector(res.buf2), nil
 }
 
+func SubmitValidatorSetEvidence(evidence []byte) error {
+	return nil
+}
+
 func InitBootstrap(spid []byte, apiKey []byte) ([]byte, error) {
 	errmsg := C.Buffer{}
 	spidSlice := sendSlice(spid)

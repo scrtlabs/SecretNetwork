@@ -16,6 +16,7 @@ import (
 	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
 	portkeeper "github.com/cosmos/ibc-go/v8/modules/core/05-port/keeper"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
+	"github.com/scrtlabs/SecretNetwork/go-cosmwasm/api"
 	wasmTypes "github.com/scrtlabs/SecretNetwork/go-cosmwasm/types"
 	"golang.org/x/crypto/ripemd160" //nolint
 
@@ -160,6 +161,17 @@ func NewKeeper(
 	keeper.queryPlugins = DefaultQueryPlugins(govKeeper, distKeeper, mintKeeper, bankKeeper, stakingKeeper, queryRouter, &keeper, channelKeeper).Merge(customPlugins)
 
 	return keeper
+}
+
+func (k Keeper) SetValidatorSetEvidence(ctx sdk.Context) error {
+
+	store := k.storeService.OpenKVStore(ctx)
+	validator_set_evidence, err := store.Get(types.ValidatorSetEvidencePrefix)
+	if err == nil {
+		api.SubmitValidatorSetEvidence(validator_set_evidence)
+s	}
+
+	return nil
 }
 
 func (k Keeper) GetLastMsgMarkerContainer() *baseapp.LastMsgMarkerContainer {

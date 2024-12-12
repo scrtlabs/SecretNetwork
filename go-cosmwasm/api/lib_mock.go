@@ -43,6 +43,10 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, random []by
 	return nil, nil, nil
 }
 
+func SubmitValidatorSetEvidence(evidence []byte) error {
+	return nil
+}
+
 func LoadSeedToEnclave(masterKey []byte, seed []byte, apiKey []byte) (bool, error) {
 	return true, nil
 }
