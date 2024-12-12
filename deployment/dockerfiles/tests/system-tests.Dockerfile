@@ -43,7 +43,7 @@ COPY deployment/ci/go-tests-bench.sh .
 RUN chmod +x go-tests.sh
 RUN chmod +x go-tests-bench.sh
 
-COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
-COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/enigmampc/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
+COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/target/release/libgo_cosmwasm.so ./go-cosmwasm/api/libgo_cosmwasm.so
+COPY --from=azcr.io/enigmampc/ci-base-image-local /go/src/github.com/scrtlabs/SecretNetwork/go-cosmwasm/librust_cosmwasm_enclave.signed.so x/compute/internal/keeper/librust_cosmwasm_enclave.signed.so
 
 ENTRYPOINT ["/bin/bash", "go-tests.sh"]
