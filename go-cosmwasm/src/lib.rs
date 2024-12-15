@@ -258,8 +258,7 @@ pub extern "C" fn submit_validator_set_evidence(evidence: Buffer, err: Option<&m
         Some(r) => r,
     };
 
-    cosmwasm_sgx_vm::untrusted_submit_validator_set_evidence(evidence_slice.try_into().unwrap())
-        .unwrap();
+    untrusted_submit_validator_set_evidence(evidence_slice.try_into().unwrap()).unwrap();
 }
 
 #[no_mangle]
