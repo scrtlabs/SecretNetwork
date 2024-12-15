@@ -1109,12 +1109,14 @@ pub unsafe extern "C" fn ecall_submit_validator_set_evidence(
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     );
 
-    let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+    #[cfg(feature = "light-client-validation")]
+    {
+        let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
 
-    verified_msgs
-        .next_validators_evidence
-        .copy_from_slice(slice::from_raw_parts(val_set_evidence, evidence_len));
-
+        verified_msgs
+            .next_validators_evidence
+            .copy_from_slice(slice::from_raw_parts(val_set_evidence, evidence_len));
+    }
     sgx_status_t::SGX_SUCCESS
 }
 
@@ -1235,10 +1237,11 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
             }
         };
 
-        let expected_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
-
+        #[cfg(feature = "light-client-validation")]
         {
+            let expected_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
             let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+
             if verified_msgs.next_validators_evidence != expected_evidence {
                 if extra.height != 0 {
                     error!("validator set evidence mismatch");
