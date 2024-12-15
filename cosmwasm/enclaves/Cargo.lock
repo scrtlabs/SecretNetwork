@@ -818,6 +818,8 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sha2 0.10.8",
+ "tendermint",
+ "tendermint-proto",
 ]
 
 [[package]]

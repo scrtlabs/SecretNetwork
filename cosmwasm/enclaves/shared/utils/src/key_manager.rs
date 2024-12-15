@@ -13,6 +13,10 @@ use sgx_types::{sgx_key_128bit_t, sgx_measurement_t};
 use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::sgxfs::SgxFile;
+use std::sync::SgxMutex;
+use tendermint::validator::Set;
+use tendermint_proto::v0_38::types::ValidatorSet as RawValidatorSet;
+use tendermint_proto::Protobuf;
 // For phase 1 of the seed rotation, all consensus secrets come in two parts:
 // 1. The genesis seed generated on 15 September 2020
 // 2. The current seed
@@ -33,6 +37,28 @@ use std::sgxfs::SgxFile;
 // All of this is needed because currently the encryption key of the value is derived using the
 // plaintext key, so we don't know the list of keys of any contract. The keys are stored
 // as sha256(key) encrypted with the seed.
+pub struct KeychainMutableData {
+    pub height: u64,
+    pub validator_set_serialized: Vec<u8>,
+    pub next_mr_enclave: Option<sgx_measurement_t>,
+}
+
+impl KeychainMutableData {
+    pub fn decode_validator_set_ex(ser: &[u8]) -> Option<Set> {
+        match <Set as Protobuf<RawValidatorSet>>::decode(ser) {
+            Ok(val) => Some(val),
+            Err(e) => {
+                error!("error decoding validator set: {:?}", e);
+                None
+            }
+        }
+    }
+
+    pub fn decode_validator_set(&self) -> Option<Set> {
+        KeychainMutableData::decode_validator_set_ex(self.validator_set_serialized.as_slice())
+    }
+}
+
 pub struct Keychain {
     consensus_seed_id: u16,
     consensus_seed: Option<SeedsHolder<Seed>>,
@@ -40,15 +66,12 @@ pub struct Keychain {
     consensus_seed_exchange_keypair: Option<SeedsHolder<KeyPair>>,
     consensus_io_exchange_keypair: Option<SeedsHolder<KeyPair>>,
     consensus_callback_secret: Option<SeedsHolder<AESKey>>,
-    //#[cfg(feature = "random")]
     pub random_encryption_key: Option<AESKey>,
-    //#[cfg(feature = "random")]
     pub initial_randomness_seed: Option<AESKey>,
     registration_key: Option<KeyPair>,
     admin_proof_secret: Option<AESKey>,
     contract_key_proof_secret: Option<AESKey>,
-    validator_set_for_height: ValidatorSetForHeight,
-    pub next_mr_enclave: Option<sgx_measurement_t>,
+    pub extra_data: SgxMutex<KeychainMutableData>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -85,12 +108,14 @@ impl Keychain {
             writer.write_all(&[0_u8])?;
         }
 
-        writer.write_all(&self.validator_set_for_height.height.to_le_bytes())?;
-        let val_size = self.validator_set_for_height.validator_set.len() as u64;
-        writer.write_all(&val_size.to_le_bytes())?;
-        writer.write_all(&self.validator_set_for_height.validator_set)?;
+        let extra = self.extra_data.lock().unwrap();
 
-        if let Some(val) = self.next_mr_enclave {
+        writer.write_all(&extra.height.to_le_bytes())?;
+        let val_size = extra.validator_set_serialized.len() as u64;
+        writer.write_all(&val_size.to_le_bytes())?;
+        writer.write_all(&extra.validator_set_serialized)?;
+
+        if let Some(val) = extra.next_mr_enclave {
             writer.write_all(&[1_u8])?;
             writer.write_all(&val.m)?;
         } else {
@@ -143,18 +168,22 @@ impl Keychain {
             self.registration_key = Some(KeyPair::from_sk(sk));
         }
 
-        self.validator_set_for_height.height = Self::read_u64(reader)?;
+        let mut extra = self.extra_data.lock().unwrap();
+
+        extra.height = Self::read_u64(reader)?;
 
         let val_size = Self::read_u64(reader)?;
 
-        self.validator_set_for_height.validator_set = vec![0u8; val_size as usize];
-        reader.read_exact(&mut self.validator_set_for_height.validator_set)?;
+        extra.validator_set_serialized = vec![0u8; val_size as usize];
+        reader.read_exact(&mut extra.validator_set_serialized)?;
 
         reader.read_exact(&mut flag_bytes)?;
         if flag_bytes[0] != 0 {
             let mut val = sgx_measurement_t::default();
             reader.read_exact(&mut val.m)?;
-            self.next_mr_enclave = Some(val);
+            extra.next_mr_enclave = Some(val);
+        } else {
+            extra.next_mr_enclave = None;
         }
 
         Ok(())
@@ -182,7 +211,7 @@ impl Keychain {
         }
     }
 
-    pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32]{
+    pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32] {
         let mut hasher = Sha256::new();
         hasher.update(self.consensus_seed.unwrap().current.as_slice());
         hasher.update(hv);
@@ -216,11 +245,11 @@ impl Keychain {
             random_encryption_key: None,
             admin_proof_secret: None,
             contract_key_proof_secret: None,
-            validator_set_for_height: ValidatorSetForHeight {
+            extra_data: SgxMutex::new(KeychainMutableData {
                 height: 0,
-                validator_set: Vec::new(),
-            },
-            next_mr_enclave: None,
+                validator_set_serialized: Vec::new(),
+                next_mr_enclave: None,
+            }),
         }
     }
 
@@ -260,7 +289,9 @@ impl Keychain {
         if let Ok(res) =
             ValidatorSetForHeight::unseal_from(&make_sgx_secret_path(SEALED_FILE_VALIDATOR_SET))
         {
-            self.validator_set_for_height = res;
+            let mut extra = self.extra_data.lock().unwrap();
+            extra.height = res.height;
+            extra.validator_set_serialized = res.validator_set;
         }
     }
 
@@ -281,18 +312,6 @@ impl Keychain {
         } else {
             None
         }
-    }
-
-    pub fn get_validator_set_for_height() -> ValidatorSetForHeight {
-        // always re-read it
-        Keychain::new().validator_set_for_height
-    }
-
-    pub fn set_validator_set_for_height(new_set: ValidatorSetForHeight) {
-        // TODO: don't re-read it, use data from KEY_MANAGER
-        let mut key_manager = Keychain::new();
-        key_manager.validator_set_for_height = new_set;
-        key_manager.save();
     }
 
     pub fn create_consensus_seed(&mut self) -> Result<(), CryptoError> {

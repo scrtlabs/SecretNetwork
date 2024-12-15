@@ -1,17 +1,10 @@
 use std::slice;
 
-use tendermint_proto::Protobuf;
-
 use sgx_types::sgx_status_t;
 
-use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr, Keychain, KEY_MANAGER};
-use log::error;
-
+use enclave_utils::{validate_const_ptr, validate_input_length, validate_mut_ptr, KEY_MANAGER};
 use log::debug;
-
-use tendermint::validator::Set;
-
-use tendermint_proto::v0_38::types::ValidatorSet as RawValidatorSet;
+use log::error;
 
 macro_rules! unwrap_or_return {
     ($result:expr) => {
@@ -69,22 +62,25 @@ pub unsafe fn submit_block_signatures_impl(
         &[]
     };
 
-    let validator_set_for_height = Keychain::get_validator_set_for_height();
+    let (validator_set, height) = {
+        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+        let validator_set = match extra.decode_validator_set() {
+            Some(set) => set,
+            None => {
+                error!("Error parsing validator set from proto");
+                return sgx_status_t::SGX_SUCCESS;
+            }
+        };
 
-    let validator_set = unwrap_or_return!(<Set as Protobuf::<RawValidatorSet>>::decode(
-        validator_set_for_height.validator_set.as_slice()
-    )
-    .map_err(|e| {
-        error!("Error parsing validator set from proto: {:?}", e);
-        sgx_status_t::SGX_SUCCESS
-    }));
+        (validator_set, extra.height)
+    };
 
     let commit = unwrap_or_return!(crate::verify::commit::decode(block_commit_slice));
 
     let header = unwrap_or_return!(crate::verify::header::validate_block_header(
         block_header_slice,
         &validator_set,
-        validator_set_for_height.height,
+        height,
         commit,
     ));
 
@@ -130,18 +126,13 @@ pub unsafe fn submit_block_signatures_impl(
 
     // store this in the storage: header.header.next_validators_hash
     if let tendermint::Hash::Sha256(val) = header.header.next_validators_hash {
-        let validator_set_evidence = KEY_MANAGER.encrypt_hash(val, validator_set_for_height.height + 1);
-
-        println!(
-            "next validator set evidence: {:?}",
-            hex::encode(validator_set_evidence)
-        );
-
+        let validator_set_evidence = KEY_MANAGER.encrypt_hash(val, height + 1);
         next_validator_set_evidence.copy_from_slice(validator_set_evidence.as_slice());
-        message_verifier.next_validators_evidence.copy_from_slice(validator_set_evidence.as_slice());
-    
+        message_verifier
+            .next_validators_evidence
+            .copy_from_slice(validator_set_evidence.as_slice());
     }
-    
+
     debug!(
         "Done verifying block height: {:?}",
         header.header.height.value()

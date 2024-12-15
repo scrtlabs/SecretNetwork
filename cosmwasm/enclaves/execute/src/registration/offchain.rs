@@ -19,9 +19,9 @@ use enclave_crypto::consts::{
 use enclave_crypto::sha_256;
 use enclave_crypto::{AESKey, Ed25519PublicKey, KeyPair, SIVEncryptable, PUBLIC_KEY_SIZE};
 use enclave_ffi_types::SINGLE_ENCRYPTED_SEED_SIZE;
+use enclave_utils::key_manager::KeychainMutableData;
 use enclave_utils::pointers::validate_mut_slice;
 use enclave_utils::storage::{migrate_all_from_2_17, SELF_REPORT_BODY};
-use enclave_utils::validator_set::ValidatorSetForHeight;
 use enclave_utils::{validate_const_ptr, validate_mut_ptr, Keychain, KEY_MANAGER};
 /// These functions run off chain, and so are not limited by deterministic limitations. Feel free
 /// to go crazy with random generation entropy, time requirements, or whatever else
@@ -38,9 +38,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::panic;
 use std::slice;
-use tendermint::validator::Set;
 use tendermint::Hash::Sha256 as tm_Sha256;
-use tendermint_proto::Protobuf;
 
 #[cfg(feature = "verify-validator-whitelist")]
 use validator_whitelist::ValidatorList;
@@ -759,12 +757,13 @@ pub unsafe extern "C" fn ecall_onchain_approve_upgrade(
         return sgx_types::sgx_status_t::SGX_ERROR_UNEXPECTED;
     }
 
-    let mut key_chain = Keychain::new();
-    key_chain.next_mr_enclave = Some(sgx_measurement_t {
-        m: msg_slice.try_into().unwrap(),
-    });
-
-    key_chain.save();
+    {
+        let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
+        extra.next_mr_enclave = Some(sgx_measurement_t {
+            m: msg_slice.try_into().unwrap(),
+        });
+    }
+    KEY_MANAGER.save();
 
     info!(
         "Migration target approved. mr_encalve={}",
@@ -786,25 +785,21 @@ fn is_export_approved_offchain(mut f_in: File, report: &sgx_report_body_t) -> bo
     let mut not_yet_voted_validators: HashMap<[u8; 20], u64> = HashMap::new();
     let mut total_voting_power: u64 = 0;
 
-    {
-        let validator_set_vec = Keychain::get_validator_set_for_height().validator_set;
-        let validator_set =
-            <Set as Protobuf<tendermint_proto::v0_38::types::ValidatorSet>>::decode(
-                validator_set_vec.as_slice(),
-            )
-            .unwrap();
-
-        for validator in validator_set.validators() {
-            //println!("Address: {}", validator.address);
-            //println!("Voting Power: {}", validator.power);
-            let power: u64 = validator.power.value();
-            if power > 0 {
-                total_voting_power += power;
-                let addr: [u8; 20] = validator.address.as_bytes().try_into().unwrap();
-                not_yet_voted_validators.insert(addr, power);
-            }
-        }
+    let validator_set = {
+        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+        extra.decode_validator_set().unwrap()
     };
+
+    for validator in validator_set.validators() {
+        //println!("Address: {}", validator.address);
+        //println!("Voting Power: {}", validator.power);
+        let power: u64 = validator.power.value();
+        if power > 0 {
+            total_voting_power += power;
+            let addr: [u8; 20] = validator.address.as_bytes().try_into().unwrap();
+            not_yet_voted_validators.insert(addr, power);
+        }
+    }
 
     let mut approved_power: u64 = 0;
     let mut approved_whitelisted: usize = 0;
@@ -897,10 +892,13 @@ fn is_export_approved(report: &sgx_report_body_t) -> bool {
         return false;
     }
 
-    if let Some(val) = KEY_MANAGER.next_mr_enclave {
-        if val.m == report.mr_enclave.m {
-            println!("Migration is authorized by on-chain consensus");
-            return true;
+    {
+        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+        if let Some(val) = extra.next_mr_enclave {
+            if val.m == report.mr_enclave.m {
+                println!("Migration is authorized by on-chain consensus");
+                return true;
+            }
         }
     }
 
@@ -1090,14 +1088,12 @@ macro_rules! validate_input_length {
     };
 }
 
-pub fn calculate_validator_set_hash(validator_set_slice: &[u8]) -> SgxResult<tendermint::Hash> {
-    match <tendermint::validator::Set as Protobuf<tendermint_proto::v0_38::types::ValidatorSet,>>::decode(validator_set_slice)
-    {
-        Ok(vs) => Ok(vs.hash()),
-        Err(e) => {
-            error!("error decoding validator set: {:?}", e);
-            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-        }
+pub fn calculate_validator_set_hash(
+    validator_set_serialized: &[u8],
+) -> SgxResult<tendermint::Hash> {
+    match KeychainMutableData::decode_validator_set_ex(validator_set_serialized) {
+        Some(res) => Ok(res.hash()),
+        None => Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
     }
 }
 
@@ -1150,15 +1146,15 @@ pub unsafe extern "C" fn ecall_generate_random(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
 
-    let validator_set_hash = match calculate_validator_set_hash(
-        Keychain::get_validator_set_for_height()
-            .validator_set
-            .as_slice(),
-    ) {
-        Ok(tm_Sha256(hash)) => hash,
-        _ => {
-            error!("Got invalid validator set");
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+    let validator_set_hash = {
+        let extra = KEY_MANAGER.extra_data.lock().unwrap();
+
+        match calculate_validator_set_hash(extra.validator_set_serialized.as_slice()) {
+            Ok(tm_Sha256(hash)) => hash,
+            _ => {
+                error!("Got invalid validator set");
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
         }
     };
 
@@ -1212,32 +1208,62 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     );
 
-    let validator_set_slice = slice::from_raw_parts(val_set, val_set_len as usize);
-    let validator_set_hash = match calculate_validator_set_hash(validator_set_slice) {
-        Ok(tm_Sha256(hash)) => hash,
-        _ => {
-            error!("invalid validator set");
-            return sgx_status_t::SGX_ERROR_UNEXPECTED;
-        }
-    };
-
-    let validator_set_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
-
     {
-        let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+        let mut extra = KEY_MANAGER.extra_data.lock().unwrap();
 
-        if verified_msgs.next_validators_evidence != validator_set_evidence {
-            error!("************************ validator set evidence mismatch");
-            //return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        if height != extra.height + 1 {
+            if extra.height == height {
+                // redundant call, skip
+                return sgx_status_t::SGX_SUCCESS;
+            }
+
+            if extra.height != 0 {
+                error!(
+                    "Height range not consequent: current={}, submitted={}",
+                    extra.height, height
+                );
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        }
+
+        let validator_set_slice = slice::from_raw_parts(val_set, val_set_len as usize);
+        let validator_set_hash = match calculate_validator_set_hash(validator_set_slice) {
+            Ok(tm_Sha256(hash)) => hash,
+            _ => {
+                error!("invalid validator set");
+                return sgx_status_t::SGX_ERROR_UNEXPECTED;
+            }
+        };
+
+        let expected_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
+
+        {
+            let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+            if verified_msgs.next_validators_evidence != expected_evidence {
+                if extra.height != 0 {
+                    error!("validator set evidence mismatch");
+                    return sgx_status_t::SGX_ERROR_UNEXPECTED;
+                }
+
+                // Currently accept initial validator set. This covers the following cases:
+                // 1. Start after bootstraping a new network
+                // 2. Start after registration and sync normally (without using statesync)
+                // 3. Start after upgrade
+
+                // While cases 1,2 are irrelevant for production build, the (3) must be supported.
+                // After the *next* upgrade it won't need to be supported (since this version DOES store the evidence),
+                // hence the following should be disabled in the production build.
+
+                info!("Setting initial validator set");
+            }
+        }
+
+        {
+            extra.height = height;
+            extra.validator_set_serialized = validator_set_slice.to_vec();
         }
     }
-
-    let val_set_for_height = ValidatorSetForHeight {
-        height,
-        validator_set: validator_set_slice.to_vec(),
-    };
-
-    Keychain::set_validator_set_for_height(val_set_for_height);
+    KEY_MANAGER.save();
 
     // calculate hash, and compare with the stored next_validators_hash
 
