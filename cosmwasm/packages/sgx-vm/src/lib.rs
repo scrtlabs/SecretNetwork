@@ -56,6 +56,7 @@ pub use crate::attestation::{
 pub use crate::seed::{
     untrusted_approve_upgrade, untrusted_health_check, untrusted_init_bootstrap,
     untrusted_init_node, untrusted_key_gen, untrusted_migration_op,
+    untrusted_submit_validator_set_evidence,
 };
 
 pub use crate::random::untrusted_submit_block_signatures;

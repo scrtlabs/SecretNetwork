@@ -10,15 +10,12 @@ mod querier;
 use crate::error::{clear_error, handle_c_error, handle_c_error_default, set_error, Error};
 pub use api::GoApi;
 use base64;
-use cosmwasm_sgx_vm::untrusted_init_bootstrap;
 use cosmwasm_sgx_vm::{
     call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, call_update_admin_raw,
-    features_from_csv, Checksum, CosmCache, Extern,
-};
-use cosmwasm_sgx_vm::{
-    create_attestation_report_u, untrusted_approve_upgrade, untrusted_get_encrypted_genesis_seed,
-    untrusted_get_encrypted_seed, untrusted_health_check, untrusted_init_node, untrusted_key_gen,
-    untrusted_migration_op,
+    create_attestation_report_u, features_from_csv, untrusted_approve_upgrade,
+    untrusted_get_encrypted_genesis_seed, untrusted_get_encrypted_seed, untrusted_health_check,
+    untrusted_init_bootstrap, untrusted_init_node, untrusted_key_gen, untrusted_migration_op,
+    untrusted_submit_validator_set_evidence, Checksum, CosmCache, Extern,
 };
 use ctor::ctor;
 pub use db::{db_t, DB};
@@ -249,6 +246,20 @@ pub extern "C" fn init_cache(
             std::ptr::null_mut()
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn submit_validator_set_evidence(evidence: Buffer, err: Option<&mut Buffer>) {
+    let evidence_slice = match unsafe { evidence.read() } {
+        None => {
+            set_error(Error::empty_arg("no evidence"), err);
+            return;
+        }
+        Some(r) => r,
+    };
+
+    cosmwasm_sgx_vm::untrusted_submit_validator_set_evidence(evidence_slice.try_into().unwrap())
+        .unwrap();
 }
 
 #[no_mangle]

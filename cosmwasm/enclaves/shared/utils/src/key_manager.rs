@@ -182,10 +182,11 @@ impl Keychain {
         }
     }
 
-    pub fn encrypt_hash(&self, hv: [u8; 32]) -> [u8; 32] {
+    pub fn encrypt_hash(&self, hv: [u8; 32], height: u64) -> [u8; 32]{
         let mut hasher = Sha256::new();
         hasher.update(self.consensus_seed.unwrap().current.as_slice());
         hasher.update(hv);
+        hasher.update(height.to_le_bytes());
 
         let mut ret: [u8; 32] = [0_u8; 32];
         ret.copy_from_slice(&hasher.finalize());

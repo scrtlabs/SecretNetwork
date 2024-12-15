@@ -65,6 +65,10 @@ func SubmitBlockSignatures(header []byte, commit []byte, txs []byte, encRandom [
 }
 
 func SubmitValidatorSetEvidence(evidence []byte) error {
+	errmsg := C.Buffer{}
+	evidenceSlice := sendSlice(evidence)
+	defer freeAfterSend(evidenceSlice)
+	C.submit_validator_set_evidence(evidenceSlice, &errmsg)
 	return nil
 }
 

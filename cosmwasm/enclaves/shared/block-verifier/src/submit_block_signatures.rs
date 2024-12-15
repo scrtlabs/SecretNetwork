@@ -130,7 +130,7 @@ pub unsafe fn submit_block_signatures_impl(
 
     // store this in the storage: header.header.next_validators_hash
     if let tendermint::Hash::Sha256(val) = header.header.next_validators_hash {
-        let validator_set_evidence = KEY_MANAGER.encrypt_hash(val);
+        let validator_set_evidence = KEY_MANAGER.encrypt_hash(val, validator_set_for_height.height + 1);
 
         println!(
             "next validator set evidence: {:?}",
@@ -138,6 +138,7 @@ pub unsafe fn submit_block_signatures_impl(
         );
 
         next_validator_set_evidence.copy_from_slice(validator_set_evidence.as_slice());
+        message_verifier.next_validators_evidence.copy_from_slice(validator_set_evidence.as_slice());
     
     }
     

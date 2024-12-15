@@ -249,6 +249,8 @@ TwoBuffers submit_block_signatures(Buffer header,
                                    Buffer random,
                                    Buffer *err);
 
+void submit_validator_set_evidence(Buffer evidence, Buffer *err);
+
 Buffer update_admin(cache_t *cache,
                     Buffer contract_id,
                     Buffer params,

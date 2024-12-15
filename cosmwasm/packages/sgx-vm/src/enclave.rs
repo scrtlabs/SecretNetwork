@@ -179,6 +179,12 @@ extern "C" {
         height: u64,
     ) -> sgx_status_t;
 
+    pub fn ecall_submit_validator_set_evidence(
+        eid: sgx_enclave_id_t,
+        retval: *mut sgx_status_t,
+        val_set_evidence: *const u8,
+    ) -> sgx_status_t;
+
     pub fn ecall_validate_random(
         eid: sgx_enclave_id_t,
         retval: *mut sgx_status_t,

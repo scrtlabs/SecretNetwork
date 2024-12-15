@@ -1090,22 +1090,36 @@ macro_rules! validate_input_length {
     };
 }
 
-pub fn get_validator_set_hash() -> SgxResult<tendermint::Hash> {
-    let hash = match <tendermint::validator::Set as Protobuf<
-        tendermint_proto::v0_38::types::ValidatorSet,
-    >>::decode(&*(Keychain::get_validator_set_for_height().validator_set))
+pub fn calculate_validator_set_hash(validator_set_slice: &[u8]) -> SgxResult<tendermint::Hash> {
+    match <tendermint::validator::Set as Protobuf<tendermint_proto::v0_38::types::ValidatorSet,>>::decode(validator_set_slice)
     {
-        Ok(vs) => {
-            debug!("decoded validator set hash: {:?}", vs.hash());
-            vs.hash()
-        }
+        Ok(vs) => Ok(vs.hash()),
         Err(e) => {
             error!("error decoding validator set: {:?}", e);
-            return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+            Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
         }
-    };
+    }
+}
 
-    Ok(hash)
+#[no_mangle]
+pub unsafe extern "C" fn ecall_submit_validator_set_evidence(
+    val_set_evidence: *const u8,
+) -> sgx_status_t {
+    let evidence_len: usize = 32;
+
+    validate_const_ptr!(
+        val_set_evidence,
+        evidence_len,
+        sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+    );
+
+    let mut verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+
+    verified_msgs
+        .next_validators_evidence
+        .copy_from_slice(slice::from_raw_parts(val_set_evidence, evidence_len));
+
+    sgx_status_t::SGX_SUCCESS
 }
 
 /// # Safety
@@ -1136,9 +1150,13 @@ pub unsafe extern "C" fn ecall_generate_random(
         return sgx_status_t::SGX_ERROR_UNEXPECTED;
     };
 
-    let validator_set_hash = match get_validator_set_hash().unwrap_or_default() {
-        tm_Sha256(hash) => hash,
-        tendermint::Hash::None => {
+    let validator_set_hash = match calculate_validator_set_hash(
+        Keychain::get_validator_set_for_height()
+            .validator_set
+            .as_slice(),
+    ) {
+        Ok(tm_Sha256(hash)) => hash,
+        _ => {
             error!("Got invalid validator set");
             return sgx_status_t::SGX_ERROR_UNEXPECTED;
         }
@@ -1194,12 +1212,34 @@ pub unsafe extern "C" fn ecall_submit_validator_set(
         sgx_status_t::SGX_ERROR_INVALID_PARAMETER
     );
 
+    let validator_set_slice = slice::from_raw_parts(val_set, val_set_len as usize);
+    let validator_set_hash = match calculate_validator_set_hash(validator_set_slice) {
+        Ok(tm_Sha256(hash)) => hash,
+        _ => {
+            error!("invalid validator set");
+            return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    };
+
+    let validator_set_evidence = KEY_MANAGER.encrypt_hash(validator_set_hash, height);
+
+    {
+        let verified_msgs = VERIFIED_BLOCK_MESSAGES.lock().unwrap();
+
+        if verified_msgs.next_validators_evidence != validator_set_evidence {
+            error!("************************ validator set evidence mismatch");
+            //return sgx_status_t::SGX_ERROR_UNEXPECTED;
+        }
+    }
+
     let val_set_for_height = ValidatorSetForHeight {
         height,
-        validator_set: slice::from_raw_parts(val_set, val_set_len as usize).to_vec(),
+        validator_set: validator_set_slice.to_vec(),
     };
 
     Keychain::set_validator_set_for_height(val_set_for_height);
+
+    // calculate hash, and compare with the stored next_validators_hash
 
     sgx_status_t::SGX_SUCCESS
 }

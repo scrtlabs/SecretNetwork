@@ -164,13 +164,11 @@ func NewKeeper(
 }
 
 func (k Keeper) SetValidatorSetEvidence(ctx sdk.Context) error {
-
 	store := k.storeService.OpenKVStore(ctx)
 	validator_set_evidence, err := store.Get(types.ValidatorSetEvidencePrefix)
 	if err == nil {
 		api.SubmitValidatorSetEvidence(validator_set_evidence)
-s	}
-
+	}
 	return nil
 }
 
