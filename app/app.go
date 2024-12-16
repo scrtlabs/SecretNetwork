@@ -432,8 +432,8 @@ func (app *SecretNetworkApp) Initialize() {
 
 	ctx := sdk.NewContext(ms, cmtproto.Header{}, false, app.Logger())
 
-	app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
-
+	_ = app.AppKeepers.ComputeKeeper.SetValidatorSetEvidence(ctx)
+	//nolint:errcheck
 }
 
 
