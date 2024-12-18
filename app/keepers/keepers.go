@@ -263,7 +263,7 @@ func (ak *SecretAppKeepers) CreateScopedKeepers() {
 // Also, Create keepers and modules for the transfer, compute, icacontroller and icahost modules.
 // These are all ibc-enabled, so we build a Stack around each of them.
 //
-// For example, this is how the stack will be build for the transfer app
+// For example, this is how the stack will be built for the transfer app
 //   - SendPacket. Originates from the transferKeeper and goes up the stack:
 //     transferKeeper.SendPacket -> ibcpacketforward.SendPacket -> ibcfeekeeper.SendPacket ->
 //   - RecvPacket, message that originates from core IBC and goes down to app, the flow is the other way:
@@ -294,7 +294,7 @@ func (ak *SecretAppKeepers) InitCustomKeepers(
 	// 4. IBC Transfer should go through the IBC Hooks middleware
 	//
 	// Therefore we'll initialize the Switch keeper and pass it to the Fee keeper as an ics4wrapper.
-	// That means that whenever a packet is being send via Fee as an ics4wrapper, it will go through the switch middleware first (ref: https://github.com/cosmos/ibc-go/blob/v4.3.0/modules/apps/29-fee/keeper/relay.go#L15-L18).
+	// That means that whenever a packet is being sent via Fee as an ics4wrapper, it will go through the switch middleware first (ref: https://github.com/cosmos/ibc-go/blob/v4.3.0/modules/apps/29-fee/keeper/relay.go#L15-L18).
 	// Then we'll pass Fee as an ics4wrapper to everything else.
 	//
 	// Compute send: Switch -> Fee -> Packet Forward -> WASM Hooks
