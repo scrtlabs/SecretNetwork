@@ -90,7 +90,7 @@ var (
 	homeDir, _     = os.UserHomeDir()
 	DefaultCLIHome = filepath.Join(homeDir, ".secretd")
 
-	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
+	// DefaultNodeHome sets the folder where the application data and configuration will be stored
 	DefaultNodeHome = filepath.Join(homeDir, ".secretd")
 
 	// Module accounts that are allowed to receive tokens
@@ -264,7 +264,7 @@ func NewSecretNetworkApp(
 	app.configurator = module.NewConfigurator(app.appCodec, app.BaseApp.MsgServiceRouter(), app.BaseApp.GRPCQueryRouter())
 	app.mm.RegisterServices(app.configurator)
 
-	// setupUpgradeHandlers() shoulbe be called after app.mm is configured
+	// setupUpgradeHandlers() should be called after app.mm is configured
 	app.setupUpgradeHandlers()
 
 	// initialize stores
