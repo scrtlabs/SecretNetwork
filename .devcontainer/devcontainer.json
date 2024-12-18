@@ -14,7 +14,7 @@
 	// Set *default* container specific settings.json values on container create.
 	"settings": {},
 
-	// Add the IDs of extensions you want installed when the container is created.
+	// Add the IDs of extensions you want to be installed when the container is created.
 	"workspaceFolder": "/home/vscode/SecretNetwork",
 	"extensions": [
 		"bungcip.better-toml",
