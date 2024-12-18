@@ -9,7 +9,7 @@ edition = "2021"
 default = []
 production = []
 
-# Just here for compatability with enclave features
+# Just here for compatibility with enclave features
 verify-validator-whitelist = []
 light-client-validation = []
 random = []
