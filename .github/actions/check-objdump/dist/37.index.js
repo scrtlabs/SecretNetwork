@@ -230,7 +230,7 @@ class MultipartParser {
 					previousIndex = index;
 
 					if (index === 0) {
-						// boyer-moore derrived algorithm to safely skip non-boundary data
+						// boyer-moore derived algorithm to safely skip non-boundary data
 						i += boundaryEnd;
 						while (i < bufferLength && !(data[i] in boundaryChars)) {
 							i += boundaryLength;

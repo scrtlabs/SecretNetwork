@@ -92,7 +92,7 @@ paths:
       tags:
         - Deprecated API
       deprecated: true
-      description: Get if the node is currently syning with other nodes
+      description: Get if the node is currently syncing with other nodes
       produces:
         - application/json
       responses:
@@ -435,7 +435,7 @@ paths:
                   $ref: "#/definitions/Coin"
       responses:
         202:
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
@@ -520,7 +520,7 @@ paths:
                   sequence:
                     type: string
         500:
-          description: Server internel error
+          description: Server internal error
   /staking/delegators/{delegatorAddr}/delegations:
     parameters:
       - in: path
@@ -773,7 +773,7 @@ paths:
         - application/json
       responses:
         200:
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
@@ -1065,7 +1065,7 @@ paths:
                 $ref: "#/definitions/StdTx"
       responses:
         200:
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
@@ -1138,7 +1138,7 @@ paths:
                   $ref: "#/definitions/Coin"
       responses:
         200:
-          description: Tx was succesfully generated
+          description: Tx was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
@@ -1219,7 +1219,7 @@ paths:
                   $ref: "#/definitions/ParamChange"
       responses:
         200:
-          description: The transaction was succesfully generated
+          description: The transaction was successfully generated
           schema:
             $ref: "#/definitions/StdTx"
         400:
