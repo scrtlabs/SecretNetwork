@@ -90,7 +90,7 @@ var (
 	homeDir, _     = os.UserHomeDir()
 	DefaultCLIHome = filepath.Join(homeDir, ".secretd")
 
-	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
+	// DefaultNodeHome sets the folder where the application data and configuration will be stored
 	DefaultNodeHome = filepath.Join(homeDir, ".secretd")
 
 	// Module accounts that are allowed to receive tokens
