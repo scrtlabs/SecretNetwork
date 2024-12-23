@@ -19,7 +19,7 @@ DB_BACKEND ?= goleveldb
 SGX_MODE ?= HW
 BRANCH ?= develop
 DEBUG ?= 0
-DOCKER_TAG ?= beta
+DOCKER_TAG ?= latest
 
 TM_SGX ?= true
 
