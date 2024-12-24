@@ -472,9 +472,9 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-           - uses: actions/download-artifact@v3
-             with:
-               name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
+      - uses: actions/download-artifact@v3
+        with:
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
