@@ -209,7 +209,7 @@ func (q GrpcQuerier) AddressByLabel(c context.Context, req *types.QueryByLabelRe
 	}, nil
 }
 
-func (q GrpcQuerier) Params(c context.Context, req *types.ParamsRequest) (*types.ParamsResponse, error) {
+func (q GrpcQuerier) Params(c context.Context, _ *types.ParamsRequest) (*types.ParamsResponse, error) {
 	params := q.keeper.GetParams(sdk.UnwrapSDKContext(c))
 	return &types.ParamsResponse{
 		Params: params,
