@@ -237,7 +237,7 @@ ENTRYPOINT ["/bin/bash", "startup.sh"]
 
 FROM release-image as mainnet-release
 
-ARG BUILD_VERSION="v1.15.0"
+ARG BUILD_VERSION="v0.0.0"
 ENV VERSION=${BUILD_VERSION}
 
 RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
