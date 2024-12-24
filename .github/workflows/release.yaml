@@ -119,6 +119,83 @@ jobs:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
           path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
 
+  build-deb-mainnet-2004:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        db_backend: [goleveldb]
+    env: # Or as an environment variable
+      SPID: ${{ secrets.SPID_MAINNET }}
+      API_KEY: ${{ secrets.API_KEY_MAINNET }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: scrtlabs/secret-network-node
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - name: Log in to the Container registry
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push Node Image
+        if: ${{ matrix.db_backend == 'goleveldb' }}
+        uses: docker/build-push-action@v4
+        with:
+          file: deployment/dockerfiles/Dockerfile.2004
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.get_version.outputs.VERSION }}
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_MAINNET }}
+            SPID=${{ secrets.SPID_MAINNET }}
+          build-args: |
+            FEATURES=verify-validator-whitelist,light-client-validation,random,production
+            FEATURES_U=production
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${{ matrix.db_backend }}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: mainnet-release
+      - name: Sets env vars for rocksdb
+        if: ${{ matrix.db_backend == 'rocksdb' }}
+        run: |
+          echo "DOCKER_CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu/ -lrocksdb -lstdc++ -llz4 -lm -lz -lbz2 -lsnappy" >> $GITHUB_ENV
+
+      - name: Build .deb Package Image
+        uses: docker/build-push-action@v4
+        with:
+          file: deployment/dockerfiles/Dockerfile
+          context: .
+          load: true
+          tags: deb_build
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_MAINNET }}
+            SPID=${{ secrets.SPID_MAINNET }}
+          build-args: |
+            FEATURES=verify-validator-whitelist,light-client-validation,random,production
+            FEATURES_U=production
+            SECRET_NODE_TYPE=NODE
+            DB_BACKEND=${{ matrix.db_backend }}
+            CGO_LDFLAGS=${{ env.DOCKER_CGO_LDFLAGS }}
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: build-deb-mainnet
+      - name: Run .deb Package Image
+        run: |
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
+      - uses: actions/upload-artifact@v3
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-20.04.deb
+
   build-deb-mainnet:
     runs-on: ubuntu-22.04
     strategy:
@@ -190,11 +267,11 @@ jobs:
       - name: Run .deb Package Image
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build deb_build
-          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+          cp build/secretnetwork_${{ steps.get_version.outputs.VERSION }}_amd64.deb secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
       - uses: actions/upload-artifact@v3
         with:
-          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
-          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64.deb
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
+          path: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_${{ matrix.db_backend }}_amd64_ubuntu-22.04.deb
 
   native-build-cli:
     runs-on: ${{matrix.os}}
@@ -352,11 +429,12 @@ jobs:
         native-build-cli,
         build-deb-testnet,
         build-deb-testnet-2004,
-        # build-deb-mainnet,
+        build-deb-mainnet,
+        build-deb-mainnet-2004,
         MacOS-ARM64-CLI,
         Ubuntu-2004-CLI,
-        # check-hw-tool,
-        # check-hw-tool-mainnet
+        check-hw-tool,
+        check-hw-tool-mainnet
       ]
     runs-on: ubuntu-22.04
     steps:
@@ -379,21 +457,24 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: secretcli-Ubuntu-20.04
-      # - uses: actions/download-artifact@v3
-        # with:
-          # name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
+      - uses: actions/download-artifact@v3
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-20.04.deb
+      - uses: actions/download-artifact@v3
+        with:
+          name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-22.04.deb
       - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-20.04.deb
       - uses: actions/download-artifact@v3
         with:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-22.04.deb
-      # - uses: actions/download-artifact@v3
-        # with:
-          # name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-      #      - uses: actions/download-artifact@v3
-      #        with:
-      #          name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
+      - uses: actions/download-artifact@v3
+        with:
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+           - uses: actions/download-artifact@v3
+             with:
+               name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
@@ -406,7 +487,7 @@ jobs:
             secretcli-Linux
             secretcli-MacOS-arm64
             secretcli-Ubuntu-20.04
-
-          # secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64.deb
-            # check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-#            check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-20.04.deb
+            secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-22.04.deb
+            check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+            check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
