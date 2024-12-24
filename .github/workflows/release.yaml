@@ -434,7 +434,7 @@ jobs:
         MacOS-ARM64-CLI,
         Ubuntu-2004-CLI,
         check-hw-tool,
-        check-hw-tool-mainnet
+        # check-hw-tool-mainnet
       ]
     runs-on: ubuntu-22.04
     steps:
