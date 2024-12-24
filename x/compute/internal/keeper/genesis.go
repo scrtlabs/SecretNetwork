@@ -46,9 +46,9 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data types.GenesisState) error 
 	if keeper.peekAutoIncrementID(ctx, types.KeyLastInstanceID) <= uint64(maxContractID) {
 		return errorsmod.Wrapf(types.ErrInvalid, "seq %s must be greater %d ", string(types.KeyLastInstanceID), maxContractID)
 	}
-	keeper.SetParams(ctx, data.Params)
+	err := keeper.SetParams(ctx, data.Params)
 
-	return nil
+	return err
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.

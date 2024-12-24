@@ -142,9 +142,9 @@ func (m Migrator) Migrate5to6(ctx sdk.Context) error {
 	if err != nil {
 		return err
 	}
-	store.Set(types.ParamsKey, bz)
+	err = store.Set(types.ParamsKey, bz)
 
-	return nil
+	return err
 }
 
 const progressPartSize = 1000

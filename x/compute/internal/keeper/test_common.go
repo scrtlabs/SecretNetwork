@@ -608,7 +608,7 @@ func CreateTestInput(t *testing.T, isCheckTx bool, supportedFeatures string, enc
 	random := make([]byte, 32)
 	_, _ = rand.Read(random)
 	keeper.SetRandomSeed(ctx, random)
-	keeper.SetParams(ctx, wasmtypes.DefaultParams())
+	_ = keeper.SetParams(ctx, wasmtypes.DefaultParams())
 
 	govSubSp, _ := paramsKeeper.GetSubspace(govtypes.ModuleName)
 

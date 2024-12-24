@@ -12,9 +12,9 @@ func (k *Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 
 	store := k.storeService.OpenKVStore(ctx)
 	bz := k.cdc.MustMarshal(&p)
-	store.Set(types.ParamsKey, bz)
+	err := store.Set(types.ParamsKey, bz)
 
-	return nil
+	return err
 }
 
 func (k *Keeper) GetParams(ctx sdk.Context) (params types.Params) {
