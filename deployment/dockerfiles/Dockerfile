@@ -97,7 +97,7 @@ RUN go install github.com/jteeuwen/go-bindata/go-bindata@latest && go-bindata -v
 # Set working directory for the build
 WORKDIR /go/src/github.com/scrtlabs/SecretNetwork
 
-ARG BUILD_VERSION="v1.15.0"
+ARG BUILD_VERSION="v0.0.0"
 ARG SGX_MODE=SW
 ARG FEATURES
 ARG FEATURES_U
@@ -237,7 +237,7 @@ ENTRYPOINT ["/bin/bash", "startup.sh"]
 
 FROM release-image as mainnet-release
 
-ARG BUILD_VERSION="v1.15.0"
+ARG BUILD_VERSION="v0.0.0"
 ENV VERSION=${BUILD_VERSION}
 
 RUN STORAGE_PATH=$(echo ${VERSION} | awk -F'[.]' '{print $1 $2}') \
@@ -301,7 +301,7 @@ CMD ["/bin/bash", "build_deb.sh"]
 
 FROM compile-enclave as compile-check-hw-tool
 
-ARG BUILD_VERSION="v1.15.0"
+ARG BUILD_VERSION="v0.0.0"
 ARG FEATURES
 ARG FEATURES_U
 
