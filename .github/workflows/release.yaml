@@ -131,6 +131,12 @@ jobs:
       REGISTRY: ghcr.io
       IMAGE_NAME: scrtlabs/secret-network-node
     steps:
+      - name: Clean up space (workaround)
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -150,7 +156,7 @@ jobs:
         with:
           file: deployment/dockerfiles/Dockerfile.2004
           context: .
-          push: true
+          push: false
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.get_version.outputs.VERSION }}
           secrets: |
             API_KEY=${{ secrets.API_KEY_MAINNET }}
