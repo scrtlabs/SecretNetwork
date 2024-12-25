@@ -368,8 +368,46 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-          path: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
+          path: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
+
+  check-hw-tool-2004:
+    runs-on: ubuntu-20.04
+    env: # Or as an environment variable
+      SPID: ${{ secrets.SPID_TESTNET }}
+      API_KEY: ${{ secrets.API_KEY_TESTNET }}
+      API_KEY_MAINNET: ${{ secrets.API_KEY_MAINNET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+      - name: Build check-hw-tool image
+        uses: docker/build-push-action@v4
+        with:
+          file: deployment/dockerfiles/Dockerfile.2004
+          context: .
+          load: true
+          tags: check_hw_tool_build
+          secrets: |
+            API_KEY=${{ secrets.API_KEY_TESTNET }}
+            SPID=${{ secrets.SPID_TESTNET }}
+            API_KEY_MAINNET=${{ secrets.API_KEY_MAINNET }}
+          build-args: |
+            BUILD_VERSION=${{ steps.get_version.outputs.VERSION }}
+            SGX_MODE=HW
+          target: compile-check-hw-tool
+      - name: Run check-hw-tool image
+        run: |
+          docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
+          cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
+          path: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
 
   publish-localsecret:
     runs-on: ubuntu-22.04
@@ -434,6 +472,7 @@ jobs:
         MacOS-ARM64-CLI,
         Ubuntu-2004-CLI,
         check-hw-tool,
+        check-hw-tool-2004,
         # check-hw-tool-mainnet
       ]
     runs-on: ubuntu-22.04
@@ -471,7 +510,10 @@ jobs:
           name: secretnetwork_${{ steps.get_version.outputs.VERSION }}_testnet_goleveldb_amd64_ubuntu-22.04.deb
       - uses: actions/download-artifact@v3
         with:
-          name: check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
+      - uses: actions/download-artifact@v3
+        with:
+          name: check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
       # - uses: actions/download-artifact@v3
       #   with:
       #     name: check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
@@ -489,5 +531,5 @@ jobs:
             secretcli-Ubuntu-20.04
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-20.04.deb
             secretnetwork_${{ steps.get_version.outputs.VERSION }}_mainnet_goleveldb_amd64_ubuntu-22.04.deb
-            check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
-            check_hw_${{ steps.get_version.outputs.VERSION }}_mainnet.tar.gz
+            check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
+            check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-20.04.tar.gz
