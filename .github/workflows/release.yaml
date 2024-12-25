@@ -364,7 +364,7 @@ jobs:
       - name: Run check-hw-tool image
         run: |
           docker run -e VERSION=${{ steps.get_version.outputs.VERSION }} -v $GITHUB_WORKSPACE/build:/build check_hw_tool_build
-          cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz
+          cp build/check_hw_${{ steps.get_version.outputs.VERSION }}.tar.gz check_hw_${{ steps.get_version.outputs.VERSION }}_ubuntu-22.04.tar.gz
 
       - uses: actions/upload-artifact@v3
         with:
