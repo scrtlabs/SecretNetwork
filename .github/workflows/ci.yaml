@@ -304,6 +304,25 @@ jobs:
           name: localsecret
           path: /tmp/localsecret.tar
 
+  Build-SecretContractOptimizer:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - uses: actions/checkout@v4
+      - name: Build SecretContractOptimizer
+        uses: docker/build-push-action@v4
+        # sudo docker buildx build --platform=linux/amd64,linux/arm64/v8 -f deployment/dockerfiles/base-images/secret-contract-optimizer.Dockerfile -t enigmampc/secret-contract-optimizer:${TAG} --push .
+        with:
+          platforms: linux/amd64,linux/arm64/v8
+          file: deployment/dockerfiles/base-images/secret-contract-optimizer.Dockerfile
+          # sudo docker buildx imagetools create -t enigmampc/secret-contract-optimizer:latest enigmampc/secret-contract-optimizer:${TAG}
+          tags: |
+            ghcr.io/scrtlabs/secret-contract-optimizer:${{ github.ref_name }}
+            ghcr.io/scrtlabs/secret-contract-optimizer:latest
+          context: .
+          push: true
+
   Build-Hermes:
     runs-on: ubuntu-20.04
     steps:
