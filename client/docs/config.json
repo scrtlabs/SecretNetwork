@@ -73,28 +73,6 @@
       }
     },
     {
-      "url": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.json",
-      "operationIds": {
-        "rename": {
-          "Params": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonParams",
-          "Pool": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonPool",
-          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonUpgradedConsensusState",
-          "Accounts": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonAccounts",
-          "Account": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonAccount",
-          "Proposal": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonProposal",
-          "Proposals": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonProposals",
-          "Deposits": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonDeposits",
-          "Deposit": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonDeposit",
-          "TallyResult": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonTallyResult",
-          "Votes": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonVotes",
-          "Vote": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonVote",
-          "Balance": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonBalance",
-          "Code": "../../tmp-swagger-gen/cosmos/autocli/v1/query.swagger.jsonCode"
-        }
-      }
-    },
-    {
       "url": "../../tmp-swagger-gen/cosmos/bank/v1beta1/query.swagger.json",
       "operationIds": {
         "rename": {
@@ -425,28 +403,6 @@
       }
     },
     {
-      "url": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.json",
-      "operationIds": {
-        "rename": {
-          "Params": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonParams",
-          "Pool": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonPool",
-          "DelegatorValidators": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonUpgradedConsensusState",
-          "Accounts": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonAccounts",
-          "Account": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonAccount",
-          "Proposal": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonProposal",
-          "Proposals": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonProposals",
-          "Deposits": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonDeposits",
-          "Deposit": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonDeposit",
-          "TallyResult": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonTallyResult",
-          "Votes": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonVotes",
-          "Vote": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonVote",
-          "Balance": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonBalance",
-          "Code": "../../tmp-swagger-gen/cosmos/tx/v1beta1/fixed-service.swagger.jsonCode"
-        }
-      }
-    },
-    {
       "url": "../../tmp-swagger-gen/cosmos/upgrade/v1beta1/query.swagger.json",
       "operationIds": {
         "rename": {
@@ -553,28 +509,6 @@
           "Vote": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonVote",
           "Balance": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonBalance",
           "Code": "../../tmp-swagger-gen/ibc/applications/transfer/v1/query.swagger.jsonCode"
-        }
-      }
-    },
-    {
-      "url": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.json",
-      "operationIds": {
-        "rename": {
-          "Params": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonParams",
-          "Pool": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonPool",
-          "DelegatorValidators": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonDelegatorValidators",
-          "UpgradedConsensusState": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonUpgradedConsensusState",
-          "Accounts": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonAccounts",
-          "Account": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonAccount",
-          "Proposal": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonProposal",
-          "Proposals": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonProposals",
-          "Deposits": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonDeposits",
-          "Deposit": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonDeposit",
-          "TallyResult": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonTallyResult",
-          "Votes": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonVotes",
-          "Vote": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonVote",
-          "Balance": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonBalance",
-          "Code": "../../tmp-swagger-gen/ibc-apps/packetforward/v1/query.swagger.jsonCode"
         }
       }
     },
@@ -708,12 +642,6 @@
           "Balance": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonBalance",
           "Code": "../../tmp-swagger-gen/secret/registration/v1beta1/query.swagger.jsonCode"
         }
-      }
-    },
-    {
-      "url": "./swagger_legacy.yaml",
-      "dereference": {
-        "circular": "ignore"
       }
     }
   ]

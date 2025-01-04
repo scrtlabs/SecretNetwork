@@ -1,7 +1,6 @@
 VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 DOCKER := $(shell which docker)
-DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
 # SPID and API_KEY are used for Intel SGX attestation
 SPID ?= 00000000000000000000000000000000
@@ -541,30 +540,42 @@ aesm-image:
 	docker build -f deployment/dockerfiles/aesm.Dockerfile -t enigmampc/aesm .
 
 ###############################################################################
-###                                Protobuf                                 ###
+###                         Swagger & Protobuf                              ###
 ###############################################################################
 
 protoVer=0.14.0
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
 protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
 
-proto-all: proto-format proto-gen proto-swagger-gen
+.PHONY: update-swagger-openapi-docs statik statik-install proto-swagger-openapi-gen
+
+statik-install:
+	@echo "Installing statik..."
+	@go install github.com/rakyll/statik@v0.1.7
+
+statik:
+	statik -src=client/docs/static/ -dest=client/docs -f -m
+
+proto-swagger-openapi-gen:
+	@echo "Generating Protobuf Swagger: $@"
+	@./scripts/protoc-swagger-openapi-gen.sh
+
+# Example `CHAIN_VERSION=v1.4.0 make update-swagger-openapi-docs`
+update-swagger-openapi-docs: statik-install proto-swagger-openapi-gen statik
+
+proto-all: proto-format proto-gen proto-swagger-openapi-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
 	@$(protoImage) sh ./scripts/protocgen.sh
 
-proto-swagger-gen:
-	@echo "Generating Protobuf Swagger: $@"
-	@$(shell ./scripts/protoc-swagger-gen.sh $@)
+proto-lint:
+	@$(protoImage) buf lint --error-format=json
 
 proto-format:
 	@$(protoImage) find ./proto -name "*.proto" -exec clang-format -i {} \;
 
-proto-lint:
-	@$(protoImage) buf lint --error-format=json
-
-.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint
+.PHONY: proto-all proto-gen proto-format proto-lint proto-check-breaking
 
 .PHONY: check-hw
 check-hw: build-linux
