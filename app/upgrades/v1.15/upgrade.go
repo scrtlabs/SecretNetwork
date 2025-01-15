@@ -41,7 +41,7 @@ var Upgrade = upgrades.Upgrade{
 	CreateUpgradeHandler: createUpgradeHandler,
 	StoreUpgrades: store.StoreUpgrades{
 		Added: []string{
-			icacontrollertypes.StoreKey,
+			// icacontrollertypes.StoreKey,
 			consensusparamtypes.StoreKey,
 			crisistypes.StoreKey,
 		},
