@@ -23,8 +23,7 @@ message BlockResponse {
 }
 
 // StatusRequest requests the status of a peer.
-message StatusRequest {
-}
+message StatusRequest {}
 
 // StatusResponse is a peer response to inform their status.
 message StatusResponse {
