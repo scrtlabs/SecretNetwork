@@ -1,5 +1,8 @@
 # CHANGELOG
 
+# 1.16.0
+- Fix ASA-2024-0012, ASA-2024-0013
+
 # 1.15.0
 - Update build OS to Ubuntu 22.04
 - Update cosmos-sdk to v0.50.10. All the related changes can be found [here](https://github.com/cosmos/cosmos-sdk/blob/release/v0.50.x/CHANGELOG.md)
